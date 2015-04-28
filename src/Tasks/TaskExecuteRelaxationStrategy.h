@@ -1,0 +1,26 @@
+#pragma once
+#include <TaskBase.h>
+#include "../ProcessInfo.h"
+
+#include "../MILPSolver/IRelaxationStrategy.h"
+#include "../MILPSolver/RelaxationStrategyStandard.h"
+#include "../MILPSolver/RelaxationStrategyAdaptive.h"
+#include "../MILPSolver/RelaxationStrategyNone.h"
+
+class TaskExecuteRelaxationStrategy: public TaskBase
+{
+	public:
+		TaskExecuteRelaxationStrategy();
+		~TaskExecuteRelaxationStrategy();
+
+		void run();
+
+	private:
+		IRelaxationStrategy *relaxationStrategy;
+
+		SHOTSettings::Settings *settings;
+		ProcessInfo *processInfo;
+
+		bool isInitialized;
+};
+

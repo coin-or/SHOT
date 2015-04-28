@@ -1,0 +1,101 @@
+
+cmake_minimum_required (VERSION 2.8)
+project (SHOTProject)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(Boost_USE_STATIC_LIBS OFF)
+set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
+#set(CMAKE_BUILD_TYPE Debug)
+
+INCLUDE(FindPkgConfig)
+
+# To make CPLEX build
+add_definitions(-DIL_STD)
+add_definitions(-LDFLAGS="-Wl,--no-as-needed")
+
+file(GLOB_RECURSE Foo_SOURCES "*.cpp")
+file(GLOB_RECURSE Foo_HEADERS "*.h")
+
+set (Foo_INCLUDE_DIRS "")
+foreach (_headerFile ${Foo_HEADERS})
+    get_filename_component(_dir ${_headerFile} PATH)
+    list (APPEND Foo_INCLUDE_DIRS ${_dir})
+endforeach()
+list(REMOVE_DUPLICATES Foo_INCLUDE_DIRS)
+
+set(Boost_INCLUDE_DIR /usr/local/include)
+set(Boost_LIBRARY_DIR /usr/local/lib)
+set(COINOS_DIR /opt/OS-2.9.0-fix)
+find_package(Boost 1.57.0 COMPONENTS system filesystem REQUIRED)
+
+INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+LINK_DIRECTORIES(${Boost_LIBRARY_DIR})
+
+include_directories(${Foo_INCLUDE_DIRS})
+
+#include_directories("." "..")
+
+include_directories("${COINOS_DIR}/include/coin")
+include_directories("${COINOS_DIR}/include/cppad")
+include_directories("${COINOS_DIR}/include")
+
+include_directories("/opt/gurobi600/linux64/include")
+include_directories("/opt/ibm/ILOG/CPLEX_Studio1261/cplex/include")
+include_directories("/opt/ibm/ILOG/CPLEX_Studio1261/concert/include")
+
+
+
+include_directories ("${PROJECT_SOURCE_DIR}/SHOTSettings")
+add_subdirectory (SHOTSettings) 
+
+add_executable (SHOT ${Foo_SOURCES})
+
+#LINK_DIRECTORIES(${COINOS_DIR}/lib)
+
+target_link_libraries (SHOT SHOTSettings)
+target_link_libraries (SHOT /opt/gurobi600/linux64/lib/libgurobi60.so)
+target_link_libraries (SHOT /opt/gurobi600/linux64/lib/libgurobi_c++.a)
+target_link_libraries (SHOT /opt/ibm/ILOG/CPLEX_Studio1261/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
+target_link_libraries (SHOT /opt/ibm/ILOG/CPLEX_Studio1261/concert/lib/x86-64_linux/static_pic/libconcert.a)
+target_link_libraries (SHOT /opt/ibm/ILOG/CPLEX_Studio1261/cplex/lib/x86-64_linux/static_pic/libcplex.a)
+target_link_libraries (SHOT pthread)
+target_link_libraries (SHOT m)
+target_link_libraries (SHOT bz2)
+target_link_libraries (SHOT z)
+target_link_libraries (SHOT lapack)
+target_link_libraries (SHOT blas)
+target_link_libraries (SHOT dl)
+target_link_libraries (SHOT gomp)
+
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libipopt.so)
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOS.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiGlpk.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiCbc.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiClp.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCoinUtils.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCgl.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libClp.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCbc.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCbcSolver.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libSym.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libVol.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libDylp.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsi.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiSym.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiVol.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiDylp.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libBonCouenne.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libbonmin.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libbonminampl.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCouenne.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCouenneReadnl.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libcoinasl.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libcoinblas.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libcoinlapack.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libcoinmumps.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libcoinmetis.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libcoinglpk.so )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libipoptamplinterface.so)
+
+target_link_libraries(SHOT ${Boost_LIBRARIES})
+
+#install(TARGETS SHOT DESTINATION bin)
