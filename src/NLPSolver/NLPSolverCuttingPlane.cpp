@@ -121,6 +121,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 	int numHPsAdded, numHPsTotal;
 	for (int i = 0; i < maxIter; i++)
 	{
+		boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 		// Saves the LP problem to file if in debug mode
 		if (settings->getBoolSetting("Debug", "SHOTSolver"))
 		{
@@ -161,8 +162,9 @@ bool NLPSolverCuttingPlane::solveProblem()
 			// Solves the minization problem wrt lambda in [0, 1]
 
 			auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision,
-					maxIterSubsolver);
+					maxIterSubsolverTmp);
 
+			std::cout << "maxIter: " << maxIterSubsolverTmp << std::endl;
 			lambda = minimizationResult.first;
 			mu = minimizationResult.second;
 

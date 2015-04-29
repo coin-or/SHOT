@@ -101,7 +101,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	bool isLinConstrFulfilled = processInfo->originalProblem->isLinearConstraintsFulfilledInPoint(primalSol.point,
 			0.000001);
 	bool isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(primalSol.point,
-			0.00001);
+			0.000001);
 
 	if (((isMinimization && primalSol.objValue < processInfo->currentObjectiveBounds.second)
 			|| (!isMinimization && primalSol.objValue > processInfo->currentObjectiveBounds.second))
@@ -127,6 +127,8 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
 
 		processInfo->primalSolutions.push_back(primalSol);
+
+		processInfo->primalSolution = primalSol.point;
 
 		return (true);
 	}

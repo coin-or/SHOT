@@ -441,8 +441,8 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 	try
 	{
 		cplexInstance = IloCplex(cplexModel);
-		cplexInstance.setOut(cplexEnv.getNullStream());
-		cplexInstance.setWarning(cplexEnv.getNullStream());
+		//cplexInstance.setOut(cplexEnv.getNullStream());
+		//cplexInstance.setWarning(cplexEnv.getNullStream());
 
 		cplexInstance.setParam(IloCplex::SolnPoolIntensity, settings->getIntSetting("SolnPoolIntensity", "CPLEX")); // Don't use 3 with heuristics
 		cplexInstance.setParam(IloCplex::SolnPoolReplace, settings->getIntSetting("SolnPoolReplace", "CPLEX"));
@@ -668,7 +668,7 @@ std::vector<double> MILPSolverCplex::getVariableSolution()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when obtaining variable solution:" << e.getMessage() << CoinMessageEol;
 
 		auto numSols = cplexInstance.getSolnPoolNsolns();
 
@@ -748,7 +748,10 @@ void MILPSolverCplex::activateDiscreteVariables(bool activate)
 	}
 	catch (IloException& e)
 	{
-		processInfo->logger.message(2) << e.getMessage() << CoinMessageEol;
+		if (activate) processInfo->logger.message(2) << "Error when activating discrete variables:"
+				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		else processInfo->logger.message(2) << "Error when deactivating discrete variables:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
 
 		cout << e << endl;
 	}
@@ -830,7 +833,8 @@ E_ProblemSolutionStatus MILPSolverCplex::getSolutionStatus()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when obtaining solution status:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
 
 	}
 
@@ -854,10 +858,12 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 
 		processInfo->logger.message(4) << " MILP solved..." << CoinMessageEol;
 		MILPSolutionStatus = getSolutionStatus();
+
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(2) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(2) << "Error when solving MILP/LP problem:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -874,7 +880,9 @@ double MILPSolverCplex::getLastObjectiveValue()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when obtaining objective value:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << cplexInstance.getBestObjValue() << CoinMessageEol;
 
 	}
 
@@ -890,7 +898,8 @@ double MILPSolverCplex::getBestObjectiveValue()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when obtaining best objective value:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
 
 	}
 
@@ -907,7 +916,8 @@ int MILPSolverCplex::increaseSolutionLimit(int increment)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when increasing solution limit:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
 
 	}
 
@@ -923,7 +933,8 @@ void MILPSolverCplex::setSolutionLimit(int limit)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when setting solution limit:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 }
@@ -938,7 +949,8 @@ int MILPSolverCplex::getSolutionLimit()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when obtaining solution limit:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 
@@ -967,6 +979,16 @@ std::vector<std::vector<double>> MILPSolverCplex::getAllVariableSolutions()
 			}
 
 		}
+	}
+	catch (IloException &e)
+	{
+		processInfo->logger.message(0) << "Error when populating solution pool:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
+
+	}
+
+	try
+	{
 		//IloCplex::Callback mycallback = cplexInstance.use(SolutionFilterCallback(cplexEnv, cplexVars, processInfo));
 		//std::cout << "Sol pool size after:" << cplexInstance.getSolnPoolNsolns() << std::endl;
 
@@ -1003,7 +1025,8 @@ std::vector<std::vector<double>> MILPSolverCplex::getAllVariableSolutions()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when reading solutions:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 
@@ -1018,7 +1041,8 @@ void MILPSolverCplex::setTimeLimit(double seconds)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when setting time limit:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 }
@@ -1039,7 +1063,8 @@ void MILPSolverCplex::setCutOff(double cutOff)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when setting cut off value:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 }
@@ -1062,7 +1087,8 @@ void MILPSolverCplex::addMIPStart(std::vector<double> point)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(2) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(2) << "Error when adding MIP starting point:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
 	}
 
 	processInfo->logger.message(3) << "Added MIP start" << CoinMessageEol;
@@ -1077,7 +1103,8 @@ void MILPSolverCplex::writeProblemToFile(std::string filename)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "Error when saving model to file:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 }
