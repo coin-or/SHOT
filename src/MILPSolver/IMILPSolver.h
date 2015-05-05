@@ -33,7 +33,7 @@ class IMILPSolver
 
 		virtual void writeProblemToFile(std::string filename) = 0;
 
-		virtual std::vector<std::vector<double>> getAllVariableSolutions() = 0;
+		virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
 		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, int numNonZero, double constant) = 0;
 
 		virtual void setTimeLimit(double seconds) = 0;

@@ -20,12 +20,12 @@ TaskCheckRelativeGap::~TaskCheckRelativeGap()
 
 void TaskCheckRelativeGap::run()
 {
-	//auto currIter = processInfo->getCurrentIteration();
+	auto currIter = processInfo->getCurrentIteration();
 
 	double gap = processInfo->getRelativeObjectiveGap();
 
-	if (/*currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&*/gap
-			<= settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+			&& gap <= settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}

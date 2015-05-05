@@ -18,8 +18,10 @@ TaskCreateMILPProblem::TaskCreateMILPProblem()
 
 	processInfo->MILPSolver->createLinearProblem(processInfo->originalProblem);
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver")) processInfo->MILPSolver->writeProblemToFile(
-			settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
+	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	{
+		processInfo->MILPSolver->writeProblemToFile(settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
+	}
 
 	processInfo->logger.message(2) << "MILP problem created" << CoinMessageEol;
 	processInfo->stopTimer("Reformulation");

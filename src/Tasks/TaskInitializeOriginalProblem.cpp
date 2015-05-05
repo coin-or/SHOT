@@ -35,8 +35,11 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 	processInfo->originalProblem->setProblem(originalInstance);
 	auto debugPath = settings->getStringSetting("DebugPath", "SHOTSolver");
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver")) processInfo->originalProblem->saveProblemModelToFile(
-			settings->getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
+	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	{
+		processInfo->originalProblem->saveProblemModelToFile(
+				settings->getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
+	}
 
 	processInfo->initializeResults(1, processInfo->originalProblem->getNumberOfVariables(),
 			processInfo->originalProblem->getNumberOfConstraints());

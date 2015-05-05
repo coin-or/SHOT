@@ -24,5 +24,7 @@ class TaskAddHyperplanes: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+
+		int itersWithoutAddedHPs;
 };
 

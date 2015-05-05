@@ -7,6 +7,7 @@ RelaxationStrategyStandard::RelaxationStrategyStandard()
 
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 RelaxationStrategyStandard::~RelaxationStrategyStandard()
@@ -95,7 +96,7 @@ bool RelaxationStrategyStandard::isLPStepFinished()
 
 bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
-	int numSteps = 5;
+	int numSteps = 10;
 
 	auto prevIter = processInfo->getPreviousIteration();
 
@@ -104,7 +105,7 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
 	auto prevIter2 = &processInfo->iterations[prevIter->iterationNumber - numSteps];
 
 	//TODO: should be substituted with parameter
-	if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.0001) return true;
+	if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001) return true;
 
 	return false;
 }

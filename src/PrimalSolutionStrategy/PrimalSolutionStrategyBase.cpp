@@ -32,6 +32,18 @@ bool PrimalSolutionStrategyBase::checkPoints(std::vector<PrimalSolution> primalS
 bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 {
 	std::string sourceDesc;
+
+	std::vector<double> tmpPoint(primalSol.point);
+	double tmpObjVal = primalSol.objValue;
+
+	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+
+	char HPadded = ' ';
+
+	bool isLinConstrFulfilled = false;
+	bool isNonLinConstrFulfilled = false;
+	IndexValuePair mostDev;
+
 	switch (primalSol.sourceType)
 	{
 		case E_PrimalSolutionSource::Linesearch:
@@ -53,20 +65,25 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 			break;
 	}
 
-	if (primalSol.sourceType != E_PrimalSolutionSource::MILPSolutionPool)
+	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool)
+	{
+		isLinConstrFulfilled = true;
+		mostDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
+	}
+	else
 	{
 		bool isRounded = false;
 
 		auto discreteVarIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
 
-		std::vector<double> ptRounded(primalSol.point);
+		std::vector<double> ptRounded(tmpPoint);
 
 		for (int i = 0; i < discreteVarIndexes.size(); i++)
 		{
 			int idx = discreteVarIndexes.at(i);
-			double rounded = round(primalSol.point.at(idx));
+			double rounded = round(tmpPoint.at(idx));
 
-			if (abs(rounded - primalSol.point.at(idx)) > 0)
+			if (abs(rounded - tmpPoint.at(idx)) > 0)
 			{
 				ptRounded.at(idx) = rounded;
 				isRounded = true;
@@ -75,64 +92,74 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		if (isRounded)
 		{
-			primalSol.point = ptRounded;
-			primalSol.objValue = processInfo->originalProblem->calculateOriginalObjectiveValue(ptRounded);
+			tmpPoint = ptRounded;
+			tmpObjVal = processInfo->originalProblem->calculateOriginalObjectiveValue(ptRounded);
+
+			if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+			{
+				tmpPoint.at(processInfo->originalProblem->getNonlinearObjectiveVariableIdx()) = tmpObjVal;
+			}
+
 		}
+
+		isLinConstrFulfilled = processInfo->originalProblem->isLinearConstraintsFulfilledInPoint(tmpPoint, 0.000001);
+
+		mostDev = processInfo->originalProblem->getMostDeviatingAllConstraint(primalSol.point);
+
 	}
+
+	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint, 0.0001);
 
 	if (std::isnan(primalSol.objValue))
 	{
-		primalSol.objValue = processInfo->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
+		tmpObjVal = processInfo->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
 	}
 
-	auto tmpMaxDev = processInfo->originalProblem->getMostDeviatingAllConstraint(primalSol.point);
+	/*if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	 {
 
-	if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	 }*/
+
+	if (((isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
+			|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second)) && isLinConstrFulfilled
+			&& isNonLinConstrFulfilled)
 	{
-		primalSol.point.at(processInfo->originalProblem->getNonlinearObjectiveVariableIdx()) = primalSol.objValue;
-	}
-
-	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
-
-	//auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(ptRounded);
-
-	char HPadded = ' ';
-
-	bool isLinConstrFulfilled = processInfo->originalProblem->isLinearConstraintsFulfilledInPoint(primalSol.point,
-			0.000001);
-	bool isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(primalSol.point,
-			0.000001);
-
-	if (((isMinimization && primalSol.objValue < processInfo->currentObjectiveBounds.second)
-			|| (!isMinimization && primalSol.objValue > processInfo->currentObjectiveBounds.second))
-			&& isLinConstrFulfilled && isNonLinConstrFulfilled)
-	{
-		processInfo->currentObjectiveBounds.second = primalSol.objValue;
-
-		if (tmpMaxDev.value >= 0) // Add point as hyperplane
+		if (mostDev.value >= 0) // Add point as hyperplane
 		{
+			processInfo->currentObjectiveBounds.second = tmpObjVal;
 			std::pair<int, std::vector<double>> tmpItem;
-			tmpItem.first = tmpMaxDev.idx;
-			tmpItem.second = primalSol.point;
-
+			tmpItem.first = mostDev.idx;
+			tmpItem.second = tmpPoint;
 			processInfo->hyperplaneWaitingList.push_back(tmpItem);
 
 			HPadded = '*';
 
 		}
+		else
+		{
+			processInfo->currentObjectiveBounds.second = tmpObjVal;
+		}
 
-		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4%") % primalSol.objValue
-				% tmpMaxDev.value % sourceDesc % HPadded;
+		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4%") % tmpObjVal % mostDev.value
+				% sourceDesc % HPadded;
 
 		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
 
+		primalSol.objValue = tmpObjVal;
+		primalSol.point = tmpPoint;
+
 		processInfo->primalSolutions.push_back(primalSol);
 
-		processInfo->primalSolution = primalSol.point;
+		processInfo->primalSolution = tmpPoint;
 
 		return (true);
 	}
 
+	/*auto tmpLine = boost::format("    No new primal bound %1% with dev. %2% (%3%) %4%") % tmpObjVal % mostDev.value
+	 % sourceDesc % HPadded;
+
+	 processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
+	 */
 	return (false);
 }
 

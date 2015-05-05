@@ -164,7 +164,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 			auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision,
 					maxIterSubsolverTmp);
 
-			std::cout << "maxIter: " << maxIterSubsolverTmp << std::endl;
+			//std::cout << "maxIter: " << maxIterSubsolverTmp << std::endl;
 			lambda = minimizationResult.first;
 			mu = minimizationResult.second;
 

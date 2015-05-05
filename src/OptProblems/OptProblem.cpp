@@ -165,7 +165,7 @@ std::string OptProblem::exportProblemToOsil()
 
 	std::string osil = osilWriter->writeOSiL(getProblemInstance());
 
-	return osil;
+	return (osil);
 }
 
 IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
@@ -193,7 +193,7 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 		valpair.value = *biggest;
 
 	}
-	return valpair;
+	return (valpair);
 }
 
 IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> point)

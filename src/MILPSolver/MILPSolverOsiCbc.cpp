@@ -311,10 +311,9 @@ int MILPSolverOsiCbc::getSolutionLimit()
 	return 100;
 }
 
-std::vector<std::vector<double>> MILPSolverOsiCbc::getAllVariableSolutions()
+std::vector<SolutionPoint> MILPSolverOsiCbc::getAllVariableSolutions()
 {
-
-	std::vector < std::vector<double> > allSolutions;
+	std::vector < SolutionPoint > allSolutions;
 	return allSolutions;
 }
 

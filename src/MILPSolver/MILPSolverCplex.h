@@ -27,7 +27,7 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		virtual void writeProblemToFile(std::string filename);
 
-		virtual std::vector<std::vector<double>> getAllVariableSolutions();
+		virtual std::vector<SolutionPoint> getAllVariableSolutions();
 
 		virtual void setTimeLimit(double seconds);
 
@@ -41,6 +41,7 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		int firstNonLazyHyperplane;
 		int iterLastLazyConvert;
+		double timeLastIter;
 
 	protected:
 

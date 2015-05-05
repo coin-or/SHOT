@@ -30,11 +30,17 @@ TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
-	processInfo->startTimer("PrimalBoundTotal");
-	processInfo->startTimer("PrimalBoundSearchNLP");
+	auto currIter = processInfo->getCurrentIteration();
 
-	primalStrategyFixedNLP->runStrategy();
+	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10
+	/*&& processInfo->getElapsedTime("Total") <= settings->getDoubleSetting("TimeLimit", "Algorithm")*/)
+	{
+		processInfo->startTimer("PrimalBoundTotal");
+		processInfo->startTimer("PrimalBoundSearchNLP");
 
-	processInfo->stopTimer("PrimalBoundSearchNLP");
-	processInfo->stopTimer("PrimalBoundTotal");
+		primalStrategyFixedNLP->runStrategy();
+
+		processInfo->stopTimer("PrimalBoundSearchNLP");
+		processInfo->stopTimer("PrimalBoundTotal");
+	}
 }

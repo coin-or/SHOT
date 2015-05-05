@@ -12,6 +12,14 @@
  Error
  };*/
 
+struct SolutionPoint
+{
+		vector<double> point;
+		double objectiveValue;
+		int iterFound;
+		IndexValuePair maxDeviation;
+};
+
 class Iteration
 {
 	public:
@@ -21,7 +29,8 @@ class Iteration
 		E_IterationProblemType type;
 		E_ProblemSolutionStatus solutionStatus;
 
-		std::vector<std::vector<double>> variableSolutions;
+		std::vector<SolutionPoint> solutionPoints;
+
 		double objectiveValue;
 		std::pair<double, double> currentObjectiveBounds;
 
@@ -47,5 +56,6 @@ class Iteration
 
 		std::vector<std::vector<double>> hyperplanePoints;
 
+		SolutionPoint getSolutionPointWithSmallestDeviation();
 };
 

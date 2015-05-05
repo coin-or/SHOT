@@ -114,7 +114,7 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 	int number;
 	SparseVector* tmpVector;
 
-	if (idx == -1)
+	if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
 	{
 		auto tmpArray = getProblemInstance()->calculateObjectiveFunctionGradient(&point.at(0), -1, true);
 		number = getProblemInstance()->getVariableNumber();
@@ -149,84 +149,6 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 	else
 	{
 		tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-
-		/*if (processInfo->originalProblem->getProblemInstance()->getInstanceName() == "synthes1")
-		 {
-		 if (idx == 0)
-		 {
-		 tmpVector->indexes[0] = 0;
-		 tmpVector->indexes[1] = 1;
-		 tmpVector->indexes[2] = 2;
-
-		 tmpVector->values[0] = 0.96 / (point.at(0) - point.at(1) + 1);
-		 tmpVector->values[1] = -0.96 / (point.at(0) - point.at(1) + 1) + 0.8 / (point.at(1) + 1);
-		 tmpVector->values[2] = -0.8;
-		 }
-		 else if (idx == 1)
-		 {
-		 tmpVector->indexes[0] = 0;
-		 tmpVector->indexes[1] = 1;
-		 tmpVector->indexes[2] = 2;
-
-		 tmpVector->values[0] = 1.2 / (point.at(0) - point.at(1) + 1);
-		 tmpVector->values[1] = -1.2 / (point.at(0) - point.at(1) + 1) + 1.0 / (point.at(1) + 1);
-		 tmpVector->values[2] = -1.0;
-		 tmpVector->values[5] = -2.0;
-		 }
-		 }
-		 else if (processInfo->originalProblem->getProblemInstance()->getInstanceName() == "nvs12")
-		 {
-
-
-		 if (idx == 0)
-		 {
-		 tmpVector->indexes[0] = 0;
-		 tmpVector->indexes[1] = 1;
-		 tmpVector->indexes[2] = 2;
-		 tmpVector->indexes[3] = 3;
-
-		 tmpVector->values[0] = -18 * point.at(0) - 10 * point.at(1) - 6 * point.at(2) - 10 * point.at(3);
-		 tmpVector->values[1] = -10 * point.at(0) - 16 * point.at(1) - 10 * point.at(2) - 6 * point.at(3);
-		 tmpVector->values[2] = -6 * point.at(0) - 10 * point.at(1) - 10 * point.at(2) - 2 * point.at(3);
-		 tmpVector->values[3] = -10 * point.at(0) - 6 * point.at(1) - 2 * point.at(2) - 14 * point.at(3);
-		 }
-		 else if (idx == 1)
-		 {
-		 tmpVector->indexes[0] = 0;
-		 tmpVector->indexes[1] = 1;
-		 tmpVector->indexes[2] = 2;
-		 tmpVector->indexes[3] = 3;
-
-		 tmpVector->values[0] = -12 * point.at(0) - 8 * point.at(1) - 2 * point.at(2) + 2 * point.at(3);
-		 tmpVector->values[1] = -8 * point.at(0) - 12 * point.at(1) - 2 * point.at(2) + 10 * point.at(3);
-		 tmpVector->values[2] = -2 * point.at(0) - 2 * point.at(1) - 8 * point.at(2);
-		 tmpVector->values[3] = 2 * point.at(0) + 10 * point.at(1) - 16 * point.at(3);
-		 }
-		 else if (idx == 2)
-		 {
-		 tmpVector->indexes[0] = 0;
-		 tmpVector->indexes[1] = 1;
-		 tmpVector->indexes[2] = 2;
-		 tmpVector->indexes[3] = 3;
-
-		 tmpVector->values[0] = -18 * point.at(0) + 2 * point.at(1) + 4 * point.at(3);
-		 tmpVector->values[1] = 2 * point.at(0) - 12 * point.at(1) + 2 * point.at(2) + 4 * point.at(3);
-		 tmpVector->values[2] = 2 * point.at(1) - 16 * point.at(2) - 2 * point.at(3);
-		 tmpVector->values[3] = 4 * point.at(0) + 4 * point.at(1) - 2 * point.at(2) - 12 * point.at(3);
-		 }
-		 else if (idx == 3)
-		 {
-		 tmpVector->indexes[0] = 0;
-		 tmpVector->indexes[1] = 1;
-		 tmpVector->indexes[2] = 2;
-		 tmpVector->indexes[3] = 3;
-
-		 tmpVector->values[0] = -16 * point.at(0) - 2 * point.at(1) - 2 * point.at(2) + 6 * point.at(3);
-		 tmpVector->values[1] = -2 * point.at(0) - 8 * point.at(1) - 4 * point.at(2) + 2 * point.at(3);
-		 tmpVector->values[2] = -2 * point.at(0) - 4 * point.at(1) - 18 * point.at(2) - 2 * point.at(3);
-		 tmpVector->values[3] = 6 * point.at(0) + 2 * point.at(1) - 2 * point.at(2) - 14 * point.at(3);
-		 }
-		 }*/
 
 		number = tmpVector->number;
 

@@ -24,13 +24,14 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	if (!currIter->isMILP())
 	{
 		lastIterSolLimIncreased = currIter->iterationNumber;
-		return false;
+		return (false);
 	}
 
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 	{
-		return false;
+		return (false);
 	}
+
 	/*
 
 	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
@@ -43,8 +44,9 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 			&& currIter->iterationNumber - lastIterSolLimIncreased
 					> settings->getIntSetting("MILPSolIncreaseIter", "MILP"))
 	{
-		std::cout << " Force solution limit update" << std::endl;
-		return true;
+
+		processInfo->logger.message(1) << "    Force solution limit update.                 " << CoinMessageEol;
+		return (true);
 	}
 
 	// We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
@@ -52,10 +54,10 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	//TODO use the strategy for updated constraint tolerance
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
 			&& (prevIter->maxDeviation
-					< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP") * prevIter->objectiveValue
+					< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP") * max(1.0, prevIter->objectiveValue)
 					|| prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
 	{
-		return true;
+		return (true);
 	}
 
 	/*
@@ -72,7 +74,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	 return true;
 	 }*/
 
-	return false;
+	return (false);
 
 }
 
@@ -100,10 +102,10 @@ int MILPSolutionLimitStrategyIncrease::getNewLimit()
 
 	//lastIterSolLimIncreased = currIter->iterationNumber;
 
-	return newLimit;
+	return (newLimit);
 }
 
 int MILPSolutionLimitStrategyIncrease::getInitialLimit()
 {
-	return settings->getIntSetting("MILPSolLimitInitial", "MILP");
+	return (settings->getIntSetting("MILPSolLimitInitial", "MILP"));
 }

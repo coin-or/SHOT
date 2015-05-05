@@ -21,11 +21,12 @@ TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
 
 void TaskCheckAbsoluteGap::run()
 {
-	//auto currIter = processInfo->getCurrentIteration();
+	auto currIter = processInfo->getCurrentIteration();
 
 	double gap = processInfo->getAbsoluteObjectiveGap();
 
-	if (gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	if (gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")
+			&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 	{
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}

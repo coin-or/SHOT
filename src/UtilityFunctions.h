@@ -15,8 +15,16 @@ namespace UtilityFunctions
 	void displayVector(std::vector<int> point);
 	void displayVector(std::vector<std::string> point);
 
+	void displayVector(std::vector<std::vector<double>> points);
+	void displayVector(std::vector<std::vector<int>> points);
+	void displayVector(std::vector<std::vector<std::string>> points);
+
 	double L2Norm(std::vector<double> ptA, std::vector<double> ptB);
 	std::vector<double> L2Norms(std::vector<std::vector<double>> ptsA, std::vector<double> ptB);
 	std::vector<double> calculateCenterPoint(std::vector<std::vector<double>> pts);
 
+	int numDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+			std::vector<int> indexes);
+	bool isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+			std::vector<int> indexes);
 }

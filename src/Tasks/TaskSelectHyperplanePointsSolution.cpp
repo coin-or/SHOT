@@ -23,12 +23,12 @@ void TaskSelectHyperplanePointsSolution::run()
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
 
-	auto allSolutions = prevIter->variableSolutions; // All solutions in the solution pool
+	auto allSolutions = prevIter->solutionPoints; // All solutions in the solution pool
 	auto originalProblem = processInfo->originalProblem;
 
 	for (int i = 0; i < allSolutions.size(); i++)
 	{
-		auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(allSolutions.at(i));
+		auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(allSolutions.at(i).point);
 
 		if (tmpMostDevConstr.value < 0)
 		{
@@ -39,9 +39,9 @@ void TaskSelectHyperplanePointsSolution::run()
 		{
 			std::pair<int, std::vector<double>> tmpItem;
 			tmpItem.first = tmpMostDevConstr.idx;
-			tmpItem.second = allSolutions.at(i);
+			tmpItem.second = allSolutions.at(i).point;
+
 			processInfo->hyperplaneWaitingList.push_back(tmpItem);
-			std::cout << "added hp point from solution" << std::endl;
 		}
 	}
 }

@@ -11,6 +11,7 @@ TaskAddHyperplanes::TaskAddHyperplanes()
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+	itersWithoutAddedHPs = 0;
 }
 
 TaskAddHyperplanes::~TaskAddHyperplanes()
@@ -22,8 +23,8 @@ void TaskAddHyperplanes::run()
 {
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 
-	if (!settings->getBoolSetting("DelayedConstraints", "MILP") || !currIter->isMILP()
-			|| !currIter->MILPSolutionLimitUpdated)
+	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
+			|| !currIter->MILPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
 		for (int k = processInfo->hyperplaneWaitingList.size(); k > 0; k--)
 		{
@@ -38,6 +39,11 @@ void TaskAddHyperplanes::run()
 		}
 
 		processInfo->hyperplaneWaitingList.clear();
+		itersWithoutAddedHPs = 0;
+	}
+	else
+	{
+		itersWithoutAddedHPs++;
 	}
 }
 
@@ -58,7 +64,7 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 
 	double constant = originalProblem->calculateConstraintFunctionValue(constrIdx, point);
 
-	if (constrIdx == -1)
+	if (constrIdx == -1 || constrIdx == originalProblem->getNonlinearObjectiveConstraintIdx())
 	{
 		processInfo->logger.message(3) << " HP point generated for auxiliary objective function constraint"
 				<< CoinMessageEol;

@@ -455,10 +455,9 @@ int MILPSolverGurobi::getSolutionLimit()
 	return gurobiModel.getEnv().get(GRB_IntParam_SolutionLimit);
 }
 
-std::vector<std::vector<double>> MILPSolverGurobi::getAllVariableSolutions()
+std::vector<SolutionPoint> MILPSolverGurobi::getAllVariableSolutions()
 {
-
-	std::vector < std::vector<double> > allSolutions;
+	std::vector < SolutionPoint > allSolutions;
 
 	if (getDiscreteVariableStatus())
 	{
@@ -466,28 +465,39 @@ std::vector<std::vector<double>> MILPSolverGurobi::getAllVariableSolutions()
 
 		for (int i = 0; i < numSols; i++)
 		{
+			SolutionPoint tmpSolPt;
+
 			int numVar = gurobiModel.get(GRB_IntAttr_NumVars);
 
 			gurobiModel.getEnv().set(GRB_IntParam_SolutionNumber, i);
 
-			vector<double> solution(numVar);
+			vector<double> tmpPt(numVar);
 
 			for (int i = 0; i < numVar; i++)
 			{
 				GRBVar tmpVar = gurobiModel.getVar(i);
 
-				solution.at(i) = tmpVar.get(GRB_DoubleAttr_Xn);
+				tmpPt.at(i) = tmpVar.get(GRB_DoubleAttr_Xn);
 			}
 
-			allSolutions.push_back(solution);
+			tmpSolPt.point = tmpPt;
+			tmpSolPt.iterFound = processInfo->getCurrentIteration()->iterationNumber;
+			tmpSolPt.objectiveValue = gurobiModel.get(GRB_DoubleAttr_ObjVal);
+
+			allSolutions.push_back(tmpSolPt);
 		}
 	}
 	else
 	{
-		allSolutions.push_back(getVariableSolution());
+		SolutionPoint tmpSolPt;
+		tmpSolPt.point = getVariableSolution();
+		tmpSolPt.iterFound = processInfo->getCurrentIteration()->iterationNumber;
+		tmpSolPt.objectiveValue = gurobiModel.get(GRB_DoubleAttr_ObjVal);
+
+		allSolutions.push_back(tmpSolPt);
 	}
 
-	return allSolutions;
+	return (allSolutions);
 
 }
 
