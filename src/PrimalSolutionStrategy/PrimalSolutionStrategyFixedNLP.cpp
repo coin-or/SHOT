@@ -9,11 +9,14 @@
 
 PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 {
+
 	isOriginalRelaxedPointTested = false;
 	NLPSolver = new NLPIpoptSolver();
 	osOption = new OSOption();
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+
+	discreteVariableIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
 
 	std::string IPOptSolver = "";
 
@@ -42,10 +45,10 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 		IPOptSolver = "mumps";
 	}
 
-	auto timeLimit = 1.0; //settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime(E_TimerTypes::Total);
-	auto constrTol = 0.000001; //settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
+	auto timeLimit = 0.1; //settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
+	//auto constrTol = 0.000001; //settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
 
-	osOption->setAnotherSolverOption("tol", "1E-6", "ipopt", "", "double", "");
+	osOption->setAnotherSolverOption("tol", "1E-8", "ipopt", "", "double", "");
 	osOption->setAnotherSolverOption("max_iter", "10000", "ipopt", "", "integer", "");
 	osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
 	osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
@@ -133,10 +136,13 @@ bool PrimalSolutionStrategyFixedNLP::solveProblem()
 	try
 	{
 		NLPSolver->solve();
+		std::cout << "\e[A";
+		std::cout << "\e[A";
+
 	}
 	catch (std::exception &e)
 	{
-
+		return false;
 	}
 	catch (...)
 	{
@@ -144,34 +150,10 @@ bool PrimalSolutionStrategyFixedNLP::solveProblem()
 		return false;
 	}
 
-	std::string solStatus = NLPSolver->osresult->getSolutionStatusType(0);
-
-	if (solStatus == "infeasible" || NLPSolver->osresult->getSolutionNumber() == 0)
+	if (NLPSolver->osresult->getSolutionStatusType(0) == "infeasible" || NLPSolver->osresult->getSolutionNumber() == 0)
 	{
-		processInfo->logger.message(1) << "No solution found to IPOpt relaxed problem. Solution status: " << solStatus
-				<< CoinMessageEol;
 		return false;
 	}
-
-	processInfo->logger.message(3) << "Solution found to IPOpt relaxed problem. Solution status: " << solStatus
-			<< CoinMessageEol;
-
-	/*
-	 int numVar = NLPProblem->getNumberOfVariables();
-	 std::vector<double> tmpPoint(numVar);
-
-	 for (int i = 0; i < numVar; i++)
-	 {
-	 tmpPoint.at(i) = NLPSolver->osresult->getVarValue(0, i);
-	 }
-
-	 if (settings->getBoolSetting("Debug", "SHOTSolver"))
-	 {
-	 auto tmpVars = NLPProblem->getVariableNames();
-	 tmpVars.push_back("mu");
-	 std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_relaxed.txt";
-	 UtilityFunctions::saveVariablePointVectorToFile(tmpPoint, tmpVars, filename);
-	 }*/
 
 	return true;
 }
@@ -185,53 +167,107 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 {
 	auto currIter = processInfo->getCurrentIteration();
 
-	if (!currIter->isMILP()) return false;
-	// Run relaxed once and round, and test
 	int numVar = processInfo->originalProblem->getNumberOfVariables();
 
 	bool isSolved;
 
+	vector < SolutionPoint > solPts;
+
 	// Fix variables
 	auto varTypes = processInfo->originalProblem->getVariableTypes();
 
-	auto solution = currIter->variableSolutions.at(0);
-
-	for (int k = 0; k < numVar; k++)
+	if (settings->getIntSetting("NLPFixedSource", "PrimalBound") == static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
+			|| settings->getIntSetting("NLPFixedSource", "PrimalBound")
+					== static_cast<int>(ES_PrimalBoundNLPFixedPoint::MILPSolution))
 	{
-		if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
+		if (testedPoints.size() == 0)
 		{
-			NLPProblem->fixVariable(k, solution.at(k));
+			solPts.push_back(currIter->solutionPoints.at(0));
+			testedPoints.push_back(currIter->solutionPoints.at(0).point);
+		}
+		else
+		{
+			for (int i = 0; i < testedPoints.size(); i++)
+			{
+				if (UtilityFunctions::isDifferentRoundedSelectedElements(currIter->solutionPoints.at(0).point,
+						testedPoints.at(i), discreteVariableIndexes))
+				{
+					solPts.push_back(currIter->solutionPoints.at(0));
+					testedPoints.push_back(currIter->solutionPoints.at(0).point);
+					break;
+				}
+			}
 		}
 	}
 
-	NLPSolver->osinstance = NLPProblem->getProblemInstance();
-	isSolved = solveProblem();
-
-	if (isSolved)
+	if (settings->getIntSetting("NLPFixedSource", "PrimalBound") == static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
+			|| settings->getIntSetting("NLPFixedSource", "PrimalBound")
+					== static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviation))
 	{
-		std::vector<double> tmpPoint(numVar);
-
-		int numNLPVars = NLPProblem->getNumberOfVariables();
-
-		for (int i = 0; i < numNLPVars; i++)
+		if (testedPoints.size() == 0)
 		{
-			tmpPoint.at(i) = NLPSolver->osresult->getVarValue(0, i);
+			solPts.push_back(currIter->getSolutionPointWithSmallestDeviation());
+			testedPoints.push_back(currIter->getSolutionPointWithSmallestDeviation().point);
 		}
+		else
+		{
+			auto solPtSmallestDev = currIter->getSolutionPointWithSmallestDeviation();
 
-		PrimalSolution primalSol;
-
-		primalSol.iterFound = currIter->iterationNumber;
-		primalSol.objValue = currIter->objectiveValue;
-		primalSol.point = tmpPoint;
-		primalSol.sourceType = E_PrimalSolutionSource::NLPFixedIntegers;
-
-		checkPoint(primalSol);
-
+			for (int i = 0; i < testedPoints.size(); i++)
+			{
+				if (UtilityFunctions::isDifferentRoundedSelectedElements(solPtSmallestDev.point, testedPoints.at(i),
+						discreteVariableIndexes))
+				{
+					solPts.push_back(solPtSmallestDev);
+					testedPoints.push_back(solPtSmallestDev.point);
+					break;
+				}
+			}
+		}
 	}
 
-//saveProblemModelToFile("NLPprimal.txt");
+	for (int j = 0; j < solPts.size(); j++)
+	{
+		double timeStart = processInfo->getElapsedTime("Total");
 
-	processInfo->itersMILPWithoutNLPCall = 0;
+		for (int k = 0; k < numVar; k++)
+		{
+			if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
+			{
+				NLPProblem->fixVariable(k, solPts.at(j).point.at(k));
+			}
+		}
 
-	return true;
+		NLPSolver->osinstance = NLPProblem->getProblemInstance();
+		isSolved = solveProblem();
+
+		double timeEnd = processInfo->getElapsedTime("Total");
+		if (isSolved)
+		{
+			std::vector<double> tmpPoint(numVar);
+
+			int numNLPVars = NLPProblem->getNumberOfVariables();
+
+			for (int i = 0; i < numNLPVars; i++)
+			{
+				tmpPoint.at(i) = NLPSolver->osresult->getVarValue(0, i);
+			}
+
+			processInfo->addPrimalSolutionCandidate(tmpPoint, E_PrimalSolutionSource::NLPFixedIntegers,
+					currIter->iterationNumber);
+
+			processInfo->logger.message(1) << "    Successful NLP call with objective value: "
+					<< NLPSolver->osresult->getObjValue(0, 0) << ", duration: " << timeEnd - timeStart << " s"
+					<< CoinMessageEol;
+		}
+		else
+		{
+			processInfo->logger.message(1) << "    Unsuccessful NLP call, duration:  " << timeEnd - timeStart << " s"
+					<< CoinMessageEol;
+		}
+
+		processInfo->itersMILPWithoutNLPCall = 0;
+	}
+
+	return (true);
 }

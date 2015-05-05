@@ -3,7 +3,6 @@
 SHOTSolver::SHOTSolver()
 {
 	settings = SHOTSettings::Settings::getInstance();
-
 	processInfo = ProcessInfo::getInstance();
 
 	initializeSettings();
@@ -26,6 +25,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 	{
 		std::string osol = fileUtil->getFileAsString(fileName.c_str());
 		settings->readSettings(osol);
+
 		processInfo->logger.message(2) << "Options read from file \"" << fileName << "\"" << CoinMessageEol;
 	}
 	catch (const ErrorClass& eclass)
@@ -131,6 +131,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 	settings->updateSetting("DebugPath", "SHOTSolver", "problemdebug/" + tmpFile);
 
 	if (settings->getBoolSetting("Debug", "SHOTSolver")) initializeDebugMode();
+	else getOSol(); // Needed due to unknown reason
 
 	bool status = this->setProblem(tmpInstance);
 
@@ -198,7 +199,7 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Relaxation
-	settings->createSetting("IterLimitLP", "Algorithm", 30, "LP iteration limit for solver", 0, INT_MAX);
+	settings->createSetting("IterLimitLP", "Algorithm", 100, "LP iteration limit for solver", 0, INT_MAX);
 	settings->createSetting("ObjectiveStagnationIterationLimit", "Algorithm", 100,
 			"Max number of iterations without objective function improvement", 0, INT_MAX);
 	settings->createSetting("ObjectiveStagnationTolerance", "Algorithm", 0.000001,
@@ -212,17 +213,17 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Termination tolerance setting
-	settings->createSetting("ConstrTermTolMILP", "Algorithm", 0.001, "Final termination tolerance for constraints", 0,
+	settings->createSetting("ConstrTermTolMILP", "Algorithm", 0.00001, "Final termination tolerance for constraints", 0,
 			DBL_MAX);
 	settings->createSetting("ConstrTermTolInitialFactor", "Algorithm", 100.0,
 			"Factor for constraint tolerance at initial MILP tree limit ", 1.0, DBL_MAX);
 	settings->createSetting("ConstrTermTolLP", "Algorithm", 0.5,
 			"Termination tolerance in constraints for LP preprocessing");
-	settings->createSetting("ObjectionFunctionTol", "Algorithm", 0.001,
+	settings->createSetting("ObjectionFunctionTol", "Algorithm", 0.0001,
 			"Additional termination tolerance for the linear and nonlinear objective function.");
 	settings->createSetting("GapTermTolAbsolute", "Algorithm", 0.001, "Absolute gap tolerance for objective function",
 			0, DBL_MAX);
-	settings->createSetting("GapTermTolRelative", "Algorithm", 0.00001, "Relative gap tolerance for objective function",
+	settings->createSetting("GapTermTolRelative", "Algorithm", 0.001, "Relative gap tolerance for objective function",
 			0, DBL_MAX);
 
 	settings->createSetting("TimeLimit", "Algorithm", 900.0, "Time limit in seconds for solver", 0.0, DBL_MAX);
@@ -299,7 +300,7 @@ void SHOTSolver::initializeSettings()
 
 	// Add constraints as lazy constraints
 	settings->createSetting("UseLazyConstraints", "MILP", false, "Add supporting hyperplanes as lazy constraints");
-	settings->createSetting("DelayedConstraints", "MILP", false,
+	settings->createSetting("DelayedConstraints", "MILP", true,
 			"Add supporting hyperplanes only after optimal MILP solution (=1).");
 	settings->createSetting("ConstraintSelectionFactor", "MILP", 0.0,
 			"The fraction of violated constraints to generate supporting hyperplanes for.", 0.0, 1.0);
@@ -339,7 +340,18 @@ void SHOTSolver::initializeSettings()
 
 	settings->createSetting("ProblemFile", "SHOTSolver", empty, "The filename of the problem.", true);
 	settings->createSetting("DebugPath", "SHOTSolver", empty, "The path where to save the debug information", true);
-	settings->createSetting("Debug", "SHOTSolver", true, "Use debug functionality");
+	settings->createSetting("Debug", "SHOTSolver", false, "Use debug functionality");
+
+	// Primal bound
+	settings->createSetting("UseNLPCall", "PrimalBound", true, "Call NLP solver to find primal bound");
+	std::vector < std::string > enumPrimalBoundNLPStartingPoint;
+	enumPrimalBoundNLPStartingPoint.push_back("MILPSolution");
+	enumPrimalBoundNLPStartingPoint.push_back("SmallestDeviation");
+	enumPrimalBoundNLPStartingPoint.push_back("Both");
+	settings->createSetting("NLPFixedSource", "PrimalBound",
+			static_cast<int>(ES_PrimalBoundNLPFixedPoint::MILPSolution), "Fixed point source",
+			enumPrimalBoundNLPStartingPoint);
+	enumPrimalBoundNLPStartingPoint.clear();
 
 	processInfo->logger.message(4) << "Initialization of settings complete." << CoinMessageEol;
 
@@ -367,7 +379,6 @@ void SHOTSolver::initializeDebugMode()
 			processInfo->logger.message(3) << "Could not create debug directory " << debugPath << "!" << CoinMessageEol;
 		}
 	}
-
 	boost::filesystem::path source(settings->getStringSetting("ProblemFile", "SHOTSolver"));
 	boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
 			boost::filesystem::copy_option::overwrite_if_exists);

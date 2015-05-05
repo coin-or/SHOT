@@ -31,12 +31,12 @@ void TaskSolveIteration::run()
 
 	currIter->solutionStatus = solStatus;
 	auto sols = MILPSolver->getAllVariableSolutions();
-	currIter->variableSolutions = sols;
+	currIter->solutionPoints = sols;
 
 	currIter->objectiveValue = MILPSolver->getLastObjectiveValue();
-	processInfo->lastObjectiveValue = currIter->objectiveValue;
+	//processInfo->lastObjectiveValue = currIter->objectiveValue;
 
-	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols[0]);
+	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
 
 	currIter->maxDeviationConstraint = mostDevConstr.idx;
 	currIter->maxDeviation = mostDevConstr.value;
@@ -55,8 +55,7 @@ void TaskSolveIteration::run()
 			// New dual solution
 			processInfo->currentObjectiveBounds.first = currIter->objectiveValue;
 
-			processInfo->addDualSolution(sols[0], E_DualSolutionSource::MILPSolution, currIter->objectiveValue,
-					currIter->iterationNumber);
+			processInfo->addDualSolution(sols.at(0), E_DualSolutionSource::MILPSolution);
 
 			processInfo->logger.message(3) << "New dual bound: " << processInfo->currentObjectiveBounds.first
 					<< CoinMessageEol;

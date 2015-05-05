@@ -20,11 +20,14 @@ TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolut
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
+	auto currIter = processInfo->getCurrentIteration();
 
-	processInfo->startTimer("PrimalBoundTotal");
-	auto allSolutions = processInfo->getCurrentIteration()->variableSolutions;
-	processInfo->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MILPSolutionPool,
-			processInfo->getCurrentIteration()->iterationNumber);
+	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
+	{
+		processInfo->startTimer("PrimalBoundTotal");
+		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
+		processInfo->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MILPSolutionPool);
 
-	processInfo->stopTimer("PrimalBoundTotal");
+		processInfo->stopTimer("PrimalBoundTotal");
+	}
 }

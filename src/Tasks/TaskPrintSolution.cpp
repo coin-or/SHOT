@@ -71,9 +71,19 @@ void TaskPrintSolution::run()
 
 	auto primalBound = processInfo->getPrimalBound();
 
-	processInfo->logger.message(1) << "Dual bound: " << dualBound << " Primal bound: " << primalBound << CoinMessageEol;
-	processInfo->logger.message(1) << "Relative objective gap: " << processInfo->getRelativeObjectiveGap()
-			<< " Absolute objective gap: " << processInfo->getAbsoluteObjectiveGap() << CoinMessageEol;
+	if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
+	{
+		processInfo->logger.message(1) << "Dual bound: " << dualBound << " Primal bound: " << primalBound
+				<< " (minimization)" << CoinMessageEol;
+	}
+	else
+	{
+		processInfo->logger.message(1) << "Primal bound: " << primalBound << " Dual bound: " << dualBound
+				<< " (maximization)" << CoinMessageEol;
+	}
+
+	processInfo->logger.message(1) << "Relative duality gap: " << processInfo->getRelativeObjectiveGap()
+			<< " Absolute duality gap: " << processInfo->getAbsoluteObjectiveGap() << CoinMessageEol;
 
 	processInfo->logger.message(1)
 			<< "==================================================================================" << CoinMessageEol;

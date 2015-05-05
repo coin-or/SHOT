@@ -37,10 +37,13 @@ void TaskExecuteRelaxationStrategy::run()
 {
 	if (!isInitialized)
 	{
-
-		isInitialized = true;
 		relaxationStrategy->setInitial();
+		isInitialized = true;
+	}
+	else
+	{
+
+		relaxationStrategy->executeStrategy();
 	}
 
-	relaxationStrategy->executeStrategy();
 }

@@ -76,6 +76,11 @@ enum class ES_LinesearchMethod
 	Boost, Bisection
 };
 
+enum class ES_PrimalBoundNLPFixedPoint
+{
+	MILPSolution, SmallestDeviation, Both
+};
+
 enum class E_PrimalSolutionSource
 {
 	Linesearch, LinesearchFixedIntegers, NLPFixedIntegers, NLPRelaxed, MILPSolutionPool

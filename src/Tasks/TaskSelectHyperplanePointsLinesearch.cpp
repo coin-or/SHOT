@@ -38,14 +38,14 @@ void TaskSelectHyperplanePointsLinesearch::run()
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
 
-	auto allSolutions = prevIter->variableSolutions; // All solutions in the solution pool
+	auto allSolutions = prevIter->solutionPoints; // All solutions in the solution pool
 	//TODO add task removing interior points
 
 	auto originalProblem = processInfo->originalProblem;
-
 	for (int i = 0; i < allSolutions.size(); i++)
 	{
-		if (originalProblem->isConstraintsFulfilledInPoint(allSolutions.at(i)))
+
+		if (originalProblem->isConstraintsFulfilledInPoint(allSolutions.at(i).point))
 		{
 			//processInfo->logger.message(3) << "LP point is on the interior!" << CoinMessageEol;
 			// TODO add as primal solution candidate
@@ -58,7 +58,7 @@ void TaskSelectHyperplanePointsLinesearch::run()
 				auto xNLP = processInfo->interiorPts.at(j).point;
 
 				processInfo->startTimer("HyperplaneLinesearch");
-				auto xNewc = linesearchMethod->findZero(xNLP, allSolutions.at(i),
+				auto xNewc = linesearchMethod->findZero(xNLP, allSolutions.at(i).point,
 						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 						settings->getDoubleSetting("LinesearchEps", "Linesearch"));
 

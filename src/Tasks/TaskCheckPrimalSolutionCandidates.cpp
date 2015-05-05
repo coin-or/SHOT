@@ -31,7 +31,10 @@ void TaskCheckPrimalSolutionCandidates::run()
 
 	for (auto cand : processInfo->primalSolutionCandidates)
 	{
+
 		primalStrategyCheckPoint->checkPoint(cand);
+		//std::cout << "Check!" << std::endl;
+
 	}
 
 	processInfo->primalSolutionCandidates.clear();

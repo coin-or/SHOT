@@ -7,20 +7,23 @@ namespace SHOTSettings
 	bool Settings::instanceFlag = false;
 	Settings* Settings::single = NULL;
 
-	enum ESettingsType { String, Integer, Double, Enum, Boolean };
-	std::map< std::pair<std::string, std::string>, std::string > _settings;
+	enum ESettingsType
+	{
+		String, Integer, Double, Enum, Boolean
+	};
+	std::map<std::pair<std::string, std::string>, std::string> _settings;
 
-	typedef std::map< std::pair<std::string, std::string>, std::string>::iterator SettingsIter;
+	typedef std::map<std::pair<std::string, std::string>, std::string>::iterator SettingsIter;
 	SettingsIter _settingsIter;
 
-	std::map< std::pair<std::string, std::string>, std::string > _settingsDesc;
-	std::map< std::pair<std::string, std::string>, ESettingsType> _settingsType;
-	std::map< std::pair<std::string, std::string>, bool> _isPrivate;
-	std::map< std::pair<std::string, std::string>, std::pair<double, double>> _settingsBounds;
-	std::map< std::pair<std::string, std::string>, bool> _settingsEnum;
-	std::map< std::tuple<std::string, std::string, int>, std::string> _enumDescription;
+	std::map<std::pair<std::string, std::string>, std::string> _settingsDesc;
+	std::map<std::pair<std::string, std::string>, ESettingsType> _settingsType;
+	std::map<std::pair<std::string, std::string>, bool> _isPrivate;
+	std::map<std::pair<std::string, std::string>, std::pair<double, double>> _settingsBounds;
+	std::map<std::pair<std::string, std::string>, bool> _settingsEnum;
+	std::map<std::tuple<std::string, std::string, int>, std::string> _enumDescription;
 
-	typedef std::map< std::tuple<std::string, std::string, int>, std::string>::iterator EnumDescriptionIter;
+	typedef std::map<std::tuple<std::string, std::string, int>, std::string>::iterator EnumDescriptionIter;
 	EnumDescriptionIter _enumDescriptionIter;
 
 	// Get the singleton instance of the settings class
@@ -45,13 +48,15 @@ namespace SHOTSettings
 
 		if (oldvalue == value)
 		{
-			logger.message(4) << "Setting <" << key.first << "," << key.second << "> not updated. Same value" << oldvalue << "given." << CoinMessageEol;
+			logger.message(4) << "Setting <" << key.first << "," << key.second << "> not updated. Same value"
+					<< oldvalue << "given." << CoinMessageEol;
 			return;
 		}
 		else
 		{
 			_settings[key] = value;
-			logger.message(4) << "Setting <" << key.first << "," << key.second << ">= " << oldvalue << " updated. New value =" << oldvalue << "." << CoinMessageEol;
+			logger.message(4) << "Setting <" << key.first << "," << key.second << ">= " << oldvalue
+					<< " updated. New value =" << oldvalue << "." << CoinMessageEol;
 		}
 	}
 
@@ -60,9 +65,10 @@ namespace SHOTSettings
 		createSetting(name, category, value, description, false);
 	}
 
-	void Settings::createSetting(std::string name, std::string category, std::string value, std::string description, bool isPrivate)
+	void Settings::createSetting(std::string name, std::string category, std::string value, std::string description,
+			bool isPrivate)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settings[key] = value;
 		_settingsDesc[key] = description;
 		_settingsType[key] = ESettingsType::String;
@@ -74,18 +80,20 @@ namespace SHOTSettings
 
 	void Settings::updateSetting(std::string name, std::string category, std::string value)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << "," << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::String)
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << "> since it is of the wrong type. (Expected string)." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << "," << category
+					<< "> since it is of the wrong type. (Expected string)." << CoinMessageEol;
 			throw SettingSetWrongTypeException(name, category);
 		}
 
@@ -94,18 +102,20 @@ namespace SHOTSettings
 
 	std::string Settings::getStringSetting(std::string name, std::string category)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << "," << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::String)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as string: Wrong type requested!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as string: Wrong type requested!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -114,10 +124,11 @@ namespace SHOTSettings
 
 	//Integer settings ==============================================================
 
-	void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal, double maxVal, bool isPrivate)
+	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+			double minVal, double maxVal, bool isPrivate)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
-		_settings[key] = boost::lexical_cast<std::string>(value);
+		std::pair < std::string, std::string > key = make_pair(name, category);
+		_settings[key] = boost::lexical_cast < std::string > (value);
 		_settingsDesc[key] = description;
 		_settingsType[key] = ESettingsType::Integer;
 		_settingsBounds[key] = std::make_pair(minVal, maxVal);
@@ -126,7 +137,8 @@ namespace SHOTSettings
 		logger.message(4) << "Setting <" << name << "," << category << "> = " << value << " created." << CoinMessageEol;
 	}
 
-	void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal, double maxVal)
+	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+			double minVal, double maxVal)
 	{
 		Settings::createSetting(name, category, value, description, minVal, maxVal, false);
 	}
@@ -138,46 +150,52 @@ namespace SHOTSettings
 
 	void Settings::updateSetting(std::string name, std::string category, int value)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << "," << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Integer)
 		{
-			logger.message(1) << "Cannot set value of setting <" << name << "," << category << "> as std::string: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot set value of setting <" << name << "," << category
+					<< "> as std::string: Wrong type!" << CoinMessageEol;
 			throw SettingSetWrongTypeException(name, category);
 		}
 
 		if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << ">: Not in interval [" << _settingsBounds[key].first << "," << _settingsBounds[key].second << "]." << CoinMessageEol;
-			throw SettingOutsideBoundsException(name, category, (double)value, _settingsBounds[key].first, _settingsBounds[key].second);
+			logger.message(1) << "Cannot update setting <" << name << "," << category << ">: Not in interval ["
+					<< _settingsBounds[key].first << "," << _settingsBounds[key].second << "]." << CoinMessageEol;
+			throw SettingOutsideBoundsException(name, category, (double) value, _settingsBounds[key].first,
+					_settingsBounds[key].second);
 		}
 
-		std::string newvalue = boost::lexical_cast<std::string>(value);
+		std::string newvalue = boost::lexical_cast < std::string > (value);
 
 		updateSettingBase(key, newvalue);
 	}
 
 	int Settings::getIntSetting(std::string name, std::string category)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << "," << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Integer)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as integer: Wrong type requested!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as integer: Wrong type requested!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -188,17 +206,19 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as integer: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as integer: Wrong type!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
 
 	//Boolean settings ==============================================================
 
-	void Settings::createSetting(std::string name, std::string category, bool value, std::string description, bool isPrivate)
+	void Settings::createSetting(std::string name, std::string category, bool value, std::string description,
+			bool isPrivate)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
-		_settings[key] = boost::lexical_cast<std::string>(value);
+		std::pair < std::string, std::string > key = make_pair(name, category);
+		_settings[key] = boost::lexical_cast < std::string > (value);
 		_settingsDesc[key] = description;
 		_settingsType[key] = ESettingsType::Boolean;
 		_isPrivate[key] = isPrivate;
@@ -213,40 +233,44 @@ namespace SHOTSettings
 
 	void Settings::updateSetting(std::string name, std::string category, bool value)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << "," << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Boolean)
 		{
-			logger.message(1) << "Cannot set value of setting <" << name << "," << category << "> as bool: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot set value of setting <" << name << "," << category << "> as bool: Wrong type!"
+					<< CoinMessageEol;
 			throw SettingSetWrongTypeException(name, category);
 		}
 
-		std::string newvalue = boost::lexical_cast<std::string>(value);
+		std::string newvalue = boost::lexical_cast < std::string > (value);
 
 		updateSettingBase(key, newvalue);
 	}
 
 	bool Settings::getBoolSetting(std::string name, std::string category)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot get setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot get setting <" << name << "," << category << "> since it has not been defined."
+					<< CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Boolean)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as boolean: Wrong type requested!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as boolean: Wrong type requested!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -257,14 +281,16 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as boolean: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as boolean: Wrong type!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
 
 	//Enum settings ==================================================================
 
-	void Settings::createSetting(std::string name, std::string category, int value, std::string description, std::vector<std::string> enumDescriptions, bool isPrivate)
+	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+			std::vector<std::string> enumDescriptions, bool isPrivate)
 	{
 		createSetting(name, category, value, description, -DBL_MAX, DBL_MAX, isPrivate);
 
@@ -277,7 +303,8 @@ namespace SHOTSettings
 		_settingsEnum[make_pair(name, category)] = true;
 	}
 
-	void Settings::createSetting(std::string name, std::string category, int value, std::string description, std::vector<std::string> enumDescriptions)
+	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
+			std::vector<std::string> enumDescriptions)
 	{
 		Settings::createSetting(name, category, value, description, enumDescriptions, false);
 	}
@@ -290,9 +317,9 @@ namespace SHOTSettings
 		{
 			std::tuple<std::string, std::string, int> t = iterator->first;
 
-			if (name == std::get<0>(t) && category == std::get<1>(t))
+			if (name == std::get < 0 > (t) && category == std::get < 1 > (t))
 			{
-				desc << boost::lexical_cast<std::string>(std::get<2>(t)) << ": " << iterator->second << ". ";
+				desc << boost::lexical_cast < std::string > (std::get < 2 > (t)) << ": " << iterator->second << ". ";
 			}
 		}
 
@@ -301,18 +328,20 @@ namespace SHOTSettings
 
 	std::string Settings::getEnumDescription(std::string name, std::string category)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot get setting <" << name << "," << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot get setting <" << name << "," << category << "> since it has not been defined."
+					<< CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Integer)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as integer: Wrong type requested!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as integer: Wrong type requested!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -324,7 +353,8 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category << "> as integer: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << "," << category
+					<< "> as integer: Wrong type!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
@@ -336,15 +366,17 @@ namespace SHOTSettings
 		Settings::createSetting(name, category, value, description, -DBL_MAX, DBL_MAX, false);
 	}
 
-	void Settings::createSetting(std::string name, std::string category, double value, std::string description, double minVal, double maxVal)
+	void Settings::createSetting(std::string name, std::string category, double value, std::string description,
+			double minVal, double maxVal)
 	{
 		Settings::createSetting(name, category, value, description, -DBL_MAX, DBL_MAX, false);
 	}
 
-	void Settings::createSetting(std::string name, std::string category, double value, std::string description, double minVal, double maxVal, bool isPrivate)
+	void Settings::createSetting(std::string name, std::string category, double value, std::string description,
+			double minVal, double maxVal, bool isPrivate)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
-		_settings[key] = boost::lexical_cast<std::string>(value);
+		std::pair < std::string, std::string > key = make_pair(name, category);
+		_settings[key] = boost::lexical_cast < std::string > (value);
 		_settingsDesc[key] = description;
 		_settingsType[key] = ESettingsType::Double;
 		_settingsBounds[key] = std::make_pair(minVal, maxVal);
@@ -355,46 +387,52 @@ namespace SHOTSettings
 
 	void Settings::updateSetting(std::string name, std::string category, double value)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << ", " << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << ", " << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Double)
 		{
-			logger.message(1) << "Cannot set value of setting <" << name << ", " << category << "> as double: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot set value of setting <" << name << ", " << category
+					<< "> as double: Wrong type!" << CoinMessageEol;
 			throw SettingSetWrongTypeException(name, category);
 		}
 
 		if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
 		{
-			logger.message(1) << "Cannot update setting <" << name << ", " << category << ">: Not in interval [" << _settingsBounds[key].first << "," << _settingsBounds[key].second << "]." << CoinMessageEol;
-			throw SettingOutsideBoundsException(name, category, value, _settingsBounds[key].first, _settingsBounds[key].second);
+			logger.message(1) << "Cannot update setting <" << name << ", " << category << ">: Not in interval ["
+					<< _settingsBounds[key].first << "," << _settingsBounds[key].second << "]." << CoinMessageEol;
+			throw SettingOutsideBoundsException(name, category, value, _settingsBounds[key].first,
+					_settingsBounds[key].second);
 		}
 
-		std::string newvalue = boost::lexical_cast<std::string>(value);
+		std::string newvalue = boost::lexical_cast < std::string > (value);
 
 		updateSettingBase(key, newvalue);
 	}
 
 	double Settings::getDoubleSetting(std::string name, std::string category)
 	{
-		std::pair<std::string, std::string> key = make_pair(name, category);
+		std::pair < std::string, std::string > key = make_pair(name, category);
 		_settingsIter = _settings.find(key);
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << ", " << category << "> since it has not been defined." << CoinMessageEol;
+			logger.message(1) << "Cannot update setting <" << name << ", " << category
+					<< "> since it has not been defined." << CoinMessageEol;
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Double)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << ", " << category << "> as double: Wrong type requested!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << ", " << category
+					<< "> as double: Wrong type requested!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -405,11 +443,11 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << ", " << category << "> as double: Wrong type!" << CoinMessageEol;
+			logger.message(1) << "Cannot get value of setting <" << name << ", " << category
+					<< "> as double: Wrong type!" << CoinMessageEol;
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
-
 
 	std::string Settings::getSettingsAsOSol()
 	{
@@ -438,20 +476,20 @@ namespace SHOTSettings
 
 			switch (_settingsType[p])
 			{
-			case ESettingsType::String:
-				type << "string";
-				break;
-			case ESettingsType::Integer:
-				type << "integer";
-				break;
-			case ESettingsType::Boolean:
-				type << "integer";
-				break;
-			case ESettingsType::Enum:
-				type << "integer";
-				break;
-			case ESettingsType::Double:
-				type << "double";
+				case ESettingsType::String:
+					type << "string";
+					break;
+				case ESettingsType::Integer:
+					type << "integer";
+					break;
+				case ESettingsType::Boolean:
+					type << "integer";
+					break;
+				case ESettingsType::Enum:
+					type << "integer";
+					break;
+				case ESettingsType::Double:
+					type << "double";
 			}
 
 			std::stringstream desc;
@@ -488,6 +526,7 @@ namespace SHOTSettings
 
 		options = osolreader->readOSoL(osol);
 		readSettings(options);
+
 	}
 
 	void Settings::readSettings(OSOption* options)
@@ -510,7 +549,7 @@ namespace SHOTSettings
 					}
 					else if (so->type == "integer")
 					{
-						std::pair<std::string, std::string> key = make_pair(so->name, so->category);
+						std::pair < std::string, std::string > key = make_pair(so->name, so->category);
 						_settingsIter = _settings.find(key);
 
 						if (_settingsIter == _settings.end())
@@ -533,7 +572,8 @@ namespace SHOTSettings
 						}
 						catch (boost::bad_lexical_cast &e)
 						{
-							logger.message(1) << "Value for setting <" << so->name << "," << so->category << "> in OSoL file is not an integer. Using default value." << CoinMessageEol;
+							logger.message(1) << "Value for setting <" << so->name << "," << so->category
+									<< "> in OSoL file is not an integer. Using default value." << CoinMessageEol;
 						}
 					}
 					else if (so->type == "double")
@@ -545,12 +585,14 @@ namespace SHOTSettings
 						}
 						catch (boost::bad_lexical_cast &e)
 						{
-							logger.message(1) << "Value for setting <" << so->name << "," << so->category << "> in OSoL file is not a double. Using default value." << CoinMessageEol;
+							logger.message(1) << "Value for setting <" << so->name << "," << so->category
+									<< "> in OSoL file is not a double. Using default value." << CoinMessageEol;
 						}
 					}
 					else
 					{
-						logger.message(1) << "Value for setting <" << so->name << "," << so->category << "> is of unknown type. Skipping it." << CoinMessageEol;
+						logger.message(1) << "Value for setting <" << so->name << "," << so->category
+								<< "> is of unknown type. Skipping it." << CoinMessageEol;
 					}
 				}
 				catch (SettingKeyNotFoundException &e)

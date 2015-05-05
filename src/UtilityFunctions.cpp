@@ -64,6 +64,66 @@ void UtilityFunctions::displayVector(std::vector<std::string> point)
 	std::cout << str.str() << std::endl;
 }
 
+void UtilityFunctions::displayVector(std::vector<std::vector<double> > points)
+{
+	std::stringstream str;
+
+	for (int i = 0; i < points.at(0).size(); i++)
+	{
+		str << i;
+
+		for (int j = 0; j < points.size(); j++)
+		{
+			str << "\t";
+			str << points.at(j).at(i);
+		}
+
+		str << std::endl;
+	}
+
+	std::cout << str.str() << std::endl;
+}
+
+void UtilityFunctions::displayVector(std::vector<std::vector<int> > points)
+{
+	std::stringstream str;
+
+	for (int i = 0; i < points.at(0).size(); i++)
+	{
+		str << i;
+
+		for (int j = 0; j < points.size(); j++)
+		{
+			str << "\t";
+			str << points.at(j).at(i);
+		}
+
+		str << std::endl;
+	}
+
+	std::cout << str.str() << std::endl;
+}
+
+void UtilityFunctions::displayVector(std::vector<std::vector<std::string> > points)
+{
+	std::stringstream str;
+
+	for (int i = 0; i < points.at(0).size(); i++)
+	{
+		str << i;
+
+		for (int j = 0; j < points.size(); j++)
+		{
+			str << "\t";
+			str << points.at(j).at(i);
+		}
+
+		str << std::endl;
+	}
+
+	std::cout << str.str() << std::endl;
+}
+
 bool UtilityFunctions::isObjectiveGenerallyNonlinear(OSInstance *instance)
 {
 	for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
@@ -124,11 +184,6 @@ std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vect
 
 	std::vector<double> newPt(ptSize, 0.0);
 
-	/*for (int j=0; j < numPts; j++)
-	 {
-	 displayVector(pts.at(j));
-	 }*/
-
 	for (int i = 0; i < ptSize; i++)
 	{
 
@@ -140,7 +195,35 @@ std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vect
 		newPt.at(i) = newPt.at(i) / numPts;
 	}
 
-	//displayVector(newPt);
+	return (newPt);
+}
 
-	return newPt;
+int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+		std::vector<int> indexes)
+{
+	int numDiff = 0;
+
+	for (int i = 0; i < indexes.size(); i++)
+	{
+		if (round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
+		{
+			numDiff++;
+			/*std::cout << "Different at element: " << indexes.at(i) << std::endl;
+			 std::cout << " values are " << firstPt.at(indexes.at(i)) << " and " << secondPt.at(indexes.at(i))
+			 << std::endl;*/
+		}
+	}
+	return (numDiff);
+}
+
+bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+		std::vector<int> indexes)
+{
+	for (int i = 0; i < indexes.size(); i++)
+	{
+		if (round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i)))) return (true);
+	}
+
+	return (false);
+
 }

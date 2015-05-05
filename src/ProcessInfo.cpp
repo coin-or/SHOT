@@ -45,22 +45,73 @@ void ProcessInfo::addDualSolutionCandidate(vector<double> pt, E_DualSolutionSour
 
 	dualSolutionCandidates.push_back(sol);
 }
-/*
- pair<double, double> ProcessInfo::getCorrectedObjectiveBounds()
- {
- pair<double, double> bounds;
 
- if (originalProblem->isTypeOfObjectiveMinimize())
- {
- bounds.first = currentObjectiveBounds.first;
- currentObjectiveBounds.second = DBL_MAX;
- }
- else
- {
- currentObjectiveBounds.first = DBL_MAX;
- currentObjectiveBounds.second = -DBL_MAX;
- }
- }*/
+pair<double, double> ProcessInfo::getCorrectedObjectiveBounds()
+{
+	pair<double, double> bounds;
+
+	if (originalProblem->isTypeOfObjectiveMinimize())
+	{
+		bounds.first = currentObjectiveBounds.first;
+		bounds.second = currentObjectiveBounds.second;
+	}
+	else
+	{
+		bounds.first = currentObjectiveBounds.second;
+		bounds.second = currentObjectiveBounds.first;
+	}
+
+	return (bounds);
+}
+
+void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source)
+{
+	PrimalSolution sol =
+	{ pt.point, source, pt.objectiveValue, pt.iterFound };
+
+	primalSolutions.push_back(sol);
+}
+
+void ProcessInfo::addDualSolution(SolutionPoint pt, E_DualSolutionSource source)
+{
+	DualSolution sol =
+	{ pt.point, source, pt.objectiveValue, pt.iterFound };
+
+	dualSolutions.push_back(sol);
+}
+
+void ProcessInfo::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
+{
+	PrimalSolution sol =
+	{ pt.point, source, pt.objectiveValue, pt.iterFound };
+
+	primalSolutionCandidates.push_back(sol);
+}
+
+void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source)
+{
+	for (auto pt : pts)
+	{
+		addPrimalSolutionCandidate(pt, source);
+	}
+}
+
+void ProcessInfo::addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source)
+{
+	DualSolution sol =
+	{ pt.point, source, pt.objectiveValue, pt.iterFound };
+
+	dualSolutionCandidates.push_back(sol);
+}
+
+void ProcessInfo::addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source)
+{
+	for (auto pt : pts)
+	{
+		addDualSolutionCandidate(pt, source);
+	}
+
+}
 
 ProcessInfo::ProcessInfo()
 {

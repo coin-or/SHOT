@@ -22,12 +22,13 @@ void TaskPrintSolutionBoundReport::run()
 {
 	double currElapsedTime = processInfo->getElapsedTime("Total");
 
-	if (itersSinceLastPrintout > 20 || currElapsedTime - timeLastPrintout > 10.0)
+	if (itersSinceLastPrintout > 4 || currElapsedTime - timeLastPrintout > 10.0)
 	{
 		double absGap = processInfo->getAbsoluteObjectiveGap();
 		double relGap = processInfo->getRelativeObjectiveGap();
-		double objLB = processInfo->currentObjectiveBounds.first;
-		double objUB = processInfo->currentObjectiveBounds.second;
+		auto objBounds = processInfo->getCorrectedObjectiveBounds();
+		double objLB = objBounds.first;
+		double objUB = objBounds.second;
 
 		auto tmpLine = boost::format("    Current obj. bound: %|24t|[%1%, %2%] %|46t|Gap abs/rel: %3% / %4%") % objLB
 				% objUB % absGap % relGap;

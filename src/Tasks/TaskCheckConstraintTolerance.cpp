@@ -42,7 +42,7 @@ void TaskCheckConstraintTolerance::run()
 					&& currIter->type == E_IterationProblemType::MIP
 					&& objChangeNorm < settings->getDoubleSetting("ObjectionFunctionTol", "Algorithm")))
 	{
-		processInfo->logger.message(2) << "Current objective change norm is " << objChangeNorm << CoinMessageEol;
+		//processInfo->logger.message(2) << "Current objective change norm is " << objChangeNorm << CoinMessageEol;
 
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}

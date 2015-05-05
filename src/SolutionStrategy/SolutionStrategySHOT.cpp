@@ -30,6 +30,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->createTimer("Subproblems", "Time spent solving subproblems");
 	processInfo->createTimer("LP", " - LP problems");
 	processInfo->createTimer("MILP", " - MILP problems");
+	processInfo->createTimer("PopulateSolutionPool", " - Populate solution pool");
 	processInfo->createTimer("HyperplaneLinesearch", " - Linesearch");
 	processInfo->createTimer("PrimalBoundTotal", " - Primal solution search");
 	processInfo->createTimer("PrimalBoundSearchNLP", "    - NLP");
@@ -44,7 +45,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
 	if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic
-			|| processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
+			|| processInfo->originalProblem->getNumberOfNonlinearConstraints() != 0)
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		processInfo->tasks->addTask(tFindIntPoint, "FindIntPoint");
@@ -58,6 +59,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
 	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
+
+	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
+	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
@@ -88,31 +92,34 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
 
-	TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
-
-	if (processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
+	if (settings->getBoolSetting("UseNLPCall", "PrimalBound"))
 	{
-		TaskBase *tSelectPrimNLPCheck = new TaskConditional();
+		TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
 
-		dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
-		{	if ( processInfo->itersMILPWithoutNLPCall >= 10)
-			{
-				return (true);
-			}
+		if (processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
+		{
+			TaskBase *tSelectPrimNLPCheck = new TaskConditional();
 
-			if (processInfo->getCurrentIteration()->isMILP())
-			{
-				processInfo->itersMILPWithoutNLPCall++;
-			}
+			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
+			{	if ( processInfo->itersMILPWithoutNLPCall >= 10)
+				{
+					return (true);
+				}
 
-			return (false);
-		});
+				if (processInfo->getCurrentIteration()->isMILP())
+				{
+					processInfo->itersMILPWithoutNLPCall++;
+				}
 
-		dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
+				return (false);
+			});
 
-		processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
+			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
 
+			processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+			dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
+
+		}
 	}
 
 	TaskBase *tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
@@ -135,7 +142,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
+	//TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
 	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy();
