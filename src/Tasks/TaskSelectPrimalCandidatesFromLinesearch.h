@@ -21,6 +21,7 @@ class TaskSelectPrimalCandidatesFromLinesearch: public TaskBase
 		TaskSelectPrimalCandidatesFromLinesearch();
 		virtual ~TaskSelectPrimalCandidatesFromLinesearch();
 		virtual void run();
+		virtual std::string getType();
 	private:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;

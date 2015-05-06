@@ -15,6 +15,7 @@ class TaskSequential: public TaskBase
 		void addTask(TaskBase* task);
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::vector<TaskBase*> m_tasks;

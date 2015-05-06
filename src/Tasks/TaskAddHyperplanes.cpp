@@ -144,3 +144,11 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 	currIter->totNumHyperplanes = processInfo->getPreviousIteration()->totNumHyperplanes
 			+ currIter->numHyperplanesAdded;
 }
+
+std::string TaskAddHyperplanes::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
+

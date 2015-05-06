@@ -19,6 +19,8 @@ class TaskAddHyperplanes: public TaskBase
 		virtual ~TaskAddHyperplanes();
 
 		virtual void run();
+
+		virtual std::string getType();
 	private:
 		void createHyperplane(int constrIdx, std::vector<double> point);
 

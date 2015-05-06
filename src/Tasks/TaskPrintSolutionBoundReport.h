@@ -11,6 +11,7 @@ class TaskPrintSolutionBoundReport: public TaskBase
 		virtual ~TaskPrintSolutionBoundReport();
 
 		void run();
+		virtual std::string getType();
 	private:
 
 		SHOTSettings::Settings *settings;

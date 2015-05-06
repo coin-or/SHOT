@@ -31,3 +31,10 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 		processInfo->stopTimer("PrimalBoundTotal");
 	}
 }
+
+std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

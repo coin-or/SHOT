@@ -101,15 +101,24 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 			TaskBase *tSelectPrimNLPCheck = new TaskConditional();
 
 			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
-			{	if ( processInfo->itersMILPWithoutNLPCall >= 10)
+			{
+
+				if (!processInfo->getCurrentIteration()->isMILP())
+				{
+					return (false);
+				}
+
+				if ( processInfo->itersMILPWithoutNLPCall >= 10)
 				{
 					return (true);
 				}
 
-				if (processInfo->getCurrentIteration()->isMILP())
+				if ( processInfo->itersWithStagnationMILP >= 10)
 				{
-					processInfo->itersMILPWithoutNLPCall++;
+					return (true);
 				}
+
+				processInfo->itersMILPWithoutNLPCall++;
 
 				return (false);
 			});
@@ -138,7 +147,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
 	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckIterLim, "CheckTimeLim");
+	processInfo->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
 	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
 
@@ -174,7 +183,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	while (processInfo->tasks->getNextTask(nextTask))
 	{
+		//std::cout << "Next task is of type: " << nextTask->getType() << std::endl;
 		nextTask->run();
+		//std::cout << "Finished task" << std::endl;
 	}
 
 	processInfo->tasks->clearTasks();

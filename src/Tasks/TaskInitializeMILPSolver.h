@@ -21,6 +21,7 @@ class TaskInitializeMILPSolver: public TaskBase
 		virtual ~TaskInitializeMILPSolver();
 
 		void run();
+		virtual std::string getType();
 
 	private:
 

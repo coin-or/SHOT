@@ -19,3 +19,10 @@ void TaskInitializeIteration::run()
 	//processInfo->getCurrentIteration()->type = processInfo->relaxationStrategy->getProblemType();
 
 }
+
+std::string TaskInitializeIteration::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

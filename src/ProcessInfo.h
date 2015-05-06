@@ -102,6 +102,9 @@ class ProcessInfo
 		int iterSignificantObjectiveUpdate; // TODO move to task
 		int itersMILPWithoutNLPCall; // TODO move to task
 
+		int iterLastPrimalBoundUpdate;
+		int iterLastDualBoundUpdate;
+
 		std::vector<int> itersSolvedAsECP;
 
 		//double getLastMaxDeviation();

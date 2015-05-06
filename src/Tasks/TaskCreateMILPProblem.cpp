@@ -36,3 +36,10 @@ TaskCreateMILPProblem::~TaskCreateMILPProblem()
 void TaskCreateMILPProblem::run()
 {
 }
+
+std::string TaskCreateMILPProblem::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

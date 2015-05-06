@@ -52,14 +52,57 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	// We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
 	//if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  prevIter->usedConstraintTolerance)
 	//TODO use the strategy for updated constraint tolerance
-	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
-			&& (prevIter->maxDeviation
-					< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP") * max(1.0, prevIter->objectiveValue)
-					|| prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+	/*if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
+	 && (prevIter->maxDeviation
+	 < settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+	 * max(1.0, abs(prevIter->objectiveValue))
+	 || prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+	 {
+	 return (true);
+	 }*/
+
+	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 	{
-		return (true);
+		if (prevIter->maxDeviation < settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")) return (true);
+
+		if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);
+
+		if (prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")) return (true);
+
+		/*std::cout << "test: " << prevIter->maxDeviationConstraint << " == "
+		 << processInfo->originalProblem->getNonlinearObjectiveConstraintIdx() << ": "
+		 << settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP") * max(1.0, abs(prevIter->objectiveValue))
+		 << std::endl;*/
+
+		if (prevIter->maxDeviationConstraint == -1
+				&& prevIter->maxDeviation
+						< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+								* max(1.0, abs(prevIter->objectiveValue)))
+		{
+			std::cout << "updated nonlinear sol lim for "
+					<< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+							* max(1.0, abs(prevIter->objectiveValue)) << std::endl;
+			return (true);
+		}
 	}
 
+	/*
+	 &&(prevIter->maxDeviation < settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+	 || prevIter->maxDeviation < prevIter->usedConstraintTolerance
+	 || prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	 )
+	 {
+	 return (true);
+	 }
+
+	 if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
+	 && (prevIter->maxDeviation < settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+	 || prevIter->maxDeviation < prevIter->usedConstraintTolerance
+	 || prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+	 {
+	 return (true);
+	 }
+	 */
 	/*
 	 // We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
 	 if (prevIter->isMILP() && prevIter->maxDeviation < prevIter->usedConstraintTolerance && (prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit))

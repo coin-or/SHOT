@@ -27,6 +27,15 @@ void TaskCheckRelativeGap::run()
 	if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& gap <= settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
+
+		processInfo->terminationReason = E_TerminationReason::RelativeGap;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}
+}
+
+std::string TaskCheckRelativeGap::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
 }

@@ -17,6 +17,7 @@ class TaskSelectPrimalCandidatesFromNLP: public TaskBase
 		TaskSelectPrimalCandidatesFromNLP();
 		virtual ~TaskSelectPrimalCandidatesFromNLP();
 		virtual void run();
+		virtual std::string getType();
 	private:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;

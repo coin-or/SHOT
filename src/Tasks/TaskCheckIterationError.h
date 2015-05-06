@@ -17,6 +17,7 @@ class TaskCheckIterationError: public TaskBase
 
 		virtual void run();
 
+		virtual std::string getType();
 	private:
 		std::string taskIDIfTrue;
 		SHOTSettings::Settings *settings;

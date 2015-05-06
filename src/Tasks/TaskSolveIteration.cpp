@@ -30,37 +30,46 @@ void TaskSolveIteration::run()
 	auto solStatus = MILPSolver->solveProblem();
 
 	currIter->solutionStatus = solStatus;
-	auto sols = MILPSolver->getAllVariableSolutions();
-	currIter->solutionPoints = sols;
 
-	currIter->objectiveValue = MILPSolver->getLastObjectiveValue();
-	//processInfo->lastObjectiveValue = currIter->objectiveValue;
-
-	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
-
-	currIter->maxDeviationConstraint = mostDevConstr.idx;
-	currIter->maxDeviation = mostDevConstr.value;
-
-	currIter->usedMILPSolutionLimit = MILPSolver->getSolutionLimit();
-
-	//Check if new dual solution
-	if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+	if (solStatus == E_ProblemSolutionStatus::Error || solStatus == E_ProblemSolutionStatus::Infeasible
+			|| solStatus == E_ProblemSolutionStatus::Unbounded)
 	{
-		bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 
-		if ((isMinimization && currIter->objectiveValue > processInfo->currentObjectiveBounds.first)
-				|| (!isMinimization && currIter->objectiveValue < processInfo->currentObjectiveBounds.first))
+	}
+	else
+	{
+		auto sols = MILPSolver->getAllVariableSolutions();
+		currIter->solutionPoints = sols;
+
+		currIter->objectiveValue = MILPSolver->getLastObjectiveValue();
+		auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
+
+		currIter->maxDeviationConstraint = mostDevConstr.idx;
+		currIter->maxDeviation = mostDevConstr.value;
+
+		//Check if new dual solution
+		if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 		{
+			bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 
-			// New dual solution
-			processInfo->currentObjectiveBounds.first = currIter->objectiveValue;
+			if ((isMinimization && currIter->objectiveValue > processInfo->currentObjectiveBounds.first)
+					|| (!isMinimization && currIter->objectiveValue < processInfo->currentObjectiveBounds.first))
+			{
+				// New dual solution
+				processInfo->currentObjectiveBounds.first = currIter->objectiveValue;
+				processInfo->iterLastDualBoundUpdate = currIter->iterationNumber;
 
-			processInfo->addDualSolution(sols.at(0), E_DualSolutionSource::MILPSolution);
+				processInfo->addDualSolution(sols.at(0), E_DualSolutionSource::MILPSolution);
 
-			processInfo->logger.message(3) << "New dual bound: " << processInfo->currentObjectiveBounds.first
-					<< CoinMessageEol;
+				processInfo->logger.message(3) << "New dual bound: " << processInfo->currentObjectiveBounds.first
+						<< CoinMessageEol;
+			}
+
+			if (!currIter->isMILP()) processInfo->iterLastDualBoundUpdate = currIter->iterationNumber;
 		}
 	}
+
+	currIter->usedMILPSolutionLimit = MILPSolver->getSolutionLimit();
 
 	// Update solution stats
 	if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
@@ -79,3 +88,10 @@ void TaskSolveIteration::run()
 	}
 
 }
+std::string TaskSolveIteration::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
+

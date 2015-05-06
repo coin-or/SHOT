@@ -241,6 +241,9 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
 				settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm"));
 
+		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
+		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
+
 		//cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
 		//cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
@@ -307,7 +310,7 @@ bool MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, 
 
 	expr.end();
 
-	return true;
+	return (true);
 
 //std::cout << "Last nonlazy: " << this->firstNonLazyHyperplane << std::endl;
 
@@ -545,7 +548,14 @@ E_ProblemSolutionStatus MILPSolverCplex::getSolutionStatus()
 			}
 
 		}
-
+		else if (status == IloAlgorithm::Status::Error)
+		{
+			MILPSolutionStatus = E_ProblemSolutionStatus::Error;
+		}
+		else if (status == IloAlgorithm::Status::Unknown)
+		{
+			MILPSolutionStatus = E_ProblemSolutionStatus::Error;
+		}
 		else
 		{
 			processInfo->logger.message(1) << "MILP solver return status unknown = " << status << CoinMessageEol;
@@ -604,9 +614,10 @@ double MILPSolverCplex::getLastObjectiveValue()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining objective value:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
-		processInfo->logger.message(0) << cplexInstance.getBestObjValue() << CoinMessageEol;
+		processInfo->logger.message(0) << "    Error when obtaining objective value: " << e.getMessage()
+				<< CoinMessageEol;
+
+		objval = cplexInstance.getBestObjValue();
 
 	}
 
@@ -622,8 +633,8 @@ double MILPSolverCplex::getBestObjectiveValue()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining best objective value:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		processInfo->logger.message(0) << "   Error when obtaining best objective value: " << e.getMessage()
+				<< CoinMessageEol;
 
 	}
 
@@ -696,7 +707,10 @@ std::vector<SolutionPoint> MILPSolverCplex::getAllVariableSolutions()
 
 			int poolSizeBefore = cplexInstance.getSolnPoolNsolns();
 
+			cplexInstance.setParam(IloCplex::SolnPoolGap, min(1.0e+75, processInfo->getAbsoluteObjectiveGap()));
+			//std::cout << "SolnPoolGap set to: " << processInfo->getAbsoluteObjectiveGap() << std::endl;
 			auto tmpTimeLim = cplexInstance.getParam(IloCplex::TiLim);
+
 			setTimeLimit (timeLastIter);
 			//std::cout << "Last iter used: " << timeLastIter << " seconds" << std::endl;
 			cplexInstance.populate();

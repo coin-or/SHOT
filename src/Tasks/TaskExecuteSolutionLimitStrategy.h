@@ -17,6 +17,7 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 		~TaskExecuteSolutionLimitStrategy();
 
 		void run();
+		virtual std::string getType();
 
 	private:
 
@@ -27,5 +28,7 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 		ProcessInfo *processInfo;
 
 		bool isInitialized;
+		bool temporaryOptLimitUsed;
+		int previousSolLimit;
 };
 

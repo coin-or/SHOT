@@ -88,3 +88,10 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 		processInfo->stopTimer("PrimalBoundTotal");
 	}
 }
+
+std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

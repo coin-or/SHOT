@@ -17,6 +17,7 @@ class TaskTerminate: public TaskBase
 		virtual ~TaskTerminate();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 

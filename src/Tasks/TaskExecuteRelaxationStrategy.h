@@ -14,6 +14,7 @@ class TaskExecuteRelaxationStrategy: public TaskBase
 		~TaskExecuteRelaxationStrategy();
 
 		void run();
+		virtual std::string getType();
 
 	private:
 		IRelaxationStrategy *relaxationStrategy;

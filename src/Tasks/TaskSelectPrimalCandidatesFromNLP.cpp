@@ -44,3 +44,10 @@ void TaskSelectPrimalCandidatesFromNLP::run()
 		processInfo->stopTimer("PrimalBoundTotal");
 	}
 }
+
+std::string TaskSelectPrimalCandidatesFromNLP::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

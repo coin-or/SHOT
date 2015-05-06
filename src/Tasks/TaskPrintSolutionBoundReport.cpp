@@ -43,3 +43,10 @@ void TaskPrintSolutionBoundReport::run()
 		itersSinceLastPrintout++;
 	}
 }
+
+std::string TaskPrintSolutionBoundReport::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

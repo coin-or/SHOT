@@ -1,6 +1,7 @@
 #pragma once
 #include "Enums.h"
 #include <iostream>
+#include <typeinfo>
 #include "Tasks/TaskException.h"
 
 class TaskBase
@@ -11,6 +12,8 @@ class TaskBase
 		virtual void deactivate();
 
 		virtual void initialize();
+
+		virtual std::string getType();
 
 		virtual void run();
 

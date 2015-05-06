@@ -16,55 +16,59 @@ void TaskPrintSolution::run()
 	processInfo->stopTimer("Subproblems");
 
 	auto tmpSol = processInfo->MILPSolver->getLastObjectiveValue();
+	processInfo->logger.message(1)
+			<< "==================================================================================" << CoinMessageEol;
 
 	processInfo->logger.setPrecision(10);
-	if (processInfo->terminationReason == E_TerminationReason::TimeLimit)
+	if (processInfo->terminationReason == E_TerminationReason::ConstraintTolerance)
 	{
-		processInfo->logger.message(1)
-				<< "=================================================================================="
+		processInfo->logger.message(1) << "Optimal solution " << tmpSol << " found to constraint tolerance "
+				<< processInfo->getCurrentIteration()->maxDeviation << " <= "
+				<< settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm") << CoinMessageEol;
+	}
+	else if (processInfo->terminationReason == E_TerminationReason::AbsoluteGap)
+	{
+		processInfo->logger.message(1) << "Optimal solution " << tmpSol << " found to absolute gap tolerance "
+				<< processInfo->getAbsoluteObjectiveGap() << " <= "
+				<< settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm") << CoinMessageEol;
+	}
+	else if (processInfo->terminationReason == E_TerminationReason::RelativeGap)
+	{
+		processInfo->logger.message(1) << "Optimal solution " << tmpSol << " found to relative gap tolerance "
+				<< processInfo->getRelativeObjectiveGap() << " <= "
+				<< settings->getDoubleSetting("GapTermTolRelative", "Algorithm") << CoinMessageEol;
+	}
+	else if (processInfo->terminationReason == E_TerminationReason::TimeLimit)
+	{
+		processInfo->logger.message(1) << "Nonoptimal solution " << tmpSol << " found due to time limit "
+				<< processInfo->getElapsedTime("Total") << " > " << settings->getDoubleSetting("TimeLimit", "Algorithm")
 				<< CoinMessageEol;
-		//processInfo->logger.message(1) << "Time limit reached. Nonoptimal solution " << tmpSol << " found" << CoinMessageEol;
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::IterationLimit)
 	{
-		processInfo->logger.message(1)
-				<< "=================================================================================="
-				<< CoinMessageEol;
-		//processInfo->logger.message(1) << "Iteration limit reached. Nonoptimal solution " << tmpSol << " found" << CoinMessageEol;
-	}
-	else if (processInfo->terminationReason == E_TerminationReason::OptimalSolution)
-	{
-		processInfo->logger.message(1)
-				<< "=================================================================================="
-				<< CoinMessageEol;
-		//processInfo->logger.message(1) << "Optimal solution" << tmpSol << " found" << CoinMessageEol;
+		processInfo->logger.message(1) << "Nonoptimal solution " << tmpSol << " found due to iteration limit "
+				<< settings->getIntSetting("IterLimitLP", "Algorithm")
+						+ settings->getIntSetting("IterLimitMILP", "Algorithm") << CoinMessageEol;
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::ObjectiveStagnation)
 	{
-		processInfo->logger.message(1)
-				<< "=================================================================================="
-				<< CoinMessageEol;
-		//processInfo->logger.message(1) << "Solution" << tmpSol << " does not meet required tolerance!" << CoinMessageEol;
-		processInfo->logger.message(1) << "MILP objective value has not changed in "
-				<< processInfo->itersWithStagnationMILP << " iterations." << CoinMessageEol;
-
+		processInfo->logger.message(1) << "Nonoptimal solution " << tmpSol
+				<< " found due to objective function stagnation" << CoinMessageEol;
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::InfeasibleProblem)
 	{
-		processInfo->logger.message(1)
-				<< "=================================================================================="
-				<< CoinMessageEol;
-		processInfo->logger.message(1) << "Infeasible "
-				<< (processInfo->getCurrentIteration()->isMILP() ? "MILP" : "LP") << " problem, check tolerances!"
+		processInfo->logger.message(1) << "Nonoptimal solution " << tmpSol
+				<< " found since linear solver reports an infeasible problem" << CoinMessageEol;
+	}
+	else if (processInfo->terminationReason == E_TerminationReason::InteriorPointError)
+	{
+		processInfo->logger.message(1) << "No solution found since an interior point could not be obtained."
 				<< CoinMessageEol;
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::Error)
 	{
-		processInfo->logger.message(1)
-				<< "=================================================================================="
-				<< CoinMessageEol;
-		processInfo->logger.message(1) << "Error when solving "
-				<< (processInfo->getCurrentIteration()->isMILP() ? "MILP" : "LP") << " problem!" << CoinMessageEol;
+		processInfo->logger.message(1) << "Nonoptimal solution " << tmpSol
+				<< " found since linear solver reports an error" << CoinMessageEol;
 	}
 
 	auto dualBound = processInfo->getDualBound();
@@ -95,5 +99,12 @@ void TaskPrintSolution::run()
 			<< processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP << CoinMessageEol;
 	processInfo->logger.message(1)
 			<< "==================================================================================" << CoinMessageEol;
+
+}
+
+std::string TaskPrintSolution::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
 
 }

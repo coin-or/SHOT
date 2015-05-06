@@ -18,6 +18,7 @@ class TaskSolveIteration: public TaskBase
 		virtual ~TaskSolveIteration();
 
 		virtual void run();
+		virtual std::string getType();
 	private:
 
 		SHOTSettings::Settings *settings;

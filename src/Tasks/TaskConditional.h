@@ -14,6 +14,7 @@ class TaskConditional: public TaskBase
 		void setCondition(std::function<bool()> conditionFunct);
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::function<bool()> condition;

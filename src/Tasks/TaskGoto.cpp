@@ -24,3 +24,10 @@ void TaskGoto::run()
 {
 	processInfo->tasks->setNextTask(gotoTaskID);
 }
+
+std::string TaskGoto::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

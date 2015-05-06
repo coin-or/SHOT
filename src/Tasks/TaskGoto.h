@@ -18,6 +18,7 @@ class TaskGoto: public TaskBase
 		virtual ~TaskGoto();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 

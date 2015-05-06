@@ -18,7 +18,15 @@
 
 enum class E_TerminationReason
 {
-	OptimalSolution, ObjectiveStagnation, IterationLimit, TimeLimit, InfeasibleProblem, Error
+	ConstraintTolerance,
+	ObjectiveStagnation,
+	IterationLimit,
+	TimeLimit,
+	InfeasibleProblem,
+	Error,
+	AbsoluteGap,
+	RelativeGap,
+	InteriorPointError
 };
 
 enum class E_ProblemSolutionStatus

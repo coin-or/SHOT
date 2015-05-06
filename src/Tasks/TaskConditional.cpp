@@ -53,4 +53,10 @@ void TaskConditional::run()
 		if (taskFalseIsSet == true) taskIfFalse->run();
 	}
 }
+std::string TaskConditional::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
 

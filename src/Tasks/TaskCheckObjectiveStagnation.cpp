@@ -55,8 +55,17 @@ void TaskCheckObjectiveStagnation::run()
 	if (processInfo->itersWithStagnationMILP
 			>= settings->getIntSetting("ObjectiveStagnationIterationLimit", "Algorithm"))
 	{
+		processInfo->terminationReason = E_TerminationReason::ObjectiveStagnation;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
+
 	}
 
 	processInfo->itersWithStagnationMILP++;
+}
+
+std::string TaskCheckObjectiveStagnation::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
 }

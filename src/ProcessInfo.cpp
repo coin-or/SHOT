@@ -124,6 +124,9 @@ ProcessInfo::ProcessInfo()
 	iterSignificantObjectiveUpdate = 0;
 	itersMILPWithoutNLPCall = 0;
 
+	iterLastPrimalBoundUpdate = 0;
+	iterLastDualBoundUpdate = 0;
+
 	currentObjectiveBounds.first = -DBL_MAX;
 	currentObjectiveBounds.second = DBL_MAX;
 
@@ -440,7 +443,9 @@ std::string ProcessInfo::getTraceResult()
 	{
 		solverStatus = "4";
 	}
-	else if (this->terminationReason == E_TerminationReason::OptimalSolution)
+	else if (this->terminationReason == E_TerminationReason::ConstraintTolerance
+			|| this->terminationReason == E_TerminationReason::AbsoluteGap
+			|| this->terminationReason == E_TerminationReason::RelativeGap)
 	{
 		solverStatus = "1";
 	}

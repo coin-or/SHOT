@@ -28,6 +28,7 @@ bool TaskHandler::getNextTask(TaskBase* &task)
 {
 	if (nextTask == taskIDMap.end()) return (false);
 
+	//std::cout << "Next task is : " << nextTask->first << std::endl;//
 	task = (nextTask->second);
 	nextTask++;
 

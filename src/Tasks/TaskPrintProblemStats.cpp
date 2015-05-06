@@ -23,3 +23,10 @@ void TaskPrintProblemStats::run()
 	//TODO: Refactor print stats from problem class
 	processInfo->originalProblem->printProblemStatistics();
 }
+
+std::string TaskPrintProblemStats::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

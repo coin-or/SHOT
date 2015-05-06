@@ -6,6 +6,7 @@ TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy()
 	settings = SHOTSettings::Settings::getInstance();
 
 	isInitialized = false;
+	temporaryOptLimitUsed = false;
 
 	solutionLimitStrategy = new MILPSolutionLimitStrategyIncrease();
 	auto initLim = solutionLimitStrategy->getInitialLimit();
@@ -30,16 +31,39 @@ void TaskExecuteSolutionLimitStrategy::run()
 
 	constrTolUpdateStrategy->calculateNewTolerance();
 
-	currIter->MILPSolutionLimitUpdated = solutionLimitStrategy->updateLimit();
-
-	if (currIter->MILPSolutionLimitUpdated)
+	if (temporaryOptLimitUsed)
 	{
-		int newLimit = solutionLimitStrategy->getNewLimit();
+		temporaryOptLimitUsed = false;
+		processInfo->MILPSolver->setSolutionLimit(previousSolLimit);
+	}
 
-		if (newLimit != processInfo->getPreviousIteration()->usedMILPSolutionLimit)
+	if (currIter->iterationNumber - processInfo->iterLastDualBoundUpdate
+			> settings->getIntSetting("MILPSolForceOptimalIter", "MILP") && processInfo->getDualBound() > -DBL_MAX)
+	{
+		previousSolLimit = processInfo->getPreviousIteration()->usedMILPSolutionLimit;
+		processInfo->MILPSolver->setSolutionLimit(2100000000);
+		temporaryOptLimitUsed = true;
+	}
+	else
+	{
+		currIter->MILPSolutionLimitUpdated = solutionLimitStrategy->updateLimit();
+
+		if (currIter->MILPSolutionLimitUpdated)
 		{
-			processInfo->MILPSolver->setSolutionLimit(newLimit);
+			int newLimit = solutionLimitStrategy->getNewLimit();
+
+			if (newLimit != processInfo->getPreviousIteration()->usedMILPSolutionLimit)
+			{
+				processInfo->MILPSolver->setSolutionLimit(newLimit);
+			}
 		}
 	}
+
+}
+
+std::string TaskExecuteSolutionLimitStrategy::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
 
 }

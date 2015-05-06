@@ -31,3 +31,10 @@ void TaskPrintIterationHeader::run()
 			<< "==================================================================================" << CoinMessageEol;
 	//}
 }
+
+std::string TaskPrintIterationHeader::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
