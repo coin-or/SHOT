@@ -55,3 +55,10 @@ void TaskInitializeOriginalProblem::run()
 {
 
 }
+
+std::string TaskInitializeOriginalProblem::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

@@ -10,6 +10,7 @@ class TaskInitializeIteration: public TaskBase
 		~TaskInitializeIteration();
 
 		void run();
+		virtual std::string getType();
 
 	private:
 

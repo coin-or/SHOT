@@ -13,6 +13,7 @@ class TaskSimple: public TaskBase
 		void setFunction(std::function<bool()> taskFunction);
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::function<bool()> task;

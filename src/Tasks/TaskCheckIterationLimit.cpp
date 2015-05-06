@@ -27,6 +27,14 @@ void TaskCheckIterationLimit::run()
 			>= settings->getIntSetting("IterLimitLP", "Algorithm")
 					+ settings->getIntSetting("IterLimitMILP", "Algorithm"))
 	{
+		processInfo->terminationReason = E_TerminationReason::IterationLimit;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}
+}
+
+std::string TaskCheckIterationLimit::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
 }

@@ -295,6 +295,8 @@ void SHOTSolver::initializeSettings()
 			"End MILP solution limit when final constraint tolerance is reached ", 1.0, DBL_MAX);
 	settings->createSetting("MILPSolIncreaseIter", "MILP", 50,
 			"Max number of iterations between MILP solution limit increase", 0, INT_MAX);
+	settings->createSetting("MILPSolForceOptimalIter", "MILP", 100,
+			"Number of iterations without dual bound update to force optimal MILP solution", 0, INT_MAX);
 	settings->createSetting("MILPSolLimitUpdateTol", "MILP", 0.01,
 			"The constraint tolerance to update solution limit at", 0, DBL_MAX);
 
@@ -321,7 +323,11 @@ void SHOTSolver::initializeSettings()
 
 	settings->createSetting("SolnPoolGap", "CPLEX", 1.0e+75,
 			"The relative tolerance on the objective values in the solution pool", 0, 1.0e+75);
+	settings->createSetting("MIPEmphasis", "CPLEX", 1,
+			"0 = balanced, 1 = feasibility, 2 = optimality, 3 = best bound, 4 = hidden feasible", 0, 4);
 
+	settings->createSetting("Probe", "CPLEX", 2,
+			"-1 = no probing, 0 = automatic, 1 = moderate, 2 = aggressive, 3 = very aggressive", -1, 3);
 	// Linesearch
 	std::vector < std::string > enumLinesearchMethod;
 	enumLinesearchMethod.push_back("Boost");
@@ -330,7 +336,7 @@ void SHOTSolver::initializeSettings()
 			"Linesearch method", enumLinesearchMethod);
 	enumLinesearchMethod.clear();
 
-	settings->createSetting("LinesearchEps", "Linesearch", 1e-14, "Epsilon tolerance for linesearch", 0.0, DBL_MAX);
+	settings->createSetting("LinesearchEps", "Linesearch", 1e-16, "Epsilon tolerance for linesearch", 0.0, DBL_MAX);
 	settings->createSetting("LinesearchMaxIter", "Linesearch", 100, "Maximal iterations for linesearch", 0, INT_MAX);
 
 	// Tracefile

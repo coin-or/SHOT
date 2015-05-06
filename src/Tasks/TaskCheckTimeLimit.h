@@ -16,6 +16,7 @@ class TaskCheckTimeLimit: public TaskBase
 		virtual ~TaskCheckTimeLimit();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::string taskIDIfTrue;

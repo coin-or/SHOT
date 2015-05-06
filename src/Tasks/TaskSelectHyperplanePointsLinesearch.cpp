@@ -90,3 +90,10 @@ void TaskSelectHyperplanePointsLinesearch::run()
 		}
 	}
 }
+
+std::string TaskSelectHyperplanePointsLinesearch::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

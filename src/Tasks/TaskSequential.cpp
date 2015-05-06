@@ -22,7 +22,11 @@ TaskSequential::~TaskSequential()
 void TaskSequential::run()
 {
 	for (auto T : m_tasks)
+	{
+		//std::cout << "Next task is of type: " << T->getType() << std::endl;
 		T->run();
+		//std::cout << "Finished task" << std::endl;
+	}
 }
 
 void TaskSequential::addTasks(std::vector<TaskBase*> tasks)
@@ -34,4 +38,11 @@ void TaskSequential::addTasks(std::vector<TaskBase*> tasks)
 void TaskSequential::addTask(TaskBase* task)
 {
 	m_tasks.emplace_back(task);
+}
+
+std::string TaskSequential::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
 }

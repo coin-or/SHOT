@@ -25,6 +25,14 @@ void TaskCheckTimeLimit::run()
 
 	if (processInfo->getElapsedTime("Total") >= settings->getDoubleSetting("TimeLimit", "Algorithm"))
 	{
+		processInfo->terminationReason = E_TerminationReason::TimeLimit;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}
+}
+
+std::string TaskCheckTimeLimit::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
 }

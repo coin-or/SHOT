@@ -11,6 +11,7 @@ class TaskPrintIterationReport: public TaskBase
 		virtual ~TaskPrintIterationReport();
 
 		void run();
+		virtual std::string getType();
 	private:
 
 		SHOTSettings::Settings *settings;

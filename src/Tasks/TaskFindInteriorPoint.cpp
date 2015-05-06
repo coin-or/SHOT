@@ -105,3 +105,10 @@ void TaskFindInteriorPoint::run()
 
 	processInfo->stopTimer("InteriorPointTotal");
 }
+
+std::string TaskFindInteriorPoint::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

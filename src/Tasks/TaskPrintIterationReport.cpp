@@ -40,6 +40,8 @@ void TaskPrintIterationReport::run()
 
 		std::stringstream tmpType;
 
+		bool hasSolution = true;
+
 		if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic
 				|| processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0)
 		{
@@ -62,6 +64,7 @@ void TaskPrintIterationReport::run()
 		if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
 		{
 			tmpType << " E";
+			hasSolution = false;
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Feasible)
 		{
@@ -70,6 +73,7 @@ void TaskPrintIterationReport::run()
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
 		{
 			tmpType << " I";
+			hasSolution = false;
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
 		{
@@ -90,19 +94,24 @@ void TaskPrintIterationReport::run()
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
 		{
 			tmpType << " UB";
+			hasSolution = false;
 		}
 
 		std::string solLimit = (currIter->isMILP() ? std::to_string(currIter->usedMILPSolutionLimit) : " ");
 
 		std::string tmpConstr;
 
-		if (currIter->maxDeviationConstraint != -1)
+		if (hasSolution && currIter->maxDeviationConstraint != -1)
 		{
 			tmpConstr = processInfo->originalProblem->getConstraintNames()[currIter->maxDeviationConstraint];
 		}
-		else
+		else if (hasSolution)
 		{
 			tmpConstr = processInfo->originalProblem->getConstraintNames().back();
+		}
+		else
+		{
+			tmpConstr = "";
 		}
 
 		auto tmpLine = boost::format(
@@ -118,3 +127,10 @@ void TaskPrintIterationReport::run()
 		processInfo->logger.message(1) << "ERROR, cannot write iteration solution report!" << CoinMessageEol;
 	}
 }
+std::string TaskPrintIterationReport::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
+

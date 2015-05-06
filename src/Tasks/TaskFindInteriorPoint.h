@@ -15,6 +15,7 @@ class TaskFindInteriorPoint: public TaskBase
 		virtual ~TaskFindInteriorPoint();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;

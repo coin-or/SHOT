@@ -175,55 +175,94 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	// Fix variables
 	auto varTypes = processInfo->originalProblem->getVariableTypes();
-
-	if (settings->getIntSetting("NLPFixedSource", "PrimalBound") == static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
-			|| settings->getIntSetting("NLPFixedSource", "PrimalBound")
-					== static_cast<int>(ES_PrimalBoundNLPFixedPoint::MILPSolution))
+	if (currIter->solutionPoints.size() == 0) //No solution found in last iteration
 	{
-		if (testedPoints.size() == 0)
+		if (processInfo->dualSolutions.size() > 0)
 		{
-			solPts.push_back(currIter->solutionPoints.at(0));
-			testedPoints.push_back(currIter->solutionPoints.at(0).point);
-		}
-		else
-		{
+			auto tmpPoint = processInfo->dualSolutions.back().point;
+
 			for (int i = 0; i < testedPoints.size(); i++)
 			{
-				if (UtilityFunctions::isDifferentRoundedSelectedElements(currIter->solutionPoints.at(0).point,
-						testedPoints.at(i), discreteVariableIndexes))
+				if (UtilityFunctions::isDifferentRoundedSelectedElements(tmpPoint, testedPoints.at(i),
+						discreteVariableIndexes))
 				{
-					solPts.push_back(currIter->solutionPoints.at(0));
-					testedPoints.push_back(currIter->solutionPoints.at(0).point);
+					SolutionPoint tmpSP;
+					tmpSP.iterFound = processInfo->dualSolutions.back().iterFound;
+					//tmpSP.maxDeviation = processInfo->dualSolutions.back().;
+					tmpSP.objectiveValue = processInfo->dualSolutions.back().objValue;
+					tmpSP.point = tmpPoint;
+					tmpSP.maxDeviation = processInfo->originalProblem->getMostDeviatingConstraint(tmpSP.point);
+
+					solPts.push_back(tmpSP);
+					testedPoints.push_back(tmpSP.point);
 					break;
+				}
+			}
+
+		}
+	}
+	else
+	{
+		if (settings->getIntSetting("NLPFixedSource", "PrimalBound")
+				== static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
+				|| settings->getIntSetting("NLPFixedSource", "PrimalBound")
+						== static_cast<int>(ES_PrimalBoundNLPFixedPoint::MILPSolution))
+		{
+			if (testedPoints.size() == 0)
+			{
+				solPts.push_back(currIter->solutionPoints.at(0));
+				testedPoints.push_back(currIter->solutionPoints.at(0).point);
+			}
+			else
+			{
+				for (int i = 0; i < testedPoints.size(); i++)
+				{
+					if (UtilityFunctions::isDifferentRoundedSelectedElements(currIter->solutionPoints.at(0).point,
+							testedPoints.at(i), discreteVariableIndexes))
+					{
+						solPts.push_back(currIter->solutionPoints.at(0));
+						testedPoints.push_back(currIter->solutionPoints.at(0).point);
+						break;
+					}
+					else
+					{
+					}
+				}
+			}
+		}
+
+		if (settings->getIntSetting("NLPFixedSource", "PrimalBound")
+				== static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
+				|| settings->getIntSetting("NLPFixedSource", "PrimalBound")
+						== static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviation))
+		{
+			if (testedPoints.size() == 0)
+			{
+				solPts.push_back(currIter->getSolutionPointWithSmallestDeviation());
+				testedPoints.push_back(currIter->getSolutionPointWithSmallestDeviation().point);
+			}
+			else
+			{
+				auto solPtSmallestDev = currIter->getSolutionPointWithSmallestDeviation();
+
+				for (int i = 0; i < testedPoints.size(); i++)
+				{
+					if (UtilityFunctions::isDifferentRoundedSelectedElements(solPtSmallestDev.point, testedPoints.at(i),
+							discreteVariableIndexes))
+					{
+						solPts.push_back(solPtSmallestDev);
+						testedPoints.push_back(solPtSmallestDev.point);
+						break;
+					}
 				}
 			}
 		}
 	}
 
-	if (settings->getIntSetting("NLPFixedSource", "PrimalBound") == static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
-			|| settings->getIntSetting("NLPFixedSource", "PrimalBound")
-					== static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviation))
+	if (solPts.size() == 0)
 	{
-		if (testedPoints.size() == 0)
-		{
-			solPts.push_back(currIter->getSolutionPointWithSmallestDeviation());
-			testedPoints.push_back(currIter->getSolutionPointWithSmallestDeviation().point);
-		}
-		else
-		{
-			auto solPtSmallestDev = currIter->getSolutionPointWithSmallestDeviation();
-
-			for (int i = 0; i < testedPoints.size(); i++)
-			{
-				if (UtilityFunctions::isDifferentRoundedSelectedElements(solPtSmallestDev.point, testedPoints.at(i),
-						discreteVariableIndexes))
-				{
-					solPts.push_back(solPtSmallestDev);
-					testedPoints.push_back(solPtSmallestDev.point);
-					break;
-				}
-			}
-		}
+		processInfo->itersMILPWithoutNLPCall++;
+		return (false);
 	}
 
 	for (int j = 0; j < solPts.size(); j++)

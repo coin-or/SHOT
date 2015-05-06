@@ -18,6 +18,7 @@ class TaskCheckPrimalSolutionCandidates: public TaskBase
 		TaskCheckPrimalSolutionCandidates();
 		virtual ~TaskCheckPrimalSolutionCandidates();
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 

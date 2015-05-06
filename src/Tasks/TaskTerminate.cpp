@@ -22,3 +22,10 @@ void TaskTerminate::run()
 {
 	//processInfo->tasks->clearTasks();
 }
+
+std::string TaskTerminate::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

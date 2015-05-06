@@ -47,3 +47,10 @@ void TaskExecuteRelaxationStrategy::run()
 	}
 
 }
+std::string TaskExecuteRelaxationStrategy::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
+

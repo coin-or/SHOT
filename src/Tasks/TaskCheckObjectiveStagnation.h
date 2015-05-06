@@ -16,6 +16,7 @@ class TaskCheckObjectiveStagnation: public TaskBase
 		virtual ~TaskCheckObjectiveStagnation();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::string taskIDIfTrue;

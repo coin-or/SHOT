@@ -33,3 +33,10 @@ void TaskSimple::run()
 		throw(e);
 	}
 }
+
+std::string TaskSimple::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

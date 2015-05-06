@@ -67,3 +67,10 @@ void TaskCalculateSolutionChangeNorm::run()
 	}
 
 }
+
+std::string TaskCalculateSolutionChangeNorm::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

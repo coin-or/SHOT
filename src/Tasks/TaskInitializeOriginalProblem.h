@@ -15,6 +15,7 @@ class TaskInitializeOriginalProblem: public TaskBase
 		~TaskInitializeOriginalProblem();
 
 		void run();
+		virtual std::string getType();
 
 	private:
 		OptProblemOriginal *problem;

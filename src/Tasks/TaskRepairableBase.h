@@ -9,6 +9,7 @@ class TaskRepairableBase: public TaskBase
 		~TaskRepairableBase();
 
 		virtual void repair();
+		virtual std::string getType();
 
 	private:
 

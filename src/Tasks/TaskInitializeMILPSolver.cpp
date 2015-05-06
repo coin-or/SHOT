@@ -49,3 +49,10 @@ void TaskInitializeMILPSolver::run()
 {
 
 }
+std::string TaskInitializeMILPSolver::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
+

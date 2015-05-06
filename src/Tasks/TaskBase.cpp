@@ -25,3 +25,10 @@ void TaskBase::run()
 {
 	std::cout << "What?!" << std::endl;
 }
+
+std::string TaskBase::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}

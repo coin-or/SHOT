@@ -18,6 +18,7 @@ class TaskCreateMILPProblem: public TaskBase
 		virtual ~TaskCreateMILPProblem();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 

@@ -16,6 +16,7 @@ class TaskCheckRelativeGap: public TaskBase
 		virtual ~TaskCheckRelativeGap();
 
 		virtual void run();
+		virtual std::string getType();
 
 	private:
 		std::string taskIDIfTrue;

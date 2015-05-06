@@ -45,3 +45,10 @@ void TaskSelectHyperplanePointsSolution::run()
 		}
 	}
 }
+
+std::string TaskSelectHyperplanePointsSolution::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
