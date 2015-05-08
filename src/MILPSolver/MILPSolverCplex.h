@@ -41,7 +41,10 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		int firstNonLazyHyperplane;
 		int iterLastLazyConvert;
-		double timeLastIter;
+		//double timeLastIter;
+		std::vector<double> iterDurations;
+
+		//double bestCutoff = DBL_MAX;
 
 	protected:
 

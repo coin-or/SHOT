@@ -79,9 +79,10 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 						< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
 								* max(1.0, abs(prevIter->objectiveValue)))
 		{
-			std::cout << "updated nonlinear sol lim for "
-					<< settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
-							* max(1.0, abs(prevIter->objectiveValue)) << std::endl;
+			/*std::cout << "updated nonlinear sol lim for "
+			 << settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+			 * max(1.0, abs(prevIter->objectiveValue)) << std::endl;*/
+
 			return (true);
 		}
 	}

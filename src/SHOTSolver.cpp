@@ -350,6 +350,10 @@ void SHOTSolver::initializeSettings()
 
 	// Primal bound
 	settings->createSetting("UseNLPCall", "PrimalBound", true, "Call NLP solver to find primal bound");
+	settings->createSetting("AddPrimalBoundAsInteriorPoint", "Algorithm", true,
+			"Set the best primal bound as internal point");
+	settings->createSetting("UseObjectiveLinesearch", "PrimalBound", true,
+			"Use a linesearch to find a primal bound if objective nonlinear");
 	std::vector < std::string > enumPrimalBoundNLPStartingPoint;
 	enumPrimalBoundNLPStartingPoint.push_back("MILPSolution");
 	enumPrimalBoundNLPStartingPoint.push_back("SmallestDeviation");

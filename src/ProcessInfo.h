@@ -105,6 +105,8 @@ class ProcessInfo
 		int iterLastPrimalBoundUpdate;
 		int iterLastDualBoundUpdate;
 
+		int numOriginalInteriorPoints;
+
 		std::vector<int> itersSolvedAsECP;
 
 		//double getLastMaxDeviation();

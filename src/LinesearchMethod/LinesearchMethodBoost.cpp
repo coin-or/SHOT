@@ -4,71 +4,16 @@ LinesearchMethodBoost::LinesearchMethodBoost()
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+
+	test = new Test();
+	test->originalProblem = (processInfo->originalProblem);
+
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
 {
+	delete test;
 }
-
-class Test
-{
-	private:
-		std::vector<double> firstPt;
-		std::vector<double> secondPt;
-		OptProblemOriginal *originalProblem;
-		//std::vector<char> varTypes;
-
-	public:
-		Test(std::vector<double> ptA, std::vector<double> ptB, OptProblemOriginal *prob)
-		{
-			firstPt = ptA;
-			secondPt = ptB;
-			originalProblem = prob;
-
-			//auto varTypes = originalProblem->getVariableTypes();
-			/*
-			 for (int i = 0; i < originalProblem->getNumberOfVariables();i++)
-			 {
-			 if (varTypes.at(i) == 'B' || varTypes.at(i) == 'I')
-			 {
-			 std::cout << "changing point from " << secondPt.at(i) " to " <<firstPt.at(i) << std::endl;
-			 secondPt.at(i) = firstPt.at(i);
-			 }
-			 }*/
-		}
-
-		double operator()(const double x)
-		{
-			int length = firstPt.size();
-			std::vector<double> ptNew(length);
-
-			for (int i = 0; i < length; i++)
-			{
-				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
-			}
-
-			auto validNewPt = originalProblem->getMostDeviatingConstraint(ptNew).value;
-
-			return validNewPt;
-		}
-};
-
-class TerminationCondition
-{
-	private:
-		double tol;
-
-	public:
-		TerminationCondition(double tolerance)
-		{
-			tol = tolerance;
-		}
-
-		bool operator()(double min, double max)
-		{
-			return abs(min - max) <= tol;
-		}
-};
 
 std::vector<double> LinesearchMethodBoost::findZero(std::vector<double> ptA, std::vector<double> ptB, int Nmax,
 		double delta)
@@ -79,7 +24,6 @@ std::vector<double> LinesearchMethodBoost::findZero(std::vector<double> ptA, std
 				<< " and " << std::to_string(ptA.size()) << CoinMessageEol;
 	}
 
-	Test t(ptA, ptB, processInfo->originalProblem);
 	int length = ptA.size();
 	std::vector<double> ptNew(length);
 	std::vector<double> ptNew2(length);
@@ -87,9 +31,12 @@ std::vector<double> LinesearchMethodBoost::findZero(std::vector<double> ptA, std
 	typedef std::pair<double, double> Result;
 	boost::uintmax_t max_iter = Nmax;
 
+	test->firstPt = ptA;
+	test->secondPt = ptB;
+
 	try
 	{
-		Result r1 = boost::math::tools::toms748_solve(t, 0.0, 1.0, TerminationCondition(delta), max_iter);
+		Result r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(delta), max_iter);
 
 		//if (r1.first < 0.00001)
 		//	r1.first = 0;

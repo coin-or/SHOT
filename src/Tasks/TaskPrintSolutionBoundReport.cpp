@@ -30,10 +30,19 @@ void TaskPrintSolutionBoundReport::run()
 		double objLB = objBounds.first;
 		double objUB = objBounds.second;
 
-		auto tmpLine = boost::format("    Current obj. bound: %|24t|[%1%, %2%] %|46t|Gap abs/rel: %3% / %4%") % objLB
-				% objUB % absGap % relGap;
+		auto tmpLine = boost::format("At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
+				% processInfo->getElapsedTime("Total") % objLB % objUB % absGap % relGap;
 
-		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
+		processInfo->logger.message(2) << "                                           " << CoinMessageNewline
+				<< tmpLine.str() << CoinMessageEol;
+
+		if (processInfo->interiorPts.size() > 1)
+		{
+			processInfo->logger.message(2) << "Number of interior points: " << (int) processInfo->interiorPts.size()
+					<< CoinMessageEol;
+		}
+
+		processInfo->logger.message(2) << " " << CoinMessageEol;
 
 		itersSinceLastPrintout = 0;
 		timeLastPrintout = currElapsedTime;

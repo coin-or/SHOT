@@ -127,6 +127,8 @@ ProcessInfo::ProcessInfo()
 	iterLastPrimalBoundUpdate = 0;
 	iterLastDualBoundUpdate = 0;
 
+	numOriginalInteriorPoints = 0;
+
 	currentObjectiveBounds.first = -DBL_MAX;
 	currentObjectiveBounds.second = DBL_MAX;
 
@@ -403,7 +405,7 @@ std::string ProcessInfo::getTraceResult()
 	}
 	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Infeasible)
 	{
-		modelStatus = "19";
+		modelStatus = "4";
 	}
 	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
 	{
@@ -437,7 +439,7 @@ std::string ProcessInfo::getTraceResult()
 	}
 	else if (this->terminationReason == E_TerminationReason::Error)
 	{
-		solverStatus = "12";
+		solverStatus = "10";
 	}
 	else if (this->terminationReason == E_TerminationReason::InfeasibleProblem)
 	{
@@ -451,7 +453,7 @@ std::string ProcessInfo::getTraceResult()
 	}
 	else
 	{
-		solverStatus = "NA";
+		solverStatus = "10";
 		this->logger.message(0) << "ERROR: Unknown return code from solver" << CoinMessageEol;
 	}
 

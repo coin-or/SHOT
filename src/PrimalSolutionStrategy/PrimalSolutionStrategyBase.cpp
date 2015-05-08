@@ -61,6 +61,9 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		case E_PrimalSolutionSource::MILPSolutionPool:
 			sourceDesc = "MILP sol. pool";
 			break;
+		case E_PrimalSolutionSource::ObjectiveConstraint:
+			sourceDesc = "Obj. constr.";
+			break;
 		default:
 			break;
 	}
@@ -108,7 +111,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 	}
 
-	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint, 0.0001);
+	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint, 0.000001);
 
 	if (std::isnan(primalSol.objValue))
 	{
@@ -120,25 +123,49 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 	 }*/
 
+	/*if (primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint)
+	 {
+	 std::cout << "Objective constraint value " << tmpObjVal << " and error " << mostDev.value << std::endl;
+	 }*/
+
+	if ((mostDev.value >= 0 && mostDev.value <= 0.5)
+			|| primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint) // Add point as hyperplane
+	{
+		std::pair<int, std::vector<double>> tmpItem;
+		tmpItem.first = mostDev.idx;
+		tmpItem.second = tmpPoint;
+		processInfo->hyperplaneWaitingList.push_back(tmpItem);
+
+		HPadded = '*';
+
+	}
+
+	bool updatePrimal = isLinConstrFulfilled && isNonLinConstrFulfilled;
+
+	updatePrimal = updatePrimal && (isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
+			|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second);
+
 	if (((isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
 			|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second)) && isLinConstrFulfilled
 			&& isNonLinConstrFulfilled)
 	{
-		if (mostDev.value >= 0) // Add point as hyperplane
-		{
-			processInfo->currentObjectiveBounds.second = tmpObjVal;
-			std::pair<int, std::vector<double>> tmpItem;
-			tmpItem.first = mostDev.idx;
-			tmpItem.second = tmpPoint;
-			processInfo->hyperplaneWaitingList.push_back(tmpItem);
+		/*if (mostDev.value >= 0) // Add point as hyperplane
+		 {
+		 processInfo->currentObjectiveBounds.second = tmpObjVal;
+		 std::pair<int, std::vector<double>> tmpItem;
+		 tmpItem.first = mostDev.idx;
+		 tmpItem.second = tmpPoint;
+		 processInfo->hyperplaneWaitingList.push_back(tmpItem);
 
-			HPadded = '*';
+		 HPadded = '*';
 
-		}
-		else
-		{
-			processInfo->currentObjectiveBounds.second = tmpObjVal;
-		}
+		 }
+		 else
+		 {
+		 processInfo->currentObjectiveBounds.second = tmpObjVal;
+		 }*/
+
+		processInfo->currentObjectiveBounds.second = tmpObjVal;
 
 		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4%") % tmpObjVal % mostDev.value
 				% sourceDesc % HPadded;
@@ -152,6 +179,24 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		processInfo->primalSolution = tmpPoint;
 
+		if (settings->getBoolSetting("AddPrimalBoundAsInteriorPoint", "Algorithm") && mostDev.value < -1e-11)
+		{
+			InteriorPoint tmpIP;
+
+			tmpIP.point = tmpPoint;
+
+			processInfo->logger.message(1) << "    Primal solution point added as interior point." << CoinMessageEol;
+
+			if (processInfo->interiorPts.size() == processInfo->numOriginalInteriorPoints)
+			{
+				processInfo->interiorPts.push_back(tmpIP);
+			}
+			else
+			{
+				processInfo->interiorPts.back() = tmpIP;
+			}
+
+		}
 		return (true);
 	}
 

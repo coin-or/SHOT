@@ -127,7 +127,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 			processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
 			dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
-
 		}
 	}
 

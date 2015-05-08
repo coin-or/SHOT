@@ -15,6 +15,8 @@
 #include "../LinesearchMethod/LinesearchMethodBoost.h"
 #include "../MILPSolver/IMILPSolver.h"
 
+#include <boost/math/tools/roots.hpp>
+
 class TaskSelectPrimalCandidatesFromLinesearch: public TaskBase
 {
 	public:
