@@ -847,46 +847,6 @@ void MILPSolverCplex::setCutOff(double cutOff)
 {
 	try
 	{
-		if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
-		{
-			/*//auto dualSol = processInfo->dualSolutions.back();
-
-			 auto prevSol = processInfo->getPreviousIteration();
-
-			 //auto lastSol = processInfo->getPreviousIteration()->
-
-			 double mu = prevSol->solutionPoints.front().objectiveValue;
-			 double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1,
-			 prevSol->solutionPoints.front().point);
-			 */
-
-			/*
-			 if (processInfo->dualSolutions.size() > 0)
-			 {
-			 auto dualSol = processInfo->dualSolutions.back();
-			 double mu = dualSol.objValue;
-			 double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
-
-			 auto tmpPoint = dualSol.point;
-			 tmpPoint.back() = mu + error;
-
-			 std::cout << "Error is " << error << std::endl;
-
-			 double tmpCutOff = mu + error;
-
-			 std::cout << "New cutoff " << tmpCutOff << std::endl;
-			 std::cout << "Given cutoff " << cutOff << std::endl;
-
-			 if (tmpCutOff < bestCutoff || cutOff < bestCutoff)
-			 {
-			 bestCutoff = min(tmpCutOff, cutOff);
-			 }
-
-			 //cutOff = min(bestCutoff, cutOff);
-
-			 //std::cout << "Used cutoff " << bestCutoff << std::endl;
-			 }*/
-		}
 
 		//processInfo->logger.message(2) << "Setting cutoff value to " << cutOff << CoinMessageEol;
 

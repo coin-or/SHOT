@@ -228,7 +228,10 @@ bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point, double
 	for (int i = 0; i < numNLC; i++)
 	{
 		double tmpVal = calculateConstraintFunctionValue(idxNLCs.at(i), point);
-		if (tmpVal > eps) return false;
+		if (tmpVal > eps)
+		{
+			return false;
+		}
 	}
 
 	return true;
@@ -304,11 +307,11 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 			//std::cout << "Lin value is: "<< tmpVal << std::endl;
 		}
 	}
-	else if (idx != -1)
-	{
-		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true)
-				- getProblemInstance()->instanceData->constraints->con[idx]->ub;
-	}
+	/*else if (idx != -1)
+	 {
+	 tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true)
+	 - getProblemInstance()->instanceData->constraints->con[idx]->ub;
+	 }*/
 	else
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
@@ -800,7 +803,7 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
 
 	auto QPStrategy = static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm"));
 
-	if (QPStrategy == ES_QPStrategy::Nonlinear/* && QPStrategy != ES_QPStrategy::QuadraticObjective*/)
+	if (QPStrategy == ES_QPStrategy::Nonlinear || QPStrategy != ES_QPStrategy::QuadraticallyConstrained)
 //	if (!settings->getBoolSetting("UseQuadraticProgramming", "Algorithm"))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)

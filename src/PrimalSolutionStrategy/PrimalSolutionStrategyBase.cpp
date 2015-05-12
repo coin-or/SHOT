@@ -68,7 +68,8 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 			break;
 	}
 
-	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool)
+	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
+			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
 	{
 		isLinConstrFulfilled = true;
 		mostDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
@@ -105,13 +106,15 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		}
 
-		isLinConstrFulfilled = processInfo->originalProblem->isLinearConstraintsFulfilledInPoint(tmpPoint, 0.000001);
+		isLinConstrFulfilled = processInfo->originalProblem->isLinearConstraintsFulfilledInPoint(tmpPoint,
+				settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"));
 
 		mostDev = processInfo->originalProblem->getMostDeviatingAllConstraint(primalSol.point);
 
 	}
 
-	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint, 0.000001);
+	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint,
+			settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"));
 
 	if (std::isnan(primalSol.objValue))
 	{
@@ -128,8 +131,11 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	 std::cout << "Objective constraint value " << tmpObjVal << " and error " << mostDev.value << std::endl;
 	 }*/
 
-	if ((mostDev.value >= 0 && mostDev.value <= 0.5)
-			|| primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint) // Add point as hyperplane
+	bool isMostDevConstrNonlinear = processInfo->originalProblem->isConstraintNonlinear(mostDev.idx);
+
+	if (isMostDevConstrNonlinear
+			&& ((mostDev.value >= 0 && mostDev.value < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+					|| primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint)) // Add point as hyperplane
 	{
 		std::pair<int, std::vector<double>> tmpItem;
 		tmpItem.first = mostDev.idx;
@@ -137,17 +143,21 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		processInfo->hyperplaneWaitingList.push_back(tmpItem);
 
 		HPadded = '*';
-
 	}
 
 	bool updatePrimal = isLinConstrFulfilled && isNonLinConstrFulfilled;
 
-	updatePrimal = updatePrimal && (isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
-			|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second);
+	/*std::cout << "Fulfilled linear: " << (isLinConstrFulfilled == true) << std::endl;
+	 std::cout << "Fulfilled nonlinear: " << (isNonLinConstrFulfilled == true) << " " << mostDev.value << std::endl;
+	 std::cout << std::endl;
+	 */
+	updatePrimal = updatePrimal
+			&& ((isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
+					|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second));
 
-	if (((isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
-			|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second)) && isLinConstrFulfilled
-			&& isNonLinConstrFulfilled)
+	//if (((isMinimization && tmpObjVal < processInfo->currentObjectiveBounds.second)
+	//		|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second)))
+	if (updatePrimal)
 	{
 		/*if (mostDev.value >= 0) // Add point as hyperplane
 		 {
@@ -195,6 +205,9 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 			{
 				processInfo->interiorPts.back() = tmpIP;
 			}
+
+			/*UtilityFunctions::displayVector(processInfo->interiorPts.at(0).point);
+			 UtilityFunctions::displayVector(processInfo->interiorPts.at(1).point);*/
 
 		}
 		return (true);

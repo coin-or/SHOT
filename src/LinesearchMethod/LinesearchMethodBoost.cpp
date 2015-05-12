@@ -38,6 +38,9 @@ std::vector<double> LinesearchMethodBoost::findZero(std::vector<double> ptA, std
 	{
 		Result r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(delta), max_iter);
 
+		if (max_iter == Nmax) processInfo->logger.message(1) << "Warning, number of line search iterations reached!"
+				<< CoinMessageEol;
+
 		//if (r1.first < 0.00001)
 		//	r1.first = 0;
 

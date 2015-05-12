@@ -263,7 +263,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 	if (solPts.size() == 0)
 	{
 		processInfo->itersMILPWithoutNLPCall++;
-		processInfo->logger.message(1) << "    No NLP call performed" << CoinMessageEol;
+		//processInfo->logger.message(1) << "    No NLP call performed" << CoinMessageEol;
 		return (false);
 
 	}

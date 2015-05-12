@@ -92,13 +92,14 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 		processInfo->startTimer("PrimalBoundTotal");
 		processInfo->startTimer("PrimalBoundLinesearch");
 
-		//auto allSolutions = processInfo->MILPSolver->getAllVariableSolutions();
-
 		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
 		if (settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
 				&& processInfo->originalProblem->isObjectiveFunctionNonlinear())
 		{
 			Test2 t(processInfo->originalProblem);
+
+			double tol = settings->getDoubleSetting("LinesearchEps", "Linesearch");
+			boost::uintmax_t N = settings->getIntSetting("LinesearchMaxIter", "Linesearch");
 
 			for (int i = 0; i < currIter->solutionPoints.size(); i++)
 			{
@@ -110,24 +111,26 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 				double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
 				vector<double> tmpPoint(dualSol.point);
-				tmpPoint.back() = mu + 1.1 * error;
-
-				//std::cout << "Error is " << error << std::endl;
-
-				//std::cout << "adding primal solution candidate" << std::endl;
+				tmpPoint.back() = mu + 1.2 * error;
 
 				int numVar = processInfo->originalProblem->getNumberOfVariables();
-				//std::vector<double> ptA(numVar);
-				//std::vector<double> ptB(numVar);
+
 				std::vector<double> ptNew(numVar);
 
 				t.firstPt = dualSol.point;
 				t.secondPt = tmpPoint;
 
 				typedef std::pair<double, double> Result;
-				boost::uintmax_t max_iter = 100;
+				boost::uintmax_t max_iter = N;
 
-				Result r1 = boost::math::tools::toms748_solve(t, 0.0, 1.0, TerminationCondition2(1e-18), max_iter);
+				Result r1 = boost::math::tools::toms748_solve(t, 0.0, 1.0, TerminationCondition2(tol), max_iter);
+
+				if (max_iter == N)
+				{
+					processInfo->logger.message(1)
+							<< "Warning, number of line search iterations reached for primal bound search!"
+							<< CoinMessageEol;
+				}
 
 				for (int i = 0; i < numVar; i++)
 				{
