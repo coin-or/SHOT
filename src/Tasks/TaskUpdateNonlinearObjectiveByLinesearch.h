@@ -17,11 +17,11 @@
 
 #include <boost/math/tools/roots.hpp>
 
-class TaskSelectPrimalCandidatesFromLinesearch: public TaskBase
+class TaskUpdateNonlinearObjectiveByLinesearch: public TaskBase
 {
 	public:
-		TaskSelectPrimalCandidatesFromLinesearch();
-		virtual ~TaskSelectPrimalCandidatesFromLinesearch();
+		TaskUpdateNonlinearObjectiveByLinesearch();
+		virtual ~TaskUpdateNonlinearObjectiveByLinesearch();
 		virtual void run();
 		virtual std::string getType();
 	private:

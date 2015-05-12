@@ -45,7 +45,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 		IPOptSolver = "mumps";
 	}
 
-	auto timeLimit = 0.1; //settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
+	auto timeLimit = 1; //settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
 	//auto constrTol = 0.000001; //settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
 
 	osOption->setAnotherSolverOption("tol", "1E-8", "ipopt", "", "double", "");
@@ -54,7 +54,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("max_cpu_time", std::to_string(timeLimit), "ipopt", "", "double", "");
-	//osOption->setAnotherSolverOption("constr_viol_tol", "1E-8", "ipopt", "", "double", "");
+	//osOption->setAnotherSolverOption("constr_viol_tol", "1E-9", "ipopt", "", "double", "");
 
 	/*osOption->setAnotherSolverOption("barrier_tol_factor", "10", "ipopt", "", "double", "");
 	 osOption->setAnotherSolverOption("expect_infeasible_problem", "no", "ipopt", "", "string", "");
@@ -177,6 +177,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 	auto varTypes = processInfo->originalProblem->getVariableTypes();
 	if (currIter->solutionPoints.size() == 0) //No solution found in last iteration
 	{
+
 		if (processInfo->dualSolutions.size() > 0)
 		{
 			auto tmpPoint = processInfo->dualSolutions.back().point;
@@ -262,7 +263,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 	if (solPts.size() == 0)
 	{
 		processInfo->itersMILPWithoutNLPCall++;
+		//processInfo->logger.message(1) << "    No NLP call performed" << CoinMessageEol;
 		return (false);
+
 	}
 
 	for (int j = 0; j < solPts.size(); j++)
@@ -285,6 +288,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 		{
 			std::vector<double> tmpPoint(numVar);
 
+			double tmpObj = NLPSolver->osresult->getObjValue(0, 0);
+
 			int numNLPVars = NLPProblem->getNumberOfVariables();
 
 			for (int i = 0; i < numNLPVars; i++)
@@ -292,12 +297,22 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				tmpPoint.at(i) = NLPSolver->osresult->getVarValue(0, i);
 			}
 
+			if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+			{
+				tmpPoint.back() = tmpObj;
+			}
+
 			processInfo->addPrimalSolutionCandidate(tmpPoint, E_PrimalSolutionSource::NLPFixedIntegers,
 					currIter->iterationNumber);
 
-			processInfo->logger.message(1) << "    Successful NLP call with objective value: "
-					<< NLPSolver->osresult->getObjValue(0, 0) << ", duration: " << timeEnd - timeStart << " s"
-					<< CoinMessageEol;
+			/*UtilityFunctions::displayVector(tmpPoint);
+
+			 UtilityFunctions::displayVector(processInfo->dualSolutions.back().point);
+			 */
+			auto error = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint).value;
+
+			processInfo->logger.message(1) << "    NLP call objective: " << tmpObj << ", max viol.: " << error
+					<< ", duration: " << timeEnd - timeStart << " s" << CoinMessageEol;
 		}
 		else
 		{

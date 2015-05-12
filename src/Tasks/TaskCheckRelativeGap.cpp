@@ -24,7 +24,7 @@ void TaskCheckRelativeGap::run()
 
 	double gap = processInfo->getRelativeObjectiveGap();
 
-	if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+	if (currIter->isMILP() && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& gap <= settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 

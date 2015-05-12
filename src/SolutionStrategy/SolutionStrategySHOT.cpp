@@ -75,6 +75,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tSolveIteration = new TaskSolveIteration();
 	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
 
+	/*if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	 {
+	 TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
+	 processInfo->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
+	 }*/
+
 	TaskBase *tPrintIterReport = new TaskPrintIterationReport();
 	processInfo->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
@@ -127,7 +133,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 			processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
 			dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
-
 		}
 	}
 

@@ -213,13 +213,13 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Termination tolerance setting
-	settings->createSetting("ConstrTermTolMILP", "Algorithm", 0.00001, "Final termination tolerance for constraints", 0,
+	settings->createSetting("ConstrTermTolMILP", "Algorithm", 1e-8, "Final termination tolerance for constraints", 0,
 			DBL_MAX);
 	settings->createSetting("ConstrTermTolInitialFactor", "Algorithm", 100.0,
 			"Factor for constraint tolerance at initial MILP tree limit ", 1.0, DBL_MAX);
 	settings->createSetting("ConstrTermTolLP", "Algorithm", 0.5,
 			"Termination tolerance in constraints for LP preprocessing");
-	settings->createSetting("ObjectionFunctionTol", "Algorithm", 0.0001,
+	settings->createSetting("ObjectionFunctionTol", "Algorithm", 1e-5,
 			"Additional termination tolerance for the linear and nonlinear objective function.");
 	settings->createSetting("GapTermTolAbsolute", "Algorithm", 0.001, "Absolute gap tolerance for objective function",
 			0, DBL_MAX);
@@ -286,7 +286,7 @@ void SHOTSolver::initializeSettings()
 			enumMILPSolver);
 	enumMILPSolver.clear();
 
-	settings->createSetting("PopulateSolutionPool", "MILP", true,
+	settings->createSetting("PopulateSolutionPool", "MILP", false,
 			"Try to fill the solution pool after solver finishes");
 
 	// Initial MILP solution depth
@@ -295,9 +295,9 @@ void SHOTSolver::initializeSettings()
 			"End MILP solution limit when final constraint tolerance is reached ", 1.0, DBL_MAX);
 	settings->createSetting("MILPSolIncreaseIter", "MILP", 50,
 			"Max number of iterations between MILP solution limit increase", 0, INT_MAX);
-	settings->createSetting("MILPSolForceOptimalIter", "MILP", 100,
+	settings->createSetting("MILPSolForceOptimalIter", "MILP", 10000,
 			"Number of iterations without dual bound update to force optimal MILP solution", 0, INT_MAX);
-	settings->createSetting("MILPSolLimitUpdateTol", "MILP", 0.01,
+	settings->createSetting("MILPSolLimitUpdateTol", "MILP", 0.001,
 			"The constraint tolerance to update solution limit at", 0, DBL_MAX);
 
 	// Add constraints as lazy constraints
@@ -350,6 +350,10 @@ void SHOTSolver::initializeSettings()
 
 	// Primal bound
 	settings->createSetting("UseNLPCall", "PrimalBound", true, "Call NLP solver to find primal bound");
+	settings->createSetting("AddPrimalBoundAsInteriorPoint", "Algorithm", false,
+			"Set the best primal bound as internal point");
+	settings->createSetting("UseObjectiveLinesearch", "PrimalBound", true,
+			"Use a linesearch to find a primal bound if objective nonlinear");
 	std::vector < std::string > enumPrimalBoundNLPStartingPoint;
 	enumPrimalBoundNLPStartingPoint.push_back("MILPSolution");
 	enumPrimalBoundNLPStartingPoint.push_back("SmallestDeviation");

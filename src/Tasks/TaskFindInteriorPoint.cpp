@@ -103,6 +103,8 @@ void TaskFindInteriorPoint::run()
 
 	processInfo->logger.message(3) << "Finished solving NLP problem" << CoinMessageEol;
 
+	processInfo->numOriginalInteriorPoints = processInfo->interiorPts.size();
+
 	processInfo->stopTimer("InteriorPointTotal");
 }
 

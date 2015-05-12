@@ -25,7 +25,7 @@ void TaskCheckAbsoluteGap::run()
 
 	double gap = processInfo->getAbsoluteObjectiveGap();
 
-	if (gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")
+	if (currIter->isMILP() && gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")
 			&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 	{
 

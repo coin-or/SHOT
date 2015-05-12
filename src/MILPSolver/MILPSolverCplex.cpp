@@ -90,9 +90,14 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		{
 			cplexVars.add(IloNumVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOBOOL, tmpNames.at(i).c_str()));
 		}
+		else if (tmpTypes.at(i) == 'D')
+		{
+			cplexVars.add(IloSemiContVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOFLOAT, tmpNames.at(i).c_str()));
+		}
 		else
 		{
-			processInfo->logger.message(1) << "Error variable type for " << tmpNames.at(i).c_str() << CoinMessageEol;
+			processInfo->logger.message(1) << "Error variable type " << tmpTypes.at(i) << " for "
+					<< tmpNames.at(i).c_str() << CoinMessageEol;
 		}
 	}
 
@@ -243,6 +248,8 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 
 		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
+
+		//cplexInstance.setParam(IloCplex::ParallelMode,1);
 
 		//cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
@@ -589,7 +596,7 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 		cplexInstance.solve();
 		double timeEnd = processInfo->getElapsedTime("Total");
 
-		timeLastIter = timeEnd - timeStart;
+		iterDurations.push_back(timeEnd - timeStart);
 		processInfo->logger.message(4) << " MILP solved..." << CoinMessageEol;
 		MILPSolutionStatus = getSolutionStatus();
 
@@ -707,19 +714,34 @@ std::vector<SolutionPoint> MILPSolverCplex::getAllVariableSolutions()
 
 			int poolSizeBefore = cplexInstance.getSolnPoolNsolns();
 
+			if (processInfo->getCurrentIteration()->iterationNumber == 0)
+			{
+				setTimeLimit(0.5);
+			}
+			else
+			{
+				// Note that the vector elements are rearranged each iteration
+				std::nth_element(iterDurations.begin(), iterDurations.begin() + iterDurations.size() / 2,
+						iterDurations.end());
+
+				setTimeLimit(2 * iterDurations[iterDurations.size() / 2]);
+				//std::cout << "Populate time limit: " << 1.2 * iterDurations[iterDurations.size() / 2] << " seconds"
+				//		<< std::endl;
+			}
+
 			cplexInstance.setParam(IloCplex::SolnPoolGap, min(1.0e+75, processInfo->getAbsoluteObjectiveGap()));
 			//std::cout << "SolnPoolGap set to: " << processInfo->getAbsoluteObjectiveGap() << std::endl;
-			auto tmpTimeLim = cplexInstance.getParam(IloCplex::TiLim);
+			//auto tmpTimeLim = cplexInstance.getParam(IloCplex::TiLim);
 
-			setTimeLimit (timeLastIter);
 			//std::cout << "Last iter used: " << timeLastIter << " seconds" << std::endl;
 			cplexInstance.populate();
-			setTimeLimit(min(tmpTimeLim, 0.5));
+
+			//setTimeLimit (timeLastIter);
 
 			int poolSizeAfter = cplexInstance.getSolnPoolNsolns();
 			if (poolSizeAfter > poolSizeBefore)
 			{
-				processInfo->logger.message(2) << "    Solution pool populated from: " << poolSizeBefore << " to "
+				processInfo->logger.message(3) << "    Solution pool populated from: " << poolSizeBefore << " to "
 						<< poolSizeAfter << CoinMessageEol;
 			}
 
@@ -825,7 +847,8 @@ void MILPSolverCplex::setCutOff(double cutOff)
 {
 	try
 	{
-		processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << CoinMessageEol;
+
+		//processInfo->logger.message(2) << "Setting cutoff value to " << cutOff << CoinMessageEol;
 
 		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
 		{

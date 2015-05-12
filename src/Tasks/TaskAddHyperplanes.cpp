@@ -53,14 +53,22 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 	auto originalProblem = processInfo->originalProblem;
 	std::vector < IndexValuePair > elements;
 
-	auto varNames = originalProblem->getVariableNames();
-
-	processInfo->logger.message(3) << " HP point is: " << CoinMessageEol;
-
-	for (int i = 0; i < point.size(); i++)
+	if (constrIdx != -1 && !originalProblem->isConstraintNonlinear(constrIdx))
 	{
-		processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
+		processInfo->logger.message(1) << CoinMessageNewline
+				<< "Error: cutting plane added to linear constraint with index: " << constrIdx << CoinMessageNewline
+				<< CoinMessageEol;
 	}
+
+	auto varNames = originalProblem->getVariableNames();
+	/*
+	 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
+
+
+	 for (int i = 0; i < point.size(); i++)
+	 {
+	 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
+	 }*/
 
 	double constant = originalProblem->calculateConstraintFunctionValue(constrIdx, point);
 
@@ -96,7 +104,7 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 		pair.value = -1.0;
 
 		elements.push_back(pair);
-		constant += -(-1) * point.at(pair.idx);
+		constant += /*-(-1) **/point.at(pair.idx);
 	}
 	else
 	{
@@ -118,15 +126,30 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 		}
 	}
 
+	/*
+	 for (auto E : elements)
+	 {
+	 processInfo->logger.message(3) << " HP coefficient for variable " << varNames.at(E.idx) << ": " << E.value
+	 << CoinMessageEol;
+	 }
+
+	 processInfo->logger.message(3) << " HP constant " << constant << CoinMessageEol;
+	 */
+
+	bool hyperplaneIsOk = true;
+
 	for (auto E : elements)
 	{
-		processInfo->logger.message(3) << " HP coefficient for variable " << varNames.at(E.idx) << ": " << E.value
-				<< CoinMessageEol;
+		if (E.value != E.value) //Check for NaN
+		{
+			processInfo->logger.message(0) << "Warning: hyperplane not generated, NaN found in linear terms!"
+					<< CoinMessageEol;
+			hyperplaneIsOk = false;
+			break;
+		}
 	}
 
-	processInfo->logger.message(3) << " HP constant " << constant << CoinMessageEol;
-
-	processInfo->MILPSolver->addLinearConstraint(elements, elements.size(), constant);
+	if (hyperplaneIsOk) processInfo->MILPSolver->addLinearConstraint(elements, elements.size(), constant);
 
 	currIter->numHyperplanesAdded++;
 	currIter->totNumHyperplanes++;
