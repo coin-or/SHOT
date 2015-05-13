@@ -31,6 +31,6 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		virtual void setCutOff(double cutOff);
 
 		virtual void addMIPStart(std::vector<double> point);
-
+		virtual void deleteMIPStarts();
 		virtual void changeConstraintToLazy(std::vector<int> constrIdxs);
 };

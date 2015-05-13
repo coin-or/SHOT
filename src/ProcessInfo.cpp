@@ -123,6 +123,7 @@ ProcessInfo::ProcessInfo()
 	itersWithStagnationMILP = 0;
 	iterSignificantObjectiveUpdate = 0;
 	itersMILPWithoutNLPCall = 0;
+	solTimeLastNLPCall = 0;
 
 	iterLastPrimalBoundUpdate = 0;
 	iterLastDualBoundUpdate = 0;

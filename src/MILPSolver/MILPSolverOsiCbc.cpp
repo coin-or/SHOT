@@ -339,3 +339,7 @@ void MILPSolverOsiCbc::changeConstraintToLazy(std::vector<int> constrIdxs)
 {
 
 }
+
+void MILPSolverOsiCbc::deleteMIPStarts()
+{
+}

@@ -321,6 +321,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 		}
 
 		processInfo->itersMILPWithoutNLPCall = 0;
+		processInfo->solTimeLastNLPCall = processInfo->getElapsedTime("Total");
 	}
 
 	return (true);

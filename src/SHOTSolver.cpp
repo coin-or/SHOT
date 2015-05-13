@@ -350,6 +350,11 @@ void SHOTSolver::initializeSettings()
 
 	// Primal bound
 	settings->createSetting("UseNLPCall", "PrimalBound", true, "Call NLP solver to find primal bound");
+	settings->createSetting("NLPCallMaxIter", "PrimalBound", 10, "Maximal number of iterations between NLP calls", 0,
+			INT_MAX);
+	settings->createSetting("NLPCallMaxElapsedTime", "PrimalBound", 5.0, "Maximal elapsed time between NLP calls", 0,
+			DBL_MAX);
+
 	settings->createSetting("AddPrimalBoundAsInteriorPoint", "Algorithm", false,
 			"Set the best primal bound as internal point");
 	settings->createSetting("UseObjectiveLinesearch", "PrimalBound", true,

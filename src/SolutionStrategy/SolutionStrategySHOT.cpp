@@ -106,28 +106,34 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		{
 			TaskBase *tSelectPrimNLPCheck = new TaskConditional();
 
-			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
-			{
+			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition(
+					[this]()
+					{
 
-				if (!processInfo->getCurrentIteration()->isMILP())
-				{
-					return (false);
-				}
+						if (!processInfo->getCurrentIteration()->isMILP())
+						{
+							return (false);
+						}
 
-				if ( processInfo->itersMILPWithoutNLPCall >= 10)
-				{
-					return (true);
-				}
+						if ( processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
+						{
+							return (true);
+						}
 
-				if ( processInfo->itersWithStagnationMILP >= 10)
-				{
-					return (true);
-				}
+						if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
+						{
+							return (true);
+						}
 
-				processInfo->itersMILPWithoutNLPCall++;
+						if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"))
+						{
+							return (true);
+						}
 
-				return (false);
-			});
+						processInfo->itersMILPWithoutNLPCall++;
+
+						return (false);
+					});
 
 			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
 

@@ -251,7 +251,7 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 
 		//cplexInstance.setParam(IloCplex::ParallelMode,1);
 
-		//cplexInstance.setParam(IloCplex::PopulateLim, 10);
+		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
 		//cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
 
@@ -585,20 +585,17 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 
 	E_ProblemSolutionStatus MILPSolutionStatus;
 
-	if (processInfo->getPrimalBound() < DBL_MAX) setCutOff(processInfo->getPrimalBound());
-
-	if (getDiscreteVariableStatus() && processInfo->primalSolution.size() > 0) addMIPStart(processInfo->primalSolution);
-
 	try
 	{
-		processInfo->logger.message(4) << " Solving MILP..." << CoinMessageEol;
+		processInfo->logger.message(3) << " Solving MILP..." << CoinMessageEol;
 		double timeStart = processInfo->getElapsedTime("Total");
 		cplexInstance.solve();
 		double timeEnd = processInfo->getElapsedTime("Total");
 
 		iterDurations.push_back(timeEnd - timeStart);
-		processInfo->logger.message(4) << " MILP solved..." << CoinMessageEol;
+		processInfo->logger.message(3) << " MILP solved..." << CoinMessageEol;
 		MILPSolutionStatus = getSolutionStatus();
+		processInfo->logger.message(3) << " Solution status obtained.." << CoinMessageEol;
 
 	}
 	catch (IloException &e)
@@ -889,8 +886,29 @@ void MILPSolverCplex::addMIPStart(std::vector<double> point)
 				<< e.getMessage() << CoinMessageEol;
 	}
 
-	processInfo->logger.message(3) << "Added MIP start" << CoinMessageEol;
+	processInfo->logger.message(3) << "Added MIP starting point" << CoinMessageEol;
 
+}
+
+void MILPSolverCplex::deleteMIPStarts()
+{
+	int numStarts = cplexInstance.getNMIPStarts();
+
+	if (numStarts > 0)
+	{
+		try
+		{
+			cplexInstance.deleteMIPStarts(0, numStarts);
+
+		}
+		catch (IloException &e)
+		{
+			processInfo->logger.message(2) << "Error when deleting MIP starting points:" << CoinMessageNewline
+					<< e.getMessage() << CoinMessageEol;
+		}
+
+		processInfo->logger.message(3) << "Deleted " << numStarts << " MIP starting points" << CoinMessageEol;
+	}
 }
 
 void MILPSolverCplex::writeProblemToFile(std::string filename)
