@@ -41,6 +41,7 @@ class IMILPSolver
 		virtual void setCutOff(double cutOff) = 0;
 
 		virtual void addMIPStart(std::vector<double> point) = 0;
+		virtual void deleteMIPStarts() = 0;
 
 		virtual void changeConstraintToLazy(std::vector<int> constrIdxs) = 0;
 

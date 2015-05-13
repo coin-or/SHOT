@@ -101,6 +101,7 @@ class ProcessInfo
 		int itersWithStagnationMILP; // TODO move to task
 		int iterSignificantObjectiveUpdate; // TODO move to task
 		int itersMILPWithoutNLPCall; // TODO move to task
+		double solTimeLastNLPCall; // TODO move to task
 
 		int iterLastPrimalBoundUpdate;
 		int iterLastDualBoundUpdate;
