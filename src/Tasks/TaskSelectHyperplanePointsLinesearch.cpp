@@ -42,6 +42,9 @@ void TaskSelectHyperplanePointsLinesearch::run()
 	//TODO add task removing interior points
 
 	auto originalProblem = processInfo->originalProblem;
+
+	int prevHPnum = processInfo->hyperplaneWaitingList.size();
+
 	for (int i = 0; i < allSolutions.size(); i++)
 	{
 

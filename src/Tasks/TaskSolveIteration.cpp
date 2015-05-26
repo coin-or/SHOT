@@ -55,7 +55,7 @@ void TaskSolveIteration::run()
 		}
 
 		//Remove cutoff
-		//if (newCutOff < DBL_MAX) MILPSolver->setCutOff(newCutOff);
+		if (newCutOff < DBL_MAX) MILPSolver->setCutOff(newCutOff);
 
 		processInfo->logger.message(1) << "Infeasible problem detected, setting new cutoff to " << newCutOff
 				<< CoinMessageEol;

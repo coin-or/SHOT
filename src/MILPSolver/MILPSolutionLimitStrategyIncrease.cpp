@@ -9,6 +9,7 @@ MILPSolutionLimitStrategyIncrease::MILPSolutionLimitStrategyIncrease()
 
 	lastIterSolLimIncreased = 1;
 	numSolLimIncremented = 1;
+	lastIterOptimal = 1;
 	//currentLimit = settings->getIntSetting("MILPSolLimitInitial", "MILP");
 }
 
@@ -24,11 +25,13 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	if (!currIter->isMILP())
 	{
 		lastIterSolLimIncreased = currIter->iterationNumber;
+		//lastIterOptimal = prevIter->iterationNumber;
 		return (false);
 	}
 
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 	{
+		lastIterOptimal = prevIter->iterationNumber;
 		return (false);
 	}
 
@@ -41,8 +44,10 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 	// Solution limit has not been updated in the maximal number of iterations
 	if (prevIter->isMILP()
-			&& currIter->iterationNumber - lastIterSolLimIncreased
-					> settings->getIntSetting("MILPSolIncreaseIter", "MILP"))
+			&& (currIter->iterationNumber - lastIterSolLimIncreased
+					> settings->getIntSetting("MILPSolIncreaseIter", "MILP")
+					&& currIter->iterationNumber - lastIterOptimal
+							> settings->getIntSetting("MILPSolIncreaseIter", "MILP")))
 	{
 
 		processInfo->logger.message(1) << "    Force solution limit update.                 " << CoinMessageEol;

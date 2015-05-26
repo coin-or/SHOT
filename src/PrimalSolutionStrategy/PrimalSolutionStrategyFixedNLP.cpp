@@ -16,6 +16,9 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
+	originalNLPTime = settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound");
+	originalNLPIter = settings->getIntSetting("NLPCallMaxIter", "PrimalBound");
+
 	discreteVariableIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
 
 	std::string IPOptSolver = "";
@@ -49,7 +52,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	//auto constrTol = 0.000001; //settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
 
 	osOption->setAnotherSolverOption("tol", "1E-8", "ipopt", "", "double", "");
-	osOption->setAnotherSolverOption("max_iter", "10000", "ipopt", "", "integer", "");
+	osOption->setAnotherSolverOption("max_iter", "1000", "ipopt", "", "integer", "");
 	osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
 	osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
@@ -313,11 +316,22 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 			processInfo->logger.message(1) << "    NLP call objective: " << tmpObj << ", max viol.: " << error
 					<< ", duration: " << timeEnd - timeStart << " s" << CoinMessageEol;
+
+			int iters = max(ceil(settings->getIntSetting("NLPCallMaxIter", "PrimalBound") * 0.98), originalNLPIter);
+			settings->updateSetting("NLPCallMaxIter", "PrimalBound", iters);
+
+			double interval = max(0.9 * settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"),
+					originalNLPTime);
+			settings->updateSetting("NLPCallMaxElapsedTime", "PrimalBound", interval);
 		}
 		else
 		{
+			int iters = ceil(settings->getIntSetting("NLPCallMaxIter", "PrimalBound") * 1.02);
+			settings->updateSetting("NLPCallMaxIter", "PrimalBound", iters);
+			double interval = 1.1 * settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound");
+			settings->updateSetting("NLPCallMaxElapsedTime", "PrimalBound", interval);
 			processInfo->logger.message(1) << "    Unsuccessful NLP call, duration:  " << timeEnd - timeStart << " s"
-					<< CoinMessageEol;
+					<< " new NLP interval: " << interval << " s and " << iters << " iters." << CoinMessageEol;
 		}
 
 		processInfo->itersMILPWithoutNLPCall = 0;
