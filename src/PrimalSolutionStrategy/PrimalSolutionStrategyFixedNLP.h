@@ -33,4 +33,7 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public 
 
 		std::vector<int> discreteVariableIndexes;
 		std::vector<std::vector<double>> testedPoints;
+
+		double originalNLPTime;
+		double originalNLPIter;
 };

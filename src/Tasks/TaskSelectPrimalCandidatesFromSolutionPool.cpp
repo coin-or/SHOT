@@ -39,7 +39,7 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 	 vector<double> tmpPoint(dualSol.point);
 	 tmpPoint.back() = error;
 
-	 std::cout << "Added " << tmpPoint.back() << std::endl;
+//	 std::cout << "Added " << tmpPoint.back() << std::endl;
 
 	 processInfo->addPrimalSolutionCandidate(tmpPoint, E_PrimalSolutionSource::ObjectiveConstraint,
 	 currIter->iterationNumber);
@@ -66,3 +66,4 @@ std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()
 	return (type);
 
 }
+

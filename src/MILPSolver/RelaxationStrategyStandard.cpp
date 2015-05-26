@@ -30,6 +30,8 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
+	if (processInfo->getCurrentIteration()->iterationNumber % 50 == 0) return this->setActive();
+
 	if (isLPStepFinished() || isCurrentToleranceReached() || isIterationLimitReached()
 			|| isRelaxedSolutionEpsilonValid() || isObjectiveStagnant())
 	{
@@ -91,6 +93,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isLPStepFinished()
 {
+
 	return LPFinished;
 }
 

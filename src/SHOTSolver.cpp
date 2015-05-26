@@ -116,7 +116,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 	}
 
 	processInfo->logger.message(2) << "Problem read from file \"" << fileName << "\"" << CoinMessageEol;
-	;
 
 	//Removes path
 	std::string tmpFile = fileName.substr(fileName.find_last_of("/\\") + 1);
@@ -131,7 +130,42 @@ bool SHOTSolver::setProblem(std::string fileName)
 	settings->updateSetting("DebugPath", "SHOTSolver", "problemdebug/" + tmpFile);
 
 	if (settings->getBoolSetting("Debug", "SHOTSolver")) initializeDebugMode();
-	else getOSol(); // Needed due to unknown reason
+	else
+	{
+		getOSol();
+		//std::cout << getOSol(); // Needed due to unknown reason
+
+		//FileUtil* fileUtil = new FileUtil();
+		/*auto debugPath = settings->getStringSetting("DebugPath", "SHOTSolver");
+
+		 boost::filesystem::path debugDir(boost::filesystem::current_path() / debugPath);
+
+		 if (boost::filesystem::exists(debugDir))
+		 {
+		 processInfo->logger.message(1) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
+		 }
+		 else
+		 {
+		 if (boost::filesystem::create_directories(debugDir))
+		 {
+		 processInfo->logger.message(1) << "Debug directory " << debugPath << " created." << CoinMessageEol;
+		 }
+		 else
+		 {
+		 processInfo->logger.message(1) << "Could not create debug directory " << debugPath << "!"
+		 << CoinMessageEol;
+		 }
+		 }
+
+		 boost::filesystem::path source(settings->getStringSetting("ProblemFile", "SHOTSolver"));
+		 boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
+		 boost::filesystem::copy_option::overwrite_if_exists);
+
+		 //fileUtil->writeFileFromString(debugPath + "/options.xml", getOSol());
+		 */
+		//delete fileUtil;
+		//std::cout << "HEJ" << std::endl;
+	}
 
 	bool status = this->setProblem(tmpInstance);
 
@@ -375,30 +409,30 @@ void SHOTSolver::initializeSettings()
 
 void SHOTSolver::initializeDebugMode()
 {
+	FileUtil* fileUtil = new FileUtil();
 	auto debugPath = settings->getStringSetting("DebugPath", "SHOTSolver");
 
 	boost::filesystem::path debugDir(boost::filesystem::current_path() / debugPath);
 
 	if (boost::filesystem::exists(debugDir))
 	{
-		processInfo->logger.message(3) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
+		processInfo->logger.message(1) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
 	}
 	else
 	{
 		if (boost::filesystem::create_directories(debugDir))
 		{
-			processInfo->logger.message(3) << "Debug directory " << debugPath << " created." << CoinMessageEol;
+			processInfo->logger.message(1) << "Debug directory " << debugPath << " created." << CoinMessageEol;
 		}
 		else
 		{
-			processInfo->logger.message(3) << "Could not create debug directory " << debugPath << "!" << CoinMessageEol;
+			processInfo->logger.message(1) << "Could not create debug directory " << debugPath << "!" << CoinMessageEol;
 		}
 	}
+
 	boost::filesystem::path source(settings->getStringSetting("ProblemFile", "SHOTSolver"));
 	boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
 			boost::filesystem::copy_option::overwrite_if_exists);
-
-	FileUtil* fileUtil = new FileUtil();
 
 	fileUtil->writeFileFromString(debugPath + "/options.xml", getOSol());
 

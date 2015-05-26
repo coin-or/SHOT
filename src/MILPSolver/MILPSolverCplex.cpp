@@ -844,16 +844,17 @@ void MILPSolverCplex::setCutOff(double cutOff)
 {
 	try
 	{
-
-		//processInfo->logger.message(2) << "Setting cutoff value to " << cutOff << CoinMessageEol;
-
 		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
 		{
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
+			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for minimization."
+					<< CoinMessageEol;
 		}
 		else
 		{
 			cplexInstance.setParam(IloCplex::CutLo, cutOff);
+			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for maximization."
+					<< CoinMessageEol;
 		}
 	}
 	catch (IloException &e)
@@ -882,7 +883,7 @@ void MILPSolverCplex::addMIPStart(std::vector<double> point)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(2) << "Error when adding MIP starting point:" << CoinMessageNewline
+		processInfo->logger.message(1) << "Error when adding MIP starting point:" << CoinMessageNewline
 				<< e.getMessage() << CoinMessageEol;
 	}
 
@@ -903,7 +904,7 @@ void MILPSolverCplex::deleteMIPStarts()
 		}
 		catch (IloException &e)
 		{
-			processInfo->logger.message(2) << "Error when deleting MIP starting points:" << CoinMessageNewline
+			processInfo->logger.message(1) << "Error when deleting MIP starting points:" << CoinMessageNewline
 					<< e.getMessage() << CoinMessageEol;
 		}
 

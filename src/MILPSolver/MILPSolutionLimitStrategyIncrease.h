@@ -13,4 +13,5 @@ class MILPSolutionLimitStrategyIncrease: public IMILPSolutionLimitStrategy
 
 		int lastIterSolLimIncreased;
 		int numSolLimIncremented;
+		int lastIterOptimal;
 };
