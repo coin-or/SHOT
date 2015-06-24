@@ -353,7 +353,6 @@ bool NLPSolverIPOptMinimax::solveProblem()
 	for (int i = 0; i < tmpNorms.size(); i++)
 	{
 		tmpNorms.at(i) = round(1000.0 * tmpNorms.at(i)) / 1000.0;
-		;
 		std::cout << "Norm " << i << ": " << tmpNorms.at(i) << std::endl;
 	}
 
@@ -389,8 +388,9 @@ bool NLPSolverIPOptMinimax::solveProblem()
 
 		//UtilityFunctions::displayVector(tmpPoint);
 		//UtilityFunctions::displayVector(tmpPoint2);
-
+		std::cout << "hejjjj" << std::endl;
 		auto maxDev = NLPProblem->getMostDeviatingConstraint(tmpPoint).value;
+
 		//auto maxDev2 = NLPProblem->getMostDeviatingConstraint(tmpPoint2).value;
 
 		std::cout << "Error " << maxDev << std::endl;

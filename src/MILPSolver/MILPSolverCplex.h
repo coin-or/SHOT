@@ -47,8 +47,6 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		//double bestCutoff = DBL_MAX;
 
-	protected:
-
 		IloEnv cplexEnv;
 		IloModel cplexModel;
 		IloCplex cplexInstance;
@@ -56,6 +54,8 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		IloRangeArray cplexConstrs;
 		IloRangeArray cplexLazyConstrs;
 		vector<IloConversion> cplexVarConvers;
+
+	protected:
 
 };
 /*

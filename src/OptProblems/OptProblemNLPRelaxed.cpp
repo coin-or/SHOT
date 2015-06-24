@@ -400,7 +400,6 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 //
 //	std::cout << problemInstance->printModel() << std::endl;
 //}
-
 IndexValuePair OptProblemNLPRelaxed::getMostDeviatingConstraint(std::vector<double> point)
 {
 	IndexValuePair valpair;

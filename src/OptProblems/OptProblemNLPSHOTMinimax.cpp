@@ -89,17 +89,17 @@ void OptProblemNLPSHOTMinimax::copyVariables(OSInstance *source, OSInstance *des
 			double lb = varLBs[i];
 			double ub = varUBs[i];
 			char type = 'C';
+			/*
+			 if (lb < -1000000000000)
+			 {
+			 lb = -10000000000;
+			 }
 
-			if (lb < -1000000000000)
-			{
-				lb = -10000000000;
-			}
-
-			if (ub > 10000000000000)
-			{
-				ub = 10000000000;
-			}
-
+			 if (ub > 10000000000000)
+			 {
+			 ub = 10000000000;
+			 }
+			 */
 			destination->addVariable(i, name, lb, ub, type);
 		}
 	}
@@ -251,28 +251,30 @@ void OptProblemNLPSHOTMinimax::copyLinearTerms(OSInstance *source, OSInstance *d
 			}
 		}
 		// Inserts the objective function variable into nonlinear constraints
-		/*if (isConstraintNonlinear(source, rowIdx))
-		 {
-		 rowIndices.push_back(rowIdx);
+		if (isConstraintNonlinear(source, rowIdx))
+		{
+			rowIndices.push_back(rowIdx);
 
-		 if (this->isObjectiveFunctionNonlinear())
-		 {
-		 colIndices.push_back(varNum + 1);
-		 }
-		 else
-		 {
-		 colIndices.push_back(varNum);
-		 }
+			if (this->isObjectiveFunctionNonlinear())
+			{
+				colIndices.push_back(varNum + 1);
+			}
+			else
+			{
+				colIndices.push_back(varNum);
+			}
 
-		 if (source->getConstraintTypes()[rowIdx] == 'L')
-		 {
-		 elements.push_back(-1.0);
-		 }
-		 else if (source->getConstraintTypes()[rowIdx] == 'G')
-		 {
-		 elements.push_back(1.0);
-		 }
-		 }*/
+			if (source->getConstraintTypes()[rowIdx] == 'L')
+			{
+				elements.push_back(-1.0);
+			}
+			else if (source->getConstraintTypes()[rowIdx] == 'G')
+			{
+				elements.push_back(1.0);
+			}
+
+			std::cout << "Row: " << rowIdx << std::endl;
+		}
 	}
 
 	if (this->isObjectiveFunctionNonlinear())
@@ -291,9 +293,11 @@ void OptProblemNLPSHOTMinimax::copyLinearTerms(OSInstance *source, OSInstance *d
 		colIndices.push_back(varNum);
 		elements.push_back(-1.0);
 
-		//rowIndices.push_back(rowNum);
-		//colIndices.push_back(varNum + 1);
-		//elements.push_back(-1.0);
+		rowIndices.push_back(rowNum);
+		colIndices.push_back(varNum + 1);
+		elements.push_back(-1.0);
+
+		std::cout << "Row obj: " << rowNum << std::endl;
 	}
 
 	CoinPackedMatrix *matrix = new CoinPackedMatrix(false, &rowIndices.at(0), &colIndices.at(0), &elements.at(0),
@@ -306,8 +310,8 @@ void OptProblemNLPSHOTMinimax::copyLinearTerms(OSInstance *source, OSInstance *d
 	int indexesBegin = 0;
 	int indexesEnd = numnonz - 1;
 
-	//int startsEnd = this->isObjectiveFunctionNonlinear() ? varNum + 1 : varNum;
-	int startsEnd = this->isObjectiveFunctionNonlinear() ? varNum : varNum - 1;
+	int startsEnd = this->isObjectiveFunctionNonlinear() ? varNum + 1 : varNum;
+	//int startsEnd = this->isObjectiveFunctionNonlinear() ? varNum : varNum - 1;
 
 	auto tmp = const_cast<int*>(matrix->getVectorStarts());
 
