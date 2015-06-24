@@ -20,6 +20,13 @@ class OptProblemNLPMinimax: public OptProblem
 		IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
 		bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
+		virtual vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
+
+		double calculateConstraintFunctionValue(int idx, std::vector<double> point);
+		SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+
 	private:
+
+		int muindex;
 
 };

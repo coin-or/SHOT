@@ -281,7 +281,6 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 	{
 		std::cerr << "Unknown exception caught" << std::endl;
 	}
-
 	return true;
 }
 
@@ -714,6 +713,7 @@ std::vector<SolutionPoint> MILPSolverCplex::getAllVariableSolutions()
 			if (processInfo->getCurrentIteration()->iterationNumber == 0)
 			{
 				setTimeLimit(0.5);
+				setTimeLimit(5);
 			}
 			else
 			{
@@ -721,7 +721,7 @@ std::vector<SolutionPoint> MILPSolverCplex::getAllVariableSolutions()
 				std::nth_element(iterDurations.begin(), iterDurations.begin() + iterDurations.size() / 2,
 						iterDurations.end());
 
-				setTimeLimit(2 * iterDurations[iterDurations.size() / 2]);
+				setTimeLimit(10 * iterDurations[iterDurations.size() / 2]);
 				//std::cout << "Populate time limit: " << 1.2 * iterDurations[iterDurations.size() / 2] << " seconds"
 				//		<< std::endl;
 			}

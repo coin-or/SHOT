@@ -10,6 +10,7 @@
 #include <INLPSolver.h>
 #include <NLPSolverBase.h>
 #include "../OptProblems/OptProblemNLPSHOTMinimax.h"
+#include "../OptProblems/OptProblemNLPMinimax.h"
 #include "../MILPSolver/MILPSolverCplex.h"
 #include "../MILPSolver/MILPSolverGurobi.h"
 #include "../MILPSolver/MILPSolverOsiCbc.h"
@@ -28,6 +29,6 @@ class NLPSolverCuttingPlane: public INLPSolver, NLPSolverBase
 
 	private:
 
-		OptProblemNLPSHOTMinimax *NLPProblem;
+		OptProblemNLPMinimax *NLPProblem;
 		IMILPSolver *MILPSolver;
 };

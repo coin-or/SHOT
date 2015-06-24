@@ -66,7 +66,8 @@ NLPSolverCuttingPlane::NLPSolverCuttingPlane()
 		throw new ErrorClass("Error in MILP solver definition for minimax solver.");
 	}
 
-	NLPProblem = new OptProblemNLPSHOTMinimax();
+	//NLPProblem = new OptProblemNLPSHOTMinimax();
+	NLPProblem = new OptProblemNLPMinimax();
 
 	processInfo->stopTimer("InteriorPointMinimax");
 }
@@ -80,14 +81,14 @@ bool NLPSolverCuttingPlane::createProblem(OSInstance* origInstance)
 {
 
 	processInfo->startTimer("InteriorPointMinimax");
-	NLPProblem->reformulate(origInstance);
+
 	processInfo->logger.message(3) << "Creating NLP problem for minimax solver" << CoinMessageEol;
+	NLPProblem->reformulate(origInstance);
+	processInfo->logger.message(3) << "NLP problem for minimax solver created" << CoinMessageEol;
 
 	processInfo->logger.message(3) << "Creating LP problem for minimax solver" << CoinMessageEol;
-
 	MILPSolver->createLinearProblem(NLPProblem);
-
-	processInfo->logger.message(3) << "MILP problem for NLP solver created" << CoinMessageEol;
+	processInfo->logger.message(3) << "MILP problem for minimax solver created" << CoinMessageEol;
 
 	processInfo->stopTimer("InteriorPointMinimax");
 	return (true);
@@ -168,6 +169,8 @@ bool NLPSolverCuttingPlane::solveProblem()
 			lambda = minimizationResult.first;
 			mu = minimizationResult.second;
 
+			//std::cout << "mu: " << mu << " lambda: " << lambda << std::endl;
+
 			// Calculates the corresponding solution point
 			for (int i = 0; i < numVar; i++)
 			{
@@ -176,7 +179,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 			// The difference between linesearch and LP objective values
 			maxObjDiffAbs = abs(mu - LPObjVar);
-			maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(max(mu, LPObjVar)));
+			maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
 
 		}
 
@@ -203,6 +206,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 			double constant = NLPProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).idx, currSol);
 
+			//constant += LPObjVar;
 			processInfo->logger.message(3) << " HP point generated for constraint index" << tmpMostDevs.at(j).idx
 					<< CoinMessageEol;
 
@@ -247,7 +251,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 		prevSol = currSol;
 	}
 
-	// Removes the mu variable value from the point
+// Removes the mu variable value from the point
 	currSol.pop_back();
 
 	auto tmpIP = new InteriorPoint();
@@ -259,6 +263,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 	delete MILPSolver;
 
 	processInfo->stopTimer("InteriorPointMinimax");
+
 	return (true);
 }
 
