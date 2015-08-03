@@ -285,7 +285,6 @@ double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 
 double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double> point)
 {
-
 	double tmpVal;
 	if (idx != getNonlinearObjectiveConstraintIdx())	// Not the objective function
 	{

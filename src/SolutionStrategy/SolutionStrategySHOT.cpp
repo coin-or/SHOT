@@ -178,6 +178,13 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes();
 	processInfo->tasks->addTask(tAddHPs, "AddHPs");
 
+	TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
+	processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
+
+	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
+	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	processInfo->tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 

@@ -343,3 +343,26 @@ void MILPSolverOsiCbc::changeConstraintToLazy(std::vector<int> constrIdxs)
 void MILPSolverOsiCbc::deleteMIPStarts()
 {
 }
+
+void MILPSolverOsiCbc::fixVariable(int varIndex, double value)
+{
+}
+
+void MILPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+{
+}
+
+pair<double, double> MILPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
+{
+	pair<double, double> tmpBounds;
+
+	tmpBounds.first = NAN;
+	tmpBounds.second = NAN;
+
+	return (tmpBounds);
+}
+
+void MILPSolverOsiCbc::createHyperplane(int constrIdx, std::vector<double> point)
+{
+	MILPSolverBase::createHyperplane(constrIdx, point);
+}

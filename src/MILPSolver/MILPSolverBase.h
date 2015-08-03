@@ -24,4 +24,5 @@ class MILPSolverBase
 		~MILPSolverBase();
 
 		virtual bool getDiscreteVariableStatus();
+		virtual void createHyperplane(int constrIdx, std::vector<double> point);
 };

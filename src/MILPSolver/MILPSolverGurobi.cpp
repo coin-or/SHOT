@@ -530,3 +530,26 @@ void MILPSolverGurobi::changeConstraintToLazy(std::vector<int> constrIdxs)
 void MILPSolverGurobi::deleteMIPStarts()
 {
 }
+
+void MILPSolverGurobi::fixVariable(int varIndex, double value)
+{
+}
+
+void MILPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+{
+}
+
+pair<double, double> MILPSolverGurobi::getCurrentVariableBounds(int varIndex)
+{
+	pair<double, double> tmpBounds;
+
+	tmpBounds.first = NAN;
+	tmpBounds.second = NAN;
+
+	return (tmpBounds);
+}
+
+void MILPSolverGurobi::createHyperplane(int constrIdx, std::vector<double> point)
+{
+	MILPSolverBase::createHyperplane(constrIdx, point);
+}

@@ -64,12 +64,16 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		case E_PrimalSolutionSource::ObjectiveConstraint:
 			sourceDesc = "Obj. constr.";
 			break;
+		case E_PrimalSolutionSource::LPFixedIntegers:
+			sourceDesc = "LP fixed";
+			break;
 		default:
 			break;
 	}
 
 	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
-			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
+			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
+			|| primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers)
 	{
 		isLinConstrFulfilled = true;
 		mostDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
@@ -187,6 +191,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		primalSol.objValue = tmpObjVal;
 		primalSol.point = tmpPoint;
+		primalSol.maxDevatingConstraint = mostDev;
 
 		processInfo->primalSolutions.push_back(primalSol);
 

@@ -969,3 +969,29 @@ void MILPSolverCplex::changeConstraintToLazy(std::vector<int> constrIdxs)
 
 	}
 }
+
+void MILPSolverCplex::fixVariable(int varIndex, double value)
+{
+	updateVariableBound(varIndex, value, value);
+}
+
+void MILPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+{
+	cplexVars[varIndex].setBounds(lowerBound, upperBound);
+	cplexInstance.extract(cplexModel);
+}
+
+pair<double, double> MILPSolverCplex::getCurrentVariableBounds(int varIndex)
+{
+	pair<double, double> tmpBounds;
+
+	tmpBounds.first = cplexVars[varIndex].getLB();
+	tmpBounds.second = cplexVars[varIndex].getUB();
+
+	return (tmpBounds);
+}
+
+void MILPSolverCplex::createHyperplane(int constrIdx, std::vector<double> point)
+{
+	MILPSolverBase::createHyperplane(constrIdx, point);
+}
