@@ -38,6 +38,11 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		virtual void changeConstraintToLazy(std::vector<int> constrIdxs);
 
+		virtual void fixVariable(int varIndex, double value);
+		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
+		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+		virtual void createHyperplane(int constrIdx, std::vector<double> point);
+
 	private:
 
 		int firstNonLazyHyperplane;

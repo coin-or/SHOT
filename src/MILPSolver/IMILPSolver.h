@@ -45,5 +45,11 @@ class IMILPSolver
 
 		virtual void changeConstraintToLazy(std::vector<int> constrIdxs) = 0;
 
+		virtual void fixVariable(int varIndex, double value) = 0;
+		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
+
+		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+		virtual void createHyperplane(int constrIdx, std::vector<double> point) = 0;
+
 	protected:
 };

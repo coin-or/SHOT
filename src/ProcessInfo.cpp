@@ -6,10 +6,21 @@ ProcessInfo* ProcessInfo::single = NULL;
 CoinMessageHandler logger;
 OSResult *osResult = NULL;
 
-void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter)
+void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
+		IndexValuePair maxConstrDev)
 {
 	PrimalSolution sol =
-	{ pt, source, objVal, iter };
+	{ pt, source, objVal, iter, maxConstrDev };
+
+	primalSolutions.push_back(sol);
+}
+
+void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter)
+{
+	auto maxConstrDev = originalProblem->getMostDeviatingConstraint(pt);
+
+	PrimalSolution sol =
+	{ pt, source, objVal, iter, maxConstrDev };
 
 	primalSolutions.push_back(sol);
 }
@@ -25,7 +36,7 @@ void ProcessInfo::addDualSolution(vector<double> pt, E_DualSolutionSource source
 void ProcessInfo::addPrimalSolutionCandidate(vector<double> pt, E_PrimalSolutionSource source, int iter)
 {
 	PrimalSolution sol =
-	{ pt, source, NAN, iter };
+	{ pt, source, NAN, iter, NAN };
 
 	primalSolutionCandidates.push_back(sol);
 }

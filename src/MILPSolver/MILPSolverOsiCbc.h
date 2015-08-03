@@ -33,4 +33,9 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		virtual void addMIPStart(std::vector<double> point);
 		virtual void deleteMIPStarts();
 		virtual void changeConstraintToLazy(std::vector<int> constrIdxs);
+
+		virtual void fixVariable(int varIndex, double value);
+		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
+		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+		virtual void createHyperplane(int constrIdx, std::vector<double> point);
 };
