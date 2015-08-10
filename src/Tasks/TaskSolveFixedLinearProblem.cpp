@@ -184,7 +184,7 @@ void TaskSolveFixedLinearProblem::run()
 
 			processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
 
-			if (mostDevConstr.value <= 0.00001) break;
+			if (mostDevConstr.value <= 0.0001) break;
 
 			if (k > 0 && abs(prevObjVal - objVal) < 0.0001) break;
 

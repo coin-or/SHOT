@@ -35,7 +35,7 @@ void TaskAddHyperplanes::run()
 
 			tmpPts = tmpItem.second;
 
-			createHyperplane(tmpIdx, tmpPts);
+			processInfo->MILPSolver->createHyperplane(tmpIdx, tmpPts);
 		}
 
 		processInfo->hyperplaneWaitingList.clear();

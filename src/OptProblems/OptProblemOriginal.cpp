@@ -1,7 +1,5 @@
 #include "OptProblemOriginal.h"
 
-
-
 OptProblemOriginal::OptProblemOriginal()
 {
 	processInfo = ProcessInfo::getInstance();
@@ -21,7 +19,8 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 
 	if (idx == -1)
 	{
-		processInfo->logger.message(1) << "Objective function constraint should not be calculated here! " << CoinMessageEol;
+		processInfo->logger.message(1) << "Objective function constraint should not be calculated here! "
+				<< CoinMessageEol;
 	}
 	else if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 	{
@@ -36,11 +35,12 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 	else if (getProblemInstance()->getConstraintTypes()[idx] == 'E')
 	{
 		auto tmpUB = getProblemInstance()->instanceData->constraints->con[idx]->ub;
-		tmpVal = tmpVal -tmpUB;
+		tmpVal = tmpVal - tmpUB;
 	}
 	else
 	{
-		processInfo->logger.message(1) << "Constraint with index " << idx << " of type " << getProblemInstance()->getConstraintTypes()[idx] << " is not supported! " << CoinMessageEol;
+		processInfo->logger.message(1) << "Constraint with index " << idx << " of type "
+				<< getProblemInstance()->getConstraintTypes()[idx] << " is not supported! " << CoinMessageEol;
 	}
 
 	return tmpVal;

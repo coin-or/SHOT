@@ -192,4 +192,3 @@ void MILPSolverBase::createHyperplane(int constrIdx, std::vector<double> point)
 	currIter->totNumHyperplanes = processInfo->getPreviousIteration()->totNumHyperplanes
 			+ currIter->numHyperplanesAdded;
 }
-
