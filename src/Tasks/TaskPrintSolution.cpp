@@ -15,7 +15,7 @@ void TaskPrintSolution::run()
 
 	processInfo->stopTimer("Subproblems");
 
-	auto tmpSol = processInfo->MILPSolver->getLastObjectiveValue();
+	auto tmpSol = processInfo->MILPSolver->getObjectiveValue();
 	processInfo->logger.message(1)
 			<< "==================================================================================" << CoinMessageEol;
 

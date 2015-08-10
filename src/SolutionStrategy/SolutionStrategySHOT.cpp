@@ -178,6 +178,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes();
 	processInfo->tasks->addTask(tAddHPs, "AddHPs");
 
+	//TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
+	//processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
+
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	processInfo->tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 

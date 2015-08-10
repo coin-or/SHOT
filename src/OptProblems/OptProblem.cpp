@@ -947,7 +947,7 @@ std::vector<QuadraticTerm*> OptProblem::getQuadraticTermsInConstraint(int constr
 
 	}
 
-	return quadTerms;
+	return (quadTerms);
 }
 
 void OptProblem::fixVariable(int varIdx, double value)

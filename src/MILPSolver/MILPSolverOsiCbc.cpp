@@ -124,16 +124,16 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 	return true;
 }
 
-bool MILPSolverOsiCbc::getDiscreteVariableStatus()
+void MILPSolverOsiCbc::initializeSolverSettings()
 {
-	return (MILPSolverBase::getDiscreteVariableStatus());
+
 }
 
-bool MILPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements, int numNonZero, double constant)
+bool MILPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
 {
 	CoinPackedVector cut;
 
-	for (int i = 0; i < numNonZero; i++)
+	for (int i = 0; i < elements.size(); i++)
 	{
 		cut.insert(elements.at(i).idx, elements.at(i).value);
 	}
@@ -146,20 +146,20 @@ bool MILPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements,
 
 	return true;
 }
+/*
+ std::vector<double> MILPSolverOsiCbc::getVariableSolution()
+ {
+ int numCol = osiModel.getNumCols();
 
-std::vector<double> MILPSolverOsiCbc::getVariableSolution()
-{
-	int numCol = osiModel.getNumCols();
+ const double * solution = osiModel.getColSolution();
 
-	const double * solution = osiModel.getColSolution();
+ std::vector<double> sols(numCol);
+ std::copy(solution, solution + numCol, sols.begin());
 
-	std::vector<double> sols(numCol);
-	std::copy(solution, solution + numCol, sols.begin());
+ delete solution;
 
-	delete solution;
-
-	return sols;
-}
+ return sols;
+ }*/
 
 void MILPSolverOsiCbc::activateDiscreteVariables(bool activate)
 {
@@ -283,15 +283,16 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::solveProblem()
 	return MILPSolutionStatus;
 }
 
-double MILPSolverOsiCbc::getLastObjectiveValue()
-{
-	return osiModel.getObjValue();
-}
+/*double MILPSolverOsiCbc::getObjectiveValue()
+ {
+ return osiModel.getObjValue();
+ }*/
 
-double MILPSolverOsiCbc::getBestObjectiveValue()
-{
-	return osiModel.getObjValue();
-}
+/*
+ double MILPSolverOsiCbc::getBestObjectiveValue()
+ {
+ return osiModel.getObjValue();
+ }*/
 
 int MILPSolverOsiCbc::increaseSolutionLimit(int increment)
 {
@@ -311,11 +312,17 @@ int MILPSolverOsiCbc::getSolutionLimit()
 	return 100;
 }
 
-std::vector<SolutionPoint> MILPSolverOsiCbc::getAllVariableSolutions()
-{
-	std::vector < SolutionPoint > allSolutions;
-	return allSolutions;
-}
+/*std::vector<SolutionPoint> MILPSolverOsiCbc::getAllVariableSolutions()
+ {
+ std::vector < SolutionPoint > allSolutions;
+ return allSolutions;
+ }*/
+
+/*
+ std::vector<SolutionPoint> MILPSolverOsiCbc::getAllVariableSolutions()
+ {
+ return (MILPSolverBase::getAllVariableSolutions());
+ }*/
 
 void MILPSolverOsiCbc::setTimeLimit(double seconds)
 {
@@ -335,11 +342,45 @@ void MILPSolverOsiCbc::writeProblemToFile(std::string filename)
 {
 }
 
+double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
+{
+}
+
 void MILPSolverOsiCbc::changeConstraintToLazy(std::vector<int> constrIdxs)
 {
 
 }
 
 void MILPSolverOsiCbc::deleteMIPStarts()
+{
+}
+
+std::vector<double> MILPSolverOsiCbc::getVariableSolution(int solIdx)
+{
+}
+
+int MILPSolverOsiCbc::getNumberOfSolutions()
+{
+}
+
+void MILPSolverOsiCbc::fixVariable(int varIndex, double value)
+{
+}
+
+void MILPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+{
+}
+
+pair<double, double> MILPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
+{
+	pair<double, double> tmpBounds;
+
+	tmpBounds.first = NAN;
+	tmpBounds.second = NAN;
+
+	return (tmpBounds);
+}
+
+void MILPSolverOsiCbc::populateSolutionPool()
 {
 }

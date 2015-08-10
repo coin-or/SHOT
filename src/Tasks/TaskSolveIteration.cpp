@@ -29,7 +29,7 @@ void TaskSolveIteration::run()
 
 	if (processInfo->getPrimalBound() < DBL_MAX) MILPSolver->setCutOff(processInfo->getPrimalBound());
 
-	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolution.size() > 0)
+	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolutions.size() > 0)
 	{
 		MILPSolver->deleteMIPStarts();
 		MILPSolver->addMIPStart(processInfo->primalSolution);
@@ -77,7 +77,7 @@ void TaskSolveIteration::run()
 		auto sols = MILPSolver->getAllVariableSolutions();
 		currIter->solutionPoints = sols;
 
-		currIter->objectiveValue = MILPSolver->getLastObjectiveValue();
+		currIter->objectiveValue = MILPSolver->getObjectiveValue();
 		auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
 
 		currIter->maxDeviationConstraint = mostDevConstr.idx;
@@ -93,6 +93,7 @@ void TaskSolveIteration::run()
 			{
 				// New dual solution
 				processInfo->currentObjectiveBounds.first = currIter->objectiveValue;
+
 				processInfo->iterLastDualBoundUpdate = currIter->iterationNumber;
 
 				processInfo->addDualSolution(sols.at(0), E_DualSolutionSource::MILPSolution);

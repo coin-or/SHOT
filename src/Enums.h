@@ -91,10 +91,23 @@ enum class ES_PrimalBoundNLPFixedPoint
 
 enum class E_PrimalSolutionSource
 {
-	Linesearch, LinesearchFixedIntegers, NLPFixedIntegers, NLPRelaxed, MILPSolutionPool, ObjectiveConstraint
+	Linesearch,
+	LinesearchFixedIntegers,
+	NLPFixedIntegers,
+	NLPRelaxed,
+	MILPSolutionPool,
+	ObjectiveConstraint,
+	LPFixedIntegers
 };
 
 enum class E_DualSolutionSource
 {
-	LPSolution, MILPSolution, Linesearch, LinesearchFixedIntegers, NLPFixedIntegers, NLPRelaxed, ObjectiveConstraint
+	LPSolution,
+	MILPSolution,
+	Linesearch,
+	LinesearchFixedIntegers,
+	NLPFixedIntegers,
+	NLPRelaxed,
+	ObjectiveConstraint,
+	LPFixedIntegers
 };

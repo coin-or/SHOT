@@ -19,13 +19,19 @@ class IMILPSolver
 		;
 
 		virtual bool createLinearProblem(OptProblem *origProblem) = 0;
-		virtual std::vector<double> getVariableSolution() = 0;
+		virtual void initializeSolverSettings() = 0;
+		//virtual std::vector<double> getVariableSolution() = 0;
+		virtual std::vector<double> getVariableSolution(int solIdx) = 0;
+
+		virtual int getNumberOfSolutions() = 0;
+
 		virtual void activateDiscreteVariables(bool activate) = 0;
 		virtual bool getDiscreteVariableStatus() = 0;
 		virtual E_ProblemSolutionStatus solveProblem() = 0;
 		virtual E_ProblemSolutionStatus getSolutionStatus() = 0;
-		virtual double getLastObjectiveValue() = 0;
-		virtual double getBestObjectiveValue() = 0;
+		virtual double getObjectiveValue() = 0;
+		//virtual double getBestObjectiveValue() = 0;
+		virtual double getObjectiveValue(int solIdx) = 0;
 
 		virtual int increaseSolutionLimit(int increment) = 0;
 		virtual void setSolutionLimit(int limit) = 0;
@@ -34,7 +40,7 @@ class IMILPSolver
 		virtual void writeProblemToFile(std::string filename) = 0;
 
 		virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, int numNonZero, double constant) = 0;
+		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
 
 		virtual void setTimeLimit(double seconds) = 0;
 
@@ -44,6 +50,14 @@ class IMILPSolver
 		virtual void deleteMIPStarts() = 0;
 
 		virtual void changeConstraintToLazy(std::vector<int> constrIdxs) = 0;
+
+		virtual void populateSolutionPool() = 0;
+
+		virtual void fixVariable(int varIndex, double value) = 0;
+		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
+
+		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+		virtual void createHyperplane(int constrIdx, std::vector<double> point) = 0;
 
 	protected:
 };

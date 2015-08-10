@@ -9,16 +9,6 @@ MILPSolverGurobi::MILPSolverGurobi()
 	settings = SHOTSettings::Settings::getInstance();
 
 	discreteVariablesActivated = true;
-
-	gurobiModel.getEnv().set(GRB_IntParam_OutputFlag, 0);
-	//gurobiModel.getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
-	//gurobiModel.getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
-	//gurobiModel.getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
-	//gurobiModel.getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
-	//gurobiModel.getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
-	gurobiModel.getEnv().set(GRB_IntParam_SolutionLimit, 2100000000);
-	gurobiModel.getEnv().set(GRB_IntParam_SolutionNumber,
-			settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm") + 1);
 }
 
 MILPSolverGurobi::~MILPSolverGurobi()
@@ -27,265 +17,330 @@ MILPSolverGurobi::~MILPSolverGurobi()
 	delete &gurobiModel;
 }
 
-bool MILPSolverGurobi::getDiscreteVariableStatus()
-{
-	return (MILPSolverBase::getDiscreteVariableStatus());
-}
-
 bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 {
-	auto numVar = origProblem->getNumberOfVariables();
-
-	auto tmpLBs = origProblem->getVariableLowerBounds();
-	auto tmpUBs = origProblem->getVariableUpperBounds();
-	auto tmpNames = origProblem->getVariableNames();
-
-	auto tmpTypes = origProblem->getVariableTypes();
-
-	for (int i = 0; i < numVar; i++)
+	try
 	{
-		//Variable *tmpVar = origInstance->instanceData->variables->var[i];
+		auto numVar = origProblem->getNumberOfVariables();
+		auto tmpLBs = origProblem->getVariableLowerBounds();
+		auto tmpUBs = origProblem->getVariableUpperBounds();
+		auto tmpNames = origProblem->getVariableNames();
+		auto tmpTypes = origProblem->getVariableTypes();
 
-		//tmpUB = 10000000.0;
+		int numCon = origProblem->getNumberOfConstraints();
+		if (origProblem->isObjectiveFunctionNonlinear()) numCon--;
 
-		if (tmpTypes.at(i) == 'C')
+		for (int i = 0; i < numVar; i++)
 		{
-			GRBVar tmpVar = gurobiModel.addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_CONTINUOUS, tmpNames.at(i));
-		}
-		else if (tmpTypes.at(i) == 'I')
-		{
-			GRBVar tmpVar = gurobiModel.addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_INTEGER, tmpNames.at(i));
-		}
-		else if (tmpTypes.at(i) == 'B')
-		{
-			GRBVar tmpVar = gurobiModel.addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_BINARY, tmpNames.at(i));
-		}
-		else
-		{
-			processInfo->logger.message(1) << "Error variable type for " << tmpNames.at(i).c_str() << CoinMessageEol;
-		}
-	}
+			//Variable *tmpVar = origInstance->instanceData->variables->var[i];
 
-	gurobiModel.update();
+			//tmpUB = 10000000.0;
 
-	auto tmpObjPairs = origProblem->getObjectiveFunctionVarCoeffPairs();
-
-	gurobiModel.set(GRB_DoubleAttr_ObjCon, origProblem->getObjectiveConstant());
-
-	if (origProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
-	{
-		GRBLinExpr *expr = new GRBLinExpr(0);
-
-		for (int i = 0; i < tmpObjPairs.size(); i++)
-		{
-			*expr = *expr + (tmpObjPairs.at(i).second) * (gurobiModel.getVar(tmpObjPairs.at(i).first));
-		}
-
-		gurobiModel.setObjective(*expr);
-	}
-	else
-	{
-		GRBQuadExpr *expr = new GRBQuadExpr(0);
-
-		for (int i = 0; i < tmpObjPairs.size(); i++)
-		{
-			*expr = *expr + (tmpObjPairs.at(i).second) * (gurobiModel.getVar(tmpObjPairs.at(i).first));
-		}
-
-		auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
-
-		for (auto T : quadTerms)
-		{
-			*expr = *expr
-					+ (T->coef * gurobiModel.getVar(tmpObjPairs.at(T->idxOne).first)
-							* gurobiModel.getVar(tmpObjPairs.at(T->idxTwo).first));
-		}
-
-		gurobiModel.setObjective(*expr);
-	}
-
-	gurobiModel.update();
-
-	if (origProblem->isTypeOfObjectiveMinimize())
-	{
-		gurobiModel.set(GRB_IntAttr_ModelSense, 1);
-	}
-	else
-	{
-		gurobiModel.set(GRB_IntAttr_ModelSense, -1);
-	}
-
-	gurobiModel.update();
-
-	int numCon = origProblem->getNumberOfConstraints();
-
-	if (origProblem->isObjectiveFunctionNonlinear()) numCon--;
-
-	int row_nonz = 0;
-	int obj_nonz = 0;
-	int varIdx = 0;
-	SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
-			origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
-	auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
-	auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
-	auto constrLBs = origProblem->getProblemInstance()->getConstraintLowerBounds();
-	auto constrUBs = origProblem->getProblemInstance()->getConstraintUpperBounds();
-
-	for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
-	{
-		if (!origProblem->isConstraintNonlinear(rowIdx))
-		{
-			auto quadTerms = origProblem->getQuadraticTermsInConstraint(rowIdx);
-
-			if (quadTerms.size() == 0)
+			if (tmpTypes.at(i) == 'C')
 			{
-				GRBLinExpr *expr = new GRBLinExpr(0);
-
-				if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
-						&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
-								> 0)
-				{
-					row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
-							- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
-
-					for (int j = 0; j < row_nonz; j++)
-					{
-						double val =
-								m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-										+ j];
-						varIdx =
-								m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-										+ j];
-						auto variable = gurobiModel.getVar(varIdx);
-
-						*expr = *expr + val * variable;
-					}
-				}
-
-				if (constrTypes[rowIdx] == 'L')
-				{
-					gurobiModel.addConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
-				}
-				else if (constrTypes[rowIdx] == 'G')
-				{
-					gurobiModel.addConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
-				}
-				else if (constrTypes[rowIdx] == 'E')
-				{
-					gurobiModel.addConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
-				}
-				else
-				{
-				}
+				GRBVar tmpVar = gurobiModel.addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_CONTINUOUS, tmpNames.at(i));
+			}
+			else if (tmpTypes.at(i) == 'I')
+			{
+				GRBVar tmpVar = gurobiModel.addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_INTEGER, tmpNames.at(i));
+			}
+			else if (tmpTypes.at(i) == 'B')
+			{
+				GRBVar tmpVar = gurobiModel.addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_BINARY, tmpNames.at(i));
 			}
 			else
 			{
-				GRBQuadExpr *expr = new GRBQuadExpr(0);
+				processInfo->logger.message(1) << "Error variable type for " << tmpNames.at(i).c_str()
+						<< CoinMessageEol;
+			}
+		}
 
-				if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
-						&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
-								> 0)
+		gurobiModel.update();
+
+		auto tmpObjPairs = origProblem->getObjectiveFunctionVarCoeffPairs();
+
+		gurobiModel.set(GRB_DoubleAttr_ObjCon, origProblem->getObjectiveConstant());
+
+		if (origProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
+		{
+			GRBLinExpr *expr = new GRBLinExpr(0);
+
+			for (int i = 0; i < tmpObjPairs.size(); i++)
+			{
+				*expr += +(tmpObjPairs.at(i).second) * (gurobiModel.getVar(tmpObjPairs.at(i).first));
+			}
+
+			gurobiModel.setObjective(*expr);
+		}
+		else
+		{
+			GRBQuadExpr *expr = new GRBQuadExpr(0);
+
+			for (int i = 0; i < tmpObjPairs.size(); i++)
+			{
+				*expr += (tmpObjPairs.at(i).second) * (gurobiModel.getVar(tmpObjPairs.at(i).first));
+			}
+
+			auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
+
+			for (auto T : quadTerms)
+			{
+				*expr += (T->coef * gurobiModel.getVar(T->idxOne) * gurobiModel.getVar(T->idxTwo));
+			}
+
+			gurobiModel.setObjective(*expr);
+		}
+
+		gurobiModel.update();
+
+		if (origProblem->isTypeOfObjectiveMinimize())
+		{
+			gurobiModel.set(GRB_IntAttr_ModelSense, 1);
+		}
+		else
+		{
+			gurobiModel.set(GRB_IntAttr_ModelSense, -1);
+		}
+
+		gurobiModel.update();
+
+		// Now creating the constraints
+
+		int row_nonz = 0;
+		int obj_nonz = 0;
+		int varIdx = 0;
+
+		SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
+				origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
+
+		auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
+		auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
+		auto constrLBs = origProblem->getProblemInstance()->getConstraintLowerBounds();
+		auto constrUBs = origProblem->getProblemInstance()->getConstraintUpperBounds();
+
+		for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
+		{
+			// Only use constraints that don't contain a nonlinear part (may include a quadratic part)
+			if (!origProblem->isConstraintNonlinear(rowIdx))
+			{
+				auto quadTerms = origProblem->getQuadraticTermsInConstraint(rowIdx);
+
+				if (quadTerms.size() == 0)
 				{
-					row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
-							- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
+					GRBLinExpr *expr = new GRBLinExpr(0);
 
-					for (int j = 0; j < row_nonz; j++)
+					if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
+							&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
+									> 0)
 					{
-						double val =
-								m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-										+ j];
-						varIdx =
-								m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-										+ j];
-						auto variable = gurobiModel.getVar(varIdx);
+						row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
+								- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
 
-						*expr = *expr + val * variable;
+						for (int j = 0; j < row_nonz; j++)
+						{
+							double val =
+									m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
+											+ j];
+							varIdx =
+									m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
+											+ j];
+							auto variable = gurobiModel.getVar(varIdx);
+
+							*expr += val * variable;
+						}
 					}
-				}
-
-				for (auto T : quadTerms)
-				{
-					*expr = *expr + (T->coef * gurobiModel.getVar(T->idxOne) * gurobiModel.getVar(T->idxTwo));
-				}
-
-				if (constrTypes[rowIdx] == 'L')
-				{
-					gurobiModel.addConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
-				}
-				else if (constrTypes[rowIdx] == 'G')
-				{
-					gurobiModel.addConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
-				}
-				else if (constrTypes[rowIdx] == 'E')
-				{
-					gurobiModel.addConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
+					if (constrTypes[rowIdx] == 'L')
+					{
+						gurobiModel.addConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
+					}
+					else if (constrTypes[rowIdx] == 'G')
+					{
+						gurobiModel.addConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
+					}
+					else if (constrTypes[rowIdx] == 'E')
+					{
+						gurobiModel.addConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
+					}
+					else
+					{
+					}
 				}
 				else
 				{
+					GRBQuadExpr *expr = new GRBQuadExpr(0);
+
+					if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
+							&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
+									> 0)
+					{
+						row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
+								- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
+
+						for (int j = 0; j < row_nonz; j++)
+						{
+							double val =
+									m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
+											+ j];
+							varIdx =
+									m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
+											+ j];
+							auto variable = gurobiModel.getVar(varIdx);
+
+							*expr += val * variable;
+						}
+					}
+
+					for (auto T : quadTerms)
+					{
+						*expr += (T->coef * gurobiModel.getVar(T->idxOne) * gurobiModel.getVar(T->idxTwo));
+					}
+
+					if (constrTypes[rowIdx] == 'L')
+					{
+						gurobiModel.addConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
+					}
+					else if (constrTypes[rowIdx] == 'G')
+					{
+						gurobiModel.addConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
+					}
+					else if (constrTypes[rowIdx] == 'E')
+					{
+						gurobiModel.addConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
+					}
+					else
+					{
+					}
 				}
+
 			}
 		}
+
+		gurobiModel.update();
 	}
-
-	gurobiModel.update();
-
-	return true;
-}
-
-bool MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, int numNonZero, double constant)
-{
-	//auto nablag = osinstanceRefMINLP->calculateConstraintFunctionGradient(&point[0], constrIdx, true);
-
-	// Sets the value g_i as the constant
-	//double gkpp = osinstanceRefMINLP->calculateFunctionValue(constrIdx, &point[0], true);
-
-	//cout << "Creating cutting plane: " << endl;
-
-	GRBLinExpr *expr = new GRBLinExpr(0.0);
-
-	//auto varNames = osinstanceRefMINLP->getVariableNames();
-
-	for (int i = 0; i < numNonZero; i++)
+	catch (GRBException &e)
 	{
-		// Inserts the term nabla g_i(x_i) * x_i to the cutting plane
-		auto variable = gurobiModel.getVar(elements.at(i).idx);
-		//cout << "Variable (gurobi): " << variable.get(GRB_StringAttr_VarName) << endl;
-		//cout << "Variable (os): " << variable.get(GRB_StringAttr_VarName) << endl;
+		{
+			processInfo->logger.message(0) << "Error when creating linear problem:" << CoinMessageNewline
+					<< e.getMessage() << CoinMessageEol;
+		}
 
-		//double nablaval = nablag->values[i];
-		*expr = *expr + elements.at(i).value * variable;
-
-		//cout << nablaval << "       " << variable.get(GRB_StringAttr_VarName) << endl;
-
-		// Adds the value of -nabla g_i(x_i) * x_i  gradient to the constant
-		//gkpp += -nablag->values[i] * point[nablag->indexes[i]];
-		//cout << "   nablag" << nablag->indexes[i] << ": " << nablag->values[i] << endl;
+		return (false);
 	}
 
-	// Adds the cutting plane
-	//osi->addRow(cut, -osi->getInfinity(), -gkpp);
-	gurobiModel.addConstr(*expr <= -constant, "");
-
-	gurobiModel.update();
-
-	//gurobiModel.write("test.lp");
-
-	return true;
+	return (true);
 }
 
-std::vector<double> MILPSolverGurobi::getVariableSolution()
+void MILPSolverGurobi::initializeSolverSettings()
 {
-	//int numVar = processInfo->originalProblem->getNumberOfVariables();
+	try
+	{
+		gurobiModel.getEnv().set(GRB_IntParam_OutputFlag, 0);
+		//gurobiModel.getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
+		//gurobiModel.getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
+		//gurobiModel.getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
+		//gurobiModel.getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
+		//gurobiModel.getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
+		gurobiModel.getEnv().set(GRB_IntParam_SolutionLimit, 2100000000);
+		gurobiModel.getEnv().set(GRB_IntParam_SolutionNumber,
+				settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm") + 1);
+	}
+	catch (GRBException &e)
+	{
+		{
+			processInfo->logger.message(0) << "Error when initializing parameters for linear solver:"
+					<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		}
+	}
+}
+
+bool MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
+{
+	try
+	{
+		GRBLinExpr *expr = new GRBLinExpr(0.0);
+
+		for (int i = 0; i < elements.size(); i++)
+		{
+			auto variable = gurobiModel.getVar(elements.at(i).idx);
+			*expr = *expr + elements.at(i).value * variable;
+		}
+
+		if (settings->getBoolSetting("UseLazyConstraints", "MILP")) // Not implemented yet in Gurobi
+		{
+			if (discreteVariablesActivated)
+			{
+				gurobiModel.addConstr(*expr <= -constant, "");
+			}
+			else
+			{
+				gurobiModel.addConstr(*expr <= -constant, "");
+			}
+		}
+		else
+		{
+			gurobiModel.addConstr(*expr <= -constant, "");
+		}
+
+		gurobiModel.update();
+	}
+	catch (GRBException &e)
+	{
+		{
+			processInfo->logger.message(0) << "Error when adding linear constraint:" << CoinMessageNewline
+					<< e.getMessage() << CoinMessageEol;
+		}
+
+		return (false);
+
+	}
+
+	return (true);
+}
+
+std::vector<double> MILPSolverGurobi::getVariableSolution(int solIdx)
+{
+	bool isMILP = getDiscreteVariableStatus();
+
 	int numVar = gurobiModel.get(GRB_IntAttr_NumVars);
 	std::vector<double> solution(numVar);
 
-	for (int i = 0; i < numVar; i++)
+	try
 	{
-		GRBVar tmpVar = gurobiModel.getVar(i);
-		solution.at(i) = tmpVar.get(GRB_DoubleAttr_X);
+		if (isMILP && solIdx > 0)
+		{
+			gurobiModel.getEnv().set(GRB_IntParam_SolutionNumber, solIdx);
+
+			for (int i = 0; i < numVar; i++)
+			{
+				GRBVar tmpVar = gurobiModel.getVar(i);
+				solution.at(i) = tmpVar.get(GRB_DoubleAttr_Xn);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < numVar; i++)
+			{
+				GRBVar tmpVar = gurobiModel.getVar(i);
+				solution.at(i) = tmpVar.get(GRB_DoubleAttr_X);
+			}
+		}
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when reading solution with index " << solIdx << ":"
+				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
 	}
 
-	return solution;
+	return (solution);
+}
+
+int MILPSolverGurobi::getNumberOfSolutions()
+{
+	int numSols = 0;
+
+	numSols = gurobiModel.get(GRB_IntAttr_SolCount);
+
+	return (numSols);
 }
 
 void MILPSolverGurobi::activateDiscreteVariables(bool activate)
@@ -340,11 +395,11 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 
 	int status = gurobiModel.get(GRB_IntAttr_Status);
 
-	//if (status == GRB_LOADED)
-	//{
-	//	MILPSolutionStatus = E_ProblemSolutionStatus::::loaded;
-	//}
-	//else
+//if (status == GRB_LOADED)
+//{
+//	MILPSolutionStatus = E_ProblemSolutionStatus::::loaded;
+//}
+//else
 	if (status == GRB_OPTIMAL)
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::Optimal;
@@ -361,10 +416,10 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
 	}
-	//else if (status == GRB_CUTOFF)
-	//{
-	//	MILPSolutionStatus = EMILPStatus::cutoff;
-	//}
+//else if (status == GRB_CUTOFF)
+//{
+//	MILPSolutionStatus = EMILPStatus::cutoff;
+//}
 	else if (status == GRB_ITERATION_LIMIT)
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
@@ -381,33 +436,34 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
 	}
-	//else if (status == GRB_INTERRUPTED)
-	//{
-	//	MILPSolutionStatus = EMILPStatus::interrupted;
-	//}
-	//else if (status == GRB_NUMERIC)
-	//{
-	//	MILPSolutionStatus = EMILPStatus::numeric;
-	//}
+//else if (status == GRB_INTERRUPTED)
+//{
+//	MILPSolutionStatus = EMILPStatus::interrupted;
+//}
+//else if (status == GRB_NUMERIC)
+//{
+//	MILPSolutionStatus = EMILPStatus::numeric;
+//}
 	else if (status == GRB_SUBOPTIMAL)
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 	}
-	//else if (status == GRB_INPROGRESS)
-	//{
-	//	MILPSolutionStatus = EMILPStatus::in_progress;
-	//}
+//else if (status == GRB_INPROGRESS)
+//{
+//	MILPSolutionStatus = EMILPStatus::in_progress;
+//}
 	else
 	{
 		processInfo->logger.message(1) << "MILP solver return status unknown = " << status << CoinMessageEol;
 	}
 
-	return MILPSolutionStatus;
+	return (MILPSolutionStatus);
 }
 
 E_ProblemSolutionStatus MILPSolverGurobi::solveProblem()
 {
 	E_ProblemSolutionStatus MILPSolutionStatus;
+	cachedSolutionHasChanged = true;
 
 	try
 	{
@@ -417,24 +473,14 @@ E_ProblemSolutionStatus MILPSolverGurobi::solveProblem()
 
 		MILPSolutionStatus = getSolutionStatus();
 	}
-	catch (GRBException e)
+	catch (GRBException &e)
 	{
 		processInfo->logger.message(2) << "Error code = " << e.getErrorCode() << CoinMessageEol;
 		processInfo->logger.message(2) << e.getMessage() << CoinMessageEol;
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
-	return MILPSolutionStatus;
-}
-
-double MILPSolverGurobi::getLastObjectiveValue()
-{
-	return gurobiModel.get(GRB_DoubleAttr_ObjVal);
-}
-
-double MILPSolverGurobi::getBestObjectiveValue()
-{
-	return gurobiModel.get(GRB_DoubleAttr_ObjBound);
+	return (MILPSolutionStatus);
 }
 
 int MILPSolverGurobi::increaseSolutionLimit(int increment)
@@ -442,7 +488,7 @@ int MILPSolverGurobi::increaseSolutionLimit(int increment)
 	gurobiModel.getEnv().set(GRB_IntParam_SolutionLimit,
 			gurobiModel.getEnv().get(GRB_IntParam_SolutionLimit) + increment);
 
-	return gurobiModel.getEnv().get(GRB_IntParam_SolutionLimit);
+	return (gurobiModel.getEnv().get(GRB_IntParam_SolutionLimit));
 }
 
 void MILPSolverGurobi::setSolutionLimit(int limit)
@@ -452,53 +498,7 @@ void MILPSolverGurobi::setSolutionLimit(int limit)
 
 int MILPSolverGurobi::getSolutionLimit()
 {
-	return gurobiModel.getEnv().get(GRB_IntParam_SolutionLimit);
-}
-
-std::vector<SolutionPoint> MILPSolverGurobi::getAllVariableSolutions()
-{
-	std::vector < SolutionPoint > allSolutions;
-
-	if (getDiscreteVariableStatus())
-	{
-		auto numSols = gurobiModel.get(GRB_IntAttr_SolCount);
-
-		for (int i = 0; i < numSols; i++)
-		{
-			SolutionPoint tmpSolPt;
-
-			int numVar = gurobiModel.get(GRB_IntAttr_NumVars);
-
-			gurobiModel.getEnv().set(GRB_IntParam_SolutionNumber, i);
-
-			vector<double> tmpPt(numVar);
-
-			for (int i = 0; i < numVar; i++)
-			{
-				GRBVar tmpVar = gurobiModel.getVar(i);
-
-				tmpPt.at(i) = tmpVar.get(GRB_DoubleAttr_Xn);
-			}
-
-			tmpSolPt.point = tmpPt;
-			tmpSolPt.iterFound = processInfo->getCurrentIteration()->iterationNumber;
-			tmpSolPt.objectiveValue = gurobiModel.get(GRB_DoubleAttr_ObjVal);
-
-			allSolutions.push_back(tmpSolPt);
-		}
-	}
-	else
-	{
-		SolutionPoint tmpSolPt;
-		tmpSolPt.point = getVariableSolution();
-		tmpSolPt.iterFound = processInfo->getCurrentIteration()->iterationNumber;
-		tmpSolPt.objectiveValue = gurobiModel.get(GRB_DoubleAttr_ObjVal);
-
-		allSolutions.push_back(tmpSolPt);
-	}
-
-	return (allSolutions);
-
+	return (gurobiModel.getEnv().get(GRB_IntParam_SolutionLimit));
 }
 
 void MILPSolverGurobi::setTimeLimit(double seconds)
@@ -508,18 +508,118 @@ void MILPSolverGurobi::setTimeLimit(double seconds)
 
 void MILPSolverGurobi::setCutOff(double cutOff)
 {
-	gurobiModel.getEnv().set(GRB_DoubleParam_Cutoff, cutOff);
+	try
+	{
+		gurobiModel.getEnv().set(GRB_DoubleParam_Cutoff, cutOff);
 
+		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		{
+			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for minimization."
+					<< CoinMessageEol;
+		}
+		else
+		{
+
+			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for maximization."
+					<< CoinMessageEol;
+		}
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when setting cut off value:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
+
+	}
 }
 
 void MILPSolverGurobi::addMIPStart(std::vector<double> point)
 {
+	int numVar = gurobiModel.get(GRB_IntAttr_NumVars);
+	std::vector<double> solution(numVar);
 
+	try
+	{
+		for (int i = 0; i < numVar; i++)
+		{
+			GRBVar tmpVar = gurobiModel.getVar(i);
+			tmpVar.set(GRB_DoubleAttr_Start, point.at(i));
+		}
+
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when adding MIP starting point:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
+	}
+
+	processInfo->logger.message(3) << "    Added MIP starting point" << CoinMessageEol;
 }
 
 void MILPSolverGurobi::writeProblemToFile(std::string filename)
 {
-	gurobiModel.write(filename);
+	try
+	{
+		gurobiModel.write(filename);
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when saving model to file:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
+	}
+}
+
+double MILPSolverGurobi::getObjectiveValue(int solIdx)
+{
+	bool isMILP = getDiscreteVariableStatus();
+
+	double objVal = NAN;
+
+	if (!isMILP && solIdx > 0) // LP problems only have one solution!
+	{
+		processInfo->logger.message(0) << "Cannot obtain solution with index " << solIdx
+				<< " since the problem is LP/QP!" << CoinMessageEol;
+
+		return (objVal);
+	}
+
+	try
+	{
+		if ((isMILP && solIdx == 0) || !isMILP)
+		{
+			objVal = gurobiModel.get(GRB_DoubleAttr_ObjVal);
+		}
+		else // Gurobi has no functionality to access the objective value of a specific solution
+		{
+			gurobiModel.getEnv().set(GRB_IntParam_SolutionNumber, solIdx);
+
+			int numvars = gurobiModel.get(GRB_IntAttr_NumVars);
+
+			auto objective = gurobiModel.getObjective();
+			objVal = objective.getLinExpr().getConstant();
+
+			for (int i = 0; i < objective.size(); i++)
+			{
+				objVal += objective.getCoeff(i) * objective.getVar1(i).get(GRB_DoubleAttr_Xn)
+						* objective.getVar2(i).get(GRB_DoubleAttr_Xn);
+			}
+
+			auto linexpr = objective.getLinExpr();
+
+			for (int i = 0; i < linexpr.size(); i++)
+			{
+				objVal += linexpr.getCoeff(i) * linexpr.getVar(i).get(GRB_DoubleAttr_Xn);
+			}
+		}
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when obtaining objective value for solution index " << solIdx << ":"
+				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+
+	}
+
+	return (objVal);
+
 }
 
 void MILPSolverGurobi::changeConstraintToLazy(std::vector<int> constrIdxs)
@@ -529,4 +629,72 @@ void MILPSolverGurobi::changeConstraintToLazy(std::vector<int> constrIdxs)
 
 void MILPSolverGurobi::deleteMIPStarts()
 {
+	int numVar = gurobiModel.get(GRB_IntAttr_NumVars);
+	std::vector<double> solution(numVar);
+
+	try
+	{
+		for (int i = 0; i < numVar; i++)
+		{
+			GRBVar tmpVar = gurobiModel.getVar(i);
+			tmpVar.set(GRB_DoubleAttr_Start, GRB_UNDEFINED);
+		}
+
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when removing MIP starting point:" << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
+	}
+
+	processInfo->logger.message(3) << "    Removed MIP starting point" << CoinMessageEol;
+}
+
+void MILPSolverGurobi::populateSolutionPool()
+{
+}
+
+void MILPSolverGurobi::fixVariable(int varIndex, double value)
+{
+	updateVariableBound(varIndex, value, value);
+}
+
+void MILPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+{
+	try
+	{
+		GRBVar tmpVar = gurobiModel.getVar(varIndex);
+
+		tmpVar.set(GRB_DoubleAttr_LB, lowerBound);
+		tmpVar.set(GRB_DoubleAttr_UB, upperBound);
+
+		gurobiModel.update();
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when updating variable bounds for variable index" << varIndex << ":"
+				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+	}
+}
+
+pair<double, double> MILPSolverGurobi::getCurrentVariableBounds(int varIndex)
+{
+	pair<double, double> tmpBounds;
+
+	try
+	{
+		GRBVar tmpVar = gurobiModel.getVar(varIndex);
+
+		tmpBounds.first = tmpVar.get(GRB_DoubleAttr_LB);
+		tmpBounds.second = tmpVar.get(GRB_DoubleAttr_UB);
+
+		gurobiModel.update();
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when obtaining variable bounds for variable index" << varIndex << ":"
+				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+	}
+
+	return (tmpBounds);
 }

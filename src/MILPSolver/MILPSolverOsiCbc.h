@@ -9,22 +9,43 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		virtual ~MILPSolverOsiCbc();
 
 		virtual bool createLinearProblem(OptProblem *origProblem);
-		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, int numNonZero, double constant);
-		virtual std::vector<double> getVariableSolution();
+		virtual void initializeSolverSettings();
+		virtual void writeProblemToFile(std::string filename);
+
+		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, double constant);
+		virtual void changeConstraintToLazy(std::vector<int> constrIdxs);
+		virtual void createHyperplane(int constrIdx, std::vector<double> point)
+		{
+			MILPSolverBase::createHyperplane(constrIdx, point);
+		}
+
+		virtual void fixVariable(int varIndex, double value);
+		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
+		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+
 		virtual void activateDiscreteVariables(bool activate);
-		virtual bool getDiscreteVariableStatus();
+		virtual bool getDiscreteVariableStatus()
+		{
+			return (MILPSolverBase::getDiscreteVariableStatus());
+		}
+
 		virtual E_ProblemSolutionStatus solveProblem();
 		virtual E_ProblemSolutionStatus getSolutionStatus();
-		virtual double getLastObjectiveValue();
-		virtual double getBestObjectiveValue();
+		virtual int getNumberOfSolutions();
+		virtual std::vector<double> getVariableSolution(int solIdx);
+		virtual std::vector<SolutionPoint> getAllVariableSolutions()
+		{
+			return (MILPSolverBase::getAllVariableSolutions());
+		}
+		virtual double getObjectiveValue(int solIdx);
+		virtual double getObjectiveValue()
+		{
+			return (MILPSolverBase::getObjectiveValue());
+		}
 
 		virtual int increaseSolutionLimit(int increment);
 		virtual void setSolutionLimit(int limit);
 		virtual int getSolutionLimit();
-
-		virtual void writeProblemToFile(std::string filename);
-
-		virtual std::vector<SolutionPoint> getAllVariableSolutions();
 
 		virtual void setTimeLimit(double seconds);
 
@@ -32,5 +53,6 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 
 		virtual void addMIPStart(std::vector<double> point);
 		virtual void deleteMIPStarts();
-		virtual void changeConstraintToLazy(std::vector<int> constrIdxs);
+
+		virtual void populateSolutionPool();
 };

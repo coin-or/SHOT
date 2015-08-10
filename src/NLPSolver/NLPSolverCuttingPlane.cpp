@@ -135,8 +135,8 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 		// Solves the problem and obtains the solution
 		MILPSolver->solveProblem();
-		auto LPVarSol = MILPSolver->getVariableSolution();
-		auto LPObjVar = MILPSolver->getLastObjectiveValue();
+		auto LPVarSol = MILPSolver->getVariableSolution(0);
+		auto LPObjVar = MILPSolver->getObjectiveValue();
 
 		if (i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
 		{
@@ -241,7 +241,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 			processInfo->logger.message(3) << "  Constant " << constant << CoinMessageEol;
 
 			// Adds the linear constraint
-			MILPSolver->addLinearConstraint(elements, elements.size(), constant);
+			MILPSolver->addLinearConstraint(elements, constant);
 		}
 
 		prevSol = currSol;
