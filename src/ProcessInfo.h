@@ -31,6 +31,7 @@ struct PrimalSolution
 		E_PrimalSolutionSource sourceType;
 		double objValue;
 		int iterFound;
+		IndexValuePair maxDevatingConstraint;
 };
 
 struct DualSolution
@@ -74,6 +75,8 @@ class ProcessInfo
 
 		pair<double, double> getCorrectedObjectiveBounds();
 
+		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
+				IndexValuePair maxConstrDev);
 		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
 		void addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
 		void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);

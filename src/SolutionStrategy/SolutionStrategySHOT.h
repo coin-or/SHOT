@@ -52,6 +52,7 @@
 #include "Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
 #include "Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
+#include "Tasks/TaskSolveFixedLinearProblem.h"
 
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"

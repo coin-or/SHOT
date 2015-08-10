@@ -18,6 +18,8 @@ TaskCreateMILPProblem::TaskCreateMILPProblem()
 
 	processInfo->MILPSolver->createLinearProblem(processInfo->originalProblem);
 
+	processInfo->MILPSolver->initializeSolverSettings();
+
 	if (settings->getBoolSetting("Debug", "SHOTSolver"))
 	{
 		processInfo->MILPSolver->writeProblemToFile(settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");

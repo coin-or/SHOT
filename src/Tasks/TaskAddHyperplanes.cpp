@@ -151,7 +151,7 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 
 	if (hyperplaneIsOk)
 	{
-		processInfo->MILPSolver->addLinearConstraint(elements, elements.size(), constant);
+		processInfo->MILPSolver->addLinearConstraint(elements, constant);
 
 		currIter->numHyperplanesAdded++;
 		currIter->totNumHyperplanes++;

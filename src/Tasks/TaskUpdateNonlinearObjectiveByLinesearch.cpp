@@ -145,14 +145,25 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			currIter->solutionPoints.at(i).maxDeviation = processInfo->originalProblem->getMostDeviatingConstraint(
 					ptNew);
 
-			currIter->solutionPoints.at(i).objectiveValue =
-					processInfo->originalProblem->calculateOriginalObjectiveValue(ptNew);
+			processInfo->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::ObjectiveConstraint,
+					currIter->iterationNumber);
+
+			auto oldObjVal = currIter->solutionPoints.at(i).objectiveValue;
+
+			currIter->solutionPoints.at(i).objectiveValue = ptNew.at(ptNew.size() - 1);
+			//processInfo->originalProblem->calculateOriginalObjectiveValue(ptNew);
 
 			currIter->solutionPoints.at(i).point = ptNew;
 
-			std::cout << "Maxiter: " << max_iter << std::endl;
-			std::cout << "New obj value: " << currIter->objectiveValue << std::endl;
-			std::cout << "Max deviation: " << currIter->maxDeviation << std::endl;
+			//std::cout << "PT: " << ptNew.at(ptNew.size() - 1) << std::endl;
+
+			processInfo->logger.message(2) << "    Obj. var." << oldObjVal << "->"
+					<< currIter->solutionPoints.at(i).objectiveValue << "max dev." << currIter->maxDeviation << "in"
+					<< (int) max_iter << " iters." << CoinMessageEol;
+
+			//std::cout << "Maxiter: " << max_iter << std::endl;
+			//std::cout << "New obj value: " << currIter->objectiveValue << std::endl;
+			//std::cout << "Max deviation: " << currIter->maxDeviation << std::endl;
 
 			/*auto mostDev = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
 
