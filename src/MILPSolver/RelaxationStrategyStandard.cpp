@@ -30,7 +30,8 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
-	if (processInfo->getCurrentIteration()->iterationNumber % 50 == 0) return this->setActive();
+	int iterInterval = settings->getIntSetting("IterSolveLPRelaxation", "Algorithm");
+	if (iterInterval != 0 && processInfo->getCurrentIteration()->iterationNumber % iterInterval == 0) return this->setActive();
 
 	if (isLPStepFinished() || isCurrentToleranceReached() || isIterationLimitReached()
 			|| isRelaxedSolutionEpsilonValid() || isObjectiveStagnant())

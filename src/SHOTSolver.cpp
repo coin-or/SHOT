@@ -238,6 +238,11 @@ void SHOTSolver::initializeSettings()
 			"Max number of iterations without objective function improvement", 0, INT_MAX);
 	settings->createSetting("ObjectiveStagnationTolerance", "Algorithm", 0.000001,
 			"Objective function improvement tolerance", 0.0, DBL_MAX);
+	settings->createSetting("IterSolveLPRelaxation", "Algorithm", 0,
+			"Solve an LP relaxation each number of iterations, 0= disable ", 0, INT_MAX);
+
+	settings->createSetting("SolveFixedLP", "Algorithm", false,
+			"Solve an LP with fixed integers if integer-values have not changes in several MIP iterations.");
 
 	std::vector < std::string > enumRelaxationStrategy;
 	enumRelaxationStrategy.push_back("Standard");

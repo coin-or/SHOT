@@ -143,13 +143,15 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 			&& ((mostDev.value >= 0 && mostDev.value < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 					|| primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint)) // Add point as hyperplane
 	{
-		std::pair<int, std::vector<double>> tmpItem;
-		tmpItem.first = mostDev.idx;
-		tmpItem.second = tmpPoint;
-		processInfo->hyperplaneWaitingList.push_back(tmpItem);
+		Hyperplane hyperplane;
+		hyperplane.sourceConstraintIndex = mostDev.idx;
+		hyperplane.generatedPoint = tmpPoint;
+		hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
+
+		processInfo->hyperplaneWaitingList.push_back(hyperplane);
 
 		HPadded = '*';
-//		std::cout << "added primal with mostdev " << mostDev.value << " for " << sourceDesc << std::endl;
+
 	}
 
 	bool updatePrimal = isLinConstrFulfilled && isNonLinConstrFulfilled;
@@ -166,26 +168,31 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	//		|| (!isMinimization && tmpObjVal > processInfo->currentObjectiveBounds.second)))
 	if (updatePrimal)
 	{
-		/*if (mostDev.value >= 0) // Add point as hyperplane
+		char HPobjadded = ' ';
+
+		/*		if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
 		 {
-		 processInfo->currentObjectiveBounds.second = tmpObjVal;
-		 std::pair<int, std::vector<double>> tmpItem;
-		 tmpItem.first = mostDev.idx;
-		 tmpItem.second = tmpPoint;
-		 processInfo->hyperplaneWaitingList.push_back(tmpItem);
+		 auto objConstrVal = processInfo->originalProblem->calculateConstraintFunctionValue(-1, primalSol.point) - primalSol.point.back();
 
-		 HPadded = '*';
+		 std::cout << "Obj constr val " << objConstrVal << std::endl;
 
+		 if (objConstrVal <= 0)
+		 {
+		 Hyperplane hyperplane;
+		 hyperplane.sourceConstraintIndex = -1;
+		 hyperplane.generatedPoint = tmpPoint;
+		 hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
+
+		 processInfo->hyperplaneWaitingList.push_back(hyperplane);
+
+		 HPobjadded = '#';
 		 }
-		 else
-		 {
-		 processInfo->currentObjectiveBounds.second = tmpObjVal;
-		 }*/
-
+		 }
+		 */
 		processInfo->currentObjectiveBounds.second = tmpObjVal;
 
-		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4%") % tmpObjVal % mostDev.value
-				% sourceDesc % HPadded;
+		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4% %5%") % tmpObjVal % mostDev.value
+				% sourceDesc % HPadded % HPobjadded;
 
 		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
 

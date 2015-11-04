@@ -37,11 +37,24 @@ void TaskSelectHyperplanePointsSolution::run()
 		}
 		else
 		{
-			std::pair<int, std::vector<double>> tmpItem;
-			tmpItem.first = tmpMostDevConstr.idx;
-			tmpItem.second = allSolutions.at(i).point;
+			Hyperplane hyperplane;
+			hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
+			hyperplane.generatedPoint = allSolutions.at(i).point;
 
-			processInfo->hyperplaneWaitingList.push_back(tmpItem);
+			if (i == 0 && currIter->isMILP())
+			{
+				hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+			}
+			else if (currIter->isMILP())
+			{
+				hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+			}
+			else
+			{
+				hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+			}
+
+			processInfo->hyperplaneWaitingList.push_back(hyperplane);
 		}
 	}
 }

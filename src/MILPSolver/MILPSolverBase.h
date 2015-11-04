@@ -7,6 +7,9 @@
 
 class MILPSolverBase
 {
+	private:
+		std::vector<GeneratedHyperplane> generatedHyperplanes;
+		int addedHyperplanes = 0;
 	protected:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
@@ -19,6 +22,9 @@ class MILPSolverBase
 		std::vector<double> lastLazyUpdateConstrSlacks;
 		std::vector<double> lastSolutionConstrSlacks;
 
+		//std::vector<E_HyperplaneSource> hyperplaneSource;
+		//std::vector<bool> isConstraintLazy;
+
 		virtual void startTimer();
 		virtual void stopTimer();
 
@@ -26,7 +32,8 @@ class MILPSolverBase
 		MILPSolverBase();
 		~MILPSolverBase();
 
-		virtual void createHyperplane(int constrIdx, std::vector<double> point);
+		virtual void createHyperplane(Hyperplane hyperplane);
+		virtual void createInteriorHyperplane(Hyperplane hyperplane);
 		virtual bool getDiscreteVariableStatus();
 		virtual void populateSolutionPool() = 0;
 		virtual std::vector<SolutionPoint> getAllVariableSolutions();
@@ -34,4 +41,6 @@ class MILPSolverBase
 		virtual std::vector<double> getVariableSolution(int i) = 0;
 		virtual double getObjectiveValue(int i) = 0;
 		virtual double getObjectiveValue();
+
+		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes();
 };

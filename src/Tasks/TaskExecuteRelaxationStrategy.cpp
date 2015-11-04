@@ -45,7 +45,6 @@ void TaskExecuteRelaxationStrategy::run()
 
 		relaxationStrategy->executeStrategy();
 	}
-
 }
 std::string TaskExecuteRelaxationStrategy::getType()
 {

@@ -927,7 +927,6 @@ std::vector<QuadraticTerm*> OptProblem::getQuadraticTermsInConstraint(int constr
 
 			if (tmpTerm->idx == constrIdx) quadTerms.push_back(tmpTerm);
 		}
-
 	}
 	else if (constrIdx == -1
 			&& (QPStrategy == ES_QPStrategy::QuadraticallyConstrained || QPStrategy == ES_QPStrategy::QuadraticObjective))
@@ -943,7 +942,6 @@ std::vector<QuadraticTerm*> OptProblem::getQuadraticTermsInConstraint(int constr
 
 			if (tmpTerm->idx == constrIdx) quadTerms.push_back(tmpTerm);
 		}
-
 	}
 
 	return (quadTerms);

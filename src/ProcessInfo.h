@@ -42,6 +42,13 @@ struct DualSolution
 		int iterFound;
 };
 
+struct Hyperplane
+{
+		int sourceConstraintIndex;
+		std::vector<double> generatedPoint;
+		E_HyperplaneSource source;
+};
+
 class ProcessInfo
 {
 	public:
@@ -137,15 +144,15 @@ class ProcessInfo
 
 		std::vector<InteriorPoint> interiorPts;
 
-		std::vector<std::pair<int, std::vector<double>>>hyperplaneWaitingList;
+		std::vector<Hyperplane> hyperplaneWaitingList;
 
 		std::vector<Timer> timers;
 
-		private:
+	private:
 		static bool instanceFlag;
 		static ProcessInfo *single;
 		SHOTSettings::Settings *settings;
 
 		ProcessInfo();
 
-	};
+};

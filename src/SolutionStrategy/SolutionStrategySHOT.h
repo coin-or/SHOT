@@ -54,6 +54,8 @@
 #include "Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 #include "Tasks/TaskSolveFixedLinearProblem.h"
 
+#include "Tasks/TaskSwitchToLazyConstraints.h"
+
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 

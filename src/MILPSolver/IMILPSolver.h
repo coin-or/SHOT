@@ -8,6 +8,19 @@
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 
+struct GeneratedHyperplane
+{
+		int generatedConstraintIndex;
+		int sourceConstraintIndex;
+		std::vector<double> generatedPoint;
+		E_HyperplaneSource source;
+		bool isLazy = false;
+		bool isRemoved = false;
+		int generatedIter;
+		int removedIter;
+		int convertedToLazyIter;
+};
+
 class IMILPSolver
 {
 	public:
@@ -18,11 +31,12 @@ class IMILPSolver
 		}
 		;
 
+		virtual void checkParameters() = 0;
+
 		virtual bool createLinearProblem(OptProblem *origProblem) = 0;
 		virtual void initializeSolverSettings() = 0;
-		//virtual std::vector<double> getVariableSolution() = 0;
-		virtual std::vector<double> getVariableSolution(int solIdx) = 0;
 
+		virtual std::vector<double> getVariableSolution(int solIdx) = 0;
 		virtual int getNumberOfSolutions() = 0;
 
 		virtual void activateDiscreteVariables(bool activate) = 0;
@@ -40,7 +54,8 @@ class IMILPSolver
 		virtual void writeProblemToFile(std::string filename) = 0;
 
 		virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
+		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
+		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan) = 0;
 
 		virtual void setTimeLimit(double seconds) = 0;
 
@@ -49,7 +64,7 @@ class IMILPSolver
 		virtual void addMIPStart(std::vector<double> point) = 0;
 		virtual void deleteMIPStarts() = 0;
 
-		virtual void changeConstraintToLazy(std::vector<int> constrIdxs) = 0;
+		virtual void changeConstraintToLazy(GeneratedHyperplane &hyperplane) = 0;
 
 		virtual void populateSolutionPool() = 0;
 
@@ -57,7 +72,13 @@ class IMILPSolver
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
-		virtual void createHyperplane(int constrIdx, std::vector<double> point) = 0;
+		virtual void createHyperplane(Hyperplane hyperplane)= 0;
+		virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
+		virtual bool supportsQuadraticObjective() = 0;
+		virtual bool supportsQuadraticConstraints() = 0;
+		virtual bool supportsLazyConstraints() = 0;
+
+		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes() = 0;
 	protected:
 };

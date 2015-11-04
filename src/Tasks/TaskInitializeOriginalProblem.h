@@ -7,6 +7,7 @@
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalLinearObjective.h"
 #include <OSInstance.h>
+#include "../MILPSolver/IMILPSolver.h"
 
 class TaskInitializeOriginalProblem: public TaskBase
 {

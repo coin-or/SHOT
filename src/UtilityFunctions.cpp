@@ -227,3 +227,15 @@ bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> fi
 	return (false);
 
 }
+
+bool UtilityFunctions::isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+		std::vector<int> indexes)
+{
+	for (int i = 0; i < indexes.size(); i++)
+	{
+		if (firstPt.at(indexes.at(i)) != secondPt.at(indexes.at(i))) return (true);
+	}
+
+	return (false);
+
+}

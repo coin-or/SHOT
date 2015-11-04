@@ -152,11 +152,12 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 				processInfo->addDualSolutionCandidate(ptNew, E_DualSolutionSource::ObjectiveConstraint,
 						currIter->iterationNumber);
 
-				std::pair<int, std::vector<double>> tmpItem;
-				tmpItem.first = mostDev.idx;
-				tmpItem.second = ptNew;
-				processInfo->hyperplaneWaitingList.push_back(tmpItem);
+				Hyperplane hyperplane;
+				hyperplane.sourceConstraintIndex = mostDev.idx;
+				hyperplane.generatedPoint = ptNew;
+				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
 
+				processInfo->hyperplaneWaitingList.push_back(hyperplane);
 			}
 		}
 
@@ -206,5 +207,4 @@ std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

@@ -30,12 +30,9 @@ void TaskAddHyperplanes::run()
 		{
 			auto tmpItem = processInfo->hyperplaneWaitingList.at(k - 1);
 
-			auto tmpIdx = tmpItem.first;
-			std::vector<double> tmpPts;
-
-			tmpPts = tmpItem.second;
-
-			processInfo->MILPSolver->createHyperplane(tmpIdx, tmpPts);
+			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective) processInfo->MILPSolver->createInteriorHyperplane(
+					tmpItem);
+			else processInfo->MILPSolver->createHyperplane(tmpItem);
 		}
 
 		processInfo->hyperplaneWaitingList.clear();

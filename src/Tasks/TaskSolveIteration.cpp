@@ -35,6 +35,16 @@ void TaskSolveIteration::run()
 		MILPSolver->addMIPStart(processInfo->primalSolution);
 	}
 
+	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	{
+		stringstream ss;
+		ss << settings->getStringSetting("DebugPath", "SHOTSolver");
+		ss << "/lp";
+		ss << currIter->iterationNumber - 1;
+		ss << ".lp";
+		processInfo->MILPSolver->writeProblemToFile(ss.str());
+	}
+
 	auto solStatus = MILPSolver->solveProblem();
 
 	int fixIter = 0;
@@ -72,6 +82,7 @@ void TaskSolveIteration::run()
 	}
 	else
 	{
+
 		currIter->solutionStatus = solStatus;
 
 		auto sols = MILPSolver->getAllVariableSolutions();
@@ -123,12 +134,11 @@ void TaskSolveIteration::run()
 	{
 		processInfo->iterFeasMILP = processInfo->iterFeasMILP + 1;
 	}
-
 }
+
 std::string TaskSolveIteration::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
 
 }
-
