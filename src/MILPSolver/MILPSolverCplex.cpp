@@ -570,23 +570,24 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 			modelUpdated = false;
 		}
 
-		int currSolLim = getSolutionLimit();
+		/*
+		 int currSolLim = getSolutionLimit();
 
-		IloInt tunestat = cplexInstance.tuneParam();
+		 IloInt tunestat = cplexInstance.tuneParam();
 
-		setSolutionLimit(currSolLim);
-		setTimeLimit(10000);
+		 setSolutionLimit(currSolLim);
+		 setTimeLimit(10000);
 
-		try
-		{
-			cplexInstance.writeParam("test.param");
-		}
-		catch (IloException &e)
-		{
-			processInfo->logger.message(0) << "Error when saving parameters to file:" << CoinMessageNewline
-					<< e.getMessage() << CoinMessageEol;
+		 try
+		 {
+		 cplexInstance.writeParam("test.param");
+		 }
+		 catch (IloException &e)
+		 {
+		 processInfo->logger.message(0) << "Error when saving parameters to file:" << CoinMessageNewline
+		 << e.getMessage() << CoinMessageEol;
 
-		}
+		 }*/
 
 		/*if (tunestat == IloCplex::TuningComplete) cout << "Tuning complete." << endl;
 		 else if (tunestat == IloCplex::TuningAbort) cout << "Tuning abort." << endl;
