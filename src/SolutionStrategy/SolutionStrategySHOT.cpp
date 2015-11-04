@@ -31,12 +31,16 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->createTimer("LP", " - LP problems");
 	processInfo->createTimer("MILP", " - MILP problems");
 	processInfo->createTimer("PopulateSolutionPool", " - Populate solution pool");
+	processInfo->createTimer("LazyChange", " - Change to lazy constraints");
 	processInfo->createTimer("HyperplaneLinesearch", " - Linesearch");
 	processInfo->createTimer("PrimalBoundTotal", " - Primal solution search");
 	processInfo->createTimer("PrimalBoundSearchNLP", "    - NLP");
 	processInfo->createTimer("PrimalBoundLinesearch", "    - Linesearch");
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
+
+	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver();
+	processInfo->tasks->addTask(tInitMILPSolver, "InitMILPSolver");
 
 	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
 	processInfo->tasks->addTask(tInitOrigProblem, "InitOrigProb");
@@ -50,9 +54,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		processInfo->tasks->addTask(tFindIntPoint, "FindIntPoint");
 	}
-
-	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver();
-	processInfo->tasks->addTask(tInitMILPSolver, "InitMILPSolver");
 
 	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem();
 	processInfo->tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
@@ -109,8 +110,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition(
 					[this]()
 					{
+						auto currIter = processInfo->getCurrentIteration();
 
-						if (!processInfo->getCurrentIteration()->isMILP())
+						if (!currIter->isMILP())
 						{
 							return (false);
 						}
@@ -127,6 +129,45 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 						if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"))
 						{
+							return (true);
+						}
+
+						int maxItersNoMIPChange = 5;
+						auto currSolPt = currIter->solutionPoints.at(0).point;
+
+						bool noMIPChange = true;
+
+						for (int i = 1; i < maxItersNoMIPChange; i++)
+						{
+							if (processInfo->iterations.size() <= i)
+							{
+								noMIPChange = false;
+								break;
+							}
+
+							auto prevIter = &processInfo->iterations.at(currIter->iterationNumber -1 - i);
+
+							if (!prevIter->isMILP())
+							{
+								noMIPChange = false;
+								break;
+							}
+
+							auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
+
+							bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
+									discreteIdxs);
+
+							if (isDifferent)
+							{
+								noMIPChange = false;
+								break;
+							}
+						}
+
+						if (noMIPChange)
+						{
+							processInfo->logger.message(1) << "    MIP solution has not changed in" << maxItersNoMIPChange << "iterations. Solving NLP problem..."<< CoinMessageEol;
 							return (true);
 						}
 
@@ -175,14 +216,20 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
+	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
+	{
+		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
+		processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
+		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
+		//processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		//processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	}
+
 	TaskBase *tAddHPs = new TaskAddHyperplanes();
 	processInfo->tasks->addTask(tAddHPs, "AddHPs");
 
-	//TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
-	//processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-	//processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
-	//processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-	//processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
+	processInfo->tasks->addTask(tSwitchLazy, "SwitchLazy");
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	processInfo->tasks->addTask(tPrintBoundReport, "PrintBoundReport");

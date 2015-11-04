@@ -111,3 +111,16 @@ enum class E_DualSolutionSource
 	ObjectiveConstraint,
 	LPFixedIntegers
 };
+
+enum class E_HyperplaneSource
+{
+	MIPOptimalLinesearch,
+	MIPSolutionPoolLinesearch,
+	LPRelaxedLinesearch,
+	MIPOptimalSolutionPoint,
+	MIPSolutionPoolSolutionPoint,
+	LPRelaxedSolutionPoint,
+	LPFixedIntegers,
+	PrimalSolutionSearch,
+	PrimalSolutionSearchInteriorObjective
+};

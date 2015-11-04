@@ -26,5 +26,7 @@ class TaskSolveFixedLinearProblem: public TaskBase
 		std::vector<std::vector<double>> testedPoints;
 
 		void printIterationReport();
+
+		std::vector<double> lastSolution;
 };
 

@@ -10,15 +10,25 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		MILPSolverCplex();
 		virtual ~MILPSolverCplex();
 
+		virtual void checkParameters();
+
 		virtual bool createLinearProblem(OptProblem *origProblem);
 		virtual void initializeSolverSettings();
 		virtual void writeProblemToFile(std::string filename);
 
-		virtual bool addLinearConstraint(std::vector<IndexValuePair> elements, double constant);
-		virtual void changeConstraintToLazy(std::vector<int> constrIdxs);
-		virtual void createHyperplane(int constrIdx, std::vector<double> point)
+		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
 		{
-			MILPSolverBase::createHyperplane(constrIdx, point);
+			return (addLinearConstraint(elements, constant, false));
+		}
+		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
+		virtual void changeConstraintToLazy(GeneratedHyperplane &hyperplane);
+		virtual void createHyperplane(Hyperplane hyperplane)
+		{
+			MILPSolverBase::createHyperplane(hyperplane);
+		}
+		virtual void createInteriorHyperplane(Hyperplane hyperplane)
+		{
+			MILPSolverBase::createInteriorHyperplane(hyperplane);
 		}
 
 		virtual void fixVariable(int varIndex, double value);
@@ -58,6 +68,15 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		virtual void populateSolutionPool();
 
+		virtual bool supportsQuadraticObjective();
+		virtual bool supportsQuadraticConstraints();
+		virtual bool supportsLazyConstraints();
+
+		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
+		{
+			return (MILPSolverBase::getGeneratedHyperplanes());
+		}
+
 	private:
 
 		int firstNonLazyHyperplane;
@@ -74,6 +93,8 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		IloRangeArray cplexConstrs;
 		IloRangeArray cplexLazyConstrs;
 		vector<IloConversion> cplexVarConvers;
+
+		bool modelUpdated = false;
 
 	protected:
 

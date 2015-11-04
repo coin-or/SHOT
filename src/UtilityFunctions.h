@@ -27,4 +27,7 @@ namespace UtilityFunctions
 			std::vector<int> indexes);
 	bool isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
 			std::vector<int> indexes);
+
+	bool isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+			std::vector<int> indexes);
 }

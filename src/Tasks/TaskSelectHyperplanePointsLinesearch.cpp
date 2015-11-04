@@ -84,10 +84,25 @@ void TaskSelectHyperplanePointsLinesearch::run()
 					processInfo->addDualSolutionCandidate(xNewc, E_DualSolutionSource::Linesearch,
 							prevIter->iterationNumber);
 
-					std::pair<int, std::vector<double>> tmpItem;
-					tmpItem.first = tmpMostDevConstr.idx;
-					tmpItem.second = xNewc;
-					processInfo->hyperplaneWaitingList.push_back(tmpItem);
+					Hyperplane hyperplane;
+					hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
+					hyperplane.generatedPoint = xNewc;
+
+					if (i == 0 && currIter->isMILP())
+					{
+						hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
+					}
+					else if (currIter->isMILP())
+					{
+						hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
+					}
+					else
+					{
+						hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
+					}
+
+					processInfo->hyperplaneWaitingList.push_back(hyperplane);
+
 				}
 			}
 		}
