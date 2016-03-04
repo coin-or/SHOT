@@ -54,6 +54,14 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 		return (true);
 	}
 
+	bool useObjectiveLinesearchUpdate = settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound");
+
+	if (prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
+	{
+		return (false);
+
+	}
+
 	// We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
 	//if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  prevIter->usedConstraintTolerance)
 	//TODO use the strategy for updated constraint tolerance
@@ -68,6 +76,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 	{
+
 		if (prevIter->maxDeviation < settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")) return (true);
 
 		if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);
@@ -116,7 +125,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	 return true;
 	 }*/
 
-	// The solution fulfills the intermediate epsilon tolerance but not the final one
+// The solution fulfills the intermediate epsilon tolerance but not the final one
 	/*
 	 if (prevIter->maxDeviation > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
 	 {
@@ -132,24 +141,24 @@ int MILPSolutionLimitStrategyIncrease::getNewLimit()
 	auto currIter = processInfo->getCurrentIteration();
 
 	int newLimit;
-	//int iterLargeIncrease = settings->getIntSetting("MILPSolIncreaseIter", "MILP");
+//int iterLargeIncrease = settings->getIntSetting("MILPSolIncreaseIter", "MILP");
 
 	newLimit = processInfo->MILPSolver->getSolutionLimit() + 1;
 	lastIterSolLimIncreased = currIter->iterationNumber;
-	// Update MILP solution limit
-	//if (numSolLimIncremented > settings->getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update
-	//{
-	//	newLimit = MILPSolver->getSolutionLimit() + 1;
-	//	//numSolLimIncremented = 1;
+// Update MILP solution limit
+//if (numSolLimIncremented > settings->getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update
+//{
+//	newLimit = MILPSolver->getSolutionLimit() + 1;
+//	//numSolLimIncremented = 1;
 
-	//}
-	//else // Increase by one
-	//{
-	//	newLimit = MILPSolver->getSolutionLimit() + 1;
-	//	numSolLimIncremented = numSolLimIncremented + 1;
-	//}
+//}
+//else // Increase by one
+//{
+//	newLimit = MILPSolver->getSolutionLimit() + 1;
+//	numSolLimIncremented = numSolLimIncremented + 1;
+//}
 
-	//lastIterSolLimIncreased = currIter->iterationNumber;
+//lastIterSolLimIncreased = currIter->iterationNumber;
 
 	return (newLimit);
 }

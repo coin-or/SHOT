@@ -23,6 +23,8 @@ void TaskAddHyperplanes::run()
 {
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 
+	//if (currIter->isMILP() && true) return; //Use with lazy + CPLEX
+
 	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
 			|| !currIter->MILPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
@@ -30,9 +32,14 @@ void TaskAddHyperplanes::run()
 		{
 			auto tmpItem = processInfo->hyperplaneWaitingList.at(k - 1);
 
-			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective) processInfo->MILPSolver->createInteriorHyperplane(
-					tmpItem);
-			else processInfo->MILPSolver->createHyperplane(tmpItem);
+			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
+			{
+				processInfo->MILPSolver->createInteriorHyperplane(tmpItem);
+			}
+			else
+			{
+				processInfo->MILPSolver->createHyperplane(tmpItem);
+			}
 		}
 
 		processInfo->hyperplaneWaitingList.clear();
@@ -76,6 +83,8 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 
 		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 				&point.at(0), -1, true);
+		processInfo->numGradientEvals++;
+
 		int number = processInfo->originalProblem->getNumberOfVariables();
 
 		for (int i = 0; i < number - 1; i++)

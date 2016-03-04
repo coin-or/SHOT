@@ -134,6 +134,7 @@ bool NLPSolverIPOptRelaxed::solveProblem()
 	try
 	{
 		NLPSolver->solve();
+		processInfo->numNLPProbsSolved++;
 	}
 	catch (std::exception e)
 	{

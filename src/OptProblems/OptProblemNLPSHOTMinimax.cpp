@@ -412,6 +412,7 @@ double OptProblemNLPSHOTMinimax::calculateConstraintFunctionValue(int idx, std::
 	double tmpVal;
 
 	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
+	processInfo->numFunctionEvals++;
 
 	if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 	{
@@ -435,7 +436,7 @@ double OptProblemNLPSHOTMinimax::calculateConstraintFunctionValue(int idx, std::
 SparseVector* OptProblemNLPSHOTMinimax::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
 {
 	auto tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-
+	processInfo->numGradientEvals++;
 	/*if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 	 {
 	 }

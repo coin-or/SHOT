@@ -16,6 +16,7 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 	double tmpVal = 0.0;
 
 	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
+	processInfo->numFunctionEvals++;
 
 	if (idx == -1)
 	{
@@ -50,6 +51,7 @@ SparseVector* OptProblemOriginal::calculateConstraintFunctionGradient(int idx, s
 {
 	SparseVector* tmpVector;
 	tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
+	processInfo->numGradientEvals++;
 
 	int number = tmpVector->number;
 

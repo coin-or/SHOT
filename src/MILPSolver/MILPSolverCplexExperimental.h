@@ -1,18 +1,19 @@
-﻿#pragma once
+#pragma once
 #include "IMILPSolver.h"
 #include "MILPSolverBase.h"
 
-#include "OsiSolverInterface.hpp"
-//#include "OsiCbcSolverInterface.hpp"
-#include "CbcModel.hpp"
-#include "CoinBuild.hpp"
-#include "CoinModel.hpp"
+#include <ilcplex/ilocplex.h>
 
-class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
+#include "../LinesearchMethod/ILinesearchMethod.h"
+#include "../LinesearchMethod/LinesearchMethodBisection.h"
+#include "../LinesearchMethod/LinesearchMethodBoost.h"
+
+class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
 {
 	public:
-		MILPSolverOsiCbc();
-		virtual ~MILPSolverOsiCbc();
+
+		MILPSolverCplexExperimental();
+		virtual ~MILPSolverCplexExperimental();
 
 		virtual void checkParameters();
 
@@ -83,10 +84,53 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		}
 
 	private:
-		OsiClpSolverInterface *osiInterface;
-		CbcModel *cbcModel;
 
-		int solLimit;
-		double cutOff = DBL_MAX;
+		int firstNonLazyHyperplane;
+		int iterLastLazyConvert;
+		//double timeLastIter;
+		std::vector<double> iterDurations;
+
+		//double bestCutoff = DBL_MAX;
+
+		IloEnv cplexEnv;
+		IloModel cplexModel;
+		IloCplex cplexInstance;
+		IloNumVarArray cplexVars;
+		IloRangeArray cplexConstrs;
+		IloRangeArray cplexLazyConstrs;
+		vector<IloConversion> cplexVarConvers;
+
+		bool modelUpdated = false;
+
+	protected:
 
 };
+
+/*
+ class SolutionFilterCallbackI: public IloCplex::IncumbentCallbackI
+ {
+ private:
+ //build solution index
+ IloNumVarArray xVar;
+ ProcessInfo *processInfo;
+
+ public:
+ SolutionFilterCallbackI(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo) :
+ IloCplex::IncumbentCallbackI(env), xVar(x)
+ {
+
+ this->processInfo = pInfo;
+ }
+ ;
+ void main();	// the call back function
+ //the duplicate function to create new call back object
+ IloCplex::CallbackI* duplicateCallback() const
+ {
+ return (new (getEnv()) SolutionFilterCallbackI(*this));
+ }
+
+ };
+
+ IloCplex::Callback SolutionFilterCallback(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo);
+ */
+

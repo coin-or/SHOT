@@ -72,8 +72,17 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 				settings->getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
 	}
 
-	processInfo->initializeResults(1, processInfo->originalProblem->getNumberOfVariables(),
-			processInfo->originalProblem->getNumberOfConstraints());
+	int numConstr = processInfo->originalProblem->getNumberOfConstraints();
+
+	int numVar = processInfo->originalProblem->getNumberOfVariables();
+
+	if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	{
+		numVar = numVar - 1; // Removes the extra objective variable
+		numConstr = numConstr - 1; // Removes the extra objective constraint
+	}
+
+	processInfo->initializeResults(1, numVar, numConstr);
 
 	processInfo->stopTimer("Reformulation");
 }

@@ -91,12 +91,16 @@ void TaskPrintSolution::run()
 
 	processInfo->logger.message(1)
 			<< "==================================================================================" << CoinMessageEol;
-	processInfo->logger.message(1) << "# optimal MILP problems solved:  " << processInfo->iterOptMILP << CoinMessageEol;
-	processInfo->logger.message(1) << "# feasible MILP problems solved: " << processInfo->iterFeasMILP
+	processInfo->logger.message(1) << "# optimal MIP problems solved:   " << processInfo->iterOptMILP << CoinMessageEol;
+	processInfo->logger.message(1) << "# feasible MIP problems solved:  " << processInfo->iterFeasMILP
 			<< CoinMessageEol;
-	processInfo->logger.message(1) << "# LP problems solved:            " << processInfo->iterLP << CoinMessageEol;
+	processInfo->logger.message(1) << "# relaxed problems solved:       " << processInfo->iterLP << CoinMessageEol;
 	processInfo->logger.message(1) << "# total problems solved:         "
 			<< processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP << CoinMessageEol;
+	processInfo->logger.message(1) << "# function evaluations (in SHOT):" << processInfo->numFunctionEvals
+			<< CoinMessageEol;
+	processInfo->logger.message(1) << "# gradient evaluations (in SHOT):" << processInfo->numGradientEvals
+			<< CoinMessageEol;
 	processInfo->logger.message(1)
 			<< "==================================================================================" << CoinMessageEol;
 

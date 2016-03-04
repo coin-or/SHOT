@@ -48,6 +48,7 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 		{
 			return (MILPSolverBase::getAllVariableSolutions());
 		}
+		virtual double getDualObjectiveValue();
 		virtual double getObjectiveValue(int solIdx);
 		virtual double getObjectiveValue()
 		{

@@ -139,6 +139,7 @@ bool PrimalSolutionStrategyFixedNLP::solveProblem()
 	try
 	{
 		NLPSolver->solve();
+		processInfo->numNLPProbsSolved++;
 		std::cout << "\e[A";
 		std::cout << "\e[A";
 

@@ -42,6 +42,8 @@ void TaskPrintIterationReport::run()
 
 		bool hasSolution = true;
 
+		if (currIter->solutionPoints.size() == 0) hasSolution = false;
+
 		if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic
 				|| processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0)
 		{
@@ -54,11 +56,11 @@ void TaskPrintIterationReport::run()
 
 		if (currIter->type == E_IterationProblemType::MIP)
 		{
-			tmpType << " T";
+			tmpType << " I";
 		}
 		else if (currIter->type == E_IterationProblemType::Relaxed)
 		{
-			tmpType << " F";
+			tmpType << " R";
 		}
 
 		if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
@@ -90,6 +92,7 @@ void TaskPrintIterationReport::run()
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
 		{
 			tmpType << " TL";
+			hasSolution = false;
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
 		{

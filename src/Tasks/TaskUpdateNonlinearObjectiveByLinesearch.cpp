@@ -7,60 +7,12 @@
 
 #include <TaskUpdateNonlinearObjectiveByLinesearch.h>
 
-class Test3
-{
-	private:
-		OptProblemOriginal *originalProblem;
-		//std::vector<char> varTypes;
-
-	public:
-		std::vector<double> firstPt;
-		std::vector<double> secondPt;
-		Test3(OptProblemOriginal *prob)
-		{
-			originalProblem = prob;
-		}
-
-		double operator()(const double x)
-		{
-			int length = firstPt.size();
-			std::vector<double> ptNew(length);
-
-			for (int i = 0; i < length; i++)
-			{
-				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
-			}
-
-			auto value = originalProblem->calculateConstraintFunctionValue(-1, ptNew);
-
-			return (value);
-		}
-};
-
-class TerminationCondition3
-{
-	private:
-		double tol;
-
-	public:
-		TerminationCondition3(double tolerance)
-		{
-			tol = tolerance;
-		}
-
-		bool operator()(double min, double max)
-		{
-			return (abs(min - max) <= tol);
-		}
-};
-
 TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesearch()
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
-	processInfo->startTimer("PrimalBoundTotal");
-	processInfo->startTimer("PrimalBoundLinesearch");
+	processInfo->startTimer("ObjectiveLinesearch");
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
 	{
 		processInfo->logger.message(2) << "Boost linesearch implementation selected for primal heuristics"
@@ -74,8 +26,7 @@ TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesear
 		linesearchMethod = new LinesearchMethodBisection();
 	}
 
-	processInfo->stopTimer("PrimalBoundLinesearch");
-	processInfo->stopTimer("PrimalBoundTotal");
+	processInfo->stopTimer("ObjectiveLinesearch");
 }
 
 TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesearch()
@@ -85,102 +36,106 @@ TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesea
 
 void TaskUpdateNonlinearObjectiveByLinesearch::run()
 {
+	processInfo->startTimer("ObjectiveLinesearch");
+
 	auto currIter = processInfo->getCurrentIteration();
 
-	if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
 	{
-		//processInfo->startTimer("PrimalBoundTotal");
-		//processInfo->startTimer("PrimalBoundLinesearch");
+		bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+		std::vector<int> constrIdxs;
+		constrIdxs.push_back(-1);
 
-		//auto allSolutions = processInfo->MILPSolver->getAllVariableSolutions();
-		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
-		//if (settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
-		//		&& processInfo->originalProblem->isObjectiveFunctionNonlinear())
-		//{
-		Test3 t(processInfo->originalProblem);
-		for (int i = 0; i < currIter->solutionPoints.size(); i++)
+		auto allSolutions = currIter->solutionPoints;
+
+		for (int i = 0; i < allSolutions.size(); i++)
 		{
-			//auto dualSol = currIter->solutionPoints.at(i);
+			auto dualSol = allSolutions.at(i);
 
-			if (currIter->solutionPoints.at(i).maxDeviation.value < 0) continue;
-			if (currIter->solutionPoints.at(i).maxDeviation.value > 1e6) continue;
+			auto oldObjVal = allSolutions.at(i).objectiveValue;
 
-			double mu = currIter->solutionPoints.at(i).objectiveValue;
-			double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1,
-					currIter->solutionPoints.at(i).point);
+			//std::cout << dualSol.maxDeviation.value << std::endl;
 
-			vector<double> tmpPoint(currIter->solutionPoints.at(i).point);
-			tmpPoint.back() = mu + 1.1 * error;
+			if (dualSol.maxDeviation.value < 0) continue;
 
-			//std::cout << "Error is " << error << std::endl;
+			double mu = dualSol.objectiveValue;
+			double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
-			//std::cout << "adding primal solution candidate" << std::endl;
+			vector<double> tmpPoint(dualSol.point);
+			tmpPoint.back() = mu + 1.05 * error;
 
-			int numVar = processInfo->originalProblem->getNumberOfVariables();
-			//std::vector<double> ptA(numVar);
-			//std::vector<double> ptB(numVar);
-			std::vector<double> ptNew(numVar);
+			std::vector<double> internalPoint;
+			std::vector<double> externalPoint;
 
-			t.firstPt = currIter->solutionPoints.at(i).point;
-			t.secondPt = tmpPoint;
-
-			typedef std::pair<double, double> Result;
-			boost::uintmax_t max_iter = 100;
-			Result r1 = boost::math::tools::toms748_solve(t, 0.0, 1.0, TerminationCondition3(1e-18), max_iter);
-
-			for (int j = 0; j < numVar; j++)
+			try
 			{
-				ptNew.at(j) = r1.second * currIter->solutionPoints.at(i).point.at(j) + (1 - r1.second) * tmpPoint.at(j);
+				auto xNewc = linesearchMethod->findZero(tmpPoint, dualSol.point,
+						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0, constrIdxs);
+
+				internalPoint = xNewc.first;
+				externalPoint = xNewc.second;
+
+				auto mostDevInner = processInfo->originalProblem->getMostDeviatingConstraint(internalPoint);
+				auto mostDevOuter = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
+
+				Hyperplane hyperplane;
+				hyperplane.sourceConstraintIndex = mostDevOuter.idx;
+				hyperplane.generatedPoint = externalPoint;
+				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
+
+				processInfo->hyperplaneWaitingList.push_back(hyperplane);
+
+				allSolutions.at(i).maxDeviation = mostDevOuter;
+				allSolutions.at(i).objectiveValue = processInfo->originalProblem->calculateOriginalObjectiveValue(
+						externalPoint);
+				allSolutions.at(i).point.back() = externalPoint.back();
+
+				//UtilityFunctions::displayVector(externalPoint);
+				//UtilityFunctions::displayVector(currIter->solutionPoints.at(i).point);
+
+				if (i == 0)
+				{
+					currIter->maxDeviation = mostDevOuter.value;
+					currIter->maxDeviationConstraint = mostDevOuter.idx;
+					currIter->objectiveValue = allSolutions.at(i).objectiveValue;
+
+					//std::cout << "New objective: " << currIter->objectiveValue << std::endl;
+
+					if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+					{
+						currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+					}
+				}
+
+				//std::cout << "PT: " << ptNew.at(ptNew.size() - 1) << std::endl;
+
+				/*Can never add a dual solution for the point is not optimal
+				 * if (i == 0 && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
+				 {
+				 DualSolution sol =
+				 { externalPoint, E_DualSolutionSource::MILPSolutionOptimal,
+				 currIter->solutionPoints.at(i).objectiveValue, currIter->iterationNumber };
+				 processInfo->addDualSolutionCandidate(sol);
+				 }*/
+
+				processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
+						processInfo->getCurrentIteration()->iterationNumber);
+				//processInfo->logger.message(2) << "    Obj. var." << oldObjVal << "->"
+				//<< currIter->solutionPoints.at(i).objectiveValue << CoinMessageEol;
+
+			}
+			catch (std::exception &e)
+			{
+				processInfo->logger.message(0)
+						<< "Cannot find solution with linesearch for updating nonlinear objective: "
+						<< CoinMessageNewline << e.what() << CoinMessageEol;
 			}
 
-			auto error2 = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
-
-			processInfo->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::ObjectiveConstraint,
-					currIter->iterationNumber);
-
-			for (int j = 0; j < numVar; j++)
-			{
-				ptNew.at(j) = r1.first * currIter->solutionPoints.at(i).point.at(j) + (1 - r1.first) * tmpPoint.at(j);
-			}
-			currIter->solutionPoints.at(i).maxDeviation = processInfo->originalProblem->getMostDeviatingConstraint(
-					ptNew);
-
-			processInfo->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::ObjectiveConstraint,
-					currIter->iterationNumber);
-
-			auto oldObjVal = currIter->solutionPoints.at(i).objectiveValue;
-
-			currIter->solutionPoints.at(i).objectiveValue = ptNew.at(ptNew.size() - 1);
-			//processInfo->originalProblem->calculateOriginalObjectiveValue(ptNew);
-
-			currIter->solutionPoints.at(i).point = ptNew;
-
-			//std::cout << "PT: " << ptNew.at(ptNew.size() - 1) << std::endl;
-
-			processInfo->logger.message(2) << "    Obj. var." << oldObjVal << "->"
-					<< currIter->solutionPoints.at(i).objectiveValue << "max dev." << currIter->maxDeviation << "in"
-					<< (int) max_iter << " iters." << CoinMessageEol;
-
-			//std::cout << "Maxiter: " << max_iter << std::endl;
-			//std::cout << "New obj value: " << currIter->objectiveValue << std::endl;
-			//std::cout << "Max deviation: " << currIter->maxDeviation << std::endl;
-
-			/*auto mostDev = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
-
-			 processInfo->addDualSolutionCandidate(ptNew, E_DualSolutionSource::ObjectiveConstraint,
-			 currIter->iterationNumber);
-
-			 std::pair<int, std::vector<double>> tmpItem;
-			 tmpItem.first = mostDev.idx;
-			 tmpItem.second = ptNew;
-			 processInfo->hyperplaneWaitingList.push_back(tmpItem);
-			 */
-			//}
 		}
-
-		//processInfo->stopTimer("PrimalBoundLinesearch");
-		//processInfo->stopTimer("PrimalBoundTotal");
 	}
+
+	processInfo->stopTimer("ObjectiveLinesearch");
 }
 
 std::string TaskUpdateNonlinearObjectiveByLinesearch::getType()

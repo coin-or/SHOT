@@ -108,6 +108,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 				&hyperplane.generatedPoint.at(0), -1, true);
 		int number = processInfo->originalProblem->getNumberOfVariables();
+		processInfo->numGradientEvals++;
 
 		for (int i = 0; i < number - 1; i++)
 		{
@@ -207,83 +208,45 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	auto originalProblem = processInfo->originalProblem;
 	std::vector < IndexValuePair > elements;
 
-	//int constrIdx = hyperplane.sourceConstraintIndex;
-	//auto point = hyperplane.generatedPoint;
-
-	if (hyperplane.sourceConstraintIndex != -1
-			&& !originalProblem->isConstraintNonlinear(hyperplane.sourceConstraintIndex))
-	{
-		processInfo->logger.message(1) << CoinMessageNewline
-				<< "Error: cutting plane added to linear constraint with index: " << hyperplane.sourceConstraintIndex
-				<< CoinMessageNewline << CoinMessageEol;
-	}
-
 	auto varNames = originalProblem->getVariableNames();
-	/*
-	 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
 
+	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
+			hyperplane.generatedPoint);
 
-	 for (int i = 0; i < point.size(); i++)
-	 {
-	 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
-	 }*/
+	//processInfo->logger.message(1) << " HP point generated for auxiliary objective function constraint"
+	//		<< CoinMessageEol;
 
-	double constant = 0.0;
-	//originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,hyperplane.generatedPoint);
+	auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
+			&hyperplane.generatedPoint.at(0), -1, true);
+	int number = processInfo->originalProblem->getNumberOfVariables();
+	processInfo->numGradientEvals++;
 
-	if (hyperplane.sourceConstraintIndex == -1
-			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
+	for (int i = 0; i < number - 1; i++)
 	{
-		processInfo->logger.message(1) << " HP point generated for auxiliary objective function constraint"
-				<< CoinMessageEol;
-
-		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
-				&hyperplane.generatedPoint.at(0), -1, true);
-		int number = processInfo->originalProblem->getNumberOfVariables();
-
-		for (int i = 0; i < number - 1; i++)
+		if (tmpArray[i] != 0)
 		{
-			if (tmpArray[i] != 0)
-			{
-				IndexValuePair pair;
-				pair.idx = i;
-				pair.value = tmpArray[i];
+			IndexValuePair pair;
+			pair.idx = i;
+			pair.value = tmpArray[i];
 
-				elements.push_back(pair);
-				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
+			elements.push_back(pair);
+			constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
 
-				processInfo->logger.message(1) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
-						<< CoinMessageEol;
-
-			}
+			//processInfo->logger.message(3) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
+			//		<< CoinMessageEol;
 		}
-
-		processInfo->logger.message(1) << " Gradient for obj.var.: -1" << CoinMessageEol;
-
-		IndexValuePair pair;
-		pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
-		pair.value = -1.0;
-
-		elements.push_back(pair);
-		constant += /*-(-1) **/hyperplane.generatedPoint.at(pair.idx);
-	}
-	else
-	{
-		processInfo->logger.message(0) << " Cannot add interior cutting plane for constraints other than the objective!"
-				<< CoinMessageEol;
 	}
 
-	/*
-	 for (auto E : elements)
-	 {
-	 processInfo->logger.message(3) << " HP coefficient for variable " << varNames.at(E.idx) << ": " << E.value
-	 << CoinMessageEol;
-	 }
+	//processInfo->logger.message(1) << "   Gradient for obj.var.: -1" << CoinMessageEol;
 
-	 processInfo->logger.message(3) << " HP constant " << constant << CoinMessageEol;
-	 */
+	IndexValuePair pair;
+	pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
+	pair.value = -1.0;
 
-	processInfo->logger.message(1) << " HP constant " << constant << CoinMessageEol;
+	elements.push_back(pair);
+	constant += hyperplane.generatedPoint.at(pair.idx);
+
+	//processInfo->logger.message(1) << "    HP constant " << constant << CoinMessageEol;
 	bool hyperplaneIsOk = true;
 
 	for (auto E : elements)
@@ -299,7 +262,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 
 	if (hyperplaneIsOk)
 	{
-		int constrIndex = processInfo->MILPSolver->addLinearConstraint(elements, constant, true);
+		int constrIndex = processInfo->MILPSolver->addLinearConstraint(elements, constant, false);
 		addedHyperplanes++;
 		GeneratedHyperplane genHyperplane;
 

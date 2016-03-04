@@ -28,11 +28,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	}
 
 	processInfo->createTimer("Subproblems", "Time spent solving subproblems");
-	processInfo->createTimer("LP", " - LP problems");
-	processInfo->createTimer("MILP", " - MILP problems");
+	processInfo->createTimer("LP", " - Relaxed problems");
+	processInfo->createTimer("MILP", " - MIP problems");
 	processInfo->createTimer("PopulateSolutionPool", " - Populate solution pool");
 	processInfo->createTimer("LazyChange", " - Change to lazy constraints");
 	processInfo->createTimer("HyperplaneLinesearch", " - Linesearch");
+	processInfo->createTimer("ObjectiveLinesearch", " - Objective linesearch");
 	processInfo->createTimer("PrimalBoundTotal", " - Primal solution search");
 	processInfo->createTimer("PrimalBoundSearchNLP", "    - NLP");
 	processInfo->createTimer("PrimalBoundLinesearch", "    - Linesearch");
@@ -76,11 +77,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tSolveIteration = new TaskSolveIteration();
 	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
 
-	/*if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
-	 {
-	 TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
-	 processInfo->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
-	 }*/
+	if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
+			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
+	{
+		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
+		processInfo->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
+	}
 
 	TaskBase *tPrintIterReport = new TaskPrintIterationReport();
 	processInfo->tasks->addTask(tPrintIterReport, "PrintIterReport");
@@ -99,6 +101,28 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
 
+	TaskBase *tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
+	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+
+	TaskBase *tCheckDualCands = new TaskCheckDualSolutionCandidates();
+	processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
+
+	TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
+	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+
+	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
+	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+
+	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
+	{
+		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
+		processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
+		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
+		processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands2");
+		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	}
+
 	if (settings->getBoolSetting("UseNLPCall", "PrimalBound"))
 	{
 		TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
@@ -112,7 +136,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 					{
 						auto currIter = processInfo->getCurrentIteration();
 
-						if (!currIter->isMILP())
+						if (!currIter->isMILP() || currIter->solutionPoints.size() == 0)
 						{
 							return (false);
 						}
@@ -122,17 +146,17 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 							return (true);
 						}
 
-						if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
-						{
-							return (true);
-						}
+						/*if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
+						 {
+						 return (true);
+						 }*/
 
 						if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"))
 						{
 							return (true);
 						}
 
-						int maxItersNoMIPChange = 5;
+						int maxItersNoMIPChange = 7;
 						auto currSolPt = currIter->solutionPoints.at(0).point;
 
 						bool noMIPChange = true;
@@ -180,17 +204,13 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 			processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
 			dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
+
+			processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+			processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
+			processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+			processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 		}
 	}
-
-	TaskBase *tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
-	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-
-	TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-
-	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
 	TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
 	processInfo->tasks->addTask(tCheckObjStag, "CheckObjStag");
@@ -212,18 +232,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 	processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
 
-	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
+	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
 	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
-
-	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
-	{
-		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
-		processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
-		//processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-		//processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
-	}
 
 	TaskBase *tAddHPs = new TaskAddHyperplanes();
 	processInfo->tasks->addTask(tAddHPs, "AddHPs");
@@ -238,21 +249,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tGoto, "Goto");
 
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckPrimCands);
+	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckDualCands);
+
 	processInfo->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
 	TaskBase *tPrintSol = new TaskPrintSolution();
 	processInfo->tasks->addTask(tPrintSol, "PrintSol");
-
-	TaskBase *nextTask = new TaskBase;
-
-	while (processInfo->tasks->getNextTask(nextTask))
-	{
-		//std::cout << "Next task is of type: " << nextTask->getType() << std::endl;
-		nextTask->run();
-		//std::cout << "Finished task" << std::endl;
-	}
-
-	processInfo->tasks->clearTasks();
 
 }
 
@@ -263,6 +265,15 @@ SolutionStrategySHOT::~SolutionStrategySHOT()
 
 bool SolutionStrategySHOT::solveProblem()
 {
+	TaskBase *nextTask = new TaskBase;
+
+	while (processInfo->tasks->getNextTask(nextTask))
+	{
+		nextTask->run();
+	}
+
+	processInfo->tasks->clearTasks();
+
 	return (true);
 }
 

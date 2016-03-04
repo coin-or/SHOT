@@ -98,6 +98,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 {
 
 	processInfo->startTimer("InteriorPointMinimax");
+
 	int numVar = NLPProblem->getNumberOfVariables();
 
 	// Sets the maximal number of iterations
@@ -214,6 +215,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 			// Calculates the gradient
 			auto nablag = NLPProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).idx, currSol);
+			processInfo->numGradientEvals++;
 
 			for (int i = 0; i < nablag->number; i++)
 			{
@@ -263,6 +265,8 @@ bool NLPSolverCuttingPlane::solveProblem()
 	delete MILPSolver;
 
 	processInfo->stopTimer("InteriorPointMinimax");
+
+	processInfo->numNLPProbsSolved++;
 
 	return (true);
 }

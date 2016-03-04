@@ -31,7 +31,7 @@ enum class E_TerminationReason
 
 enum class E_ProblemSolutionStatus
 {
-	Feasible, Optimal, Infeasible, Unbounded, IterationLimit, TimeLimit, SolutionLimit, Error
+	Feasible, Optimal, Infeasible, Unbounded, IterationLimit, TimeLimit, SolutionLimit, Error, CutOff
 };
 
 enum class E_IterationProblemType
@@ -97,19 +97,19 @@ enum class E_PrimalSolutionSource
 	NLPRelaxed,
 	MILPSolutionPool,
 	ObjectiveConstraint,
-	LPFixedIntegers
+	LPFixedIntegers,
+	LazyConstraintCallback
 };
 
 enum class E_DualSolutionSource
 {
-	LPSolution,
-	MILPSolution,
-	Linesearch,
-	LinesearchFixedIntegers,
-	NLPFixedIntegers,
-	NLPRelaxed,
+	LPSolution, MILPSolutionOptimal, MILPSolutionFeasible,
+	//Linesearch,
+	//LinesearchFixedIntegers,
+	//NLPFixedIntegers,
+	//NLPRelaxed,
 	ObjectiveConstraint,
-	LPFixedIntegers
+//LPFixedIntegers
 };
 
 enum class E_HyperplaneSource
