@@ -7,6 +7,7 @@
 class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 {
 	public:
+
 		MILPSolverCplex();
 		virtual ~MILPSolverCplex();
 
@@ -49,6 +50,7 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		{
 			return (MILPSolverBase::getAllVariableSolutions());
 		}
+		virtual double getDualObjectiveValue();
 		virtual double getObjectiveValue(int solIdx);
 		virtual double getObjectiveValue()
 		{
@@ -99,6 +101,7 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 	protected:
 
 };
+
 /*
  class SolutionFilterCallbackI: public IloCplex::IncumbentCallbackI
  {

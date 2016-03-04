@@ -54,8 +54,7 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 		}
 		else if (tmpTypes.at(i) == 'D')
 		{
-			// TODO: Implement
-			//cplexVars.add(IloSemiContVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOFLOAT, tmpNames.at(i).c_str()));
+
 		}
 		else
 		{
@@ -702,6 +701,10 @@ bool MILPSolverOsiCbc::supportsQuadraticObjective()
 bool MILPSolverOsiCbc::supportsQuadraticConstraints()
 {
 	return (false);
+}
+
+double MILPSolverOsiCbc::getDualObjectiveValue()
+{
 }
 
 bool MILPSolverOsiCbc::supportsLazyConstraints()

@@ -7,52 +7,53 @@
 
 #include <TaskSelectPrimalCandidatesFromLinesearch.h>
 
-class Test2
-{
-	private:
-		OptProblemOriginal *originalProblem;
-		//std::vector<char> varTypes;
+/*
+ class Test2
+ {
+ private:
+ OptProblemOriginal *originalProblem;
+ //std::vector<char> varTypes;
 
-	public:
-		std::vector<double> firstPt;
-		std::vector<double> secondPt;
-		Test2(OptProblemOriginal *prob)
-		{
-			originalProblem = prob;
-		}
+ public:
+ std::vector<double> firstPt;
+ std::vector<double> secondPt;
+ Test2(OptProblemOriginal *prob)
+ {
+ originalProblem = prob;
+ }
 
-		double operator()(const double x)
-		{
-			int length = firstPt.size();
-			std::vector<double> ptNew(length);
+ double operator()(const double x)
+ {
+ int length = firstPt.size();
+ std::vector<double> ptNew(length);
 
-			for (int i = 0; i < length; i++)
-			{
-				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
-			}
+ for (int i = 0; i < length; i++)
+ {
+ ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
+ }
 
-			auto value = originalProblem->calculateConstraintFunctionValue(-1, ptNew);
+ auto value = originalProblem->calculateConstraintFunctionValue(-1, ptNew);
 
-			return value;
-		}
-};
+ return value;
+ }
+ };
 
-class TerminationCondition2
-{
-	private:
-		double tol;
+ class TerminationCondition2
+ {
+ private:
+ double tol;
 
-	public:
-		TerminationCondition2(double tolerance)
-		{
-			tol = tolerance;
-		}
+ public:
+ TerminationCondition2(double tolerance)
+ {
+ tol = tolerance;
+ }
 
-		bool operator()(double min, double max)
-		{
-			return abs(min - max) <= tol;
-		}
-};
+ bool operator()(double min, double max)
+ {
+ return abs(min - max) <= tol;
+ }
+ };*/
 
 TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch()
 {
@@ -93,73 +94,42 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 		processInfo->startTimer("PrimalBoundLinesearch");
 
 		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
-		if (settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
-				&& processInfo->originalProblem->isObjectiveFunctionNonlinear())
-		{
-			Test2 t(processInfo->originalProblem);
 
-			double tol = settings->getDoubleSetting("LinesearchEps", "Linesearch");
-			boost::uintmax_t N = settings->getIntSetting("LinesearchMaxIter", "Linesearch");
+		/*
+		 if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
+		 && settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
+		 {
+		 for (int i = 0; i < currIter->solutionPoints.size(); i++)
+		 {
+		 auto dualSol = currIter->solutionPoints.at(i);
 
-			for (int i = 0; i < currIter->solutionPoints.size(); i++)
-			{
-				auto dualSol = currIter->solutionPoints.at(i);
+		 if (dualSol.maxDeviation.value < 0) continue;
 
-				if (dualSol.maxDeviation.value < 0) continue;
+		 double mu = dualSol.objectiveValue;
+		 double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
-				double mu = dualSol.objectiveValue;
-				double error = processInfo->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
+		 vector<double> tmpPoint(dualSol.point);
+		 tmpPoint.back() = mu + 1.2 * error;
 
-				vector<double> tmpPoint(dualSol.point);
-				tmpPoint.back() = mu + 1.2 * error;
+		 int numVar = processInfo->originalProblem->getNumberOfVariables();
 
-				int numVar = processInfo->originalProblem->getNumberOfVariables();
+		 std::vector<double> ptNew(numVar);
 
-				std::vector<double> ptNew(numVar);
+		 auto xNewc = linesearchMethod->findZero(dualSol.point, allSolutions.at(i).point,
+		 settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+		 settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+		 settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
 
-				t.firstPt = dualSol.point;
-				t.secondPt = tmpPoint;
+		 auto mostDev = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
 
-				typedef std::pair<double, double> Result;
-				boost::uintmax_t max_iter = N;
+		 Hyperplane hyperplane;
+		 hyperplane.sourceConstraintIndex = mostDev.idx;
+		 hyperplane.generatedPoint = ptNew;
+		 hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
 
-				Result r1 = boost::math::tools::toms748_solve(t, 0.0, 1.0, TerminationCondition2(tol), max_iter);
-
-				if (max_iter == N)
-				{
-					processInfo->logger.message(1)
-							<< "Warning, number of line search iterations reached for primal bound search!"
-							<< CoinMessageEol;
-				}
-
-				for (int i = 0; i < numVar; i++)
-				{
-					ptNew.at(i) = r1.second * dualSol.point.at(i) + (1 - r1.second) * tmpPoint.at(i);
-				}
-
-				auto error2 = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
-
-				processInfo->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::ObjectiveConstraint,
-						currIter->iterationNumber);
-
-				for (int i = 0; i < numVar; i++)
-				{
-					ptNew.at(i) = r1.first * dualSol.point.at(i) + (1 - r1.first) * tmpPoint.at(i);
-				}
-
-				auto mostDev = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
-
-				processInfo->addDualSolutionCandidate(ptNew, E_DualSolutionSource::ObjectiveConstraint,
-						currIter->iterationNumber);
-
-				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = mostDev.idx;
-				hyperplane.generatedPoint = ptNew;
-				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
-
-				processInfo->hyperplaneWaitingList.push_back(hyperplane);
-			}
-		}
+		 processInfo->hyperplaneWaitingList.push_back(hyperplane);
+		 }
+		 }*/
 
 		for (int i = 0; i < allSolutions.size(); i++)
 		{
@@ -186,20 +156,49 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 				auto maxDevNLP2 = processInfo->originalProblem->getMostDeviatingAllConstraint(xNLP2);
 				auto maxDevMILP = processInfo->originalProblem->getMostDeviatingAllConstraint(allSolutions.at(i).point);
 
-				if (maxDevNLP2.value <= 0 && maxDevMILP.value >= 0)
+				if (maxDevNLP2.value <= 0 && maxDevMILP.value > 0)
 				{
-					auto xNewc2 = linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
-							settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-							settings->getDoubleSetting("LinesearchEps", "Linesearch"));
+					try
+					{
 
-					processInfo->addPrimalSolutionCandidate(xNewc2, E_PrimalSolutionSource::LinesearchFixedIntegers,
-							processInfo->getCurrentIteration()->iterationNumber);
+						processInfo->startTimer("PrimalBoundLinesearch");
+						auto xNewc = linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
+								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+								settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0);
+
+						processInfo->stopTimer("PrimalBoundLinesearch");
+
+						processInfo->addPrimalSolutionCandidate(xNewc.first, E_PrimalSolutionSource::Linesearch,
+								processInfo->getCurrentIteration()->iterationNumber);
+
+						//processInfo->addPrimalSolutionCandidate(xNewc.second,
+						//		E_PrimalSolutionSource::LinesearchFixedIntegers,
+						//		processInfo->getCurrentIteration()->iterationNumber);
+					}
+					catch (std::exception &e)
+					{
+
+						processInfo->logger.message(1) << "Cannot find solution with primal bound linesearch: "
+								<< CoinMessageNewline << e.what() << CoinMessageEol;
+						processInfo->stopTimer("PrimalBoundLinesearch");
+					}
+
+					//auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
+
+					//auto xNewc = linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
+					//		settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+					//		settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 10 ^ (-17));
+
+					/*processInfo->addPrimalSolutionCandidate(xNewc.first,
+					 E_PrimalSolutionSource::LinesearchFixedIntegers,
+					 processInfo->getCurrentIteration()->iterationNumber);
+					 */
+
 				}
 			}
-		}
 
-		processInfo->stopTimer("PrimalBoundLinesearch");
-		processInfo->stopTimer("PrimalBoundTotal");
+			processInfo->stopTimer("PrimalBoundTotal");
+		}
 	}
 }
 
@@ -208,3 +207,4 @@ std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
 	std::string type = typeid(this).name();
 	return (type);
 }
+

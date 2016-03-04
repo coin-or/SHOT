@@ -53,6 +53,10 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			{
 				GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_BINARY, tmpNames.at(i));
 			}
+			else if (tmpTypes.at(i) == 'D')
+			{
+				GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_SEMICONT, tmpNames.at(i));
+			}
 			else
 			{
 				processInfo->logger.message(1) << "Error variable type for " << tmpNames.at(i).c_str()
@@ -460,6 +464,10 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 //{
 //	MILPSolutionStatus = EMILPStatus::numeric;
 //}
+	else if (status == GRB_CUTOFF)
+	{
+		MILPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+	}
 	else if (status == GRB_SUBOPTIMAL)
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::Feasible;
@@ -519,14 +527,33 @@ int MILPSolverGurobi::getSolutionLimit()
 
 void MILPSolverGurobi::setTimeLimit(double seconds)
 {
-	gurobiModel->getEnv().set(GRB_DoubleParam_TimeLimit, seconds);
+
+	try
+	{
+		if (seconds > 0)
+		{
+			gurobiModel->getEnv().set(GRB_DoubleParam_TimeLimit, seconds);
+		}
+		else
+		{
+			gurobiModel->getEnv().set(GRB_DoubleParam_TimeLimit, 0.00001);
+		}
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when setting time limit:" << CoinMessageNewline << e.getMessage()
+				<< CoinMessageEol;
+
+	}
+
 }
 
 void MILPSolverGurobi::setCutOff(double cutOff)
 {
 	try
 	{
-		gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff);
+		// Gurobi has problems if not an epsilon value is added to the cutoff...
+		gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + 0.0000001);
 
 		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
 		{
@@ -722,6 +749,27 @@ bool MILPSolverGurobi::supportsQuadraticObjective()
 bool MILPSolverGurobi::supportsQuadraticConstraints()
 {
 	return (true);
+}
+
+double MILPSolverGurobi::getDualObjectiveValue()
+{
+
+	bool isMILP = getDiscreteVariableStatus();
+	double objVal = NAN;
+
+	try
+	{
+		objVal = gurobiModel->get(GRB_DoubleAttr_ObjBound);
+
+	}
+	catch (GRBException &e)
+	{
+		processInfo->logger.message(0) << "Error when obtaining dual objective value: " << CoinMessageNewline
+				<< e.getMessage() << CoinMessageEol;
+
+	}
+
+	return (objVal);
 }
 
 bool MILPSolverGurobi::supportsLazyConstraints()

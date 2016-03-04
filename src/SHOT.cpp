@@ -1,7 +1,6 @@
 // SHOT.cpp : Defines the entry point for the console application.
 //
 
-
 //#include "SHOTSettings.h"
 #include "SHOTSolver.h"
 //#include "OSErrorClass.h"
@@ -155,7 +154,7 @@ int main(int argc, char *argv[])
 	catch (const ErrorClass& eclass)
 	{
 		processInfo->logger.message(0) << eclass.errormsg << CoinMessageEol;
-		;
+
 		std::cout << eclass.errormsg << CoinMessageEol;
 		delete fileUtil, solver, processInfo;
 
@@ -167,6 +166,7 @@ int main(int argc, char *argv[])
 	processInfo->stopTimer("Total");
 
 	std::string osrl = solver->getOSrl();
+
 	fileUtil->writeFileFromString(resultFile.string(), osrl);
 
 	std::string trace = solver->getTraceResult();

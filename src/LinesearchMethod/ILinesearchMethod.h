@@ -5,9 +5,15 @@
 
 class ILinesearchMethod
 {
-public:
-	virtual ~ILinesearchMethod() {};
+	public:
+		virtual ~ILinesearchMethod()
+		{
+		}
+		;
 
-	virtual std::vector<double> findZero(std::vector<double> ptA, std::vector<double> ptB, int Nmax, double delta) = 0;
+		virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
+				std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol) = 0;
 
+		virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
+				std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs) = 0;
 };

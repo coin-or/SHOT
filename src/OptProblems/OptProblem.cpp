@@ -174,26 +174,60 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 
 	std::vector<int> idxNLCs = this->getNonlinearConstraintIndexes();
 
-	if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
+	return (this->getMostDeviatingConstraint(point, idxNLCs).first);
+
+	/*if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
+	 {
+	 valpair.idx = -1;
+	 valpair.value = 0.0;
+	 }
+	 else
+	 {
+	 std::vector<double> constrDevs(idxNLCs.size());
+
+	 for (int i = 0; i < idxNLCs.size(); i++)
+	 {
+	 constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
+	 }
+
+	 auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
+	 valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
+	 valpair.value = *biggest;
+
+	 }
+	 return (valpair);*/
+}
+
+std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstraint(std::vector<double> point,
+		std::vector<int> constrIdxs)
+{
+	IndexValuePair valpair;
+
+	std::vector<int> activeConstraints;
+
+	if (constrIdxs.size() == 0)
 	{
+		//Only a quadratic objective function and quadratic constraints
 		valpair.idx = -1;
 		valpair.value = 0.0;
 	}
 	else
 	{
-		std::vector<double> constrDevs(idxNLCs.size());
+		std::vector<double> constrDevs(constrIdxs.size());
 
-		for (int i = 0; i < idxNLCs.size(); i++)
+		for (int i = 0; i < constrIdxs.size(); i++)
 		{
-			constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
+			constrDevs.at(i) = calculateConstraintFunctionValue(constrIdxs.at(i), point);
+
+			if (constrDevs.at(i) >= 0) activeConstraints.push_back(constrIdxs.at(i));
 		}
 
 		auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-		valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
+		valpair.idx = constrIdxs.at(std::distance(std::begin(constrDevs), biggest));
 		valpair.value = *biggest;
-
 	}
-	return (valpair);
+
+	return (std::make_pair(valpair, activeConstraints));
 }
 
 IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> point)
@@ -210,7 +244,7 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
 		constrDevs.at(i) = calculateConstraintFunctionValue(i, point);
 	}
 
-	//UtilityFunctions::displayVector(constrDevs);
+//UtilityFunctions::displayVector(constrDevs);
 
 	auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
 	valpair.idx = std::distance(std::begin(constrDevs), biggest);
@@ -272,6 +306,7 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
 
 SparseVector* OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
 {
+	processInfo->numGradientEvals++;
 	return getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 }
 
@@ -279,16 +314,19 @@ double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 {
 	auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
 
-	//std::cout << "Obj value calculated: " << tmpVal << std::endl;
+	processInfo->numFunctionEvals++;
+//std::cout << "Obj value calculated: " << tmpVal << std::endl;
 	return tmpVal;
 }
 
 double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double> point)
 {
+
 	double tmpVal;
 	if (idx != getNonlinearObjectiveConstraintIdx())	// Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
+		processInfo->numFunctionEvals++;
 
 		if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 		{
@@ -315,12 +353,13 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
 		tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub; // -problemInstance->getConstraintConstants()[idx];
+		processInfo->numFunctionEvals++;
 	}
 
-	//else if (idx == -1)
-	//{
-	//	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-	//}
+//else if (idx == -1)
+//{
+//	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
+//}
 
 	return tmpVal;
 }
@@ -625,8 +664,8 @@ void OptProblem::setNonlinearConstraintIndexes()
 		if (isQuadratic.at(i)) QCIndexes.push_back(i);
 	}
 
-	//UtilityFunctions::displayVector(NLCIndexes);
-	//UtilityFunctions::displayVector(QCIndexes);
+//UtilityFunctions::displayVector(NLCIndexes);
+//UtilityFunctions::displayVector(QCIndexes);
 
 	setNonlinearConstraints(NLCIndexes);
 	setQuadraticConstraints(QCIndexes);
@@ -679,9 +718,9 @@ std::vector<int> OptProblem::getLinearConstraintIndexes()
 {
 	std::vector<int> idxs;
 	int numCon = this->getProblemInstance()->getConstraintNumber();
-	//std::cout << "Nonlinear constraint index : " << this->getNonlinearObjectiveConstraintIdx() << std::endl;
-	//int numCon = this->getNumberOfConstraints();
-	//idxs.reserve(numCon);
+//std::cout << "Nonlinear constraint index : " << this->getNonlinearObjectiveConstraintIdx() << std::endl;
+//int numCon = this->getNumberOfConstraints();
+//idxs.reserve(numCon);
 
 	for (int i = 0; i < numCon; i++)
 	{

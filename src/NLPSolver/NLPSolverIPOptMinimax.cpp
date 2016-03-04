@@ -242,6 +242,7 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		try
 		{
 			NLPSolver->solve();
+			processInfo->numNLPProbsSolved++;
 		}
 		catch (...)
 		{

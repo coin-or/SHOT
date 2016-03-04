@@ -15,6 +15,7 @@ class RelaxationStrategyBase
 		bool isRelaxedSolutionEpsilonValid();
 		bool isRelaxedSolutionInterior();
 		bool isCurrentToleranceReached();
+		bool isGapReached();
 
 		//IMILPSolver *MILPSolver;
 		//bool relaxationActive;

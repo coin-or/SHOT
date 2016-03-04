@@ -233,7 +233,7 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Relaxation
-	settings->createSetting("IterLimitLP", "Algorithm", 100, "LP iteration limit for solver", 0, INT_MAX);
+	settings->createSetting("IterLimitLP", "Algorithm", 200, "LP iteration limit for solver", 0, INT_MAX);
 	settings->createSetting("ObjectiveStagnationIterationLimit", "Algorithm", 100,
 			"Max number of iterations without objective function improvement", 0, INT_MAX);
 	settings->createSetting("ObjectiveStagnationTolerance", "Algorithm", 0.000001,
@@ -241,8 +241,14 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("IterSolveLPRelaxation", "Algorithm", 0,
 			"Solve an LP relaxation each number of iterations, 0= disable ", 0, INT_MAX);
 
-	settings->createSetting("SolveFixedLP", "Algorithm", false,
+	settings->createSetting("SolveFixedLP", "Algorithm", true,
 			"Solve an LP with fixed integers if integer-values have not changes in several MIP iterations.");
+
+	settings->createSetting("SolveFixedLPMaxIter", "Algorithm", 5, "Max LP iterations for fixed strategy", 0, INT_MAX);
+	settings->createSetting("SolveFixedLPObjTol", "Algorithm", 0.001, "Objective tolerance for fixed strategy", 0.0,
+			DBL_MAX);
+	settings->createSetting("SolveFixedLPConstrTol", "Algorithm", 0.00001, "Constraint tolerance for fixed strategy",
+			0.0, DBL_MAX);
 
 	std::vector < std::string > enumRelaxationStrategy;
 	enumRelaxationStrategy.push_back("Standard");
@@ -269,7 +275,7 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("IterLimitMILP", "Algorithm", 2000, "MILP iteration limit for solver", 1, INT_MAX);
 
 	// Initial MILP solution depth
-	settings->createSetting("MaxHyperplanesPerIteration", "Algorithm", 5,
+	settings->createSetting("MaxHyperplanesPerIteration", "Algorithm", 10,
 			"Maximal extra number of hyperplanes to add per iteration", 0, INT_MAX);
 
 	// NLP solver
@@ -341,6 +347,8 @@ void SHOTSolver::initializeSettings()
 
 	// Add constraints as lazy constraints
 	settings->createSetting("UseLazyConstraints", "MILP", false, "Add supporting hyperplanes as lazy constraints");
+	settings->createSetting("UsePrimalObjectiveCut", "MILP", true, "Add an objective cut in the primal solution");
+
 	settings->createSetting("DelayedConstraints", "MILP", true,
 			"Add supporting hyperplanes only after optimal MILP solution (=1).");
 	settings->createSetting("ConstraintSelectionFactor", "MILP", 0.0,
@@ -355,7 +363,7 @@ void SHOTSolver::initializeSettings()
 			"QP strategy", enumQPStrategy);
 
 	// CPLEX
-	settings->createSetting("SolnPoolIntensity", "CPLEX", 4,
+	settings->createSetting("SolnPoolIntensity", "CPLEX", 0,
 			"0 = automatic, 1 = mild, 2 = moderate, 3 = aggressive, 4 = very aggressive", 0, 4);
 	settings->createSetting("SolnPoolReplace", "CPLEX", 2,
 			"0 = replace oldest solution, 1 = replace worst solution, 2 = find diverse solutions", 0, 2);
@@ -365,7 +373,7 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("MIPEmphasis", "CPLEX", 1,
 			"0 = balanced, 1 = feasibility, 2 = optimality, 3 = best bound, 4 = hidden feasible", 0, 4);
 
-	settings->createSetting("Probe", "CPLEX", 2,
+	settings->createSetting("Probe", "CPLEX", 0,
 			"-1 = no probing, 0 = automatic, 1 = moderate, 2 = aggressive, 3 = very aggressive", -1, 3);
 	// Linesearch
 	std::vector < std::string > enumLinesearchMethod;
@@ -375,8 +383,11 @@ void SHOTSolver::initializeSettings()
 			"Linesearch method", enumLinesearchMethod);
 	enumLinesearchMethod.clear();
 
-	settings->createSetting("LinesearchEps", "Linesearch", 1e-16, "Epsilon tolerance for linesearch", 0.0, DBL_MAX);
+	settings->createSetting("LinesearchLambdaEps", "Linesearch", 1e-16, "Epsilon lambda tolerance for linesearch", 0.0,
+			DBL_MAX);
 	settings->createSetting("LinesearchMaxIter", "Linesearch", 100, "Maximal iterations for linesearch", 0, INT_MAX);
+	settings->createSetting("LinesearchConstrEps", "Linesearch", 0.0, "Epsilon constraint tolerance for linesearch",
+			0.0, DBL_MAX);
 
 	// Tracefile
 	//createSetting("TraceFile", "Algorithm", "esh.trc", "The filename for the trace file. If empty trace information will not be saved.");
@@ -406,6 +417,12 @@ void SHOTSolver::initializeSettings()
 			static_cast<int>(ES_PrimalBoundNLPFixedPoint::MILPSolution), "Fixed point source",
 			enumPrimalBoundNLPStartingPoint);
 	enumPrimalBoundNLPStartingPoint.clear();
+
+	settings->createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-8,
+			"The nonlinear constraint tolerance for accepting primal bounds ");
+
+	settings->createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-8,
+			"The linear constraint tolerance for accepting primal bounds ");
 
 	processInfo->logger.message(4) << "Initialization of settings complete." << CoinMessageEol;
 

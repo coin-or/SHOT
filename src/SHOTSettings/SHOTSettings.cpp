@@ -452,12 +452,25 @@ namespace SHOTSettings
 	std::string Settings::getSettingsAsOSol()
 	{
 		OSoLWriter *osolwriter = new OSoLWriter();
+		osolwriter->m_bWhiteSpace = false;
 
-		string tmpOSol = osolwriter->writeOSoL(getSettingsAsOSOption());
+		using boost::property_tree::ptree;
+		ptree pt;
+		boost::property_tree::xml_writer_settings < std::string > settings(' ', 1);
 
-		delete osolwriter;
+		stringstream ss;
+		ss << osolwriter->writeOSoL(getSettingsAsOSOption());
 
-		return tmpOSol;
+		read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
+
+		pt.sort();
+
+		std::ostringstream oss;
+		write_xml(oss, pt, settings);
+
+		// If the comment below is removed, some problems are not solved... Check this!
+		//delete osolwriter;
+		return (oss.str());
 	}
 
 	OSOption* Settings::getSettingsAsOSOption()

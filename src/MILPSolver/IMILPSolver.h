@@ -44,7 +44,9 @@ class IMILPSolver
 		virtual E_ProblemSolutionStatus solveProblem() = 0;
 		virtual E_ProblemSolutionStatus getSolutionStatus() = 0;
 		virtual double getObjectiveValue() = 0;
-		//virtual double getBestObjectiveValue() = 0;
+
+		virtual double getDualObjectiveValue() = 0;
+
 		virtual double getObjectiveValue(int solIdx) = 0;
 
 		virtual int increaseSolutionLimit(int increment) = 0;

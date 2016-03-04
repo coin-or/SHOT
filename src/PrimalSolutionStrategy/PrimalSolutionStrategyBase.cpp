@@ -67,16 +67,23 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		case E_PrimalSolutionSource::LPFixedIntegers:
 			sourceDesc = "LP fixed";
 			break;
+		case E_PrimalSolutionSource::LazyConstraintCallback:
+			sourceDesc = "Lazy constr. callback";
+			break;
 		default:
 			break;
 	}
 
+	if (std::isnan(primalSol.objValue))
+	{
+		tmpObjVal = processInfo->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
+	}
+
 	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
-			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-			|| primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers)
+			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
 	{
 		isLinConstrFulfilled = true;
-		mostDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
+		mostDev = primalSol.maxDevatingConstraint;
 	}
 	else
 	{
@@ -111,22 +118,11 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		}
 
 		isLinConstrFulfilled = processInfo->originalProblem->isLinearConstraintsFulfilledInPoint(tmpPoint,
-		//settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")
-				0.000001);
-
-		mostDev = processInfo->originalProblem->getMostDeviatingAllConstraint(primalSol.point);
-
+				settings->getDoubleSetting("PrimalBoundLinearTolerance", "PrimalBound"));
 	}
 
 	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint,
-	//settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")
-			0.000001);
-
-	if (std::isnan(primalSol.objValue))
-	{
-		tmpObjVal = processInfo->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
-	}
-
+			settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"));
 	/*if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
 	 {
 
@@ -140,7 +136,8 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	bool isMostDevConstrNonlinear = processInfo->originalProblem->isConstraintNonlinear(mostDev.idx);
 
 	if (primalSol.sourceType != E_PrimalSolutionSource::MILPSolutionPool && isMostDevConstrNonlinear
-			&& ((mostDev.value >= 0 && mostDev.value < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+			&& ((mostDev.value >= 0
+					&& mostDev.value < 10000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 					|| primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint)) // Add point as hyperplane
 	{
 		Hyperplane hyperplane;
@@ -170,25 +167,26 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	{
 		char HPobjadded = ' ';
 
-		/*		if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
-		 {
-		 auto objConstrVal = processInfo->originalProblem->calculateConstraintFunctionValue(-1, primalSol.point) - primalSol.point.back();
+		if (settings->getBoolSetting("UsePrimalObjectiveCut", "MILP")
+				&& processInfo->originalProblem->isObjectiveFunctionNonlinear())
+		{
+			auto objConstrVal = processInfo->originalProblem->calculateConstraintFunctionValue(-1, primalSol.point)
+					- primalSol.point.back();
 
-		 std::cout << "Obj constr val " << objConstrVal << std::endl;
+			if (objConstrVal < 0)
+			{
 
-		 if (objConstrVal <= 0)
-		 {
-		 Hyperplane hyperplane;
-		 hyperplane.sourceConstraintIndex = -1;
-		 hyperplane.generatedPoint = tmpPoint;
-		 hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
+				Hyperplane hyperplane;
+				hyperplane.sourceConstraintIndex = -1;
+				hyperplane.generatedPoint = tmpPoint;
+				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
 
-		 processInfo->hyperplaneWaitingList.push_back(hyperplane);
+				processInfo->hyperplaneWaitingList.push_back(hyperplane);
 
-		 HPobjadded = '#';
-		 }
-		 }
-		 */
+				HPobjadded = '#';
+			}
+		}
+
 		processInfo->currentObjectiveBounds.second = tmpObjVal;
 
 		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4% %5%") % tmpObjVal % mostDev.value

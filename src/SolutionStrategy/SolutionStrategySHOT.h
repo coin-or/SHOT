@@ -51,6 +51,8 @@
 #include "Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
+#include "Tasks/TaskCheckDualSolutionCandidates.h"
+
 #include "Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 #include "Tasks/TaskSolveFixedLinearProblem.h"
 

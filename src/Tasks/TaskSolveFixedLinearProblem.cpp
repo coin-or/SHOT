@@ -1,51 +1,52 @@
 #include <TaskSolveFixedLinearProblem.h>
 
-class Test4
-{
-	private:
-		OptProblemOriginal *originalProblem;
+/*
+ class Test4
+ {
+ private:
+ OptProblemOriginal *originalProblem;
 
-	public:
-		std::vector<double> firstPt;
-		std::vector<double> secondPt;
-		Test4(OptProblemOriginal *prob)
-		{
-			originalProblem = prob;
-		}
+ public:
+ std::vector<double> firstPt;
+ std::vector<double> secondPt;
+ Test4(OptProblemOriginal *prob)
+ {
+ originalProblem = prob;
+ }
 
-		double operator()(const double x)
-		{
-			int length = firstPt.size();
-			std::vector<double> ptNew(length);
+ double operator()(const double x)
+ {
+ int length = firstPt.size();
+ std::vector<double> ptNew(length);
 
-			for (int i = 0; i < length; i++)
-			{
-				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
-			}
+ for (int i = 0; i < length; i++)
+ {
+ ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
+ }
 
-			auto validNewPt = originalProblem->getMostDeviatingConstraint(ptNew).value;
+ auto validNewPt = originalProblem->getMostDeviatingConstraint(ptNew).value;
 
-			return (validNewPt);
+ return (validNewPt);
 
-		}
-};
+ }
+ };
 
-class TerminationCondition4
-{
-	private:
-		double tol;
+ class TerminationCondition4
+ {
+ private:
+ double tol;
 
-	public:
-		TerminationCondition4(double tolerance)
-		{
-			tol = tolerance;
-		}
+ public:
+ TerminationCondition4(double tolerance)
+ {
+ tol = tolerance;
+ }
 
-		bool operator()(double min, double max)
-		{
-			return (abs(min - max) <= tol);
-		}
-};
+ bool operator()(double min, double max)
+ {
+ return (abs(min - max) <= tol);
+ }
+ };*/
 
 TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem()
 {
@@ -80,8 +81,14 @@ TaskSolveFixedLinearProblem::~TaskSolveFixedLinearProblem()
 
 void TaskSolveFixedLinearProblem::run()
 {
-	auto prevIter = processInfo->getPreviousIteration();
 	auto currIter = processInfo->getCurrentIteration(); //The one not solved yet
+
+	if (currIter->iterationNumber < 5)
+	{
+		return;
+	}
+
+	auto prevIter = processInfo->getPreviousIteration();
 
 	if (prevIter->iterationNumber < 4) return;
 
@@ -123,35 +130,39 @@ void TaskSolveFixedLinearProblem::run()
 				currSolPt.at(discreteVariableIndexes.at(i)));
 	}
 
-	double tol = max(settings->getDoubleSetting("LinesearchEps", "Linesearch"), 0.000000000000001);
+	//double tol = max(settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0.000000000000001);
 	//double tol = settings->getDoubleSetting("LinesearchEps", "Linesearch");
-	boost::uintmax_t N = settings->getIntSetting("LinesearchMaxIter", "Linesearch");
-	double maxDev = max(0.00001, settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"));
+	//boost::uintmax_t N = settings->getIntSetting("LinesearchMaxIter", "Linesearch");
+	//double maxDev = max(0.00001, settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"));
 	int numVar = processInfo->originalProblem->getNumberOfVariables();
 
-	Test4 t(processInfo->originalProblem);
+	//Test4 t(processInfo->originalProblem);
 
 	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 
 	double prevObjVal;
 
-	for (int k = 0; k < 5; k++)
+	int maxIter = settings->getIntSetting("SolveFixedLPMaxIter", "Algorithm");
+	int objTol = settings->getDoubleSetting("SolveFixedLPObjTol", "Algorithm");
+	double constrTol = settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm");
+
+	for (int k = 0; k < maxIter; k++)
 	{
 		auto solStatus = processInfo->MILPSolver->solveProblem();
 
 		if (solStatus != E_ProblemSolutionStatus::Optimal)
 		{
-			std::cout << "nonoptimal" << std::endl;
+			//std::cout << "nonoptimal" << std::endl;
 			break;
 		}
 		else
 		{
 			auto varSol = processInfo->MILPSolver->getVariableSolution(0);
-			auto objVal = processInfo->MILPSolver->getObjectiveValue();
+			auto objVal = processInfo->MILPSolver->getObjectiveValue(0);
 
 			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(varSol);
 
-			bool hasSolution = true;
+			//bool hasSolution = true;
 			std::stringstream tmpType;
 
 			if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic
@@ -169,7 +180,7 @@ void TaskSolveFixedLinearProblem::run()
 			if (solStatus == E_ProblemSolutionStatus::Error)
 			{
 				tmpType << " E";
-				hasSolution = false;
+				//hasSolution = false;
 			}
 			else if (solStatus == E_ProblemSolutionStatus::Feasible)
 			{
@@ -178,7 +189,7 @@ void TaskSolveFixedLinearProblem::run()
 			else if (solStatus == E_ProblemSolutionStatus::Infeasible)
 			{
 				tmpType << " I";
-				hasSolution = false;
+				//hasSolution = false;
 			}
 			else if (solStatus == E_ProblemSolutionStatus::IterationLimit)
 			{
@@ -199,7 +210,7 @@ void TaskSolveFixedLinearProblem::run()
 			else if (solStatus == E_ProblemSolutionStatus::Unbounded)
 			{
 				tmpType << " UB";
-				hasSolution = false;
+				//hasSolution = false;
 			}
 
 			auto tmpLine = boost::format(
@@ -209,79 +220,57 @@ void TaskSolveFixedLinearProblem::run()
 
 			processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
 
-			if (mostDevConstr.value <= maxDev)
+			if (mostDevConstr.value <= constrTol)
 			{
-				std::cout << "Constr break" << std::endl;
+				//std::cout << "Constr break" << std::endl;
 				break;
 			}
 
-			if (k > 0 && abs(prevObjVal - objVal) < 0.0000001)
+			if (k > 0 && abs(prevObjVal - objVal) < objTol)
 			{
-				std::cout << "Obj break" << std::endl;
+				//std::cout << "Obj break" << std::endl;
 				break;
 			}
 
-			t.firstPt = varSol;
-			t.secondPt = processInfo->interiorPts.at(0).point;
+			std::vector<double> externalPoint = varSol;
+			std::vector<double> internalPoint = processInfo->interiorPts.at(0).point;
 
-			typedef std::pair<double, double> Result;
-			boost::uintmax_t max_iter = N;
-			Result r1 = boost::math::tools::toms748_solve(t, 0.0, 1.0, TerminationCondition4(tol), max_iter);
-			if (max_iter == N)
+			try
 			{
-				processInfo->logger.message(1)
-						<< "Warning, number of line search iterations reached for primal LP strategy!"
-						<< CoinMessageEol;
-			}
 
-			std::vector<double> ptNew(numVar);
-			std::vector<double> ptNew2(numVar);
+				processInfo->startTimer("HyperplaneLinesearch");
+				auto xNewc = linesearchMethod->findZero(internalPoint, externalPoint,
+						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
 
-			//std::cout << "lambda: " << r1.second << std::endl;
-			for (int i = 0; i < numVar; i++)
-			{
-				ptNew.at(i) = r1.second * varSol.at(i) + (1 - r1.second) * currSolPt.at(i);
-				ptNew2.at(i) = r1.first * varSol.at(i) + (1 - r1.first) * currSolPt.at(i);
-			}
+				processInfo->stopTimer("HyperplaneLinesearch");
+				internalPoint = xNewc.first;
+				externalPoint = xNewc.second;
 
-			auto error = processInfo->originalProblem->getMostDeviatingConstraint(ptNew);
-			auto error2 = processInfo->originalProblem->getMostDeviatingConstraint(ptNew2);
+				//processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::LPFixedIntegers,
+				//currIter->iterationNumber);
 
-			if (error.value <= 0)
-			{
-				processInfo->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::LPFixedIntegers,
-						prevIter->iterationNumber);
-			}
-			else
-			{
+				auto errorExternal = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
 
 				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = error.idx;
-				hyperplane.generatedPoint = ptNew;
+				hyperplane.sourceConstraintIndex = errorExternal.idx;
+				hyperplane.generatedPoint = externalPoint;
 				hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
 				processInfo->MILPSolver->createHyperplane(hyperplane);
-				//std::cout << "Hyperplane added for constraint " << error.idx << " with error " << error.value
-				//		<< std::endl;
+
+			}
+			catch (std::exception &e)
+			{
+
+				processInfo->logger.message(0)
+						<< "Cannot find solution with linesearch for fixed LP, using solution point instead: "
+						<< CoinMessageNewline << e.what() << CoinMessageEol;
 			}
 
-			if (error2.value <= 0 && r1.second != r1.first)
-			{
-				processInfo->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::LPFixedIntegers,
-						prevIter->iterationNumber);
-			}
-			else
-			{
-				if (abs(error.value - error2.value) > 0.01)
-				{
-					Hyperplane hyperplane;
-					hyperplane.sourceConstraintIndex = error2.idx;
-					hyperplane.generatedPoint = ptNew2;
-					hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
+			processInfo->stopTimer("HyperplaneLinesearch");
 
-					processInfo->MILPSolver->createHyperplane(hyperplane);
-				}
-			}
 			if (k == 0) prevObjVal = objVal;
 		}
 

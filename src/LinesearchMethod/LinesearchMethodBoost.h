@@ -9,44 +9,25 @@ class Test
 	private:
 
 		//std::vector<char> varTypes;
+		//std::vector<int> activeConstraints;
 
 	public:
 		std::vector<double> firstPt;
 		std::vector<double> secondPt;
+
+		double valFirstPt;
+		double valSecondPt;
+
 		OptProblemOriginal *originalProblem;
 
-		Test()
-		{
-			/*firstPt = ptA;
-			 secondPt = ptB;
-			 originalProblem = prob;
-			 */
-			//auto varTypes = originalProblem->getVariableTypes();
-			/*
-			 for (int i = 0; i < originalProblem->getNumberOfVariables();i++)
-			 {
-			 if (varTypes.at(i) == 'B' || varTypes.at(i) == 'I')
-			 {
-			 std::cout << "changing point from " << secondPt.at(i) " to " <<firstPt.at(i) << std::endl;
-			 secondPt.at(i) = firstPt.at(i);
-			 }
-			 }*/
-		}
+		Test();
+		void determineActiveConstraints(double constrTol);
+		void setActiveConstraints(std::vector<int> constrIdxs);
+		std::vector<int> getActiveConstraints();
+		void clearActiveConstraints();
+		void addActiveConstraint(int constrIdx);
 
-		double operator()(const double x)
-		{
-			int length = firstPt.size();
-			std::vector<double> ptNew(length);
-
-			for (int i = 0; i < length; i++)
-			{
-				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
-			}
-
-			auto validNewPt = originalProblem->getMostDeviatingConstraint(ptNew).value;
-
-			return validNewPt;
-		}
+		double operator()(const double x);
 
 };
 
@@ -74,8 +55,11 @@ class LinesearchMethodBoost: public ILinesearchMethod
 		LinesearchMethodBoost();
 		virtual ~LinesearchMethodBoost();
 
-		virtual std::vector<double> findZero(std::vector<double> ptA, std::vector<double> ptB, int Nmax, double delta);
+		virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
+				std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol);
 
+		virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
+				std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
 	private:
 		ProcessInfo* processInfo;
 		SHOTSettings::Settings *settings;

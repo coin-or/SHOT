@@ -30,13 +30,34 @@ void ProcessInfo::addDualSolution(vector<double> pt, E_DualSolutionSource source
 	DualSolution sol =
 	{ pt, source, objVal, iter };
 
-	dualSolutions.push_back(sol);
+	addDualSolution(sol);
+}
+
+void ProcessInfo::addDualSolution(SolutionPoint pt, E_DualSolutionSource source)
+{
+	DualSolution sol =
+	{ pt.point, source, pt.objectiveValue, pt.iterFound };
+
+	addDualSolution(sol);
+}
+
+void ProcessInfo::addDualSolution(DualSolution solution)
+{
+	if (dualSolutions.size() == 0)
+	{
+		dualSolutions.push_back(solution);
+	}
+	else
+	{
+		dualSolutions.at(0) = solution;
+	}
 }
 
 void ProcessInfo::addPrimalSolutionCandidate(vector<double> pt, E_PrimalSolutionSource source, int iter)
 {
 	PrimalSolution sol =
-	{ pt, source, NAN, iter, NAN };
+	{ pt, source, originalProblem->calculateOriginalObjectiveValue(pt), iter,
+			originalProblem->getMostDeviatingConstraint(pt) };
 
 	primalSolutionCandidates.push_back(sol);
 }
@@ -51,10 +72,33 @@ void ProcessInfo::addPrimalSolutionCandidates(vector<vector<double> > pts, E_Pri
 
 void ProcessInfo::addDualSolutionCandidate(vector<double> pt, E_DualSolutionSource source, int iter)
 {
-	DualSolution sol =
-	{ pt, source, NAN, iter };
+	double tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(pt);
 
-	dualSolutionCandidates.push_back(sol);
+	DualSolution sol =
+	{ pt, source, tmpObjVal, iter };
+
+	addDualSolutionCandidate(sol);
+}
+
+void ProcessInfo::addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source)
+{
+	DualSolution sol =
+	{ pt.point, source, pt.objectiveValue, pt.iterFound };
+
+	addDualSolutionCandidate(sol);
+}
+
+void ProcessInfo::addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source)
+{
+	for (auto pt : pts)
+	{
+		addDualSolutionCandidate(pt, source);
+	}
+}
+
+void ProcessInfo::addDualSolutionCandidate(DualSolution solution)
+{
+	dualSolutionCandidates.push_back(solution);
 }
 
 pair<double, double> ProcessInfo::getCorrectedObjectiveBounds()
@@ -83,14 +127,6 @@ void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource sou
 	primalSolutions.push_back(sol);
 }
 
-void ProcessInfo::addDualSolution(SolutionPoint pt, E_DualSolutionSource source)
-{
-	DualSolution sol =
-	{ pt.point, source, pt.objectiveValue, pt.iterFound };
-
-	dualSolutions.push_back(sol);
-}
-
 void ProcessInfo::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
 {
 	PrimalSolution sol =
@@ -107,34 +143,26 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_
 	}
 }
 
-void ProcessInfo::addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source)
-{
-	DualSolution sol =
-	{ pt.point, source, pt.objectiveValue, pt.iterFound };
-
-	dualSolutionCandidates.push_back(sol);
-}
-
-void ProcessInfo::addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source)
-{
-	for (auto pt : pts)
-	{
-		addDualSolutionCandidate(pt, source);
-	}
-
-}
-
 ProcessInfo::ProcessInfo()
 {
 	createTimer("Total", "Total solution time");
 
 	iterLP = 0;
+	iterQP = 0;
 	iterFeasMILP = 0;
 	iterOptMILP = 0;
+	iterFeasMIQP = 0;
+	iterOptMIQP = 0;
+
+	numNLPProbsSolved = 0;
+
 	itersWithStagnationMILP = 0;
 	iterSignificantObjectiveUpdate = 0;
 	itersMILPWithoutNLPCall = 0;
 	solTimeLastNLPCall = 0;
+
+	numFunctionEvals = 0;
+	numGradientEvals = 0;
 
 	iterLastPrimalBoundUpdate = 0;
 	iterLastDualBoundUpdate = 0;
@@ -261,102 +289,250 @@ void ProcessInfo::initializeResults(int numObj, int numVar, int numConstr)
 	osResult->setObjectiveNumber(numObj);
 	osResult->setVariableNumber(numVar);
 	osResult->setConstraintNumber(numConstr);
-
-	osResult->setSolutionNumber(1);
 }
 
 std::string ProcessInfo::getOSrl()
 {
+	auto varNames = originalProblem->getVariableNames();
+	auto constrNames = originalProblem->getConstraintNames();
+	int numConstr = osResult->getConstraintNumber();
 
-	/*if (dualSolutions.size() > 0)
-	 {
-	 osResult->setDualVariableValuesDense(0, &(dualSolutions.at(dualSolutions.size() - 1).point)[0]);
-	 }
-	 */
-	if (primalSolutions.size() > 0)
+	int numVar = osResult->getVariableNumber();
+
+	int numPrimalSols = primalSolutions.size();
+
+	if (numPrimalSols == 0)
 	{
-		osResult->setPrimalVariableValuesDense(0, &(primalSolutions.at(primalSolutions.size() - 1).point)[0]);
+		osResult->setSolutionNumber(1);
+
+		osResult->setNumberOfObjValues(0, 1);
+		//osResult->setNumberOfPrimalVariableValues(0, numVar);
+
+		std::stringstream strstrdb;
+		strstrdb << std::fixed << std::setprecision(15) << getDualBound();
+
+		osResult->setAnOtherSolutionResult(0, "DualObjectiveBound", strstrdb.str(), "Final solution",
+				"The dual bound for the objective", 0, NULL);
+
+		if (dualSolutions.size() > 0)
+		{
+			osResult->setObjValue(0, 0, -1, "", dualSolutions.back().objValue);
+
+			std::stringstream strstr;
+			strstr << std::fixed << std::setprecision(15)
+					<< this->originalProblem->getMostDeviatingConstraint(dualSolutions.back().point).value;
+
+			osResult->setAnOtherSolutionResult(0, "MaxErrorConstrs", strstr.str(), "Final solution",
+					"Maximal error in constraint", 0, NULL);
+		}
+
+		std::stringstream strstr2;
+		strstr2 << std::fixed << std::setprecision(15) << getAbsoluteObjectiveGap();
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "AbsOptimalityGap", strstr2.str(), "Final solution",
+				"The absolute optimality gap", 0, NULL);
+
+		std::stringstream strstr3;
+		strstr3 << std::fixed << std::setprecision(15) << getRelativeObjectiveGap();
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "RelOptimalityGap", strstr3.str(), "Final solution",
+				"The relative optimality gap", 0, NULL);
+
 	}
+	else
+	{
 
-	//osResult->setObjValue(0, 0, -1, originalProblem->getProblemInstance()->getObjectiveNames()[0], getDualBound());
+		osResult->setSolutionNumber(numPrimalSols);
 
-	double tmpObjval[1] =
-	{ getDualBound() };
+		for (int i = 0; i < numPrimalSols; i++)
+		{
+			osResult->setNumberOfVarValues(i, numVar);
+			osResult->setNumberOfObjValues(i, 1);
+			osResult->setNumberOfPrimalVariableValues(i, numVar);
+			osResult->setObjValue(i, 0, -1, "", primalSolutions.at(i).objValue);
 
-	osResult->setObjectiveValuesDense(0, tmpObjval);
+			auto primalPoint = primalSolutions.at(i).point;
 
-	osResult->setAnOtherSolutionResult(0, "MaxErrorConstrs", std::to_string(getCurrentIteration()->maxDeviation),
-			"Term_tolerance", "Maximal error in constraint", 0, NULL);
+			osResult->setPrimalVariableValuesDense(i, &primalPoint[0]);
+
+			for (int j = 0; j < numVar; j++)
+			{
+				osResult->setVarValue(i, j, j, varNames.at(j), primalPoint.at(j));
+			}
+
+			std::vector<double> tmpConstrVals;
+
+			osResult->setNumberOfDualValues(i, numConstr);
+
+			for (int j = 0; j < numConstr; j++)
+			{
+				//tmpConstrVals.push_back(originalProblem->calculateConstraintFunctionValue(j, primalPoint));
+				osResult->setDualValue(i, j, j, constrNames.at(j),
+						originalProblem->calculateConstraintFunctionValue(j, primalPoint));
+			}
+
+			//osResult->setConstraintValuesDense(i, &tmpConstrVals[0]);
+		}
+
+		std::stringstream strstrdb;
+		strstrdb << std::fixed << std::setprecision(15) << getDualBound();
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "DualObjectiveBound", strstrdb.str(), "Final solution",
+				"The dual bound for the objective", 0, NULL);
+
+		std::stringstream strstrpb;
+		strstrpb << std::fixed << std::setprecision(15) << getPrimalBound();
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "PrimalObjectiveBound", strstrpb.str(), "Final solution",
+				"The primal bound for the objective", 0, NULL);
+
+		std::stringstream strstr;
+		strstr << std::fixed << std::setprecision(15) << getCurrentIteration()->maxDeviation;
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "MaxErrorConstrs", strstr.str(), "Final solution",
+				"Maximal error in constraint", 0, NULL);
+
+		std::stringstream strstr2;
+		strstr2 << std::fixed << std::setprecision(15) << getAbsoluteObjectiveGap();
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "AbsOptimalityGap", strstr2.str(), "Final solution",
+				"The absolute optimality gap", 0, NULL);
+
+		std::stringstream strstr3;
+		strstr3 << std::fixed << std::setprecision(15) << getRelativeObjectiveGap();
+
+		osResult->setAnOtherSolutionResult(numPrimalSols - 1, "RelOptimalityGap", strstr3.str(), "Final solution",
+				"The relative optimality gap", 0, NULL);
+	}
 
 	for (auto T : timers)
 	{
 		osResult->addTimingInformation(T.name, "SHOT", "second", T.description, T.elapsed());
 	}
 
-	/*
-	 osResult->addTimingInformation("ElapsedTotal", "total", "second", "Total solution time",
-	 getElapsedTime(E_TimerTypes::Total));
-	 osResult->addTimingInformation("ElapsedReformulating", "input", "second", "Total preprocessing time",
-	 getElapsedTime(E_TimerTypes::ReformulateProblem));
-	 osResult->addTimingInformation("ElapsedNLP", "preprocessing", "second", "Total solution time for NLP solver",
-	 getElapsedTime(E_TimerTypes::ReformulateSolveNLP));
-	 osResult->addTimingInformation("ElapsedLPMILP", "total", "second", "The total LP/MILP solution time",
-	 getElapsedTime(E_TimerTypes::TotalLPMILP));
-	 osResult->addTimingInformation("ElapsedLP1", "total", "second", "The total LP1 solution time",
-	 getElapsedTime(E_TimerTypes::TotalLP1));
-	 osResult->addTimingInformation("ElapsedLP2", "total", "second", "The total LP2 solution time",
-	 getElapsedTime(E_TimerTypes::TotalLP2));
-	 osResult->addTimingInformation("ElapsedMILP", "total", "second", "The total MILP solution time",
-	 getElapsedTime(E_TimerTypes::TotalMILP));
-	 osResult->addTimingInformation("ElapsedLinesearch", "total", "second", "The total time spent on linesearch",
-	 getElapsedTime(E_TimerTypes::Linesearch));
-	 */
+	numPrimalSols = max(1, numPrimalSols); // To make sure we also print the following even if we have no primal solution
 
-	osResult->setAnOtherSolutionResult(0, "IterationsLP", std::to_string(iterLP), "Iterations", "LP iterations", 0,
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "LP", std::to_string(iterLP), "ProblemsSolved",
+			"Relaxed LP problems solved", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "QP", std::to_string(iterQP), "ProblemsSolved",
+			"Relaxed QP problems solved", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMILP", std::to_string(iterFeasMILP),
+			"ProblemsSolved", "MILP problems solved to feasibility", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMILP", std::to_string(iterOptMILP), "ProblemsSolved",
+			"MILP problems solved to optimality", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMIQP", std::to_string(iterFeasMIQP),
+			"ProblemsSolved", "MIQP problems solved to feasibility", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMIQP", std::to_string(iterOptMIQP), "ProblemsSolved",
+			"MIQP problems solved to optimality", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Total",
+			std::to_string(iterLP + iterFeasMILP + iterOptMILP + iterQP + iterFeasMIQP + iterOptMIQP), "ProblemsSolved",
+			"Total number of (MI)QP/(MI)LP subproblems solved", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NLP", std::to_string(numNLPProbsSolved), "ProblemsSolved",
+			"NLP problems solved", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Functions", std::to_string(numFunctionEvals), "Evaluations",
+			"Total number of function evaluations in SHOT", 0, NULL);
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Gradients", std::to_string(numGradientEvals), "Evaluations",
+			"Total number of gradient evaluations in SHOT", 0, NULL);
+
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FileName",
+			this->originalProblem->getProblemInstance()->getInstanceName(), "Problem", "The original filename", 0,
 			NULL);
-	osResult->setAnOtherSolutionResult(0, "IterationsFeasibleMILP", std::to_string(iterFeasMILP), "Iterations",
-			"MILP iterations solved to feasibility", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "IterationsOptimalMILP", std::to_string(iterOptMILP), "Iterations",
-			"MILP iterations solved to optimality", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "IterationsTotal", std::to_string(iterLP + iterFeasMILP + iterOptMILP),
-			"Iterations", "Total number of iterations", 0, NULL);
 
-	osResult->setAnOtherSolutionResult(0, "FileName", this->originalProblem->getProblemInstance()->getInstanceName(),
-			"Problem", "The original filename", 0, NULL);
-
-	osResult->setAnOtherSolutionResult(0, "NumberVariables",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberVariables",
 			std::to_string(this->originalProblem->getProblemInstance()->getVariableNumber()), "Problem",
 			"Total number of variables", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "NumberContinousVariables",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberContinousVariables",
 			std::to_string(
 					this->originalProblem->getProblemInstance()->getVariableNumber()
 							- this->originalProblem->getNumberOfIntegerVariables()
 							- this->originalProblem->getNumberOfBinaryVariables()), "Problem",
 			"Number of continuous variables", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "NumberBinaryVariables",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberBinaryVariables",
 			std::to_string(this->originalProblem->getProblemInstance()->getNumberOfBinaryVariables()), "Problem",
 			"Number of binary variables", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "NumberIntegerVariables",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberIntegerVariables",
 			std::to_string(this->originalProblem->getProblemInstance()->getNumberOfIntegerVariables()), "Problem",
 			"Number of integer variables", 0, NULL);
 
-	osResult->setAnOtherSolutionResult(0, "NumberConstraints",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberConstraints",
 			std::to_string(this->originalProblem->getProblemInstance()->getConstraintNumber()), "Problem",
 			"Number of constraints", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "NumberNonlinearConstraints",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberNonlinearConstraints",
 			std::to_string(this->originalProblem->getProblemInstance()->getNumberOfNonlinearConstraints()), "Problem",
 			"Number of nonlinear constraints", 0, NULL);
-	osResult->setAnOtherSolutionResult(0, "NumberLinearConstraints",
+	osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberLinearConstraints",
 			std::to_string(
 					this->originalProblem->getProblemInstance()->getConstraintNumber()
 							- this->originalProblem->getNumberOfNonlinearConstraints()), "Problem",
 			"Number of linear constraints", 0, NULL);
 
+	std::string modelStatus;
+	std::string modelDescription;
+
+	if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Optimal)
+	{
+		modelStatus = "optimal";
+		modelDescription = "Optimal solution found.";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Feasible)
+	{
+		modelStatus = "feasible";
+		modelDescription = "Feasible solution found.";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Unbounded)
+	{
+		modelStatus = "unbounded";
+		modelDescription = "Problem is unbounded.";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Error)
+	{
+		modelStatus = "error";
+		modelDescription = "Error occured.";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Infeasible)
+	{
+		modelStatus = "infeasible";
+		modelDescription = "Problem is infeasible.";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
+	{
+		modelStatus = "feasible";
+		modelDescription = "Termination due to iteration limit.";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
+	{
+		modelStatus = "feasible";
+		modelDescription = "";
+	}
+	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
+	{
+		modelStatus = "feasible";
+		modelDescription = "Termination due to time limit.";
+	}
+	else
+	{
+		modelStatus = "NA";
+	}
+
+	osResult->setSolutionStatusType(numPrimalSols - 1, modelStatus);
+
 	OSrLWriter writer;
 
-	std::string osrl = writer.writeOSrL(osResult);
+	writer.m_bWhiteSpace = false;
 
-	return (osrl);
+	using boost::property_tree::ptree;
+	ptree pt;
+	boost::property_tree::xml_writer_settings < std::string > settings('\t', 1);
+
+	stringstream ss;
+	ss << writer.writeOSrL(osResult);
+
+	read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
+
+	std::ostringstream oss;
+	write_xml(oss, pt, settings);
+
+	return (oss.str());
 }
 
 std::string ProcessInfo::getTraceResult()
@@ -501,7 +677,7 @@ void ProcessInfo::createIteration()
 	iter.MILPSolutionLimitUpdated = false;
 
 	iter.type = relaxationStrategy->getProblemType();
-	//getCurrentIteration()->type = relaxationStrategy->getProblemType();
+//getCurrentIteration()->type = relaxationStrategy->getProblemType();
 
 	iterations.push_back(iter);
 

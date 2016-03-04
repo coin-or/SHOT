@@ -15,6 +15,10 @@
 #include "OSErrorClass.h"
 
 #include "MILPSolver/IRelaxationStrategy.h"
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
 class OptProblemOriginal;
 class IMILPSolver;
 //class TaskHandler;
@@ -85,10 +89,11 @@ class ProcessInfo
 		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
 				IndexValuePair maxConstrDev);
 		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
-		void addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
 		void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
-		void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
 
+		void addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
+		void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
+		void addDualSolution(DualSolution solution);
 		void addPrimalSolutionCandidate(vector<double> pt, E_PrimalSolutionSource source, int iter);
 		void addPrimalSolutionCandidates(vector<vector<double>> pts, E_PrimalSolutionSource source, int iter);
 
@@ -98,6 +103,7 @@ class ProcessInfo
 		void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
 		void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
 		void addDualSolutionCandidate(vector<double> pt, E_DualSolutionSource source, int iter);
+		void addDualSolutionCandidate(DualSolution solution);
 
 		std::pair<double, double> currentObjectiveBounds;
 		double getAbsoluteObjectiveGap();
@@ -105,8 +111,15 @@ class ProcessInfo
 
 		int iterationCount;
 		int iterLP;
+		int iterQP;
 		int iterFeasMILP;
 		int iterOptMILP;
+		int iterFeasMIQP;
+		int iterOptMIQP;
+		int iterFeasMIQCQP;
+		int iterOptMIQCQP;
+
+		int numNLPProbsSolved;
 
 		int itersWithStagnationMILP; // TODO move to task
 		int iterSignificantObjectiveUpdate; // TODO move to task
@@ -116,7 +129,12 @@ class ProcessInfo
 		int iterLastPrimalBoundUpdate;
 		int iterLastDualBoundUpdate;
 
+		int lastLazyAddedIter;
+
 		int numOriginalInteriorPoints;
+
+		int numFunctionEvals;
+		int numGradientEvals;
 
 		std::vector<int> itersSolvedAsECP;
 
