@@ -102,10 +102,11 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 
 					//std::cout << "New objective: " << currIter->objectiveValue << std::endl;
 
-					if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-					{
-						currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
-					}
+					/*
+					 if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+					 {
+					 currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+					 }*/
 				}
 
 				//std::cout << "PT: " << ptNew.at(ptNew.size() - 1) << std::endl;

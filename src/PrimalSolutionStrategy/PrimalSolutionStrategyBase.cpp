@@ -68,7 +68,10 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 			sourceDesc = "LP fixed";
 			break;
 		case E_PrimalSolutionSource::LazyConstraintCallback:
-			sourceDesc = "Lazy constr. callback";
+			sourceDesc = "Lazy constraint callback";
+			break;
+		case E_PrimalSolutionSource::HeuristicCallback:
+			sourceDesc = "Heuristic constraint callback";
 			break;
 		default:
 			break;
@@ -80,7 +83,8 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	}
 
 	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
-			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
+			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
+			|| primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback)
 	{
 		isLinConstrFulfilled = true;
 		mostDev = primalSol.maxDevatingConstraint;
@@ -136,7 +140,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	bool isMostDevConstrNonlinear = processInfo->originalProblem->isConstraintNonlinear(mostDev.idx);
 
 	if (primalSol.sourceType != E_PrimalSolutionSource::MILPSolutionPool && isMostDevConstrNonlinear
-			&& ((mostDev.value >= 0
+			&& ((mostDev.value > 0
 					&& mostDev.value < 10000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 					|| primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint)) // Add point as hyperplane
 	{

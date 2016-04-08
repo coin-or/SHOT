@@ -22,13 +22,17 @@ void TaskCheckDualSolutionCandidates::run()
 {
 	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 
+	double currDualBound = processInfo->getDualBound();
+	double currPrimalBound = processInfo->getPrimalBound();
+
 	for (auto C : processInfo->dualSolutionCandidates)
 	{
-		if ((isMinimization && C.objValue > processInfo->currentObjectiveBounds.first)
-				|| (!isMinimization && C.objValue < processInfo->currentObjectiveBounds.first))
+		if ((isMinimization && (C.objValue > currDualBound && C.objValue <= currPrimalBound))
+				|| (!isMinimization && (C.objValue < currDualBound && C.objValue >= currPrimalBound)))
 		{
 			// New dual solution
 			processInfo->currentObjectiveBounds.first = C.objValue;
+			currDualBound = C.objValue;
 			processInfo->iterLastDualBoundUpdate = processInfo->getCurrentIteration()->iterationNumber;
 
 			// If the solution is MILP feasible we only have a bound, no variable solutions

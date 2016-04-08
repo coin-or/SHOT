@@ -37,6 +37,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->createTimer("PrimalBoundTotal", " - Primal solution search");
 	processInfo->createTimer("PrimalBoundSearchNLP", "    - NLP");
 	processInfo->createTimer("PrimalBoundLinesearch", "    - Linesearch");
+	processInfo->createTimer("PrimalBoundFixedLP", "    - Fixed LP");
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
@@ -90,9 +91,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
 	processInfo->tasks->addTask(tCheckIterError, "CheckIterError");
 
-	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
-
 	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
 	processInfo->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
@@ -113,6 +111,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
 	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
+	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
+	processInfo->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+
 	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
 	{
 		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
@@ -131,74 +132,74 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		{
 			TaskBase *tSelectPrimNLPCheck = new TaskConditional();
 
-			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition(
-					[this]()
+			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
+			{
+				auto currIter = processInfo->getCurrentIteration();
+
+				// Added MILPSollimit updated krav mars 2016
+					if (!currIter->isMILP() || currIter->solutionPoints.size() == 0 || currIter->MILPSolutionLimitUpdated)
 					{
-						auto currIter = processInfo->getCurrentIteration();
-
-						if (!currIter->isMILP() || currIter->solutionPoints.size() == 0)
-						{
-							return (false);
-						}
-
-						if ( processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
-						{
-							return (true);
-						}
-
-						/*if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
-						 {
-						 return (true);
-						 }*/
-
-						if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"))
-						{
-							return (true);
-						}
-
-						int maxItersNoMIPChange = 7;
-						auto currSolPt = currIter->solutionPoints.at(0).point;
-
-						bool noMIPChange = true;
-
-						for (int i = 1; i < maxItersNoMIPChange; i++)
-						{
-							if (processInfo->iterations.size() <= i)
-							{
-								noMIPChange = false;
-								break;
-							}
-
-							auto prevIter = &processInfo->iterations.at(currIter->iterationNumber -1 - i);
-
-							if (!prevIter->isMILP())
-							{
-								noMIPChange = false;
-								break;
-							}
-
-							auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
-
-							bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
-									discreteIdxs);
-
-							if (isDifferent)
-							{
-								noMIPChange = false;
-								break;
-							}
-						}
-
-						if (noMIPChange)
-						{
-							processInfo->logger.message(1) << "    MIP solution has not changed in" << maxItersNoMIPChange << "iterations. Solving NLP problem..."<< CoinMessageEol;
-							return (true);
-						}
-
-						processInfo->itersMILPWithoutNLPCall++;
-
 						return (false);
-					});
+					}
+
+					if ( processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
+					{
+						return (true);
+					}
+
+					/*if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
+					 {
+					 return (true);
+					 }*/
+
+					if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"))
+					{
+						return (true);
+					}
+
+					int maxItersNoMIPChange = 7;
+					auto currSolPt = currIter->solutionPoints.at(0).point;
+
+					bool noMIPChange = true;
+
+					for (int i = 1; i < maxItersNoMIPChange; i++)
+					{
+						if (processInfo->iterations.size() <= i)
+						{
+							noMIPChange = false;
+							break;
+						}
+
+						auto prevIter = &processInfo->iterations.at(currIter->iterationNumber -1 - i);
+
+						if (!prevIter->isMILP())
+						{
+							noMIPChange = false;
+							break;
+						}
+
+						auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
+
+						bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
+								discreteIdxs);
+
+						if (isDifferent)
+						{
+							noMIPChange = false;
+							break;
+						}
+					}
+
+					if (noMIPChange)
+					{
+						processInfo->logger.message(1) << "    MIP solution has not changed in" << maxItersNoMIPChange << "iterations. Solving NLP problem..."<< CoinMessageEol;
+						return (true);
+					}
+
+					processInfo->itersMILPWithoutNLPCall++;
+
+					return (false);
+				});
 
 			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
 
@@ -229,18 +230,26 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy();
 	processInfo->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
-	TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-	processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+	auto solverMILP = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
 
-	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	if (solverMILP != ES_MILPSolver::CplexExperimental)
+	{
+		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+		processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
 
-	TaskBase *tAddHPs = new TaskAddHyperplanes();
-	processInfo->tasks->addTask(tAddHPs, "AddHPs");
+		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-	TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
-	processInfo->tasks->addTask(tSwitchLazy, "SwitchLazy");
+		TaskBase *tAddHPs = new TaskAddHyperplanes();
+		processInfo->tasks->addTask(tAddHPs, "AddHPs");
+
+		if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+		{
+			TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
+			processInfo->tasks->addTask(tSwitchLazy, "SwitchLazy");
+		}
+	}
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	processInfo->tasks->addTask(tPrintBoundReport, "PrintBoundReport");

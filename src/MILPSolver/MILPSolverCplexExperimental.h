@@ -8,6 +8,10 @@
 #include "../LinesearchMethod/LinesearchMethodBisection.h"
 #include "../LinesearchMethod/LinesearchMethodBoost.h"
 
+#include "../Tasks/TaskCheckPrimalSolutionCandidates.h"
+#include "../Tasks/TaskCheckDualSolutionCandidates.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+
 class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
 {
 	public:

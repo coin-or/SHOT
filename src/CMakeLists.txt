@@ -39,8 +39,8 @@ include_directories("${COINOS_DIR}/include/cppad")
 include_directories("${COINOS_DIR}/include")
 
 include_directories("/opt/gurobi600/linux64/include")
-include_directories("/opt/ibm/ILOG/CPLEX_Studio1261/cplex/include")
-include_directories("/opt/ibm/ILOG/CPLEX_Studio1261/concert/include")
+include_directories("/opt/ibm/ILOG/CPLEX_Studio1263/cplex/include")
+include_directories("/opt/ibm/ILOG/CPLEX_Studio1263/concert/include")
 
 
 

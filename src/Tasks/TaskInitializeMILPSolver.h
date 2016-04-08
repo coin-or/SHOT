@@ -9,10 +9,12 @@
 
 #include <TaskBase.h>
 #include "../ProcessInfo.h"
+#include "UtilityFunctions.h"
 #include "../MILPSolver/IMILPSolver.h"
 #include "../MILPSolver/MILPSolverCplex.h"
 #include "../MILPSolver/MILPSolverGurobi.h"
 #include "../MILPSolver/MILPSolverOsiCbc.h"
+#include "../MILPSolver/MILPSolverCplexExperimental.h"
 
 class TaskInitializeMILPSolver: public TaskBase
 {

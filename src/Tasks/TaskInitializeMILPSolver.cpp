@@ -31,6 +31,11 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver()
 		processInfo->MILPSolver = new MILPSolverOsiCbc();
 		processInfo->logger.message(2) << "Cbc selected as MIP solver." << CoinMessageEol;
 	}
+	else if (solver == ES_MILPSolver::CplexExperimental)
+	{
+		processInfo->MILPSolver = new MILPSolverCplexExperimental();
+		processInfo->logger.message(2) << "Cplex lazy selected as MIP solver." << CoinMessageEol;
+	}
 	else
 	{
 		throw new ErrorClass("Error in MIP solver definition.");

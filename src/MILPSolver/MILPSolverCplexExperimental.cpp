@@ -44,10 +44,111 @@ ILOSTLBEGIN
 
 std::vector<IloRange> cplexLazyConstrs;
 int lazyiters;
-double minConstrDev;
-bool useMinConstrDev;
+int itersSinceNLPCall;
+//double minConstrDev;
+//bool useMinConstrDev;
 int lazyBreakCtr;
+double timestampLastNLPCall;
+double lastIncumbentObjVal;
 
+TaskBase *tCheckPrimCands;
+TaskBase *tCheckDualCands;
+TaskBase *tSelectPrimNLP;
+
+class HCallbackI: public IloCplex::HeuristicCallbackI
+{
+		IloNumVarArray cplexVars;
+
+		ProcessInfo *processInfo;
+		SHOTSettings::Settings *settings;
+
+		//int numLazyConstrs;
+		//int lastIterNum;
+		//int numLazyAdded;
+		//bool isBusy;
+
+	private:
+		//ProcessInfo *processInfo;
+
+	public:
+		IloCplex::CallbackI* duplicateCallback() const
+		{
+			return (new (getEnv()) HCallbackI(*this));
+		}
+		HCallbackI(IloEnv env, IloNumVarArray xx2, ProcessInfo *pInfo) :
+				IloCplex::HeuristicCallbackI(env), cplexVars(xx2)
+		{
+			this->processInfo = pInfo;
+
+			settings = SHOTSettings::Settings::getInstance();
+		}
+		void main();	// the call back function
+};
+
+IloCplex::Callback HCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo *pInfo)
+{
+	return (IloCplex::Callback(new (env) HCallbackI(env, cplexVars, pInfo)));
+}
+
+void HCallbackI::main()
+{
+	if (this->hasIncumbent())
+	{
+		auto primalBound = processInfo->getPrimalBound();
+
+		bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+
+		bool betterPrimalThanIncumbent = ((isMinimization && primalBound < this->getIncumbentObjValue())
+				|| (!isMinimization && primalBound > this->getIncumbentObjValue()));
+
+		if (betterPrimalThanIncumbent)
+		{
+			auto primalSol = processInfo->primalSolution;
+
+			IloNumArray tmpVals(this->getEnv());
+
+			std::vector<double> solution(tmpVals.getSize());
+
+			for (int i = 0; i < primalSol.size(); i++)
+			{
+				tmpVals.add(primalSol.at(i));
+			}
+
+			//std::cout << "Solution suggested: " << this->getIncumbentObjValue() << " -> " << primalBound << std::endl;
+
+			setSolution(cplexVars, tmpVals);
+
+		}
+		else
+		{
+
+			int numVar = cplexVars.getSize();
+			std::vector<double> solution(numVar);
+
+			IloNumArray tmpSolsCplex(this->getEnv());
+
+			try
+			{
+
+				this->getIncumbentValues(tmpSolsCplex, cplexVars);
+
+				for (int i = 0; i < numVar; i++)
+				{
+					solution.at(i) = tmpSolsCplex[i];
+				}
+
+				processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback,
+						processInfo->getCurrentIteration()->iterationNumber);
+
+			}
+			catch (IloException &e)
+			{
+				std::cout << "ERROR" << std::endl;
+			}
+
+		}
+	}
+}
 class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 {
 		IloNumVarArray cplexVars;
@@ -79,9 +180,11 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 			//numLazyAdded = 0;
 			isBusy = false;
 			lazyiters = 0;
-			minConstrDev = 1000;
-			useMinConstrDev = false;
-			lazyBreakCtr = 500;
+			itersSinceNLPCall = 0;
+
+			//minConstrDev = 1000;
+			//useMinConstrDev = false;
+			lazyBreakCtr = 1000;
 			settings = SHOTSettings::Settings::getInstance();
 
 			if (settings->getIntSetting("LinesearchMethod", "Linesearch")
@@ -96,6 +199,11 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 				this->processInfo->logger.message(2) << "Bisection linesearch selected" << CoinMessageEol;
 				linesearchMethod = new LinesearchMethodBisection();
 			}
+
+			tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
+			tCheckDualCands = new TaskCheckDualSolutionCandidates();
+			tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+
 		}
 		void main();	// the call back function
 };
@@ -107,8 +215,10 @@ IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo 
 
 void CtCallbackI::main()
 {
-	//return;
+
+//return;
 	int currIterNum = processInfo->getCurrentIteration()->iterationNumber;
+	bool returnAfter = false;
 
 	while (isBusy)
 	{
@@ -117,26 +227,59 @@ void CtCallbackI::main()
 
 	isBusy = true;
 
-	if (lazyiters == 50)
+	double primalBegin = processInfo->getPrimalBound();
+
+	if (itersSinceNLPCall == 0)
 	{
-
-		if (minConstrDev > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-		{
-			useMinConstrDev = true;
-
-		}
+		timestampLastNLPCall = processInfo->getElapsedTime("Total");
 	}
 
-	if (lazyiters == lazyBreakCtr)
+	/*
+	 if (lazyiters == 50)
+	 {
+
+	 if (minConstrDev > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	 {
+	 useMinConstrDev = true;
+
+	 }
+	 }*/
+	IloNumArray tmpVals(this->getEnv());
+
+	this->getValues(tmpVals, cplexVars);
+
+	std::vector<double> solution(tmpVals.getSize());
+
+	for (int i = 0; i < tmpVals.getSize(); i++)
 	{
-		lazyBreakCtr = lazyBreakCtr * 1.2;
-		minConstrDev = 1000;
+		solution.at(i) = tmpVals[i];
+	}
+
+	auto currIter = processInfo->getCurrentIteration();
+	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+
+	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solution);
+
+	auto gap = processInfo->getAbsoluteObjectiveGap();
+	auto relgap = processInfo->getRelativeObjectiveGap();
+
+	if (lazyiters > lazyBreakCtr && this->hasIncumbent())
+	{
+		//lazyBreakCtr = lazyBreakCtr * 1.5;
+		//minConstrDev = 1000;
+		std::cout << "     OBJI: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
+				<< this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
+		std::cout << "     Lazyiters: " << lazyiters << " >= " << lazyBreakCtr << std::endl;
 		lazyiters = 0;
-		isBusy = false;
-		return;
+		itersSinceNLPCall = 0;
+		//timestampLastNLPCall = processInfo->getElapsedTime("Total");
+		returnAfter = true;
+		//isBusy = false;
+		//return;
 	}
 	else
 	{
+		//std::cout << lazyBreakCtr << std::endl;
 		lazyiters++;
 	}
 
@@ -166,22 +309,18 @@ void CtCallbackI::main()
 	 }
 	 */
 //	if (numLazyAdded > 500) return;
-	IloNumArray tmpVals(this->getEnv());
-	this->getValues(tmpVals, cplexVars);
+	/*if (abs(this->getIncumbentObjValue()) < 1e70)
+	 {
+	 this->getIncumbentValues(tmpVals, cplexVars);
+	 std::cout << "     INCUMBENT: " << this->getIncumbentObjValue() << std::endl;
+	 }
+	 else
+	 {
+	 this->getValues(tmpVals, cplexVars);
+	 }*/
 
-	std::vector<double> solution(tmpVals.getSize());
-
-	for (int i = 0; i < tmpVals.getSize(); i++)
-	{
-		solution.at(i) = tmpVals[i];
-	}
-
-	auto currIter = processInfo->getCurrentIteration();
-	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
-
-	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solution);
-
-	minConstrDev = min(mostDevConstr.value, minConstrDev);
+//minConstrDev = min(mostDevConstr.value, minConstrDev);
+//minConstrDev = minConstrDev;
 	/*if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	 {
 	 processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
@@ -189,19 +328,100 @@ void CtCallbackI::main()
 	 //	return;
 	 }*/
 
-	if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	if (mostDevConstr.value <= settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
 	{
 		//		processInfo->logger.message(1) << "MILP point is on the interior!" << CoinMessageEol;
+
+		auto tmpPrimal = processInfo->getPrimalBound();
+
 		processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
+
+		tCheckPrimCands->run();
+
+		if (abs(tmpPrimal - processInfo->getPrimalBound()) > 0)
+		{
+			isBusy = false;
+			return;
+		}
+
 	}
 
-	if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm") / 10.0)
+	if (abs(this->getBestObjValue() - processInfo->getDualBound() > 0.0000001))
 	{
-//		processInfo->logger.message(1) << "MILP point is on the interior!" << CoinMessageEol;
-		//processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
+		double tmpDualObjBound = this->getBestObjValue();
+
+		DualSolution sol =
+		{ solution, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound, currIter->iterationNumber };
+		processInfo->addDualSolutionCandidate(sol);
+
+		tCheckDualCands->run();
+	}
+
+	if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	{
+		returnAfter = true;
 		isBusy = false;
 		return;
 	}
+
+//auto gap = abs(processInfo->getPrimalBound() - this->getBestObjValue());
+
+//double relgap = gap / ((1e-10) + abs(processInfo->getPrimalBound()));
+
+//std::cout << "O:" << this->getIncumbentObjValue() << std::endl;
+
+//auto gap = processInfo->getAbsoluteObjectiveGap();
+//auto relgap = processInfo->getRelativeObjectiveGap();
+
+	/*if (abs(this->getIncumbentObjValue() - this->getBestObjValue())
+	 < settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	 {
+	 std::cout << "     OBJ: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
+	 << this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
+	 std::cout << "     Relative gap: " << relgap << std::endl;
+	 returnAfter = true;
+	 isBusy = false;
+	 return;
+	 }
+	 else*/
+	if (relgap < settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	{
+		std::cout << "     OBJR: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
+				<< this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
+		std::cout << "     Relative gap: " << relgap << std::endl;
+		returnAfter = true;
+		isBusy = false;
+		return;
+	}
+	else if (gap < settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	{
+		std::cout << "     OBJA: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
+				<< this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
+		std::cout << "     Absolute gap: " << gap << std::endl;
+		returnAfter = true;
+		isBusy = false;
+		return;
+	}
+
+	double elapsedTime = processInfo->getElapsedTime("Total") - timestampLastNLPCall;
+//std::cout << "Elapsed" << elapsedTime << std::endl;
+	if ((elapsedTime > 5.0)
+			|| ((itersSinceNLPCall > 50)
+					&& mostDevConstr.value < (10 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+			|| (itersSinceNLPCall > 200))
+	{
+		dynamic_cast<TaskSelectPrimalCandidatesFromNLP*>(tSelectPrimNLP)->setFixedPoint(solution);
+		tSelectPrimNLP->run();
+
+		tCheckPrimCands->run();
+		itersSinceNLPCall = 0;
+		timestampLastNLPCall = processInfo->getElapsedTime("Total");
+	}
+	else
+	{
+		itersSinceNLPCall++;
+	}
+
 	/*else if (lazyiters > 100 && mostDevConstr.value < minConstrDev * 10.0)
 	 {
 	 processInfo->logger.message(1) << "Using minconstrdev!" << CoinMessageEol;
@@ -215,92 +435,177 @@ void CtCallbackI::main()
 	 isBusy = false;
 	 return;
 	 }*/
-	else
+//else
+//{
+	std::vector < Hyperplane > hyperplanes;
+	Hyperplane hyperplane;
+
+	for (int j = 0; j < processInfo->interiorPts.size(); j++)
 	{
-		/*Hyperplane hyperplane;
-		 hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
-		 hyperplane.generatedPoint = solution;*/
+		//processInfo->startTimer(E_TimerTypes::Linesearch);
+		auto xNLP = processInfo->interiorPts.at(j).point;
 
-		Hyperplane hyperplane;
+		processInfo->startTimer("HyperplaneLinesearch");
 
-		for (int j = 0; j < processInfo->interiorPts.size(); j++)
+		auto intervalPts = linesearchMethod->findZero(xNLP, solution,
+				settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+				settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+				settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+
+		auto xNewc = intervalPts.second;
+
+		processInfo->stopTimer("HyperplaneLinesearch");
+		//processInfo->stopTimer(E_TimerTypes::Linesearch);
+
+		if (xNewc.size() == 0) break;	// TODO remove?
+
+		auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(xNewc);
+
+		if (tmpMostDevConstr.value < 0)
 		{
-			//processInfo->startTimer(E_TimerTypes::Linesearch);
-			auto xNLP = processInfo->interiorPts.at(j).point;
+			//processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
 
-			processInfo->startTimer("HyperplaneLinesearch");
-			auto xNewc = linesearchMethod->findZero(xNLP, solution,
-					settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-					settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"));
+			auto tmpPrimal = processInfo->getPrimalBound();
 
-			processInfo->stopTimer("HyperplaneLinesearch");
-			//processInfo->stopTimer(E_TimerTypes::Linesearch);
+			processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
 
-			if (xNewc.size() == 0) break;	// TODO remove?
+			tCheckPrimCands->run();
 
-			auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(xNewc);
-
-			if (tmpMostDevConstr.value < 0)
+			if (abs(tmpPrimal - processInfo->getPrimalBound()) > 0)
 			{
-				processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback,
-						currIterNum);
-			}
-
-			if (tmpMostDevConstr.value < 0)
-			{
-				isBusy = false;
-				processInfo->logger.message(1) << "Hyperplane point is on the interior." << CoinMessageEol;
-
-				return;
-			}
-			else
-			{
-				processInfo->logger.message(6) << "Hyperplane point is on the exterior." << CoinMessageEol;
-
-				hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
-				hyperplane.generatedPoint = xNewc;
-
+				returnAfter;
 			}
 		}
 
-		/*
-		 if (i == 0 && currIter->isMILP())
-		 {
-		 hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
-		 }
-		 else if (currIter->isMILP())
-		 {
-		 hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
-		 }
-		 else
-		 {
-		 hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
-		 }*/
+		if (tmpMostDevConstr.value < 0)
+		{
+			isBusy = false;
+			processInfo->logger.message(1) << "Hyperplane point is on the interior." << CoinMessageEol;
 
-		//processInfo->hyperplaneWaitingList.push_back(hyperplane);
-		auto varNames = processInfo->originalProblem->getVariableNames();
-		/*
-		 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
+			return;
+		}
+		else
+		{
+			processInfo->logger.message(6) << "Hyperplane point is on the exterior." << CoinMessageEol;
+
+			hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
+			hyperplane.generatedPoint = xNewc;
+
+		}
+	}
+
+	hyperplanes.push_back(hyperplane);
+
+// Tries to remove the incumbent solution. Does not seem to work
+	if (false && abs(this->getIncumbentObjValue() - lastIncumbentObjVal) > 0.1)
+	{
+		lastIncumbentObjVal = this->getIncumbentObjValue();
+
+		Hyperplane hyperplane2;
+
+		if (this->hasIncumbent())
+		{
+			this->getIncumbentValues(tmpVals, cplexVars);
+			std::cout << "     INCUMBENT: " << this->getIncumbentObjValue() << std::endl;
+
+			std::vector<double> solution(tmpVals.getSize());
+
+			for (int i = 0; i < tmpVals.getSize(); i++)
+			{
+				solution.at(i) = tmpVals[i];
+			}
+
+			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solution);
+			std::cout << "Incumbent max dev" << mostDevConstr.value << std::endl;
+
+			for (int j = 0; j < processInfo->interiorPts.size(); j++)
+			{
+				//processInfo->startTimer(E_TimerTypes::Linesearch);
+				auto xNLP = processInfo->interiorPts.at(j).point;
+
+				processInfo->startTimer("HyperplaneLinesearch");
+
+				auto intervalPts = linesearchMethod->findZero(xNLP, solution,
+						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+
+				auto xNewc = intervalPts.second;
+
+				processInfo->stopTimer("HyperplaneLinesearch");
+				//processInfo->stopTimer(E_TimerTypes::Linesearch);
+
+				if (xNewc.size() == 0) break;	// TODO remove?
+
+				auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(xNewc);
+
+				if (tmpMostDevConstr.value < 0)
+				{
+					processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback,
+							currIterNum);
+				}
+
+				if (tmpMostDevConstr.value < 0)
+				{
+					isBusy = false;
+					processInfo->logger.message(1) << "Hyperplane point is on the interior." << CoinMessageEol;
+
+					return;
+				}
+				else
+				{
+					processInfo->logger.message(6) << "Hyperplane point is on the exterior." << CoinMessageEol;
+
+					hyperplane2.sourceConstraintIndex = tmpMostDevConstr.idx;
+					hyperplane2.generatedPoint = xNewc;
+
+				}
+			}
+
+			//hyperplanes.push_back(hyperplane2);
+
+		}
+	}
+
+	/*
+	 if (i == 0 && currIter->isMILP())
+	 {
+	 hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+	 }
+	 else if (currIter->isMILP())
+	 {
+	 hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+	 }
+	 else
+	 {
+	 hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+	 }*/
+
+//processInfo->hyperplaneWaitingList.push_back(hyperplane);
+	auto varNames = processInfo->originalProblem->getVariableNames();
+	/*
+	 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
 
 
-		 for (int i = 0; i < point.size(); i++)
-		 {
-		 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
-		 }*/
+	 for (int i = 0; i < point.size(); i++)
+	 {
+	 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
+	 }*/
 
+	for (auto hp : hyperplanes)
+	{
 		std::vector < IndexValuePair > elements;
-		double constant = processInfo->originalProblem->calculateConstraintFunctionValue(
-				hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
+		double constant = processInfo->originalProblem->calculateConstraintFunctionValue(hp.sourceConstraintIndex,
+				hp.generatedPoint);
 
-		if (hyperplane.sourceConstraintIndex == -1
-				|| hyperplane.sourceConstraintIndex
-						== processInfo->originalProblem->getNonlinearObjectiveConstraintIdx())
+		if (hp.sourceConstraintIndex == -1
+				|| hp.sourceConstraintIndex == processInfo->originalProblem->getNonlinearObjectiveConstraintIdx())
 		{
 			processInfo->logger.message(3) << " HP point generated for auxiliary objective function constraint"
 					<< CoinMessageEol;
 
 			auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
-					&hyperplane.generatedPoint.at(0), -1, true);
+					&hp.generatedPoint.at(0), -1, true);
 			int number = processInfo->originalProblem->getNumberOfVariables();
 
 			for (int i = 0; i < number - 1; i++)
@@ -312,7 +617,7 @@ void CtCallbackI::main()
 					pair.value = tmpArray[i];
 
 					elements.push_back(pair);
-					constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
+					constant += -tmpArray[i] * hp.generatedPoint.at(i);
 
 					processInfo->logger.message(3) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
 							<< CoinMessageEol;
@@ -326,15 +631,15 @@ void CtCallbackI::main()
 			pair.value = -1.0;
 
 			elements.push_back(pair);
-			constant += /*-(-1) **/hyperplane.generatedPoint.at(pair.idx);
+			constant += /*-(-1) **/hp.generatedPoint.at(pair.idx);
 		}
 		else
 		{
-			processInfo->logger.message(3) << " HP point generated for constraint index"
-					<< hyperplane.sourceConstraintIndex << CoinMessageEol;
+			processInfo->logger.message(3) << " HP point generated for constraint index" << hp.sourceConstraintIndex
+					<< CoinMessageEol;
 
-			auto nablag = processInfo->originalProblem->calculateConstraintFunctionGradient(
-					hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
+			auto nablag = processInfo->originalProblem->calculateConstraintFunctionGradient(hp.sourceConstraintIndex,
+					hp.generatedPoint);
 			processInfo->numGradientEvals++;
 
 			for (int i = 0; i < nablag->number; i++)
@@ -344,7 +649,7 @@ void CtCallbackI::main()
 				pair.value = nablag->values[i];
 
 				elements.push_back(pair);
-				constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
+				constant += -nablag->values[i] * hp.generatedPoint.at(nablag->indexes[i]);
 
 				processInfo->logger.message(3) << " Gradient for variable" << varNames.at(nablag->indexes[i]) << ": "
 						<< nablag->values[i] << CoinMessageEol;
@@ -390,10 +695,11 @@ void CtCallbackI::main()
 			cplexLazyConstrs.push_back(tmpRange);
 			//numLazyAdded++;
 
-			std::cout << "     LAZY OBJ: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue()
-					<< "\t\t DEV: " << mostDevConstr.value << " < " << minConstrDev << " NUM: "
-					<< cplexLazyConstrs.size() << std::endl;
-			this->add(tmpRange);
+			std::cout << "     LAZY #: " << cplexLazyConstrs.size() << "\t DB: " << this->getBestObjValue()
+					<< "\t OBJ: " << this->getObjValue() << "\t GAP: " << gap << "\t PB: "
+					<< this->getIncumbentObjValue() << "\t DEV: " << mostDevConstr.value << std::endl;
+			this->add(tmpRange, IloCplex::CutManagement::UseCutPurge);
+			//this->addLocal(tmpRange);
 			//std::cout << "HEJ" << std::endl;
 			//tmpRange2.end();
 
@@ -416,6 +722,14 @@ void CtCallbackI::main()
 			 currIter->numHyperplanesAdded++;
 			 currIter->totNumHyperplanes++;*/
 		}
+	}
+//}
+
+	//std::cout << "Before: " << primalBegin << " after " << processInfo->getPrimalBound() << std::endl;
+	if (returnAfter || abs(primalBegin - processInfo->getPrimalBound()) > 0)
+	{
+		isBusy = false;
+		return;
 	}
 
 	isBusy = false;
@@ -445,6 +759,8 @@ MILPSolverCplexExperimental::MILPSolverCplexExperimental()
 MILPSolverCplexExperimental::~MILPSolverCplexExperimental()
 {
 	cplexEnv.end();
+	delete tCheckDualCands;
+	delete tCheckPrimCands;
 }
 
 bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
@@ -612,7 +928,13 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 		IloExprArray lhs;
 		IloNumArray rhs;
 
-		cplexInstance.use(CtCallback(cplexEnv, cplexVars, this->processInfo));
+		// Do not use the callback if quadratic function
+		if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
+		{
+			cplexInstance.use(CtCallback(cplexEnv, cplexVars, this->processInfo));
+			cplexInstance.use(HCallback(cplexEnv, cplexVars, this->processInfo));
+
+		}
 	}
 	catch (IloException& e)
 	{
@@ -633,7 +955,7 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 		cplexInstance.setOut(cplexEnv.getNullStream());
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
-		cplexInstance.setParam(IloCplex::SolnPoolIntensity, settings->getIntSetting("SolnPoolIntensity", "CPLEX"));	// Don't use 3 with heuristics
+		cplexInstance.setParam(IloCplex::SolnPoolIntensity, settings->getIntSetting("SolnPoolIntensity", "CPLEX")); // Don't use 3 with heuristics
 		cplexInstance.setParam(IloCplex::SolnPoolReplace, settings->getIntSetting("SolnPoolReplace", "CPLEX"));
 
 		cplexInstance.setParam(IloCplex::RepairTries, 5);
@@ -647,7 +969,7 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
 
-		//cplexInstance.setParam(IloCplex::ParallelMode,1);
+		//cplexInstance.setParam(IloCplex::ParallelMode, 1);
 		cplexInstance.setParam(IloCplex::Threads, 8);
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
@@ -985,16 +1307,57 @@ E_ProblemSolutionStatus MILPSolverCplexExperimental::solveProblem()
 		 else if (tunestat == IloCplex::TuningTimeLim) cout << "Tuning time limit." << endl;
 		 else cout << "Tuning status unknown." << endl;
 		 */
+		/*
+		 if (processInfo->iterations.size() > 1)
+		 {
+		 std::cout << "CO: " << cplexInstance.getCutoff() << " pb: "
+		 << processInfo->getPreviousIteration()->objectiveValue << " diff: "
+		 << abs(cplexInstance.getCutoff() - processInfo->getPreviousIteration()->objectiveValue)
+		 << std::endl;
+		 }
+
+		 if (processInfo->iterationCount > 1
+		 && abs(cplexInstance.getCutoff() - processInfo->getPreviousIteration()->objectiveValue) < 0.1)
+		 {
+		 std::cout << "XCO: " << cplexInstance.getCutoff() << " pb: "
+		 << processInfo->getPreviousIteration()->objectiveValue << std::endl;
+		 cplexInstance.setParam(IloCplex::MIPEmphasis, 3 );
+		 }
+		 else
+		 {
+		 cplexInstance.setParam(IloCplex::MIPEmphasis, 0);
+		 }*/
+
 		processInfo->logger.message(3) << " Solving MILP..." << CoinMessageEol;
 		double timeStart = processInfo->getElapsedTime("Total");
 
+		/*// Set branching priorities
+		 if (processInfo->getCurrentIteration()->iterationNumber == 1)
+		 {
+		 auto nonlinearVariables =
+		 processInfo->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap();
+
+		 int numVar = cplexVars.getSize();
+
+		 IloNumArray tmpPriorities(cplexEnv);
+		 tmpPriorities.setSize(numVar);
+
+		 for (auto V : nonlinearVariables)
+		 {
+		 std::cout << "F " << V.first << " S " << V.second << std::endl;
+		 tmpPriorities[V.second] = 2;
+		 }
+
+		 cplexInstance.setPriorities(cplexVars, tmpPriorities);
+		 }*/
 		cplexInstance.solve();
 		double timeEnd = processInfo->getElapsedTime("Total");
 
 		iterDurations.push_back(timeEnd - timeStart);
 		processInfo->logger.message(3) << " MILP solved..." << CoinMessageEol;
 		MILPSolutionStatus = getSolutionStatus();
-		processInfo->logger.message(3) << " Solution status obtained.." << CoinMessageEol;
+		processInfo->logger.message(3) << " Solution status obtained: << " << (int) MILPSolutionStatus
+				<< CoinMessageEol;
 
 	}
 	catch (IloException &e)
@@ -1040,7 +1403,7 @@ void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 
 	if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
 	{
-		limit = 1;
+		limit = settings->getIntSetting("MILPSolLimitInitial", "MILP");
 	}
 
 	try

@@ -25,13 +25,14 @@ void TaskCheckAbsoluteGap::run()
 
 	double gap = processInfo->getAbsoluteObjectiveGap();
 
-	if (currIter->isMILP() && gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")
+	if (/*currIter->isMILP() &&*/gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")
 	/*&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal*/)
 	{
 
 		processInfo->terminationReason = E_TerminationReason::AbsoluteGap;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}
+
 }
 
 std::string TaskCheckAbsoluteGap::getType()
