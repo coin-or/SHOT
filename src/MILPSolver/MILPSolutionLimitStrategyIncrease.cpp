@@ -59,7 +59,6 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	if (prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
 	{
 		return (false);
-
 	}
 
 	// We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
@@ -76,7 +75,6 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 	{
-
 		if (prevIter->maxDeviation < settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP")) return (true);
 
 		if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);

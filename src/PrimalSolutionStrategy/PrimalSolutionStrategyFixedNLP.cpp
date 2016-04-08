@@ -177,6 +177,20 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	vector < SolutionPoint > solPts;
 
+	if (this->fixPoint.size() > 0)
+	{
+		SolutionPoint tmpSPf;
+		tmpSPf.iterFound = currIter->iterationNumber;
+		tmpSPf.objectiveValue = processInfo->originalProblem->calculateOriginalObjectiveValue(this->fixPoint);
+		tmpSPf.point = this->fixPoint;
+		tmpSPf.maxDeviation = processInfo->originalProblem->getMostDeviatingConstraint(tmpSPf.point);
+
+		solPts.push_back(tmpSPf);
+
+		this->fixPoint = std::vector<double>
+		{ };
+	}
+
 	// Fix variables
 	auto varTypes = processInfo->originalProblem->getVariableTypes();
 	if (currIter->solutionPoints.size() == 0) //No solution found in last iteration
@@ -340,4 +354,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 	}
 
 	return (true);
+}
+
+void PrimalSolutionStrategyFixedNLP::setFixedPoint(std::vector<double> fixedPt)
+{
+	this->fixPoint = fixedPt;
 }

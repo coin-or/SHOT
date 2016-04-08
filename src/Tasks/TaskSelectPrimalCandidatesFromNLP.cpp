@@ -51,3 +51,8 @@ std::string TaskSelectPrimalCandidatesFromNLP::getType()
 	return (type);
 
 }
+
+void TaskSelectPrimalCandidatesFromNLP::setFixedPoint(std::vector<double> fixedPt)
+{
+	primalStrategyFixedNLP->setFixedPoint(fixedPt);
+}

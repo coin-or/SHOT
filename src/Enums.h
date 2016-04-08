@@ -61,7 +61,7 @@ enum class ES_RelaxationStrategy
 
 enum class ES_MILPSolver
 {
-	Cplex, Gurobi, Cbc
+	Cplex, Gurobi, Cbc, CplexExperimental
 };
 
 enum class ES_QPStrategy
@@ -98,7 +98,8 @@ enum class E_PrimalSolutionSource
 	MILPSolutionPool,
 	ObjectiveConstraint,
 	LPFixedIntegers,
-	LazyConstraintCallback
+	LazyConstraintCallback,
+	HeuristicCallback
 };
 
 enum class E_DualSolutionSource

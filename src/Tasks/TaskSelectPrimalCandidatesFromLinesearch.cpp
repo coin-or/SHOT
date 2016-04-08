@@ -180,6 +180,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 
 						processInfo->logger.message(1) << "Cannot find solution with primal bound linesearch: "
 								<< CoinMessageNewline << e.what() << CoinMessageEol;
+						processInfo->stopTimer("PrimalBoundTotal");
 						processInfo->stopTimer("PrimalBoundLinesearch");
 					}
 
@@ -198,6 +199,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 			}
 
 			processInfo->stopTimer("PrimalBoundTotal");
+			processInfo->stopTimer("PrimalBoundLinesearch");
 		}
 	}
 }

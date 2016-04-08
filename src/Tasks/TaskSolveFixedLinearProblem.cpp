@@ -54,7 +54,7 @@ TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem()
 	settings = SHOTSettings::Settings::getInstance();
 
 	processInfo->startTimer("PrimalBoundTotal");
-	processInfo->startTimer("PrimalBoundLinesearch");
+	processInfo->startTimer("PrimalBoundFixedLP");
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
 	{
 		processInfo->logger.message(2) << "Boost linesearch implementation selected for primal heuristics"
@@ -70,7 +70,7 @@ TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem()
 
 	discreteVariableIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
 
-	processInfo->stopTimer("PrimalBoundLinesearch");
+	processInfo->stopTimer("PrimalBoundFixedLP");
 	processInfo->stopTimer("PrimalBoundTotal");
 }
 
@@ -81,21 +81,39 @@ TaskSolveFixedLinearProblem::~TaskSolveFixedLinearProblem()
 
 void TaskSolveFixedLinearProblem::run()
 {
+	processInfo->startTimer("PrimalBoundTotal");
+	processInfo->startTimer("PrimalBoundFixedLP");
 	auto currIter = processInfo->getCurrentIteration(); //The one not solved yet
+
+	if (currIter->MILPSolutionLimitUpdated) return;
 
 	if (currIter->iterationNumber < 5)
 	{
+
+		processInfo->stopTimer("PrimalBoundFixedLP");
+		processInfo->stopTimer("PrimalBoundTotal");
 		return;
 	}
 
 	auto prevIter = processInfo->getPreviousIteration();
 
-	if (prevIter->iterationNumber < 4) return;
+	if (prevIter->iterationNumber < 4)
+	{
+
+		processInfo->stopTimer("PrimalBoundFixedLP");
+		processInfo->stopTimer("PrimalBoundTotal");
+		return;
+	}
 
 	auto prevIter2 = &processInfo->iterations.at(prevIter->iterationNumber - 2);
 	auto prevIter3 = &processInfo->iterations.at(prevIter->iterationNumber - 3);
 
-	if (!prevIter->isMILP() && !prevIter2->isMILP() && !prevIter3->isMILP()) return;
+	if (!prevIter->isMILP() && !prevIter2->isMILP() && !prevIter3->isMILP())
+	{
+		processInfo->stopTimer("PrimalBoundFixedLP");
+		processInfo->stopTimer("PrimalBoundTotal");
+		return;
+	}
 
 	auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
 
@@ -107,7 +125,12 @@ void TaskSolveFixedLinearProblem::run()
 	bool isDifferent2 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter3->solutionPoints.at(0).point,
 			discreteIdxs);
 
-	if (isDifferent1 || isDifferent2) return;
+	if (isDifferent1 || isDifferent2)
+	{
+		processInfo->stopTimer("PrimalBoundFixedLP");
+		processInfo->stopTimer("PrimalBoundTotal");
+		return;
+	}
 
 	/*if (processInfo->primalSolution.size() == 0) return;
 
@@ -237,8 +260,6 @@ void TaskSolveFixedLinearProblem::run()
 
 			try
 			{
-
-				processInfo->startTimer("HyperplaneLinesearch");
 				auto xNewc = linesearchMethod->findZero(internalPoint, externalPoint,
 						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
@@ -269,8 +290,6 @@ void TaskSolveFixedLinearProblem::run()
 						<< CoinMessageNewline << e.what() << CoinMessageEol;
 			}
 
-			processInfo->stopTimer("HyperplaneLinesearch");
-
 			if (k == 0) prevObjVal = objVal;
 		}
 
@@ -284,6 +303,8 @@ void TaskSolveFixedLinearProblem::run()
 				originalBounds.at(i).second);
 	}
 
+	processInfo->stopTimer("PrimalBoundFixedLP");
+	processInfo->stopTimer("PrimalBoundTotal");
 	return;
 }
 

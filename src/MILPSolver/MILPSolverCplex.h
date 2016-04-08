@@ -96,7 +96,7 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		IloRangeArray cplexLazyConstrs;
 		vector<IloConversion> cplexVarConvers;
 
-		bool modelUpdated = false;
+		bool modelUpdated = true;
 
 	protected:
 

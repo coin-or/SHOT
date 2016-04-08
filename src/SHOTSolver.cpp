@@ -132,7 +132,8 @@ bool SHOTSolver::setProblem(std::string fileName)
 	if (settings->getBoolSetting("Debug", "SHOTSolver")) initializeDebugMode();
 	else
 	{
-		getOSol();
+		//getOSol();
+		initializeDebugMode(); // Does not work without this...
 		//std::cout << getOSol(); // Needed due to unknown reason
 
 		//FileUtil* fileUtil = new FileUtil();
@@ -327,6 +328,7 @@ void SHOTSolver::initializeSettings()
 	enumMILPSolver.push_back("Cplex");
 	enumMILPSolver.push_back("Gurobi");
 	enumMILPSolver.push_back("Cbc");
+	enumMILPSolver.push_back("CplexExperimental");
 	settings->createSetting("MILPSolver", "MILP", static_cast<int>(ES_MILPSolver::Cplex), "MILP solver",
 			enumMILPSolver);
 	enumMILPSolver.clear();
@@ -421,7 +423,7 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-8,
 			"The nonlinear constraint tolerance for accepting primal bounds ");
 
-	settings->createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-8,
+	settings->createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-9,
 			"The linear constraint tolerance for accepting primal bounds ");
 
 	processInfo->logger.message(4) << "Initialization of settings complete." << CoinMessageEol;

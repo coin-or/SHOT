@@ -31,7 +31,7 @@ void TaskSolveIteration::run()
 
 	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolutions.size() > 0)
 	{
-		MILPSolver->deleteMIPStarts();
+		//MILPSolver->deleteMIPStarts();
 		MILPSolver->addMIPStart(processInfo->primalSolution);
 	}
 
@@ -51,7 +51,8 @@ void TaskSolveIteration::run()
 	 int fixIter = 0;
 	 double newCutOff = processInfo->getPrimalBound();
 
-	 while ((solStatus == E_ProblemSolutionStatus::CutOff) && fixIter < 10)
+	 while ((solStatus == E_ProblemSolutionStatus::CutOff || solStatus == E_ProblemSolutionStatus::Infeasible)
+	 && fixIter < 3)
 	 {
 	 MILPSolver->deleteMIPStarts();
 	 if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
@@ -74,8 +75,8 @@ void TaskSolveIteration::run()
 	 solStatus = MILPSolver->solveProblem();
 	 fixIter++;
 
-	 }*/
-
+	 }
+	 */
 	if (solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error
 			|| solStatus == E_ProblemSolutionStatus::Unbounded)
 	{

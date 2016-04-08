@@ -242,7 +242,7 @@ void MILPSolverCplex::initializeSolverSettings()
 
 		//cplexInstance.setParam(IloCplex::NumericalEmphasis, 1);
 		//cplexInstance.setParam(IloCplex::MemoryEmphasis, 1);
-		//cplexInstance.setParam(IloCplex::EpGap, 10 ^ (-14));
+		//cplexInstance.setParam(IloCplex::EpRHS, 10 ^ (-5));
 		//cplexInstance.setParam(IloCplex::EpInt, 10 ^ (-6));
 		//cplexInstance.setParam(IloCplex::EpOpt, 1 ^ (-9));
 		//cplexInstance.setParam(IloCplex::EpAGap, 10 ^ (-14));
@@ -528,20 +528,30 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 	try
 	{
 
-		if (modelUpdated && settings->getBoolSetting("UseLazyConstraints", "MILP"))
+		if (modelUpdated) // EDIT: march 2016, should this be used??
 		{
-			//Extract the model if we have updated the constraints
 			cplexInstance.extract(cplexModel);
-			// Must add the lazy constraints again if we have extracted the model
 
-			if (cplexLazyConstrs.getSize() > 0)
+			if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
 			{
-				processInfo->startTimer("LazyChange");
-				cplexInstance.addLazyConstraints(cplexLazyConstrs);
-				processInfo->stopTimer("LazyChange");
+				//Extract the model if we have updated the constraints
+				cplexInstance.extract(cplexModel);
+				// Must add the lazy constraints again if we have extracted the model
+
+				if (cplexLazyConstrs.getSize() > 0)
+				{
+					processInfo->startTimer("LazyChange");
+					cplexInstance.addLazyConstraints(cplexLazyConstrs);
+
+					processInfo->logger.message(0) << "    Readded lazy constraints to model." << CoinMessageEol;
+
+					processInfo->stopTimer("LazyChange");
+				}
 			}
+
 			modelUpdated = false;
 		}
+
 		/*
 		 int currSolLim = getSolutionLimit();
 
@@ -923,8 +933,8 @@ void MILPSolverCplex::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
 		try
 		{
 			cplexModel.remove(tmpRange);
-			cplexInstance.extract(cplexModel);
-			//cplexInstance.addLazyConstraint(tmpRange);
+			//cplexInstance.extract(cplexModel);
+			cplexInstance.addLazyConstraint(tmpRange);
 			cplexLazyConstrs.add(tmpRange);
 			modelUpdated = true;
 			hyperplane.isLazy = true;
