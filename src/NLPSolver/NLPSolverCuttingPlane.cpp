@@ -261,7 +261,18 @@ bool NLPSolverCuttingPlane::solveProblem()
 	tmpIP->NLPSolver = static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax);
 	tmpIP->point = currSol;
 
+	auto maxDev = processInfo->originalProblem->getMostDeviatingConstraint(currSol);
+	tmpIP->maxDevatingConstraint = maxDev;
+
 	processInfo->interiorPts.push_back(*tmpIP);
+
+	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	{
+		auto tmpVars = NLPProblem->getVariableNames();
+		tmpVars.push_back("mu");
+		std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimaxcp.txt";
+		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
+	}
 
 	delete MILPSolver;
 

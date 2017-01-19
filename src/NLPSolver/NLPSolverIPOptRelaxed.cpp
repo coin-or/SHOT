@@ -205,7 +205,10 @@ bool NLPSolverIPOptRelaxed::solveProblem()
 		tmpPoint.push_back(NLPSolver->osresult->getObjValue(0, 0));
 	}
 
+	auto maxDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
+
 	tmpIP->point = tmpPoint;
+	tmpIP->maxDevatingConstraint = maxDev;
 
 	processInfo->interiorPts.push_back(*tmpIP);
 

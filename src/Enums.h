@@ -130,4 +130,3 @@ enum class ES_AddPrimalPointAsInteriorPoint
 {
 	KeepOriginal, KeepBoth, KeepNew, OnlyAverage
 };
-
