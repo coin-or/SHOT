@@ -206,13 +206,15 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		processInfo->primalSolution = tmpPoint;
 
-		if (settings->getBoolSetting("AddPrimalBoundAsInteriorPoint", "Algorithm") && mostDev.value < -1e-11)
+		if (settings->getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
+				== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && mostDev.value < 0)
 		{
 			InteriorPoint tmpIP;
 
 			tmpIP.point = tmpPoint;
 
-			processInfo->logger.message(1) << "    Primal solution point added as interior point." << CoinMessageEol;
+			processInfo->logger.message(1) << "    Primal solution point used as additional interior point."
+					<< CoinMessageEol;
 
 			if (processInfo->interiorPts.size() == processInfo->numOriginalInteriorPoints)
 			{
@@ -222,11 +224,41 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 			{
 				processInfo->interiorPts.back() = tmpIP;
 			}
+		}
+		else if (settings->getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
+				== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && mostDev.value < 0)
+		{
+			InteriorPoint tmpIP;
 
-			/*UtilityFunctions::displayVector(processInfo->interiorPts.at(0).point);
-			 UtilityFunctions::displayVector(processInfo->interiorPts.at(1).point);*/
+			// Add the new point only
+			tmpIP.point = tmpPoint;
+
+			processInfo->logger.message(1) << "    Interior point replaced with primal solution point."
+					<< CoinMessageEol;
+
+			processInfo->interiorPts.back() = tmpIP;
 
 		}
+		else if (settings->getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
+				== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && mostDev.value < 0)
+		{
+			InteriorPoint tmpIP;
+
+			// Find a new point in the midpoint between the original and new
+			for (int i = 0; i < tmpPoint.size(); i++)
+			{
+				tmpPoint.at(i) = (0.5 * tmpPoint.at(i) + 0.5 * processInfo->interiorPts.at(0).point.at(i));
+			}
+
+			tmpIP.point = tmpPoint;
+
+			processInfo->logger.message(1) << "    Interior point replaced with primal solution point."
+					<< CoinMessageEol;
+
+			processInfo->interiorPts.back() = tmpIP;
+
+		}
+
 		return (true);
 	}
 
