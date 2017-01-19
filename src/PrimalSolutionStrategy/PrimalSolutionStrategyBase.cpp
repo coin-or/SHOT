@@ -206,6 +206,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		processInfo->primalSolution = tmpPoint;
 
+
 		if (processInfo->interiorPts.size() > 0)
 		{
 			// Add the new point if it is deeper within the feasible region
@@ -218,6 +219,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 				processInfo->logger.message(1)
 						<< "    Interior point replaced with primal solution point due to constraint deviation."
 						<< CoinMessageEol;
+
 
 				processInfo->interiorPts.back() = tmpIP;
 			}
@@ -273,10 +275,12 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 				processInfo->logger.message(1) << "    Interior point replaced with primal solution point."
 						<< CoinMessageEol;
 
+
 				processInfo->interiorPts.back() = tmpIP;
 
 			}
 		}
+
 		return (true);
 	}
 
