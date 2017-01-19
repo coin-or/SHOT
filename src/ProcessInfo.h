@@ -27,6 +27,7 @@ struct InteriorPoint
 {
 		vector<double> point;
 		int NLPSolver;
+		IndexValuePair maxDevatingConstraint;
 };
 
 struct PrimalSolution

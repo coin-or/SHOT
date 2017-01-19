@@ -406,8 +406,16 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("NLPCallMaxElapsedTime", "PrimalBound", 5.0, "Maximal elapsed time between NLP calls", 0,
 			DBL_MAX);
 
-	settings->createSetting("AddPrimalBoundAsInteriorPoint", "Algorithm", false,
-			"Set the best primal bound as internal point");
+	std::vector < std::string > enumAddPrimalPointAsInteriorPoint;
+	enumAddPrimalPointAsInteriorPoint.push_back("Keep original");
+	enumAddPrimalPointAsInteriorPoint.push_back("Keep both");
+	enumAddPrimalPointAsInteriorPoint.push_back("Only new");
+	enumAddPrimalPointAsInteriorPoint.push_back("Only average");
+	settings->createSetting("AddPrimalBoundAsInteriorPoint", "Algorithm",
+			static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal),
+			"How to update interior point when new primal solution is found", enumAddPrimalPointAsInteriorPoint);
+	enumAddPrimalPointAsInteriorPoint.clear();
+
 	settings->createSetting("UseObjectiveLinesearch", "PrimalBound", true,
 			"Use a linesearch to find a primal bound if objective nonlinear");
 	std::vector < std::string > enumPrimalBoundNLPStartingPoint;

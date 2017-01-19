@@ -125,3 +125,8 @@ enum class E_HyperplaneSource
 	PrimalSolutionSearch,
 	PrimalSolutionSearchInteriorObjective
 };
+
+enum class ES_AddPrimalPointAsInteriorPoint
+{
+	KeepOriginal, KeepBoth, KeepNew, OnlyAverage
+};

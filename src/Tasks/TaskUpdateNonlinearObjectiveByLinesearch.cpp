@@ -42,7 +42,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 
 	auto currIter = processInfo->getCurrentIteration();
 
-	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
+	if (currIter->isMILP())
 	{
 		bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 		std::vector<int> constrIdxs;
@@ -55,8 +55,6 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			auto dualSol = allSolutions.at(i);
 
 			auto oldObjVal = allSolutions.at(i).objectiveValue;
-
-			//std::cout << dualSol.maxDeviation.value << std::endl;
 
 			if (dualSol.maxDeviation.value < 0) continue;
 
@@ -81,59 +79,51 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 				auto mostDevInner = processInfo->originalProblem->getMostDeviatingConstraint(internalPoint);
 				auto mostDevOuter = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
 
-				//std::cout << "mostDevInner: " << mostDevInner.value << std::endl;
-				//std::cout << "mostDevOuter: " << mostDevOuter.value << std::endl;
-
-				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = mostDevOuter.idx;
-				hyperplane.generatedPoint = externalPoint;
-				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
-
-				processInfo->hyperplaneWaitingList.push_back(hyperplane);
-
 				allSolutions.at(i).maxDeviation = mostDevOuter;
 				allSolutions.at(i).objectiveValue = processInfo->originalProblem->calculateOriginalObjectiveValue(
 						externalPoint);
 				allSolutions.at(i).point.back() = externalPoint.back();
 
-				//std::cout << "Old objective: " << oldObjVal << std::endl;
+				auto diffobj = abs(oldObjVal - allSolutions.at(i).objectiveValue);
 
-				//UtilityFunctions::displayVector(externalPoint);
-				//UtilityFunctions::displayVector(currIter->solutionPoints.at(i).point);
+				if (diffobj > settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+				{
+					Hyperplane hyperplane;
+					hyperplane.sourceConstraintIndex = mostDevOuter.idx;
+					hyperplane.generatedPoint = externalPoint;
+					hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
+					processInfo->hyperplaneWaitingList.push_back(hyperplane);
+				}
 
+				// Update the iteration solution as well (for i==0)
 				if (i == 0 && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 				{
 					currIter->maxDeviation = mostDevOuter.value;
 					currIter->maxDeviationConstraint = mostDevOuter.idx;
-					currIter->objectiveValue = allSolutions.at(i).objectiveValue;
+					currIter->objectiveValue = allSolutions.at(0).objectiveValue;
 
 					processInfo->setObjectiveUpdatedByLinesearch(true);
-					std::cout << "New objective: " << currIter->objectiveValue << std::endl;
+					processInfo->logger.message(2) << "    Obj. for sol. # 0 upd. by l.s." << oldObjVal << "->"
+							<< allSolutions.at(i).objectiveValue << "(diff:" << diffobj << ")  #" << CoinMessageEol;
 
-					if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+					// Change the status of the solution if it has been updated much
+					if (diffobj > settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 					{
-						currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+						if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+						{
+							currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+						}
 					}
-
-					//processInfo->addDualSolutionCandidate(externalPoint, E_DualSolutionSource::ObjectiveConstraint,
-					//		processInfo->getCurrentIteration()->iterationNumber);
 				}
-
-				//std::cout << "PT: " << ptNew.at(ptNew.size() - 1) << std::endl;
-
-				/*Can never add a dual solution for the point is not optimal
-				 * if (i == 0 && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
-				 {
-				 DualSolution sol =
-				 { externalPoint, E_DualSolutionSource::MILPSolutionOptimal,
-				 currIter->solutionPoints.at(i).objectiveValue, currIter->iterationNumber };
-				 processInfo->addDualSolutionCandidate(sol);
-				 }*/
+				else
+				{
+					processInfo->logger.message(2) << "    Obj. for sol. #" << std::to_string(i) << "upd. by l.s."
+							<< oldObjVal << "->" << allSolutions.at(i).objectiveValue << "(" << diffobj << ")  #"
+							<< CoinMessageEol;
+				}
 
 				processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
 						processInfo->getCurrentIteration()->iterationNumber);
-				//processInfo->logger.message(2) << "    Obj. var." << oldObjVal << "->"
-				//<< currIter->solutionPoints.at(i).objectiveValue << CoinMessageEol;
 
 			}
 			catch (std::exception &e)
