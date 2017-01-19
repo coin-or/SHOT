@@ -741,6 +741,7 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 		else
 		{
 			objVal = cplexInstance.getObjValue();
+
 		}
 
 	}

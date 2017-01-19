@@ -27,9 +27,11 @@ void TaskCheckDualSolutionCandidates::run()
 
 	for (auto C : processInfo->dualSolutionCandidates)
 	{
+
 		if ((isMinimization && (C.objValue > currDualBound && C.objValue <= currPrimalBound))
 				|| (!isMinimization && (C.objValue < currDualBound && C.objValue >= currPrimalBound)))
 		{
+
 			// New dual solution
 			processInfo->currentObjectiveBounds.first = C.objValue;
 			currDualBound = C.objValue;
@@ -65,7 +67,6 @@ void TaskCheckDualSolutionCandidates::run()
 			}
 
 			auto tmpLine = boost::format("    New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
-
 			if (C.sourceType != E_DualSolutionSource::LPSolution)
 			{
 				processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;

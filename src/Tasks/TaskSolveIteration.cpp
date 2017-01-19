@@ -92,6 +92,7 @@ void TaskSolveIteration::run()
 		if (sols.size() > 0)
 		{
 			currIter->objectiveValue = MILPSolver->getObjectiveValue();
+			//std::cout << "OBJ: " << currIter->objectiveValue << std::endl;
 			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
 
 			currIter->maxDeviationConstraint = mostDevConstr.idx;

@@ -115,6 +115,13 @@ void TaskSolveFixedLinearProblem::run()
 		return;
 	}
 
+	if (currIter->numHyperplanesAdded == 0)
+	{
+		processInfo->stopTimer("PrimalBoundFixedLP");
+		processInfo->stopTimer("PrimalBoundTotal");
+		return;
+	}
+
 	auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
 
 	auto currSolPt = prevIter->solutionPoints.at(0).point;

@@ -121,7 +121,6 @@ void HCallbackI::main()
 		}
 		else
 		{
-
 			int numVar = cplexVars.getSize();
 			std::vector<double> solution(numVar);
 
@@ -147,6 +146,25 @@ void HCallbackI::main()
 			}
 
 		}
+	}
+	else //Added august 2016
+	{
+		if (processInfo->primalSolution.size() == 0) return;
+
+		auto primalSol = processInfo->primalSolution;
+
+		IloNumArray tmpVals(this->getEnv());
+
+		std::vector<double> solution(tmpVals.getSize());
+
+		for (int i = 0; i < primalSol.size(); i++)
+		{
+			tmpVals.add(primalSol.at(i));
+		}
+
+		//std::cout << "Solution suggested: " << this->getIncumbentObjValue() << " -> " << primalBound << std::endl;
+
+		setSolution(cplexVars, tmpVals);
 	}
 }
 class CtCallbackI: public IloCplex::LazyConstraintCallbackI
@@ -215,16 +233,14 @@ IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo 
 
 void CtCallbackI::main()
 {
-
-//return;
 	int currIterNum = processInfo->getCurrentIteration()->iterationNumber;
 	bool returnAfter = false;
 
-	while (isBusy)
-	{
-		sleep(0.000001);
-	}
-
+	/*while (isBusy)
+	 {
+	 sleep(0.000001);
+	 }
+	 */
 	isBusy = true;
 
 	double primalBegin = processInfo->getPrimalBound();
@@ -343,13 +359,12 @@ void CtCallbackI::main()
 			isBusy = false;
 			return;
 		}
-
 	}
 
-	if (abs(this->getBestObjValue() - processInfo->getDualBound() > 0.0000001))
-	{
-		double tmpDualObjBound = this->getBestObjValue();
+	double tmpDualObjBound = this->getBestObjValue();
 
+	if (abs(tmpDualObjBound - processInfo->getDualBound() > 0.000001))
+	{
 		DualSolution sol =
 		{ solution, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound, currIter->iterationNumber };
 		processInfo->addDualSolutionCandidate(sol);
@@ -362,6 +377,25 @@ void CtCallbackI::main()
 		returnAfter = true;
 		isBusy = false;
 		return;
+	}
+
+	//auto dualitygap = abs(this->getBestObjValue() - this->getObjValue());
+	auto mipgap = this->getMIPRelativeGap();
+	//std::cout << "Mip gap: " << mipgap << std::endl;
+	//if (dualitygap < settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	if (abs(mipgap) < settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	{
+		//std::cout << "Mip gap ok: " << dualitygap << "(" << this->getBestObjValue() << ", " << this->getObjValue()
+		//<< std::endl;
+		std::cout << "Mip gap ok: " << mipgap << std::endl;
+
+		returnAfter = true;
+		isBusy = false;
+		return;
+	}
+	else
+	{
+		//std::cout << "Duality gap: " << dualitygap << std::endl;
 	}
 
 //auto gap = abs(processInfo->getPrimalBound() - this->getBestObjValue());
@@ -407,7 +441,7 @@ void CtCallbackI::main()
 //std::cout << "Elapsed" << elapsedTime << std::endl;
 	if ((elapsedTime > 5.0)
 			|| ((itersSinceNLPCall > 50)
-					&& mostDevConstr.value < (10 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+					&& mostDevConstr.value < (1000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
 			|| (itersSinceNLPCall > 200))
 	{
 		dynamic_cast<TaskSelectPrimalCandidatesFromNLP*>(tSelectPrimNLP)->setFixedPoint(solution);
@@ -473,28 +507,29 @@ void CtCallbackI::main()
 
 			if (abs(tmpPrimal - processInfo->getPrimalBound()) > 0)
 			{
-				returnAfter;
+				// Tillsatt 10.4.2016
+				returnAfter = true;
 			}
 		}
 
 		if (tmpMostDevConstr.value < 0)
 		{
 			isBusy = false;
-			processInfo->logger.message(1) << "Hyperplane point is on the interior." << CoinMessageEol;
+			processInfo->logger.message(1) << "    Hyperplane point is on the interior." << CoinMessageEol;
 
 			return;
 		}
 		else
 		{
-			processInfo->logger.message(6) << "Hyperplane point is on the exterior." << CoinMessageEol;
+			processInfo->logger.message(6) << "    Hyperplane point is on the exterior." << CoinMessageEol;
 
 			hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
 			hyperplane.generatedPoint = xNewc;
 
+			hyperplanes.push_back(hyperplane);
+
 		}
 	}
-
-	hyperplanes.push_back(hyperplane);
 
 // Tries to remove the incumbent solution. Does not seem to work
 	if (false && abs(this->getIncumbentObjValue() - lastIncumbentObjVal) > 0.1)
@@ -698,7 +733,8 @@ void CtCallbackI::main()
 			std::cout << "     LAZY #: " << cplexLazyConstrs.size() << "\t DB: " << this->getBestObjValue()
 					<< "\t OBJ: " << this->getObjValue() << "\t GAP: " << gap << "\t PB: "
 					<< this->getIncumbentObjValue() << "\t DEV: " << mostDevConstr.value << std::endl;
-			this->add(tmpRange, IloCplex::CutManagement::UseCutPurge);
+			//this->add(tmpRange, IloCplex::CutManagement::UseCutPurge);
+			this->add(tmpRange);
 			//this->addLocal(tmpRange);
 			//std::cout << "HEJ" << std::endl;
 			//tmpRange2.end();
@@ -725,7 +761,7 @@ void CtCallbackI::main()
 	}
 //}
 
-	//std::cout << "Before: " << primalBegin << " after " << processInfo->getPrimalBound() << std::endl;
+//std::cout << "Before: " << primalBegin << " after " << processInfo->getPrimalBound() << std::endl;
 	if (returnAfter || abs(primalBegin - processInfo->getPrimalBound()) > 0)
 	{
 		isBusy = false;
@@ -928,13 +964,10 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 		IloExprArray lhs;
 		IloNumArray rhs;
 
-		// Do not use the callback if quadratic function
-		if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
-		{
-			cplexInstance.use(CtCallback(cplexEnv, cplexVars, this->processInfo));
-			cplexInstance.use(HCallback(cplexEnv, cplexVars, this->processInfo));
+		// Do not use the callback if quadratic function, not needed anymore...
+		cplexInstance.use(CtCallback(cplexEnv, cplexVars, this->processInfo));
+		//cplexInstance.use(HCallback(cplexEnv, cplexVars, this->processInfo));
 
-		}
 	}
 	catch (IloException& e)
 	{
@@ -1414,7 +1447,6 @@ void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 	{
 		processInfo->logger.message(0) << "Error when setting solution limit:" << CoinMessageNewline << e.getMessage()
 				<< CoinMessageEol;
-
 	}
 }
 

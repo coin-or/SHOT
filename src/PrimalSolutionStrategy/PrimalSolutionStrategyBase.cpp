@@ -83,8 +83,8 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 	}
 
 	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
-			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-			|| primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback)
+			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers/*
+			 || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback*/)
 	{
 		isLinConstrFulfilled = true;
 		mostDev = primalSol.maxDevatingConstraint;

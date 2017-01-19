@@ -7,12 +7,22 @@
 
 #include <TaskInitializeMILPSolver.h>
 
-TaskInitializeMILPSolver::TaskInitializeMILPSolver()
+TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	processInfo->startTimer("MILP");
+
+	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
+			== ES_QPStrategy::QuadraticObjective;
+
+	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
+			== ES_QPStrategy::QuadraticallyConstrained;
+
+	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
+	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
+	bool isQuadraticUsed = (useQuadraticObjective || (useQuadraticConstraint));
 
 	auto solver = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
 
@@ -33,8 +43,23 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver()
 	}
 	else if (solver == ES_MILPSolver::CplexExperimental)
 	{
-		processInfo->MILPSolver = new MILPSolverCplexExperimental();
-		processInfo->logger.message(2) << "Cplex lazy selected as MIP solver." << CoinMessageEol;
+		if (isObjQuadratic && isQuadraticUsed)
+		{
+			processInfo->MILPSolver = new MILPSolverCplex();
+			processInfo->logger.message(2) << "Cplex selected as MIP solver." << CoinMessageEol;
+			settings->updateSetting("MILPSolver", "MILP", 0);
+		}
+		else if (useQuadraticConstraint && originalInstance->getNumberOfQuadraticTerms() > 0)
+		{
+			processInfo->MILPSolver = new MILPSolverCplex();
+			processInfo->logger.message(2) << "Cplex selected as MIP solver." << CoinMessageEol;
+			settings->updateSetting("MILPSolver", "MILP", 0);
+		}
+		else
+		{
+			processInfo->MILPSolver = new MILPSolverCplexExperimental();
+			processInfo->logger.message(2) << "Cplex lazy selected as MIP solver." << CoinMessageEol;
+		}
 	}
 	else
 	{

@@ -43,7 +43,12 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		int tmpVal = originalInstance->instanceData->constraints->numberOfConstraints;
+		//std::cout << "ssss " << std::endl;
+
+		// 28.11.2016 int tmpVal = originalInstance->instanceData->constraints->numberOfConstraints;
+		int tmpVal = originalInstance->getConstraintNumber();
+
+		//std::cout << "numconstr " << tmpVal << std::endl;
 		setNonlinearObjectiveConstraintIdx(tmpVal);	// Sets a virtual constraint
 
 		setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());

@@ -39,9 +39,11 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->createTimer("PrimalBoundLinesearch", "    - Linesearch");
 	processInfo->createTimer("PrimalBoundFixedLP", "    - Fixed LP");
 
+	auto solverMILP = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
+
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
-	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver();
+	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(osInstance);
 	processInfo->tasks->addTask(tInitMILPSolver, "InitMILPSolver");
 
 	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
@@ -79,7 +81,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
 
 	if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
-			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
+			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
+			&& solverMILP != ES_MILPSolver::CplexExperimental)
 	{
 		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
 		processInfo->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
@@ -95,12 +98,17 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-	processInfo->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
-
 	TaskBase *tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
-	processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+
+	if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+			== ES_SolutionStrategy::ESH)
+	{
+		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
+		processInfo->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
+		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+
+		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+	}
 
 	TaskBase *tCheckDualCands = new TaskCheckDualSolutionCandidates();
 	processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
@@ -157,7 +165,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 						return (true);
 					}
 
-					int maxItersNoMIPChange = 7;
+					int maxItersNoMIPChange = 20;
 					auto currSolPt = currIter->solutionPoints.at(0).point;
 
 					bool noMIPChange = true;
@@ -230,12 +238,20 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy();
 	processInfo->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
-	auto solverMILP = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
-
 	if (solverMILP != ES_MILPSolver::CplexExperimental)
 	{
-		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-		processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+
+		if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+				== ES_SolutionStrategy::ESH)
+		{
+			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+		}
+		else
+		{
+			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+			processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+		}
 
 		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
 		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
@@ -244,11 +260,45 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		TaskBase *tAddHPs = new TaskAddHyperplanes();
 		processInfo->tasks->addTask(tAddHPs, "AddHPs");
 
-		if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
-		{
-			TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
-			processInfo->tasks->addTask(tSwitchLazy, "SwitchLazy");
-		}
+		/*
+		 if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+		 {
+		 TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
+		 processInfo->tasks->addTask(tSwitchLazy, "SwitchLazy");
+		 }*/
+	}
+	else
+	{
+		// Needed because e.g. fac2 terminates with optimal linear solution but not optimal nonlinear solution
+		TaskBase *tForcedHyperplaneAddition = new TaskSequential();
+
+		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tSelectHPPts);
+		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckPrimCands);
+		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckAbsGap);
+		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckRelGap);
+
+		TaskBase *tAddHPs = new TaskAddHyperplanes();
+		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tAddHPs);
+
+		TaskBase *tForceSupportingHyperplaneAddition = new TaskConditional();
+
+		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setCondition(
+				[this]()
+				{
+					auto prevIter = processInfo->getPreviousIteration();
+
+					if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+					{
+						return (true);
+					}
+
+					return (false);
+				});
+
+		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setTaskIfTrue(tForcedHyperplaneAddition);
+
+		processInfo->tasks->addTask(tForceSupportingHyperplaneAddition, "ForceSupportingHyperplaneAddition");
 	}
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();

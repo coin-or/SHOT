@@ -38,6 +38,8 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 {
 	processInfo->startTimer("ObjectiveLinesearch");
 
+	processInfo->setObjectiveUpdatedByLinesearch(false);
+
 	auto currIter = processInfo->getCurrentIteration();
 
 	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
@@ -79,6 +81,9 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 				auto mostDevInner = processInfo->originalProblem->getMostDeviatingConstraint(internalPoint);
 				auto mostDevOuter = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
 
+				//std::cout << "mostDevInner: " << mostDevInner.value << std::endl;
+				//std::cout << "mostDevOuter: " << mostDevOuter.value << std::endl;
+
 				Hyperplane hyperplane;
 				hyperplane.sourceConstraintIndex = mostDevOuter.idx;
 				hyperplane.generatedPoint = externalPoint;
@@ -91,22 +96,27 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 						externalPoint);
 				allSolutions.at(i).point.back() = externalPoint.back();
 
+				//std::cout << "Old objective: " << oldObjVal << std::endl;
+
 				//UtilityFunctions::displayVector(externalPoint);
 				//UtilityFunctions::displayVector(currIter->solutionPoints.at(i).point);
 
-				if (i == 0)
+				if (i == 0 && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 				{
 					currIter->maxDeviation = mostDevOuter.value;
 					currIter->maxDeviationConstraint = mostDevOuter.idx;
 					currIter->objectiveValue = allSolutions.at(i).objectiveValue;
 
-					//std::cout << "New objective: " << currIter->objectiveValue << std::endl;
+					processInfo->setObjectiveUpdatedByLinesearch(true);
+					std::cout << "New objective: " << currIter->objectiveValue << std::endl;
 
-					/*
-					 if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-					 {
-					 currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
-					 }*/
+					if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+					{
+						currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+					}
+
+					//processInfo->addDualSolutionCandidate(externalPoint, E_DualSolutionSource::ObjectiveConstraint,
+					//		processInfo->getCurrentIteration()->iterationNumber);
 				}
 
 				//std::cout << "PT: " << ptNew.at(ptNew.size() - 1) << std::endl;

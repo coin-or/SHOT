@@ -1,35 +1,10 @@
-// SHOT.cpp : Defines the entry point for the console application.
-//
-
-//#include "SHOTSettings.h"
 #include "SHOTSolver.h"
-//#include "OSErrorClass.h"
-//#include <boost/filesystem.hpp>
-//#include <windows.h>
-//#include <MWE.h>
-// The directory path returned by native GetCurrentDirectory() no end backslash
-/*std::string getCurrentDirectoryOnWindows()
- {
- const unsigned long maxDir = 260;
- char currentDir[maxDir];
- GetCurrentDirectory(maxDir, currentDir);
- return std::string(currentDir);
- }
-
- bool is_file_exist(std::string fileName)
- {
- std::ifstream infile(fileName);
- return infile.good();
- }*/
 
 SHOTSolver *solver = NULL;
-
 FileUtil *fileUtil = NULL;
 
 int main(int argc, char *argv[])
 {
-	//MWE *mwe = new MWE();
-	//WindowsErrorPopupBlocker();
 	ProcessInfo *processInfo;
 	processInfo = ProcessInfo::getInstance();
 	processInfo->startTimer("Total");
@@ -45,13 +20,11 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 		std::cout << "Usage: filename.osil options.osol results.osrl trace.trc" << std::endl;
-		return 0;
+
+		delete processInfo;
+
+		return (0);
 	}
-
-	//processInfo->logger.setLogLevel(1);
-
-	//SHOTSettings::Settings *settings;
-	//settings = SHOTSettings::Settings::getInstance();
 
 	boost::filesystem::path resultFile, optionsFile, traceFile;
 
@@ -62,8 +35,6 @@ int main(int argc, char *argv[])
 	{
 		optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
 
-		//optionsFile = getCurrentDirectoryOnWindows() + "\\options.xml";
-
 		if (!boost::filesystem::exists(optionsFile))
 		{
 			fileUtil->writeFileFromString(optionsFile.string(), solver->getOSol());
@@ -71,17 +42,16 @@ int main(int argc, char *argv[])
 
 		resultFile = boost::filesystem::path(boost::filesystem::current_path() / "results.osrl");
 		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
-
-		//resultFile = getCurrentDirectoryOnWindows() + "\\results.osrl";
-		//traceFile = getCurrentDirectoryOnWindows() + "\\trace.trc";
 	}
 	else if (argc == 3)
 	{
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << "Options file not found!" << std::endl;
+
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 
 		optionsFile = boost::filesystem::path(argv[2]);
@@ -93,21 +63,25 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << "Options file not found!" << std::endl;
+
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 
 		optionsFile = boost::filesystem::path(argv[2]);
 		resultFile = boost::filesystem::path(argv[3]);
 		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
 	}
-	else //if (argc == 4)
+	else
 	{
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << "Options file not found!" << std::endl;
+
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 
 		optionsFile = boost::filesystem::path(argv[2]);
@@ -120,8 +94,10 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[1]))
 		{
 			std::cout << "Problem file not found!" << std::endl;
+
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 
 		std::string osilFileName = argv[1];
@@ -129,7 +105,8 @@ int main(int argc, char *argv[])
 		if (!solver->setOptions(optionsFile.string()))
 		{
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 
 		if (!solver->setProblem(osilFileName))
@@ -137,18 +114,17 @@ int main(int argc, char *argv[])
 			processInfo->logger.message(0) << "Error when reading problem file" << CoinMessageEol;
 
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 
-		if (solver->solveProblem())
-		{
-		}
-		else
+		if (!solver->solveProblem()) // solve problem
 		{
 			processInfo->logger.message(0) << "Error when solving problem." << CoinMessageEol;
 
 			delete fileUtil, solver, processInfo;
-			return 0;
+
+			return (0);
 		}
 	}
 	catch (const ErrorClass& eclass)
@@ -158,10 +134,8 @@ int main(int argc, char *argv[])
 		std::cout << eclass.errormsg << CoinMessageEol;
 		delete fileUtil, solver, processInfo;
 
-		return 0;
+		return (0);
 	}
-
-	//std::cout << "Log level: " << processInfo->logger.logLevel() << std::endl;
 
 	processInfo->stopTimer("Total");
 
@@ -186,6 +160,6 @@ int main(int argc, char *argv[])
 
 	}
 
-	//std::getchar();
 	delete fileUtil, solver, processInfo;
+	return (0);
 }

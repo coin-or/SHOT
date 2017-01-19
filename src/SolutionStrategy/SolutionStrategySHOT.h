@@ -44,6 +44,7 @@
 #include "Tasks/TaskPrintSolution.h"
 
 #include "Tasks/TaskSelectHyperplanePointsLinesearch.h"
+#include "Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "Tasks/TaskAddHyperplanes.h"
 
 #include "Tasks/TaskCheckPrimalSolutionCandidates.h"

@@ -143,6 +143,16 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_
 	}
 }
 
+void ProcessInfo::setObjectiveUpdatedByLinesearch(bool updated)
+{
+	objectiveUpdatedByLinesearch = updated;
+}
+
+bool ProcessInfo::getObjectiveUpdatedByLinesearch()
+{
+	return (objectiveUpdatedByLinesearch);
+}
+
 ProcessInfo::ProcessInfo()
 {
 	createTimer("Total", "Total solution time");
@@ -177,6 +187,8 @@ ProcessInfo::ProcessInfo()
 	logger.setLogLevel(2);
 
 	tasks = new TaskHandler();
+
+	objectiveUpdatedByLinesearch = false;
 }
 
 ProcessInfo* ProcessInfo::getInstance()

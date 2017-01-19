@@ -88,6 +88,7 @@ bool NLPSolverCuttingPlane::createProblem(OSInstance* origInstance)
 
 	processInfo->logger.message(3) << "Creating LP problem for minimax solver" << CoinMessageEol;
 	MILPSolver->createLinearProblem(NLPProblem);
+	MILPSolver->activateDiscreteVariables(false);
 	processInfo->logger.message(3) << "MILP problem for minimax solver created" << CoinMessageEol;
 
 	processInfo->stopTimer("InteriorPointMinimax");

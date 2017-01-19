@@ -173,7 +173,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			processInfo->logger.message(0) << "Warning: hyperplane not generated, NaN found in linear terms!"
+			processInfo->logger.message(0) << "    Warning: hyperplane not generated, NaN found in linear terms!"
 					<< CoinMessageEol;
 			hyperplaneIsOk = false;
 			break;
@@ -253,7 +253,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			processInfo->logger.message(0) << "Warning: hyperplane not generated, NaN found in linear terms!"
+			processInfo->logger.message(0) << "    Warning: hyperplane not generated, NaN found in linear terms!"
 					<< CoinMessageEol;
 			hyperplaneIsOk = false;
 			break;

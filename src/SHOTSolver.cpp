@@ -6,7 +6,6 @@ SHOTSolver::SHOTSolver()
 	processInfo = ProcessInfo::getInstance();
 
 	initializeSettings();
-
 }
 
 SHOTSolver::~SHOTSolver()
@@ -53,10 +52,10 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
 	{
 		processInfo->logger.message(0) << "Error when reading options." << CoinMessageEol;
 		processInfo->logger.message(0) << " Error message: \"" << eclass.errormsg << "\"" << CoinMessageEol;
-		return false;
+		return (false);
 	}
 
-	return true;
+	return (true);
 }
 
 bool SHOTSolver::setProblem(std::string fileName)
@@ -99,7 +98,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 		else
 		{
 			processInfo->logger.message(0) << "Wrong filetype specified." << CoinMessageEol;
-			return false;
+			return (false);
 		}
 
 		tmpInstance->instanceHeader->source = tmpFilename;
@@ -112,7 +111,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 		processInfo->logger.message(0) << "Error when reading problem from \"" << fileName << "\"" << CoinMessageEol;
 		processInfo->logger.message(0) << " Error message: \"" << eclass.errormsg << "\"" << CoinMessageEol;
 
-		return false;
+		return (false);
 	}
 
 	processInfo->logger.message(2) << "Problem read from file \"" << fileName << "\"" << CoinMessageEol;
@@ -173,7 +172,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 	delete fileUtil;
 	fileUtil = NULL;
 
-	return status;
+	return (status);
 }
 
 bool SHOTSolver::setProblem(OSInstance *osInstance)
@@ -185,29 +184,29 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
 	solutionStrategy = new SolutionStrategySHOT(osInstance);
 
-	return true;
+	return (true);
 }
 
 bool SHOTSolver::solveProblem()
 {
-	return solutionStrategy->solveProblem();
+	return (solutionStrategy->solveProblem());
 }
 
 std::string SHOTSolver::getOSrl()
 {
-	return processInfo->getOSrl();
+	return (processInfo->getOSrl());
 }
 
 std::string SHOTSolver::getOSol()
 {
 	if (!settings->settingsInitialized) initializeSettings();
 
-	return settings->getSettingsAsOSol();
+	return (settings->getSettingsAsOSol());
 }
 
 std::string SHOTSolver::getTraceResult()
 {
-	return processInfo->getTraceResult();
+	return (processInfo->getTraceResult());
 }
 
 void SHOTSolver::initializeSettings()

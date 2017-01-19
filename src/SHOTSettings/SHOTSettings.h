@@ -134,5 +134,17 @@ namespace SHOTSettings
 			{
 			}
 	};
+
+// Predicate for sorting keys
+//template<class ptree>
+/*struct SortPred
+ {
+ bool operator()(const typename boost::property_tree::ptree::value_type &v1,
+ const typename boost::property_tree::ptree::value_type &v2) const
+ {
+ std::cout << "Compare" << v1.first << " " << v2.first << std::endl;
+ return true;
+ }
+ };*/
 }
 ;

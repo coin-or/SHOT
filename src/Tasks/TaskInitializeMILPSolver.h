@@ -19,7 +19,7 @@
 class TaskInitializeMILPSolver: public TaskBase
 {
 	public:
-		TaskInitializeMILPSolver();
+		TaskInitializeMILPSolver(OSInstance *originalInstance);
 		virtual ~TaskInitializeMILPSolver();
 
 		void run();

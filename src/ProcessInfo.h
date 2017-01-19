@@ -108,6 +108,8 @@ class ProcessInfo
 		std::pair<double, double> currentObjectiveBounds;
 		double getAbsoluteObjectiveGap();
 		double getRelativeObjectiveGap();
+		void setObjectiveUpdatedByLinesearch(bool updated);
+		bool getObjectiveUpdatedByLinesearch();
 
 		int iterationCount;
 		int iterLP;
@@ -170,6 +172,7 @@ class ProcessInfo
 		static bool instanceFlag;
 		static ProcessInfo *single;
 		SHOTSettings::Settings *settings;
+		bool objectiveUpdatedByLinesearch;
 
 		ProcessInfo();
 
