@@ -48,7 +48,34 @@ NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
 
 	osOption->setAnotherSolverOption("tol", "1E-8", "ipopt", "", "double", "");
 	osOption->setAnotherSolverOption("max_iter", "10000", "ipopt", "", "integer", "");
-	osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
+
+	switch (settings->getIntSetting("LogLevelConsole", "SHOTSolver") + 1)
+	{
+		case ENUM_OUTPUT_LEVEL_error:
+			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_summary:
+			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_warning:
+			osOption->setAnotherSolverOption("print_level", "1", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_info:
+			osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_debug:
+			osOption->setAnotherSolverOption("print_level", "8", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_trace:
+			osOption->setAnotherSolverOption("print_level", "10", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_detailed_trace:
+			osOption->setAnotherSolverOption("print_level", "12", "ipopt", "", "integer", "");
+			break;
+		default:
+			break;
+	}
+
 	osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("max_cpu_time", std::to_string(timeLimit), "ipopt", "", "double", "");
@@ -110,62 +137,8 @@ bool NLPSolverIPOptMinimax::createProblem(OSInstance * origInstance)
 	NLPProblem = new OptProblemNLPMinimax();
 	NLPProblem->reformulate(origInstance);
 	NLPSolver->osinstance = NLPProblem->getProblemInstance();
-	//NLPSolver->buildSolverInstance();
-	processInfo->logger.message(2) << "NLP problem created" << CoinMessageEol;
 
-	/*nl2os = new OSnl2OS();
-	 nl2os->readNl("clay0203h.nl");
-	 //nl2os->setOsol(oscommandline->osol);
-	 nl2os->createOSObjects();
-	 NLPSolver->osinstance = nl2os->osinstance;
-
-	 NLPSolver->buildSolverInstance();
-
-	 for (int i = 0; i < NLPSolver->osinstance->getVariableNumber(); i++)
-	 {
-	 NLPSolver->osinstance->instanceData->variables->var[i]->type = 'C';
-	 }
-
-
-	 NLPSolver->solve();*/
-
-	// convert to the OS native format
-	/*OSnl2OS *nl2osil = NULL;
-	 nl2osil = new OSnl2OS();
-	 nl2osil->readNl("osi\clay0203h.nl");
-	 // create the first in-memory OSInstance
-	 nl2osil->createOSObjects();
-	 NLPSolver->osinstance = nl2osil->osinstance;
-	 */
-	//NLPProblem->printProblem();
-	/*OSiLWriter *osilWriter = new OSiLWriter();
-
-	 std::string osil = osilWriter->writeOSiL(NLPProblem->getProblemInstance());
-
-	 OSiLReader *osilreader = new OSiLReader();
-	 OSInstance *instance = NULL;
-
-	 instance = osilreader->readOSiL(osil);
-
-	 instance->bUseExpTreeForFunEval = true;*/
-
-	//std::cout << NLPProblem->problemInstance->printModel();
-	/*OSiLWriter *osilwriter = NULL;
-	 osilwriter = new OSiLWriter();
-
-	 std::string test = osilwriter->writeOSiL(NLPProblem->getProblemInstance());
-
-	 FileUtil * f = new FileUtil();
-	 */
-	//f->writeFileFromString("test.osil", test);*/
-	/*instance->bVariablesModified = true;
-
-	 instance->getJacobianSparsityPattern();
-
-	 //std::cout << instance->printModel();
-
-	 NLPSolver->osinstance = instance;
-	 NLPSolver->buildSolverInstance();*/
+	processInfo->outputDebug("NLP problem created");
 
 	processInfo->stopTimer("InteriorPointMinimax");
 	return true;
@@ -223,7 +196,6 @@ bool NLPSolverIPOptMinimax::solveProblem()
 
 			osOption->setAnotherSolverOption("tol", "1E-8", "ipopt", "", "double", "");
 			osOption->setAnotherSolverOption("max_iter", "10000", "ipopt", "", "integer", "");
-			osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
 			osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
 			//osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
 			osOption->setAnotherSolverOption("max_cpu_time", std::to_string(timeLimit), "ipopt", "", "double", "");
@@ -243,10 +215,12 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		{
 			NLPSolver->solve();
 			processInfo->numNLPProbsSolved++;
+			std::cout << "\e[A";
+			std::cout << "\e[A";
 		}
 		catch (...)
 		{
-			processInfo->logger.message(1) << "Error when solving IPOpt minimax problem!" << CoinMessageEol;
+			processInfo->outputError("Error when solving IPOpt minimax problem!");
 			continue;
 			//return false;
 		}
@@ -255,15 +229,13 @@ bool NLPSolverIPOptMinimax::solveProblem()
 
 		if (solStatus == "infeasible" || NLPSolver->osresult->getSolutionNumber() == 0)
 		{
-			processInfo->logger.message(1) << "No solution found to IPOpt minimax problem. Solution status: "
-					<< solStatus << CoinMessageEol;
+			processInfo->outputError("No solution found to minimax problem with Ipopt. Solution status: " + solStatus);
 
 			processInfo->stopTimer("InteriorPointMinimax");
 			return false;
 		}
 
-		processInfo->logger.message(1) << "Solution found to IPOpt minimax problem. Solution status: " << solStatus
-				<< CoinMessageEol;
+		processInfo->outputInfo("Solution found to minimax problem with Ipopt. Solution status:" + solStatus);
 
 		int numVar = NLPProblem->getNumberOfVariables();
 		std::vector<double> tmpPoint(numVar);
@@ -277,50 +249,24 @@ bool NLPSolverIPOptMinimax::solveProblem()
 
 		if (objval > settings->getDoubleSetting("InteriorPointFeasEps", "NLP"))
 		{
-			processInfo->logger.message(2) << "NLP point from IPOpt minimax problem not valid!" << CoinMessageEol;
-			processInfo->logger.message(2) << "Objective value is " << objval << " > "
-					<< settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
+			processInfo->outputError(
+					"NLP point from minimax problem not valid!\nObjective value is" + to_string(objval) + " > "
+							+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 
 			processInfo->stopTimer("InteriorPointMinimax");
 			return false;
 		}
 
-		processInfo->logger.message(2) << "NLP point from IPOpt minimax problem valid." << CoinMessageEol;
-		processInfo->logger.message(2) << "Objective value is " << objval << " < "
-				<< settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
+		processInfo->outputInfo(
+				"NLP point from minimax problem valid!\nObjective value is" + to_string(objval) + " < "
+						+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 
-		/*
-		 if (NLPProblem->getNumberOfNonlinearConstraints() > 0)
-		 {
-		 //auto maxDev = NLPProblem->getMostDeviatingConstraint(tmpPoint).value;
-
-
-		 if (objval > settings->getDoubleSetting("InteriorPointFeasEps", "NLP"))
-		 {
-		 processInfo->logger.message(2) << "NLP point from IPOpt minimax problem not valid!" << CoinMessageEol;
-		 processInfo->logger.message(2) << "	Objective value is " << objval << " > " << settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
-		 return false;
-		 }
-
-		 processInfo->logger.message(2) << "NLP point from IPOpt minimax problem valid." << CoinMessageEol;
-		 processInfo->logger.message(2) << " Objective value is " << objval << " < " << settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
-		 }
-		 else
-		 {
-		 processInfo->logger.message(2) << "NLP problem linearly constrained. Assuming point is valid." << CoinMessageEol;
-		 }*/
-
-		//auto tmpIP = new InteriorPoint();
-		//tmpIP->NLPSolver = static_cast<int>(ES_NLPSolver::IPOptMiniMax);
 		tmpPoint.pop_back();
 
 		if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
 		{
 			tmpPoint.pop_back();
 		}
-
-		//tmpIP->point = tmpPoint;
-		//processInfo->interiorPts.push_back(*tmpIP);
 
 		tmpPoints.push_back(tmpPoint);
 
@@ -335,11 +281,8 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		if (!useMultiple) break;
 	}
 
-	//if (settings->getBoolSetting("Debug", "SHOTSolver"))
-
 	if (tmpPoints.size() == 0)
 	{
-
 		processInfo->stopTimer("InteriorPointMinimax");
 		return false;
 	}
@@ -354,7 +297,6 @@ bool NLPSolverIPOptMinimax::solveProblem()
 	for (int i = 0; i < tmpNorms.size(); i++)
 	{
 		tmpNorms.at(i) = round(1000.0 * tmpNorms.at(i)) / 1000.0;
-		std::cout << "Norm " << i << ": " << tmpNorms.at(i) << std::endl;
 	}
 
 	std::vector<double> usedNorms;
@@ -365,7 +307,6 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		{
 			selPts.push_back(tmpPoints.at(i));
 			usedNorms.push_back(tmpNorms.at(i));
-			std::cout << "Pt with norm: " << tmpNorms.at(i) << " added." << std::endl;
 		}
 	}
 
@@ -407,7 +348,7 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		}
 	}
 
-	std::cout << "Number of NLP points: " << processInfo->interiorPts.size() << std::endl;
+	processInfo->outputInfo("Number of NLP points: " + to_string(processInfo->interiorPts.size()));
 
 	processInfo->stopTimer("InteriorPointMinimax");
 	return (true);

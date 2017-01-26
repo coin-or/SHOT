@@ -3,22 +3,38 @@
 SHOTSolver *solver = NULL;
 FileUtil *fileUtil = NULL;
 
+std::string startmessage;
+
 int main(int argc, char *argv[])
 {
 	ProcessInfo *processInfo;
 	processInfo = ProcessInfo::getInstance();
 	processInfo->startTimer("Total");
 
-	processInfo->logger.message(1)
-			<< "==================================================================================" << CoinMessageEol;
-	processInfo->logger.message(1)
-			<< "=                SHOT - Supporting Hyperplane Optimization Toolkit               =" << CoinMessageEol;
-	processInfo->logger.message(1)
-			<< "=================================================================================="
-			<< CoinMessageNewline << CoinMessageEol;
+	// Adds a file output
+	osoutput->AddChannel("shotlogfile");
+
+	/*osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_always, "Always\n");
+	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_warning, "Warning\n");
+	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_debug, "Debug\n");
+	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, "Detailed trace\n");
+	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, "Error\n");
+	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Info\n");
+	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_summary, "Summary\n");*/
+	//osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_trace, "Trace\n");
+	startmessage = ""
+			"┌─────────────────────────────────────────────────────────────────────┐\n"
+			"│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
+			"├─────────────────────────────────────────────────────────────────────┤\n"
+			"│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
+			"│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
+			"│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
+			"│   Åbo Akademi University, Turku, Finland                            │\n"
+			"└─────────────────────────────────────────────────────────────────────┘\n";
 
 	if (argc == 1)
 	{
+		std::cout << startmessage << std::endl;
 		std::cout << "Usage: filename.osil options.osol results.osrl trace.trc" << std::endl;
 
 		delete processInfo;
@@ -47,6 +63,7 @@ int main(int argc, char *argv[])
 	{
 		if (!boost::filesystem::exists(argv[2]))
 		{
+			std::cout << startmessage << std::endl;
 			std::cout << "Options file not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
@@ -62,6 +79,7 @@ int main(int argc, char *argv[])
 	{
 		if (!boost::filesystem::exists(argv[2]))
 		{
+			std::cout << startmessage << std::endl;
 			std::cout << "Options file not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
@@ -77,6 +95,7 @@ int main(int argc, char *argv[])
 	{
 		if (!boost::filesystem::exists(argv[2]))
 		{
+			std::cout << startmessage << std::endl;
 			std::cout << "Options file not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
@@ -93,6 +112,7 @@ int main(int argc, char *argv[])
 	{
 		if (!boost::filesystem::exists(argv[1]))
 		{
+			std::cout << startmessage << std::endl;
 			std::cout << "Problem file not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
@@ -106,12 +126,17 @@ int main(int argc, char *argv[])
 		{
 			delete fileUtil, solver, processInfo;
 
+			std::cout << startmessage << std::endl;
+			std::cout << "Cannot set options!" << std::endl;
 			return (0);
 		}
 
+		// Prints out the welcome message to the logging facility
+		processInfo->outputSummary(startmessage);
+
 		if (!solver->setProblem(osilFileName))
 		{
-			processInfo->logger.message(0) << "Error when reading problem file" << CoinMessageEol;
+			processInfo->outputError("Error when reading problem file.");
 
 			delete fileUtil, solver, processInfo;
 
@@ -120,7 +145,7 @@ int main(int argc, char *argv[])
 
 		if (!solver->solveProblem()) // solve problem
 		{
-			processInfo->logger.message(0) << "Error when solving problem." << CoinMessageEol;
+			processInfo->outputError("Error when solving problem.");
 
 			delete fileUtil, solver, processInfo;
 
@@ -129,9 +154,7 @@ int main(int argc, char *argv[])
 	}
 	catch (const ErrorClass& eclass)
 	{
-		processInfo->logger.message(0) << eclass.errormsg << CoinMessageEol;
-
-		std::cout << eclass.errormsg << CoinMessageEol;
+		processInfo->outputError(eclass.errormsg);
 		delete fileUtil, solver, processInfo;
 
 		return (0);
@@ -146,7 +169,8 @@ int main(int argc, char *argv[])
 	std::string trace = solver->getTraceResult();
 	fileUtil->writeFileFromString(traceFile.string(), trace);
 
-	processInfo->logger.message(2) << CoinMessageNewline;
+	processInfo->outputSummary("\n"
+			"┌─── Solution time ──────────────────────────────────────────────────────────────┐");
 
 	for (auto T : processInfo->timers)
 	{
@@ -155,10 +179,12 @@ int main(int argc, char *argv[])
 		if (elapsed > 0)
 		{
 			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
-			processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
-		}
 
+			processInfo->outputSummary("│ " + tmpLine.str());
+		}
 	}
+
+	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
 
 	delete fileUtil, solver, processInfo;
 	return (0);

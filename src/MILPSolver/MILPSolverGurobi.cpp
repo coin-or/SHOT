@@ -59,8 +59,8 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			}
 			else
 			{
-				processInfo->logger.message(1) << "Error variable type for " << tmpNames.at(i).c_str()
-						<< CoinMessageEol;
+				processInfo->outputWarning(
+						"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 			}
 		}
 
@@ -222,7 +222,6 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 					{
 					}
 				}
-
 			}
 		}
 
@@ -231,8 +230,7 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 	catch (GRBException &e)
 	{
 		{
-			processInfo->logger.message(0) << "Error when creating linear problem:" << CoinMessageNewline
-					<< e.getMessage() << CoinMessageEol;
+			processInfo->outputError("Error when creating linear problem:", e.getMessage());
 		}
 
 		return (false);
@@ -258,8 +256,7 @@ void MILPSolverGurobi::initializeSolverSettings()
 	catch (GRBException &e)
 	{
 		{
-			processInfo->logger.message(0) << "Error when initializing parameters for linear solver:"
-					<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+			processInfo->outputError("Error when initializing parameters for linear solver", e.getMessage());
 		}
 	}
 }
@@ -305,10 +302,7 @@ int MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, 
 	}
 	catch (GRBException &e)
 	{
-		{
-			processInfo->logger.message(0) << "Error when adding linear constraint:" << CoinMessageNewline
-					<< e.getMessage() << CoinMessageEol;
-		}
+		processInfo->outputError("Error when adding linear constraint", e.getMessage());
 
 		return (-1);
 
@@ -347,8 +341,7 @@ std::vector<double> MILPSolverGurobi::getVariableSolution(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when reading solution with index " << solIdx << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when reading solution with index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (solution);
@@ -370,7 +363,7 @@ void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 
 	if (activate)
 	{
-		processInfo->logger.message(3) << "Activating MILP strategy" << CoinMessageEol;
+		processInfo->outputSummary("Activating MILP strategy.");
 
 		for (int i = 0; i < numVar; i++)
 		{
@@ -392,7 +385,7 @@ void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 	}
 	else
 	{
-		processInfo->logger.message(3) << "Activating LP strategy" << CoinMessageEol;
+		processInfo->outputSummary("Activating LP strategy.");
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -478,7 +471,8 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 //}
 	else
 	{
-		processInfo->logger.message(1) << "MILP solver return status unknown = " << status << CoinMessageEol;
+		processInfo->outputError("MILP solver return status " + to_string(status));
+		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
 	return (MILPSolutionStatus);
@@ -491,16 +485,13 @@ E_ProblemSolutionStatus MILPSolverGurobi::solveProblem()
 
 	try
 	{
-		processInfo->logger.message(4) << " Solving MILP..." << CoinMessageEol;
 		gurobiModel->optimize();
-		processInfo->logger.message(4) << " MILP solved..." << CoinMessageEol;
 
 		MILPSolutionStatus = getSolutionStatus();
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(2) << "Error code = " << e.getErrorCode() << CoinMessageEol;
-		processInfo->logger.message(2) << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when solving MILP/LP problem", e.getMessage());
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -541,9 +532,7 @@ void MILPSolverGurobi::setTimeLimit(double seconds)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when setting time limit:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when setting time limit", e.getMessage());
 	}
 
 }
@@ -557,21 +546,16 @@ void MILPSolverGurobi::setCutOff(double cutOff)
 
 		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
 		{
-			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for minimization."
-					<< CoinMessageEol;
+			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
-
-			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for maximization."
-					<< CoinMessageEol;
+			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when setting cut off value:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when setting cut off value", e.getMessage());
 	}
 }
 
@@ -591,11 +575,10 @@ void MILPSolverGurobi::addMIPStart(std::vector<double> point)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when adding MIP starting point:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->logger.message(3) << "    Added MIP starting point" << CoinMessageEol;
+	processInfo->outputInfo("    Added MIP starting point.");
 }
 
 void MILPSolverGurobi::writeProblemToFile(std::string filename)
@@ -606,8 +589,7 @@ void MILPSolverGurobi::writeProblemToFile(std::string filename)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when saving model to file:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
+		processInfo->outputError("Error when saving model to file", e.getMessage());
 	}
 }
 
@@ -619,8 +601,8 @@ double MILPSolverGurobi::getObjectiveValue(int solIdx)
 
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
-		processInfo->logger.message(0) << "Cannot obtain solution with index " << solIdx
-				<< " since the problem is LP/QP!" << CoinMessageEol;
+		processInfo->outputError(
+				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
 		return (objVal);
 	}
@@ -656,9 +638,8 @@ double MILPSolverGurobi::getObjectiveValue(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining objective value for solution index " << solIdx << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
-
+		processInfo->outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
+				e.getMessage());
 	}
 
 	return (objVal);
@@ -686,11 +667,10 @@ void MILPSolverGurobi::deleteMIPStarts()
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when removing MIP starting point:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when deleting MIP starting points", e.getMessage());
 	}
 
-	processInfo->logger.message(3) << "    Removed MIP starting point" << CoinMessageEol;
+	processInfo->outputDebug("    Deleted MIP starting points.");
 }
 
 void MILPSolverGurobi::populateSolutionPool()
@@ -715,8 +695,8 @@ void MILPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doub
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when updating variable bounds for variable index" << varIndex << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when updating variable bounds for variable index" + to_string(varIndex),
+				e.getMessage());
 	}
 }
 
@@ -735,8 +715,8 @@ pair<double, double> MILPSolverGurobi::getCurrentVariableBounds(int varIndex)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining variable bounds for variable index" << varIndex << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when obtaining variable bounds for variable index" + to_string(varIndex),
+				e.getMessage());
 	}
 
 	return (tmpBounds);
@@ -764,8 +744,7 @@ double MILPSolverGurobi::getDualObjectiveValue()
 	}
 	catch (GRBException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining dual objective value: " << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when obtaining dual objective value", e.getMessage());
 
 	}
 

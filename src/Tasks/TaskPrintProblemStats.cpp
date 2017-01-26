@@ -28,5 +28,4 @@ std::string TaskPrintProblemStats::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

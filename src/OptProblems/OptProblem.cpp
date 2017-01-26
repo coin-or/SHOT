@@ -115,20 +115,20 @@ std::vector<int> OptProblem::getDiscreteVariableIndices()
 
 void OptProblem::printProblemStatistics()
 {
-	processInfo->logger.message(2) << CoinMessageNewline
-			<< "= Problem statistics =============================================================" << CoinMessageEol;
-	processInfo->logger.message(2) << "# constraints (total/linear/nonlinear): ";
-	processInfo->logger.message(2) << getProblemInstance()->getConstraintNumber() << "/"
-			<< getNumberOfLinearConstraints() << "/" << getNumberOfNonlinearConstraints() << CoinMessageEol;
+	processInfo->outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
-	processInfo->logger.message(2) << "# variables (total/real/binary/integer):";
-	processInfo->logger.message(2) << getNumberOfVariables() << "/";
-	processInfo->logger.message(2) << getNumberOfRealVariables() << "/";
-	processInfo->logger.message(2) << getNumberOfBinaryVariables() << "/";
-	processInfo->logger.message(2) << getNumberOfIntegerVariables() << CoinMessageEol;
-	processInfo->logger.message(2)
-			<< "=================================================================================="
-			<< CoinMessageNewline << CoinMessageEol;
+	processInfo->outputSummary(
+			"│ Number of constraints (total/linear/nonlinear):   "
+					+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
+					+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
+
+	processInfo->outputSummary(
+			"│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
+					+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
+					+ to_string(getNumberOfIntegerVariables()) + "/");
+
+	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
+	processInfo->outputSummary("");
 }
 
 void OptProblem::exportProblemToOsil(std::string fileName)
@@ -139,7 +139,7 @@ void OptProblem::exportProblemToOsil(std::string fileName)
 	std::string osil = osilWriter->writeOSiL(getProblemInstance());
 	if (!fileUtil->writeFileFromString(fileName, osil))
 	{
-		processInfo->logger.message(2) << "Error when writing to file " << fileName << "." << CoinMessageEol;
+		processInfo->outputError("Error when writing to file " + fileName);
 	}
 
 	delete fileUtil;
@@ -153,7 +153,7 @@ void OptProblem::saveProblemModelToFile(std::string fileName)
 
 	if (!fileUtil->writeFileFromString(fileName, problem))
 	{
-		processInfo->logger.message(2) << "Error when writing to file " << fileName << "." << CoinMessageEol;
+		processInfo->outputError("Error when writing to file " + fileName);
 	}
 
 	delete fileUtil;

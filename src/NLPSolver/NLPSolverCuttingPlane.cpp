@@ -48,17 +48,17 @@ NLPSolverCuttingPlane::NLPSolverCuttingPlane()
 	if (solver == ES_MILPSolver::Cplex)
 	{
 		MILPSolver = new MILPSolverCplex();
-		processInfo->logger.message(2) << "Cplex selected as MILP solver for minimax solver." << CoinMessageEol;
+		processInfo->outputSummary("Cplex selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::Gurobi)
 	{
 		MILPSolver = new MILPSolverGurobi();
-		processInfo->logger.message(2) << "Gurobi selected as MILP solver for minimax solver." << CoinMessageEol;
+		processInfo->outputSummary("Gurobi selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::Cbc)
 	{
 		MILPSolver = new MILPSolverOsiCbc();
-		processInfo->logger.message(2) << "Cbc selected as MILP solver for minimax solver." << CoinMessageEol;
+		processInfo->outputSummary("Cbc selected as MILP solver for minimax solver.");
 	}
 	else
 	{
@@ -66,7 +66,6 @@ NLPSolverCuttingPlane::NLPSolverCuttingPlane()
 		throw new ErrorClass("Error in MILP solver definition for minimax solver.");
 	}
 
-	//NLPProblem = new OptProblemNLPSHOTMinimax();
 	NLPProblem = new OptProblemNLPMinimax();
 
 	processInfo->stopTimer("InteriorPointMinimax");
@@ -82,14 +81,14 @@ bool NLPSolverCuttingPlane::createProblem(OSInstance* origInstance)
 
 	processInfo->startTimer("InteriorPointMinimax");
 
-	processInfo->logger.message(3) << "Creating NLP problem for minimax solver" << CoinMessageEol;
+	processInfo->outputInfo("Creating NLP problem for minimax solver");
 	NLPProblem->reformulate(origInstance);
-	processInfo->logger.message(3) << "NLP problem for minimax solver created" << CoinMessageEol;
+	processInfo->outputInfo("NLP problem for minimax solver created");
 
-	processInfo->logger.message(3) << "Creating LP problem for minimax solver" << CoinMessageEol;
+	processInfo->outputInfo("Creating LP problem for minimax solver");
 	MILPSolver->createLinearProblem(NLPProblem);
 	MILPSolver->activateDiscreteVariables(false);
-	processInfo->logger.message(3) << "MILP problem for minimax solver created" << CoinMessageEol;
+	processInfo->outputInfo("MILP problem for minimax solver created");
 
 	processInfo->stopTimer("InteriorPointMinimax");
 	return (true);
@@ -152,11 +151,10 @@ bool NLPSolverCuttingPlane::solveProblem()
 			auto tmpLine = boost::format("%1% %|4t|%2% %3% %|15t|%4% %|30t|%5% %|45t|%6% %|60t|%7% %|75t|%8%") % "#"
 					% "HPs" % " " % "Obj. LP" % "Obj. LS" % "Abs. diff." % "Rel. diff." % "Lambda";
 
-			processInfo->logger.message(2)
-					<< "=================================================================================="
-					<< CoinMessageEol << tmpLine.str() << CoinMessageEol
-					<< "=================================================================================="
-					<< CoinMessageEol;
+			processInfo->outputSummary(
+					"==================================================================================\n"
+							+ tmpLine.str()
+							+ "==================================================================================\n");
 		}
 		else
 		{
@@ -191,7 +189,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 		auto tmpLine = boost::format("%1% %|4t|+%2% = %3% %|15t|%4% %|30t|%5% %|45t|%6% %|60t|%7% %|75t|%8%") % i
 				% numHPsAdded % numHPsTotal % LPObjVar % mu % maxObjDiffAbs % maxObjDiffRel % lambda;
 
-		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
+		processInfo->outputSummary(tmpLine.str());
 
 		// Checks termination condition
 		if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
@@ -207,12 +205,6 @@ bool NLPSolverCuttingPlane::solveProblem()
 			std::vector < IndexValuePair > elements; // Contains the terms in the hyperplane
 
 			double constant = NLPProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).idx, currSol);
-
-			//constant += LPObjVar;
-			processInfo->logger.message(3) << " HP point generated for constraint index" << tmpMostDevs.at(j).idx
-					<< CoinMessageEol;
-
-			processInfo->logger.message(3) << "  Constant " << constant << CoinMessageEol;
 
 			// Calculates the gradient
 			auto nablag = NLPProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).idx, currSol);
@@ -238,14 +230,6 @@ bool NLPSolverCuttingPlane::solveProblem()
 			pair.value = -1;
 
 			elements.push_back(pair);
-
-			for (auto E : elements)
-			{
-				processInfo->logger.message(3) << "  Coefficient for variable index " << E.idx << ": " << E.value
-						<< CoinMessageEol;
-			}
-
-			processInfo->logger.message(3) << "  Constant " << constant << CoinMessageEol;
 
 			// Adds the linear constraint
 			MILPSolver->addLinearConstraint(elements, constant);

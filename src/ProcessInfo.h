@@ -5,11 +5,15 @@
 #include "Iteration.h"
 #include "Timer.h"
 
+// Used for OSOutput
+#include <cstdio>
+#define HAVE_STDIO_H 1
+#include "OSOutput.h"
+
 #include "SHOTSettings.h"
 
 #include "TaskHandler.h"
 
-#include "CoinMessageHandler.hpp"
 #include "OSResult.h"
 #include "OSrLWriter.h"
 #include "OSErrorClass.h"
@@ -62,9 +66,6 @@ class ProcessInfo
 		OSResult *osResult;
 		OptProblemOriginal *originalProblem;
 
-		//TaskHandler *tasks;
-
-		CoinMessageHandler logger;
 		IMILPSolver *MILPSolver;
 		IRelaxationStrategy *relaxationStrategy;
 		TaskHandler *tasks;
@@ -168,6 +169,16 @@ class ProcessInfo
 		std::vector<Hyperplane> hyperplaneWaitingList;
 
 		std::vector<Timer> timers;
+
+		void outputAlways(std::string message);
+		void outputError(std::string message);
+		void outputError(std::string message, std::string errormessage);
+		void outputSummary(std::string message);
+		void outputWarning(std::string message);
+		void outputInfo(std::string message);
+		void outputDebug(std::string message);
+		void outputTrace(std::string message);
+		void outputDetailedTrace(std::string message);
 
 	private:
 		static bool instanceFlag;

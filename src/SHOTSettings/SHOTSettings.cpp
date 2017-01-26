@@ -2,8 +2,11 @@
 
 //#include <stdexcept>
 
+extern const OSSmartPtr<OSOutput> osoutput;
+
 namespace SHOTSettings
 {
+
 	bool Settings::instanceFlag = false;
 	Settings* Settings::single = NULL;
 
@@ -48,15 +51,17 @@ namespace SHOTSettings
 
 		if (oldvalue == value)
 		{
-			logger.message(4) << "Setting <" << key.first << "," << key.second << "> not updated. Same value"
-					<< oldvalue << "given." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+					"Setting <" + key.first + "," + key.second + "> not updated. Same value " + oldvalue + " given.");
 			return;
 		}
 		else
 		{
 			_settings[key] = value;
-			logger.message(4) << "Setting <" << key.first << "," << key.second << ">= " << oldvalue
-					<< " updated. New value =" << oldvalue << "." << CoinMessageEol;
+
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+					"Setting <" + key.first + "," + key.second + "> = " + oldvalue + " updated. New value = " + oldvalue
+							+ ".");
 		}
 	}
 
@@ -75,7 +80,8 @@ namespace SHOTSettings
 		std::string test = name;
 		_isPrivate[key] = isPrivate;
 
-		logger.message(4) << "Setting <" << name << "," << category << "> = " << value << " created." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+				"Setting <" + name + "," + category + "> = " + value + " created.");
 	}
 
 	void Settings::updateSetting(std::string name, std::string category, std::string value)
@@ -85,15 +91,17 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::String)
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category
-					<< "> since it is of the wrong type. (Expected string)." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category
+							+ "> since it is of the wrong type. (Expected string).");
 			throw SettingSetWrongTypeException(name, category);
 		}
 
@@ -107,22 +115,22 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::String)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as string: Wrong type requested!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
 			throw SettingGetWrongTypeException(name, category);
 		}
 
 		return _settings[key];
 	}
 
-	//Integer settings ==============================================================
+//Integer settings ==============================================================
 
 	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
 			double minVal, double maxVal, bool isPrivate)
@@ -134,7 +142,9 @@ namespace SHOTSettings
 		_settingsBounds[key] = std::make_pair(minVal, maxVal);
 		_isPrivate[key] = isPrivate;
 
-		logger.message(4) << "Setting <" << name << "," << category << "> = " << value << " created." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+				"Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+
 	}
 
 	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
@@ -155,22 +165,25 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Integer)
 		{
-			logger.message(1) << "Cannot set value of setting <" << name << "," << category
-					<< "> as std::string: Wrong type!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
 			throw SettingSetWrongTypeException(name, category);
 		}
 
 		if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category << ">: Not in interval ["
-					<< _settingsBounds[key].first << "," << _settingsBounds[key].second << "]." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + ">: Not in interval ["
+							+ to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second)
+							+ "].");
+
 			throw SettingOutsideBoundsException(name, category, (double) value, _settingsBounds[key].first,
 					_settingsBounds[key].second);
 		}
@@ -187,15 +200,15 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Integer)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as integer: Wrong type requested!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -206,13 +219,14 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as integer: Wrong type!" << CoinMessageEol;
+
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
 
-	//Boolean settings ==============================================================
+//Boolean settings ==============================================================
 
 	void Settings::createSetting(std::string name, std::string category, bool value, std::string description,
 			bool isPrivate)
@@ -223,7 +237,9 @@ namespace SHOTSettings
 		_settingsType[key] = ESettingsType::Boolean;
 		_isPrivate[key] = isPrivate;
 
-		logger.message(4) << "Setting <" << name << "," << category << "> = " << value << " created." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+				"Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+
 	}
 
 	void Settings::createSetting(std::string name, std::string category, bool value, std::string description)
@@ -238,15 +254,15 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << "," << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Boolean)
 		{
-			logger.message(1) << "Cannot set value of setting <" << name << "," << category << "> as bool: Wrong type!"
-					<< CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
 			throw SettingSetWrongTypeException(name, category);
 		}
 
@@ -262,15 +278,15 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot get setting <" << name << "," << category << "> since it has not been defined."
-					<< CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Boolean)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as boolean: Wrong type requested!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -281,13 +297,13 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as boolean: Wrong type!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
 
-	//Enum settings ==================================================================
+//Enum settings ==================================================================
 
 	void Settings::createSetting(std::string name, std::string category, int value, std::string description,
 			std::vector<std::string> enumDescriptions, bool isPrivate)
@@ -297,7 +313,9 @@ namespace SHOTSettings
 		for (int i = 0; i < enumDescriptions.size(); i++)
 		{
 			_enumDescription[make_tuple(name, category, i)] = enumDescriptions.at(i);
-			logger.message(4) << " Enum value " << i << ": " << enumDescriptions.at(i) << CoinMessageEol;
+
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+					" Enum value " + to_string(i) + ": " + enumDescriptions.at(i));
 		}
 
 		_settingsEnum[make_pair(name, category)] = true;
@@ -333,15 +351,16 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot get setting <" << name << "," << category << "> since it has not been defined."
-					<< CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Integer)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as integer: Wrong type requested!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -353,13 +372,15 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << "," << category
-					<< "> as integer: Wrong type!" << CoinMessageEol;
+
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
 
-	//Double settings ================================================================
+//Double settings ================================================================
 
 	void Settings::createSetting(std::string name, std::string category, double value, std::string description)
 	{
@@ -382,7 +403,9 @@ namespace SHOTSettings
 		_settingsBounds[key] = std::make_pair(minVal, maxVal);
 		_isPrivate[key] = isPrivate;
 
-		logger.message(4) << "Setting <" << name << "," << category << "> = " << value << " created." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+				"Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+
 	}
 
 	void Settings::updateSetting(std::string name, std::string category, double value)
@@ -392,22 +415,26 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << ", " << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Double)
 		{
-			logger.message(1) << "Cannot set value of setting <" << name << ", " << category
-					<< "> as double: Wrong type!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
+
 			throw SettingSetWrongTypeException(name, category);
 		}
 
 		if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
 		{
-			logger.message(1) << "Cannot update setting <" << name << ", " << category << ">: Not in interval ["
-					<< _settingsBounds[key].first << "," << _settingsBounds[key].second << "]." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + ">: Not in interval ["
+							+ to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second)
+							+ "].");
+
 			throw SettingOutsideBoundsException(name, category, value, _settingsBounds[key].first,
 					_settingsBounds[key].second);
 		}
@@ -424,15 +451,15 @@ namespace SHOTSettings
 
 		if (_settingsIter == _settings.end())
 		{
-			logger.message(1) << "Cannot update setting <" << name << ", " << category
-					<< "> since it has not been defined." << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 			throw SettingKeyNotFoundException(name, category);
 		}
 
 		if (_settingsType[key] != ESettingsType::Double)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << ", " << category
-					<< "> as double: Wrong type requested!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
 			throw SettingGetWrongTypeException(name, category);
 		}
 
@@ -443,8 +470,9 @@ namespace SHOTSettings
 		}
 		catch (boost::bad_lexical_cast &e)
 		{
-			logger.message(1) << "Cannot get value of setting <" << name << ", " << category
-					<< "> as double: Wrong type!" << CoinMessageEol;
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+
 			throw SettingGetWrongTypeException(name, category);
 		}
 	}
@@ -503,7 +531,9 @@ namespace SHOTSettings
 
 	OSOption* Settings::getSettingsAsOSOption()
 	{
-		logger.message(4) << "Starting conversion of settings to OSOption object." << CoinMessageEol;
+
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+				"Starting conversion of settings to OSOption object.");
 
 		OSOption* options = new OSOption();
 
@@ -545,20 +575,24 @@ namespace SHOTSettings
 			}
 
 			options->setAnotherSolverOption(p.first, iterator->second, "SHOT", p.second, type.str(), desc.str());
-			logger.message(4) << " Setting <" << p.first << "," << p.second << "> converted." << CoinMessageEol;
+
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+					" Setting <" + p.first + "," + p.second + "> converted.");
 
 			type.clear();
 			desc.clear();
 		}
 
-		logger.message(4) << "Conversion of settings to OSOption object completed." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+				"Conversion of settings to OSOption object completed.");
 
 		return options;
 	}
 
 	void Settings::readSettings(std::string osol)
 	{
-		logger.message(4) << "Starting conversion of settings from OSoL." << CoinMessageEol;
+
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Starting conversion of settings from OSoL.");
 
 		OSoLReader *osolreader = NULL;
 		osolreader = new OSoLReader();
@@ -572,7 +606,7 @@ namespace SHOTSettings
 
 	void Settings::readSettings(OSOption* options)
 	{
-		logger.message(4) << "Conversion of settings from OSOptions." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Conversion of settings from OSOptions.");
 
 		SolverOption** optionscntr = options->getAllSolverOptions();
 
@@ -613,8 +647,10 @@ namespace SHOTSettings
 						}
 						catch (boost::bad_lexical_cast &e)
 						{
-							logger.message(1) << "Value for setting <" << so->name << "," << so->category
-									<< "> in OSoL file is not an integer. Using default value." << CoinMessageEol;
+
+							osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+									"Value for setting <" + so->name + "," + so->category
+											+ "> in OSoL file is not an integer. Using default value.");
 						}
 					}
 					else if (so->type == "double")
@@ -626,14 +662,17 @@ namespace SHOTSettings
 						}
 						catch (boost::bad_lexical_cast &e)
 						{
-							logger.message(1) << "Value for setting <" << so->name << "," << so->category
-									<< "> in OSoL file is not a double. Using default value." << CoinMessageEol;
+							osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+									"Value for setting <" + so->name + "," + so->category
+											+ "> in OSoL file is not a double. Using default value.");
 						}
 					}
 					else
 					{
-						logger.message(1) << "Value for setting <" << so->name << "," << so->category
-								<< "> is of unknown type. Skipping it." << CoinMessageEol;
+
+						osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+								"Value for setting <" + so->name + "," + so->category
+										+ "> in OSoL file is of unknown type. Skipping it.");
 					}
 				}
 				catch (SettingKeyNotFoundException &e)
@@ -648,7 +687,7 @@ namespace SHOTSettings
 			}
 		}
 
-		logger.message(4) << "Conversion of settings from OSoL completed." << CoinMessageEol;
+		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Conversion of settings from OSoL completed.");
 
 	}
 }

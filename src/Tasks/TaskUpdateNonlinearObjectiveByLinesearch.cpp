@@ -15,15 +15,14 @@ TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesear
 	processInfo->startTimer("ObjectiveLinesearch");
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
 	{
-		processInfo->logger.message(2) << "Boost linesearch implementation selected for primal heuristics"
-				<< CoinMessageEol;
 		linesearchMethod = new LinesearchMethodBoost();
+		processInfo->outputDebug("Boost linesearch implementation selected for objective linesearch.");
 	}
 	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
 			== static_cast<int>(ES_LinesearchMethod::Bisection))
 	{
-		processInfo->logger.message(2) << "Bisection linesearch selected primal heuristics" << CoinMessageEol;
 		linesearchMethod = new LinesearchMethodBisection();
+		processInfo->outputDebug("Bisection linesearch implementation selected for objective linesearch.");
 	}
 
 	processInfo->stopTimer("ObjectiveLinesearch");
@@ -103,9 +102,10 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 					currIter->objectiveValue = allSolutions.at(0).objectiveValue;
 
 					processInfo->setObjectiveUpdatedByLinesearch(true);
-					processInfo->logger.message(2) << "    Obj. for sol. # 0 upd. by l.s." << oldObjVal << "->"
-							<< allSolutions.at(i).objectiveValue << "(diff:" << diffobj << ")  #" << CoinMessageEol;
-
+					processInfo->outputInfo(
+							"    Obj. for sol. # 0 upd. by l.s." + to_string(oldObjVal) + "->"
+									+ to_string(allSolutions.at(i).objectiveValue) + "(diff:" + to_string(diffobj)
+									+ ")  #");
 					// Change the status of the solution if it has been updated much
 					if (diffobj > settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 					{
@@ -117,9 +117,10 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 				}
 				else
 				{
-					processInfo->logger.message(2) << "    Obj. for sol. #" << std::to_string(i) << "upd. by l.s."
-							<< oldObjVal << "->" << allSolutions.at(i).objectiveValue << "(" << diffobj << ")  #"
-							<< CoinMessageEol;
+					processInfo->outputInfo(
+							"    Obj. for sol. #" + std::to_string(i) + " upd. by l.s." + to_string(oldObjVal) + "->"
+									+ to_string(allSolutions.at(i).objectiveValue) + "(diff:" + to_string(diffobj)
+									+ ")  #");
 				}
 
 				processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
@@ -128,11 +129,8 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			}
 			catch (std::exception &e)
 			{
-				processInfo->logger.message(0)
-						<< "Cannot find solution with linesearch for updating nonlinear objective: "
-						<< CoinMessageNewline << e.what() << CoinMessageEol;
+				processInfo->outputWarning("Cannot find solution with linesearch for updating nonlinear objective.");
 			}
-
 		}
 	}
 

@@ -200,7 +200,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 					if (noMIPChange)
 					{
-						processInfo->logger.message(1) << "    MIP solution has not changed in" << maxItersNoMIPChange << "iterations. Solving NLP problem..."<< CoinMessageEol;
+						processInfo->outputWarning("     MIP solution has not changed in " + to_string( maxItersNoMIPChange)+ " iterations. Solving NLP problem...");
 						return (true);
 					}
 

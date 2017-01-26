@@ -3,8 +3,9 @@
 
 bool ProcessInfo::instanceFlag = false;
 ProcessInfo* ProcessInfo::single = NULL;
-CoinMessageHandler logger;
 OSResult *osResult = NULL;
+
+extern const OSSmartPtr<OSOutput> osoutput;
 
 void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
 		IndexValuePair maxConstrDev)
@@ -153,6 +154,52 @@ bool ProcessInfo::getObjectiveUpdatedByLinesearch()
 	return (objectiveUpdatedByLinesearch);
 }
 
+void ProcessInfo::outputAlways(std::string message)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_always, message);
+}
+
+void ProcessInfo::outputError(std::string message)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
+}
+
+void ProcessInfo::outputError(std::string message, std::string errormessage)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, "Error message: " + errormessage);
+}
+
+void ProcessInfo::outputSummary(std::string message)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_summary, message);
+}
+
+void ProcessInfo::outputWarning(std::string message)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_warning, message);
+}
+
+void ProcessInfo::outputInfo(std::string message)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, message);
+}
+
+void ProcessInfo::outputDebug(std::string message)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_debug, message);
+}
+
+void ProcessInfo::outputTrace(std::string message)
+{
+	//osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, message);
+}
+
+void ProcessInfo::outputDetailedTrace(std::string message)
+{
+	//osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, message);
+}
+
 ProcessInfo::ProcessInfo()
 {
 	createTimer("Total", "Total solution time");
@@ -183,8 +230,6 @@ ProcessInfo::ProcessInfo()
 	currentObjectiveBounds.second = DBL_MAX;
 
 	settings = SHOTSettings::Settings::getInstance();
-
-	logger.setLogLevel(2);
 
 	tasks = new TaskHandler();
 
@@ -240,7 +285,7 @@ void ProcessInfo::startTimer(string name)
 
 	if (timer == timers.end())
 	{
-		logger.message(0) << "Error: timer with name  \" " << name << "\" not found!";
+		outputError("Timer with name  \" " + name + "\" not found!");
 		return;
 	}
 
@@ -256,7 +301,7 @@ void ProcessInfo::restartTimer(string name)
 
 	if (timer == timers.end())
 	{
-		logger.message(0) << "Error: timer with name  \" " << name << "\" not found!";
+		outputError("Timer with name  \" " + name + "\" not found!");
 		return;
 	}
 
@@ -272,7 +317,7 @@ void ProcessInfo::stopTimer(string name)
 
 	if (timer == timers.end())
 	{
-		logger.message(0) << "Error: timer with name  \" " << name << "\" not found!";
+		outputError("Timer with name  \" " + name + "\" not found!");
 		return;
 	}
 
@@ -288,7 +333,7 @@ double ProcessInfo::getElapsedTime(string name)
 
 	if (timer == timers.end())
 	{
-		logger.message(0) << "Error: timer with name  \" " << name << "\" not found!";
+		outputError("Timer with name  \" " + name + "\" not found!");
 		return (0.0);
 	}
 
@@ -622,7 +667,7 @@ std::string ProcessInfo::getTraceResult()
 	else
 	{
 		modelStatus = "NA";
-		this->logger.message(0) << "ERROR: Unknown return code from model solution" << CoinMessageEol;
+		outputError("Unknown return code from model solution.");
 	}
 
 	if (this->terminationReason == E_TerminationReason::TimeLimit)
@@ -654,7 +699,7 @@ std::string ProcessInfo::getTraceResult()
 	else
 	{
 		solverStatus = "10";
-		this->logger.message(0) << "ERROR: Unknown return code from solver" << CoinMessageEol;
+		outputError("Unknown return code obtainedfrom solver.");
 	}
 
 	ss << modelStatus << ",";

@@ -32,23 +32,6 @@ void TaskCheckConstraintTolerance::run()
 	}
 
 	return;
-
-	/*if (currIter->iterationNumber == 1) return;
-
-	 auto prevIter = processInfo->getPreviousIteration();
-	 auto objChangeNorm = abs(currIter->objectiveValue - prevIter->objectiveValue);
-
-	 if (settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")
-	 != settings->getDoubleSetting("ObjectionFunctionTol", "Algorithm")
-	 && (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")
-	 && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
-	 && currIter->type == E_IterationProblemType::MIP
-	 && objChangeNorm < settings->getDoubleSetting("ObjectionFunctionTol", "Algorithm")))
-	 {
-	 //processInfo->logger.message(2) << "Current objective change norm is " << objChangeNorm << CoinMessageEol;
-
-	 processInfo->tasks->setNextTask(taskIDIfTrue);
-	 }*/
 }
 
 std::string TaskCheckConstraintTolerance::getType()

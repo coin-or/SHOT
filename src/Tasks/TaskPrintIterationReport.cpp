@@ -11,6 +11,8 @@ TaskPrintIterationReport::TaskPrintIterationReport()
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+
+	lastNumHyperplane = 0;
 }
 
 TaskPrintIterationReport::~TaskPrintIterationReport()
@@ -24,116 +26,157 @@ void TaskPrintIterationReport::run()
 
 	try
 	{
-		std::string tmpboundaryDistance = " ";
-
-		if (!OSIsnan(currIter->boundaryDistance))
-		{
-			tmpboundaryDistance = (
-					currIter->boundaryDistance == DBL_MAX ? " " : std::to_string(currIter->boundaryDistance));
-		}
-
-		std::size_t found = tmpboundaryDistance.find("INF");
-		if (found != std::string::npos)
-		{
-			tmpboundaryDistance = "";
-		}
-
 		std::stringstream tmpType;
 
 		bool hasSolution = true;
 
+		bool isMIQP = (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
+		bool isMIQCP = (processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0);
+		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP);
+
+		if (isMIQCP && isDiscrete) tmpType << "MIQCP";
+		else if (isMIQCP) tmpType << "QCP";
+		else if (isMIQP && isDiscrete) tmpType << "MIQP";
+		else if (isMIQP) tmpType << "QP";
+		else if (isDiscrete) tmpType << "MILP";
+		else tmpType << "LP";
+
 		if (currIter->solutionPoints.size() == 0) hasSolution = false;
-
-		if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic
-				|| processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0)
-		{
-			tmpType << "Q";
-		}
-		else
-		{
-			tmpType << "L";
-		}
-
-		if (currIter->type == E_IterationProblemType::MIP)
-		{
-			tmpType << " I";
-		}
-		else if (currIter->type == E_IterationProblemType::Relaxed)
-		{
-			tmpType << " R";
-		}
 
 		if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
 		{
-			tmpType << " E";
+			tmpType << " ERR";
 			hasSolution = false;
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Feasible)
 		{
-			tmpType << " F";
+			tmpType << " FEA";
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
 		{
-			tmpType << " I";
+			tmpType << " INF";
 			hasSolution = false;
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
 		{
-			tmpType << " IL";
+			tmpType << " ITL";
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 		{
-			tmpType << " O";
+			tmpType << " OPT";
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 		{
 			tmpType << " SL";
+			tmpType << std::to_string(currIter->usedMILPSolutionLimit);
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
 		{
-			tmpType << " TL";
+			tmpType << " TIL";
 			hasSolution = false;
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
 		{
-			tmpType << " UB";
+			tmpType << " UNB";
 			hasSolution = false;
 		}
 
-		std::string solLimit = (currIter->isMILP() ? std::to_string(currIter->usedMILPSolutionLimit) : " ");
+		std::string hyperplanesExpr;
+
+		auto numHyperAdded = currIter->numHyperplanesAdded;
+		auto numHyperTot = currIter->totNumHyperplanes;
+
+		if (numHyperTot > lastNumHyperplane)
+		{
+			hyperplanesExpr = "+" + to_string(numHyperAdded) + " = " + to_string(numHyperTot);
+			lastNumHyperplane = numHyperTot;
+		}
+		else
+		{
+			hyperplanesExpr = " ";
+		}
+
+		std::string primalBoundExpr;
+		std::string dualBoundExpr;
+
+		auto primalBound = processInfo->getPrimalBound();
+		auto dualBound = processInfo->getDualBound();
+
+		if (primalBound > 1.e100)
+		{
+			primalBoundExpr = "inf";
+		}
+		else if (primalBound != lastPrimalBound)
+		{
+			primalBoundExpr = ((boost::format("%.3f") % primalBound).str());
+			lastPrimalBound = primalBound;
+		}
+		else
+		{
+			primalBoundExpr = "";
+		}
+
+		if (dualBound < -1.e100)
+		{
+			dualBoundExpr = "-inf";
+		}
+		else if (dualBound != lastDualBound)
+		{
+			dualBoundExpr = ((boost::format("%.3f") % dualBound).str());
+			lastDualBound = dualBound;
+		}
+		else
+		{
+			dualBoundExpr = "";
+		}
+
+		std::string tmpObjVal = ((boost::format("%.3f") % currIter->objectiveValue).str());
 
 		std::string tmpConstr;
 
+		double tmpConstrVal = currIter->maxDeviation;
+
+		std::string tmpConstrExpr;
+
+		if (tmpConstrVal > 1.e12)
+		{
+			tmpConstrExpr = "inf";
+		}
+
+		else
+		{
+			tmpConstrExpr = ((boost::format("%.5f") % currIter->maxDeviation).str());
+		}
+
 		if (hasSolution && currIter->maxDeviationConstraint != -1)
 		{
-			tmpConstr = processInfo->originalProblem->getConstraintNames()[currIter->maxDeviationConstraint];
+			tmpConstr = processInfo->originalProblem->getConstraintNames()[currIter->maxDeviationConstraint] + ": "
+					+ tmpConstrExpr;
 		}
 		else if (hasSolution)
 		{
-			tmpConstr = processInfo->originalProblem->getConstraintNames().back();
+			tmpConstr = processInfo->originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
 		}
 		else
 		{
 			tmpConstr = "";
 		}
 
-		auto tmpLine = boost::format(
-				"%1% %|4t|%2% %|10t|%3% %|14t|+%4% = %5% %|24t|%6% %|38t|%7% %|46t|%8%: %|54t|%9% %|70t|%10%")
-				% currIter->iterationNumber % tmpType.str() % solLimit % currIter->numHyperplanesAdded
-				% currIter->totNumHyperplanes % currIter->objectiveValue % currIter->usedConstraintTolerance % tmpConstr
-				% currIter->maxDeviation % tmpboundaryDistance;
+		auto tmpLine = boost::format("%|-4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
+				% currIter->iterationNumber % tmpType.str() % hyperplanesExpr % dualBoundExpr % tmpObjVal
+				% primalBoundExpr % tmpConstr;
 
-		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
+		processInfo->outputSummary(tmpLine.str());
+
 	}
 	catch (...)
 	{
-		processInfo->logger.message(1) << "ERROR, cannot write iteration solution report!" << CoinMessageEol;
+		processInfo->outputError("ERROR, cannot write iteration solution report!");
 	}
 }
 std::string TaskPrintIterationReport::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }
 

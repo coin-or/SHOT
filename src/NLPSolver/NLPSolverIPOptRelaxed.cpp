@@ -41,7 +41,33 @@ NLPSolverIPOptRelaxed::NLPSolverIPOptRelaxed()
 
 	//osOption->setAnotherSolverOption("tol", "1E-1", "ipopt", "", "double", "");
 	osOption->setAnotherSolverOption("max_iter", "10000", "ipopt", "", "integer", "");
-	osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
+	switch (settings->getIntSetting("LogLevelConsole", "SHOTSolver") + 1)
+	{
+		case ENUM_OUTPUT_LEVEL_error:
+			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_summary:
+			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_warning:
+			osOption->setAnotherSolverOption("print_level", "1", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_info:
+			osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_debug:
+			osOption->setAnotherSolverOption("print_level", "8", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_trace:
+			osOption->setAnotherSolverOption("print_level", "10", "ipopt", "", "integer", "");
+			break;
+		case ENUM_OUTPUT_LEVEL_detailed_trace:
+			osOption->setAnotherSolverOption("print_level", "12", "ipopt", "", "integer", "");
+			break;
+		default:
+			break;
+	}
+
 	osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
 	osOption->setAnotherSolverOption("max_cpu_time", std::to_string(timeLimit), "ipopt", "", "double", "");
@@ -92,37 +118,7 @@ bool NLPSolverIPOptRelaxed::createProblem(OSInstance * origInstance)
 	NLPProblem = new OptProblemNLPRelaxed();
 	NLPProblem->reformulate(origInstance);
 	NLPSolver->osinstance = NLPProblem->getProblemInstance();
-	//OSiLWriter *osilwriter = NULL;
-
-	//osilwriter = new OSiLWriter();
-
-	//std::string test = osilwriter->writeOSiL(NLPProblem->getProblemInstance());
-
-	//NLPProblem->exportProblemToOsil("exportNLP.osil");
-	/*
-	 FileUtil *fileUtil = new FileUtil();
-	 OSiLReader *osilreader = new OSiLReader();
-	 OSInstance *instance = NULL;
-
-
-	 std::string osil = fileUtil->getFileAsChar(origInstance->instanceHeader->source.c_str());
-
-	 instance = osilreader->readOSiL(osil);
-
-
-	 for (int i = 0; i < instance->getVariableNumber(); i++)
-	 {
-	 instance->instanceData->variables->var[i]->type = 'C';
-	 }
-
-	 instance->getJacobianSparsityPattern();
-
-	 NLPSolver->osinstance = instance;	*/
-	//NLPSolver->buildSolverInstance();
-	processInfo->logger.message(2) << "NLP problem created" << CoinMessageEol;
-	/*NLPProblem->printProblem();
-	 NLPProblem->exportProblemToOsil("exportNLP.osil");
-	 std::cout << NLPProblem->problemInstance->printModel();*/
+	processInfo->outputDebug("NLP problem created");
 
 	processInfo->stopTimer("InteriorPointRelaxed");
 	return true;
@@ -135,18 +131,18 @@ bool NLPSolverIPOptRelaxed::solveProblem()
 	{
 		NLPSolver->solve();
 		processInfo->numNLPProbsSolved++;
+		std::cout << "\e[A";
+		std::cout << "\e[A";
 	}
 	catch (std::exception e)
 	{
-		processInfo->logger.message(1) << "Error when solving IPOpt relaxed problem!" << CoinMessageEol;
-
+		processInfo->outputError("Error when solving relaxed problem with Ipopt!");
 		processInfo->stopTimer("InteriorPointRelaxed");
 		return false;
 	}
 	catch (...)
 	{
-		processInfo->logger.message(1) << "Error when solving IPOpt relaxed problem!" << CoinMessageEol;
-
+		processInfo->outputError("Error when solving relaxed problem with Ipopt!");
 		processInfo->stopTimer("InteriorPointRelaxed");
 		return false;
 	}
@@ -155,15 +151,13 @@ bool NLPSolverIPOptRelaxed::solveProblem()
 
 	if (solStatus == "infeasible" || NLPSolver->osresult->getSolutionNumber() == 0)
 	{
-		processInfo->logger.message(1) << "No solution found to IPOpt minimax problem. Solution status: " << solStatus
-				<< CoinMessageEol;
+		processInfo->outputError("No solution found to relaxed problem with Ipopt. Solution status: " + solStatus);
 
 		processInfo->stopTimer("InteriorPointRelaxed");
 		return false;
 	}
 
-	processInfo->logger.message(3) << "Solution found to IPOpt relaxed problem. Solution status: " << solStatus
-			<< CoinMessageEol;
+	processInfo->outputInfo("Solution found to relaxed problem with Ipopt. Solution status:" + solStatus);
 
 	int numVar = NLPProblem->getNumberOfVariables();
 	std::vector<double> tmpPoint(numVar);
@@ -173,27 +167,28 @@ bool NLPSolverIPOptRelaxed::solveProblem()
 		tmpPoint.at(i) = NLPSolver->osresult->getVarValue(0, i);
 	}
 
+	auto objval = NLPSolver->osresult->getObjValue(0, 0);
+
 	if (NLPProblem->getNumberOfNonlinearConstraints() > 0)
 	{
 		auto maxDev = NLPProblem->getMostDeviatingConstraint(tmpPoint).value;
 		if (maxDev > settings->getDoubleSetting("InteriorPointFeasEps", "NLP"))
 		{
-			processInfo->logger.message(2) << "NLP point from IPOpt relaxed problem not valid!" << CoinMessageEol;
-			processInfo->logger.message(2) << " Maximum constraint value is " << maxDev << " > "
-					<< settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
+			processInfo->outputError(
+					"NLP point from relaxed problem not valid!\nObjective value is" + to_string(objval) + " > "
+							+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 
 			processInfo->stopTimer("InteriorPointRelaxed");
 			return false;
 		}
 
-		processInfo->logger.message(2) << "NLP point from IPOpt relaxed problem valid." << CoinMessageEol;
-		processInfo->logger.message(2) << " Maximum constraint value is " << maxDev << " < "
-				<< settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
+		processInfo->outputInfo(
+				"NLP point from relaxed problem valid!\nObjective value is" + to_string(objval) + " < "
+						+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 	}
 	else
 	{
-		processInfo->logger.message(2) << "NLP problem linearly constrained. Assuming point is valid."
-				<< CoinMessageEol;
+		processInfo->outputInfo("NLP problem linearly constrained. Assuming point is valid.");
 	}
 
 	auto tmpIP = new InteriorPoint();
@@ -228,67 +223,3 @@ void NLPSolverIPOptRelaxed::saveProblemModelToFile(std::string fileName)
 {
 	NLPProblem->saveProblemModelToFile(fileName);
 }
-
-/*
- bool NLPSolverIPOptRelaxed::solveProblem()
- {
- std::string solStatus;
- double optSolValue;
-
- NLPSolver->solve();
- // the argument is the solution index
- solStatus = NLPSolver->osresult->getSolutionStatusType(0);
-
- if (solStatus.find("ptimal") != std::string::npos || solStatus == "bestSoFar" || solStatus == "feasible"){
- std::cout << solStatus << std::endl;
- optSolValue = NLPSolver->osresult->optimization->solution[0]->objectives->values[0].obj[0]->value;
- }
- else{
- std::cout << "IPOpt could not solve problem. The solver status is: " << solStatus << std::endl;
-
- if (NLPProblem->isConstraintsFulfilledInPoint(getSolution()))
- return true;
- else
- {
- std::cout << "NLP solution is not valid!" << std::endl;
- std::cout << "Maximum constraint value in NLP point is " << NLPProblem->getMostDeviatingConstraint(getSolution()).value << std::endl;
-
- return false;
- }
- }
-
- if (NLPProblem->isConstraintsFulfilledInPoint(getSolution()))
- {
-
- std::cout << "Maximum constraint value in NLP point is " << NLPProblem->getMostDeviatingConstraint(getSolution()).value << std::endl;
-
- return true;
- }
- else
- {
- std::cout << "NLP solution is not valid!" << std::endl;
- std::cout << "Maximum constraint value in NLP point is " << NLPProblem->getMostDeviatingConstraint(getSolution()).value << std::endl;
-
- return false;
- }
- }
-
- std::vector<double> NLPSolverIPOptRelaxed::getSolution()
- {
- if (!isPointValueCached)
- {
- int numVar = NLPProblem->getNumberOfVariables();
-
- std::vector<double> xNLP(numVar);
-
- for (int i = 0; i < numVar; i++)
- {
- xNLP[i] = NLPSolver->osresult->getVarValue(0, i);
- }
-
-
- NLPpoint = xNLP;
- }
-
- return NLPpoint;
- }*/

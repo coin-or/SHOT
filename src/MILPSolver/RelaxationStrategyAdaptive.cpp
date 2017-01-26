@@ -172,18 +172,9 @@ void RelaxationStrategyAdaptive::updateCurrentDistanceLevel()
 
 		for (double i = numVals; i > numVals - considerVals; i--)
 		{
-			//tmpVal = (1.0 / (considerVals+1.0))*tmpVal*distanceLevels[i-1];
 			tmpVal = tmpVal + distanceLevels[i - 1];
 		}
 
-		//currentDistanceLevel = 0.5*pow(tmpVal, 1.0 / considerVals);
-		//processInfo->logger.message(1) << " TMPval " << tmpVal << CoinMessageEol;
 		currentDistanceLevel = 0.5 * tmpVal / considerVals;
-		//processInfo->logger.message(1) << " Updated distance level " << currentDistanceLevel << CoinMessageEol;
-		//auto tmp = processInfo->getPreviousIteration()->boundaryDistance;
-
-		//currentDistanceLevel = currentDistanceLevel - pow(processInfo->getPreviousIteration()->boundaryDistance / initialDistanceLevel, 1.0 / numLPMeans);
-
-		//numLPMeans = numLPMeans + 1.0;
 	}
 }

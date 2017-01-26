@@ -35,9 +35,9 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	this->addedObjectiveVariableName = "addobjvar";
 	this->addedObjectiveVariableLowerBound = -settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-	//this->addedObjectiveVariableLowerBound = 117916.288;
+
 	this->addedObjectiveVariableUpperBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-	;
+
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
 	instance->getJacobianSparsityPattern();
@@ -61,36 +61,16 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 		else if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
 		{
 			tmpVal = -tmpVal + getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
-			//std::cout << "Lin value is: "<< tmpVal << std::endl;
 		}
 		else if (getProblemInstance()->getConstraintTypes()[idx] == 'E')
 		{
 			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
-			//std::cout << "Lin value is: "<< tmpVal << std::endl;
 		}
-		/*
-		 if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
-		 {
-		 auto tmpUB = getProblemInstance()->instanceData->constraints->con[idx]->ub;
-		 tmpVal = tmpVal - tmpUB; // -problemInstance->getConstraintConstants()[idx];
-		 std::cout << "Lin value2 is: "<< tmpVal << std::endl;
-		 }
-		 else if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
-		 {
-		 auto tmpLB = getProblemInstance()->instanceData->constraints->con[idx]->lb;
-		 tmpVal = -tmpVal + tmpLB; // +problemInstance->getConstraintConstants()[idx];
-		 //std::cout << "Lin value is: "<< tmpVal << std::endl;
-		 }
-		 else if (getProblemInstance()->getConstraintTypes()[idx] == 'E')
-		 {
-		 auto tmpLB = getProblemInstance()->instanceData->constraints->con[idx]->lb;
-		 tmpVal = tmpVal -tmpLB;
-		 //std::cout << "Lin value is: "<< tmpVal << std::endl;
-		 }*/
 		else
 		{
-			processInfo->logger.message(1) << "Constraint with index " << idx << " of type "
-					<< getProblemInstance()->getConstraintTypes()[idx] << " is not supported! " << CoinMessageEol;
+			processInfo->outputWarning(
+					"Constraint with index " + to_string(idx) + " of type "
+							+ to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
 		}
 	}
 	else // The nonlinear objective function constraint
@@ -98,13 +78,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 		tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
 		processInfo->numFunctionEvals++;
 
-		//std::cout << "tmpval before: " << tmpVal << std::endl;
-
 		tmpVal = tmpVal - point.at(this->getNonlinearObjectiveVariableIdx());
-
-		//std::cout << "nonlin var index: " <<this->getNonlinearObjectiveVariableIdx() << std::endl;
-		//std::cout << "point :" << point.at(this->getNonlinearObjectiveVariableIdx());
-		//std::cout << "tmpval after: " << tmpVal << std::endl;
 	}
 
 	return tmpVal;
@@ -201,33 +175,6 @@ IndexValuePair OptProblemOriginalNonlinearObjective::getMostDeviatingAllConstrai
 
 int OptProblemOriginalNonlinearObjective::getNumberOfNonlinearConstraints()
 {
-	/*	int ctr = 0;
-
-	 std::vector<bool> isNonlinear(getProblemInstance()->getConstraintNumber(), false);
-
-	 for (int i = 0; i < getProblemInstance()->getNumberOfNonlinearExpressions(); i++)
-	 {
-	 int tmpIndex = getProblemInstance()->instanceData->nonlinearExpressions->nl[i]->idx;
-
-	 if (tmpIndex != -1) isNonlinear.at(tmpIndex) = true;
-	 }
-
-
-	 if (!settings->getBoolSetting("UseQuadraticProgramming", "Algorithm"))
-	 {
-	 for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
-	 {
-	 int tmpIndex = getProblemInstance()->instanceData->quadraticCoefficients->qTerm[i]->idx;
-
-	 if (tmpIndex != -1) isNonlinear.at(tmpIndex) = true;
-	 }
-	 }
-
-	 for (int i = 0; i < isNonlinear.size(); i++)
-	 {
-	 if (isNonlinear.at(i))	ctr++;
-	 }*/
-
 	int ctr = OptProblem::getNumberOfNonlinearConstraints();
 
 	ctr++; //Nonlinear objective function constraint

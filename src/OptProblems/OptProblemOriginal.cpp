@@ -20,8 +20,7 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 
 	if (idx == -1)
 	{
-		processInfo->logger.message(1) << "Objective function constraint should not be calculated here! "
-				<< CoinMessageEol;
+		processInfo->outputWarning("Objective function constraint should not be calculated here! ");
 	}
 	else if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 	{
@@ -40,8 +39,9 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 	}
 	else
 	{
-		processInfo->logger.message(1) << "Constraint with index " << idx << " of type "
-				<< getProblemInstance()->getConstraintTypes()[idx] << " is not supported! " << CoinMessageEol;
+		processInfo->outputWarning(
+				"Constraint with index " + to_string(idx) + " of type "
+						+ to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
 	}
 
 	return tmpVal;

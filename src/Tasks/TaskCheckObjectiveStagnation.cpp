@@ -48,7 +48,7 @@ void TaskCheckObjectiveStagnation::run()
 	{
 		processInfo->iterSignificantObjectiveUpdate = currIter->iterationNumber;
 		processInfo->itersWithStagnationMILP = 0;
-		processInfo->logger.message(4) << "Significant change in objective function value detected." << CoinMessageEol;
+
 		return;
 	}
 

@@ -20,16 +20,16 @@ TaskPrintIterationHeader::~TaskPrintIterationHeader()
 
 void TaskPrintIterationHeader::run()
 {
-	//if ()
-	//{
-	auto tmpLine = boost::format("%1% %|4t|%2% %|10t|%3% %|14t|%4% %|24t|%5% %|38t|%6% %|46t|%7%: %|54t|%8% %|70t|%9%")
-			% "#" % "Type" % "SL" % "HPs" % "Obj. val." % "Tol." % "Max. error" % " " % "||HPP||";
+	std::stringstream tmpLine;
+	tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
 
-	processInfo->logger.message(2)
-			<< "==================================================================================" << CoinMessageEol
-			<< tmpLine.str() << CoinMessageEol
-			<< "==================================================================================" << CoinMessageEol;
-	//}
+	tmpLine
+			<< boost::format("%|-14| %|=11| %|=14| %|=14| %|=14|  %s\n") % "Iteration" % "HPs" % "DB" % "OBJ" % "PB"
+					% "max constr.";
+
+	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
+
+	processInfo->outputSummary(tmpLine.str());
 }
 
 std::string TaskPrintIterationHeader::getType()

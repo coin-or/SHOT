@@ -16,7 +16,7 @@ void TaskFindInteriorPoint::run()
 
 	processInfo->startTimer("InteriorPointTotal");
 
-	processInfo->logger.message(3) << "Initializing NLP solver" << CoinMessageEol;
+	processInfo->outputDebug("Initializing NLP solver");
 	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("NLPSolver", "NLP"));
 
 	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
@@ -25,7 +25,7 @@ void TaskFindInteriorPoint::run()
 
 		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
 
-		processInfo->logger.message(2) << "Cutting plane minimax selected as NLP solver." << CoinMessageEol;
+		processInfo->outputDebug("Cutting plane minimax selected as NLP solver.");
 	}
 	else if (solver == ES_NLPSolver::IPOptMiniMax)
 	{
@@ -33,7 +33,7 @@ void TaskFindInteriorPoint::run()
 
 		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
 
-		processInfo->logger.message(2) << "IPOpt minimax selected as NLP solver." << CoinMessageEol;
+		processInfo->outputDebug("IPOpt minimax selected as NLP solver.");
 	}
 	else if (solver == ES_NLPSolver::IPOptRelaxed)
 	{
@@ -41,7 +41,7 @@ void TaskFindInteriorPoint::run()
 
 		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
 
-		processInfo->logger.message(2) << "IPOpt relaxed selected as NLP solver." << CoinMessageEol;
+		processInfo->outputDebug("IPOpt relaxed selected as NLP solver.");
 
 	}
 	else if (solver == ES_NLPSolver::IPOptMiniMaxAndRelaxed)
@@ -54,7 +54,7 @@ void TaskFindInteriorPoint::run()
 
 		NLPSolvers[1]->createProblem(processInfo->originalProblem->getProblemInstance());
 
-		processInfo->logger.message(2) << "IPOpt minimax and relaxed selected as NLP solver." << CoinMessageEol;
+		processInfo->outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
 	}
 	else if (solver == ES_NLPSolver::CouenneMiniMax)
 	{
@@ -62,8 +62,7 @@ void TaskFindInteriorPoint::run()
 
 		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
 
-		processInfo->logger.message(2) << "Couenne minimax selected as NLP solver." << CoinMessageEol;
-
+		processInfo->outputDebug("Couenne minimax selected as NLP solver.");
 	}
 	else
 	{
@@ -84,9 +83,7 @@ void TaskFindInteriorPoint::run()
 		}
 	}
 
-	processInfo->logger.message(3) << "NLP solver initialized" << CoinMessageEol;
-
-	processInfo->logger.message(3) << "Solving NLP problem" << CoinMessageEol;
+	processInfo->outputDebug("Solving NLP problem.");
 
 	bool foundNLPPoint = false;
 
@@ -101,7 +98,7 @@ void TaskFindInteriorPoint::run()
 		throw TaskExceptionInteriorPoint("No interior point found");
 	}
 
-	processInfo->logger.message(3) << "Finished solving NLP problem" << CoinMessageEol;
+	processInfo->outputDebug("Finished solving NLP problem.");
 
 	processInfo->numOriginalInteriorPoints = processInfo->interiorPts.size();
 

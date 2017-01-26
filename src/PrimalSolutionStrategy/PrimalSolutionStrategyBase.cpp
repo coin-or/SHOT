@@ -196,7 +196,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4% %5%") % tmpObjVal % mostDev.value
 				% sourceDesc % HPadded % HPobjadded;
 
-		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
+		processInfo->outputInfo("tmpLine.str()");
 
 		primalSol.objValue = tmpObjVal;
 		primalSol.point = tmpPoint;
@@ -205,7 +205,6 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		processInfo->primalSolutions.push_back(primalSol);
 
 		processInfo->primalSolution = tmpPoint;
-
 
 		if (processInfo->interiorPts.size() > 0)
 		{
@@ -216,10 +215,8 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 				tmpIP.point = tmpPoint;
 				tmpIP.maxDevatingConstraint = mostDev;
 
-				processInfo->logger.message(1)
-						<< "    Interior point replaced with primal solution point due to constraint deviation."
-						<< CoinMessageEol;
-
+				processInfo->outputSummary(
+						"     Interior point replaced with primal solution point due to constraint deviation.");
 
 				processInfo->interiorPts.back() = tmpIP;
 			}
@@ -231,8 +228,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 				tmpIP.point = tmpPoint;
 				tmpIP.maxDevatingConstraint = mostDev;
 
-				processInfo->logger.message(1) << "    Primal solution point used as additional interior point."
-						<< CoinMessageEol;
+				processInfo->outputSummary("     Primal solution point used as additional interior point.");
 
 				if (processInfo->interiorPts.size() == processInfo->numOriginalInteriorPoints)
 				{
@@ -252,8 +248,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 				tmpIP.point = tmpPoint;
 				tmpIP.maxDevatingConstraint = mostDev;
 
-				processInfo->logger.message(1) << "    Interior point replaced with primal solution point."
-						<< CoinMessageEol;
+				processInfo->outputSummary("     Interior point replaced with primal solution point.");
 
 				processInfo->interiorPts.back() = tmpIP;
 
@@ -272,9 +267,7 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 				tmpIP.point = tmpPoint;
 				tmpIP.maxDevatingConstraint = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
 
-				processInfo->logger.message(1) << "    Interior point replaced with primal solution point."
-						<< CoinMessageEol;
-
+				processInfo->outputSummary("     Interior point replaced with primal solution point.");
 
 				processInfo->interiorPts.back() = tmpIP;
 
@@ -284,11 +277,6 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 		return (true);
 	}
 
-	/*auto tmpLine = boost::format("    No new primal bound %1% with dev. %2% (%3%) %4%") % tmpObjVal % mostDev.value
-	 % sourceDesc % HPadded;
-
-	 processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
-	 */
 	return (false);
 }
 

@@ -14,7 +14,7 @@ TaskCreateMILPProblem::TaskCreateMILPProblem()
 
 	processInfo->startTimer("Reformulation");
 
-	processInfo->logger.message(2) << "Creating MILP problem" << CoinMessageEol;
+	processInfo->outputDebug("Creating MILP problem");
 
 	processInfo->MILPSolver->createLinearProblem(processInfo->originalProblem);
 
@@ -25,7 +25,7 @@ TaskCreateMILPProblem::TaskCreateMILPProblem()
 		processInfo->MILPSolver->writeProblemToFile(settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
 	}
 
-	processInfo->logger.message(2) << "MILP problem created" << CoinMessageEol;
+	processInfo->outputDebug("MILP problem created");
 	processInfo->stopTimer("Reformulation");
 
 }
