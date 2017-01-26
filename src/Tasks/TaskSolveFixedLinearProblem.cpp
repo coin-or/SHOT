@@ -57,15 +57,14 @@ TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem()
 	processInfo->startTimer("PrimalBoundFixedLP");
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
 	{
-		processInfo->logger.message(2) << "Boost linesearch implementation selected for primal heuristics"
-				<< CoinMessageEol;
 		linesearchMethod = new LinesearchMethodBoost();
+		processInfo->outputDebug("Boost linesearch implementation selected for fixed LP strategy.");
 	}
 	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
 			== static_cast<int>(ES_LinesearchMethod::Bisection))
 	{
-		processInfo->logger.message(2) << "Bisection linesearch selected primal heuristics" << CoinMessageEol;
 		linesearchMethod = new LinesearchMethodBisection();
+		processInfo->outputDebug("Bisection linesearch implementation selected for fixed LP strategy.");
 	}
 
 	discreteVariableIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
@@ -170,6 +169,8 @@ void TaskSolveFixedLinearProblem::run()
 
 	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 
+	processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
+
 	double prevObjVal;
 
 	int maxIter = settings->getIntSetting("SolveFixedLPMaxIter", "Algorithm");
@@ -187,78 +188,101 @@ void TaskSolveFixedLinearProblem::run()
 		}
 		else
 		{
+			std::stringstream tmpType;
+
 			auto varSol = processInfo->MILPSolver->getVariableSolution(0);
 			auto objVal = processInfo->MILPSolver->getObjectiveValue(0);
 
 			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(varSol);
 
-			//bool hasSolution = true;
-			std::stringstream tmpType;
+			bool hasSolution = true;
 
-			if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic
-					|| processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0)
-			{
-				tmpType << "Q";
-			}
-			else
-			{
-				tmpType << "L";
-			}
+			bool isMIQP = (processInfo->originalProblem->getObjectiveFunctionType()
+					== E_ObjectiveFunctionType::Quadratic);
+			bool isMIQCP = (processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0);
+			bool isDiscrete = false;
 
-			tmpType << " X";
+			if (isMIQCP) tmpType << "FIXQCP";
+			else if (isMIQP) tmpType << "FIXQP";
+			else tmpType << "FIXLP";
+
+			if (varSol.size() == 0) hasSolution = false;
 
 			if (solStatus == E_ProblemSolutionStatus::Error)
 			{
-				tmpType << " E";
-				//hasSolution = false;
+				tmpType << " ERR";
+				hasSolution = false;
 			}
 			else if (solStatus == E_ProblemSolutionStatus::Feasible)
 			{
-				tmpType << " F";
+				tmpType << " FEA";
 			}
 			else if (solStatus == E_ProblemSolutionStatus::Infeasible)
 			{
-				tmpType << " I";
-				//hasSolution = false;
+				tmpType << " INF";
+				hasSolution = false;
 			}
 			else if (solStatus == E_ProblemSolutionStatus::IterationLimit)
 			{
-				tmpType << " IL";
+				tmpType << " ITL";
 			}
 			else if (solStatus == E_ProblemSolutionStatus::Optimal)
 			{
-				tmpType << " O";
+				tmpType << " OPT";
 			}
-			else if (solStatus == E_ProblemSolutionStatus::SolutionLimit)
-			{
-				tmpType << " SL";
-			}
+			/*else if (solStatus == E_ProblemSolutionStatus::SolutionLimit)
+			 {
+			 tmpType << " SL";
+			 tmpType << std::to_string(currIter->usedMILPSolutionLimit);
+			 }*/
 			else if (solStatus == E_ProblemSolutionStatus::TimeLimit)
 			{
-				tmpType << " TL";
+				tmpType << " TIL";
+				hasSolution = false;
 			}
 			else if (solStatus == E_ProblemSolutionStatus::Unbounded)
 			{
-				tmpType << " UB";
-				//hasSolution = false;
+				tmpType << " UNB";
+				hasSolution = false;
 			}
 
-			auto tmpLine = boost::format(
-					"%1% %|4t|%2% %|10t|%3% %|14t|+%4% = %5% %|24t|%6% %|38t|%7% %|46t|%8%: %|54t|%9% %|70t|%10%") % k
-					% tmpType.str() % " " % "1" % (currIter->totNumHyperplanes + 1) % objVal % " " % " "
-					% mostDevConstr.value % "";
+			std::string hyperplanesExpr;
 
-			processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
+			auto numHyperTot = currIter->totNumHyperplanes;
+
+			hyperplanesExpr = "+1 = " + to_string(numHyperTot);
+
+			std::string tmpObjVal = ((boost::format("%.3f") % objVal).str());
+
+			std::string tmpConstr;
+
+			if (hasSolution && mostDevConstr.idx != -1)
+			{
+				tmpConstr = processInfo->originalProblem->getConstraintNames()[mostDevConstr.idx] + ": "
+						+ ((boost::format("%.5f") % mostDevConstr.value).str());
+			}
+			else if (hasSolution)
+			{
+				tmpConstr = processInfo->originalProblem->getConstraintNames().back() + ": "
+						+ ((boost::format("%.5f") % mostDevConstr.value).str());
+			}
+			else
+			{
+				tmpConstr = "";
+			}
+
+			auto tmpLine = boost::format("%|-4s| %|-10s| %|=10s| %|=44s| %|-14s|") % k % tmpType.str() % hyperplanesExpr
+					% tmpObjVal % tmpConstr;
+
+			processInfo->outputSummary(tmpLine.str());
 
 			if (mostDevConstr.value <= constrTol)
 			{
-				//std::cout << "Constr break" << std::endl;
 				break;
 			}
 
 			if (k > 0 && abs(prevObjVal - objVal) < objTol)
 			{
-				//std::cout << "Obj break" << std::endl;
 				break;
 			}
 
@@ -292,9 +316,9 @@ void TaskSolveFixedLinearProblem::run()
 			catch (std::exception &e)
 			{
 
-				processInfo->logger.message(0)
-						<< "Cannot find solution with linesearch for fixed LP, using solution point instead: "
-						<< CoinMessageNewline << e.what() << CoinMessageEol;
+				processInfo->outputWarning(
+						"Cannot find solution with linesearch for fixed LP, using solution point instead:");
+				processInfo->outputWarning(e.what());
 			}
 
 			if (k == 0) prevObjVal = objVal;
@@ -310,6 +334,8 @@ void TaskSolveFixedLinearProblem::run()
 				originalBounds.at(i).second);
 	}
 
+	processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
+
 	processInfo->stopTimer("PrimalBoundFixedLP");
 	processInfo->stopTimer("PrimalBoundTotal");
 	return;
@@ -321,93 +347,3 @@ std::string TaskSolveFixedLinearProblem::getType()
 	return (type);
 }
 
-void TaskSolveFixedLinearProblem::printIterationReport()
-{
-	auto currIter = processInfo->getCurrentIteration();
-
-	try
-	{
-		std::string tmpboundaryDistance = " ";
-
-		std::stringstream tmpType;
-
-		bool hasSolution = true;
-
-		if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic
-				|| processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0)
-		{
-			tmpType << "Q";
-		}
-		else
-		{
-			tmpType << "L";
-		}
-
-		tmpType << " X";
-
-		if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
-		{
-			tmpType << " E";
-			hasSolution = false;
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Feasible)
-		{
-			tmpType << " F";
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
-		{
-			tmpType << " I";
-			hasSolution = false;
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
-		{
-			tmpType << " IL";
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-		{
-			tmpType << " O";
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
-		{
-			tmpType << " SL";
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
-		{
-			tmpType << " TL";
-		}
-		else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
-		{
-			tmpType << " UB";
-			hasSolution = false;
-		}
-
-		std::string solLimit = (currIter->isMILP() ? std::to_string(currIter->usedMILPSolutionLimit) : " ");
-
-		std::string tmpConstr;
-
-		if (hasSolution && currIter->maxDeviationConstraint != -1)
-		{
-			tmpConstr = processInfo->originalProblem->getConstraintNames()[currIter->maxDeviationConstraint];
-		}
-		else if (hasSolution)
-		{
-			tmpConstr = processInfo->originalProblem->getConstraintNames().back();
-		}
-		else
-		{
-			tmpConstr = "";
-		}
-
-		auto tmpLine = boost::format(
-				"%1% %|4t|%2% %|10t|%3% %|14t|+%4% = %5% %|24t|%6% %|38t|%7% %|46t|%8%: %|54t|%9% %|70t|%10%")
-				% currIter->iterationNumber % tmpType.str() % solLimit % currIter->numHyperplanesAdded
-				% currIter->totNumHyperplanes % currIter->objectiveValue % currIter->usedConstraintTolerance % tmpConstr
-				% currIter->maxDeviation % tmpboundaryDistance;
-
-		processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
-	}
-	catch (...)
-	{
-		processInfo->logger.message(1) << "ERROR, cannot write iteration solution report!" << CoinMessageEol;
-	}
-}

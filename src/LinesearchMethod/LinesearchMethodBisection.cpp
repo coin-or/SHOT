@@ -56,8 +56,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
 			}
 		}
 
-		processInfo->logger.message(3) << " Linesearch completed in " << n << " iterations." << CoinMessageEol;
-
+		processInfo->outputInfo("Linesearch completed in " + to_string(n) + "iterations.");
 		if (!validNewPt)
 		{
 			std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
@@ -71,7 +70,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
 	}
 	catch (...)
 	{
-		processInfo->logger.message(0) << "Error while doing linesearch." << CoinMessageEol;
+		processInfo->outputError("Error while doing linesearch.");
 
 		if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptA))
 		//Returns the NLP point if not on the interior

@@ -67,20 +67,13 @@ double Test::operator()(const double x)
 	}
 
 	auto tmpActiveConstraints = getActiveConstraints();
-	//auto tmpActiveConstraints = originalProblem->getNonlinearConstraintIndexes();
 	auto mostDevConstr = originalProblem->getMostDeviatingConstraint(ptNew, tmpActiveConstraints);
 
 	double validNewPt = mostDevConstr.first.value;
 
-	//std::cout << " Deviation " << validNewPt << " <= " << lastActiveConstraintUpdateValue << std::endl;
-
 	if (validNewPt > 0 && validNewPt <= lastActiveConstraintUpdateValue
 			&& mostDevConstr.second.size() < tmpActiveConstraints.size())
 	{
-
-		//std::cout << " Deviation " << validNewPt << " <= " << lastActiveConstraintUpdateValue << " new size "
-		//		<< mostDevConstr.second.size() << std::endl;
-
 		setActiveConstraints(mostDevConstr.second);
 		lastActiveConstraintUpdateValue = validNewPt;
 	}
@@ -115,8 +108,7 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 {
 	if (ptA.size() != ptB.size())
 	{
-		processInfo->logger.message(1) << " Linesearch error: sizes of points vary" << std::to_string(ptB.size())
-				<< " and " << std::to_string(ptA.size()) << CoinMessageEol;
+		processInfo->outputError("     Linesearch error: sizes of points vary");
 	}
 
 	int length = ptA.size();
@@ -140,10 +132,6 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		test->valSecondPt = processInfo->originalProblem->getMostDeviatingConstraint(ptB).value;
 	}
 
-	//processInfo->logger.message(1) << " ====== Active constraints before "
-	//<< (double) test->getActiveConstraints().size() << " / "
-	//<< processInfo->originalProblem->getNumberOfNonlinearConstraints() << CoinMessageEol;
-
 	if (test->getActiveConstraints().size() == 0) // All constraints are fulfilled.
 	{
 		if (test->valFirstPt > test->valSecondPt)
@@ -158,29 +146,20 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		return (tmpPair);
 	}
 
-//try
-//{
 	int tempFEvals = processInfo->numFunctionEvals;
 	Result r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
-
-	//processInfo->logger.message(1) << " ======  Active constraints after"
-	//<< (double) test->getActiveConstraints().size() << " / "
-	//<< processInfo->originalProblem->getNumberOfNonlinearConstraints() << CoinMessageEol;
 
 	int resFVals = processInfo->numFunctionEvals - tempFEvals;
 	if (max_iter == Nmax)
 	{
-		processInfo->logger.message(1) << "    Warning, number of line search iterations " << (double) max_iter
-				<< " reached!" << CoinMessageEol;
+		processInfo->outputWarning(
+				"     Warning, number of line search iterations " + to_string(max_iter) + " reached!");
 	}
 	else
 	{
-		processInfo->logger.message(3) << "    Line search iterations: " << (double) max_iter
-				<< "   function evaluations: " << (double) resFVals << CoinMessageEol;
+		processInfo->outputInfo(
+				"     Line search iterations: " + to_string(max_iter) + "function evaluations: " + to_string(resFVals));
 	}
-
-//if (r1.first < 0.00001)
-//	r1.first = 0;
 
 	for (int i = 0; i < length; i++)
 	{
@@ -188,19 +167,10 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		ptNew2.at(i) = r1.second * ptA.at(i) + (1 - r1.second) * ptB.at(i);
 	}
 
-//if (r1.first > 1-0.5)
-//std::cout << "Line search value: " << r1.first << std::endl;
-
-//if (max_iter > settings->getIntSetting("LinesearchMaxIter", "Linesearch")) processInfo->logger.message(1)
-//		<< "Warning maximal number of line search iterations reached: " << (int) max_iter << CoinMessageEol;
-
 	auto validNewPt = processInfo->originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
 	if (!validNewPt) // ptNew Outside feasible region
 	{
-		//processInfo->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
-		//		processInfo->getCurrentIteration()->iterationNumber);
-
 		processInfo->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
 				processInfo->getCurrentIteration()->iterationNumber);
 
@@ -215,52 +185,5 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptNew2);
 		return (tmpPair);
 	}
-	/*}
-	 catch (std::exception &e)
-	 {
-
-	 processInfo->logger.message(0) << "Boost error while doing linesearch: " << e.what() << CoinMessageEol;
-	 //processInfo->logger.message(0) << "Returning solution point instead. " << CoinMessageEol;
-	 //std::vector<double> ptEmpty(0);
-
-	 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);
-
-	 std::cout << "NEJ" << std::endl;
-	 return (tmpPair);
-
-	 if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptA))
-	 {
-	 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);
-
-	 std::cout << "NEJ" << std::endl;
-	 return (tmpPair);
-	 }
-
-	 if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptB))
-	 {
-	 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptA, ptB);
-
-	 std::cout << "NEJ2" << std::endl;
-	 return (tmpPair);
-	 }
-
-	 }
-	 catch (...)
-	 {
-	 processInfo->logger.message(0) << "Boost error while doing linesearch." << CoinMessageEol;
-	 //processInfo->logger.message(0) << "Returning solution point instead. " << CoinMessageEol;
-
-	 if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptA)) //Returns the NLP point if not on the interior
-
-	 if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptA))
-	 {
-
-	 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptA);
-	 return (tmpPair);
-	 }
-
-	 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptB);
-	 return (tmpPair);
-	 }*/
 }
 

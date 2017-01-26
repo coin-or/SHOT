@@ -67,14 +67,8 @@ void TaskCheckDualSolutionCandidates::run()
 			}
 
 			auto tmpLine = boost::format("    New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
-			if (C.sourceType != E_DualSolutionSource::LPSolution)
-			{
-				processInfo->logger.message(2) << tmpLine.str() << CoinMessageEol;
-			}
-			else
-			{
-				processInfo->logger.message(4) << tmpLine.str() << CoinMessageEol;
-			}
+
+			processInfo->outputInfo("tmpLine.str()");
 
 		}
 	}

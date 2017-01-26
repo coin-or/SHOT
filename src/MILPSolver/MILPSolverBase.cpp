@@ -75,26 +75,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	auto originalProblem = processInfo->originalProblem;
 	std::vector < IndexValuePair > elements;
 
-	//int constrIdx = hyperplane.sourceConstraintIndex;
-	//auto point = hyperplane.generatedPoint;
-
-	if (hyperplane.sourceConstraintIndex != -1
-			&& !originalProblem->isConstraintNonlinear(hyperplane.sourceConstraintIndex))
-	{
-		processInfo->logger.message(1) << CoinMessageNewline
-				<< "Error: cutting plane added to linear constraint with index: " << hyperplane.sourceConstraintIndex
-				<< CoinMessageNewline << CoinMessageEol;
-	}
-
 	auto varNames = originalProblem->getVariableNames();
-	/*
-	 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
-
-
-	 for (int i = 0; i < point.size(); i++)
-	 {
-	 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
-	 }*/
 
 	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
@@ -102,8 +83,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	if (hyperplane.sourceConstraintIndex == -1
 			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
 	{
-		processInfo->logger.message(3) << " HP point generated for auxiliary objective function constraint"
-				<< CoinMessageEol;
+		processInfo->outputDebug("     HP point generated for auxiliary objective function constraint");
 
 		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 				&hyperplane.generatedPoint.at(0), -1, true);
@@ -121,12 +101,12 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 				elements.push_back(pair);
 				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
 
-				processInfo->logger.message(3) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
-						<< CoinMessageEol;
+				processInfo->outputDebug(
+						"     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
 			}
 		}
 
-		processInfo->logger.message(3) << " Gradient for obj.var.: -1" << CoinMessageEol;
+		processInfo->outputDebug("     Gradient for obj.var.: -1");
 
 		IndexValuePair pair;
 		pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
@@ -137,8 +117,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	}
 	else
 	{
-		processInfo->logger.message(3) << " HP point generated for constraint index" << hyperplane.sourceConstraintIndex
-				<< CoinMessageEol;
+		processInfo->outputDebug(
+				"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
 
 		auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
 				hyperplane.generatedPoint);
@@ -152,20 +132,11 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 			elements.push_back(pair);
 			constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
 
-			processInfo->logger.message(3) << " Gradient for variable" << varNames.at(nablag->indexes[i]) << ": "
-					<< nablag->values[i] << CoinMessageEol;
+			processInfo->outputDebug(
+					"     Gradient for variable" + varNames.at(nablag->indexes[i]) + ": "
+							+ to_string(nablag->values[i]));
 		}
 	}
-
-	/*
-	 for (auto E : elements)
-	 {
-	 processInfo->logger.message(3) << " HP coefficient for variable " << varNames.at(E.idx) << ": " << E.value
-	 << CoinMessageEol;
-	 }
-
-	 processInfo->logger.message(3) << " HP constant " << constant << CoinMessageEol;
-	 */
 
 	bool hyperplaneIsOk = true;
 
@@ -173,8 +144,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			processInfo->logger.message(0) << "    Warning: hyperplane not generated, NaN found in linear terms!"
-					<< CoinMessageEol;
+
+			processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}
@@ -213,9 +184,6 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
 
-	//processInfo->logger.message(1) << " HP point generated for auxiliary objective function constraint"
-	//		<< CoinMessageEol;
-
 	auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 			&hyperplane.generatedPoint.at(0), -1, true);
 	int number = processInfo->originalProblem->getNumberOfVariables();
@@ -231,13 +199,8 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 
 			elements.push_back(pair);
 			constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
-
-			//processInfo->logger.message(3) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
-			//		<< CoinMessageEol;
 		}
 	}
-
-	//processInfo->logger.message(1) << "   Gradient for obj.var.: -1" << CoinMessageEol;
 
 	IndexValuePair pair;
 	pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
@@ -246,15 +209,14 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	elements.push_back(pair);
 	constant += hyperplane.generatedPoint.at(pair.idx);
 
-	//processInfo->logger.message(1) << "    HP constant " << constant << CoinMessageEol;
 	bool hyperplaneIsOk = true;
 
 	for (auto E : elements)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			processInfo->logger.message(0) << "    Warning: hyperplane not generated, NaN found in linear terms!"
-					<< CoinMessageEol;
+			processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+
 			hyperplaneIsOk = false;
 			break;
 		}

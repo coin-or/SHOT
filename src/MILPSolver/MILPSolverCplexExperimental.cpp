@@ -208,14 +208,14 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 			if (settings->getIntSetting("LinesearchMethod", "Linesearch")
 					== static_cast<int>(ES_LinesearchMethod::Boost))
 			{
-				this->processInfo->logger.message(2) << "Boost linesearch implementation selected" << CoinMessageEol;
 				linesearchMethod = new LinesearchMethodBoost();
+				processInfo->outputDebug("Boost linesearch implementation selected.");
 			}
 			else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
 					== static_cast<int>(ES_LinesearchMethod::Bisection))
 			{
-				this->processInfo->logger.message(2) << "Bisection linesearch selected" << CoinMessageEol;
 				linesearchMethod = new LinesearchMethodBisection();
+				processInfo->outputDebug("Bisection linesearch implementation selected.");
 			}
 
 			tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
@@ -295,59 +295,11 @@ void CtCallbackI::main()
 	}
 	else
 	{
-		//std::cout << lazyBreakCtr << std::endl;
 		lazyiters++;
 	}
 
-	/*
-	 if (processInfo->lastLazyAddedIter < currIterNum)
-	 {
-	 //numLazyAdded = 0;
-
-	 //		int numAdd = min(300,(int)cplexLazyConstrs.size());
-	 int numAdd = 0.2 * cplexLazyConstrs.size();
-	 int numAdd2 = 0.2 * cplexLazyConstrs.size();
-
-	 for (int i = 0; i < numAdd; i++)
-	 {
-	 this->add(cplexLazyConstrs.at(cplexLazyConstrs.size() - i - 1));
-	 }
-
-	 for (int i = 0; i < numAdd2; i++)
-	 {
-	 this->add(cplexLazyConstrs.at(i));
-	 }
-
-	 std::cout << "Added " << numAdd + numAdd2 << " lazy constraints!" << std::endl;
-
-	 processInfo->lastLazyAddedIter = currIterNum;
-
-	 }
-	 */
-//	if (numLazyAdded > 500) return;
-	/*if (abs(this->getIncumbentObjValue()) < 1e70)
-	 {
-	 this->getIncumbentValues(tmpVals, cplexVars);
-	 std::cout << "     INCUMBENT: " << this->getIncumbentObjValue() << std::endl;
-	 }
-	 else
-	 {
-	 this->getValues(tmpVals, cplexVars);
-	 }*/
-
-//minConstrDev = min(mostDevConstr.value, minConstrDev);
-//minConstrDev = minConstrDev;
-	/*if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-	 {
-	 processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
-	 //		processInfo->logger.message(1) << "MILP point is on the boundary or interior!" << CoinMessageEol;
-	 //	return;
-	 }*/
-
 	if (mostDevConstr.value <= settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
 	{
-		//		processInfo->logger.message(1) << "MILP point is on the interior!" << CoinMessageEol;
-
 		auto tmpPrimal = processInfo->getPrimalBound();
 
 		processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
@@ -456,21 +408,6 @@ void CtCallbackI::main()
 		itersSinceNLPCall++;
 	}
 
-	/*else if (lazyiters > 100 && mostDevConstr.value < minConstrDev * 10.0)
-	 {
-	 processInfo->logger.message(1) << "Using minconstrdev!" << CoinMessageEol;
-	 isBusy = false;
-	 return;
-	 }*/
-	/*else if(mostDevConstr.value > 0 && mostDevConstr.value < 10^(-12)) //Kommentera för tls
-	 {
-	 processInfo->logger.message(1) << "MILP point is on the boundary!" << CoinMessageEol;
-
-	 isBusy = false;
-	 return;
-	 }*/
-//else
-//{
 	std::vector < Hyperplane > hyperplanes;
 	Hyperplane hyperplane;
 
@@ -515,13 +452,13 @@ void CtCallbackI::main()
 		if (tmpMostDevConstr.value < 0)
 		{
 			isBusy = false;
-			processInfo->logger.message(1) << "    Hyperplane point is on the interior." << CoinMessageEol;
+			processInfo->outputWarning("     Hyperplane point is on the interior.");
 
 			return;
 		}
 		else
 		{
-			processInfo->logger.message(6) << "    Hyperplane point is on the exterior." << CoinMessageEol;
+			processInfo->outputDebug("     Hyperplane point is on the exterior.");
 
 			hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
 			hyperplane.generatedPoint = xNewc;
@@ -583,49 +520,24 @@ void CtCallbackI::main()
 				if (tmpMostDevConstr.value < 0)
 				{
 					isBusy = false;
-					processInfo->logger.message(1) << "Hyperplane point is on the interior." << CoinMessageEol;
+
+					processInfo->outputWarning("     Hyperplane point is on the interior.");
 
 					return;
 				}
 				else
 				{
-					processInfo->logger.message(6) << "Hyperplane point is on the exterior." << CoinMessageEol;
+					processInfo->outputDebug("     Hyperplane point is on the exterior.");
 
 					hyperplane2.sourceConstraintIndex = tmpMostDevConstr.idx;
 					hyperplane2.generatedPoint = xNewc;
 
 				}
 			}
-
-			//hyperplanes.push_back(hyperplane2);
-
 		}
 	}
 
-	/*
-	 if (i == 0 && currIter->isMILP())
-	 {
-	 hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
-	 }
-	 else if (currIter->isMILP())
-	 {
-	 hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
-	 }
-	 else
-	 {
-	 hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
-	 }*/
-
-//processInfo->hyperplaneWaitingList.push_back(hyperplane);
 	auto varNames = processInfo->originalProblem->getVariableNames();
-	/*
-	 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
-
-
-	 for (int i = 0; i < point.size(); i++)
-	 {
-	 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
-	 }*/
 
 	for (auto hp : hyperplanes)
 	{
@@ -636,8 +548,8 @@ void CtCallbackI::main()
 		if (hp.sourceConstraintIndex == -1
 				|| hp.sourceConstraintIndex == processInfo->originalProblem->getNonlinearObjectiveConstraintIdx())
 		{
-			processInfo->logger.message(3) << " HP point generated for auxiliary objective function constraint"
-					<< CoinMessageEol;
+
+			processInfo->outputDebug("     HP point generated for auxiliary objective function constraint");
 
 			auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 					&hp.generatedPoint.at(0), -1, true);
@@ -653,13 +565,8 @@ void CtCallbackI::main()
 
 					elements.push_back(pair);
 					constant += -tmpArray[i] * hp.generatedPoint.at(i);
-
-					processInfo->logger.message(3) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
-							<< CoinMessageEol;
 				}
 			}
-
-			processInfo->logger.message(3) << " Gradient for obj.var.: -1" << CoinMessageEol;
 
 			IndexValuePair pair;
 			pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
@@ -670,8 +577,6 @@ void CtCallbackI::main()
 		}
 		else
 		{
-			processInfo->logger.message(3) << " HP point generated for constraint index" << hp.sourceConstraintIndex
-					<< CoinMessageEol;
 
 			auto nablag = processInfo->originalProblem->calculateConstraintFunctionGradient(hp.sourceConstraintIndex,
 					hp.generatedPoint);
@@ -685,21 +590,8 @@ void CtCallbackI::main()
 
 				elements.push_back(pair);
 				constant += -nablag->values[i] * hp.generatedPoint.at(nablag->indexes[i]);
-
-				processInfo->logger.message(3) << " Gradient for variable" << varNames.at(nablag->indexes[i]) << ": "
-						<< nablag->values[i] << CoinMessageEol;
 			}
 		}
-
-		/*
-		 for (auto E : elements)
-		 {
-		 processInfo->logger.message(3) << " HP coefficient for variable " << varNames.at(E.idx) << ": " << E.value
-		 << CoinMessageEol;
-		 }
-
-		 processInfo->logger.message(3) << " HP constant " << constant << CoinMessageEol;
-		 */
 
 		bool hyperplaneIsOk = true;
 
@@ -707,8 +599,8 @@ void CtCallbackI::main()
 		{
 			if (E.value != E.value) //Check for NaN
 			{
-				processInfo->logger.message(0) << "Warning: hyperplane not generated, NaN found in linear terms!"
-						<< CoinMessageEol;
+				processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+
 				hyperplaneIsOk = false;
 				break;
 			}
@@ -831,8 +723,7 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 		}
 		else
 		{
-			processInfo->logger.message(1) << "Error variable type " << tmpTypes.at(i) << " for "
-					<< tmpNames.at(i).c_str() << CoinMessageEol;
+			processInfo->outputWarning("Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -1085,79 +976,31 @@ int MILPSolverCplexExperimental::addLinearConstraint(std::vector<IndexValuePair>
 	}
 	catch (IloException& e)
 	{
-		processInfo->logger.message(2) << "Error when adding linear constraint:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
+		processInfo->outputError("Error when adding linear constraint:", e.getMessage());
 
 		return (-1);
 	}
 
 	return (cplexInstance.getNrows() - 1);
 
-//std::cout << "Last nonlazy: " << this->firstNonLazyHyperplane << std::endl;
-
-//if (processInfo->getCurrentIteration()->iterationNumber == 10)
-//if (settings->getBoolSetting("DelayedConstraints", "MILP") && currIter->isMILP() && currIter->MILPSolutionLimitUpdated)
-
 	if (processInfo->getCurrentIteration()->iterationNumber - iterLastLazyConvert > 10)
 	{
-		//if (!processInfo->getCurrentIteration()->isMILP() || !(settings->getBoolSetting("DelayedConstraints", "MILP") && processInfo->getCurrentIteration()->MILPSolutionLimitUpdated))
-		//{
 		std::vector<int> idxs;
 
-		//int numCons = processInfo->originalProblem->getNumberOfConstraints();
-
-		/*idxs.push_back(1);
-		 idxs.push_back(2);
-		 idxs.push_back(3);*/
-
 		int percentage = max(20.0, ceil(processInfo->getCurrentIteration()->numHyperplanesAdded * 0.05));
-
-		//std::cout << "perc: " << percentage << std::endl;
 
 		for (int i = this->firstNonLazyHyperplane; i < cplexConstrs.getSize() - percentage; i++)
 		{
 			idxs.push_back(i);
 		}
 
-		/*
-		 //UtilityFunctions::displayVector(lastSolutionConstrSlacks);
-		 signed int numCheck = (lastSolutionConstrSlacks.size() - percentage);
-
-		 //std::cout << "perc: " << numCheck << std::endl;
-
-		 for (int i = 0; i < numCheck; i++)
-		 {
-		 //std::cout << i << std::endl;
-		 if (abs(lastSolutionConstrSlacks.at(i)) > 1)
-		 {
-		 idxs.push_back(this->firstNonLazyHyperplane + i);
-
-		 }
-
-		 std::cout << "Slack: " << abs(lastSolutionConstrSlacks.at(i)) << std::endl;
-		 }*/
-
-		//std::cout << "finished: "<< std::endl;
-		/*for (int i = 0; i < lastLazyUpdateConstrSlacks.size(); i++)
-		 {
-		 if (abs(lastLazyUpdateConstrSlacks.at(i)-lastSolutionConstrSlacks.at(i)) > 1.0)
-		 {
-		 idxs.push_back(this->firstNonLazyHyperplane + i);
-		 std::cout << "Slack change: " << abs(lastLazyUpdateConstrSlacks.at(i)-lastSolutionConstrSlacks.at(i)) << std::endl;
-		 }
-		 }*/
-
 		if (idxs.size() > 0)
 		{
-			//changeConstraintsToLazy(idxs);
-
 			this->firstNonLazyHyperplane = idxs.at(idxs.size() - 1) + 1;
 			iterLastLazyConvert = processInfo->getCurrentIteration()->iterationNumber;
 			lastLazyUpdateConstrSlacks = lastSolutionConstrSlacks;
 		}
-		//}
 	}
-//UtilityFunctions::displayVector(idxs);
 
 	if (cplexLazyConstrs.getSize() > 0) cplexInstance.addLazyConstraints(cplexLazyConstrs);
 
@@ -1179,7 +1022,7 @@ void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 
 		if (activate)
 		{
-			processInfo->logger.message(3) << "Activating MILP strategy" << CoinMessageEol;
+			processInfo->outputDebug("     Activating MILP strategy");
 
 			for (int i = 0; i < processInfo->originalProblem->getNumberOfVariables(); i++)
 			{
@@ -1203,7 +1046,7 @@ void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 		}
 		else
 		{
-			processInfo->logger.message(3) << "Activating LP strategy" << CoinMessageEol;
+			processInfo->outputDebug("     Activating LP strategy");
 			for (int i = 0; i < processInfo->originalProblem->getNumberOfVariables(); i++)
 			{
 				if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -1220,10 +1063,8 @@ void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 	}
 	catch (IloException& e)
 	{
-		if (activate) processInfo->logger.message(2) << "Error when activating discrete variables:"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
-		else processInfo->logger.message(2) << "Error when deactivating discrete variables:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		if (activate) processInfo->outputError("Error when activating discrete variables", e.getMessage());
+		else processInfo->outputError("Error when deactivating discrete variables", e.getMessage());
 	}
 }
 
@@ -1277,14 +1118,13 @@ E_ProblemSolutionStatus MILPSolverCplexExperimental::getSolutionStatus()
 		}
 		else
 		{
-			processInfo->logger.message(1) << "MILP solver return status unknown = " << status << CoinMessageEol;
+			processInfo->outputError("MILP solver return status unknown = " + status);
 			MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining solution status:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when obtaining solution status:", e.getMessage());
 
 	}
 
@@ -1316,87 +1156,18 @@ E_ProblemSolutionStatus MILPSolverCplexExperimental::solveProblem()
 			modelUpdated = false;
 		}
 
-		/*
-		 int currSolLim = getSolutionLimit();
-
-		 IloInt tunestat = cplexInstance.tuneParam();
-
-		 setSolutionLimit(currSolLim);
-		 setTimeLimit(10000);
-
-		 try
-		 {
-		 cplexInstance.writeParam("test.param");
-		 }
-		 catch (IloException &e)
-		 {
-		 processInfo->logger.message(0) << "Error when saving parameters to file:" << CoinMessageNewline
-		 << e.getMessage() << CoinMessageEol;
-
-		 }*/
-
-		/*if (tunestat == IloCplex::TuningComplete) cout << "Tuning complete." << endl;
-		 else if (tunestat == IloCplex::TuningAbort) cout << "Tuning abort." << endl;
-		 else if (tunestat == IloCplex::TuningTimeLim) cout << "Tuning time limit." << endl;
-		 else cout << "Tuning status unknown." << endl;
-		 */
-		/*
-		 if (processInfo->iterations.size() > 1)
-		 {
-		 std::cout << "CO: " << cplexInstance.getCutoff() << " pb: "
-		 << processInfo->getPreviousIteration()->objectiveValue << " diff: "
-		 << abs(cplexInstance.getCutoff() - processInfo->getPreviousIteration()->objectiveValue)
-		 << std::endl;
-		 }
-
-		 if (processInfo->iterationCount > 1
-		 && abs(cplexInstance.getCutoff() - processInfo->getPreviousIteration()->objectiveValue) < 0.1)
-		 {
-		 std::cout << "XCO: " << cplexInstance.getCutoff() << " pb: "
-		 << processInfo->getPreviousIteration()->objectiveValue << std::endl;
-		 cplexInstance.setParam(IloCplex::MIPEmphasis, 3 );
-		 }
-		 else
-		 {
-		 cplexInstance.setParam(IloCplex::MIPEmphasis, 0);
-		 }*/
-
-		processInfo->logger.message(3) << " Solving MILP..." << CoinMessageEol;
 		double timeStart = processInfo->getElapsedTime("Total");
 
-		/*// Set branching priorities
-		 if (processInfo->getCurrentIteration()->iterationNumber == 1)
-		 {
-		 auto nonlinearVariables =
-		 processInfo->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap();
-
-		 int numVar = cplexVars.getSize();
-
-		 IloNumArray tmpPriorities(cplexEnv);
-		 tmpPriorities.setSize(numVar);
-
-		 for (auto V : nonlinearVariables)
-		 {
-		 std::cout << "F " << V.first << " S " << V.second << std::endl;
-		 tmpPriorities[V.second] = 2;
-		 }
-
-		 cplexInstance.setPriorities(cplexVars, tmpPriorities);
-		 }*/
 		cplexInstance.solve();
 		double timeEnd = processInfo->getElapsedTime("Total");
 
 		iterDurations.push_back(timeEnd - timeStart);
-		processInfo->logger.message(3) << " MILP solved..." << CoinMessageEol;
 		MILPSolutionStatus = getSolutionStatus();
-		processInfo->logger.message(3) << " Solution status obtained: << " << (int) MILPSolutionStatus
-				<< CoinMessageEol;
 
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(2) << "Error when solving MILP/LP problem:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
+		processInfo->outputError("Error when solving MILP/LP problem", e.getMessage());
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -1404,12 +1175,6 @@ E_ProblemSolutionStatus MILPSolverCplexExperimental::solveProblem()
 
 	return (MILPSolutionStatus);
 }
-/*
- double MILPSolverCplexExperimental::getObjectiveValue()
- {
- double objval = getObjectiveValue(0);
- return (objval);
- }*/
 
 int MILPSolverCplexExperimental::increaseSolutionLimit(int increment)
 {
@@ -1422,9 +1187,7 @@ int MILPSolverCplexExperimental::increaseSolutionLimit(int increment)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when increasing solution limit:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
-
+		processInfo->outputError("Error when increasing solution limit", e.getMessage());
 	}
 
 	return (sollim);
@@ -1445,8 +1208,7 @@ void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when setting solution limit:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
+		processInfo->outputError("Error when setting solution limit", e.getMessage());
 	}
 }
 
@@ -1460,19 +1222,13 @@ int MILPSolverCplexExperimental::getSolutionLimit()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining solution limit:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
+
+		processInfo->outputError("Error when obtaining solution limit", e.getMessage());
 
 	}
 
 	return (solLim);
 }
-
-/*
- std::vector<SolutionPoint> MILPSolverCplexExperimental::getAllVariableSolutions()
- {
- return (MILPSolverBase::getAllVariableSolutions());
- }*/
 
 std::vector<double> MILPSolverCplexExperimental::getVariableSolution(int solIdx)
 {
@@ -1500,8 +1256,7 @@ std::vector<double> MILPSolverCplexExperimental::getVariableSolution(int solIdx)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when reading solution with index " << solIdx << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when reading solution with index", e.getMessage());
 	}
 
 	return (solution);
@@ -1519,9 +1274,7 @@ int MILPSolverCplexExperimental::getNumberOfSolutions()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining number of solutions:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
-
+		processInfo->outputError("Error when obtaining number of solutions", e.getMessage());
 	}
 
 	return (numSols);
@@ -1535,8 +1288,9 @@ double MILPSolverCplexExperimental::getObjectiveValue(int solIdx)
 
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
-		processInfo->logger.message(0) << "Cannot obtain solution with index " << solIdx
-				<< " since the problem is LP/QP!" << CoinMessageEol;
+
+		processInfo->outputError(
+				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
 		return (objVal);
 	}
@@ -1555,8 +1309,9 @@ double MILPSolverCplexExperimental::getObjectiveValue(int solIdx)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining objective value for solution index " << solIdx << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+
+		processInfo->outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
+				e.getMessage());
 
 	}
 
@@ -1597,14 +1352,17 @@ void MILPSolverCplexExperimental::populateSolutionPool()
 
 		if (poolSizeAfter > poolSizeBefore)
 		{
-			processInfo->logger.message(3) << "    Solution pool populated from: " << poolSizeBefore << " to "
-					<< poolSizeAfter << CoinMessageEol;
+
+			processInfo->outputDebug(
+					"     Solution pool populated from: " + to_string(poolSizeBefore) + " to "
+							+ to_string(poolSizeAfter));
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when populating solution pool:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
+
+		processInfo->outputError("Error when populating solution pool", e.getMessage());
+
 		processInfo->stopTimer("PopulateSolutionPool");
 
 	}
@@ -1627,9 +1385,7 @@ void MILPSolverCplexExperimental::setTimeLimit(double seconds)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when setting time limit:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when setting time limit", e.getMessage());
 	}
 }
 
@@ -1640,21 +1396,19 @@ void MILPSolverCplexExperimental::setCutOff(double cutOff)
 		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
 		{
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
-			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for minimization."
-					<< CoinMessageEol;
+			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+
 		}
 		else
 		{
 			cplexInstance.setParam(IloCplex::CutLo, cutOff);
-			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for maximization."
-					<< CoinMessageEol;
+			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when setting cut off value:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when setting cut off value", e.getMessage());
 	}
 }
 
@@ -1676,12 +1430,10 @@ void MILPSolverCplexExperimental::addMIPStart(std::vector<double> point)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(1) << "Error when adding MIP starting point:" << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->logger.message(3) << "Added MIP starting point" << CoinMessageEol;
-
+	processInfo->outputInfo("    Added MIP starting point.");
 }
 
 void MILPSolverCplexExperimental::deleteMIPStarts()
@@ -1697,11 +1449,10 @@ void MILPSolverCplexExperimental::deleteMIPStarts()
 		}
 		catch (IloException &e)
 		{
-			processInfo->logger.message(1) << "Error when deleting MIP starting points:" << CoinMessageNewline
-					<< e.getMessage() << CoinMessageEol;
+			processInfo->outputError("Error when deleting MIP starting points", e.getMessage());
 		}
 
-		processInfo->logger.message(3) << "Deleted " << numStarts << " MIP starting points" << CoinMessageEol;
+		processInfo->outputInfo("    Deleted " + to_string(numStarts) + " MIP starting points.");
 	}
 }
 
@@ -1722,9 +1473,7 @@ void MILPSolverCplexExperimental::writeProblemToFile(std::string filename)
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when saving model to file:" << CoinMessageNewline << e.getMessage()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when saving model to file", e.getMessage());
 	}
 }
 
@@ -1749,20 +1498,18 @@ void MILPSolverCplexExperimental::changeConstraintToLazy(GeneratedHyperplane &hy
 			hyperplane.isLazy = true;
 			hyperplane.convertedToLazyIter = processInfo->getCurrentIteration()->iterationNumber;
 
-			processInfo->logger.message(3) << "    Changed constraint " << hyperplane.generatedConstraintIndex
-					<< "generated in iteration" << hyperplane.generatedIter << "to lazy." << CoinMessageEol;
+			processInfo->outputInfo(
+					"     Changed constraint " + to_string(hyperplane.generatedConstraintIndex)
+							+ "generated in iteration" + to_string(hyperplane.generatedIter) + "to lazy.");
 		}
 		catch (IloException &e)
 		{
-			processInfo->logger.message(1) << e.getMessage() << CoinMessageEol;
+			processInfo->outputError(e.getMessage());
 		}
-
-		//std::cout << "End  conversion to lazy "<< std::endl;
-		//std::cout << "Number stop " << cplexConstrs.getSize()<< std::endl;
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << e.getMessage() << CoinMessageEol;
+		processInfo->outputError(e.getMessage());
 	}
 }
 
@@ -1780,8 +1527,8 @@ void MILPSolverCplexExperimental::updateVariableBound(int varIndex, double lower
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when updating variable bounds for variable index" << varIndex << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when updating variable bounds for variable index" + to_string(varIndex),
+				e.getMessage());
 	}
 }
 
@@ -1796,8 +1543,8 @@ pair<double, double> MILPSolverCplexExperimental::getCurrentVariableBounds(int v
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining variable bounds for variable index" << varIndex << ":"
-				<< CoinMessageNewline << e.getMessage() << CoinMessageEol;
+		processInfo->outputError("Error when obtaining variable bounds for variable index" + to_string(varIndex),
+				e.getMessage());
 	}
 	return (tmpBounds);
 }
@@ -1824,9 +1571,7 @@ double MILPSolverCplexExperimental::getDualObjectiveValue()
 	}
 	catch (IloException &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining dual objective value: " << CoinMessageNewline
-				<< e.getMessage() << CoinMessageEol;
-
+		processInfo->outputError("Error when obtaining dual objective value", e.getMessage());
 	}
 
 	return (objVal);

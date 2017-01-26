@@ -99,37 +99,8 @@ bool PrimalSolutionStrategyFixedNLP::createProblem(OSInstance * origInstance)
 {
 	NLPProblem = new OptProblemNLPRelaxed();
 	NLPProblem->reformulate(origInstance);
-	//NLPSolver->osinstance = NLPProblem->getProblemInstance();
-	processInfo->logger.message(2) << "NLP problem for primal bound created" << CoinMessageEol;
 
-	// Run relaxed once and round, and test
-	int numVar = processInfo->originalProblem->getNumberOfVariables();
-
-	bool isSolved;
-	/*
-	 if (!isOriginalRelaxedPointTested)	// Tests to solve the integer relaxed problem
-	 {
-	 NLPSolver->osinstance = NLPProblem->getProblemInstance();
-	 isSolved = solveProblem();
-
-	 if (isSolved)
-	 {
-	 std::vector<double> tmpPoint(numVar);
-
-
-	 int numNLPVars = NLPProblem->getNumberOfVariables();
-
-	 for (int i = 0; i < numNLPVars; i++)
-	 {
-	 tmpPoint.at(i) = NLPSolver->osresult->getVarValue(0, i);
-	 }
-
-	 //checkPoint(tmpPoint,"NLP");
-	 }
-
-	 isOriginalRelaxedPointTested = true;
-	 }
-	 */
+	processInfo->outputDebug("NLP problem for primal heuristics created.");
 
 	return true;
 }
@@ -146,20 +117,22 @@ bool PrimalSolutionStrategyFixedNLP::solveProblem()
 	}
 	catch (std::exception &e)
 	{
-		return false;
+		processInfo->outputError("     NLPFIX:     Error when solving Ipopt relaxed problem!", e.what());
+		return (false);
 	}
 	catch (...)
 	{
-		processInfo->logger.message(1) << "Error when solving IPOpt relaxed problem!" << CoinMessageEol;
-		return false;
+		processInfo->outputError("     NLPFIX:     Error when solving Ipopt relaxed problem!");
+		return (false);
 	}
 
 	if (NLPSolver->osresult->getSolutionStatusType(0) == "infeasible" || NLPSolver->osresult->getSolutionNumber() == 0)
 	{
-		return false;
+		processInfo->outputError("     NLPFIX:     No solution found to Ipopt problem!");
+		return (false);
 	}
 
-	return true;
+	return (true);
 }
 
 void PrimalSolutionStrategyFixedNLP::saveProblemModelToFile(std::string fileName)
@@ -281,7 +254,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 	if (solPts.size() == 0)
 	{
 		processInfo->itersMILPWithoutNLPCall++;
-		//processInfo->logger.message(1) << "    No NLP call performed" << CoinMessageEol;
 		return (false);
 
 	}
@@ -327,10 +299,26 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 			 UtilityFunctions::displayVector(processInfo->dualSolutions.back().point);
 			 */
-			auto error = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint).value;
+			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
+			std::string tmpConstr;
 
-			processInfo->logger.message(1) << "    NLP call objective: " << tmpObj << ", max viol.: " << error
-					<< ", duration: " << timeEnd - timeStart << " s" << CoinMessageEol;
+			if (mostDevConstr.idx != -1)
+			{
+				tmpConstr = processInfo->originalProblem->getConstraintNames()[mostDevConstr.idx] + ": "
+						+ ((boost::format("%.5f") % mostDevConstr.value).str());
+			}
+			else
+			{
+				tmpConstr = "";
+			}
+
+			std::string solExpr = ((boost::format("duration: %.3f s") % (timeEnd - timeStart)).str());
+			std::string tmpObjVal = ((boost::format("%.3f") % tmpObj).str());
+
+			auto tmpLine = boost::format("%|-4s| %|-10s|  %|=10s|%|=30s| %|7s| %|-14s|") % "" % "NLPFIX:" % solExpr
+					% tmpObjVal % "" % tmpConstr;
+
+			processInfo->outputSummary(tmpLine.str());
 
 			int iters = max(ceil(settings->getIntSetting("NLPCallMaxIter", "PrimalBound") * 0.98), originalNLPIter);
 			settings->updateSetting("NLPCallMaxIter", "PrimalBound", iters);
@@ -345,8 +333,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			settings->updateSetting("NLPCallMaxIter", "PrimalBound", iters);
 			double interval = 1.1 * settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound");
 			settings->updateSetting("NLPCallMaxElapsedTime", "PrimalBound", interval);
-			processInfo->logger.message(1) << "    Unsuccessful NLP call, duration:  " << timeEnd - timeStart << " s"
-					<< " new NLP interval: " << interval << " s and " << iters << " iters." << CoinMessageEol;
+			processInfo->outputInfo(
+					"    Unsuccessful NLP call, duration:  " + to_string(timeEnd - timeStart) + " s. New NLP interval: "
+							+ to_string(interval) + " s or " + to_string(iters) + " iters.");
 		}
 
 		processInfo->itersMILPWithoutNLPCall = 0;

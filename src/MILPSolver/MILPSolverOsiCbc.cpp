@@ -58,8 +58,7 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 		}
 		else
 		{
-			processInfo->logger.message(1) << "Error variable type " << tmpTypes.at(i) << " for "
-					<< tmpNames.at(i).c_str() << CoinMessageEol;
+			processInfo->outputWarning("Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -167,110 +166,8 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 			else
 			{
 			}
-			//coinModel->
 		}
 	}
-
-//osiSolver->loadFromCoinModel(*coinModel);
-//cbcModel = CbcModel(*osiSolver);
-
-////OsiClpSolverInterface osiModel;
-
-//int numLinConstrs = origInstance->getConstraintNumber() - origInstance->getNumberOfNonlinearConstraints();
-//int numNonLinConstrs = origInstance->getNumberOfNonlinearConstraints();
-//int numCon = origInstance->getConstraintNumber();
-////int *idxNonlinear = origInstance->getNonlinearExpressionTreeIndexes();
-
-//setVariableCharacteristics(origInstance);
-
-//origInstance->initForAlgDiff();
-
-//// Copies the linear constraints to the OSI instance
-//int row_nonz = 0;
-//int obj_nonz = 0;
-//int varIdx = 0;
-//SparseMatrix *m_linearConstraintCoefficientsInRowMajor = origInstance->getLinearConstraintCoefficientsInRowMajor();
-
-//CoinPackedMatrix * matrix = new CoinPackedMatrix(false, 0, 0);
-//matrix->setDimensions(0, numVariables);
-
-//std::vector<double>rowLBs;
-//std::vector<double>rowUBs;
-
-//for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
-//{
-//	// Only use constraints that don't contain a nonlinear part
-//	if (origInstance->getNonlinearExpressionTree(rowIdx) == NULL)
-//	{
-//		if (origInstance->instanceData->linearConstraintCoefficients != NULL &&
-//			origInstance->instanceData->linearConstraintCoefficients->numberOfValues > 0)
-//		{
-//			row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
-
-//			//vector<int> varIndexes;
-//			//vector<double> varElements;
-
-//			CoinPackedVector row;
-
-//			for (int j = 0; j < row_nonz; j++)
-//			{
-//				varIdx = m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-//				row.insert(varIdx, m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j]);
-//			}
-
-//			matrix->appendRow(row);
-
-//			// Adds the bounds of the rows
-//			rowLBs.push_back(origInstance->instanceData->constraints->con[rowIdx]->lb);
-//			rowUBs.push_back(origInstance->instanceData->constraints->con[rowIdx]->ub);
-//		}
-//	}
-//}
-
-//// Gets the objective function coefficients in the right form
-////SparseVector *objectiveCoeffs = origInstance->getObjectiveCoefficients()[0];
-////vector<double> objectiveCoeffsDbl(objectiveCoeffs->number);
-////std::copy(objectiveCoeffs->values, objectiveCoeffs->values + objectiveCoeffs->number, objectiveCoeffsDbl.begin());
-
-//auto dense = origInstance->getDenseObjectiveCoefficients()[0];
-////vector<double> objectiveCoeffsDbl(objectiveCoeffs->number);
-////std::copy(objectiveCoeffs->values, objectiveCoeffs->values + objectiveCoeffs->number, objectiveCoeffsDbl.begin());
-
-//// Adds everything to the OSI instance
-///*auto test = origInstance->getVariableLowerBounds();
-//auto test2 = origInstance->getVariableUpperBounds();
-//auto test3 = &rowLBs[0];
-//auto test4 = &rowUBs[0];
-//*/
-
-//osiModel.loadProblem(*matrix, origInstance->getVariableLowerBounds(),
-//	origInstance->getVariableUpperBounds(), &dense[0], &rowLBs[0], &rowUBs[0]);
-
-//// Adds the variables
-//for (int i = 0; i < numVariables; i++)
-//{
-//	Variable *tmpVar = origInstance->instanceData->variables->var[i];
-
-//	// Sets the variable name
-//	osiModel.setColName(i, tmpVar->name);
-
-//	if (tmpVar->type == 'C')
-//	{
-//		osiModel.setContinuous(i);
-//	}
-//	else if (tmpVar->type == 'I' || tmpVar->type == 'B')
-//	{
-//		osiModel.setInteger(i);
-//	}
-//	else
-//	{
-//		processInfo->logger.message(1) << "ERROR in variable definition!" << CoinMessageEol;
-//	}
-//}
-
-//osiModel.writeLp("c:\\test", "lp");
-
-//osiModel.initialSolve();
 
 	osiInterface->loadFromCoinModel(*coinModel);
 	cbcModel = new CbcModel(*osiInterface);
@@ -278,12 +175,6 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 	cbcModel->setLogLevel(0);
 	osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
 
-	//cbcModel->initialSolve();
-
-	/*cbcModel = new CbcModel(*osiInterface);
-	 CbcMain0 (*cbcModel);
-	 cbcModel->setLogLevel(0);
-	 cbcModel->solver()->setHintParam(OsiDoReducePrint, false, OsiHintTry);*/
 	return (true);
 }
 
@@ -305,19 +196,6 @@ int MILPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements, 
 	if (isGreaterThan) osiInterface->addRow(cut, -constant, osiInterface->getInfinity());
 	else osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant);
 
-	/*
-	 //CoinPackedVector cut;
-	 int rowNum = coinModel->numberRows();
-
-	 for (int i = 0; i < elements.size(); i++)
-	 {
-	 coinModel->setElement(rowNum, elements.at(i).idx, elements.at(i).value);
-	 }
-
-	 coinModel->setRowUpper(rowNum, -constant);
-	 */
-//osiSolver->loadFromCoinModel(*coinModel);
-//cbcModel = CbcModel(*osiSolver);
 	return (osiInterface->getNumRows() - 1);
 }
 
@@ -328,7 +206,7 @@ void MILPSolverOsiCbc::activateDiscreteVariables(bool activate)
 
 	if (activate)
 	{
-		processInfo->logger.message(3) << "Activating MILP strategy" << CoinMessageEol;
+		processInfo->outputDebug("Activating MILP strategy");
 
 		for (int i = 0; i < numVar; i++)
 		{
@@ -342,7 +220,7 @@ void MILPSolverOsiCbc::activateDiscreteVariables(bool activate)
 	}
 	else
 	{
-		processInfo->logger.message(3) << "Activating LP strategy" << CoinMessageEol;
+		processInfo->outputDebug("Activating LP strategy");
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -422,7 +300,7 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::getSolutionStatus()
 	 }*/
 	else
 	{
-		processInfo->logger.message(0) << "MILP solver return status unknown." << CoinMessageEol;
+		processInfo->outputError("MILP solver return status unknown.");
 	}
 
 	return (MILPSolutionStatus);
@@ -435,17 +313,6 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::solveProblem()
 
 	try
 	{
-		processInfo->logger.message(4) << " Solving MILP..." << CoinMessageEol;
-		//osiInterface->loadFromCoinModel(*coinModel);
-
-		/*
-		 cbcModel = new CbcModel(*osiInterface);
-		 CbcMain0 (*cbcModel);
-		 cbcModel->setLogLevel(0);
-		 cbcModel->solver()->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-		 */
-		//cbcModel->initialSolve();
-		//CbcMain0 (*cbcModel);
 		cbcModel->solver()->setHintParam(OsiDoReducePrint, false, OsiHintTry);
 
 		cbcModel = new CbcModel(*osiInterface);
@@ -455,14 +322,13 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::solveProblem()
 		CbcMain0 (*cbcModel);
 		cbcModel->setLogLevel(0);
 		cbcModel->branchAndBound();
-		processInfo->logger.message(4) << " MILP solved..." << CoinMessageEol;
 
 		MILPSolutionStatus = getSolutionStatus();
 
 	}
 	catch (exception &e)
 	{
-		processInfo->logger.message(0) << e.what() << CoinMessageEol;
+		processInfo->outputError(e.what());
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -491,18 +357,6 @@ int MILPSolverOsiCbc::getSolutionLimit()
 	return (this->solLimit);
 }
 
-/*std::vector<SolutionPoint> MILPSolverOsiCbc::getAllVariableSolutions()
- {
- std::vector < SolutionPoint > allSolutions;
- return allSolutions;
- }*/
-
-/*
- std::vector<SolutionPoint> MILPSolverOsiCbc::getAllVariableSolutions()
- {
- return (MILPSolverBase::getAllVariableSolutions());
- }*/
-
 void MILPSolverOsiCbc::setTimeLimit(double seconds)
 {
 }
@@ -511,26 +365,20 @@ void MILPSolverOsiCbc::setCutOff(double cutOff)
 {
 	try
 	{
-		//cbcModel->setCutoff(cutOff);
 		this->cutOff = cutOff;
 
 		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
 		{
-			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for minimization."
-					<< CoinMessageEol;
+			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
-
-			processInfo->logger.message(3) << "Setting cutoff value to " << cutOff << " for maximization."
-					<< CoinMessageEol;
+			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (exception &e)
 	{
-		processInfo->logger.message(0) << "Error when setting cut off value:" << CoinMessageNewline << e.what()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when setting cut off value", e.what());
 	}
 }
 
@@ -543,28 +391,24 @@ void MILPSolverOsiCbc::writeProblemToFile(std::string filename)
 {
 	try
 	{
-		//osiInterface->loadFromCoinModel(*coinModel);
 		osiInterface->writeLp(filename.c_str(), "lp");
 	}
 	catch (exception &e)
 	{
-		processInfo->logger.message(0) << "Error when saving model to file:" << CoinMessageNewline << e.what()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when saving model to file", e.what());
 	}
 }
 
 double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 {
-
 	bool isMILP = getDiscreteVariableStatus();
 
 	double objVal = NAN;
 
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
-		processInfo->logger.message(0) << "Cannot obtain solution with index " << solIdx
-				<< " since the problem is LP/QP!" << CoinMessageEol;
+		processInfo->outputError(
+				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
 		return (objVal);
 	}
@@ -597,18 +441,17 @@ double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 	}
 	catch (exception &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining objective value for solution index " << solIdx << ":"
-				<< CoinMessageNewline << e.what() << CoinMessageEol;
+		processInfo->outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
+				e.what());
 
 	}
 
-//std::cout << "Obj: " << objVal << std::endl;
 	return (objVal);
 }
 
 void MILPSolverOsiCbc::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
 {
-
+	processInfo->outputError("Lazy constraints not implemented in Cbc interface!");
 }
 
 void MILPSolverOsiCbc::deleteMIPStarts()
@@ -644,8 +487,7 @@ std::vector<double> MILPSolverOsiCbc::getVariableSolution(int solIdx)
 	}
 	catch (exception&e)
 	{
-		processInfo->logger.message(0) << "Error when reading solution with index " << solIdx << ":"
-				<< CoinMessageNewline << e.what() << CoinMessageEol;
+		processInfo->outputError("Error when reading solution with index " + to_string(solIdx), e.what());
 	}
 	return (solution);
 }
@@ -662,9 +504,7 @@ int MILPSolverOsiCbc::getNumberOfSolutions()
 	}
 	catch (exception &e)
 	{
-		processInfo->logger.message(0) << "Error when obtaining number of solutions:" << CoinMessageNewline << e.what()
-				<< CoinMessageEol;
-
+		processInfo->outputError("Error when obtaining number of solutions", e.what());
 	}
 
 	return (numSols);
@@ -727,17 +567,15 @@ void MILPSolverOsiCbc::checkParameters()
 	{
 		// MIP solver does not support quadratic objectives, reseting both settings
 		settings->updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
-		processInfo->logger.message(0)
-				<< "Quadratic objective setting activated, but MIP solver does not support it. Resetting setting!"
-				<< CoinMessageEol;
+		processInfo->outputWarning(
+				"Quadratic objective setting activated, but MIP solver does not support it. Resetting setting!");
 	}
 	else if (useQuadraticConstraint)
 	{
 		// MIP solver supports quadratic objectives but not quadratic constraints, reseting setting
 		settings->updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
-		processInfo->logger.message(0)
-				<< "Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!"
-				<< CoinMessageEol;
+		processInfo->outputWarning(
+				"Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!");
 	}
 }
 

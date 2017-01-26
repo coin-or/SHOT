@@ -29,19 +29,11 @@ void ConstraintToleranceUpdateStrategyDecreasing::calculateNewTolerance()
 
 		int NL = prevIter->usedMILPSolutionLimit;
 
-		//if (prevIter->isMILP() && prevIter->maxDeviation > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
-		//{
-		//	currIter->usedConstraintTolerance = originalTolerance;
-		//}s
-		//else
 		if (NL <= solutionLimitDepthFinal)
 		{
 			currIter->usedConstraintTolerance = (initialToleranceFactor
 					- (initialToleranceFactor - 1) / (1 - solutionLimitDepthFinal)
 					+ (initialToleranceFactor - 1) / (1 - solutionLimitDepthFinal) * NL) * originalTolerance;
-
-			//if (currIter->usedConstraintTolerance != prevIter->usedConstraintTolerance)
-			//	processInfo->logger.message(2) << "\tNew constraint tolerance: " << currIter->usedConstraintTolerance << CoinMessageEol;
 		}
 		else
 		{

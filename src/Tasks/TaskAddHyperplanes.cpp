@@ -59,27 +59,16 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 
 	if (constrIdx != -1 && !originalProblem->isConstraintNonlinear(constrIdx))
 	{
-		processInfo->logger.message(1) << CoinMessageNewline
-				<< "Error: cutting plane added to linear constraint with index: " << constrIdx << CoinMessageNewline
-				<< CoinMessageEol;
+		processInfo->outputWarning("Cutting plane added to linear constraint with index: " + to_string(constrIdx));
 	}
 
 	auto varNames = originalProblem->getVariableNames();
-	/*
-	 processInfo->logger.message(1) << " HP point is: " << CoinMessageEol;
-
-
-	 for (int i = 0; i < point.size(); i++)
-	 {
-	 processInfo->logger.message(3) << "  " << varNames.at(i) << ": " << point[i] << CoinMessageEol;
-	 }*/
 
 	double constant = originalProblem->calculateConstraintFunctionValue(constrIdx, point);
 
 	if (constrIdx == -1 || constrIdx == originalProblem->getNonlinearObjectiveConstraintIdx())
 	{
-		processInfo->logger.message(3) << " HP point generated for auxiliary objective function constraint"
-				<< CoinMessageEol;
+		processInfo->outputInfo("HP point generated for auxiliary objective function constraint");
 
 		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 				&point.at(0), -1, true);
@@ -98,12 +87,11 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 				elements.push_back(pair);
 				constant += -tmpArray[i] * point.at(i);
 
-				processInfo->logger.message(3) << " Gradient for variable" << varNames.at(i) << ": " << tmpArray[i]
-						<< CoinMessageEol;
+				processInfo->outputInfo("Gradient for variable" + varNames.at(i) + ": " + to_string(tmpArray[i]));
 			}
 		}
 
-		processInfo->logger.message(3) << " Gradient for obj.var.: -1" << CoinMessageEol;
+		processInfo->outputInfo("Gradient for obj.var.: -1");
 
 		IndexValuePair pair;
 		pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
@@ -114,7 +102,7 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 	}
 	else
 	{
-		processInfo->logger.message(3) << " HP point generated for constraint index" << constrIdx << CoinMessageEol;
+		processInfo->outputInfo("HP point generated for constraint index" + to_string(constrIdx));
 
 		auto nablag = originalProblem->calculateConstraintFunctionGradient(constrIdx, point);
 
@@ -127,20 +115,10 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 			elements.push_back(pair);
 			constant += -nablag->values[i] * point.at(nablag->indexes[i]);
 
-			processInfo->logger.message(3) << " Gradient for variable" << varNames.at(nablag->indexes[i]) << ": "
-					<< nablag->values[i] << CoinMessageEol;
+			processInfo->outputInfo(
+					"Gradient for variable" + varNames.at(nablag->indexes[i]) + ": " + to_string(nablag->indexes[i]));
 		}
 	}
-
-	/*
-	 for (auto E : elements)
-	 {
-	 processInfo->logger.message(3) << " HP coefficient for variable " << varNames.at(E.idx) << ": " << E.value
-	 << CoinMessageEol;
-	 }
-
-	 processInfo->logger.message(3) << " HP constant " << constant << CoinMessageEol;
-	 */
 
 	bool hyperplaneIsOk = true;
 
@@ -148,8 +126,8 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			processInfo->logger.message(0) << "Warning: hyperplane not generated, NaN found in linear terms!"
-					<< CoinMessageEol;
+
+			processInfo->outputError("Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}

@@ -49,8 +49,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 					&& currIter->iterationNumber - lastIterOptimal
 							> settings->getIntSetting("MILPSolIncreaseIter", "MILP")))
 	{
-
-		processInfo->logger.message(1) << "    Force solution limit update.                 " << CoinMessageEol;
+		processInfo->outputInfo("     Force solution limit update.");
 		return (true);
 	}
 

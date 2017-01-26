@@ -5,7 +5,11 @@
 #include "OSOption.h"
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
-#include "CoinMessageHandler.hpp"
+
+// Used for OSOutput
+#include <cstdio>
+#define HAVE_STDIO_H 1
+#include "OSOutput.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -20,8 +24,6 @@ namespace SHOTSettings
 			static bool instanceFlag;
 			static Settings *single;
 			void updateSettingBase(std::pair<std::string, std::string> key, std::string value);
-
-			CoinMessageHandler logger;
 
 			Settings()
 			{
@@ -135,16 +137,5 @@ namespace SHOTSettings
 			}
 	};
 
-// Predicate for sorting keys
-//template<class ptree>
-/*struct SortPred
- {
- bool operator()(const typename boost::property_tree::ptree::value_type &v1,
- const typename boost::property_tree::ptree::value_type &v2) const
- {
- std::cout << "Compare" << v1.first << " " << v2.first << std::endl;
- return true;
- }
- };*/
 }
 ;

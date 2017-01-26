@@ -15,51 +15,23 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
 			== ES_QPStrategy::QuadraticallyConstrained;
 
-	/*
-	 if (useQuadraticObjective && !processInfo->MILPSolver->supportsQuadraticObjective())
-	 {
-	 // MIP solver does not support quadratic objectives, reseting both settings
-	 useQuadraticObjective = false;
-	 useQuadraticConstraint = false;
-	 settings->updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
-	 processInfo->logger.message(2)
-	 << "Quadratic objective setting activated, but MIP solver does not support it. Resetting setting!"
-	 << CoinMessageEol;
-	 }
-	 else if (useQuadraticConstraint && !processInfo->MILPSolver->supportsQuadraticConstraints()())
-	 {
-	 // MIP solver supports quadratic objectives but not quadratic constraints, reseting setting
-	 useQuadraticConstraint = false;
-	 settings->updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::QuadraticObjective);
-	 processInfo->logger.message(2)
-	 << "Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!"
-	 << CoinMessageEol;
-	 }*/
-
 	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
 	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
 	bool isQuadraticUsed = (useQuadraticObjective || (useQuadraticConstraint));
 
-	/*if (isQuadraticUsed && isObjQuadratic && !processInfo->MILPSolver->supportsQuadraticObjective())
-	 {
-	 processInfo->logger.message(2) << "Quadratic objective function detected, but MIP solver does not support it!"
-	 << CoinMessageEol;
-	 processInfo->originalProblem = new OptProblemOriginalNonlinearObjective();
-	 }
-	 else*/
 	if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
 	{
-		processInfo->logger.message(2) << "Nonlinear objective function detected" << CoinMessageEol;
+		processInfo->outputInfo("Nonlinear objective function detected.");
 		processInfo->originalProblem = new OptProblemOriginalNonlinearObjective();
 	}
 	else if (isObjQuadratic && isQuadraticUsed)
 	{
-		processInfo->logger.message(2) << "Quadratic objective function detected" << CoinMessageEol;
+		processInfo->outputInfo("Quadratic objective function detected.");
 		processInfo->originalProblem = new OptProblemOriginalQuadraticObjective();
 	}
 	else //Linear objective function
 	{
-		processInfo->logger.message(2) << "Linear objective function detected" << CoinMessageEol;
+		processInfo->outputInfo("Linear objective function detected.");
 		processInfo->originalProblem = new OptProblemOriginalLinearObjective();
 	}
 

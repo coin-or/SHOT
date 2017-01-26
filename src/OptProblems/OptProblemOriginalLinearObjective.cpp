@@ -1,10 +1,8 @@
 #include "OptProblemOriginalLinearObjective.h"
 
-
 OptProblemOriginalLinearObjective::OptProblemOriginalLinearObjective()
 {
 }
-
 
 OptProblemOriginalLinearObjective::~OptProblemOriginalLinearObjective()
 {
@@ -25,9 +23,8 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 		settings->updateSetting("MILPSolLimitInitial", "MILP", 1000);
 	}
 
-
 	processInfo->setOriginalProblem(this);
-	
+
 	instance->getJacobianSparsityPattern();
 
 	return true;

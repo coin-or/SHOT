@@ -16,9 +16,6 @@ OptProblemNLPMinimax::~OptProblemNLPMinimax()
 
 void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 {
-
-	processInfo->logger.message(3) << "Starting minimax NLP problem definition" << CoinMessageEol;
-
 	OSInstance *newInstance = NULL;
 	newInstance = new OSInstance();
 
@@ -43,12 +40,8 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		//std::cout << "ssss " << std::endl;
-
-		// 28.11.2016 int tmpVal = originalInstance->instanceData->constraints->numberOfConstraints;
 		int tmpVal = originalInstance->getConstraintNumber();
 
-		//std::cout << "numconstr " << tmpVal << std::endl;
 		setNonlinearObjectiveConstraintIdx(tmpVal);	// Sets a virtual constraint
 
 		setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());
@@ -56,14 +49,8 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	}
 	else
 	{
-		//setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber() + 1);
 		muindex = originalInstance->getVariableNumber();
 	}
-
-	//newInstance->getJacobianSparsityPattern();
-	//newInstance->initForAlgDiff();
-
-	processInfo->logger.message(3) << "Finished minimax NLP problem definition" << CoinMessageEol;
 }
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)

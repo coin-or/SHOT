@@ -16,9 +16,6 @@ OptProblemNLPSHOTMinimax::~OptProblemNLPSHOTMinimax()
 
 void OptProblemNLPSHOTMinimax::reformulate(OSInstance *originalInstance)
 {
-
-	processInfo->logger.message(3) << "Starting minimax NLP problem definition" << CoinMessageEol;
-
 	OSInstance *newInstance = NULL;
 	newInstance = new OSInstance();
 
@@ -52,8 +49,6 @@ void OptProblemNLPSHOTMinimax::reformulate(OSInstance *originalInstance)
 
 	newInstance->getJacobianSparsityPattern();
 	newInstance->initForAlgDiff();
-
-	processInfo->logger.message(3) << "Finished minimax NLP problem definition" << CoinMessageEol;
 }
 
 void OptProblemNLPSHOTMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)

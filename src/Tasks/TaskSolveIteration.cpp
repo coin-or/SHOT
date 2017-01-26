@@ -47,36 +47,6 @@ void TaskSolveIteration::run()
 
 	auto solStatus = MILPSolver->solveProblem();
 
-	/*
-	 int fixIter = 0;
-	 double newCutOff = processInfo->getPrimalBound();
-
-	 while ((solStatus == E_ProblemSolutionStatus::CutOff || solStatus == E_ProblemSolutionStatus::Infeasible)
-	 && fixIter < 3)
-	 {
-	 MILPSolver->deleteMIPStarts();
-	 if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
-	 {
-	 if (newCutOff > 0) newCutOff = 1.01 * newCutOff;
-	 else newCutOff = 0.99 * newCutOff;
-	 }
-	 else
-	 {
-	 if (newCutOff > 0) newCutOff = 0.99 * newCutOff;
-	 else newCutOff = 1.01 * newCutOff;
-	 }
-
-	 //Remove cutoff
-	 if (newCutOff < DBL_MAX) MILPSolver->setCutOff(newCutOff);
-
-	 processInfo->logger.message(1) << "Infeasible problem detected, setting new cutoff to " << newCutOff
-	 << CoinMessageEol;
-
-	 solStatus = MILPSolver->solveProblem();
-	 fixIter++;
-
-	 }
-	 */
 	if (solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error
 			|| solStatus == E_ProblemSolutionStatus::Unbounded)
 	{

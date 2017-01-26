@@ -32,8 +32,7 @@ void TaskSelectHyperplanePointsSolution::run()
 
 		if (tmpMostDevConstr.value < 0)
 		{
-			processInfo->logger.message(3) << "LP point is on the interior!" << CoinMessageEol;
-			// TODO add as primal solution candidate
+			processInfo->outputWarning("LP point is on the interior!");
 		}
 		else
 		{

@@ -16,14 +16,14 @@ TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch()
 
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
 	{
-		processInfo->logger.message(2) << "Boost linesearch implementation selected" << CoinMessageEol;
 		linesearchMethod = new LinesearchMethodBoost();
+		processInfo->outputDebug("Boost linesearch implementation selected.");
 	}
 	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
 			== static_cast<int>(ES_LinesearchMethod::Bisection))
 	{
-		processInfo->logger.message(2) << "Bisection linesearch selected" << CoinMessageEol;
 		linesearchMethod = new LinesearchMethodBisection();
+		processInfo->outputDebug("Bisection linesearch implementation selected.");
 	}
 	processInfo->stopTimer("HyperplaneLinesearch");
 }
@@ -49,14 +49,11 @@ void TaskSelectHyperplanePointsLinesearch::run()
 	{
 		if (originalProblem->isConstraintsFulfilledInPoint(allSolutions.at(i).point))
 		{
-			//processInfo->logger.message(3) << "LP point is on the interior!" << CoinMessageEol;
-			// TODO add as primal solution candidate
 		}
 		else
 		{
 			for (int j = 0; j < processInfo->interiorPts.size(); j++)
 			{
-				//processInfo->startTimer(E_TimerTypes::Linesearch);
 				auto xNLP = processInfo->interiorPts.at(j).point;
 
 				std::vector<double> externalPoint;
@@ -74,27 +71,19 @@ void TaskSelectHyperplanePointsLinesearch::run()
 					processInfo->stopTimer("HyperplaneLinesearch");
 					internalPoint = xNewc.first;
 					externalPoint = xNewc.second;
-
-					//processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
-					//		processInfo->getCurrentIteration()->iterationNumber);
-
 				}
 				catch (std::exception &e)
 				{
 					processInfo->stopTimer("HyperplaneLinesearch");
 					externalPoint = allSolutions.at(i).point;
 
-					processInfo->logger.message(0)
-							<< "Cannot find solution with linesearch using solution point instead: "
-							<< CoinMessageNewline << e.what() << CoinMessageEol;
+					processInfo->outputWarning("Cannot find solution with linesearch, using solution point instead.");
 				}
 
 				auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(externalPoint);
 
 				if (tmpMostDevConstr.value >= 0)
 				{
-					processInfo->logger.message(6) << "Hyperplane point is on the exterior." << CoinMessageEol;
-
 					Hyperplane hyperplane;
 					hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
 					hyperplane.generatedPoint = externalPoint;

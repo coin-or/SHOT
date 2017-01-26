@@ -29,36 +29,36 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 	if (solver == ES_MILPSolver::Cplex)
 	{
 		processInfo->MILPSolver = new MILPSolverCplex();
-		processInfo->logger.message(2) << "Cplex selected as MIP solver." << CoinMessageEol;
+		processInfo->outputInfo("Cplex selected as MIP solver.");
 	}
 	else if (solver == ES_MILPSolver::Gurobi)
 	{
 		processInfo->MILPSolver = new MILPSolverGurobi();
-		processInfo->logger.message(2) << "Gurobi selected as MIP solver." << CoinMessageEol;
+		processInfo->outputInfo("Gurobi selected as MIP solver.");
 	}
 	else if (solver == ES_MILPSolver::Cbc)
 	{
 		processInfo->MILPSolver = new MILPSolverOsiCbc();
-		processInfo->logger.message(2) << "Cbc selected as MIP solver." << CoinMessageEol;
+		processInfo->outputInfo("Cbc selected as MIP solver.");
 	}
 	else if (solver == ES_MILPSolver::CplexExperimental)
 	{
 		if (isObjQuadratic && isQuadraticUsed)
 		{
 			processInfo->MILPSolver = new MILPSolverCplex();
-			processInfo->logger.message(2) << "Cplex selected as MIP solver." << CoinMessageEol;
+			processInfo->outputInfo("Cplex selected as MIP solver.");
 			settings->updateSetting("MILPSolver", "MILP", 0);
 		}
 		else if (useQuadraticConstraint && originalInstance->getNumberOfQuadraticTerms() > 0)
 		{
 			processInfo->MILPSolver = new MILPSolverCplex();
-			processInfo->logger.message(2) << "Cplex selected as MIP solver." << CoinMessageEol;
+			processInfo->outputInfo("Cplex selected as MIP solver.");
 			settings->updateSetting("MILPSolver", "MILP", 0);
 		}
 		else
 		{
 			processInfo->MILPSolver = new MILPSolverCplexExperimental();
-			processInfo->logger.message(2) << "Cplex lazy selected as MIP solver." << CoinMessageEol;
+			processInfo->outputInfo("Cplex (lazy, experimental) selected as MIP solver.");
 		}
 	}
 	else
@@ -66,7 +66,6 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		throw new ErrorClass("Error in MIP solver definition.");
 	}
 
-	processInfo->logger.message(1) << "MIP solver initialized" << CoinMessageEol;
 	processInfo->stopTimer("MILP");
 }
 

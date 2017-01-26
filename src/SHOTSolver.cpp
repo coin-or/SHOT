@@ -24,17 +24,22 @@ bool SHOTSolver::setOptions(std::string fileName)
 	{
 		std::string osol = fileUtil->getFileAsString(fileName.c_str());
 		settings->readSettings(osol);
-
-		processInfo->logger.message(2) << "Options read from file \"" << fileName << "\"" << CoinMessageEol;
 	}
 	catch (const ErrorClass& eclass)
 	{
-		processInfo->logger.message(0) << "Error when reading options from \"" << fileName << "\"" << CoinMessageEol;
-		processInfo->logger.message(0) << " Error message: \"" << eclass.errormsg << "\"" << CoinMessageEol;
+		processInfo->outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
 		delete fileUtil;
 		delete osolreader;
 		return (false);
 	}
+
+	// Sets the correct log levels
+	osoutput->SetPrintLevel("stdout",
+			(ENUM_OUTPUT_LEVEL)(settings->getIntSetting("LogLevelConsole", "SHOTSolver") + 1));
+	osoutput->SetPrintLevel("shotlogfile",
+			(ENUM_OUTPUT_LEVEL)(settings->getIntSetting("LogLevelFile", "SHOTSolver") + 1));
+
+	processInfo->outputInfo("Options read from file \"" + fileName + "\"");
 
 	delete fileUtil;
 	delete osolreader;
@@ -50,10 +55,13 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
 	}
 	catch (ErrorClass &eclass)
 	{
-		processInfo->logger.message(0) << "Error when reading options." << CoinMessageEol;
-		processInfo->logger.message(0) << " Error message: \"" << eclass.errormsg << "\"" << CoinMessageEol;
+
+		processInfo->outputError("Error when reading options.", eclass.errormsg);
+
 		return (false);
 	}
+
+	processInfo->outputInfo("Options read.");
 
 	return (true);
 }
@@ -97,7 +105,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 		}
 		else
 		{
-			processInfo->logger.message(0) << "Wrong filetype specified." << CoinMessageEol;
+			processInfo->outputError("Wrong filetype specified.");
 			return (false);
 		}
 
@@ -108,13 +116,10 @@ bool SHOTSolver::setProblem(std::string fileName)
 		delete fileUtil;
 		delete osilreader;
 
-		processInfo->logger.message(0) << "Error when reading problem from \"" << fileName << "\"" << CoinMessageEol;
-		processInfo->logger.message(0) << " Error message: \"" << eclass.errormsg << "\"" << CoinMessageEol;
+		processInfo->outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
 
 		return (false);
 	}
-
-	processInfo->logger.message(2) << "Problem read from file \"" << fileName << "\"" << CoinMessageEol;
 
 	//Removes path
 	std::string tmpFile = fileName.substr(fileName.find_last_of("/\\") + 1);
@@ -177,11 +182,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 
 bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
-
-	//solutionStrategy = new SolutionStrategyESH(osInstance);
-
-	//TaskHandler handler;
-
 	solutionStrategy = new SolutionStrategySHOT(osInstance);
 
 	return (true);
@@ -213,16 +213,28 @@ void SHOTSolver::initializeSettings()
 {
 	if (settings->settingsInitialized)
 	{
-		processInfo->logger.message(1) << "Warning! Settings have already been initialized. Ignoring..."
-				<< CoinMessageEol;
+		processInfo->outputWarning("Warning! Settings have already been initialized. Ignoring new settings.");
 		return;
 	}
 
-	processInfo->logger.message(4) << "Starting initialization of settings:" << CoinMessageEol;
+	processInfo->outputInfo("Starting initialization of settings:");
 
 	// Logging setting
-	settings->createSetting("LogLevel", "SHOTSolver", 1, "Below what log level to display. 0 = least output.", 0,
-			INT_MAX);
+	std::vector < std::string > enumLogLevel;
+	enumLogLevel.push_back("error");
+	enumLogLevel.push_back("summary");
+	enumLogLevel.push_back("warning");
+	enumLogLevel.push_back("info");
+	enumLogLevel.push_back("debug");
+	enumLogLevel.push_back("trace");
+	enumLogLevel.push_back("detailed_trace");
+	settings->createSetting("LogLevelConsole", "SHOTSolver", static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1,
+			"Log level for console output", enumLogLevel);
+
+	settings->createSetting("LogLevelFile", "SHOTSolver", static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1,
+			"Log level for file output", enumLogLevel);
+
+	enumLogLevel.clear();
 
 	// Solution strategy
 	std::vector < std::string > enumSolutionStrategy;
@@ -433,7 +445,7 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-9,
 			"The linear constraint tolerance for accepting primal bounds ");
 
-	processInfo->logger.message(4) << "Initialization of settings complete." << CoinMessageEol;
+	processInfo->outputInfo("Initialization of settings complete.");
 
 	settings->settingsInitialized = true;
 }
@@ -447,17 +459,17 @@ void SHOTSolver::initializeDebugMode()
 
 	if (boost::filesystem::exists(debugDir))
 	{
-		processInfo->logger.message(1) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
+		processInfo->outputInfo("Debug directory " + debugPath + " already exists.");
 	}
 	else
 	{
 		if (boost::filesystem::create_directories(debugDir))
 		{
-			processInfo->logger.message(1) << "Debug directory " << debugPath << " created." << CoinMessageEol;
+			processInfo->outputInfo("Debug directory " + debugPath + " created.");
 		}
 		else
 		{
-			processInfo->logger.message(1) << "Could not create debug directory " << debugPath << "!" << CoinMessageEol;
+			processInfo->outputWarning("Could not create debug directory.");
 		}
 	}
 

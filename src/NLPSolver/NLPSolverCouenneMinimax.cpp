@@ -8,18 +8,9 @@ NLPSolverCouenneMinimax::NLPSolverCouenneMinimax()
 	settings = SHOTSettings::Settings::getInstance();
 	processInfo->startTimer("InteriorPointMinimax");
 
-	//NLPSolver->NLPSolver = new IpoptSolver();
-	//NLPSolver->NLPSolver->osoption = osOption;
-
-	//ipoptSolver = new NLPIpoptSolver();
-	//NLPSolver->nlp = ipoptSolver;
-
 	OSoLWriter *osolwriter = NULL;
 	osolwriter = new OSoLWriter();
 
-	//(options = osolreader->readOSoL(osol);
-
-	//NLPSolver->osoption = osOption;
 	NLPSolver->osol = osolwriter->writeOSoL(osOption);
 
 	isPointValueCached = false;
@@ -41,10 +32,7 @@ bool NLPSolverCouenneMinimax::createProblem(OSInstance * origInstance)
 	NLPProblem = new OptProblemNLPMinimax();
 	NLPProblem->reformulate(origInstance);
 	NLPSolver->osinstance = NLPProblem->getProblemInstance();
-	processInfo->logger.message(2) << "NLP problem created" << CoinMessageEol;
-	/*NLPProblem->printProblem();
-	 NLPProblem->exportProblemToOsil("exportNLP.osil");
-	 std::cout << NLPProblem->problemInstance->printModel();*/
+	processInfo->outputDebug("NLP problem created");
 
 	NLPSolver->buildSolverInstance();
 
@@ -62,7 +50,7 @@ bool NLPSolverCouenneMinimax::solveProblem()
 	}
 	catch (...)
 	{
-		processInfo->logger.message(1) << "Error when solving Couenne minimax problem!" << CoinMessageEol;
+		processInfo->outputError("Error when solving Couenne minimax problem!");
 
 		processInfo->stopTimer("InteriorPointMinimax");
 		return false;
@@ -72,15 +60,13 @@ bool NLPSolverCouenneMinimax::solveProblem()
 
 	if (solStatus == "infeasible" || solStatus == "error" || NLPSolver->osresult->getSolutionNumber() == 0)
 	{
-		processInfo->logger.message(1) << "No solution found to Couenne minimax problem. Solution status: " << solStatus
-				<< CoinMessageEol;
+		processInfo->outputError("No solution found to Couenne minimax problem. Solution status: " + solStatus);
 
 		processInfo->stopTimer("InteriorPointMinimax");
 		return false;
 	}
 
-	processInfo->logger.message(1) << "Solution found to Couenne minimax problem. Solution status: " << solStatus
-			<< CoinMessageEol;
+	processInfo->outputInfo("Solution found to Couenne minimax problem. Solution status: " + solStatus);
 
 	int numVar = NLPProblem->getNumberOfVariables();
 	std::vector<double> tmpPoint(numVar);
@@ -96,22 +82,23 @@ bool NLPSolverCouenneMinimax::solveProblem()
 
 		if (maxDev > settings->getDoubleSetting("InteriorPointFeasEps", "NLP"))
 		{
-			processInfo->logger.message(2) << "NLP point from Couenne minimax problem not valid!" << CoinMessageEol;
-			processInfo->logger.message(2) << " Maximum constraint value is " << maxDev << " > "
-					<< settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
+			processInfo->outputWarning("NLP point from Couenne minimax problem not valid!");
+			processInfo->outputWarning(
+					" Maximum constraint value is " + to_string(maxDev) + " > "
+							+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 
 			processInfo->stopTimer("InteriorPointMinimax");
 			return false;
 		}
 
-		processInfo->logger.message(2) << "NLP point from Couenne minimax problem valid." << CoinMessageEol;
-		processInfo->logger.message(2) << " Maximum constraint value is " << maxDev << " < "
-				<< settings->getDoubleSetting("InteriorPointFeasEps", "NLP") << CoinMessageEol;
+		processInfo->outputInfo("NLP point from Couenne minimax problem valid.");
+		processInfo->outputWarning(
+				" Maximum constraint value is " + to_string(maxDev) + " < "
+						+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 	}
 	else
 	{
-		processInfo->logger.message(2) << "NLP problem linearly constrained. Assuming point is valid."
-				<< CoinMessageEol;
+		processInfo->outputInfo("NLP problem linearly constrained. Assuming point is valid.");
 	}
 
 	auto tmpIP = new InteriorPoint();
