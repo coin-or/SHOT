@@ -244,7 +244,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
 				== ES_SolutionStrategy::ESH)
 		{
-			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
 			processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
 		}
 		else

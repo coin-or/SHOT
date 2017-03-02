@@ -75,7 +75,6 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 				{
 					try
 					{
-
 						processInfo->startTimer("PrimalBoundLinesearch");
 						auto xNewc = linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
 								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),

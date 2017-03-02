@@ -86,6 +86,13 @@ void TaskSolveFixedLinearProblem::run()
 
 	if (currIter->MILPSolutionLimitUpdated) return;
 
+	if (currIter->maxDeviation <= settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm"))
+	{
+		processInfo->stopTimer("PrimalBoundFixedLP");
+		processInfo->stopTimer("PrimalBoundTotal");
+		return;
+	}
+
 	if (currIter->iterationNumber < 5)
 	{
 
