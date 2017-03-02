@@ -244,8 +244,18 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
 				== ES_SolutionStrategy::ESH)
 		{
-			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-			processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+			if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy",
+					"ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			{
+				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+				processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+			}
+			else
+			{
+				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+				processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+			}
+
 		}
 		else
 		{

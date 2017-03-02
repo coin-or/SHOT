@@ -250,8 +250,7 @@ void MILPSolverGurobi::initializeSolverSettings()
 		//gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, 2100000000);
-		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber,
-				settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm") + 1);
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, settings->getIntSetting("SolutionPoolSize", "MILP") + 1);
 	}
 	catch (GRBException &e)
 	{

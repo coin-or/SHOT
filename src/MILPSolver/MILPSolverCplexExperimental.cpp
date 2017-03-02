@@ -887,8 +887,7 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 		//cplexInstance.setParam(IloCplex::AdvInd,2);
 
 		cplexInstance.setParam(IloCplex::SolnPoolGap, settings->getDoubleSetting("SolnPoolGap", "CPLEX"));
-		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
-				settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm"));
+		cplexInstance.setParam(IloCplex::SolnPoolCapacity, settings->getIntSetting("SolutionPoolSize", "MILP"));
 
 		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));

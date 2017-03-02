@@ -38,6 +38,8 @@ TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndiv
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run()
 {
+	int addedHyperplanes = 0;
+
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
 
@@ -72,10 +74,14 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run()
 					auto constrDevExterior = processInfo->originalProblem->calculateConstraintFunctionValue(
 							currConstrIdx, allSolutions.at(i).point);
 
-					if (constrDevExterior < 0) continue;
+					if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+
+					// Do not add hyperplane if less than this tolerance or negative
+					if (constrDevExterior < settings->getDoubleSetting("LinesearchConstraintTolerance", "ESH")) continue;
 
 					// Do not add hyperplane if constraint value is much less than largest
-					if (constrDevExterior <= 0.9 * maxDevConstr.value) continue;
+					if (constrDevExterior
+							< settings->getDoubleSetting("LinesearchConstraintFactor", "ESH") * maxDevConstr.value) continue;
 
 					std::vector<double> externalPoint;
 					std::vector<double> internalPoint;
@@ -131,6 +137,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run()
 						}
 
 						processInfo->hyperplaneWaitingList.push_back(hyperplane);
+						addedHyperplanes++;
 
 						if (currConstrIdx != -1) hyperplaneAddedToConstraint.at(k) = true;
 						else hyperplaneAddedToConstraint.at(hyperplaneAddedToConstraint.back()) = true;

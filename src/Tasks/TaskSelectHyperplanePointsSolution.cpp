@@ -20,6 +20,8 @@ TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
 
 void TaskSelectHyperplanePointsSolution::run()
 {
+	int addedHyperplanes = 0;
+
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
 
@@ -28,6 +30,8 @@ void TaskSelectHyperplanePointsSolution::run()
 
 	for (int i = 0; i < allSolutions.size(); i++)
 	{
+		if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+
 		auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(allSolutions.at(i).point);
 
 		if (tmpMostDevConstr.value < 0)
@@ -54,6 +58,8 @@ void TaskSelectHyperplanePointsSolution::run()
 			}
 
 			processInfo->hyperplaneWaitingList.push_back(hyperplane);
+
+			addedHyperplanes++;
 		}
 	}
 }

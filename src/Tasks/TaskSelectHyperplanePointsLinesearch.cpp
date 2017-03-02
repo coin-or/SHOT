@@ -35,6 +35,8 @@ TaskSelectHyperplanePointsLinesearch::~TaskSelectHyperplanePointsLinesearch()
 
 void TaskSelectHyperplanePointsLinesearch::run()
 {
+	int addedHyperplanes = 0;
+
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
 	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
 
@@ -54,6 +56,7 @@ void TaskSelectHyperplanePointsLinesearch::run()
 		{
 			for (int j = 0; j < processInfo->interiorPts.size(); j++)
 			{
+				if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 				auto xNLP = processInfo->interiorPts.at(j).point;
 
 				std::vector<double> externalPoint;
@@ -102,6 +105,7 @@ void TaskSelectHyperplanePointsLinesearch::run()
 					}
 
 					processInfo->hyperplaneWaitingList.push_back(hyperplane);
+					addedHyperplanes++;
 
 				}
 			}

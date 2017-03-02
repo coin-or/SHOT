@@ -28,8 +28,12 @@ void TaskAddHyperplanes::run()
 	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
 			|| !currIter->MILPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
+		int addedHyperplanes = 0;
+
 		for (int k = processInfo->hyperplaneWaitingList.size(); k > 0; k--)
 		{
+			if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) break;
+
 			auto tmpItem = processInfo->hyperplaneWaitingList.at(k - 1);
 
 			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
@@ -39,6 +43,7 @@ void TaskAddHyperplanes::run()
 			else
 			{
 				processInfo->MILPSolver->createHyperplane(tmpItem);
+				addedHyperplanes++;
 			}
 		}
 

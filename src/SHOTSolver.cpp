@@ -286,8 +286,10 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("TimeLimit", "Algorithm", 900.0, "Time limit in seconds for solver", 0.0, DBL_MAX);
 	settings->createSetting("IterLimitMILP", "Algorithm", 2000, "MILP iteration limit for solver", 1, INT_MAX);
 
-	// Initial MILP solution depth
-	settings->createSetting("MaxHyperplanesPerIteration", "Algorithm", 10,
+	// Max Solution pool size
+	settings->createSetting("SolutionPoolSize", "MILP", 100, "Solution pool capacity", 0, INT_MAX);
+
+	settings->createSetting("MaxHyperplanesPerIteration", "Algorithm", 200,
 			"Maximal extra number of hyperplanes to add per iteration", 0, INT_MAX);
 
 	// NLP solver
@@ -364,8 +366,7 @@ void SHOTSolver::initializeSettings()
 
 	settings->createSetting("DelayedConstraints", "MILP", true,
 			"Add supporting hyperplanes only after optimal MILP solution (=1).");
-	settings->createSetting("ConstraintSelectionFactor", "MILP", 0.0,
-			"The fraction of violated constraints to generate supporting hyperplanes for.", 0.0, 1.0);
+
 	//settings->createSetting("UseQuadraticProgramming", "Algorithm", true, "Solve QP problems if objective function is quadratic,");
 
 	std::vector < std::string > enumQPStrategy;
@@ -401,6 +402,29 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("LinesearchMaxIter", "Linesearch", 100, "Maximal iterations for linesearch", 0, INT_MAX);
 	settings->createSetting("LinesearchConstrEps", "Linesearch", 0.0, "Epsilon constraint tolerance for linesearch",
 			0.0, DBL_MAX);
+
+	settings->createSetting("LinesearchConstraintSelectionFactor", "ECP", 0.0,
+			"NOT USED! The fraction of violated constraints to generate supporting hyperplanes for when using the ECP strategy.",
+			0.0, 1.0);
+
+	settings->createSetting("LinesearchConstraintStrategy", "ESH", 0.0,
+			"NOT USED! The fraction of violated constraints to generate supporting hyperplanes for when using the ECP strategy.",
+			0.0, 1.0);
+
+	std::vector < std::string > enumLinesearchConstraintStrategy;
+	enumLinesearchConstraintStrategy.push_back("Max function");
+	enumLinesearchConstraintStrategy.push_back("Individual constraints");
+	settings->createSetting("LinesearchConstraintStrategy", "ESH",
+			static_cast<int>(ES_LinesearchConstraintStrategy::AllAsMaxFunct),
+			"Strategy for grouping the constraints for linesearches", enumLinesearchConstraintStrategy);
+	enumLinesearchMethod.clear();
+
+	settings->createSetting("LinesearchConstraintTolerance", "ESH", 1e-8,
+			"Constraint tolerance for when not to add individual hyperplanes.", 0, DBL_MAX);
+
+	settings->createSetting("LinesearchConstraintFactor", "ESH", 0.5,
+			"No linesearch on a constraint if its solution point value is less than this factor of the maximum.", 1e-6,
+			1.0);
 
 	// Tracefile
 	//createSetting("TraceFile", "Algorithm", "esh.trc", "The filename for the trace file. If empty trace information will not be saved.");

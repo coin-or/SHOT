@@ -84,17 +84,17 @@ void OptProblemNLPSHOTMinimax::copyVariables(OSInstance *source, OSInstance *des
 			double lb = varLBs[i];
 			double ub = varUBs[i];
 			char type = 'C';
-			/*
-			 if (lb < -1000000000000)
-			 {
-			 lb = -10000000000;
-			 }
 
-			 if (ub > 10000000000000)
-			 {
-			 ub = 10000000000;
-			 }
-			 */
+			if (lb < -1000000000000)
+			{
+				lb = -10000000000;
+			}
+
+			if (ub > 10000000000000)
+			{
+				ub = 10000000000;
+			}
+
 			destination->addVariable(i, name, lb, ub, type);
 		}
 	}
