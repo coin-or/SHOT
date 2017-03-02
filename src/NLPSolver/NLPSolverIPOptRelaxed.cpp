@@ -47,7 +47,7 @@ NLPSolverIPOptRelaxed::NLPSolverIPOptRelaxed()
 			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
 			break;
 		case ENUM_OUTPUT_LEVEL_summary:
-			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
+			osOption->setAnotherSolverOption("print_level", "1", "ipopt", "", "integer", "");
 			break;
 		case ENUM_OUTPUT_LEVEL_warning:
 			osOption->setAnotherSolverOption("print_level", "1", "ipopt", "", "integer", "");

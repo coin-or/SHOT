@@ -56,8 +56,10 @@ class OptProblem
 		std::string exportProblemToOsil();
 
 		virtual IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
+
 		virtual std::pair<IndexValuePair, std::vector<int>> getMostDeviatingConstraint(std::vector<double> point,
 				std::vector<int> constrIdxs);
+
 		virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
 		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
 		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);

@@ -175,27 +175,6 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 	std::vector<int> idxNLCs = this->getNonlinearConstraintIndexes();
 
 	return (this->getMostDeviatingConstraint(point, idxNLCs).first);
-
-	/*if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
-	 {
-	 valpair.idx = -1;
-	 valpair.value = 0.0;
-	 }
-	 else
-	 {
-	 std::vector<double> constrDevs(idxNLCs.size());
-
-	 for (int i = 0; i < idxNLCs.size(); i++)
-	 {
-	 constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
-	 }
-
-	 auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-	 valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
-	 valpair.value = *biggest;
-
-	 }
-	 return (valpair);*/
 }
 
 std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstraint(std::vector<double> point,

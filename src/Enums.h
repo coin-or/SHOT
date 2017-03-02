@@ -130,3 +130,8 @@ enum class ES_AddPrimalPointAsInteriorPoint
 {
 	KeepOriginal, KeepBoth, KeepNew, OnlyAverage
 };
+
+enum class ES_LinesearchConstraintStrategy
+{
+	AllAsMaxFunct, IndividualConstrains
+};
