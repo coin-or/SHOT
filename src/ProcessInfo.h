@@ -43,6 +43,15 @@ struct PrimalSolution
 		IndexValuePair maxDevatingConstraint;
 };
 
+struct PrimalFixedNLPCandidate
+{
+		vector<double> point;
+		E_PrimalNLPSource sourceType;
+		double objValue;
+		int iterFound;
+		IndexValuePair maxDevatingConstraint;
+};
+
 struct DualSolution
 {
 		vector<double> point;
@@ -84,6 +93,7 @@ class ProcessInfo
 		vector<DualSolution> dualSolutions;
 
 		vector<PrimalSolution> primalSolutionCandidates;
+		vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
 		vector<DualSolution> dualSolutionCandidates;
 
 		pair<double, double> getCorrectedObjectiveBounds();
@@ -92,6 +102,9 @@ class ProcessInfo
 				IndexValuePair maxConstrDev);
 		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
 		void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
+
+		void addPrimalFixedNLPCandidate(vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
+				IndexValuePair maxConstrDev);
 
 		void addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
 		void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
@@ -124,6 +137,7 @@ class ProcessInfo
 		int iterOptMIQCQP;
 
 		int numNLPProbsSolved;
+		int numPrimalFixedNLPProbsSolved;
 
 		int itersWithStagnationMILP; // TODO move to task
 		int iterSignificantObjectiveUpdate; // TODO move to task

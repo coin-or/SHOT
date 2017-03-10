@@ -10,8 +10,8 @@ Test::Test()
 
 void Test::determineActiveConstraints(double constrTol)
 {
-	valFirstPt = -DBL_MAX;
-	valSecondPt = -DBL_MAX;
+	valFirstPt = -OSDBL_MAX;
+	valSecondPt = -OSDBL_MAX;
 
 	auto allNonlinearConstrIdxs = originalProblem->getNonlinearConstraintIndexes();
 
@@ -33,7 +33,7 @@ void Test::determineActiveConstraints(double constrTol)
 
 	}
 
-	lastActiveConstraintUpdateValue = DBL_MAX;
+	lastActiveConstraintUpdateValue = OSDBL_MAX;
 }
 
 void Test::addActiveConstraint(int constrIdx)
@@ -172,7 +172,8 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 	else
 	{
 		processInfo->outputInfo(
-				"     Line search iterations: " + to_string(max_iter) + "function evaluations: " + to_string(resFVals));
+				"     Line search iterations: " + to_string(max_iter) + ". Function evaluations: "
+						+ to_string(resFVals));
 	}
 
 	for (int i = 0; i < length; i++)

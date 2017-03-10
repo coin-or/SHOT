@@ -176,7 +176,7 @@ void TaskSolveFixedLinearProblem::run()
 
 	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
 
-	processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
+	//processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
 
 	double prevObjVal;
 
@@ -278,7 +278,7 @@ void TaskSolveFixedLinearProblem::run()
 				tmpConstr = "";
 			}
 
-			auto tmpLine = boost::format("%|-4s| %|-10s| %|=10s| %|=44s| %|-14s|") % k % tmpType.str() % hyperplanesExpr
+			auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % tmpType.str() % hyperplanesExpr
 					% tmpObjVal % tmpConstr;
 
 			processInfo->outputSummary(tmpLine.str());
@@ -341,7 +341,7 @@ void TaskSolveFixedLinearProblem::run()
 				originalBounds.at(i).second);
 	}
 
-	processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
+	//processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
 
 	processInfo->stopTimer("PrimalBoundFixedLP");
 	processInfo->stopTimer("PrimalBoundTotal");

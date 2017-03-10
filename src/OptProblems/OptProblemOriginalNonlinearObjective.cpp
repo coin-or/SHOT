@@ -277,6 +277,30 @@ std::vector<double> OptProblemOriginalNonlinearObjective::getVariableUpperBounds
 	return tmpVector;
 }
 
+void OptProblemOriginalNonlinearObjective::setVariableUpperBound(int varIdx, double value)
+{
+	if (varIdx == getNonlinearObjectiveVariableIdx())
+	{
+		this->addedObjectiveVariableUpperBound = value;
+	}
+	else
+	{
+		getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
+	}
+}
+
+void OptProblemOriginalNonlinearObjective::setVariableLowerBound(int varIdx, double value)
+{
+	if (varIdx == getNonlinearObjectiveVariableIdx())
+	{
+		this->addedObjectiveVariableLowerBound = value;
+	}
+	else
+	{
+		getProblemInstance()->instanceData->variables->var[varIdx]->lb = value;
+	}
+}
+
 std::vector<std::pair<int, double>> OptProblemOriginalNonlinearObjective::getObjectiveFunctionVarCoeffPairs()
 {
 	std::vector<std::pair<int, double>> tmpVector;

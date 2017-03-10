@@ -391,22 +391,22 @@ void CtCallbackI::main()
 
 	double elapsedTime = processInfo->getElapsedTime("Total") - timestampLastNLPCall;
 //std::cout << "Elapsed" << elapsedTime << std::endl;
-	if ((elapsedTime > 5.0)
-			|| ((itersSinceNLPCall > 50)
-					&& mostDevConstr.value < (1000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
-			|| (itersSinceNLPCall > 200))
-	{
-		dynamic_cast<TaskSelectPrimalCandidatesFromNLP*>(tSelectPrimNLP)->setFixedPoint(solution);
-		tSelectPrimNLP->run();
+	/*if ((elapsedTime > 5.0)
+	 || ((itersSinceNLPCall > 50)
+	 && mostDevConstr.value < (1000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+	 || (itersSinceNLPCall > 200))
+	 {
+	 /*dynamic_cast<TaskSelectPrimalCandidatesFromNLP*>(tSelectPrimNLP)->setFixedPoint(solution);
+	 tSelectPrimNLP->run();
 
-		tCheckPrimCands->run();
-		itersSinceNLPCall = 0;
-		timestampLastNLPCall = processInfo->getElapsedTime("Total");
-	}
-	else
-	{
-		itersSinceNLPCall++;
-	}
+	 tCheckPrimCands->run();
+	 itersSinceNLPCall = 0;
+	 timestampLastNLPCall = processInfo->getElapsedTime("Total");
+	 }
+	 else
+	 {
+	 itersSinceNLPCall++;
+	 }*/
 
 	std::vector < Hyperplane > hyperplanes;
 	Hyperplane hyperplane;
@@ -1432,7 +1432,7 @@ void MILPSolverCplexExperimental::addMIPStart(std::vector<double> point)
 		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->outputInfo("    Added MIP starting point.");
+	processInfo->outputInfo("     Added MIP starting point.");
 }
 
 void MILPSolverCplexExperimental::deleteMIPStarts()

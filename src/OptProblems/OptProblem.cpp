@@ -83,6 +83,16 @@ std::vector<double> OptProblem::getVariableUpperBounds()
 	return tmpVector;
 }
 
+void OptProblem::setVariableUpperBound(int varIdx, double value)
+{
+	getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
+}
+
+void OptProblem::setVariableLowerBound(int varIdx, double value)
+{
+	getProblemInstance()->instanceData->variables->var[varIdx]->lb = value;
+}
+
 std::vector<int> OptProblem::getRealVariableIndices()
 {
 	std::vector<int> indices;
@@ -453,6 +463,28 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 				destination->instanceData->variables->var[i]->type = 'C';
 			}
 		}
+
+		for (int i = 0; i < nvar; i++)
+		{
+			if (destination->instanceData->variables->var[i]->lb <= -OSDBL_MAX)
+			{
+				processInfo->outputInfo(
+						"Corrected lower bound for variable " + varname[i] + " from "
+								+ to_string(destination->instanceData->variables->var[i]->lb) + " to "
+								+ to_string(-OSDBL_MAX));
+				destination->instanceData->variables->var[i]->lb = -OSDBL_MAX;
+			}
+
+			if (destination->instanceData->variables->var[i]->ub >= OSDBL_MAX)
+			{
+				processInfo->outputInfo(
+						"Corrected upper bound for variable " + varname[i] + " from "
+								+ to_string(destination->instanceData->variables->var[i]->ub) + " to "
+								+ to_string(OSDBL_MAX));
+				destination->instanceData->variables->var[i]->ub = OSDBL_MAX;
+			}
+		}
+
 	}
 
 	destination->bVariablesModified = true;
@@ -967,6 +999,19 @@ std::vector<QuadraticTerm*> OptProblem::getQuadraticTermsInConstraint(int constr
 
 void OptProblem::fixVariable(int varIdx, double value)
 {
-	getProblemInstance()->instanceData->variables->var[varIdx]->lb = value;
-	getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
+	if (value >= getProblemInstance()->instanceData->variables->var[varIdx]->lb
+			&& value <= getProblemInstance()->instanceData->variables->var[varIdx]->ub)
+	{
+		getProblemInstance()->instanceData->variables->var[varIdx]->lb = value;
+		getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
+	}
+	else
+	{
+		processInfo->outputError(
+				"Cannot fix variable value for variable with index " + to_string(varIdx) + ": not within bounds ("
+						+ to_string(getProblemInstance()->instanceData->variables->var[varIdx]->lb) + " < "
+						+ to_string(value) + " < "
+						+ to_string(getProblemInstance()->instanceData->variables->var[varIdx]->ub));
+	}
 }
+

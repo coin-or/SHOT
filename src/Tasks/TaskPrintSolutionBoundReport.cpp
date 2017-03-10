@@ -30,9 +30,10 @@ void TaskPrintSolutionBoundReport::run()
 		double objLB = objBounds.first;
 		double objUB = objBounds.second;
 
-		auto tmpLine = boost::format(
-				"     At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
+		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
 				% processInfo->getElapsedTime("Total") % objLB % objUB % absGap % relGap;
+
+		processInfo->outputSummary("");
 
 		processInfo->outputSummary(
 				"─────────────────────────────────────────────────────────────────────────────────────");

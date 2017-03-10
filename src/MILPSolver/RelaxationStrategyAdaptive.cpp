@@ -125,7 +125,8 @@ bool RelaxationStrategyAdaptive::isRelaxationDistanceSmall()
 	 double distance = calculateDistance(currIterSol, prevIterSol);
 	 */
 
-	if (processInfo->getPreviousIteration()->boundaryDistance < currentDistanceLevel && currentDistanceLevel < DBL_MAX)
+	if (processInfo->getPreviousIteration()->boundaryDistance < currentDistanceLevel
+			&& currentDistanceLevel < OSDBL_MAX)
 	{
 
 		return true;
@@ -161,7 +162,7 @@ bool RelaxationStrategyAdaptive::isIterationLimitReached()
 
 void RelaxationStrategyAdaptive::updateCurrentDistanceLevel()
 {
-	if (processInfo->getPreviousIteration()->boundaryDistance < DBL_MAX)
+	if (processInfo->getPreviousIteration()->boundaryDistance < OSDBL_MAX)
 	{
 		double tmpVal = 0.0;
 

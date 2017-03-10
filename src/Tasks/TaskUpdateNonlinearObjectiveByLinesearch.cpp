@@ -103,8 +103,8 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 
 					processInfo->setObjectiveUpdatedByLinesearch(true);
 					processInfo->outputInfo(
-							"    Obj. for sol. # 0 upd. by l.s." + to_string(oldObjVal) + "->"
-									+ to_string(allSolutions.at(i).objectiveValue) + "(diff:" + to_string(diffobj)
+							"     Obj. for sol. # 0 upd. by l.s." + to_string(oldObjVal) + " -> "
+									+ to_string(allSolutions.at(i).objectiveValue) + " (diff:" + to_string(diffobj)
 									+ ")  #");
 					// Change the status of the solution if it has been updated much
 					if (diffobj > settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
@@ -118,8 +118,8 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 				else
 				{
 					processInfo->outputInfo(
-							"    Obj. for sol. #" + std::to_string(i) + " upd. by l.s." + to_string(oldObjVal) + "->"
-									+ to_string(allSolutions.at(i).objectiveValue) + "(diff:" + to_string(diffobj)
+							"     Obj. for sol. #" + std::to_string(i) + " upd. by l.s." + to_string(oldObjVal) + " -> "
+									+ to_string(allSolutions.at(i).objectiveValue) + " (diff:" + to_string(diffobj)
 									+ ")  #");
 				}
 

@@ -180,7 +180,7 @@ void OptProblemNLPSHOTMinimax::copyConstraints(OSInstance *source, OSInstance *d
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		//double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-		destination->addConstraint(numCon, "objconstr", -DBL_MAX, -source->instanceData->objectives->obj[0]->constant,
+		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
 				0.0);
 	}
 

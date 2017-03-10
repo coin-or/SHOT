@@ -84,9 +84,14 @@ enum class ES_LinesearchMethod
 	Boost, Bisection
 };
 
+enum class ES_PrimalNLPStrategy
+{
+	AlwaysUse, DoNotUse, IterationOrTime, IterationOrTimeAndAllFeasibleSolutions
+};
+
 enum class ES_PrimalBoundNLPFixedPoint
 {
-	MILPSolution, SmallestDeviation, Both
+	AllSolutions, FirstSolution, AllFeasibleSolutions, FirstAndFeasibleSolutions, SmallestDeviationSolution
 };
 
 enum class E_PrimalSolutionSource
@@ -100,6 +105,11 @@ enum class E_PrimalSolutionSource
 	LPFixedIntegers,
 	LazyConstraintCallback,
 	HeuristicCallback
+};
+
+enum class E_PrimalNLPSource
+{
+	FirstSolution, FeasibleSolution, UnFeasibleSolution, SmallestDeviationSolution
 };
 
 enum class E_DualSolutionSource

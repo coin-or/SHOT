@@ -49,10 +49,9 @@ std::string TaskSelectPrimalCandidatesFromNLP::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }
 
-void TaskSelectPrimalCandidatesFromNLP::setFixedPoint(std::vector<double> fixedPt)
-{
-	primalStrategyFixedNLP->setFixedPoint(fixedPt);
-}
+/*void TaskSelectPrimalCandidatesFromNLP::setFixedPoint(std::vector<double> fixedPt)
+ {
+ primalStrategyFixedNLP->setFixedPoint(fixedPt);
+ }*/

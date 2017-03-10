@@ -144,6 +144,15 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_
 	}
 }
 
+void ProcessInfo::addPrimalFixedNLPCandidate(vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
+		IndexValuePair maxConstrDev)
+{
+	PrimalFixedNLPCandidate cand =
+	{ pt, source, objVal, iter };
+
+	primalFixedNLPCandidates.push_back(cand);
+}
+
 void ProcessInfo::setObjectiveUpdatedByLinesearch(bool updated)
 {
 	objectiveUpdatedByLinesearch = updated;
@@ -212,6 +221,7 @@ ProcessInfo::ProcessInfo()
 	iterOptMIQP = 0;
 
 	numNLPProbsSolved = 0;
+	numPrimalFixedNLPProbsSolved = 0;
 
 	itersWithStagnationMILP = 0;
 	iterSignificantObjectiveUpdate = 0;
@@ -226,8 +236,8 @@ ProcessInfo::ProcessInfo()
 
 	numOriginalInteriorPoints = 0;
 
-	currentObjectiveBounds.first = -DBL_MAX;
-	currentObjectiveBounds.second = DBL_MAX;
+	currentObjectiveBounds.first = -OSDBL_MAX;
+	currentObjectiveBounds.second = OSDBL_MAX;
 
 	settings = SHOTSettings::Settings::getInstance();
 
@@ -258,13 +268,13 @@ void ProcessInfo::setOriginalProblem(OptProblemOriginal *problem)
 
 	if (isMinimization)
 	{
-		currentObjectiveBounds.first = -DBL_MAX;
-		currentObjectiveBounds.second = DBL_MAX;
+		currentObjectiveBounds.first = -OSDBL_MAX;
+		currentObjectiveBounds.second = OSDBL_MAX;
 	}
 	else
 	{
-		currentObjectiveBounds.first = DBL_MAX;
-		currentObjectiveBounds.second = -DBL_MAX;
+		currentObjectiveBounds.first = OSDBL_MAX;
+		currentObjectiveBounds.second = -OSDBL_MAX;
 	}
 
 }
@@ -729,8 +739,8 @@ void ProcessInfo::createIteration()
 	if (iterations.size() == 0) iter.totNumHyperplanes = 0;
 	else iter.totNumHyperplanes = iterations.at(iterations.size() - 1).totNumHyperplanes;
 
-	iter.maxDeviation = DBL_MAX;
-	iter.boundaryDistance = DBL_MAX;
+	iter.maxDeviation = OSDBL_MAX;
+	iter.boundaryDistance = OSDBL_MAX;
 	iter.MILPSolutionLimitUpdated = false;
 
 	iter.type = relaxationStrategy->getProblemType();

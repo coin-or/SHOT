@@ -49,15 +49,16 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 
 	 }*/
 
-	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
+	if (currIter->isMILP()
+			&& processInfo->getRelativeObjectiveGap() > settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 		processInfo->startTimer("PrimalBoundTotal");
 		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
+
 		processInfo->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MILPSolutionPool);
 
 		processInfo->stopTimer("PrimalBoundTotal");
 	}
-
 }
 
 std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()

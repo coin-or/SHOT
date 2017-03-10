@@ -131,11 +131,11 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		destination->addVariable(numVar, "mu", -tmpObjBound, tmpObjBound, 'C');
-		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, tmpObjBound, 'C');
+		destination->addVariable(numVar + 1, "tempobjvar", -100, 0.1, 'C');
 	}
 	else
 	{
-		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, tmpObjBound, 'C');
+		destination->addVariable(numVar, "tempobjvar", -100, 0.1, 'C');
 	}
 
 	//destination->bVariablesModified = true;
@@ -192,7 +192,7 @@ void OptProblemNLPMinimax::copyConstraints(OSInstance *source, OSInstance *desti
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		//double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-		destination->addConstraint(numCon, "objconstr", -DBL_MAX, -source->instanceData->objectives->obj[0]->constant,
+		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
 				0.0);
 	}
 

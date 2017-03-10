@@ -18,7 +18,7 @@ class TaskSelectPrimalCandidatesFromNLP: public TaskBase
 		virtual ~TaskSelectPrimalCandidatesFromNLP();
 		virtual void run();
 		virtual std::string getType();
-		void setFixedPoint(std::vector<double> fixedPt);
+		//void setFixedPoint(std::vector<double> fixedPt);
 	private:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;

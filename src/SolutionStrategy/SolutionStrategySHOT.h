@@ -50,6 +50,7 @@
 
 #include "Tasks/TaskCheckPrimalSolutionCandidates.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
+#include "Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 

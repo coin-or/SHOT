@@ -80,6 +80,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tSolveIteration = new TaskSolveIteration();
 	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
 
+	TaskBase *tCheckDualCands = new TaskCheckDualSolutionCandidates();
+	processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
+
 	if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
 			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
 			&& solverMILP != ES_MILPSolver::CplexExperimental)
@@ -93,6 +96,15 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
 	processInfo->tasks->addTask(tCheckIterError, "CheckIterError");
+
+	TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
+	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+
+	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
+	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+
+	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
+	processInfo->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
 	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
 	processInfo->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
@@ -108,19 +120,11 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
 
 		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+
+		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+
+		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
-
-	TaskBase *tCheckDualCands = new TaskCheckDualSolutionCandidates();
-	processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
-
-	TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-
-	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
-
-	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
 	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
 	{
@@ -132,94 +136,107 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (settings->getBoolSetting("UseNLPCall", "PrimalBound"))
+	if (settings->getIntSetting("NLPFixedStrategy", "PrimalBound") != static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
+			&& processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
 	{
-		TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
+		processInfo->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
-		if (processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
-		{
-			TaskBase *tSelectPrimNLPCheck = new TaskConditional();
-
-			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
-			{
-				auto currIter = processInfo->getCurrentIteration();
-
-				// Added MILPSollimit updated krav mars 2016
-					if (!currIter->isMILP() || currIter->solutionPoints.size() == 0 || currIter->MILPSolutionLimitUpdated)
-					{
-						return (false);
-					}
-
-					if ( processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
-					{
-						return (true);
-					}
-
-					/*if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPCallMaxIter", "PrimalBound"))
-					 {
-					 return (true);
-					 }*/
-
-					if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPCallMaxElapsedTime", "PrimalBound"))
-					{
-						return (true);
-					}
-
-					int maxItersNoMIPChange = 20;
-					auto currSolPt = currIter->solutionPoints.at(0).point;
-
-					bool noMIPChange = true;
-
-					for (int i = 1; i < maxItersNoMIPChange; i++)
-					{
-						if (processInfo->iterations.size() <= i)
-						{
-							noMIPChange = false;
-							break;
-						}
-
-						auto prevIter = &processInfo->iterations.at(currIter->iterationNumber -1 - i);
-
-						if (!prevIter->isMILP())
-						{
-							noMIPChange = false;
-							break;
-						}
-
-						auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
-
-						bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
-								discreteIdxs);
-
-						if (isDifferent)
-						{
-							noMIPChange = false;
-							break;
-						}
-					}
-
-					if (noMIPChange)
-					{
-						processInfo->outputWarning("     MIP solution has not changed in " + to_string( maxItersNoMIPChange)+ " iterations. Solving NLP problem...");
-						return (true);
-					}
-
-					processInfo->itersMILPWithoutNLPCall++;
-
-					return (false);
-				});
-
-			dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
-
-			processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-			dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
-
-			processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-			processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
-			processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-			processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
-		}
+		TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP();
+		processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 	}
+
+	/*
+	 if (settings->getBoolSetting("UseNLPCall", "PrimalBound"))
+	 {
+	 TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+
+	 if (processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
+	 {
+	 TaskBase *tSelectPrimNLPCheck = new TaskConditional();
+
+	 dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
+	 {
+	 auto currIter = processInfo->getCurrentIteration();
+
+	 // Added MILPSollimit updated krav mars 2016
+	 if (!currIter->isMILP() || currIter->solutionPoints.size() == 0 || currIter->MILPSolutionLimitUpdated)
+	 {
+	 return (false);
+	 }
+
+	 if ( processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 {
+	 return (true);
+	 }
+
+	 //if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 //{
+	 //return (true);
+	 //}
+
+	 if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 {
+	 return (true);
+	 }
+
+	 int maxItersNoMIPChange = 20;
+	 auto currSolPt = currIter->solutionPoints.at(0).point;
+
+	 bool noMIPChange = true;
+
+	 for (int i = 1; i < maxItersNoMIPChange; i++)
+	 {
+	 if (processInfo->iterations.size() <= i)
+	 {
+	 noMIPChange = false;
+	 break;
+	 }
+
+	 auto prevIter = &processInfo->iterations.at(currIter->iterationNumber -1 - i);
+
+	 if (!prevIter->isMILP())
+	 {
+	 noMIPChange = false;
+	 break;
+	 }
+
+	 auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
+
+	 bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
+	 discreteIdxs);
+
+	 if (isDifferent)
+	 {
+	 noMIPChange = false;
+	 break;
+	 }
+	 }
+
+	 if (noMIPChange)
+	 {
+	 processInfo->outputWarning("     MIP solution has not changed in " + to_string( maxItersNoMIPChange)+ " iterations. Solving NLP problem...");
+	 return (true);
+	 }
+
+	 processInfo->itersMILPWithoutNLPCall++;
+
+	 return (false);
+	 });
+
+	 dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
+
+	 processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+	 dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
+
+	 processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+	 processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
+	 processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	 processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	 }
+	 }*/
 
 	TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
 	processInfo->tasks->addTask(tCheckObjStag, "CheckObjStag");

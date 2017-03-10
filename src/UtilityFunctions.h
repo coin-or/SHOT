@@ -12,6 +12,7 @@ namespace UtilityFunctions
 	bool isObjectiveQuadratic(OSInstance *instance);
 
 	void displayVector(std::vector<double> point);
+	void displayVector(std::vector<double> point1, std::vector<double> point2);
 	void displayVector(std::vector<int> point);
 	void displayVector(std::vector<std::string> point);
 

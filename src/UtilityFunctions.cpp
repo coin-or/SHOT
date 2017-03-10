@@ -21,7 +21,6 @@ void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, 
 
 void UtilityFunctions::displayVector(std::vector<double> point)
 {
-
 	std::stringstream str;
 
 	for (int i = 0; i < point.size(); i++)
@@ -34,9 +33,28 @@ void UtilityFunctions::displayVector(std::vector<double> point)
 	std::cout << str.str() << std::endl;
 }
 
+void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<double> point2)
+{
+	std::stringstream str;
+
+	if (point1.size() != point2.size()) return;
+
+	for (int i = 0; i < point1.size(); i++)
+	{
+		str << i;
+		str << "\t";
+		str << point1.at(i);
+
+		str << "\t";
+		str << point2.at(i);
+		str << std::endl;
+	}
+
+	std::cout << str.str() << std::endl;
+}
+
 void UtilityFunctions::displayVector(std::vector<int> point)
 {
-
 	std::stringstream str;
 
 	for (int i = 0; i < point.size(); i++)

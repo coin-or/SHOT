@@ -95,19 +95,24 @@ void TaskPrintSolution::run()
 
 	processInfo->outputSummary("├────────────────────────────────────────────────────────────────────────────────┤");
 
-	processInfo->outputSummary("│ Optimal MIP problems solved:    " + to_string(processInfo->iterOptMILP));
+	processInfo->outputSummary("│ Optimal MIP problems solved:      " + to_string(processInfo->iterOptMILP));
 
-	processInfo->outputSummary("│ Feasible MIP problems solved:   " + to_string(processInfo->iterFeasMILP));
+	processInfo->outputSummary("│ Feasible MIP problems solved:     " + to_string(processInfo->iterFeasMILP));
 
-	processInfo->outputSummary("│ Relaxed problems solved:        " + to_string(processInfo->iterLP));
+	processInfo->outputSummary("│ Relaxed problems solved:          " + to_string(processInfo->iterLP));
 
 	processInfo->outputSummary(
-			"│ Total problems solved:          "
+			"│ Total problems solved:            "
 					+ to_string(processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP));
 
-	processInfo->outputSummary("│ Function evaluations (in SHOT): " + to_string(processInfo->numFunctionEvals));
+	processInfo->outputSummary(
+			"│ Fixed primal NLP problems solved: " + to_string(processInfo->numPrimalFixedNLPProbsSolved));
 
-	processInfo->outputSummary("│ Gradient evaluations (in SHOT): " + to_string(processInfo->numGradientEvals));
+	processInfo->outputSummary("│ Total NLP problems solved:        " + to_string(processInfo->numNLPProbsSolved));
+
+	processInfo->outputSummary("│ Function evaluations (in SHOT):   " + to_string(processInfo->numFunctionEvals));
+
+	processInfo->outputSummary("│ Gradient evaluations (in SHOT):   " + to_string(processInfo->numGradientEvals));
 
 	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
 

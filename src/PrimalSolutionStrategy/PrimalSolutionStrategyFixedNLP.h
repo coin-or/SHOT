@@ -23,7 +23,9 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public 
 		virtual bool solveProblem();
 		virtual void saveProblemModelToFile(std::string fileName);
 
-		void setFixedPoint(std::vector<double> fixedPt);
+		virtual void initializeOSOption();
+
+		//void setFixedPoint(std::vector<double> fixedPt);
 
 	protected:
 		using PrimalSolutionStrategyBase::processInfo;
@@ -31,7 +33,6 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public 
 
 	private:
 		OptProblemNLPRelaxed *NLPProblem;
-		bool isOriginalRelaxedPointTested;
 
 		std::vector<int> discreteVariableIndexes;
 		std::vector<std::vector<double>> testedPoints;
@@ -39,5 +40,8 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public 
 
 		double originalNLPTime;
 		double originalNLPIter;
+
+		std::vector<double> originalLBs;
+		std::vector<double> originalUBs;
 
 };

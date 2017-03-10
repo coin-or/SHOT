@@ -22,7 +22,7 @@ void TaskCalculateSolutionChangeNorm::run()
 {
 	auto currIter = processInfo->getCurrentIteration();
 
-	currIter->boundaryDistance = DBL_MAX;
+	currIter->boundaryDistance = OSDBL_MAX;
 
 	if (processInfo->iterations.size() < 3)
 	{
@@ -54,7 +54,7 @@ void TaskCalculateSolutionChangeNorm::run()
 
 			if (OSIsnan(distance)) // Checks for INF, do not remove!
 			{
-				currIter->boundaryDistance = DBL_MAX;
+				currIter->boundaryDistance = OSDBL_MAX;
 			}
 			else
 			{

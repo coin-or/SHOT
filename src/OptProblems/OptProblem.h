@@ -40,6 +40,9 @@ class OptProblem
 		virtual std::vector<double> getVariableLowerBounds();
 		virtual std::vector<double> getVariableUpperBounds();
 
+		virtual void setVariableUpperBound(int varIdx, double value);
+		virtual void setVariableLowerBound(int varIdx, double value);
+
 		virtual std::vector<int> getRealVariableIndices();
 		virtual std::vector<int> getDiscreteVariableIndices();
 

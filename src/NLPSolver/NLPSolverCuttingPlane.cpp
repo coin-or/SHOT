@@ -87,6 +87,7 @@ bool NLPSolverCuttingPlane::createProblem(OSInstance* origInstance)
 
 	processInfo->outputInfo("Creating LP problem for minimax solver");
 	MILPSolver->createLinearProblem(NLPProblem);
+	MILPSolver->initializeSolverSettings();
 	MILPSolver->activateDiscreteVariables(false);
 	processInfo->outputInfo("MILP problem for minimax solver created");
 
@@ -117,8 +118,8 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 	// Corresponds to the difference between the LP solution objective value and
 	// the objective found in the linesearch minimization procedure
-	double maxObjDiffAbs = DBL_MAX;
-	double maxObjDiffRel = DBL_MAX;
+	double maxObjDiffAbs = OSDBL_MAX;
+	double maxObjDiffRel = OSDBL_MAX;
 
 	int numHPsAdded, numHPsTotal;
 	for (int i = 0; i < maxIter; i++)
@@ -186,6 +187,11 @@ bool NLPSolverCuttingPlane::solveProblem()
 		// Gets the most deviated constraints with a tolerance
 		auto tmpMostDevs = NLPProblem->getMostDeviatingConstraints(currSol, constrSelTol);
 
+		for (int j = 0; j < tmpMostDevs.size(); j++)
+		{
+
+		}
+
 		auto tmpLine = boost::format("%1% %|4t|+%2% = %3% %|15t|%4% %|30t|%5% %|45t|%6% %|60t|%7% %|75t|%8%") % i
 				% numHPsAdded % numHPsTotal % LPObjVar % mu % maxObjDiffAbs % maxObjDiffRel % lambda;
 
@@ -193,6 +199,11 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 		// Checks termination condition
 		if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
+		{
+			break;
+		}
+
+		if (tmpMostDevs.at(0).value < 0)
 		{
 			break;
 		}

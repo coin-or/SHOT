@@ -127,15 +127,6 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 	isNonLinConstrFulfilled = processInfo->originalProblem->isConstraintsFulfilledInPoint(tmpPoint,
 			settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"));
-	/*if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
-	 {
-
-	 }*/
-
-	/*if (primalSol.sourceType == E_PrimalSolutionSource::ObjectiveConstraint)
-	 {
-	 std::cout << "Objective constraint value " << tmpObjVal << " and error " << mostDev.value << std::endl;
-	 }*/
 
 	bool isMostDevConstrNonlinear = processInfo->originalProblem->isConstraintNonlinear(mostDev.idx);
 
@@ -193,10 +184,10 @@ bool PrimalSolutionStrategyBase::checkPoint(PrimalSolution primalSol)
 
 		processInfo->currentObjectiveBounds.second = tmpObjVal;
 
-		auto tmpLine = boost::format("    New primal bound %1% with dev. %2% (%3%) %4% %5%") % tmpObjVal % mostDev.value
-				% sourceDesc % HPadded % HPobjadded;
+		auto tmpLine = boost::format("     New primal bound %1% with dev. %2% (%3%) %4% %5%") % tmpObjVal
+				% mostDev.value % sourceDesc % HPadded % HPobjadded;
 
-		processInfo->outputInfo("tmpLine.str()");
+		processInfo->outputInfo(tmpLine.str());
 
 		primalSol.objValue = tmpObjVal;
 		primalSol.point = tmpPoint;

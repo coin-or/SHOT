@@ -1,7 +1,7 @@
 #include "MILPSolverGurobi.h"
 
-GRBEnv gurobiEnv = GRBEnv();
-GRBModel gurobiModel = GRBModel(gurobiEnv);
+GRBEnv *gurobiEnv;
+GRBModel *gurobiModel;
 
 MILPSolverGurobi::MILPSolverGurobi()
 {
@@ -577,7 +577,7 @@ void MILPSolverGurobi::addMIPStart(std::vector<double> point)
 		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->outputInfo("    Added MIP starting point.");
+	processInfo->outputInfo("      Added MIP starting point.");
 }
 
 void MILPSolverGurobi::writeProblemToFile(std::string filename)

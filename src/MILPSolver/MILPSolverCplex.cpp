@@ -223,7 +223,7 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
 
-		//cplexInstance.setParam(IloCplex::ParallelMode,1);
+		//cplexInstance.setParam(IloCplex::ParallelMode, 1); //Deterministic parallel
 		cplexInstance.setParam(IloCplex::Threads, 8);
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
@@ -804,7 +804,7 @@ void MILPSolverCplex::addMIPStart(std::vector<double> point)
 		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->outputInfo("    Added MIP starting point.");
+	processInfo->outputInfo("     Added MIP starting point.");
 }
 
 void MILPSolverCplex::deleteMIPStarts()

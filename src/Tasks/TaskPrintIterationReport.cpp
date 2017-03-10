@@ -162,7 +162,7 @@ void TaskPrintIterationReport::run()
 			tmpConstr = "";
 		}
 
-		auto tmpLine = boost::format("%|-4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
+		auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
 				% currIter->iterationNumber % tmpType.str() % hyperplanesExpr % dualBoundExpr % tmpObjVal
 				% primalBoundExpr % tmpConstr;
 

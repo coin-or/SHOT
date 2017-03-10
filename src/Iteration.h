@@ -57,5 +57,6 @@ class Iteration
 		std::vector<std::vector<double>> hyperplanePoints;
 
 		SolutionPoint getSolutionPointWithSmallestDeviation();
+		int getSolutionPointWithSmallestDeviationIndex();
 };
 

@@ -38,7 +38,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 	}
 
 	if (currIter->iterationNumber - processInfo->iterLastDualBoundUpdate
-			> settings->getIntSetting("MILPSolForceOptimalIter", "MILP") && processInfo->getDualBound() > -DBL_MAX)
+			> settings->getIntSetting("MILPSolForceOptimalIter", "MILP") && processInfo->getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = processInfo->getPreviousIteration()->usedMILPSolutionLimit;
 		processInfo->MILPSolver->setSolutionLimit(2100000000);

@@ -87,6 +87,6 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		CbcModel *cbcModel;
 
 		int solLimit;
-		double cutOff = DBL_MAX;
+		double cutOff = OSDBL_MAX;
 
 };

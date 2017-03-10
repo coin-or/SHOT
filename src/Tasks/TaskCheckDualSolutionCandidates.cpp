@@ -66,9 +66,9 @@ void TaskCheckDualSolutionCandidates::run()
 					break;
 			}
 
-			auto tmpLine = boost::format("    New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
+			auto tmpLine = boost::format("     New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
 
-			processInfo->outputInfo("tmpLine.str()");
+			processInfo->outputInfo(tmpLine.str());
 
 		}
 	}

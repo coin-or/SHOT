@@ -6,6 +6,8 @@ NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
 {
 
 	NLPSolver = new NLPIpoptSolver();
+
+	//auto tmp = static_cast<NLPIpoptSolver>(NLPSolver);
 	osOption = new OSOption();
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
@@ -118,6 +120,7 @@ NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
 
 	NLPSolver->osoption = osOption;
 	NLPSolver->osol = osolwriter->writeOSoL(osOption);
+
 	//NLPSolver->setSolverOptions();
 	isPointValueCached = false;
 

@@ -16,7 +16,7 @@ bool Iteration::isMILP()
 
 SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 {
-	double tmpVal = -DBL_MAX;
+	double tmpVal = -OSDBL_MAX;
 	int tmpIdx = 0;
 
 	for (int i = 0; i < solutionPoints.size(); i++)
@@ -29,4 +29,21 @@ SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 	}
 
 	return (solutionPoints.at(tmpIdx));
+}
+
+int Iteration::getSolutionPointWithSmallestDeviationIndex()
+{
+	double tmpVal = -OSDBL_MAX;
+	int tmpIdx = 0;
+
+	for (int i = 0; i < solutionPoints.size(); i++)
+	{
+		if (solutionPoints.at(i).maxDeviation.value > tmpVal)
+		{
+			tmpIdx = i;
+			tmpVal = solutionPoints.at(i).maxDeviation.value;
+		}
+	}
+
+	return (tmpIdx);
 }
