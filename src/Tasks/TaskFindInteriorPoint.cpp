@@ -56,14 +56,14 @@ void TaskFindInteriorPoint::run()
 
 		processInfo->outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
 	}
-	else if (solver == ES_NLPSolver::CouenneMiniMax)
-	{
-		NLPSolvers.emplace_back(new NLPSolverCouenneMinimax());
+	/*else if (solver == ES_NLPSolver::CouenneMiniMax)
+	 {
+	 NLPSolvers.emplace_back(new NLPSolverCouenneMinimax());
 
-		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
+	 NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
 
-		processInfo->outputDebug("Couenne minimax selected as NLP solver.");
-	}
+	 processInfo->outputDebug("Couenne minimax selected as NLP solver.");
+	 }*/
 	else
 	{
 		throw new TaskExceptionInteriorPoint("Error in NLP solver definition.");

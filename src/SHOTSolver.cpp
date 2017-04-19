@@ -306,7 +306,7 @@ void SHOTSolver::initializeSettings()
 	enumNLPSolver.push_back("IPOptMinimax");
 	enumNLPSolver.push_back("IPOptRelaxed");
 	enumNLPSolver.push_back("IPOptMinimax and IPOptRelaxed");
-	enumNLPSolver.push_back("CouenneMiniMax");
+	//enumNLPSolver.push_back("CouenneMiniMax");
 	settings->createSetting("NLPSolver", "NLP", static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax), "NLP solver",
 			enumNLPSolver);
 	enumNLPSolver.clear();

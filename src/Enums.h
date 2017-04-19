@@ -71,7 +71,7 @@ enum class ES_QPStrategy
 
 enum class ES_NLPSolver
 {
-	CuttingPlaneMiniMax, IPOptMiniMax, IPOptRelaxed, IPOptMiniMaxAndRelaxed, CouenneMiniMax
+	CuttingPlaneMiniMax, IPOptMiniMax, IPOptRelaxed, IPOptMiniMaxAndRelaxed
 };
 
 enum class ES_IPOptSolver
