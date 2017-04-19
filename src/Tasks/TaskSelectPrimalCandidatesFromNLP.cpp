@@ -17,8 +17,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
 
 	primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
 
-	primalStrategyFixedNLP->createProblem(processInfo->originalProblem->getProblemInstance());
-
 	processInfo->stopTimer("PrimalBoundSearchNLP");
 	processInfo->stopTimer("PrimalBoundTotal");
 }
@@ -32,12 +30,11 @@ void TaskSelectPrimalCandidatesFromNLP::run()
 {
 	auto currIter = processInfo->getCurrentIteration();
 
-	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10
-	/*&& processInfo->getElapsedTime("Total") <= settings->getDoubleSetting("TimeLimit", "Algorithm")*/)
+	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
 	{
 		processInfo->startTimer("PrimalBoundTotal");
 		processInfo->startTimer("PrimalBoundSearchNLP");
-
+		primalStrategyFixedNLP->createProblem(processInfo->originalProblem->getProblemInstance());
 		primalStrategyFixedNLP->runStrategy();
 
 		processInfo->stopTimer("PrimalBoundSearchNLP");

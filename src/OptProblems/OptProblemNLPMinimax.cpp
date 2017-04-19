@@ -131,11 +131,11 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		destination->addVariable(numVar, "mu", -tmpObjBound, tmpObjBound, 'C');
-		destination->addVariable(numVar + 1, "tempobjvar", -100, 0.1, 'C');
+		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, 0.1, 'C');
 	}
 	else
 	{
-		destination->addVariable(numVar, "tempobjvar", -100, 0.1, 'C');
+		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, 0.1, 'C');
 	}
 
 	//destination->bVariablesModified = true;
@@ -407,67 +407,6 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 
 		}
 	}
-}
-
-vector<IndexValuePair> OptProblemNLPMinimax::getMostDeviatingConstraints(std::vector<double> point, double tolerance)
-{
-	vector < IndexValuePair > valpairs;
-
-	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
-
-	if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
-	{
-		IndexValuePair valpair;
-		valpair.idx = -1;
-		valpair.value = 0.0;
-
-		valpairs.push_back(valpair);
-	}
-	else
-	{
-		if (tolerance < 0) tolerance = 0;
-		if (tolerance > 1) tolerance = 1;
-
-		std::vector<double> constrDevs(idxNLCs.size());
-
-		for (int i = 0; i < idxNLCs.size(); i++)
-		{
-			constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
-		}
-
-		IndexValuePair valpair;
-		auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-		valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
-		valpair.value = *biggest;
-		valpairs.push_back(valpair);
-
-		double compVal;
-		if (valpair.value >= 0)
-		{
-			compVal = valpair.value * (1 - tolerance);
-		}
-		else
-		{
-			compVal = valpair.value * (1 + tolerance);
-		}
-
-		for (int i = 0; i < idxNLCs.size(); i++)
-		{
-			if (idxNLCs.at(i) != valpair.idx)
-			{
-				if (constrDevs.at(i) >= compVal)
-				{
-					IndexValuePair tmpPair
-					{ idxNLCs.at(i), constrDevs.at(i) };
-
-					valpairs.push_back(tmpPair);
-				}
-			}
-		}
-
-	}
-
-	return valpairs;
 }
 
 IndexValuePair OptProblemNLPMinimax::getMostDeviatingConstraint(std::vector<double> point)

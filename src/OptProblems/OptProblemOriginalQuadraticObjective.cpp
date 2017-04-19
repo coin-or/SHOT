@@ -24,6 +24,8 @@ bool OptProblemOriginalQuadraticObjective::setProblem(OSInstance *instance)
 
 	processInfo->setOriginalProblem(this);
 
+	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
+
 	instance->getJacobianSparsityPattern();
 
 	return true;

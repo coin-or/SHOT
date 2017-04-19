@@ -15,9 +15,9 @@ void TaskPrintSolution::run()
 
 	processInfo->stopTimer("Subproblems");
 
-	//auto tmpSol = processInfo->MILPSolver->getObjectiveValue();
-	processInfo->outputSummary("\n"
-			"┌─── Solution report ────────────────────────────────────────────────────────────┐");
+	processInfo->outputSummary(
+			"                                                                                     \n");
+	processInfo->outputSummary("┌─── Solution report ────────────────────────────────────────────────────────────┐");
 
 	if (processInfo->terminationReason == E_TerminationReason::ConstraintTolerance)
 	{

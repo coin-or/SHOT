@@ -48,9 +48,8 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 	 }
 
 	 }*/
-
-	if (currIter->isMILP()
-			&& processInfo->getRelativeObjectiveGap() > settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (currIter->isMILP()/*
+	 && processInfo->getRelativeObjectiveGap() > settings->getDoubleSetting("GapTermTolRelative", "Algorithm")*/)
 	{
 		processInfo->startTimer("PrimalBoundTotal");
 		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;

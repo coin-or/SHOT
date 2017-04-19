@@ -218,8 +218,8 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 				processInfo->outputDebug("Bisection linesearch implementation selected.");
 			}
 
-			tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
-			tCheckDualCands = new TaskCheckDualSolutionCandidates();
+			//tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
+			//tCheckDualCands = new TaskCheckDualSolutionCandidates();
 			tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
 
 		}
@@ -1584,4 +1584,22 @@ bool MILPSolverCplexExperimental::supportsLazyConstraints()
 void MILPSolverCplexExperimental::checkParameters()
 {
 
+}
+
+std::pair<std::vector<double>, std::vector<double> > MILPSolverCplexExperimental::presolveAndGetNewBounds()
+{
+	return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
+			processInfo->originalProblem->getVariableLowerBounds()));
+}
+
+void MILPSolverCplexExperimental::writePresolvedToFile(std::string filename)
+{
+	try
+	{
+		//Not implemented
+	}
+	catch (IloException &e)
+	{
+		processInfo->outputError("Error when saving presolved model to file", e.getMessage());
+	}
 }

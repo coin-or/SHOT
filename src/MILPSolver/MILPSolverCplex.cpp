@@ -223,8 +223,8 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
 
-		//cplexInstance.setParam(IloCplex::ParallelMode, 1); //Deterministic parallel
-		cplexInstance.setParam(IloCplex::Threads, 8);
+		cplexInstance.setParam(IloCplex::ParallelMode, settings->getIntSetting("ParallelMode", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Threads, settings->getIntSetting("Threads", "CPLEX"));
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
@@ -517,7 +517,6 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 
 	try
 	{
-
 		if (modelUpdated) // EDIT: march 2016, should this be used??
 		{
 			cplexInstance.extract(cplexModel);
@@ -550,6 +549,24 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 		iterDurations.push_back(timeEnd - timeStart);
 		MILPSolutionStatus = getSolutionStatus();
 
+		/*if (!processInfo->getCurrentIteration()->isMILP())
+		 {
+
+		 auto numVar = processInfo->originalProblem->getNumberOfVariables();
+		 //IloIntVarArray ivararray(cplexEnv, numVar);
+		 IloNumArray redubs(cplexEnv, numVar);
+		 IloNumArray redlbs(cplexEnv, numVar);
+		 IloRangeArray ranges(cplexEnv, numVar);
+		 IloBoolArray redund(cplexEnv, numVar);
+
+		 std::cout << "HEJ" << std::endl;
+		 //cplexInstance.basicPresolve(ivararray, redlbs, redubs, ranges, redund);
+		 std::cout << "HEJ" << std::endl;
+		 /*for (int i = 0; i < numVar; i++)
+		 {
+		 std::cout << redubs[i] << " " << redlbs[i] << std::endl;
+		 }
+		 }*/
 	}
 	catch (IloException &e)
 	{
@@ -889,7 +906,7 @@ void MILPSolverCplex::updateVariableBound(int varIndex, double lowerBound, doubl
 	try
 	{
 		cplexVars[varIndex].setBounds(lowerBound, upperBound);
-		cplexInstance.extract(cplexModel);
+		modelUpdated = true;
 	}
 	catch (IloException &e)
 	{
@@ -941,6 +958,82 @@ double MILPSolverCplex::getDualObjectiveValue()
 	}
 
 	return (objVal);
+}
+
+std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAndGetNewBounds()
+{
+	try
+	{
+		auto numVar = processInfo->originalProblem->getNumberOfVariables();
+		IloIntVarArray ivararray(cplexEnv, numVar);
+		IloNumArray redubs(cplexEnv, numVar);
+		IloNumArray redlbs(cplexEnv, numVar);
+
+		IloBoolArray redund(cplexEnv);
+
+		bool isUpdated = false;
+
+		cplexInstance.basicPresolve(cplexVars, redlbs, redubs, cplexConstrs, redund);
+
+		std::vector<double> newLBs;
+		std::vector<double> newUBs;
+
+		newLBs.reserve(numVar);
+		newUBs.reserve(numVar);
+
+		for (int i = 0; i < numVar; i++)
+		{
+			newLBs.push_back(redlbs[i]);
+			newUBs.push_back(redubs[i]);
+		}
+
+		if (settings->getBoolSetting("RemoveRedundantConstraintsFromMIP", "Presolve"))
+		{
+			int numconstr = 0;
+
+			for (int j = 0; j < cplexConstrs.getSize(); j++)
+			{
+				if (redund[j] == true)
+				{
+					cplexModel.remove(cplexConstrs[j]);
+					cplexConstrs[j].asConstraint().removeFromAll();
+
+					numconstr++;
+					isUpdated = true;
+				}
+			}
+
+			if (isUpdated)
+			{
+				cplexInstance.extract(cplexModel);
+				processInfo->outputInfo(
+						"     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
+				processInfo->numConstraintsRemovedInPresolve = numconstr;
+			}
+		}
+
+		return (std::make_pair(newLBs, newUBs));
+
+	}
+	catch (IloException &e)
+	{
+		processInfo->outputError("Error during presolve", e.getMessage());
+
+		return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
+				processInfo->originalProblem->getVariableLowerBounds()));
+	}
+}
+
+void MILPSolverCplex::writePresolvedToFile(std::string filename)
+{
+	try
+	{
+		//Not implemented
+	}
+	catch (IloException &e)
+	{
+		processInfo->outputError("Error when saving presolved model to file", e.getMessage());
+	}
 }
 
 bool MILPSolverCplex::supportsLazyConstraints()

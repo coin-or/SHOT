@@ -20,6 +20,7 @@ class RelaxationStrategyStandard: public IRelaxationStrategy, RelaxationStrategy
 
 	private:
 		bool isIterationLimitReached();
+		bool isTimeLimitReached();
 		bool isLPStepFinished();
 		bool isObjectiveStagnant();
 

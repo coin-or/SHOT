@@ -54,6 +54,7 @@ class IMILPSolver
 		virtual int getSolutionLimit() = 0;
 
 		virtual void writeProblemToFile(std::string filename) = 0;
+		virtual void writePresolvedToFile(std::string filename) = 0;
 
 		virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
@@ -74,6 +75,10 @@ class IMILPSolver
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+
+		virtual void presolveAndUpdateBounds() = 0;
+		virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
+
 		virtual void createHyperplane(Hyperplane hyperplane)= 0;
 		virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
@@ -82,5 +87,7 @@ class IMILPSolver
 		virtual bool supportsLazyConstraints() = 0;
 
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes() = 0;
+
+		virtual void updateNonlinearObjectiveFromPrimalDualBounds() = 0;
 	protected:
 };

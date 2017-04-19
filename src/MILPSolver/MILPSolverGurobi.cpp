@@ -750,6 +750,10 @@ double MILPSolverGurobi::getDualObjectiveValue()
 	return (objVal);
 }
 
+void MILPSolverGurobi::writePresolvedToFile(std::string filename)
+{
+}
+
 bool MILPSolverGurobi::supportsLazyConstraints()
 {
 	return (false);
@@ -758,4 +762,10 @@ bool MILPSolverGurobi::supportsLazyConstraints()
 void MILPSolverGurobi::checkParameters()
 {
 
+}
+
+std::pair<std::vector<double>, std::vector<double> > MILPSolverGurobi::presolveAndGetNewBounds()
+{
+	return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
+			processInfo->originalProblem->getVariableLowerBounds()));
 }

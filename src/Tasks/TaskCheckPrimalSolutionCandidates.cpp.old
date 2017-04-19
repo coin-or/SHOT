@@ -26,16 +26,16 @@ TaskCheckPrimalSolutionCandidates::~TaskCheckPrimalSolutionCandidates()
 
 void TaskCheckPrimalSolutionCandidates::run()
 {
-	processInfo->startTimer("PrimalBoundTotal");
+	/*processInfo->startTimer("PrimalBoundTotal");
 
-	for (auto cand : processInfo->primalSolutionCandidates)
-	{
-		primalStrategyCheckPoint->checkPoint(cand);
-	}
+	 for (auto cand : processInfo->primalSolutionCandidates)
+	 {
+	 //primalStrategyCheckPoint->checkPoint(cand);
+	 }
 
-	processInfo->primalSolutionCandidates.clear();
+	 processInfo->primalSolutionCandidates.clear();
 
-	processInfo->stopTimer("PrimalBoundTotal");
+	 processInfo->stopTimer("PrimalBoundTotal");*/
 
 }
 

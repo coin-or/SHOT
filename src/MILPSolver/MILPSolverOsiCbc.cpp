@@ -547,6 +547,16 @@ double MILPSolverOsiCbc::getDualObjectiveValue()
 {
 }
 
+std::pair<std::vector<double>, std::vector<double> > MILPSolverOsiCbc::presolveAndGetNewBounds()
+{
+	return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
+			processInfo->originalProblem->getVariableLowerBounds()));
+}
+
+void MILPSolverOsiCbc::writePresolvedToFile(std::string filename)
+{
+}
+
 bool MILPSolverOsiCbc::supportsLazyConstraints()
 {
 	return (false);
@@ -578,4 +588,3 @@ void MILPSolverOsiCbc::checkParameters()
 				"Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!");
 	}
 }
-

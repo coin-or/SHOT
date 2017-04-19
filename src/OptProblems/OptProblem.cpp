@@ -83,6 +83,16 @@ std::vector<double> OptProblem::getVariableUpperBounds()
 	return tmpVector;
 }
 
+double OptProblem::getVariableLowerBound(int varIdx)
+{
+	return (getProblemInstance()->instanceData->variables->var[varIdx]->lb);
+}
+
+double OptProblem::getVariableUpperBound(int varIdx)
+{
+	return (getProblemInstance()->instanceData->variables->var[varIdx]->ub);
+}
+
 void OptProblem::setVariableUpperBound(int varIdx, double value)
 {
 	getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
@@ -105,7 +115,7 @@ std::vector<int> OptProblem::getRealVariableIndices()
 		if (varTypes.at(i) == 'C') indices.push_back(i);
 	}
 
-	return indices;
+	return (indices);
 }
 
 std::vector<int> OptProblem::getDiscreteVariableIndices()
@@ -120,11 +130,43 @@ std::vector<int> OptProblem::getDiscreteVariableIndices()
 		if (varTypes.at(i) == 'I' || varTypes.at(i) == 'B') indices.push_back(i);
 	}
 
-	return indices;
+	return (indices);
+}
+
+std::vector<int> OptProblem::getBinaryVariableIndices()
+{
+	std::vector<int> indices;
+	indices.reserve(getNumberOfBinaryVariables());
+
+	auto varTypes = getVariableTypes();
+
+	for (int i = 0; i < getNumberOfVariables(); i++)
+	{
+		if (varTypes.at(i) == 'B') indices.push_back(i);
+	}
+
+	return (indices);
+}
+
+std::vector<int> OptProblem::getIntegerVariableIndices()
+{
+	std::vector<int> indices;
+	indices.reserve(getNumberOfIntegerVariables());
+
+	auto varTypes = getVariableTypes();
+
+	for (int i = 0; i < getNumberOfVariables(); i++)
+	{
+		if (varTypes.at(i) == 'I') indices.push_back(i);
+	}
+
+	return (indices);
 }
 
 void OptProblem::printProblemStatistics()
 {
+	processInfo->outputSummary(
+			"                                                                                     \n");
 	processInfo->outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
 	processInfo->outputSummary(
@@ -138,7 +180,8 @@ void OptProblem::printProblemStatistics()
 					+ to_string(getNumberOfIntegerVariables()) + "/");
 
 	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
-	processInfo->outputSummary("");
+	processInfo->outputSummary(
+			"                                                                                     \n");
 }
 
 void OptProblem::exportProblemToOsil(std::string fileName)
@@ -240,6 +283,67 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
 	valpair.value = *biggest;
 
 	return valpair;
+}
+
+vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<double> point, double tolerance)
+{
+	vector < IndexValuePair > valpairs;
+
+	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
+
+	if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
+	{
+		IndexValuePair valpair;
+		valpair.idx = -1;
+		valpair.value = 0.0;
+
+		valpairs.push_back(valpair);
+	}
+	else
+	{
+		if (tolerance < 0) tolerance = 0;
+		if (tolerance > 1) tolerance = 1;
+
+		std::vector<double> constrDevs(idxNLCs.size());
+
+		for (int i = 0; i < idxNLCs.size(); i++)
+		{
+			constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
+		}
+
+		IndexValuePair valpair;
+		auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
+		valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
+		valpair.value = *biggest;
+		valpairs.push_back(valpair);
+
+		double compVal;
+		if (valpair.value >= 0)
+		{
+			compVal = valpair.value * (1 - tolerance);
+		}
+		else
+		{
+			compVal = valpair.value * (1 + tolerance);
+		}
+
+		for (int i = 0; i < idxNLCs.size(); i++)
+		{
+			if (idxNLCs.at(i) != valpair.idx)
+			{
+				if (constrDevs.at(i) >= compVal)
+				{
+					IndexValuePair tmpPair
+					{ idxNLCs.at(i), constrDevs.at(i) };
+
+					valpairs.push_back(tmpPair);
+				}
+			}
+		}
+
+	}
+
+	return (valpairs);
 }
 
 bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
@@ -442,7 +546,6 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 	if (source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
 	{
 		int nvar = source->getVariableNumber();
-		//destination->setVariableNumber(nvar);
 
 		std::string *varname = source->getVariableNames();
 		char *vartype = source->getVariableTypes();
@@ -745,6 +848,16 @@ std::vector<int> OptProblem::getLinearConstraintIndexes()
 	return idxs;
 }
 
+bool OptProblem::hasVariableBoundsBeenTightened(int varIndex)
+{
+	return (m_variableBoundTightened.at(varIndex));
+}
+
+void OptProblem::setVariableBoundsAsTightened(int varIndex)
+{
+	m_variableBoundTightened.at(varIndex) = true;
+}
+
 std::vector<int> OptProblem::getNonlinearConstraintIndexes()
 {
 	return m_nonlinearConstraints;
@@ -897,6 +1010,12 @@ OSInstance * OptProblem::getProblemInstance()
 {
 	return m_problemInstance;
 }
+
+void OptProblem::setVariableBoundsTightened(std::vector<bool> status)
+{
+	m_variableBoundTightened = status;
+}
+
 void OptProblem::setProblemInstance(OSInstance * instance)
 {
 	m_problemInstance = instance;

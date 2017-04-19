@@ -18,7 +18,9 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 
 		virtual bool createLinearProblem(OptProblem *origProblem);
 		virtual void initializeSolverSettings();
+
 		virtual void writeProblemToFile(std::string filename);
+		virtual void writePresolvedToFile(std::string filename);
 
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
 		{
@@ -38,6 +40,13 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		virtual void fixVariable(int varIndex, double value);
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+
+		virtual void presolveAndUpdateBounds()
+		{
+			return (MILPSolverBase::presolveAndUpdateBounds());
+		}
+
+		virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds();
 
 		virtual void activateDiscreteVariables(bool activate);
 		virtual bool getDiscreteVariableStatus()
@@ -80,6 +89,11 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
 		{
 			return (MILPSolverBase::getGeneratedHyperplanes());
+		}
+
+		virtual void updateNonlinearObjectiveFromPrimalDualBounds()
+		{
+			return (MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
 		}
 
 	private:

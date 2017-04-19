@@ -10,6 +10,7 @@
 #include <PrimalSolutionStrategyBase.h>
 #include "NLPSolverIPOptBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
+#include "../MILPSolver/IMILPSolver.h"
 
 class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public INLPSolver, public NLPSolverIPOptBase
 {

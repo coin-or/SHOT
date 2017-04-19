@@ -109,7 +109,7 @@ enum class E_PrimalSolutionSource
 
 enum class E_PrimalNLPSource
 {
-	FirstSolution, FeasibleSolution, UnFeasibleSolution, SmallestDeviationSolution
+	FirstSolution, FeasibleSolution, UnFeasibleSolution, SmallestDeviationSolution, FirstSolutionNewDualBound
 };
 
 enum class E_DualSolutionSource
@@ -139,6 +139,11 @@ enum class E_HyperplaneSource
 enum class ES_AddPrimalPointAsInteriorPoint
 {
 	KeepOriginal, KeepBoth, KeepNew, OnlyAverage
+};
+
+enum class ES_PresolveStrategy
+{
+	Never, Once, EveryIteration
 };
 
 enum class ES_LinesearchConstraintStrategy

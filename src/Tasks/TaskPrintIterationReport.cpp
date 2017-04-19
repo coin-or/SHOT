@@ -68,7 +68,14 @@ void TaskPrintIterationReport::run()
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 		{
 			tmpType << " SL";
-			tmpType << std::to_string(currIter->usedMILPSolutionLimit);
+			if (currIter->usedMILPSolutionLimit > 1000)
+			{
+				tmpType << "∞";
+			}
+			else
+			{
+				tmpType << std::to_string(currIter->usedMILPSolutionLimit);
+			}
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
 		{
@@ -102,13 +109,10 @@ void TaskPrintIterationReport::run()
 		auto primalBound = processInfo->getPrimalBound();
 		auto dualBound = processInfo->getDualBound();
 
-		if (primalBound > 1.e100)
+		if (primalBound != lastPrimalBound && processInfo->primalSolutions.size() > 0
+				&& processInfo->primalSolutions.at(0).sourceType == E_PrimalSolutionSource::MILPSolutionPool)
 		{
-			primalBoundExpr = "inf";
-		}
-		else if (primalBound != lastPrimalBound)
-		{
-			primalBoundExpr = ((boost::format("%.3f") % primalBound).str());
+			primalBoundExpr = UtilityFunctions::toString(primalBound);
 			lastPrimalBound = primalBound;
 		}
 		else
@@ -116,13 +120,9 @@ void TaskPrintIterationReport::run()
 			primalBoundExpr = "";
 		}
 
-		if (dualBound < -1.e100)
+		if (dualBound != lastDualBound)
 		{
-			dualBoundExpr = "-inf";
-		}
-		else if (dualBound != lastDualBound)
-		{
-			dualBoundExpr = ((boost::format("%.3f") % dualBound).str());
+			dualBoundExpr = UtilityFunctions::toString(dualBound);
 			lastDualBound = dualBound;
 		}
 		else
@@ -130,7 +130,7 @@ void TaskPrintIterationReport::run()
 			dualBoundExpr = "";
 		}
 
-		std::string tmpObjVal = ((boost::format("%.3f") % currIter->objectiveValue).str());
+		std::string tmpObjVal = UtilityFunctions::toString(currIter->objectiveValue);
 
 		std::string tmpConstr;
 
@@ -138,15 +138,7 @@ void TaskPrintIterationReport::run()
 
 		std::string tmpConstrExpr;
 
-		if (tmpConstrVal > 1.e12)
-		{
-			tmpConstrExpr = "inf";
-		}
-
-		else
-		{
-			tmpConstrExpr = ((boost::format("%.5f") % currIter->maxDeviation).str());
-		}
+		tmpConstrExpr = UtilityFunctions::toStringFormat(currIter->maxDeviation, "%.5f");
 
 		if (hasSolution && currIter->maxDeviationConstraint != -1)
 		{

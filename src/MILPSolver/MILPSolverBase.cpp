@@ -168,9 +168,6 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 		currIter->numHyperplanesAdded++;
 		currIter->totNumHyperplanes++;
 	}
-
-	currIter->totNumHyperplanes = processInfo->getPreviousIteration()->totNumHyperplanes
-			+ currIter->numHyperplanesAdded;
 }
 
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
@@ -247,4 +244,81 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 std::vector<GeneratedHyperplane> *MILPSolverBase::getGeneratedHyperplanes()
 {
 	return (&generatedHyperplanes);
+}
+
+void MILPSolverBase::presolveAndUpdateBounds()
+{
+	auto newBounds = this->presolveAndGetNewBounds();
+
+	auto numVar = processInfo->originalProblem->getNumberOfVariables();
+
+	for (int i = 0; i < numVar; i++)
+	{
+		auto currBounds = this->getCurrentVariableBounds(i);
+
+		bool newLB = false;
+		bool newUB = false;
+
+		if (newBounds.first.at(i) > currBounds.first) newLB = true;
+		if (newBounds.second.at(i) > currBounds.second) newUB = true;
+
+		if (newLB)
+		{
+			processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			processInfo->outputInfo(
+					"     Lower bound for variable (" + to_string(i) + ") updated from "
+							+ UtilityFunctions::toString(currBounds.first) + " to "
+							+ UtilityFunctions::toString(newBounds.first.at(i)));
+
+			if (!processInfo->originalProblem->hasVariableBoundsBeenTightened(i))
+			{
+				processInfo->originalProblem->setVariableBoundsAsTightened(i);
+				processInfo->numVariableBoundsTightenedInPresolve++;
+			}
+		}
+
+		if (newUB)
+		{
+			processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			processInfo->outputInfo(
+					"     Upper bound for variable (" + to_string(i) + ") updated from "
+							+ UtilityFunctions::toString(currBounds.second) + " to "
+							+ UtilityFunctions::toString(newBounds.second.at(i)));
+
+			if (!processInfo->originalProblem->hasVariableBoundsBeenTightened(i))
+			{
+				processInfo->originalProblem->setVariableBoundsAsTightened(i);
+				processInfo->numVariableBoundsTightenedInPresolve++;
+			}
+		}
+
+		if (settings->getBoolSetting("UsePresolveBoundsForMIP", "Presolve") && (newLB || newUB))
+		{
+			updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
+			processInfo->outputInfo("     Bounds updated also in MIP problem");
+		}
+	}
+}
+
+void MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
+{
+	if (!processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	{
+		return;
+	}
+
+	auto varIdx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
+
+	auto newLB = processInfo->getDualBound();
+	auto newUB = processInfo->getPrimalBound();
+
+	auto currBounds = this->getCurrentVariableBounds(varIdx);
+
+	if (newLB > currBounds.first || newUB < currBounds.second)
+	{
+		this->updateVariableBound(varIdx, newLB, newUB);
+		processInfo->outputInfo(
+				"     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and "
+						+ UtilityFunctions::toString(newUB));
+	}
 }
