@@ -65,6 +65,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
 	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
 
+	TaskBase *tAddHPs = new TaskAddHyperplanes();
+	processInfo->tasks->addTask(tAddHPs, "AddHPs");
+
 	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
 	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
@@ -77,11 +80,15 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	processInfo->tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
 
+	if (static_cast<ES_PresolveStrategy>(settings->getIntSetting("PresolveStrategy", "Presolve"))
+			!= ES_PresolveStrategy::Never)
+	{
+		TaskBase *tPresolve = new TaskPresolve();
+		processInfo->tasks->addTask(tPresolve, "Presolve");
+	}
+
 	TaskBase *tSolveIteration = new TaskSolveIteration();
 	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
-
-	TaskBase *tCheckDualCands = new TaskCheckDualSolutionCandidates();
-	processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
 
 	if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
 			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
@@ -110,16 +117,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	processInfo->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	TaskBase *tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
-
 	if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
 			== ES_SolutionStrategy::ESH)
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		processInfo->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
-
-		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
 
 		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
@@ -130,8 +133,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	{
 		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
 		processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands2");
-		processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands2");
 		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
@@ -280,12 +281,18 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 			processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
 		}
 
-		processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+		//processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
 		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-		TaskBase *tAddHPs = new TaskAddHyperplanes();
+		//TaskBase *tAddHPs = new TaskAddHyperplanes();
 		processInfo->tasks->addTask(tAddHPs, "AddHPs");
+
+		if (settings->getBoolSetting("AddIntegerCuts", "Algorithm"))
+		{
+			TaskBase *tAddICs = new TaskAddIntegerCuts();
+			processInfo->tasks->addTask(tAddICs, "AddICs");
+		}
 
 		/*
 		 if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
@@ -301,11 +308,11 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tSelectHPPts);
-		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckPrimCands);
+		//dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckPrimCands);
 		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckAbsGap);
 		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckRelGap);
 
-		TaskBase *tAddHPs = new TaskAddHyperplanes();
+		//TaskBase *tAddHPs = new TaskAddHyperplanes();
 		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tAddHPs);
 
 		TaskBase *tForceSupportingHyperplaneAddition = new TaskConditional();
@@ -334,8 +341,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
 	processInfo->tasks->addTask(tGoto, "Goto");
 
-	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckPrimCands);
-	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckDualCands);
+	//dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckPrimCands);
+	//dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckDualCands);
 
 	processInfo->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 

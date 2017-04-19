@@ -42,6 +42,7 @@ namespace SHOTSettings
 			void readSettings(std::string osol);
 			void readSettings(OSOption* options);
 			std::string getSettingsAsOSol();
+			std::string getSettingsAsString();
 			OSOption* getSettingsAsOSOption();
 
 			// String settings

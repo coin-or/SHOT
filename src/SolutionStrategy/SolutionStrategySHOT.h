@@ -9,6 +9,7 @@
 #pragma once
 
 #include <ISolutionStrategy.h>
+#include <TaskAddIntegerCuts.h>
 #include <TaskFindInteriorPoint.h>
 
 #include "Tasks/TaskBase.h"
@@ -32,6 +33,7 @@
 #include "Tasks/TaskPrintSolutionBoundReport.h"
 
 #include "Tasks/TaskSolveIteration.h"
+#include "Tasks/TaskPresolve.h"
 
 #include "Tasks/TaskCheckAbsoluteGap.h"
 #include "Tasks/TaskCheckIterationError.h"
@@ -48,18 +50,20 @@
 #include "Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "Tasks/TaskAddHyperplanes.h"
 
-#include "Tasks/TaskCheckPrimalSolutionCandidates.h"
+//#include "Tasks/TaskCheckPrimalSolutionCandidates.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
-#include "Tasks/TaskCheckDualSolutionCandidates.h"
+//#include "Tasks/TaskCheckDualSolutionCandidates.h"
 
 #include "Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 #include "Tasks/TaskSolveFixedLinearProblem.h"
 
 #include "Tasks/TaskSwitchToLazyConstraints.h"
+
+#include "Tasks/TaskAddIntegerCuts.h"
 
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"

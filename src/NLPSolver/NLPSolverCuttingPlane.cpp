@@ -6,6 +6,7 @@
  */
 
 #include <NLPSolverCuttingPlane.h>
+#include <Tasks/TaskAddHyperplanes.h>
 
 class MinimizationFunction
 {
@@ -48,17 +49,17 @@ NLPSolverCuttingPlane::NLPSolverCuttingPlane()
 	if (solver == ES_MILPSolver::Cplex)
 	{
 		MILPSolver = new MILPSolverCplex();
-		processInfo->outputSummary("Cplex selected as MILP solver for minimax solver.");
+		processInfo->outputInfo("Cplex selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::Gurobi)
 	{
 		MILPSolver = new MILPSolverGurobi();
-		processInfo->outputSummary("Gurobi selected as MILP solver for minimax solver.");
+		processInfo->outputInfo("Gurobi selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::Cbc)
 	{
 		MILPSolver = new MILPSolverOsiCbc();
-		processInfo->outputSummary("Cbc selected as MILP solver for minimax solver.");
+		processInfo->outputInfo("Cbc selected as MILP solver for minimax solver.");
 	}
 	else
 	{
@@ -121,7 +122,7 @@ bool NLPSolverCuttingPlane::solveProblem()
 	double maxObjDiffAbs = OSDBL_MAX;
 	double maxObjDiffRel = OSDBL_MAX;
 
-	int numHPsAdded, numHPsTotal;
+	int numHyperAdded, numHyperTot;
 	for (int i = 0; i < maxIter; i++)
 	{
 		boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
@@ -146,16 +147,19 @@ bool NLPSolverCuttingPlane::solveProblem()
 			currSol = LPVarSol;
 			lambda = -1; // For reporting purposes only
 			mu = LPObjVar;
-			numHPsAdded = 0;
-			numHPsTotal = 0;
+			numHyperAdded = 0;
+			numHyperTot = 0;
 
-			auto tmpLine = boost::format("%1% %|4t|%2% %3% %|15t|%4% %|30t|%5% %|45t|%6% %|60t|%7% %|75t|%8%") % "#"
-					% "HPs" % " " % "Obj. LP" % "Obj. LS" % "Abs. diff." % "Rel. diff." % "Lambda";
+			std::stringstream tmpLine;
+			tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
 
-			processInfo->outputSummary(
-					"==================================================================================\n"
-							+ tmpLine.str()
-							+ "==================================================================================\n");
+			tmpLine
+					<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
+							% "Obj. LS" % "Abs. diff" % "Rel. diff";
+
+			tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
+
+			processInfo->outputSummary(tmpLine.str());
 		}
 		else
 		{
@@ -166,11 +170,8 @@ bool NLPSolverCuttingPlane::solveProblem()
 			auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision,
 					maxIterSubsolverTmp);
 
-			//std::cout << "maxIter: " << maxIterSubsolverTmp << std::endl;
 			lambda = minimizationResult.first;
 			mu = minimizationResult.second;
-
-			//std::cout << "mu: " << mu << " lambda: " << lambda << std::endl;
 
 			// Calculates the corresponding solution point
 			for (int i = 0; i < numVar; i++)
@@ -181,37 +182,44 @@ bool NLPSolverCuttingPlane::solveProblem()
 			// The difference between linesearch and LP objective values
 			maxObjDiffAbs = abs(mu - LPObjVar);
 			maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
-
 		}
 
 		// Gets the most deviated constraints with a tolerance
 		auto tmpMostDevs = NLPProblem->getMostDeviatingConstraints(currSol, constrSelTol);
 
-		for (int j = 0; j < tmpMostDevs.size(); j++)
+		std::string hyperplanesExpr;
+
+		hyperplanesExpr = "+" + to_string(numHyperAdded) + " = " + to_string(numHyperTot);
+
+		std::string tmpObjLP = UtilityFunctions::toString(LPObjVar);
+		std::string tmpObjLS = UtilityFunctions::toString(mu);
+
+		boost::format tmpLine;
+
+		if (i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
 		{
-
+			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT"
+					% hyperplanesExpr % tmpObjLP % "" % "" % "";
 		}
-
-		auto tmpLine = boost::format("%1% %|4t|+%2% = %3% %|15t|%4% %|30t|%5% %|45t|%6% %|60t|%7% %|75t|%8%") % i
-				% numHPsAdded % numHPsTotal % LPObjVar % mu % maxObjDiffAbs % maxObjDiffRel % lambda;
+		else
+		{
+			std::string tmpAbsDiff = ((boost::format("%.5f") % maxObjDiffAbs).str());
+			std::string tmpRelDiff = ((boost::format("%.5f") % maxObjDiffRel).str());
+			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT"
+					% hyperplanesExpr % tmpObjLP % tmpObjLS % tmpAbsDiff % tmpRelDiff;
+		}
 
 		processInfo->outputSummary(tmpLine.str());
 
-		// Checks termination condition
 		if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
 		{
 			break;
 		}
 
-		if (tmpMostDevs.at(0).value < 0)
-		{
-			break;
-		}
+		numHyperAdded = tmpMostDevs.size();
+		numHyperTot = numHyperTot + numHyperAdded;
 
-		numHPsAdded = tmpMostDevs.size();
-		numHPsTotal = numHPsTotal + numHPsAdded;
-
-		for (int j = 0; j < numHPsAdded; j++)
+		for (int j = 0; j < numHyperAdded; j++)
 		{
 			std::vector < IndexValuePair > elements; // Contains the terms in the hyperplane
 
@@ -244,12 +252,31 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 			// Adds the linear constraint
 			MILPSolver->addLinearConstraint(elements, constant);
+
+			if (mu >= 0 && settings->getBoolSetting("CopyMinimaxCuttingPlanes", "MinimaxNLP"))
+			{
+
+				auto tmpPoint = currSol;
+				tmpPoint.pop_back();
+				Hyperplane hyperplane;
+				hyperplane.sourceConstraintIndex = j;
+				hyperplane.generatedPoint = tmpPoint;
+
+				processInfo->hyperplaneWaitingList.push_back(hyperplane);
+
+			}
 		}
 
 		prevSol = currSol;
 	}
 
-// Removes the mu variable value from the point
+	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	{
+		auto tmpVars = NLPProblem->getVariableNames();
+		std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimaxcp.txt";
+		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
+	}
+
 	currSol.pop_back();
 
 	auto tmpIP = new InteriorPoint();
@@ -261,19 +288,13 @@ bool NLPSolverCuttingPlane::solveProblem()
 
 	processInfo->interiorPts.push_back(*tmpIP);
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
-	{
-		auto tmpVars = NLPProblem->getVariableNames();
-		tmpVars.push_back("mu");
-		std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimaxcp.txt";
-		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
-	}
-
 	delete MILPSolver;
 
 	processInfo->stopTimer("InteriorPointMinimax");
 
 	processInfo->numNLPProbsSolved++;
+
+	if (maxDev.value > 0) return (false);
 
 	return (true);
 }

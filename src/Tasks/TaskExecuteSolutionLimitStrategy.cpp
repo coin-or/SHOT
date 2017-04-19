@@ -28,6 +28,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 	}
 
 	auto currIter = processInfo->getCurrentIteration();
+	auto prevIter = processInfo->getPreviousIteration();
 
 	constrTolUpdateStrategy->calculateNewTolerance();
 
@@ -38,11 +39,32 @@ void TaskExecuteSolutionLimitStrategy::run()
 	}
 
 	if (currIter->iterationNumber - processInfo->iterLastDualBoundUpdate
-			> settings->getIntSetting("MILPSolForceOptimalIter", "MILP") && processInfo->getDualBound() > -OSDBL_MAX)
+			> settings->getIntSetting("ForceOptimalIter", "MILP") && processInfo->getDualBound() > -OSDBL_MAX)
 	{
-		previousSolLimit = processInfo->getPreviousIteration()->usedMILPSolutionLimit;
+		previousSolLimit = prevIter->usedMILPSolutionLimit;
 		processInfo->MILPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
+		currIter->MILPSolutionLimitUpdated = true;
+		processInfo->outputInfo("     Forced optimal iteration since too many iterations since last dual bound update");
+	}
+	else if (processInfo->getElapsedTime("Total") - processInfo->timeLastDualBoundUpdate
+			> settings->getDoubleSetting("ForceOptimalTime", "MILP") && processInfo->getDualBound() > -OSDBL_MAX)
+	{
+		previousSolLimit = prevIter->usedMILPSolutionLimit;
+		processInfo->MILPSolver->setSolutionLimit(2100000000);
+		temporaryOptLimitUsed = true;
+		currIter->MILPSolutionLimitUpdated = true;
+		processInfo->outputAlways("     Forced optimal iteration since too long time since last dual bound update");
+	}
+	else if (processInfo->getPrimalBound() < OSDBL_MAX
+			&& abs(prevIter->objectiveValue - processInfo->getPrimalBound()) < 0.001)
+	{
+		previousSolLimit = prevIter->usedMILPSolutionLimit + 1;
+		processInfo->MILPSolver->setSolutionLimit(2100000000);
+		temporaryOptLimitUsed = true;
+		currIter->MILPSolutionLimitUpdated = true;
+		processInfo->outputInfo(
+				"     Forced optimal iteration since difference between MIP solution and primal is small");
 	}
 	else
 	{
@@ -58,7 +80,6 @@ void TaskExecuteSolutionLimitStrategy::run()
 			}
 		}
 	}
-
 }
 
 std::string TaskExecuteSolutionLimitStrategy::getType()

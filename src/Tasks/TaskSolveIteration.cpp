@@ -32,6 +32,19 @@ void TaskSolveIteration::run()
 		MILPSolver->setCutOff(processInfo->getPrimalBound());
 	}
 
+	if (settings->getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP")
+			&& !currIter->MILPSolutionLimitUpdated)
+	{
+		MILPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
+	}
+
+	/*
+	 if (currIter->iterationNumber == 100)
+	 {
+	 MILPSolver->setCutOff(21380.0);
+	 MILPSolver->setSolutionLimit(2100000);
+	 }*/
+
 	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolutions.size() > 0)
 	{
 		//MILPSolver->deleteMIPStarts();
@@ -103,7 +116,7 @@ void TaskSolveIteration::run()
 
 	currIter->usedMILPSolutionLimit = MILPSolver->getSolutionLimit();
 
-	// Update solution stats
+// Update solution stats
 	if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 	{
 		if (processInfo->originalProblem->isConstraintQuadratic(-1))

@@ -46,7 +46,6 @@ void TaskAddHyperplanes::run()
 				addedHyperplanes++;
 			}
 		}
-
 		processInfo->hyperplaneWaitingList.clear();
 		itersWithoutAddedHPs = 0;
 	}
@@ -156,8 +155,11 @@ void TaskAddHyperplanes::createHyperplane(int constrIdx, std::vector<double> poi
 		processInfo->MILPSolver->writeProblemToFile(ss.str());
 	}
 
-	currIter->totNumHyperplanes = processInfo->getPreviousIteration()->totNumHyperplanes
-			+ currIter->numHyperplanesAdded;
+	if (currIter->iterationNumber > 1)
+	{
+		currIter->totNumHyperplanes = processInfo->getPreviousIteration()->totNumHyperplanes
+				+ currIter->numHyperplanesAdded;
+	}
 }
 
 std::string TaskAddHyperplanes::getType()

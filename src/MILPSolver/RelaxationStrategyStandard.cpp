@@ -18,7 +18,8 @@ void RelaxationStrategyStandard::setInitial()
 {
 	LPFinished = false;
 
-	if (settings->getIntSetting("IterLimitLP", "Algorithm") > 0)
+	if (settings->getIntSetting("IterLimitLP", "Algorithm") > 0
+			&& settings->getDoubleSetting("TimeLimitLP", "Algorithm") > 0)
 	{
 		this->setActive();
 	}
@@ -31,10 +32,14 @@ void RelaxationStrategyStandard::setInitial()
 void RelaxationStrategyStandard::executeStrategy()
 {
 	int iterInterval = settings->getIntSetting("IterSolveLPRelaxation", "Algorithm");
-	if (iterInterval != 0 && processInfo->getCurrentIteration()->iterationNumber % iterInterval == 0) return this->setActive();
+	if (iterInterval != 0 && processInfo->getCurrentIteration()->iterationNumber % iterInterval == 0)
+	{
+		return (this->setActive());
+
+	}
 
 	if (isLPStepFinished() || isCurrentToleranceReached() || isGapReached() || isIterationLimitReached()
-			|| isRelaxedSolutionEpsilonValid() || isObjectiveStagnant())
+			|| isTimeLimitReached() || isRelaxedSolutionEpsilonValid() || isObjectiveStagnant())
 	{
 		this->setInactive();
 	}
@@ -76,8 +81,8 @@ E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 {
 	if (processInfo->MILPSolver->getDiscreteVariableStatus())
 
-	return E_IterationProblemType::MIP;
-	else return E_IterationProblemType::Relaxed;
+	return (E_IterationProblemType::MIP);
+	else return (E_IterationProblemType::Relaxed);
 }
 
 bool RelaxationStrategyStandard::isIterationLimitReached()
@@ -86,16 +91,26 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 	if (prevIter->iterationNumber < settings->getIntSetting("IterLimitLP", "Algorithm"))
 	{
-		return false;
+		return (false);
 	}
 
-	return true;
+	return (true);
+}
+
+bool RelaxationStrategyStandard::isTimeLimitReached()
+{
+	if (processInfo->getElapsedTime("LP") < settings->getDoubleSetting("TimeLimitLP", "Algorithm"))
+	{
+		return (false);
+	}
+
+	return (true);
 }
 
 bool RelaxationStrategyStandard::isLPStepFinished()
 {
 
-	return LPFinished;
+	return (LPFinished);
 }
 
 bool RelaxationStrategyStandard::isObjectiveStagnant()
@@ -104,12 +119,13 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
 
 	auto prevIter = processInfo->getPreviousIteration();
 
-	if (prevIter->iterationNumber < numSteps) return false;
+	if (prevIter->iterationNumber < numSteps) return (false);
 
 	auto prevIter2 = &processInfo->iterations[prevIter->iterationNumber - numSteps];
 
-	//TODO: should be substituted with parameter
-	if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001) return true;
+//TODO: should be substituted with parameter
+	if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001) return (true);
 
-	return false;
+	return (false);
 }
+

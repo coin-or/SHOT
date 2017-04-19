@@ -28,38 +28,44 @@ void TaskSelectHyperplanePointsSolution::run()
 	auto allSolutions = prevIter->solutionPoints; // All solutions in the solution pool
 	auto originalProblem = processInfo->originalProblem;
 
+	auto constrSelFactor = settings->getDoubleSetting("LinesearchConstraintSelectionFactor", "ECP");
+
 	for (int i = 0; i < allSolutions.size(); i++)
 	{
-		if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+		auto tmpMostDevConstrs = originalProblem->getMostDeviatingConstraints(allSolutions.at(i).point,
+				constrSelFactor);
 
-		auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(allSolutions.at(i).point);
-
-		if (tmpMostDevConstr.value < 0)
+		for (int j = 0; j < tmpMostDevConstrs.size(); j++)
 		{
-			processInfo->outputWarning("LP point is on the interior!");
-		}
-		else
-		{
-			Hyperplane hyperplane;
-			hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
-			hyperplane.generatedPoint = allSolutions.at(i).point;
+			if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 
-			if (i == 0 && currIter->isMILP())
+			if (tmpMostDevConstrs.at(j).value < 0)
 			{
-				hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
-			}
-			else if (currIter->isMILP())
-			{
-				hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+				processInfo->outputWarning("LP point is in the interior!");
 			}
 			else
 			{
-				hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+				Hyperplane hyperplane;
+				hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
+				hyperplane.generatedPoint = allSolutions.at(i).point;
+
+				if (i == 0 && currIter->isMILP())
+				{
+					hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+				}
+				else if (currIter->isMILP())
+				{
+					hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+				}
+				else
+				{
+					hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+				}
+
+				processInfo->hyperplaneWaitingList.push_back(hyperplane);
+
+				addedHyperplanes++;
 			}
-
-			processInfo->hyperplaneWaitingList.push_back(hyperplane);
-
-			addedHyperplanes++;
 		}
 	}
 }

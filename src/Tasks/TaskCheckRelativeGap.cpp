@@ -20,23 +20,15 @@ TaskCheckRelativeGap::~TaskCheckRelativeGap()
 
 void TaskCheckRelativeGap::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
-
-	double gap = processInfo->getRelativeObjectiveGap();
-
-	if (/*currIter->isMILP()
-	 && */gap <= settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (processInfo->isRelativeObjectiveGapToleranceMet())
 	{
-
 		processInfo->terminationReason = E_TerminationReason::RelativeGap;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}
-
 }
 
 std::string TaskCheckRelativeGap::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

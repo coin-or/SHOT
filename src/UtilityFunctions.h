@@ -3,6 +3,7 @@
 #include <iostream>
 #include "OSFileUtil.h"
 #include "OSInstance.h"
+#include <boost/format.hpp>
 
 namespace UtilityFunctions
 {
@@ -31,4 +32,8 @@ namespace UtilityFunctions
 
 	bool isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
 			std::vector<int> indexes);
+
+	std::string toStringFormat(double value, std::string format, bool useInfinitySymbol);
+	std::string toStringFormat(double value, std::string format);
+	std::string toString(double value);
 }

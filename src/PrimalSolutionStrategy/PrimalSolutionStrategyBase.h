@@ -18,12 +18,6 @@ class PrimalSolutionStrategyBase: public IPrimalSolutionStrategy
 		PrimalSolutionStrategyBase();
 		virtual ~PrimalSolutionStrategyBase();
 
-		//virtual bool checkPoint(std::vector<double> pt, E_PrimalSolutionSource source);
-		//virtual bool checkPoints(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source);
-
-		virtual bool checkPoint(PrimalSolution primalSol);
-		virtual bool checkPoints(std::vector<PrimalSolution> primalSols);
-
 	protected:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;

@@ -21,6 +21,9 @@ class OptProblemOriginalNonlinearObjective: public OptProblemOriginal
 		virtual std::vector<double> getVariableLowerBounds();
 		virtual std::vector<double> getVariableUpperBounds();
 
+		virtual double getVariableLowerBound(int varIdx);
+		virtual double getVariableUpperBound(int varIdx);
+
 		virtual void setVariableUpperBound(int varIdx, double value);
 		virtual void setVariableLowerBound(int varIdx, double value);
 

@@ -21,7 +21,8 @@ TaskPrintIterationHeader::~TaskPrintIterationHeader()
 void TaskPrintIterationHeader::run()
 {
 	std::stringstream tmpLine;
-	tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
+	tmpLine << "                                                                                     \n";
+	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 
 	tmpLine
 			<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB"

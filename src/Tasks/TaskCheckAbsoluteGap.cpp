@@ -21,23 +21,15 @@ TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
 
 void TaskCheckAbsoluteGap::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
-
-	double gap = processInfo->getAbsoluteObjectiveGap();
-
-	if (/*currIter->isMILP() &&*/gap <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")
-	/*&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal*/)
+	if (processInfo->isAbsoluteObjectiveGapToleranceMet())
 	{
-
 		processInfo->terminationReason = E_TerminationReason::AbsoluteGap;
 		processInfo->tasks->setNextTask(taskIDIfTrue);
 	}
-
 }
 
 std::string TaskCheckAbsoluteGap::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

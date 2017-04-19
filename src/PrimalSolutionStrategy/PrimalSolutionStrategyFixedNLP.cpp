@@ -34,6 +34,9 @@ bool PrimalSolutionStrategyFixedNLP::createProblem(OSInstance * origInstance)
 	originalLBs = NLPProblem->getVariableLowerBounds();
 	originalUBs = NLPProblem->getVariableUpperBounds();
 
+	/*NLPSolver = new NLPIpoptSolver();
+	 NLPSolver->osinstance = NLPProblem->getProblemInstance();*/
+
 	processInfo->outputDebug("NLP problem for primal heuristics created.");
 
 	return true;
@@ -90,52 +93,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	vector < PrimalFixedNLPCandidate > testPts;
 
-	/*
-	 vector < PrimalFixedNLPCandidate > testPts;
-
-	 if (this->fixPoint.size() > 0)
-	 {
-	 PrimalFixedNLPCandidate tmpCand;
-	 tmpCand.iterFound = currIter->iterationNumber;
-	 tmpCand.objValue = processInfo->originalProblem->calculateOriginalObjectiveValue(this->fixPoint);
-	 tmpCand.point = this->fixPoint;
-	 tmpCand.maxDevatingConstraint = processInfo->originalProblem->getMostDeviatingConstraint(tmpCand.point);
-
-	 testPts.push_back(tmpCand);
-
-	 this->fixPoint = std::vector<double>
-	 { };
-	 }*/
-
 	// Fix variables
 	auto varTypes = processInfo->originalProblem->getVariableTypes();
-	/*if (currIter->solutionPoints.size() == 0) //No solution found in last iteration
-	 {
-	 /*
-	 if (processInfo->dualSolutions.size() > 0)
-	 {
-	 auto tmpPoint = processInfo->dualSolutions.back().point;
-
-	 for (int i = 0; i < testedPoints.size(); i++)
-	 {
-	 if (UtilityFunctions::isDifferentRoundedSelectedElements(tmpPoint, testedPoints.at(i),
-	 discreteVariableIndexes))
-	 {
-	 SolutionPoint tmpSP;
-	 tmpSP.iterFound = processInfo->dualSolutions.back().iterFound;
-	 //tmpSP.maxDeviation = processInfo->dualSolutions.back().;
-	 tmpSP.objectiveValue = processInfo->dualSolutions.back().objValue;
-	 tmpSP.point = tmpPoint;
-	 tmpSP.maxDeviation = processInfo->originalProblem->getMostDeviatingConstraint(tmpSP.point);
-
-	 solPts.push_back(tmpSP);
-	 testedPoints.push_back(tmpSP.point);
-	 break;
-	 }
-	 }
-	 }
-	 }*
-	 else*/
 
 	if (processInfo->primalFixedNLPCandidates.size() == 0)
 	{
@@ -164,33 +123,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 		testPts.push_back(processInfo->primalFixedNLPCandidates.at(0));
 		testedPoints.push_back(processInfo->primalFixedNLPCandidates.at(0).point);
 	}
-
-	/*
-	 if (settings->getIntSetting("NLPFixedSource", "PrimalBound") == static_cast<int>(ES_PrimalBoundNLPFixedPoint::Both)
-	 || settings->getIntSetting("NLPFixedSource", "PrimalBound")
-	 == static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviation))
-	 {
-	 if (testedPoints.size() == 0)
-	 {
-	 solPts.push_back(currIter->getSolutionPointWithSmallestDeviation());
-	 testedPoints.push_back(currIter->getSolutionPointWithSmallestDeviation().point);
-	 }
-	 else
-	 {
-	 auto solPtSmallestDev = currIter->getSolutionPointWithSmallestDeviation();
-
-	 for (int i = 0; i < testedPoints.size(); i++)
-	 {
-	 if (UtilityFunctions::isDifferentRoundedSelectedElements(solPtSmallestDev.point, testedPoints.at(i),
-	 discreteVariableIndexes))
-	 {
-	 solPts.push_back(solPtSmallestDev);
-	 testedPoints.push_back(solPtSmallestDev.point);
-	 break;
-	 }
-	 }
-	 }
-	 }*/
 
 	if (testPts.size() == 0)
 	{
@@ -294,7 +226,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			NLPProblem->saveProblemModelToFile(filename);
 		}
 
-		// Updats the problem to Ipopt
+		// Updates the problem to Ipopt
 		NLPSolver->osinstance = NLPProblem->getProblemInstance();
 		NLPSolver->osoption = osOption;
 
@@ -317,11 +249,14 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			case E_PrimalNLPSource::SmallestDeviationSolution:
 				sourceDesc = "SMADEV";
 				break;
+			case E_PrimalNLPSource::FirstSolutionNewDualBound:
+				sourceDesc = "NEWDB";
+				break;
 			default:
 				break;
 		}
 
-		std::string solExpr = ((boost::format("(%.3f s)        ") % (timeEnd - timeStart)).str());
+		std::string solExpr = ((boost::format("(%.3f s)") % (timeEnd - timeStart)).str());
 
 		if (isSolved)
 		{
@@ -341,9 +276,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				tmpPoint.back() = tmpObj;
 			}
 
-			processInfo->addPrimalSolutionCandidate(tmpPoint, E_PrimalSolutionSource::NLPFixedIntegers,
-					currIter->iterationNumber);
-
 			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
 			std::string tmpConstr;
 
@@ -359,11 +291,15 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 								+ ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
 			}
 
-			std::string tmpObjVal = ((boost::format("%.3f") % tmpObj).str());
+			std::string tmpObjVal = UtilityFunctions::toStringFormat(tmpObj, "%.3f");
 
-			auto tmpLine = boost::format("%|4s| %|-10s|  %|=10s|%|=30s| %|7s| %|-14s|")
-					% processInfo->numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % tmpObjVal % ""
-					% tmpConstr;
+			std::string tmpPrimal = "";
+
+			if (processInfo->getPrimalBound() > tmpObj) tmpPrimal = tmpObjVal;
+
+			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
+					% processInfo->numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % tmpObjVal
+					% tmpPrimal % tmpConstr;
 
 			processInfo->outputSummary(tmpLine.str());
 
@@ -373,6 +309,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			double interval = max(0.9 * settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"),
 					originalNLPTime);
 			settings->updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
+
+			processInfo->addPrimalSolutionCandidate(tmpPoint, E_PrimalSolutionSource::NLPFixedIntegers,
+					currIter->iterationNumber);
 		}
 		else
 		{
@@ -381,14 +320,38 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			double interval = 1.1 * settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
 			settings->updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
 
-			auto tmpLine = boost::format("%|4s| %|-10s|  %|=10s|%|=30s| %|7s| %|-14s|")
-					% processInfo->numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "infeasible" % ""
-					% "";
+			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
+					% processInfo->numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % "infeasible"
+					% "" % "";
+
 			processInfo->outputSummary(tmpLine.str());
 
 			processInfo->outputInfo(
 					"     Duration:  " + to_string(timeEnd - timeStart) + " s. New interval: " + to_string(interval)
 							+ " s or " + to_string(iters) + " iters.");
+
+			if (settings->getBoolSetting("AddIntegerCuts", "Algorithm")
+					&& processInfo->originalProblem->getNumberOfIntegerVariables() == 0)
+			{
+				//Add integer cut.
+
+				auto binVars = processInfo->originalProblem->getBinaryVariableIndices();
+
+				if (binVars.size() > 0)
+				{
+					std::vector<int> elements;
+
+					for (int i = 0; i < binVars.size(); i++)
+					{
+						if (testPts.at(j).point.at(binVars.at(i)) > 0.99)
+						{
+							elements.push_back(binVars.at(i));
+						}
+					}
+
+					processInfo->integerCutWaitingList.push_back(elements);
+				}
+			}
 		}
 
 		for (int k = 0; k < numVar; k++)
@@ -444,16 +407,18 @@ void PrimalSolutionStrategyFixedNLP::initializeOSOption()
 		IPOptSolver = "mumps";
 	}
 
-	auto timeLimit = 100;
+	auto timeLimit = settings->getDoubleSetting("NLPTimeLimit", "PrimalBound");
+	osOption->setAnotherSolverOption("max_cpu_time", std::to_string(timeLimit), "ipopt", "", "double", "");
 
-	//settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
-	//auto constrTol = 0.000001; //settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
+//auto constrTol = 0.000001; //settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
 	osOption->setAnotherSolverOption("tol", "1E-8", "ipopt", "", "double", "");
 	osOption->setAnotherSolverOption("warm_start_init_point", "yes", "ipopt", "", "string", "");
-	//osOption->setAnotherSolverOption("max_iter", "1000", "ipopt", "", "integer", "");
+//osOption->setAnotherSolverOption("max_iter", "1000", "ipopt", "", "integer", "");
+
+// Suppress Ipopt banner
 	osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
+
 	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
-	osOption->setAnotherSolverOption("max_cpu_time", std::to_string(timeLimit), "ipopt", "", "double", "");
 
 	switch (settings->getIntSetting("LogLevelConsole", "SHOTSolver") + 1)
 	{
@@ -482,10 +447,10 @@ void PrimalSolutionStrategyFixedNLP::initializeOSOption()
 			break;
 	}
 
-	//osOption->setAnotherSolverOption("fixed_variable_treatment", "relax_bounds", "ipopt", "", "string", "");
+//osOption->setAnotherSolverOption("fixed_variable_treatment", "relax_bounds", "ipopt", "", "string", "");
 
-	//osOption->setAnotherSolverOption("expect_infeasible_problem", "no", "ipopt", "", "string", "");
-	//osOption->setAnotherSolverOption("constr_viol_tol", "1E-9", "ipopt", "", "double", "");
+//osOption->setAnotherSolverOption("expect_infeasible_problem", "no", "ipopt", "", "string", "");
+//osOption->setAnotherSolverOption("constr_viol_tol", "1E-9", "ipopt", "", "double", "");
 
 	/*osOption->setAnotherSolverOption("barrier_tol_factor", "10", "ipopt", "", "double", "");
 
@@ -505,13 +470,13 @@ void PrimalSolutionStrategyFixedNLP::initializeOSOption()
 	 osOption->setAnotherSolverOption("mu_oracle", "quality-function", "ipopt", "", "string", "");
 	 osOption->setAnotherSolverOption("check_derivatives_for_naninf", "yes", "ipopt", "", "string", "");*/
 
-	//ipoptSolver = new NLPIpoptSolver();
-	//NLPSolver->nlp = ipoptSolver;
-	//OSoLWriter *osolwriter = NULL;
-	//osolwriter = new OSoLWriter();
-	//(options = osolreader->readOSoL(osol);
-	//NLPSolver->osoption = osOption;
-	//NLPSolver->osol = osolwriter->writeOSoL(osOption);
+//ipoptSolver = new NLPIpoptSolver();
+//NLPSolver->nlp = ipoptSolver;
+//OSoLWriter *osolwriter = NULL;
+//osolwriter = new OSoLWriter();
+//(options = osolreader->readOSoL(osol);
+//NLPSolver->osoption = osOption;
+//NLPSolver->osol = osolwriter->writeOSoL(osOption);
 }
 
 /*void PrimalSolutionStrategyFixedNLP::setFixedPoint(std::vector<double> fixedPt)

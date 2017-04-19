@@ -236,6 +236,9 @@ void SHOTSolver::initializeSettings()
 
 	enumLogLevel.clear();
 
+	settings->createSetting("SaveAllPrimalSolutions", "SHOTSolver", false,
+			"Should all intermediate solutions (primal and dual) be saved.");
+
 	// Solution strategy
 	std::vector < std::string > enumSolutionStrategy;
 	enumSolutionStrategy.push_back("ESH");
@@ -246,6 +249,7 @@ void SHOTSolver::initializeSettings()
 
 	// Relaxation
 	settings->createSetting("IterLimitLP", "Algorithm", 200, "LP iteration limit for solver", 0, OSINT_MAX);
+	settings->createSetting("TimeLimitLP", "Algorithm", 30.0, "LP time limit for solver", 0, OSDBL_MAX);
 	settings->createSetting("ObjectiveStagnationIterationLimit", "Algorithm", 100,
 			"Max number of iterations without objective function improvement", 0, OSINT_MAX);
 	settings->createSetting("ObjectiveStagnationTolerance", "Algorithm", 0.000001,
@@ -256,12 +260,15 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("SolveFixedLP", "Algorithm", true,
 			"Solve an LP with fixed integers if integer-values have not changes in several MIP iterations.");
 
-	settings->createSetting("SolveFixedLPMaxIter", "Algorithm", 5, "Max LP iterations for fixed strategy", 0,
+	settings->createSetting("SolveFixedLPMaxIter", "Algorithm", 20, "Max LP iterations for fixed strategy", 0,
 			OSINT_MAX);
 	settings->createSetting("SolveFixedLPObjTol", "Algorithm", 0.001, "Objective tolerance for fixed strategy", 0.0,
 			OSDBL_MAX);
 	settings->createSetting("SolveFixedLPConstrTol", "Algorithm", 0.00001, "Constraint tolerance for fixed strategy",
 			0.0, OSDBL_MAX);
+
+	settings->createSetting("AddIntegerCuts", "Algorithm", true,
+			"Add integer cuts for infeasible integer-combinations for binary problems");
 
 	std::vector < std::string > enumRelaxationStrategy;
 	enumRelaxationStrategy.push_back("Standard");
@@ -300,7 +307,7 @@ void SHOTSolver::initializeSettings()
 	enumNLPSolver.push_back("IPOptRelaxed");
 	enumNLPSolver.push_back("IPOptMinimax and IPOptRelaxed");
 	enumNLPSolver.push_back("CouenneMiniMax");
-	settings->createSetting("NLPSolver", "NLP", static_cast<int>(ES_NLPSolver::IPOptMiniMax), "NLP solver",
+	settings->createSetting("NLPSolver", "NLP", static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax), "NLP solver",
 			enumNLPSolver);
 	enumNLPSolver.clear();
 
@@ -325,12 +332,16 @@ void SHOTSolver::initializeSettings()
 			OSINT_MAX);
 	settings->createSetting("BitPrecision", "MinimaxNLP", 8, "Required bit precision for minimization subsolver", 1,
 			64);
-	settings->createSetting("TermToleranceAbs", "MinimaxNLP", 0.1,
+	settings->createSetting("TermToleranceAbs", "MinimaxNLP", 0.5,
 			"Absolute termination tolerance for the difference between LP and linesearch objective", 0.0, OSDBL_MAX);
-	settings->createSetting("TermToleranceRel", "MinimaxNLP", 0.001,
+	settings->createSetting("TermToleranceRel", "MinimaxNLP", 0.1,
 			"Relative termination tolerance for the difference between LP and linesearch objective", 0.0, OSDBL_MAX);
 	settings->createSetting("ConstraintSelectionTolerance", "MinimaxNLP", 0.05,
 			"The tolerance for selecting the most constraint with largest deviation", 0.0, 1.0);
+
+	settings->createSetting("CopyMinimaxCuttingPlanes", "MinimaxNLP", true,
+			"Copy over the valid cutting planes in the minimax solver to main problem.");
+
 	// Interior point feasibility epsilon
 	settings->createSetting("InteriorPointFeasEps", "NLP", 0.000001, "Interior point feasibility epsilon", 0.0,
 			OSDBL_MAX);
@@ -356,14 +367,34 @@ void SHOTSolver::initializeSettings()
 			"End MILP solution limit when final constraint tolerance is reached ", 1.0, OSDBL_MAX);
 	settings->createSetting("MILPSolIncreaseIter", "MILP", 50,
 			"Max number of iterations between MILP solution limit increase", 0, OSINT_MAX);
-	settings->createSetting("MILPSolForceOptimalIter", "MILP", 10000,
+	settings->createSetting("ForceOptimalIter", "MILP", 10000,
 			"Number of iterations without dual bound update to force optimal MILP solution", 0, OSINT_MAX);
+	settings->createSetting("ForceOptimalTime", "MILP", 1000.0,
+			"Amount of time without dual bound update to force optimal MILP solution", 0, OSDBL_MAX);
 	settings->createSetting("MILPSolLimitUpdateTol", "MILP", 0.001,
 			"The constraint tolerance to update solution limit at", 0, OSDBL_MAX);
+
+	// Presolve
+	std::vector < std::string > enumPresolve;
+	enumPresolve.push_back("Never");
+	enumPresolve.push_back("Once");
+	enumPresolve.push_back("Always");
+	settings->createSetting("PresolveStrategy", "Presolve", static_cast<int>(ES_PresolveStrategy::Once),
+			"What presolve strategy to use", enumPresolve);
+	enumPresolve.clear();
+
+	settings->createSetting("UsePresolveBoundsForPrimalNLP", "Presolve", true,
+			"Use updated bounds from the MIP solver when solving primal NLP problems");
+	settings->createSetting("UsePresolveBoundsForMIP", "Presolve", true,
+			"Use updated bounds from the MIP solver in new MIP iterations");
+	settings->createSetting("RemoveRedundantConstraintsFromMIP", "Presolve", false,
+			"Removes the constraints flagged as redundant by presolve");
 
 	// Add constraints as lazy constraints
 	settings->createSetting("UseLazyConstraints", "MILP", false, "Add supporting hyperplanes as lazy constraints");
 	settings->createSetting("UsePrimalObjectiveCut", "MILP", true, "Add an objective cut in the primal solution");
+	settings->createSetting("UpdateNonlinearObjectiveVariableBounds", "MILP", false,
+			"Updates the bounds for the nonlinear objective variable when new dual/primal bounds are found ");
 
 	settings->createSetting("DelayedConstraints", "MILP", true,
 			"Add supporting hyperplanes only after optimal MILP solution (=1).");
@@ -390,6 +421,11 @@ void SHOTSolver::initializeSettings()
 
 	settings->createSetting("Probe", "CPLEX", 0,
 			"-1 = no probing, 0 = automatic, 1 = moderate, 2 = aggressive, 3 = very aggressive", -1, 3);
+
+	settings->createSetting("ParallelMode", "CPLEX", 0, "-1 = opportunistic, 0 = automatic, 1 = deterministic", -1, 1);
+
+	settings->createSetting("Threads", "CPLEX", 0, "Number of threads to use, 0 = automatic", 0, 999);
+
 	// Linesearch
 	std::vector < std::string > enumLinesearchMethod;
 	enumLinesearchMethod.push_back("Boost");
@@ -405,7 +441,7 @@ void SHOTSolver::initializeSettings()
 			0.0, OSDBL_MAX);
 
 	settings->createSetting("LinesearchConstraintSelectionFactor", "ECP", 0.0,
-			"NOT USED! The fraction of violated constraints to generate supporting hyperplanes for when using the ECP strategy.",
+			"The fraction of violated constraints to generate supporting hyperplanes for when using the ECP strategy.",
 			0.0, 1.0);
 
 	settings->createSetting("LinesearchConstraintStrategy", "ESH", 0.0,
@@ -453,6 +489,8 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("NLPFixedMaxIters", "PrimalBound", 10, "Maximal number of iterations between calls", 0,
 			OSINT_MAX);
 	settings->createSetting("NLPFixedMaxElapsedTime", "PrimalBound", 5.0, "Maximal elapsed time between calls", 0,
+			OSDBL_MAX);
+	settings->createSetting("NLPTimeLimit", "PrimalBound", 10.0, "Maximal time allowed per fixed NLP problem", 0,
 			OSDBL_MAX);
 
 	std::vector < std::string > enumAddPrimalPointAsInteriorPoint;

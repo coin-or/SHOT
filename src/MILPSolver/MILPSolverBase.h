@@ -42,5 +42,14 @@ class MILPSolverBase
 		virtual double getObjectiveValue(int i) = 0;
 		virtual double getObjectiveValue();
 
+		virtual void presolveAndUpdateBounds();
+		virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
+
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes();
+
+		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+
+		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
+
+		virtual void updateNonlinearObjectiveFromPrimalDualBounds();
 };

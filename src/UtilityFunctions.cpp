@@ -3,6 +3,13 @@
 void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
 		std::string fileName)
 {
+	if (point.size() != variables.size())
+	{
+		std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
+				<< variables.size() << std::endl;
+		return;
+	}
+
 	FileUtil *fileUtil = new FileUtil();
 
 	std::stringstream str;
@@ -256,4 +263,34 @@ bool UtilityFunctions::isDifferentSelectedElements(std::vector<double> firstPt, 
 
 	return (false);
 
+}
+
+std::string UtilityFunctions::toStringFormat(double value, std::string format)
+{
+	return (UtilityFunctions::toStringFormat(value, format, true));
+}
+
+std::string UtilityFunctions::toStringFormat(double value, std::string format, bool useInfinitySymbol)
+{
+	std::string str;
+
+	if (useInfinitySymbol && value < -1.e100)
+	{
+		str = "-∞";
+	}
+	else if (useInfinitySymbol && value > 1.e100)
+	{
+		str = "∞";
+	}
+	else
+	{
+		str = ((boost::format(format) % value).str());
+	}
+
+	return (str);
+}
+
+std::string UtilityFunctions::toString(double value)
+{
+	return (UtilityFunctions::toStringFormat(value, "%.3f", true));
 }

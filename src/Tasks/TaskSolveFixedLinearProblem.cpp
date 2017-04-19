@@ -86,16 +86,15 @@ void TaskSolveFixedLinearProblem::run()
 
 	if (currIter->MILPSolutionLimitUpdated) return;
 
-	if (currIter->maxDeviation <= settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm"))
+	if (currIter->iterationNumber < 5)
 	{
 		processInfo->stopTimer("PrimalBoundFixedLP");
 		processInfo->stopTimer("PrimalBoundTotal");
 		return;
 	}
 
-	if (currIter->iterationNumber < 5)
+	if (currIter->maxDeviation <= settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm"))
 	{
-
 		processInfo->stopTimer("PrimalBoundFixedLP");
 		processInfo->stopTimer("PrimalBoundTotal");
 		return;
@@ -178,10 +177,11 @@ void TaskSolveFixedLinearProblem::run()
 
 	//processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
 
-	double prevObjVal;
+	double prevObjVal = COIN_DBL_MAX;
 
+	int iterLastObjUpdate = 0;
 	int maxIter = settings->getIntSetting("SolveFixedLPMaxIter", "Algorithm");
-	int objTol = settings->getDoubleSetting("SolveFixedLPObjTol", "Algorithm");
+	double objTol = settings->getDoubleSetting("SolveFixedLPObjTol", "Algorithm");
 	double constrTol = settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm");
 
 	for (int k = 0; k < maxIter; k++)
@@ -190,7 +190,8 @@ void TaskSolveFixedLinearProblem::run()
 
 		if (solStatus != E_ProblemSolutionStatus::Optimal)
 		{
-			//std::cout << "nonoptimal" << std::endl;
+			auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP INF" % "" % "" % "";
+			processInfo->outputSummary(tmpLine.str());
 			break;
 		}
 		else
@@ -278,20 +279,34 @@ void TaskSolveFixedLinearProblem::run()
 				tmpConstr = "";
 			}
 
-			auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % tmpType.str() % hyperplanesExpr
-					% tmpObjVal % tmpConstr;
-
-			processInfo->outputSummary(tmpLine.str());
-
 			if (mostDevConstr.value <= constrTol)
 			{
+				auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP CON"
+						% hyperplanesExpr % tmpObjVal % tmpConstr;
+				processInfo->outputSummary(tmpLine.str());
 				break;
 			}
 
-			if (k > 0 && abs(prevObjVal - objVal) < objTol)
+			if (k - iterLastObjUpdate > 10)
 			{
+				auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP ITR"
+						% hyperplanesExpr % tmpObjVal % tmpConstr;
+				processInfo->outputSummary(tmpLine.str());
 				break;
 			}
+
+			if (objVal > processInfo->getPrimalBound())
+			{
+				auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP PB "
+						% hyperplanesExpr % tmpObjVal % tmpConstr;
+				processInfo->outputSummary(tmpLine.str());
+
+				break;
+			}
+
+			auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % tmpType.str() % hyperplanesExpr
+					% tmpObjVal % tmpConstr;
+			processInfo->outputSummary(tmpLine.str());
 
 			std::vector<double> externalPoint = varSol;
 			std::vector<double> internalPoint = processInfo->interiorPts.at(0).point;
@@ -328,7 +343,17 @@ void TaskSolveFixedLinearProblem::run()
 				processInfo->outputWarning(e.what());
 			}
 
-			if (k == 0) prevObjVal = objVal;
+			if (abs(prevObjVal - objVal) > prevObjVal * objTol)
+			{
+				iterLastObjUpdate = k;
+				prevObjVal = objVal;
+			}
+
+			/*if (k == 0)
+			 {
+			 prevObjVal = objVal;
+			 iterLastObjUpdate = 0;
+			 }*/
 		}
 
 	}

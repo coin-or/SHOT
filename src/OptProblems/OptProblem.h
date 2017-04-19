@@ -40,11 +40,16 @@ class OptProblem
 		virtual std::vector<double> getVariableLowerBounds();
 		virtual std::vector<double> getVariableUpperBounds();
 
+		virtual double getVariableLowerBound(int varIdx);
+		virtual double getVariableUpperBound(int varIdx);
+
 		virtual void setVariableUpperBound(int varIdx, double value);
 		virtual void setVariableLowerBound(int varIdx, double value);
 
 		virtual std::vector<int> getRealVariableIndices();
 		virtual std::vector<int> getDiscreteVariableIndices();
+		virtual std::vector<int> getBinaryVariableIndices();
+		virtual std::vector<int> getIntegerVariableIndices();
 
 		virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
 		virtual std::vector<QuadraticTerm*> getQuadraticTermsInConstraint(int constrIdx);
@@ -64,6 +69,9 @@ class OptProblem
 				std::vector<int> constrIdxs);
 
 		virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
+
+		virtual vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
+
 		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
 		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
@@ -98,6 +106,10 @@ class OptProblem
 		bool isConstraintNonlinear(OSInstance *instance, int idx);
 		bool isProblemNonlinear(OSInstance *instance);
 
+		bool hasVariableBoundsBeenTightened(int varIndex);
+		void setVariableBoundsAsTightened(int varIndex);
+		void setVariableBoundsTightened(std::vector<bool> status);
+
 		OSInstance * getProblemInstance();
 
 		virtual void fixVariable(int varIdx, double value);
@@ -126,6 +138,7 @@ class OptProblem
 		std::vector<int> m_nonlinearConstraints;
 		std::vector<int> m_quadraticConstraints;
 		std::vector<int> m_nonlinearOrQuadraticConstraints;
+		std::vector<bool> m_variableBoundTightened;
 
 		bool m_isTypeOfObjectiveMinimize;
 

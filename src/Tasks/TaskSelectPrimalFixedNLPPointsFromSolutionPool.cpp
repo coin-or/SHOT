@@ -17,16 +17,21 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
 
 	bool callNLPSolver = false;
-	//bool useFeasibleSolution = false;
+	bool useFeasibleSolutionExtra = false;
 
 	if (!currIter->isMILP())
 	{
 		return;
 	}
 
-	if (allSolutions.size() == 0 || currIter->MILPSolutionLimitUpdated)
+	if (allSolutions.size() == 0)
 	{
-		//processInfo->itersMILPWithoutNLPCall++;
+		return;
+	}
+
+	if (currIter->MILPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
+	{
+		processInfo->itersMILPWithoutNLPCall++;
 		return;
 	}
 
@@ -39,6 +44,12 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::DoNotUse))
 	{
 		callNLPSolver = false;
+	}
+	else if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+			&& abs(allSolutions.at(0).objectiveValue - processInfo->getDualBound()) < 0.1)
+	{
+		callNLPSolver = true;
+		useFeasibleSolutionExtra = true;
 	}
 	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
 	{
@@ -67,7 +78,13 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 		}
 	}
 
-	if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviationSolution))
+	if (useFeasibleSolutionExtra)
+	{
+		auto tmpSol = allSolutions.at(0);
+		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
+				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+	}
+	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviationSolution))
 	{
 		auto tmpSol = currIter->getSolutionPointWithSmallestDeviation();
 		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::SmallestDeviationSolution,
@@ -95,9 +112,14 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 		}
 	}
 	else if (callNLPSolver
-			|| userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
+			&& userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
 	{
-		for (int i = 0; i < allSolutions.size(); i++)
+		auto tmpSol = allSolutions.at(0);
+
+		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
+				tmpSol.iterFound, tmpSol.maxDeviation);
+
+		for (int i = 1; i < allSolutions.size(); i++)
 		{
 			auto tmpSol = allSolutions.at(i);
 

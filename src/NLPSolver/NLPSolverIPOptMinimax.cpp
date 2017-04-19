@@ -260,11 +260,11 @@ bool NLPSolverIPOptMinimax::solveProblem()
 			return false;
 		}
 
-		processInfo->outputInfo(
+		processInfo->outputSummary(
 				"NLP point from minimax problem valid!\nObjective value is" + to_string(objval) + " < "
 						+ to_string(settings->getDoubleSetting("InteriorPointFeasEps", "NLP")));
 
-		tmpPoint.pop_back();
+		//tmpPoint.pop_back();
 
 		if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
 		{
@@ -272,14 +272,14 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		}
 
 		tmpPoints.push_back(tmpPoint);
-
-		if (settings->getBoolSetting("Debug", "SHOTSolver"))
-		{
-			auto tmpVars = NLPProblem->getVariableNames();
-			std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimax"
-					+ std::to_string(k) + ".txt";
-			UtilityFunctions::saveVariablePointVectorToFile(tmpPoint, tmpVars, filename);
-		}
+		/*
+		 if (settings->getBoolSetting("Debug", "SHOTSolver"))
+		 {
+		 auto tmpVars = NLPProblem->getVariableNames();
+		 std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimax"
+		 + std::to_string(k) + ".txt";
+		 UtilityFunctions::saveVariablePointVectorToFile(tmpPoint, tmpVars, filename);
+		 }*/
 
 		if (!useMultiple) break;
 	}
@@ -320,13 +320,25 @@ bool NLPSolverIPOptMinimax::solveProblem()
 	//selPts.push_back(tmpPoints.at(valpair.idx));
 	for (int i = 0; i < selPts.size(); i++)
 	{
+		if (settings->getBoolSetting("Debug", "SHOTSolver"))
+		{
+			auto tmpVars = NLPProblem->getVariableNames();
+			//tmpVars.push_back("mu");
+			std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimax"
+					+ std::to_string(i) + ".txt";
+			UtilityFunctions::saveVariablePointVectorToFile(selPts.at(i), tmpVars, filename);
+		}
 
 		//auto centerPoint = tmpPoints.at(0);
 		auto tmpIP = new InteriorPoint();
 		tmpIP->NLPSolver = static_cast<int>(ES_NLPSolver::IPOptMiniMax);
+
+		selPts.at(i).pop_back();
+
 		tmpIP->point = selPts.at(i);
 
 		auto tmpPoint(tmpIP->point);
+
 		//auto tmpPoint2(tmpPoints.at(0));
 		//tmpPoint2.pop_back();
 
@@ -334,21 +346,13 @@ bool NLPSolverIPOptMinimax::solveProblem()
 		//UtilityFunctions::displayVector(tmpPoint2);
 		auto maxDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPoint);
 
-		tmpPoint.pop_back();
+		//tmpPoint.pop_back();
 		//auto maxDev2 = NLPProblem->getMostDeviatingConstraint(tmpPoint2).value;
 		//std::cout << "Error " << maxDev2 << std::endl;
 
 		tmpIP->maxDevatingConstraint = maxDev;
 		processInfo->interiorPts.push_back(*tmpIP);
 
-		if (settings->getBoolSetting("Debug", "SHOTSolver"))
-		{
-			auto tmpVars = NLPProblem->getVariableNames();
-			tmpVars.push_back("mu");
-			std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimax"
-					+ std::to_string(i) + ".txt";
-			UtilityFunctions::saveVariablePointVectorToFile(tmpPoint, tmpVars, filename);
-		}
 	}
 
 	processInfo->outputInfo("Number of NLP points: " + to_string(processInfo->interiorPts.size()));

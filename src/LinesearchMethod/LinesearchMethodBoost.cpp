@@ -108,7 +108,9 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 {
 	if (ptA.size() != ptB.size())
 	{
-		processInfo->outputError("     Linesearch error: sizes of points vary");
+		processInfo->outputError(
+				"     Linesearch error: sizes of points vary: " + std::to_string(ptA.size()) + " != "
+						+ std::to_string(ptB.size()));
 	}
 
 	int length = ptA.size();

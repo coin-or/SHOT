@@ -1,0 +1,24 @@
+/*
+ * PrimalSolutionStrategyCheckPoint.cpp
+ *
+ *  Created on: Mar 4, 2015
+ *      Author: alundell
+ */
+
+#include <PrimalSolutionStrategyCheckPoint.h>
+
+PrimalSolutionStrategyCheckPoint::~PrimalSolutionStrategyCheckPoint()
+{
+	processInfo = ProcessInfo::getInstance();
+	settings = SHOTSettings::Settings::getInstance();
+}
+
+PrimalSolutionStrategyCheckPoint::PrimalSolutionStrategyCheckPoint()
+{
+	// TODO Auto-generated constructor stub
+}
+
+bool PrimalSolutionStrategyCheckPoint::runStrategy()
+{
+	return (false);
+}

@@ -40,6 +40,8 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
+	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber() + 1, false));
+
 	instance->getJacobianSparsityPattern();
 
 	return true;
@@ -275,6 +277,30 @@ std::vector<double> OptProblemOriginalNonlinearObjective::getVariableUpperBounds
 	tmpVector.push_back(this->addedObjectiveVariableUpperBound);
 
 	return tmpVector;
+}
+
+double OptProblemOriginalNonlinearObjective::getVariableLowerBound(int varIdx)
+{
+	if (varIdx == getNonlinearObjectiveVariableIdx())
+	{
+		return (this->addedObjectiveVariableLowerBound);
+	}
+	else
+	{
+		return (getProblemInstance()->instanceData->variables->var[varIdx]->lb);
+	}
+}
+
+double OptProblemOriginalNonlinearObjective::getVariableUpperBound(int varIdx)
+{
+	if (varIdx == getNonlinearObjectiveVariableIdx())
+	{
+		return (this->addedObjectiveVariableUpperBound);
+	}
+	else
+	{
+		return (getProblemInstance()->instanceData->variables->var[varIdx]->ub);
+	}
 }
 
 void OptProblemOriginalNonlinearObjective::setVariableUpperBound(int varIdx, double value)

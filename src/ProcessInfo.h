@@ -25,7 +25,6 @@
 
 class OptProblemOriginal;
 class IMILPSolver;
-//class TaskHandler;
 
 struct InteriorPoint
 {
@@ -115,6 +114,12 @@ class ProcessInfo
 		void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
 		void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
 
+		void checkPrimalSolutionCandidates();
+		void checkDualSolutionCandidates();
+
+		bool isRelativeObjectiveGapToleranceMet();
+		bool isAbsoluteObjectiveGapToleranceMet();
+
 		void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
 		void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
 		void addDualSolutionCandidate(vector<double> pt, E_DualSolutionSource source, int iter);
@@ -147,12 +152,18 @@ class ProcessInfo
 		int iterLastPrimalBoundUpdate;
 		int iterLastDualBoundUpdate;
 
+		double timeLastDualBoundUpdate;
+
 		int lastLazyAddedIter;
 
 		int numOriginalInteriorPoints;
 
 		int numFunctionEvals;
 		int numGradientEvals;
+
+		int numConstraintsRemovedInPresolve;
+		int numVariableBoundsTightenedInPresolve;
+		int numIntegerCutsAdded;
 
 		std::vector<int> itersSolvedAsECP;
 
@@ -182,6 +193,8 @@ class ProcessInfo
 
 		std::vector<Hyperplane> hyperplaneWaitingList;
 
+		std::vector<std::vector<int>> integerCutWaitingList;
+
 		std::vector<Timer> timers;
 
 		void outputAlways(std::string message);
@@ -199,6 +212,8 @@ class ProcessInfo
 		static ProcessInfo *single;
 		SHOTSettings::Settings *settings;
 		bool objectiveUpdatedByLinesearch;
+
+		bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
 		ProcessInfo();
 
