@@ -43,16 +43,13 @@ ILOSTLBEGIN
  }*/
 
 std::vector<IloRange> cplexLazyConstrs;
-int lazyiters;
+
+int iterSinceLastIncumbent;
 int itersSinceNLPCall;
-//double minConstrDev;
-//bool useMinConstrDev;
-int lazyBreakCtr;
+
 double timestampLastNLPCall;
 double lastIncumbentObjVal;
 
-TaskBase *tCheckPrimCands;
-TaskBase *tCheckDualCands;
 TaskBase *tSelectPrimNLP;
 
 class HCallbackI: public IloCplex::HeuristicCallbackI
@@ -62,13 +59,7 @@ class HCallbackI: public IloCplex::HeuristicCallbackI
 		ProcessInfo *processInfo;
 		SHOTSettings::Settings *settings;
 
-		//int numLazyConstrs;
-		//int lastIterNum;
-		//int numLazyAdded;
-		//bool isBusy;
-
 	private:
-		//ProcessInfo *processInfo;
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const
@@ -90,67 +81,11 @@ IloCplex::Callback HCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo *
 	return (IloCplex::Callback(new (env) HCallbackI(env, cplexVars, pInfo)));
 }
 
-void HCallbackI::main()
+void HCallbackI::main() // Called at each node...
 {
-	if (this->hasIncumbent())
+
+	if ((processInfo->primalSolutions.size() > 0) && (this->getIncumbentObjValue() > processInfo->getPrimalBound()))
 	{
-		auto primalBound = processInfo->getPrimalBound();
-
-		bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
-
-		bool betterPrimalThanIncumbent = ((isMinimization && primalBound < this->getIncumbentObjValue())
-				|| (!isMinimization && primalBound > this->getIncumbentObjValue()));
-
-		if (betterPrimalThanIncumbent)
-		{
-			auto primalSol = processInfo->primalSolution;
-
-			IloNumArray tmpVals(this->getEnv());
-
-			std::vector<double> solution(tmpVals.getSize());
-
-			for (int i = 0; i < primalSol.size(); i++)
-			{
-				tmpVals.add(primalSol.at(i));
-			}
-
-			//std::cout << "Solution suggested: " << this->getIncumbentObjValue() << " -> " << primalBound << std::endl;
-
-			setSolution(cplexVars, tmpVals);
-
-		}
-		else
-		{
-			int numVar = cplexVars.getSize();
-			std::vector<double> solution(numVar);
-
-			IloNumArray tmpSolsCplex(this->getEnv());
-
-			try
-			{
-
-				this->getIncumbentValues(tmpSolsCplex, cplexVars);
-
-				for (int i = 0; i < numVar; i++)
-				{
-					solution.at(i) = tmpSolsCplex[i];
-				}
-
-				processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback,
-						processInfo->getCurrentIteration()->iterationNumber);
-
-			}
-			catch (IloException &e)
-			{
-				std::cout << "ERROR" << std::endl;
-			}
-
-		}
-	}
-	else //Added august 2016
-	{
-		if (processInfo->primalSolution.size() == 0) return;
-
 		auto primalSol = processInfo->primalSolution;
 
 		IloNumArray tmpVals(this->getEnv());
@@ -162,12 +97,91 @@ void HCallbackI::main()
 			tmpVals.add(primalSol.at(i));
 		}
 
-		//std::cout << "Solution suggested: " << this->getIncumbentObjValue() << " -> " << primalBound << std::endl;
-
 		setSolution(cplexVars, tmpVals);
 	}
+
+	return;
+	/*
+	 //std::cout << "HCallbackI" << std::endl;
+	 if (this->hasIncumbent())
+	 {
+	 std::cout << "Has incumbent" << std::endl;
+	 auto primalBound = processInfo->getPrimalBound();
+
+	 bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+
+	 bool betterPrimalThanIncumbent = ((isMinimization && primalBound < this->getIncumbentObjValue())
+	 || (!isMinimization && primalBound > this->getIncumbentObjValue()));
+
+	 if (betterPrimalThanIncumbent)
+	 {
+	 auto primalSol = processInfo->primalSolution;
+
+	 IloNumArray tmpVals(this->getEnv());
+
+	 std::vector<double> solution(tmpVals.getSize());
+
+	 for (int i = 0; i < primalSol.size(); i++)
+	 {
+	 tmpVals.add(primalSol.at(i));
+	 }
+
+	 std::cout << "Solution suggested: " << this->getIncumbentObjValue() << " -> " << primalBound << std::endl;
+
+	 setSolution(cplexVars, tmpVals);
+
+	 }
+	 else
+	 {
+	 int numVar = cplexVars.getSize();
+	 std::vector<double> solution(numVar);
+
+	 IloNumArray tmpSolsCplex(this->getEnv());
+
+	 try
+	 {
+
+	 this->getIncumbentValues(tmpSolsCplex, cplexVars);
+
+	 for (int i = 0; i < numVar; i++)
+	 {
+	 solution.at(i) = tmpSolsCplex[i];
+	 }
+
+	 processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback,
+	 processInfo->getCurrentIteration()->iterationNumber);
+
+	 }
+	 catch (IloException &e)
+	 {
+	 std::cout << "ERROR" << std::endl;
+	 }
+
+	 }
+	 }
+	 else //Added august 2016
+	 {
+	 this->std::cout << "Has no incumbent" << std::endl;
+	 if (processInfo->primalSolution.size() == 0) return;
+
+	 auto primalSol = processInfo->primalSolution;
+
+	 IloNumArray tmpVals(this->getEnv());
+
+	 std::vector<double> solution(tmpVals.getSize());
+
+	 for (int i = 0; i < primalSol.size(); i++)
+	 {
+	 tmpVals.add(primalSol.at(i));
+	 }
+
+	 setSolution(cplexVars, tmpVals);
+	 std::cout << "Solution suggested: " << this->getIncumbentObjValue() << std::endl;
+	 }*/
+
 }
-class CtCallbackI: public IloCplex::LazyConstraintCallbackI
+
+class IncCallbackI: public IloCplex::IncumbentCallbackI
 {
 		IloNumVarArray cplexVars;
 
@@ -177,89 +191,33 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 		//int numLazyConstrs;
 		//int lastIterNum;
 		//int numLazyAdded;
-		bool isBusy;
+		//bool isBusy;
 
-		ILinesearchMethod *linesearchMethod;
 	private:
 		//ProcessInfo *processInfo;
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const
 		{
-			return (new (getEnv()) CtCallbackI(*this));
+			return (new (getEnv()) IncCallbackI(*this));
 		}
-		CtCallbackI(IloEnv env, IloNumVarArray xx2, ProcessInfo *pInfo) :
-				IloCplex::LazyConstraintCallbackI(env), cplexVars(xx2)
+		IncCallbackI(IloEnv env, IloNumVarArray xx2, ProcessInfo *pInfo) :
+				IloCplex::IncumbentCallbackI(env), cplexVars(xx2)
 		{
 			this->processInfo = pInfo;
-			//cplexLazyConstrs = IloRangeArray(env);
-			//cplexLazyConstrs.reserve(1000);
-			processInfo->lastLazyAddedIter = 0;
-			//numLazyAdded = 0;
-			isBusy = false;
-			lazyiters = 0;
-			itersSinceNLPCall = 0;
 
-			//minConstrDev = 1000;
-			//useMinConstrDev = false;
-			lazyBreakCtr = 1000;
 			settings = SHOTSettings::Settings::getInstance();
-
-			if (settings->getIntSetting("LinesearchMethod", "Linesearch")
-					== static_cast<int>(ES_LinesearchMethod::Boost))
-			{
-				linesearchMethod = new LinesearchMethodBoost();
-				processInfo->outputDebug("Boost linesearch implementation selected.");
-			}
-			else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
-					== static_cast<int>(ES_LinesearchMethod::Bisection))
-			{
-				linesearchMethod = new LinesearchMethodBisection();
-				processInfo->outputDebug("Bisection linesearch implementation selected.");
-			}
-
-			//tCheckPrimCands = new TaskCheckPrimalSolutionCandidates();
-			//tCheckDualCands = new TaskCheckDualSolutionCandidates();
-			tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
-
 		}
 		void main();	// the call back function
 };
 
-IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo *pInfo)
+IloCplex::Callback IncCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo *pInfo)
 {
-	return (IloCplex::Callback(new (env) CtCallbackI(env, cplexVars, pInfo)));
+	return (IloCplex::Callback(new (env) IncCallbackI(env, cplexVars, pInfo)));
 }
 
-void CtCallbackI::main()
+void IncCallbackI::main() // Called at each node...
 {
-	int currIterNum = processInfo->getCurrentIteration()->iterationNumber;
-	bool returnAfter = false;
-
-	/*while (isBusy)
-	 {
-	 sleep(0.000001);
-	 }
-	 */
-	isBusy = true;
-
-	double primalBegin = processInfo->getPrimalBound();
-
-	if (itersSinceNLPCall == 0)
-	{
-		timestampLastNLPCall = processInfo->getElapsedTime("Total");
-	}
-
-	/*
-	 if (lazyiters == 50)
-	 {
-
-	 if (minConstrDev > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-	 {
-	 useMinConstrDev = true;
-
-	 }
-	 }*/
 	IloNumArray tmpVals(this->getEnv());
 
 	this->getValues(tmpVals, cplexVars);
@@ -271,397 +229,381 @@ void CtCallbackI::main()
 		solution.at(i) = tmpVals[i];
 	}
 
-	auto currIter = processInfo->getCurrentIteration();
-	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
-
 	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solution);
 
-	auto gap = processInfo->getAbsoluteObjectiveGap();
-	auto relgap = processInfo->getRelativeObjectiveGap();
+	auto currIter = processInfo->getCurrentIteration();
 
-	if (lazyiters > lazyBreakCtr && this->hasIncumbent())
+	if (processInfo->getPrimalBound() > this->getIncumbentObjValue())
 	{
-		//lazyBreakCtr = lazyBreakCtr * 1.5;
-		//minConstrDev = 1000;
-		std::cout << "     OBJI: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
-				<< this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
-		std::cout << "     Lazyiters: " << lazyiters << " >= " << lazyBreakCtr << std::endl;
-		lazyiters = 0;
+		processInfo->addPrimalFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
+				processInfo->getCurrentIteration()->iterationNumber, mostDevConstr);
+		tSelectPrimNLP->run();
+
 		itersSinceNLPCall = 0;
-		//timestampLastNLPCall = processInfo->getElapsedTime("Total");
-		returnAfter = true;
-		//isBusy = false;
-		//return;
-	}
-	else
-	{
-		lazyiters++;
-	}
-
-	if (mostDevConstr.value <= settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
-	{
-		auto tmpPrimal = processInfo->getPrimalBound();
-
-		processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
-
-		tCheckPrimCands->run();
-
-		if (abs(tmpPrimal - processInfo->getPrimalBound()) > 0)
-		{
-			isBusy = false;
-			return;
-		}
-	}
-
-	double tmpDualObjBound = this->getBestObjValue();
-
-	if (abs(tmpDualObjBound - processInfo->getDualBound() > 0.000001))
-	{
-		DualSolution sol =
-		{ solution, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound, currIter->iterationNumber };
-		processInfo->addDualSolutionCandidate(sol);
-
-		tCheckDualCands->run();
+		timestampLastNLPCall = processInfo->getElapsedTime("Total");
 	}
 
 	if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	{
-		returnAfter = true;
-		isBusy = false;
-		return;
-	}
-
-	//auto dualitygap = abs(this->getBestObjValue() - this->getObjValue());
-	auto mipgap = this->getMIPRelativeGap();
-	//std::cout << "Mip gap: " << mipgap << std::endl;
-	//if (dualitygap < settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
-	if (abs(mipgap) < settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
-	{
-		//std::cout << "Mip gap ok: " << dualitygap << "(" << this->getBestObjValue() << ", " << this->getObjValue()
-		//<< std::endl;
-		std::cout << "Mip gap ok: " << mipgap << std::endl;
-
-		returnAfter = true;
-		isBusy = false;
+		processInfo->addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::IncumbentCallback, 0);
+		//std::cout << "Most dev: " << mostDevConstr.value << std::endl;
 		return;
 	}
 	else
 	{
-		//std::cout << "Duality gap: " << dualitygap << std::endl;
+		std::cout << "Not rejected: " << mostDevConstr.value << std::endl;
+		//reject();
+	}
+}
+
+class CtCallbackI: public IloCplex::LazyConstraintCallbackI
+{
+		IloNumVarArray cplexVars;
+
+		ProcessInfo *processInfo;
+		SHOTSettings::Settings *settings;
+
+		//bool isBusy;
+		bool isMinimization;
+		int cbCalls;
+
+		TaskBase *taskSelectHPPts;
+
+	public:
+		IloCplex::CallbackI* duplicateCallback() const
+		{
+			return (new (getEnv()) CtCallbackI(*this));
+		}
+		CtCallbackI(IloEnv env, IloNumVarArray xx2, ProcessInfo *pInfo) :
+				IloCplex::LazyConstraintCallbackI(env), cplexVars(xx2)
+		{
+			this->processInfo = pInfo;
+			processInfo->lastLazyAddedIter = 0;
+			//isBusy = false;
+			isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+			//lazyiters = 0;
+			itersSinceNLPCall = 0;
+			cbCalls = 0;
+
+			settings = SHOTSettings::Settings::getInstance();
+
+			if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+					== ES_SolutionStrategy::ESH)
+			{
+				if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy",
+						"ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+				{
+					taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+				}
+				else
+				{
+					taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+				}
+			}
+			else
+			{
+				taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
+			}
+
+			tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+
+		}
+		void main();	// the call back function
+		bool createHyperplane(Hyperplane hyperplane);
+};
+
+IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo *pInfo)
+{
+	return (IloCplex::Callback(new (env) CtCallbackI(env, cplexVars, pInfo)));
+}
+
+bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
+{
+	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto originalProblem = processInfo->originalProblem;
+	std::vector < IndexValuePair > elements;
+
+	auto varNames = originalProblem->getVariableNames();
+
+	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
+			hyperplane.generatedPoint);
+
+	if (hyperplane.sourceConstraintIndex == -1
+			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
+	{
+		processInfo->outputDebug("     HP point generated for auxiliary objective function constraint");
+
+		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
+				&hyperplane.generatedPoint.at(0), -1, true);
+		int number = processInfo->originalProblem->getNumberOfVariables();
+		processInfo->numGradientEvals++;
+
+		for (int i = 0; i < number - 1; i++)
+		{
+			if (tmpArray[i] != 0)
+			{
+				IndexValuePair pair;
+				pair.idx = i;
+				pair.value = tmpArray[i];
+
+				elements.push_back(pair);
+				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
+
+				processInfo->outputDebug(
+						"     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
+			}
+		}
+
+		processInfo->outputDebug("     Gradient for obj.var.: -1");
+
+		IndexValuePair pair;
+		pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
+		pair.value = -1.0;
+
+		elements.push_back(pair);
+		constant += /*-(-1) **/hyperplane.generatedPoint.at(pair.idx);
+	}
+	else
+	{
+		processInfo->outputDebug(
+				"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
+
+		auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
+				hyperplane.generatedPoint);
+
+		for (int i = 0; i < nablag->number; i++)
+		{
+			IndexValuePair pair;
+			pair.idx = nablag->indexes[i];
+			pair.value = nablag->values[i];
+
+			elements.push_back(pair);
+			constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
+
+			processInfo->outputDebug(
+					"     Gradient for variable" + varNames.at(nablag->indexes[i]) + ": "
+							+ to_string(nablag->values[i]));
+		}
 	}
 
-//auto gap = abs(processInfo->getPrimalBound() - this->getBestObjValue());
+	bool hyperplaneIsOk = true;
 
-//double relgap = gap / ((1e-10) + abs(processInfo->getPrimalBound()));
-
-//std::cout << "O:" << this->getIncumbentObjValue() << std::endl;
-
-//auto gap = processInfo->getAbsoluteObjectiveGap();
-//auto relgap = processInfo->getRelativeObjectiveGap();
-
-	/*if (abs(this->getIncumbentObjValue() - this->getBestObjValue())
-	 < settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
-	 {
-	 std::cout << "     OBJ: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
-	 << this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
-	 std::cout << "     Relative gap: " << relgap << std::endl;
-	 returnAfter = true;
-	 isBusy = false;
-	 return;
-	 }
-	 else*/
-	if (relgap < settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	for (auto E : elements)
 	{
-		std::cout << "     OBJR: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
-				<< this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
-		std::cout << "     Relative gap: " << relgap << std::endl;
-		returnAfter = true;
-		isBusy = false;
+		if (E.value != E.value) //Check for NaN
+		{
+
+			processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+			hyperplaneIsOk = false;
+			break;
+		}
+	}
+
+	if (hyperplaneIsOk)
+	{
+		IloExpr expr(this->getEnv());
+
+		for (int i = 0; i < elements.size(); i++)
+		{
+			expr += elements.at(i).value * cplexVars[elements.at(i).idx];
+		}
+
+		IloRange tmpRange(this->getEnv(), -IloInfinity, expr, -constant);
+
+		this->add(tmpRange);
+		//this->add(tmpRange, IloCplex::CutManagement::UseCutPurge);
+		//this->addLocal(tmpRange);
+
+		currIter->numHyperplanesAdded++;
+		currIter->totNumHyperplanes++;
+
+		return (true);
+	}
+
+	return (false);
+}
+
+void CtCallbackI::main()
+{
+	this->cbCalls++;
+	auto currIter = processInfo->getCurrentIteration();
+	bool returnAfter = false;
+
+	double primalBegin = processInfo->getPrimalBound();
+
+	if (itersSinceNLPCall == 0)
+	{
+		timestampLastNLPCall = processInfo->getElapsedTime("Total");
+	}
+
+	IloNumArray tmpVals(this->getEnv());
+
+	this->getValues(tmpVals, cplexVars);
+
+	std::vector<double> solution(tmpVals.getSize());
+
+	for (int i = 0; i < tmpVals.getSize(); i++)
+	{
+		solution.at(i) = tmpVals[i];
+	}
+
+	auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solution);
+
+	auto absObjGap = processInfo->getAbsoluteObjectiveGap();
+	auto relObjGap = processInfo->getRelativeObjectiveGap();
+
+	double tmpDualObjBound = this->getBestObjValue();
+
+// Check if better dual bound
+	if ((isMinimization && tmpDualObjBound > processInfo->getDualBound())
+			|| (!isMinimization && tmpDualObjBound < processInfo->getDualBound()))
+	{
+		DualSolution sol =
+		{ solution, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound, currIter->iterationNumber };
+		processInfo->addDualSolutionCandidate(sol);
+	}
+
+	auto relMIPGap = this->getMIPRelativeGap();
+
+	if (abs(relMIPGap) < settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	{
+		processInfo->outputInfo(
+				"Terminated by relative MIP gap tolerance: " + UtilityFunctions::toString(relMIPGap) + " < "
+						+ UtilityFunctions::toString(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
 		return;
 	}
-	else if (gap < settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+
+	if (processInfo->isRelativeObjectiveGapToleranceMet())
 	{
-		std::cout << "     OBJA: " << this->getObjValue() << "\t BEST: " << this->getBestObjValue() << "\t INT: "
-				<< this->getIncumbentObjValue() << "\t\t DEV: " << mostDevConstr.value << " < " << std::endl;
-		std::cout << "     Absolute gap: " << gap << std::endl;
-		returnAfter = true;
-		isBusy = false;
+		processInfo->outputInfo(
+				"Terminated by relative objective gap tolerance: " + UtilityFunctions::toString(relObjGap) + " < "
+						+ UtilityFunctions::toString(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
+		return;
+	}
+
+	if (processInfo->isAbsoluteObjectiveGapToleranceMet())
+	{
+		processInfo->outputInfo(
+				"Terminated by absolute objective gap tolerance: " + UtilityFunctions::toString(absObjGap) + " < "
+						+ UtilityFunctions::toString(settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
 		return;
 	}
 
 	double elapsedTime = processInfo->getElapsedTime("Total") - timestampLastNLPCall;
-//std::cout << "Elapsed" << elapsedTime << std::endl;
-	/*if ((elapsedTime > 5.0)
-	 || ((itersSinceNLPCall > 50)
-	 && mostDevConstr.value < (1000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
-	 || (itersSinceNLPCall > 200))
-	 {
-	 /*dynamic_cast<TaskSelectPrimalCandidatesFromNLP*>(tSelectPrimNLP)->setFixedPoint(solution);
-	 tSelectPrimNLP->run();
-
-	 tCheckPrimCands->run();
-	 itersSinceNLPCall = 0;
-	 timestampLastNLPCall = processInfo->getElapsedTime("Total");
-	 }
-	 else
-	 {
-	 itersSinceNLPCall++;
-	 }*/
-
-	std::vector < Hyperplane > hyperplanes;
-	Hyperplane hyperplane;
-
-	for (int j = 0; j < processInfo->interiorPts.size(); j++)
+	if ((elapsedTime > 5)
+			|| ((itersSinceNLPCall > 50)
+					&& mostDevConstr.value < (1000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+			|| (itersSinceNLPCall > 200))
 	{
-		//processInfo->startTimer(E_TimerTypes::Linesearch);
-		auto xNLP = processInfo->interiorPts.at(j).point;
+		processInfo->addPrimalFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
+				processInfo->getCurrentIteration()->iterationNumber, mostDevConstr);
+		tSelectPrimNLP->run();
 
-		processInfo->startTimer("HyperplaneLinesearch");
+		processInfo->checkPrimalSolutionCandidates();
 
-		auto intervalPts = linesearchMethod->findZero(xNLP, solution,
-				settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-				settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-				settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+		itersSinceNLPCall = 0;
+		timestampLastNLPCall = processInfo->getElapsedTime("Total");
+	}
+	else
+	{
+		itersSinceNLPCall++;
+	}
 
-		auto xNewc = intervalPts.second;
+	std::vector < SolutionPoint > solutionPoints(1);
 
-		processInfo->stopTimer("HyperplaneLinesearch");
-		//processInfo->stopTimer(E_TimerTypes::Linesearch);
+	SolutionPoint tmpSolPt;
 
-		if (xNewc.size() == 0) break;	// TODO remove?
+	tmpSolPt.point = solution;
+	tmpSolPt.objectiveValue = getObjValue();
+	tmpSolPt.iterFound = processInfo->getCurrentIteration()->iterationNumber;
+	tmpSolPt.maxDeviation = mostDevConstr;
 
-		auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(xNewc);
+	solutionPoints.at(0) = tmpSolPt;
 
-		if (tmpMostDevConstr.value < 0)
+	if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+			== ES_SolutionStrategy::ESH)
+	{
+		if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy", "ESH"))
+				== ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 		{
-			//processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
-
-			auto tmpPrimal = processInfo->getPrimalBound();
-
-			processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback, currIterNum);
-
-			tCheckPrimCands->run();
-
-			if (abs(tmpPrimal - processInfo->getPrimalBound()) > 0)
-			{
-				// Tillsatt 10.4.2016
-				returnAfter = true;
-			}
-		}
-
-		if (tmpMostDevConstr.value < 0)
-		{
-			isBusy = false;
-			processInfo->outputWarning("     Hyperplane point is on the interior.");
-
-			return;
+			dynamic_cast<TaskSelectHyperplanePointsLinesearch*>(taskSelectHPPts)->run(solutionPoints);
 		}
 		else
 		{
-			processInfo->outputDebug("     Hyperplane point is on the exterior.");
-
-			hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
-			hyperplane.generatedPoint = xNewc;
-
-			hyperplanes.push_back(hyperplane);
-
+			dynamic_cast<TaskSelectHyperplanePointsIndividualLinesearch*>(taskSelectHPPts)->run(solutionPoints);
 		}
 	}
-
-// Tries to remove the incumbent solution. Does not seem to work
-	if (false && abs(this->getIncumbentObjValue() - lastIncumbentObjVal) > 0.1)
+	else
 	{
-		lastIncumbentObjVal = this->getIncumbentObjValue();
-
-		Hyperplane hyperplane2;
-
-		if (this->hasIncumbent())
-		{
-			this->getIncumbentValues(tmpVals, cplexVars);
-			std::cout << "     INCUMBENT: " << this->getIncumbentObjValue() << std::endl;
-
-			std::vector<double> solution(tmpVals.getSize());
-
-			for (int i = 0; i < tmpVals.getSize(); i++)
-			{
-				solution.at(i) = tmpVals[i];
-			}
-
-			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solution);
-			std::cout << "Incumbent max dev" << mostDevConstr.value << std::endl;
-
-			for (int j = 0; j < processInfo->interiorPts.size(); j++)
-			{
-				//processInfo->startTimer(E_TimerTypes::Linesearch);
-				auto xNLP = processInfo->interiorPts.at(j).point;
-
-				processInfo->startTimer("HyperplaneLinesearch");
-
-				auto intervalPts = linesearchMethod->findZero(xNLP, solution,
-						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
-
-				auto xNewc = intervalPts.second;
-
-				processInfo->stopTimer("HyperplaneLinesearch");
-				//processInfo->stopTimer(E_TimerTypes::Linesearch);
-
-				if (xNewc.size() == 0) break;	// TODO remove?
-
-				auto tmpMostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(xNewc);
-
-				if (tmpMostDevConstr.value < 0)
-				{
-					processInfo->addPrimalSolutionCandidate(xNewc, E_PrimalSolutionSource::LazyConstraintCallback,
-							currIterNum);
-				}
-
-				if (tmpMostDevConstr.value < 0)
-				{
-					isBusy = false;
-
-					processInfo->outputWarning("     Hyperplane point is on the interior.");
-
-					return;
-				}
-				else
-				{
-					processInfo->outputDebug("     Hyperplane point is on the exterior.");
-
-					hyperplane2.sourceConstraintIndex = tmpMostDevConstr.idx;
-					hyperplane2.generatedPoint = xNewc;
-
-				}
-			}
-		}
+		dynamic_cast<TaskSelectHyperplanePointsSolution*>(taskSelectHPPts)->run(solutionPoints);
 	}
 
-	auto varNames = processInfo->originalProblem->getVariableNames();
+	int numHPsAdded = 0;
 
-	for (auto hp : hyperplanes)
+	for (auto hp : processInfo->hyperplaneWaitingList)
 	{
-		std::vector < IndexValuePair > elements;
-		double constant = processInfo->originalProblem->calculateConstraintFunctionValue(hp.sourceConstraintIndex,
-				hp.generatedPoint);
-
-		if (hp.sourceConstraintIndex == -1
-				|| hp.sourceConstraintIndex == processInfo->originalProblem->getNonlinearObjectiveConstraintIdx())
-		{
-
-			processInfo->outputDebug("     HP point generated for auxiliary objective function constraint");
-
-			auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
-					&hp.generatedPoint.at(0), -1, true);
-			int number = processInfo->originalProblem->getNumberOfVariables();
-
-			for (int i = 0; i < number - 1; i++)
-			{
-				if (tmpArray[i] != 0)
-				{
-					IndexValuePair pair;
-					pair.idx = i;
-					pair.value = tmpArray[i];
-
-					elements.push_back(pair);
-					constant += -tmpArray[i] * hp.generatedPoint.at(i);
-				}
-			}
-
-			IndexValuePair pair;
-			pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
-			pair.value = -1.0;
-
-			elements.push_back(pair);
-			constant += /*-(-1) **/hp.generatedPoint.at(pair.idx);
-		}
-		else
-		{
-
-			auto nablag = processInfo->originalProblem->calculateConstraintFunctionGradient(hp.sourceConstraintIndex,
-					hp.generatedPoint);
-			processInfo->numGradientEvals++;
-
-			for (int i = 0; i < nablag->number; i++)
-			{
-				IndexValuePair pair;
-				pair.idx = nablag->indexes[i];
-				pair.value = nablag->values[i];
-
-				elements.push_back(pair);
-				constant += -nablag->values[i] * hp.generatedPoint.at(nablag->indexes[i]);
-			}
-		}
-
-		bool hyperplaneIsOk = true;
-
-		for (auto E : elements)
-		{
-			if (E.value != E.value) //Check for NaN
-			{
-				processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
-
-				hyperplaneIsOk = false;
-				break;
-			}
-		}
-
-		if (hyperplaneIsOk)
-		{
-			IloExpr expr(this->getEnv());
-
-			for (int i = 0; i < elements.size(); i++)
-			{
-				expr += elements.at(i).value * cplexVars[elements.at(i).idx];
-			}
-
-			IloRange tmpRange(this->getEnv(), -IloInfinity, expr, -constant);
-
-			//IloRange tmpRange2(this->getEnv(), -IloInfinity, expr, -constant);
-
-			cplexLazyConstrs.push_back(tmpRange);
-			//numLazyAdded++;
-
-			std::cout << "     LAZY #: " << cplexLazyConstrs.size() << "\t DB: " << this->getBestObjValue()
-					<< "\t OBJ: " << this->getObjValue() << "\t GAP: " << gap << "\t PB: "
-					<< this->getIncumbentObjValue() << "\t DEV: " << mostDevConstr.value << std::endl;
-			//this->add(tmpRange, IloCplex::CutManagement::UseCutPurge);
-			this->add(tmpRange);
-			//this->addLocal(tmpRange);
-			//std::cout << "HEJ" << std::endl;
-			//tmpRange2.end();
-
-			//numLazyConstrs++;
-			//cplexConstrs.add(tmpRange);
-			//cplexModel.add(tmpRange);
-
-			//int constrIndex = processInfo->MILPSolver->addLinearConstraint(elements, constant);
-			/*addedHyperplanes++;
-			 GeneratedHyperplane genHyperplane;
-
-			 genHyperplane.generatedConstraintIndex = constrIndex;
-			 genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-			 genHyperplane.generatedPoint = hyperplane.generatedPoint;
-			 genHyperplane.source = hyperplane.source;
-			 genHyperplane.generatedIter = currIter->iterationNumber;
-
-			 generatedHyperplanes.push_back(genHyperplane);
-
-			 currIter->numHyperplanesAdded++;
-			 currIter->totNumHyperplanes++;*/
-		}
+		if (this->createHyperplane(hp)) numHPsAdded++;
 	}
-//}
+
+	processInfo->hyperplaneWaitingList.clear();
+
+	std::stringstream tmpType;
+	tmpType << "LazyCB";
+
+	std::string hyperplanesExpr;
+
+	if (numHPsAdded > 0)
+	{
+		hyperplanesExpr = "+" + to_string(numHPsAdded) + " = " + to_string(currIter->totNumHyperplanes);
+	}
+	else
+	{
+		hyperplanesExpr = " ";
+	}
+
+	auto tmpConstrExpr = UtilityFunctions::toStringFormat(mostDevConstr.value, "%.5f");
+
+	if (mostDevConstr.idx != -1)
+	{
+		tmpConstrExpr = processInfo->originalProblem->getConstraintNames()[mostDevConstr.idx] + ": " + tmpConstrExpr;
+	}
+	else tmpConstrExpr = processInfo->originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
+	{
+	}
+
+	std::string primalBoundExpr;
+	std::string dualBoundExpr;
+	std::string objExpr;
+
+	if (this->hasIncumbent())
+	{
+		primalBoundExpr = UtilityFunctions::toString(this->getIncumbentObjValue());
+	}
+
+	objExpr = UtilityFunctions::toString(this->getObjValue());
+	dualBoundExpr = UtilityFunctions::toString(this->getBestObjValue());
+
+	auto tmpLine = boost::format("%|5| %|-11s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
+			% (to_string(this->getMyThreadNum()) + "-" + to_string(cbCalls)) % tmpType.str() % hyperplanesExpr
+			% dualBoundExpr % objExpr % primalBoundExpr % tmpConstrExpr;
+
+	/*stringstream str;
+
+	 str << processInfo->hyperplaneWaitingList.size() << "   LAZY #: " << currIter->totNumHyperplanes << "\t DB: "
+	 << this->getBestObjValue() << "\t OBJ: " << this->getObjValue() << "\t GAP: " << absObjGap << "\t PB: "
+	 << this->getIncumbentObjValue() << "\t DEV: " << mostDevConstr.value;
+	 */
+	processInfo->outputSummary(tmpLine.str());
 
 //std::cout << "Before: " << primalBegin << " after " << processInfo->getPrimalBound() << std::endl;
-	if (returnAfter || abs(primalBegin - processInfo->getPrimalBound()) > 0)
-	{
-		isBusy = false;
-		return;
-	}
+	/*if (returnAfter || abs(primalBegin - processInfo->getPrimalBound()) > 0)
+	 {
+	 isBusy = false;
+	 std::cout << "Term return after" << std::endl;
+	 return;
+	 }*/
 
-	isBusy = false;
-
+	//isBusy = false;
 }
 
 MILPSolverCplexExperimental::MILPSolverCplexExperimental()
@@ -678,17 +620,17 @@ MILPSolverCplexExperimental::MILPSolverCplexExperimental()
 	cplexLazyConstrs = IloRangeArray(cplexEnv);
 
 	iterLastLazyConvert = 0;
+	itersSinceNLPCall = 0;
 
 	cachedSolutionHasChanged = true;
 
 	checkParameters();
+
 }
 
 MILPSolverCplexExperimental::~MILPSolverCplexExperimental()
 {
 	cplexEnv.end();
-	delete tCheckDualCands;
-	delete tCheckPrimCands;
 }
 
 bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
@@ -783,7 +725,7 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 //{
 	for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
 	{
-		// Only use constraints that don't contain a nonlinear part (may include a quadratic part)
+// Only use constraints that don't contain a nonlinear part (may include a quadratic part)
 		if (!origProblem->isConstraintNonlinear(rowIdx))
 		{
 			IloExpr expr(cplexEnv);
@@ -849,15 +791,16 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 
 	try
 	{
-		//cplexInstance.setParam(IloCplex::Param::MIP::Strategy::Search, IloCplex::Traditional);
+//cplexInstance.setParam(IloCplex::Param::MIP::Strategy::Search, IloCplex::Traditional);
 		cplexInstance = IloCplex(cplexModel);
 
 		IloExprArray lhs;
 		IloNumArray rhs;
 
-		// Do not use the callback if quadratic function, not needed anymore...
+// Do not use the callback if quadratic function, not needed anymore...
 		cplexInstance.use(CtCallback(cplexEnv, cplexVars, this->processInfo));
-		//cplexInstance.use(HCallback(cplexEnv, cplexVars, this->processInfo));
+		cplexInstance.use(IncCallback(cplexEnv, cplexVars, this->processInfo));
+		cplexInstance.use(HCallback(cplexEnv, cplexVars, this->processInfo));
 
 	}
 	catch (IloException& e)
@@ -875,7 +818,7 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 
 	try
 	{
-		// Disable CPLEX output
+// Disable CPLEX output
 		cplexInstance.setOut(cplexEnv.getNullStream());
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
@@ -883,41 +826,42 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 		cplexInstance.setParam(IloCplex::SolnPoolReplace, settings->getIntSetting("SolnPoolReplace", "CPLEX"));
 
 		cplexInstance.setParam(IloCplex::RepairTries, 5);
-		//cplexInstance.setParam(IloCplex::HeurFreq,2);
-		//cplexInstance.setParam(IloCplex::AdvInd,2);
+//cplexInstance.setParam(IloCplex::HeurFreq,2);
+//cplexInstance.setParam(IloCplex::AdvInd,2);
 
 		cplexInstance.setParam(IloCplex::SolnPoolGap, settings->getDoubleSetting("SolnPoolGap", "CPLEX"));
 		cplexInstance.setParam(IloCplex::SolnPoolCapacity, settings->getIntSetting("SolutionPoolSize", "MILP"));
 
 		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
+		//cplexInstance.setParam(IloCplex::NodeSel, CPX_NODESEL_BESTEST);
 
-		//cplexInstance.setParam(IloCplex::ParallelMode, 1);
+//cplexInstance.setParam(IloCplex::ParallelMode, 1);
 		cplexInstance.setParam(IloCplex::Threads, 8);
 
-		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
+//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
-		//cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
+//cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
 
-		//cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap, 0.1);
+//cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap, 0.1);
 		cplexInstance.setParam(IloCplex::WorkMem, 30000);
 
 		cplexInstance.setParam(IloCplex::NodeFileInd, 2);
 
-		//cplexInstance.setParam(IloCplex::Param::Tune::Measure, CPX_TUNE_AVERAGE);
-		//cplexInstance.setParam(IloCplex::Param::Tune::TimeLimit, 10);
+//cplexInstance.setParam(IloCplex::Param::Tune::Measure, CPX_TUNE_AVERAGE);
+//cplexInstance.setParam(IloCplex::Param::Tune::TimeLimit, 10);
 
-		//cplexInstance.setParam(IloCplex::NumericalEmphasis, 1);
-		//cplexInstance.setParam(IloCplex::MemoryEmphasis, 1);
-		//cplexInstance.setParam(IloCplex::EpGap, 10 ^ (-14));
-		//cplexInstance.setParam(IloCplex::EpInt, 10 ^ (-6));
-		//cplexInstance.setParam(IloCplex::EpOpt, 1 ^ (-9));
-		//cplexInstance.setParam(IloCplex::EpAGap, 10 ^ (-14));
+//cplexInstance.setParam(IloCplex::NumericalEmphasis, 1);
+//cplexInstance.setParam(IloCplex::MemoryEmphasis, 1);
+//cplexInstance.setParam(IloCplex::EpGap, 10 ^ (-14));
+//cplexInstance.setParam(IloCplex::EpInt, 10 ^ (-6));
+//cplexInstance.setParam(IloCplex::EpOpt, 1 ^ (-9));
+//cplexInstance.setParam(IloCplex::EpAGap, 10 ^ (-14));
 
 		cplexInstance.setParam(IloCplex::WorkDir, "/data/stuff/tmp/");
 
 		cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
-		//cplexInstance.setParam(IloCplex::EpMrk, 0.9);
+//cplexInstance.setParam(IloCplex::EpMrk, 0.9);
 
 	}
 	catch (IloException& e)
@@ -969,7 +913,7 @@ int MILPSolverCplexExperimental::addLinearConstraint(std::vector<IndexValuePair>
 
 		modelUpdated = true;
 
-		//}
+//}
 
 		expr.end();
 	}
@@ -1195,7 +1139,6 @@ int MILPSolverCplexExperimental::increaseSolutionLimit(int increment)
 
 void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 {
-
 	if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
 	{
 		limit = settings->getIntSetting("MILPSolLimitInitial", "MILP");
@@ -1480,11 +1423,11 @@ void MILPSolverCplexExperimental::changeConstraintToLazy(GeneratedHyperplane &hy
 {
 	try
 	{
-		//std::cout << "Starting conversion to lazy "<< std::endl;
-		//std::cout << "Number start " << cplexConstrs.getSize()<< std::endl;
+//std::cout << "Starting conversion to lazy "<< std::endl;
+//std::cout << "Number start " << cplexConstrs.getSize()<< std::endl;
 
-		//UtilityFunctions::displayVector(constrIdxs);
-		//std::cout << "Converted to lazy: " << constrIdxs[i] << std::endl;
+//UtilityFunctions::displayVector(constrIdxs);
+//std::cout << "Converted to lazy: " << constrIdxs[i] << std::endl;
 		IloRange tmpRange = cplexConstrs[hyperplane.generatedConstraintIndex];
 
 		try
@@ -1596,7 +1539,7 @@ void MILPSolverCplexExperimental::writePresolvedToFile(std::string filename)
 {
 	try
 	{
-		//Not implemented
+//Not implemented
 	}
 	catch (IloException &e)
 	{

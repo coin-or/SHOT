@@ -104,7 +104,8 @@ enum class E_PrimalSolutionSource
 	ObjectiveConstraint,
 	LPFixedIntegers,
 	LazyConstraintCallback,
-	HeuristicCallback
+	HeuristicCallback,
+	IncumbentCallback
 };
 
 enum class E_PrimalNLPSource

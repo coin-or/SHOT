@@ -20,20 +20,22 @@ TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
 
 void TaskSelectHyperplanePointsSolution::run()
 {
+	this->run(processInfo->getPreviousIteration()->solutionPoints);
+}
+
+void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
+{
 	int addedHyperplanes = 0;
 
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
-	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
 
-	auto allSolutions = prevIter->solutionPoints; // All solutions in the solution pool
 	auto originalProblem = processInfo->originalProblem;
 
 	auto constrSelFactor = settings->getDoubleSetting("LinesearchConstraintSelectionFactor", "ECP");
 
-	for (int i = 0; i < allSolutions.size(); i++)
+	for (int i = 0; i < solPoints.size(); i++)
 	{
-		auto tmpMostDevConstrs = originalProblem->getMostDeviatingConstraints(allSolutions.at(i).point,
-				constrSelFactor);
+		auto tmpMostDevConstrs = originalProblem->getMostDeviatingConstraints(solPoints.at(i).point, constrSelFactor);
 
 		for (int j = 0; j < tmpMostDevConstrs.size(); j++)
 		{
@@ -47,7 +49,7 @@ void TaskSelectHyperplanePointsSolution::run()
 			{
 				Hyperplane hyperplane;
 				hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
-				hyperplane.generatedPoint = allSolutions.at(i).point;
+				hyperplane.generatedPoint = solPoints.at(i).point;
 
 				if (i == 0 && currIter->isMILP())
 				{

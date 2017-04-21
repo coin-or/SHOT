@@ -61,6 +61,11 @@ NLPSolverCuttingPlane::NLPSolverCuttingPlane()
 		MILPSolver = new MILPSolverOsiCbc();
 		processInfo->outputInfo("Cbc selected as MILP solver for minimax solver.");
 	}
+	else if (solver == ES_MILPSolver::CplexExperimental)
+	{
+		MILPSolver = new MILPSolverCplex();
+		processInfo->outputInfo("Cplex selected as MILP solver for minimax solver.");
+	}
 	else
 	{
 		processInfo->stopTimer("InteriorPointMinimax");
@@ -98,7 +103,6 @@ bool NLPSolverCuttingPlane::createProblem(OSInstance* origInstance)
 
 bool NLPSolverCuttingPlane::solveProblem()
 {
-
 	processInfo->startTimer("InteriorPointMinimax");
 
 	int numVar = NLPProblem->getNumberOfVariables();

@@ -35,21 +35,22 @@ TaskSelectHyperplanePointsLinesearch::~TaskSelectHyperplanePointsLinesearch()
 
 void TaskSelectHyperplanePointsLinesearch::run()
 {
+	this->run(processInfo->getPreviousIteration()->solutionPoints);
+}
+
+void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
+{
 	int addedHyperplanes = 0;
 
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
-	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
-
-	auto allSolutions = prevIter->solutionPoints; // All solutions in the solution pool
-	//TODO add task removing interior points
 
 	auto originalProblem = processInfo->originalProblem;
 
 	int prevHPnum = processInfo->hyperplaneWaitingList.size();
 
-	for (int i = 0; i < allSolutions.size(); i++)
+	for (int i = 0; i < solPoints.size(); i++)
 	{
-		if (originalProblem->isConstraintsFulfilledInPoint(allSolutions.at(i).point))
+		if (originalProblem->isConstraintsFulfilledInPoint(solPoints.at(i).point))
 		{
 		}
 		else
@@ -66,7 +67,7 @@ void TaskSelectHyperplanePointsLinesearch::run()
 				{
 
 					processInfo->startTimer("HyperplaneLinesearch");
-					auto xNewc = linesearchMethod->findZero(xNLP, allSolutions.at(i).point,
+					auto xNewc = linesearchMethod->findZero(xNLP, solPoints.at(i).point,
 							settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 							settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
 							settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
@@ -78,7 +79,7 @@ void TaskSelectHyperplanePointsLinesearch::run()
 				catch (std::exception &e)
 				{
 					processInfo->stopTimer("HyperplaneLinesearch");
-					externalPoint = allSolutions.at(i).point;
+					externalPoint = solPoints.at(i).point;
 
 					processInfo->outputWarning("Cannot find solution with linesearch, using solution point instead.");
 				}

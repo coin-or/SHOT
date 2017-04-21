@@ -38,20 +38,22 @@ TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndiv
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run()
 {
+	this->run(processInfo->getPreviousIteration()->solutionPoints);
+}
+
+void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> solPoints)
+{
 	int addedHyperplanes = 0;
 
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
-	auto prevIter = processInfo->getPreviousIteration(); // The already solved iteration
-
-	auto allSolutions = prevIter->solutionPoints; // All solutions in the solution pool
 
 	// Contains boolean array that indicates if a constraint has been added or not
 	std::vector<bool> hyperplaneAddedToConstraint(processInfo->originalProblem->getNumberOfNonlinearConstraints(),
 			false);
 
-	for (int i = 0; i < allSolutions.size(); i++)
+	for (int i = 0; i < solPoints.size(); i++)
 	{
-		auto maxDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(allSolutions.at(i).point);
+		auto maxDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solPoints.at(i).point);
 
 		if (maxDevConstr.value <= 0)
 		{
@@ -72,7 +74,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run()
 							|| ((currConstrIdx == -1) && hyperplaneAddedToConstraint.back())) continue;
 
 					auto constrDevExterior = processInfo->originalProblem->calculateConstraintFunctionValue(
-							currConstrIdx, allSolutions.at(i).point);
+							currConstrIdx, solPoints.at(i).point);
 
 					if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 
@@ -93,7 +95,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run()
 					try
 					{
 						processInfo->startTimer("HyperplaneLinesearch");
-						auto xNewc = linesearchMethod->findZero(xNLP, allSolutions.at(i).point,
+						auto xNewc = linesearchMethod->findZero(xNLP, solPoints.at(i).point,
 								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 								settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
 								settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"), currentIndexes);
@@ -105,7 +107,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run()
 					catch (std::exception &e)
 					{
 						processInfo->stopTimer("HyperplaneLinesearch");
-						externalPoint = allSolutions.at(i).point;
+						externalPoint = solPoints.at(i).point;
 
 						processInfo->outputError(
 								"     Cannot find solution with linesearch. Interior value: "
@@ -160,3 +162,4 @@ std::string TaskSelectHyperplanePointsIndividualLinesearch::getType()
 	return (type);
 
 }
+

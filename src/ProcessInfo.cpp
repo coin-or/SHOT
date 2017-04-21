@@ -361,6 +361,9 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		case E_PrimalSolutionSource::HeuristicCallback:
 			sourceDesc = "Heuristic constraint callback";
 			break;
+		case E_PrimalSolutionSource::IncumbentCallback:
+			sourceDesc = "Incumbent constraint callback";
+			break;
 		default:
 			break;
 	}
