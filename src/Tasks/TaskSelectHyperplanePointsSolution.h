@@ -18,6 +18,8 @@ class TaskSelectHyperplanePointsSolution: public TaskBase
 		virtual ~TaskSelectHyperplanePointsSolution();
 
 		virtual void run();
+		virtual void run(vector<SolutionPoint> solPoints);
+
 		virtual std::string getType();
 
 	private:

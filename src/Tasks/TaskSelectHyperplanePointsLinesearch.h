@@ -20,6 +20,8 @@ class TaskSelectHyperplanePointsLinesearch: public TaskBase
 		virtual ~TaskSelectHyperplanePointsLinesearch();
 
 		virtual void run();
+		virtual void run(vector<SolutionPoint> solPoints);
+
 		virtual std::string getType();
 	private:
 		ILinesearchMethod *linesearchMethod;
