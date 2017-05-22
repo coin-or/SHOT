@@ -163,7 +163,18 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 	}
 
 	int tempFEvals = processInfo->numFunctionEvals;
-	Result r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
+
+	Result r1;
+
+	if (static_cast<ES_LinesearchMethod>(settings->getIntSetting("LinesearchMethod", "Linesearch"))
+			== ES_LinesearchMethod::BoostTOMS748)
+	{
+		r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
+	}
+	else
+	{
+		r1 = boost::math::tools::bisect(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
+	}
 
 	int resFVals = processInfo->numFunctionEvals - tempFEvals;
 	if (max_iter == Nmax)

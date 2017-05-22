@@ -62,6 +62,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem();
 	processInfo->tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
 
+	TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
+	processInfo->tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
+
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
 	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
 

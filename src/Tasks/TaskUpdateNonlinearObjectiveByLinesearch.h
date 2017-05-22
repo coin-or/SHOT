@@ -10,12 +10,7 @@
 #include <TaskBase.h>
 #include "../ProcessInfo.h"
 
-#include "../LinesearchMethod/ILinesearchMethod.h"
-#include "../LinesearchMethod/LinesearchMethodBisection.h"
-#include "../LinesearchMethod/LinesearchMethodBoost.h"
-#include "../MILPSolver/IMILPSolver.h"
-
-#include <boost/math/tools/roots.hpp>
+#include "../OptProblems/OptProblemOriginal.h"
 
 class TaskUpdateNonlinearObjectiveByLinesearch: public TaskBase
 {
@@ -27,6 +22,5 @@ class TaskUpdateNonlinearObjectiveByLinesearch: public TaskBase
 	private:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
-		ILinesearchMethod *linesearchMethod;
 };
 

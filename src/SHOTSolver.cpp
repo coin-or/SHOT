@@ -428,9 +428,10 @@ void SHOTSolver::initializeSettings()
 
 	// Linesearch
 	std::vector < std::string > enumLinesearchMethod;
-	enumLinesearchMethod.push_back("Boost");
+	enumLinesearchMethod.push_back("BoostTOMS748");
+	enumLinesearchMethod.push_back("BoostBisection");
 	enumLinesearchMethod.push_back("Bisection");
-	settings->createSetting("LinesearchMethod", "Linesearch", static_cast<int>(ES_LinesearchMethod::Boost),
+	settings->createSetting("LinesearchMethod", "Linesearch", static_cast<int>(ES_LinesearchMethod::BoostTOMS748),
 			"Linesearch method", enumLinesearchMethod);
 	enumLinesearchMethod.clear();
 

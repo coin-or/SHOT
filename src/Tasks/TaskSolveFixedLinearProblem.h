@@ -3,12 +3,7 @@
 #include <TaskBase.h>
 #include "../ProcessInfo.h"
 
-#include "../LinesearchMethod/ILinesearchMethod.h"
-#include "../LinesearchMethod/LinesearchMethodBisection.h"
-#include "../LinesearchMethod/LinesearchMethodBoost.h"
 #include "../MILPSolver/IMILPSolver.h"
-
-#include <boost/math/tools/roots.hpp>
 
 class TaskSolveFixedLinearProblem: public TaskBase
 {
@@ -20,7 +15,6 @@ class TaskSolveFixedLinearProblem: public TaskBase
 	private:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
-		ILinesearchMethod *linesearchMethod;
 
 		std::vector<int> discreteVariableIndexes;
 		std::vector<std::vector<double>> testedPoints;

@@ -55,17 +55,6 @@ TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem()
 
 	processInfo->startTimer("PrimalBoundTotal");
 	processInfo->startTimer("PrimalBoundFixedLP");
-	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
-	{
-		linesearchMethod = new LinesearchMethodBoost();
-		processInfo->outputDebug("Boost linesearch implementation selected for fixed LP strategy.");
-	}
-	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
-			== static_cast<int>(ES_LinesearchMethod::Bisection))
-	{
-		linesearchMethod = new LinesearchMethodBisection();
-		processInfo->outputDebug("Bisection linesearch implementation selected for fixed LP strategy.");
-	}
 
 	discreteVariableIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
 
@@ -313,7 +302,7 @@ void TaskSolveFixedLinearProblem::run()
 
 			try
 			{
-				auto xNewc = linesearchMethod->findZero(internalPoint, externalPoint,
+				auto xNewc = processInfo->linesearchMethod->findZero(internalPoint, externalPoint,
 						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
 						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));

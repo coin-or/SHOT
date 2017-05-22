@@ -3,7 +3,6 @@
 #include "Enums.h"
 #include "SHOTSettings.h"
 #include <SolutionStrategy/ISolutionStrategy.h>
-//#include <SolutionStrategy/SolutionStrategyESH.h>
 #include <SolutionStrategy/SolutionStrategySHOT.h>
 #include "ProcessInfo.h"
 #include "OSnl2OS.h"

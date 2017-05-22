@@ -8,10 +8,7 @@
 #pragma once
 #include <TaskBase.h>
 #include "../ProcessInfo.h"
-
-#include "../LinesearchMethod/ILinesearchMethod.h"
-#include "../LinesearchMethod/LinesearchMethodBisection.h"
-#include "../LinesearchMethod/LinesearchMethodBoost.h"
+#include "../OptProblems/OptProblemOriginal.h"
 
 class TaskSelectHyperplanePointsIndividualLinesearch: public TaskBase
 {
@@ -24,8 +21,6 @@ class TaskSelectHyperplanePointsIndividualLinesearch: public TaskBase
 
 		virtual std::string getType();
 	private:
-		ILinesearchMethod *linesearchMethod;
-
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
 

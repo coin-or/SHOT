@@ -3,7 +3,6 @@
 #include "../ProcessInfo.h"
 #include "IMILPSolver.h"
 
-//#include "OSException.h"
 class IMILPSolutionLimitStrategy
 {
 	public:
@@ -22,8 +21,5 @@ class IMILPSolutionLimitStrategy
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
 
-		//IMILPSolver *MILPSolver;
-
 	protected:
-		//int currentLimit;
 };
