@@ -45,18 +45,16 @@
 
 #include "Tasks/TaskPrintSolution.h"
 
+#include "Tasks/TaskInitializeLinesearch.h"
 #include "Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "Tasks/TaskAddHyperplanes.h"
 
-//#include "Tasks/TaskCheckPrimalSolutionCandidates.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "Tasks/TaskSelectPrimalCandidatesFromNLP.h"
-
-//#include "Tasks/TaskCheckDualSolutionCandidates.h"
 
 #include "Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 #include "Tasks/TaskSolveFixedLinearProblem.h"

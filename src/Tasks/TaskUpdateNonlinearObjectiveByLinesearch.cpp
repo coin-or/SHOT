@@ -11,21 +11,6 @@ TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesear
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
-
-	processInfo->startTimer("ObjectiveLinesearch");
-	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
-	{
-		linesearchMethod = new LinesearchMethodBoost();
-		processInfo->outputDebug("Boost linesearch implementation selected for objective linesearch.");
-	}
-	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
-			== static_cast<int>(ES_LinesearchMethod::Bisection))
-	{
-		linesearchMethod = new LinesearchMethodBisection();
-		processInfo->outputDebug("Bisection linesearch implementation selected for objective linesearch.");
-	}
-
-	processInfo->stopTimer("ObjectiveLinesearch");
 }
 
 TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesearch()
@@ -68,7 +53,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 
 			try
 			{
-				auto xNewc = linesearchMethod->findZero(tmpPoint, dualSol.point,
+				auto xNewc = processInfo->linesearchMethod->findZero(tmpPoint, dualSol.point,
 						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0, constrIdxs);
 

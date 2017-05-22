@@ -11,23 +11,6 @@ TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesear
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
-
-	processInfo->startTimer("PrimalBoundTotal");
-	processInfo->startTimer("PrimalBoundLinesearch");
-	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
-	{
-		linesearchMethod = new LinesearchMethodBoost();
-		processInfo->outputDebug("Boost linesearch implementation selected for primal heuristics.");
-	}
-	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
-			== static_cast<int>(ES_LinesearchMethod::Bisection))
-	{
-		linesearchMethod = new LinesearchMethodBisection();
-		processInfo->outputDebug("Bisection linesearch implementation selected for primal heuristics.");
-	}
-
-	processInfo->stopTimer("PrimalBoundLinesearch");
-	processInfo->stopTimer("PrimalBoundTotal");
 }
 
 TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesearch()
@@ -76,7 +59,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 					try
 					{
 						processInfo->startTimer("PrimalBoundLinesearch");
-						auto xNewc = linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
+						auto xNewc = processInfo->linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
 								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 								settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0);
 

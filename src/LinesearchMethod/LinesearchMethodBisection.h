@@ -1,8 +1,8 @@
 #pragma once
 #include "ILinesearchMethod.h"
 #include "SHOTSettings.h"
+#include "../OptProblems/OptProblemOriginal.h"
 
-//#include "..\OptProblems\OptProblemReformulated.h"
 class LinesearchMethodBisection: public ILinesearchMethod
 {
 	public:

@@ -17,8 +17,6 @@ void TaskBase::deactivate()
 
 void TaskBase::initialize()
 {
-	//processInfo = ProcessInfo::getInstance();
-	//settings = SHOTSettings::Settings::getInstance();
 }
 
 void TaskBase::run()

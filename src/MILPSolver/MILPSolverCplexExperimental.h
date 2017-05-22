@@ -4,14 +4,9 @@
 
 #include <ilcplex/ilocplex.h>
 
-//#include "../LinesearchMethod/ILinesearchMethod.h"
-//#include "../LinesearchMethod/LinesearchMethodBisection.h"
-//#include "../LinesearchMethod/LinesearchMethodBoost.h"
-
-//#include "../Tasks/TaskCheckPrimalSolutionCandidates.h"
-//#include "../Tasks/TaskCheckDualSolutionCandidates.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
+#include "Tasks/TaskInitializeLinesearch.h"
 #include "Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "Tasks/TaskSelectHyperplanePointsSolution.h"
