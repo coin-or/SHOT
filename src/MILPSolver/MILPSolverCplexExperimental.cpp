@@ -251,7 +251,7 @@ void IncCallbackI::main() // Called at each node...
 	}
 	else
 	{
-		std::cout << "Not rejected: " << mostDevConstr.value << std::endl;
+		processInfo->outputSummary("Not rejected: " + to_string(mostDevConstr.value));
 		//reject();
 	}
 }
