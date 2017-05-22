@@ -25,6 +25,9 @@
 
 class OptProblemOriginal;
 class IMILPSolver;
+class ILinesearchMethod;
+
+#include <LinesearchMethod/ILinesearchMethod.h>
 
 struct InteriorPoint
 {
@@ -76,6 +79,7 @@ class ProcessInfo
 
 		IMILPSolver *MILPSolver;
 		IRelaxationStrategy *relaxationStrategy;
+
 		TaskHandler *tasks;
 
 		void initializeResults(int numObj, int numVar, int numConstr);
@@ -207,6 +211,7 @@ class ProcessInfo
 		void outputTrace(std::string message);
 		void outputDetailedTrace(std::string message);
 
+		ILinesearchMethod *linesearchMethod;
 	private:
 		static bool instanceFlag;
 		static ProcessInfo *single;

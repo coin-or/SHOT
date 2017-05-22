@@ -1,0 +1,39 @@
+#include <TaskInitializeLinesearch.h>
+
+TaskInitializeLinesearch::TaskInitializeLinesearch()
+{
+	processInfo = ProcessInfo::getInstance();
+	settings = SHOTSettings::Settings::getInstance();
+
+	processInfo->startTimer("HyperplaneLinesearch");
+
+	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Bisection))
+	{
+		processInfo->linesearchMethod = new LinesearchMethodBisection();
+		processInfo->outputSummary("Bisection linesearch implementation selected.");
+	}
+	else
+	{
+		processInfo->linesearchMethod = new LinesearchMethodBoost();
+		processInfo->outputSummary("Boost linesearch implementation selected.");
+	}
+
+	processInfo->stopTimer("HyperplaneLinesearch");
+}
+
+TaskInitializeLinesearch::~TaskInitializeLinesearch()
+{
+}
+
+void TaskInitializeLinesearch::run()
+{
+
+}
+
+std::string TaskInitializeLinesearch::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+
+}
+

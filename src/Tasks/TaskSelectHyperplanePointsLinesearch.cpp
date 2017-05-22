@@ -11,26 +11,10 @@ TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch()
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
-
-	processInfo->startTimer("HyperplaneLinesearch");
-
-	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Boost))
-	{
-		linesearchMethod = new LinesearchMethodBoost();
-		processInfo->outputDebug("Boost linesearch implementation selected.");
-	}
-	else if (settings->getIntSetting("LinesearchMethod", "Linesearch")
-			== static_cast<int>(ES_LinesearchMethod::Bisection))
-	{
-		linesearchMethod = new LinesearchMethodBisection();
-		processInfo->outputDebug("Bisection linesearch implementation selected.");
-	}
-	processInfo->stopTimer("HyperplaneLinesearch");
 }
 
 TaskSelectHyperplanePointsLinesearch::~TaskSelectHyperplanePointsLinesearch()
 {
-	delete linesearchMethod;
 }
 
 void TaskSelectHyperplanePointsLinesearch::run()
@@ -67,7 +51,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 				{
 
 					processInfo->startTimer("HyperplaneLinesearch");
-					auto xNewc = linesearchMethod->findZero(xNLP, solPoints.at(i).point,
+					auto xNewc = processInfo->linesearchMethod->findZero(xNLP, solPoints.at(i).point,
 							settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 							settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
 							settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));

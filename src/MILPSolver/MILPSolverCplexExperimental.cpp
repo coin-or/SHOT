@@ -287,6 +287,8 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 
 			settings = SHOTSettings::Settings::getInstance();
 
+			auto taskInitLinesearch = new TaskInitializeLinesearch();
+
 			if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
 					== ES_SolutionStrategy::ESH)
 			{

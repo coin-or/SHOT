@@ -81,7 +81,7 @@ enum class ES_IPOptSolver
 
 enum class ES_LinesearchMethod
 {
-	Boost, Bisection
+	BoostTOMS748, BoostBisection, Bisection
 };
 
 enum class ES_PrimalNLPStrategy
