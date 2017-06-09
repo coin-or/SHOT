@@ -1,5 +1,6 @@
 #pragma once
 #include "../Enums.h"
+
 #include "SHOTSettings.h"
 class IRelaxationStrategy
 {

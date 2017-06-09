@@ -7,8 +7,9 @@
 
 #include <TaskCreateMILPProblem.h>
 
-TaskCreateMILPProblem::TaskCreateMILPProblem()
+TaskCreateMILPProblem::TaskCreateMILPProblem(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
@@ -16,13 +17,13 @@ TaskCreateMILPProblem::TaskCreateMILPProblem()
 
 	processInfo->outputDebug("Creating MILP problem");
 
-	processInfo->MILPSolver->createLinearProblem(processInfo->originalProblem);
+	MILPSolver->createLinearProblem(processInfo->originalProblem);
 
-	processInfo->MILPSolver->initializeSolverSettings();
+	MILPSolver->initializeSolverSettings();
 
 	if (settings->getBoolSetting("Debug", "SHOTSolver"))
 	{
-		processInfo->MILPSolver->writeProblemToFile(settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
+		MILPSolver->writeProblemToFile(settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
 	}
 
 	processInfo->outputDebug("MILP problem created");

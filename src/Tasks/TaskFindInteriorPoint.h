@@ -1,4 +1,5 @@
 #pragma once
+#include <NLPSolverCuttingPlaneMinimax.h>
 #include <TaskBase.h>
 #include "../ProcessInfo.h"
 
@@ -6,7 +7,6 @@
 #include "../NLPSolver/NLPSolverIPOptMinimax.h"
 #include "../NLPSolver/NLPSolverIPOptRelaxed.h"
 //#include "../NLPSolver/NLPSolverCouenneMinimax.h"
-#include "../NLPSolver/NLPSolverCuttingPlane.h"
 
 class TaskFindInteriorPoint: public TaskBase
 {

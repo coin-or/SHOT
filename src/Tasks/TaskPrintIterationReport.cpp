@@ -100,7 +100,7 @@ void TaskPrintIterationReport::run()
 		}
 		else
 		{
-			hyperplanesExpr = " ";
+			hyperplanesExpr = "      ";
 		}
 
 		std::string primalBoundExpr;

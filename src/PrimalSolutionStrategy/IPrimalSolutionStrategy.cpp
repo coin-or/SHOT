@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <PrimalSolutionStrategy/IPrimalSolutionStrategy.h>
+#include "IPrimalSolutionStrategy.h"
 
 /*IPrimalSolutionStrategy::IPrimalSolutionStrategy() {
 	// TODO Auto-generated constructor stub

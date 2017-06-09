@@ -1,20 +1,4 @@
 #pragma once
-/*
- enum E_TimerTypes
- {
- Reformulation,
- InteriorPointTotal,
- InteriorPointMinimax,
- InteriorPointRelaxed,
- Subproblems,
- LP,
- MILP,
- HyperplaneLinesearch,
- PrimalBoundLinesearch,
- PrimalBoundNLP,
- PrimalBoundTotal,
- Total,
- };*/
 
 enum class E_TerminationReason
 {
@@ -32,6 +16,11 @@ enum class E_TerminationReason
 enum class E_ProblemSolutionStatus
 {
 	Feasible, Optimal, Infeasible, Unbounded, IterationLimit, TimeLimit, SolutionLimit, Error, CutOff
+};
+
+enum class E_NLPSolutionStatus
+{
+	Feasible, Optimal, Infeasible, Unbounded, IterationLimit, TimeLimit, Error
 };
 
 enum class E_IterationProblemType
@@ -76,7 +65,7 @@ enum class ES_NLPSolver
 
 enum class ES_IPOptSolver
 {
-	ma27, ma57, ma86, ma97, mumps, multiple
+	ma27, ma57, ma86, ma97, mumps
 };
 
 enum class ES_LinesearchMethod
@@ -134,7 +123,8 @@ enum class E_HyperplaneSource
 	LPRelaxedSolutionPoint,
 	LPFixedIntegers,
 	PrimalSolutionSearch,
-	PrimalSolutionSearchInteriorObjective
+	PrimalSolutionSearchInteriorObjective,
+	InteriorPointSearch
 };
 
 enum class ES_AddPrimalPointAsInteriorPoint

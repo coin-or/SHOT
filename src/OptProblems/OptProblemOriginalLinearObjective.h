@@ -1,15 +1,14 @@
 #pragma once
 #include "OptProblemOriginal.h"
 
-class OptProblemOriginalLinearObjective : public OptProblemOriginal
+class OptProblemOriginalLinearObjective: public OptProblemOriginal
 {
-public:
-	OptProblemOriginalLinearObjective();
-	~OptProblemOriginalLinearObjective();
+	public:
+		OptProblemOriginalLinearObjective();
+		~OptProblemOriginalLinearObjective();
 
-	virtual bool setProblem(OSInstance *instance);
+		virtual bool setProblem(OSInstance *instance);
 
-private:
-	
+	private:
+
 };
-

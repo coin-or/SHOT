@@ -7,8 +7,9 @@
 
 #include <TaskSolveIteration.h>
 
-TaskSolveIteration::TaskSolveIteration()
+TaskSolveIteration::TaskSolveIteration(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
@@ -21,7 +22,6 @@ TaskSolveIteration::~TaskSolveIteration()
 void TaskSolveIteration::run()
 {
 	auto currIter = processInfo->getCurrentIteration();
-	auto MILPSolver = processInfo->MILPSolver;
 
 	// Sets the iteration time limit
 	auto timeLim = settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
@@ -58,7 +58,7 @@ void TaskSolveIteration::run()
 		ss << "/lp";
 		ss << currIter->iterationNumber - 1;
 		ss << ".lp";
-		processInfo->MILPSolver->writeProblemToFile(ss.str());
+		MILPSolver->writeProblemToFile(ss.str());
 	}
 
 	auto solStatus = MILPSolver->solveProblem();

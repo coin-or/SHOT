@@ -15,18 +15,20 @@
 class TaskAddHyperplanes: public TaskBase
 {
 	public:
-		TaskAddHyperplanes();
+		TaskAddHyperplanes(IMILPSolver *MILPSolver);
 		virtual ~TaskAddHyperplanes();
 
 		virtual void run();
 
 		virtual std::string getType();
 	private:
-		void createHyperplane(int constrIdx, std::vector<double> point);
+		//void createHyperplane(int constrIdx, std::vector<double> point);
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
 
 		int itersWithoutAddedHPs;
+
+		IMILPSolver *MILPSolver;
 };
 

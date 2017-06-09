@@ -10,7 +10,7 @@
 class TaskExecuteRelaxationStrategy: public TaskBase
 {
 	public:
-		TaskExecuteRelaxationStrategy();
+		TaskExecuteRelaxationStrategy(IMILPSolver *MILPSolver);
 		~TaskExecuteRelaxationStrategy();
 
 		void run();
@@ -23,5 +23,8 @@ class TaskExecuteRelaxationStrategy: public TaskBase
 		ProcessInfo *processInfo;
 
 		bool isInitialized;
+
+		IMILPSolver *MILPSolver;
+
 };
 

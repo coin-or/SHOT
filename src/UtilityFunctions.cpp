@@ -1,5 +1,21 @@
 #include "UtilityFunctions.h"
 
+int UtilityFunctions::round(double d)
+{
+	return static_cast<int>(d + 0.5);
+}
+
+bool UtilityFunctions::isnan(double val)
+{
+	/*#if defined(_WIN64)
+	 // x64 version
+	 return _isnanf(val) != 0;
+	 #else
+	 return _isnan(val) != 0;
+	 #endif*/
+	return boost::math::isnan(val);
+}
+
 void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
 		std::string fileName)
 {
@@ -230,12 +246,9 @@ int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> fi
 
 	for (int i = 0; i < indexes.size(); i++)
 	{
-		if (round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
+		if (UtilityFunctions::round(firstPt.at(indexes.at(i))) != UtilityFunctions::round(secondPt.at(indexes.at(i))))
 		{
 			numDiff++;
-			/*std::cout << "Different at element: " << indexes.at(i) << std::endl;
-			 std::cout << " values are " << firstPt.at(indexes.at(i)) << " and " << secondPt.at(indexes.at(i))
-			 << std::endl;*/
 		}
 	}
 	return (numDiff);
@@ -246,7 +259,7 @@ bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> fi
 {
 	for (int i = 0; i < indexes.size(); i++)
 	{
-		if (round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i)))) return (true);
+		if (UtilityFunctions::round(firstPt.at(indexes.at(i))) != UtilityFunctions::round(secondPt.at(indexes.at(i)))) return (true);
 	}
 
 	return (false);
@@ -294,3 +307,44 @@ std::string UtilityFunctions::toString(double value)
 {
 	return (UtilityFunctions::toStringFormat(value, "%.3f", true));
 }
+
+void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<int> point2)
+{
+	std::stringstream str;
+
+	if (point1.size() != point2.size()) return;
+
+	for (int i = 0; i < point1.size(); i++)
+	{
+		str << i;
+		str << "\t";
+		str << point1.at(i);
+
+		str << "\t";
+		str << point2.at(i);
+		str << std::endl;
+	}
+
+	std::cout << str.str() << std::endl;
+}
+
+void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<double> point2)
+{
+	std::stringstream str;
+
+	if (point1.size() != point2.size()) return;
+
+	for (int i = 0; i < point1.size(); i++)
+	{
+		str << i;
+		str << "\t";
+		str << point1.at(i);
+
+		str << "\t";
+		str << point2.at(i);
+		str << std::endl;
+	}
+
+	std::cout << str.str() << std::endl;
+}
+

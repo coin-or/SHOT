@@ -1,10 +1,8 @@
 #include "RelaxationStrategyStandard.h"
 
-RelaxationStrategyStandard::RelaxationStrategyStandard()
+RelaxationStrategyStandard::RelaxationStrategyStandard(IMILPSolver *MILPSolver)
 {
-	//MILPSolver = solver;
-	//relaxationActive = false;
-
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
@@ -51,11 +49,11 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-	if (processInfo->MILPSolver->getDiscreteVariableStatus())
+	if (MILPSolver->getDiscreteVariableStatus())
 	{
 		processInfo->stopTimer("MILP");
 		processInfo->startTimer("LP");
-		processInfo->MILPSolver->activateDiscreteVariables(false);
+		MILPSolver->activateDiscreteVariables(false);
 
 		processInfo->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
 
@@ -64,11 +62,11 @@ void RelaxationStrategyStandard::setActive()
 
 void RelaxationStrategyStandard::setInactive()
 {
-	if (!processInfo->MILPSolver->getDiscreteVariableStatus())
+	if (!MILPSolver->getDiscreteVariableStatus())
 	{
 		processInfo->stopTimer("LP");
 		processInfo->startTimer("MILP");
-		processInfo->MILPSolver->activateDiscreteVariables(true);
+		MILPSolver->activateDiscreteVariables(true);
 
 		processInfo->getCurrentIteration()->type = E_IterationProblemType::MIP;
 
@@ -79,7 +77,7 @@ void RelaxationStrategyStandard::setInactive()
 
 E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 {
-	if (processInfo->MILPSolver->getDiscreteVariableStatus())
+	if (MILPSolver->getDiscreteVariableStatus())
 
 	return (E_IterationProblemType::MIP);
 	else return (E_IterationProblemType::Relaxed);

@@ -28,13 +28,13 @@ TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
+
 	auto currIter = processInfo->getCurrentIteration();
 
 	if (currIter->isMILP() && processInfo->getRelativeObjectiveGap() > 1e-10)
 	{
 		processInfo->startTimer("PrimalBoundTotal");
 		processInfo->startTimer("PrimalBoundSearchNLP");
-		primalStrategyFixedNLP->createProblem(processInfo->originalProblem->getProblemInstance());
 		primalStrategyFixedNLP->runStrategy();
 
 		processInfo->stopTimer("PrimalBoundSearchNLP");
@@ -47,8 +47,3 @@ std::string TaskSelectPrimalCandidatesFromNLP::getType()
 	std::string type = typeid(this).name();
 	return (type);
 }
-
-/*void TaskSelectPrimalCandidatesFromNLP::setFixedPoint(std::vector<double> fixedPt)
- {
- primalStrategyFixedNLP->setFixedPoint(fixedPt);
- }*/

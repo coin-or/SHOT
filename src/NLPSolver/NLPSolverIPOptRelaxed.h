@@ -1,28 +1,24 @@
 #pragma once
 #include "NLPSolverIPOptBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
-#include "../UtilityFunctions.h"
+//#include "../UtilityFunctions.h"
 
-class NLPSolverIPOptRelaxed :
-	public INLPSolver, public NLPSolverIPOptBase
+class NLPSolverIPOptRelaxed: public NLPSolverBase, public NLPSolverIPOptBase
 {
-public:
-	NLPSolverIPOptRelaxed();
-	~NLPSolverIPOptRelaxed();
+	public:
+		NLPSolverIPOptRelaxed();
+		~NLPSolverIPOptRelaxed();
 
-	virtual bool createProblem(OSInstance * origInstance);
-	virtual bool solveProblem();
-	virtual void saveProblemModelToFile(std::string fileName);
-	//virtual std::vector<double> getSolution();
-	//std::vector<double> NLPpoint;
+		virtual std::vector<double> getSolution();
 
-private:
-	//OSOption* osOption;
-	OptProblemNLPRelaxed *NLPProblem;
-	//DefaultSolver *NLPSolver;
-	//std::vector<double> solution;
-	//SHOTSettings::Settings *settings;
-	//ProcessInfo *processInfo;
-	//bool isPointValueCached;
+	protected:
 
+		bool createProblemInstance(OSInstance * origInstance);
+
+		virtual void setSolverSpecificInitialSettings();
+
+	private:
+
+		SHOTSettings::Settings *settings;
+		ProcessInfo *processInfo;
 };

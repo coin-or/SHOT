@@ -477,10 +477,11 @@ namespace SHOTSettings
 		}
 	}
 
+	
 	struct SortPred
 	{
-			bool operator()(const typename boost::property_tree::ptree::value_type &v1,
-					const typename boost::property_tree::ptree::value_type &v2) const
+			bool operator()(const boost::property_tree::ptree::value_type &v1,
+					const boost::property_tree::ptree::value_type &v2) const
 			{
 				if (v1.first == "solverOption" && v2.first == "solverOption")
 				{
@@ -551,11 +552,11 @@ namespace SHOTSettings
 
 		for (auto& child : pt.get_child("osol.optimization.solverOptions"))
 		{
-			if (child.second.get < std::string > ("<xmlattr>.name", "") == "") continue;
-			oss << (oss.tellp() == 0 ? "[" : ", [");
-			oss << child.second.get < std::string > ("<xmlattr>.category", "") << ",";
-			oss << child.second.get < std::string > ("<xmlattr>.name", "") << "] = ";
-			oss << child.second.get < std::string > ("<xmlattr>.value", "");
+			if (child.second.get < std::string >("<xmlattr>.name", "") == "") continue;
+			oss << (((int) oss.tellp()) == 0 ? "[" : ", [");
+			oss << child.second.get < std::string >("<xmlattr>.category", "") << ",";
+			oss << child.second.get < std::string >("<xmlattr>.name", "") << "] = ";
+			oss << child.second.get < std::string >("<xmlattr>.value", "");
 		}
 
 		delete osolwriter;

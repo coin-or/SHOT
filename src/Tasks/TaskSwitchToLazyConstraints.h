@@ -15,7 +15,7 @@
 class TaskSwitchToLazyConstraints: public TaskBase
 {
 	public:
-		TaskSwitchToLazyConstraints();
+		TaskSwitchToLazyConstraints(IMILPSolver *MILPSolver);
 		virtual ~TaskSwitchToLazyConstraints();
 
 		void run();
@@ -25,5 +25,7 @@ class TaskSwitchToLazyConstraints: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+
+		IMILPSolver *MILPSolver;
 };
 

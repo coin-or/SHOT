@@ -1,5 +1,5 @@
 #pragma once
-#include <vector>
+#include "vector"
 #include "../Enums.h"
 #include "OSInstance.h"
 #include "../ProcessInfo.h"
@@ -14,8 +14,8 @@ struct GeneratedHyperplane
 		int sourceConstraintIndex;
 		std::vector<double> generatedPoint;
 		E_HyperplaneSource source;
-		bool isLazy = false;
-		bool isRemoved = false;
+		bool isLazy;
+		bool isRemoved;
 		int generatedIter;
 		int removedIter;
 		int convertedToLazyIter;
@@ -72,6 +72,9 @@ class IMILPSolver
 		virtual void populateSolutionPool() = 0;
 
 		virtual void fixVariable(int varIndex, double value) = 0;
+		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues) = 0;
+		virtual void unfixVariables() = 0;
+
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;

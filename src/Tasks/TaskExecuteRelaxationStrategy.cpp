@@ -1,25 +1,24 @@
 #include "TaskExecuteRelaxationStrategy.h"
 
-TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy()
+TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
-	auto solver = processInfo->MILPSolver;
-
 	if (settings->getIntSetting("RelaxationStrategy", "Algorithm") == static_cast<int>(ES_RelaxationStrategy::Adaptive))
 	{
-		relaxationStrategy = new RelaxationStrategyAdaptive();
+		relaxationStrategy = new RelaxationStrategyAdaptive(this->MILPSolver);
 	}
 	else if (settings->getIntSetting("RelaxationStrategy", "Algorithm")
 			== static_cast<int>(ES_RelaxationStrategy::Standard))
 	{
-		relaxationStrategy = new RelaxationStrategyStandard();
+		relaxationStrategy = new RelaxationStrategyStandard(this->MILPSolver);
 	}
 	else if (settings->getIntSetting("RelaxationStrategy", "Algorithm")
 			== static_cast<int>(ES_RelaxationStrategy::None))
 	{
-		relaxationStrategy = new RelaxationStrategyNone();
+		relaxationStrategy = new RelaxationStrategyNone(this->MILPSolver);
 	}
 
 	processInfo->relaxationStrategy = relaxationStrategy;

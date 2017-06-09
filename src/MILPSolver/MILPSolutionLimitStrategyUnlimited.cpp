@@ -1,12 +1,10 @@
 #include "MILPSolutionLimitStrategyUnlimited.h"
 
-MILPSolutionLimitStrategyUnlimited::MILPSolutionLimitStrategyUnlimited()
+MILPSolutionLimitStrategyUnlimited::MILPSolutionLimitStrategyUnlimited(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
-
-	//MILPSolver = solver;
-
 }
 
 MILPSolutionLimitStrategyUnlimited::~MILPSolutionLimitStrategyUnlimited()
@@ -20,11 +18,11 @@ bool MILPSolutionLimitStrategyUnlimited::updateLimit()
 
 int MILPSolutionLimitStrategyUnlimited::getNewLimit()
 {
-	return processInfo->MILPSolver->getSolutionLimit();
+	return MILPSolver->getSolutionLimit();
 }
 
 int MILPSolutionLimitStrategyUnlimited::getInitialLimit()
 {
-	auto tmpVal = processInfo->MILPSolver->getSolutionLimit();
+	auto tmpVal = MILPSolver->getSolutionLimit();
 	return tmpVal;
 }

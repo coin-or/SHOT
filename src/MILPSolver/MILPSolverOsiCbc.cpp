@@ -4,7 +4,7 @@
 #include "CbcModel.hpp"
 #include "OsiClpSolverInterface.hpp"
 
-#include <vector>
+#include "vector"
 
 MILPSolverOsiCbc::MILPSolverOsiCbc()
 {
@@ -13,9 +13,10 @@ MILPSolverOsiCbc::MILPSolverOsiCbc()
 
 	discreteVariablesActivated = true;
 
-	cachedSolutionHasChanged = true;
-
 	osiInterface = new OsiClpSolverInterface();
+
+	cachedSolutionHasChanged = true;
+	isVariablesFixed = false;
 
 	checkParameters();
 }
@@ -26,6 +27,8 @@ MILPSolverOsiCbc::~MILPSolverOsiCbc()
 
 bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 {
+	originalProblem = origProblem;
+
 	CoinModel *coinModel;
 	coinModel = new CoinModel();
 
@@ -201,8 +204,8 @@ int MILPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements, 
 
 void MILPSolverOsiCbc::activateDiscreteVariables(bool activate)
 {
-	auto variableTypes = processInfo->originalProblem->getVariableTypes();
-	int numVar = processInfo->originalProblem->getNumberOfVariables();
+	auto variableTypes = originalProblem->getVariableTypes();
+	int numVar = originalProblem->getNumberOfVariables();
 
 	if (activate)
 	{
@@ -367,7 +370,7 @@ void MILPSolverOsiCbc::setCutOff(double cutOff)
 	{
 		this->cutOff = cutOff;
 
-		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
 			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
@@ -416,11 +419,11 @@ double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 	try
 	{
 		// Fixes some strange behavior with the objective value when solving MILPs vs LPs
-		if (isMILP && processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		if (isMILP && originalProblem->isTypeOfObjectiveMinimize())
 		{
 			objVal = 1.0;
 		}
-		else if (isMILP && !processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		else if (isMILP && !originalProblem->isTypeOfObjectiveMinimize())
 		{
 			objVal = -1.0;
 		}
@@ -461,7 +464,7 @@ void MILPSolverOsiCbc::deleteMIPStarts()
 std::vector<double> MILPSolverOsiCbc::getVariableSolution(int solIdx)
 {
 	bool isMILP = getDiscreteVariableStatus();
-	int numVar = processInfo->originalProblem->getNumberOfVariables();
+	int numVar = originalProblem->getNumberOfVariables();
 	std::vector<double> solution(numVar);
 
 	try
@@ -545,12 +548,12 @@ bool MILPSolverOsiCbc::supportsQuadraticConstraints()
 
 double MILPSolverOsiCbc::getDualObjectiveValue()
 {
+	return 0.0;
 }
 
 std::pair<std::vector<double>, std::vector<double> > MILPSolverOsiCbc::presolveAndGetNewBounds()
 {
-	return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
-			processInfo->originalProblem->getVariableLowerBounds()));
+	return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 }
 
 void MILPSolverOsiCbc::writePresolvedToFile(std::string filename)

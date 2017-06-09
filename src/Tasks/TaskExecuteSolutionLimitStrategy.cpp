@@ -1,16 +1,17 @@
 #include "TaskExecuteSolutionLimitStrategy.h"
 
-TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy()
+TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	isInitialized = false;
 	temporaryOptLimitUsed = false;
 
-	solutionLimitStrategy = new MILPSolutionLimitStrategyIncrease();
+	solutionLimitStrategy = new MILPSolutionLimitStrategyIncrease(this->MILPSolver);
 	auto initLim = solutionLimitStrategy->getInitialLimit();
-	processInfo->MILPSolver->setSolutionLimit(initLim);
+	MILPSolver->setSolutionLimit(initLim);
 
 	constrTolUpdateStrategy = new ConstraintToleranceUpdateStrategyDecreasing();
 }
@@ -35,14 +36,14 @@ void TaskExecuteSolutionLimitStrategy::run()
 	if (temporaryOptLimitUsed)
 	{
 		temporaryOptLimitUsed = false;
-		processInfo->MILPSolver->setSolutionLimit(previousSolLimit);
+		MILPSolver->setSolutionLimit(previousSolLimit);
 	}
 
 	if (currIter->iterationNumber - processInfo->iterLastDualBoundUpdate
 			> settings->getIntSetting("ForceOptimalIter", "MILP") && processInfo->getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit;
-		processInfo->MILPSolver->setSolutionLimit(2100000000);
+		MILPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MILPSolutionLimitUpdated = true;
 		processInfo->outputInfo("     Forced optimal iteration since too many iterations since last dual bound update");
@@ -51,7 +52,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 			> settings->getDoubleSetting("ForceOptimalTime", "MILP") && processInfo->getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit;
-		processInfo->MILPSolver->setSolutionLimit(2100000000);
+		MILPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MILPSolutionLimitUpdated = true;
 		processInfo->outputAlways("     Forced optimal iteration since too long time since last dual bound update");
@@ -60,7 +61,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 			&& abs(prevIter->objectiveValue - processInfo->getPrimalBound()) < 0.001)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit + 1;
-		processInfo->MILPSolver->setSolutionLimit(2100000000);
+		MILPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MILPSolutionLimitUpdated = true;
 		processInfo->outputInfo(
@@ -76,7 +77,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 
 			if (newLimit != processInfo->getPreviousIteration()->usedMILPSolutionLimit)
 			{
-				processInfo->MILPSolver->setSolutionLimit(newLimit);
+				MILPSolver->setSolutionLimit(newLimit);
 			}
 		}
 	}

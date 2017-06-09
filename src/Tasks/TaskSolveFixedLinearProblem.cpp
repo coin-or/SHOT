@@ -48,8 +48,9 @@
  }
  };*/
 
-TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem()
+TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
@@ -133,38 +134,18 @@ void TaskSolveFixedLinearProblem::run()
 		return;
 	}
 
-	/*if (processInfo->primalSolution.size() == 0) return;
-
-	 if (processInfo->primalSolutions.back().iterFound != currIter->iterationNumber - 1) return;
-
-	 if (processInfo->primalSolutions.back().sourceType == E_PrimalSolutionSource::LPFixedIntegers) return;
-
-	 auto primalSolution = processInfo->primalSolutions.back();
-	 if (primalSolution.maxDevatingConstraint.value > 0) return;
-	 */
-
-	vector < pair<double, double> > originalBounds(discreteVariableIndexes.size());
-
-	processInfo->MILPSolver->activateDiscreteVariables(false);
+	std::vector<double> fixValues(discreteVariableIndexes.size());
 
 	for (int i = 0; i < discreteVariableIndexes.size(); i++)
 	{
-		originalBounds.at(i) = processInfo->MILPSolver->getCurrentVariableBounds(discreteVariableIndexes.at(i));
-		processInfo->MILPSolver->fixVariable(discreteVariableIndexes.at(i),
-				currSolPt.at(discreteVariableIndexes.at(i)));
+		fixValues.at(i) = currSolPt.at(discreteVariableIndexes.at(i));
 	}
 
-	//double tol = max(settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0.000000000000001);
-	//double tol = settings->getDoubleSetting("LinesearchEps", "Linesearch");
-	//boost::uintmax_t N = settings->getIntSetting("LinesearchMaxIter", "Linesearch");
-	//double maxDev = max(0.00001, settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"));
+	MILPSolver->fixVariables(discreteVariableIndexes, fixValues);
+
 	int numVar = processInfo->originalProblem->getNumberOfVariables();
 
-	//Test4 t(processInfo->originalProblem);
-
 	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
-
-	//processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
 
 	double prevObjVal = COIN_DBL_MAX;
 
@@ -175,7 +156,7 @@ void TaskSolveFixedLinearProblem::run()
 
 	for (int k = 0; k < maxIter; k++)
 	{
-		auto solStatus = processInfo->MILPSolver->solveProblem();
+		auto solStatus = MILPSolver->solveProblem();
 
 		if (solStatus != E_ProblemSolutionStatus::Optimal)
 		{
@@ -185,12 +166,44 @@ void TaskSolveFixedLinearProblem::run()
 		}
 		else
 		{
-			std::stringstream tmpType;
-
-			auto varSol = processInfo->MILPSolver->getVariableSolution(0);
-			auto objVal = processInfo->MILPSolver->getObjectiveValue(0);
+			auto varSol = MILPSolver->getVariableSolution(0);
+			auto objVal = MILPSolver->getObjectiveValue(0);
 
 			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(varSol);
+
+			std::vector<double> externalPoint = varSol;
+			std::vector<double> internalPoint = processInfo->interiorPts.at(0).point;
+
+			try
+			{
+				auto xNewc = processInfo->linesearchMethod->findZero(internalPoint, externalPoint,
+						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
+						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+
+				processInfo->stopTimer("HyperplaneLinesearch");
+				internalPoint = xNewc.first;
+				externalPoint = xNewc.second;
+
+				auto errorExternal = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
+
+				Hyperplane hyperplane;
+				hyperplane.sourceConstraintIndex = errorExternal.idx;
+				hyperplane.generatedPoint = externalPoint;
+				hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
+
+				MILPSolver->createHyperplane(hyperplane);
+
+			}
+			catch (std::exception &e)
+			{
+
+				processInfo->outputWarning(
+						"Cannot find solution with linesearch for fixed LP, using solution point instead:");
+				processInfo->outputWarning(e.what());
+			}
+
+			std::stringstream tmpType;
 
 			bool hasSolution = true;
 
@@ -227,11 +240,6 @@ void TaskSolveFixedLinearProblem::run()
 			{
 				tmpType << " OPT";
 			}
-			/*else if (solStatus == E_ProblemSolutionStatus::SolutionLimit)
-			 {
-			 tmpType << " SL";
-			 tmpType << std::to_string(currIter->usedMILPSolutionLimit);
-			 }*/
 			else if (solStatus == E_ProblemSolutionStatus::TimeLimit)
 			{
 				tmpType << " TIL";
@@ -268,94 +276,62 @@ void TaskSolveFixedLinearProblem::run()
 				tmpConstr = "";
 			}
 
+			std::string primalBoundExpr;
+			std::string dualBoundExpr = "";
+
+			auto primalBound = processInfo->getPrimalBound();
+			auto dualBound = processInfo->getDualBound();
+
+			if (primalBound != lastPrimalBound && processInfo->primalSolutions.size() > 0)
+			{
+				primalBoundExpr = UtilityFunctions::toString(primalBound);
+				lastPrimalBound = primalBound;
+			}
+			else
+			{
+				primalBoundExpr = "";
+			}
+
 			if (mostDevConstr.value <= constrTol)
 			{
-				auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP CON"
-						% hyperplanesExpr % tmpObjVal % tmpConstr;
+				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP CON"
+						% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 				processInfo->outputSummary(tmpLine.str());
 				break;
 			}
 
 			if (k - iterLastObjUpdate > 10)
 			{
-				auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP ITR"
-						% hyperplanesExpr % tmpObjVal % tmpConstr;
+				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP ITR"
+						% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 				processInfo->outputSummary(tmpLine.str());
 				break;
 			}
 
 			if (objVal > processInfo->getPrimalBound())
 			{
-				auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP PB "
-						% hyperplanesExpr % tmpObjVal % tmpConstr;
+				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP PB "
+						% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 				processInfo->outputSummary(tmpLine.str());
 
 				break;
 			}
 
-			auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % tmpType.str() % hyperplanesExpr
-					% tmpObjVal % tmpConstr;
+			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % tmpType.str()
+					% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 			processInfo->outputSummary(tmpLine.str());
-
-			std::vector<double> externalPoint = varSol;
-			std::vector<double> internalPoint = processInfo->interiorPts.at(0).point;
-
-			try
-			{
-				auto xNewc = processInfo->linesearchMethod->findZero(internalPoint, externalPoint,
-						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
-
-				processInfo->stopTimer("HyperplaneLinesearch");
-				internalPoint = xNewc.first;
-				externalPoint = xNewc.second;
-
-				//processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::LPFixedIntegers,
-				//currIter->iterationNumber);
-
-				auto errorExternal = processInfo->originalProblem->getMostDeviatingConstraint(externalPoint);
-
-				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = errorExternal.idx;
-				hyperplane.generatedPoint = externalPoint;
-				hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
-
-				processInfo->MILPSolver->createHyperplane(hyperplane);
-
-			}
-			catch (std::exception &e)
-			{
-
-				processInfo->outputWarning(
-						"Cannot find solution with linesearch for fixed LP, using solution point instead:");
-				processInfo->outputWarning(e.what());
-			}
 
 			if (abs(prevObjVal - objVal) > prevObjVal * objTol)
 			{
 				iterLastObjUpdate = k;
 				prevObjVal = objVal;
 			}
-
-			/*if (k == 0)
-			 {
-			 prevObjVal = objVal;
-			 iterLastObjUpdate = 0;
-			 }*/
 		}
-
 	}
 
-	processInfo->MILPSolver->activateDiscreteVariables(true);
+	MILPSolver->activateDiscreteVariables(true);
 
-	for (int i = 0; i < discreteVariableIndexes.size(); i++)
-	{
-		processInfo->MILPSolver->updateVariableBound(discreteVariableIndexes.at(i), originalBounds.at(i).first,
-				originalBounds.at(i).second);
-	}
-
-	//processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
+	MILPSolver->unfixVariables();
 
 	processInfo->stopTimer("PrimalBoundFixedLP");
 	processInfo->stopTimer("PrimalBoundTotal");

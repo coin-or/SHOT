@@ -1,10 +1,11 @@
 #include <TaskPresolve.h>
 
-TaskPresolve::TaskPresolve()
+TaskPresolve::TaskPresolve(IMILPSolver *MILPSolver)
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	isPresolved = false;
+	this->MILPSolver = MILPSolver;
 }
 
 TaskPresolve::~TaskPresolve()
@@ -15,7 +16,6 @@ TaskPresolve::~TaskPresolve()
 void TaskPresolve::run()
 {
 	auto currIter = processInfo->getCurrentIteration();
-	auto MILPSolver = processInfo->MILPSolver;
 
 	auto strategy = static_cast<ES_PresolveStrategy>(settings->getIntSetting("PresolveStrategy", "Presolve"));
 

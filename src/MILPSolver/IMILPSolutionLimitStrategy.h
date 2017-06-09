@@ -20,6 +20,7 @@ class IMILPSolutionLimitStrategy
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+		IMILPSolver *MILPSolver;
 
 	protected:
 };

@@ -1,6 +1,6 @@
 #include "IMILPSolver.h"
 #include "MILPSolverCplex.h"
-//#include <ilcplex/cplex.h>
+//#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
 MILPSolverCplex::MILPSolverCplex()
@@ -20,6 +20,8 @@ MILPSolverCplex::MILPSolverCplex()
 
 	cachedSolutionHasChanged = true;
 
+	isVariablesFixed = false;
+
 	checkParameters();
 }
 
@@ -30,6 +32,8 @@ MILPSolverCplex::~MILPSolverCplex()
 
 bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 {
+	originalProblem = origProblem;
+
 	auto numVar = origProblem->getNumberOfVariables();
 	auto tmpLBs = origProblem->getVariableLowerBounds();
 	auto tmpUBs = origProblem->getVariableUpperBounds();
@@ -202,7 +206,7 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 
 void MILPSolverCplex::initializeSolverSettings()
 {
-	firstNonLazyHyperplane = processInfo->originalProblem->getNumberOfLinearConstraints();
+	firstNonLazyHyperplane = originalProblem->getNumberOfLinearConstraints();
 
 	try
 	{
@@ -286,24 +290,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 			cplexModel.add(tmpRange);
 		}
 
-		/*if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
-		 {
-		 if (discreteVariablesActivated)
-		 {
-		 cplexInstance.addLazyConstraint(tmpRange);
-		 }
-		 else
-		 {
-		 cplexModel.add(tmpRange);
-		 cplexInstance.extract(cplexModel);
-		 }
-		 }
-		 else
-		 {
-		 */
-
 		modelUpdated = true;
-
 		//}
 
 		expr.end();
@@ -328,7 +315,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 		//{
 		std::vector<int> idxs;
 
-		//int numCons = processInfo->originalProblem->getNumberOfConstraints();
+		//int numCons = originalProblem->getNumberOfConstraints();
 
 		/*idxs.push_back(1);
 		 idxs.push_back(2);
@@ -390,7 +377,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 
 void MILPSolverCplex::activateDiscreteVariables(bool activate)
 {
-	auto variableTypes = processInfo->originalProblem->getVariableTypes();
+	auto variableTypes = originalProblem->getVariableTypes();
 
 	try
 	{
@@ -403,7 +390,7 @@ void MILPSolverCplex::activateDiscreteVariables(bool activate)
 
 		if (activate)
 		{
-			for (int i = 0; i < processInfo->originalProblem->getNumberOfVariables(); i++)
+			for (int i = 0; i < originalProblem->getNumberOfVariables(); i++)
 			{
 				if (variableTypes.at(i) == 'I')
 				{
@@ -425,7 +412,7 @@ void MILPSolverCplex::activateDiscreteVariables(bool activate)
 		}
 		else
 		{
-			for (int i = 0; i < processInfo->originalProblem->getNumberOfVariables(); i++)
+			for (int i = 0; i < originalProblem->getNumberOfVariables(); i++)
 			{
 				if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
 				{
@@ -552,7 +539,7 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 		/*if (!processInfo->getCurrentIteration()->isMILP())
 		 {
 
-		 auto numVar = processInfo->originalProblem->getNumberOfVariables();
+		 auto numVar = originalProblem->getNumberOfVariables();
 		 //IloIntVarArray ivararray(cplexEnv, numVar);
 		 IloNumArray redubs(cplexEnv, numVar);
 		 IloNumArray redlbs(cplexEnv, numVar);
@@ -782,7 +769,7 @@ void MILPSolverCplex::setCutOff(double cutOff)
 {
 	try
 	{
-		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
@@ -964,7 +951,7 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 {
 	try
 	{
-		auto numVar = processInfo->originalProblem->getNumberOfVariables();
+		auto numVar = originalProblem->getNumberOfVariables();
 		IloIntVarArray ivararray(cplexEnv, numVar);
 		IloNumArray redubs(cplexEnv, numVar);
 		IloNumArray redlbs(cplexEnv, numVar);
@@ -1019,8 +1006,7 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 	{
 		processInfo->outputError("Error during presolve", e.getMessage());
 
-		return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
-				processInfo->originalProblem->getVariableLowerBounds()));
+		return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 	}
 }
 

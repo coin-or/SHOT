@@ -13,7 +13,7 @@
 class TaskExecuteSolutionLimitStrategy: public TaskBase
 {
 	public:
-		TaskExecuteSolutionLimitStrategy();
+		TaskExecuteSolutionLimitStrategy(IMILPSolver *MILPSolver);
 		~TaskExecuteSolutionLimitStrategy();
 
 		void run();
@@ -26,6 +26,8 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+
+		IMILPSolver *MILPSolver;
 
 		bool isInitialized;
 		bool temporaryOptLimitUsed;

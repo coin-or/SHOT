@@ -14,7 +14,7 @@
 class TaskCreateMILPProblem: public TaskBase
 {
 	public:
-		TaskCreateMILPProblem();
+		TaskCreateMILPProblem(IMILPSolver *MILPSolver);
 		virtual ~TaskCreateMILPProblem();
 
 		virtual void run();
@@ -24,5 +24,7 @@ class TaskCreateMILPProblem: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+
+		IMILPSolver *MILPSolver;
 };
 

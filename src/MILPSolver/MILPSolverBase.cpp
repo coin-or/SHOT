@@ -36,7 +36,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	if (cachedSolutionHasChanged == false) return (lastSolutions);
 
 	int numSol = getNumberOfSolutions();
-	int numVar = processInfo->originalProblem->getNumberOfVariables();
+	int numVar = originalProblem->getNumberOfVariables();
 
 	std::vector < SolutionPoint > allSolutions(numSol);
 
@@ -53,7 +53,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 
 		auto tmpPt = getVariableSolution(i);
 
-		auto maxDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpPt);
+		auto maxDev = originalProblem->getMostDeviatingConstraint(tmpPt);
 
 		tmpSolPt.point = tmpPt;
 		tmpSolPt.objectiveValue = getObjectiveValue(i);
@@ -72,7 +72,6 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
-	auto originalProblem = processInfo->originalProblem;
 	std::vector < IndexValuePair > elements;
 
 	auto varNames = originalProblem->getVariableNames();
@@ -83,11 +82,12 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	if (hyperplane.sourceConstraintIndex == -1
 			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
 	{
-		processInfo->outputDebug("     HP point generated for auxiliary objective function constraint");
+		processInfo->outputInfo("     HP point generated for auxiliary objective function constraint");
 
-		auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
+		auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 				&hyperplane.generatedPoint.at(0), -1, true);
-		int number = processInfo->originalProblem->getNumberOfVariables();
+		int number = originalProblem->getNumberOfVariables();
+
 		processInfo->numGradientEvals++;
 
 		for (int i = 0; i < number - 1; i++)
@@ -101,15 +101,14 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 				elements.push_back(pair);
 				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
 
-				processInfo->outputDebug(
-						"     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
+				processInfo->outputInfo("     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
 			}
 		}
 
-		processInfo->outputDebug("     Gradient for obj.var.: -1");
+		processInfo->outputInfo("     Gradient for obj.var.: -1");
 
 		IndexValuePair pair;
-		pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
+		pair.idx = originalProblem->getNonlinearObjectiveVariableIdx();
 		pair.value = -1.0;
 
 		elements.push_back(pair);
@@ -117,8 +116,9 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	}
 	else
 	{
-		processInfo->outputDebug(
+		processInfo->outputInfo(
 				"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
+		int number = originalProblem->getNumberOfVariables();
 
 		auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
 				hyperplane.generatedPoint);
@@ -132,7 +132,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 			elements.push_back(pair);
 			constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
 
-			processInfo->outputDebug(
+			processInfo->outputInfo(
 					"     Gradient for variable" + varNames.at(nablag->indexes[i]) + ": "
 							+ to_string(nablag->values[i]));
 		}
@@ -153,7 +153,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 
 	if (hyperplaneIsOk)
 	{
-		int constrIndex = processInfo->MILPSolver->addLinearConstraint(elements, constant);
+		int constrIndex = addLinearConstraint(elements, constant);
+
 		addedHyperplanes++;
 		GeneratedHyperplane genHyperplane;
 
@@ -173,7 +174,6 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
-	auto originalProblem = processInfo->originalProblem;
 	std::vector < IndexValuePair > elements;
 
 	auto varNames = originalProblem->getVariableNames();
@@ -181,9 +181,9 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
 
-	auto tmpArray = processInfo->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
+	auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 			&hyperplane.generatedPoint.at(0), -1, true);
-	int number = processInfo->originalProblem->getNumberOfVariables();
+	int number = originalProblem->getNumberOfVariables();
 	processInfo->numGradientEvals++;
 
 	for (int i = 0; i < number - 1; i++)
@@ -200,7 +200,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	}
 
 	IndexValuePair pair;
-	pair.idx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
+	pair.idx = originalProblem->getNonlinearObjectiveVariableIdx();
 	pair.value = -1.0;
 
 	elements.push_back(pair);
@@ -221,7 +221,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 
 	if (hyperplaneIsOk)
 	{
-		int constrIndex = processInfo->MILPSolver->addLinearConstraint(elements, constant, false);
+		int constrIndex = addLinearConstraint(elements, constant, false);
 		addedHyperplanes++;
 		GeneratedHyperplane genHyperplane;
 
@@ -250,7 +250,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 {
 	auto newBounds = this->presolveAndGetNewBounds();
 
-	auto numVar = processInfo->originalProblem->getNumberOfVariables();
+	auto numVar = originalProblem->getNumberOfVariables();
 
 	for (int i = 0; i < numVar; i++)
 	{
@@ -264,30 +264,30 @@ void MILPSolverBase::presolveAndUpdateBounds()
 
 		if (newLB)
 		{
-			processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
 			processInfo->outputInfo(
 					"     Lower bound for variable (" + to_string(i) + ") updated from "
 							+ UtilityFunctions::toString(currBounds.first) + " to "
 							+ UtilityFunctions::toString(newBounds.first.at(i)));
 
-			if (!processInfo->originalProblem->hasVariableBoundsBeenTightened(i))
+			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				processInfo->originalProblem->setVariableBoundsAsTightened(i);
+				originalProblem->setVariableBoundsAsTightened(i);
 				processInfo->numVariableBoundsTightenedInPresolve++;
 			}
 		}
 
 		if (newUB)
 		{
-			processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
 			processInfo->outputInfo(
 					"     Upper bound for variable (" + to_string(i) + ") updated from "
 							+ UtilityFunctions::toString(currBounds.second) + " to "
 							+ UtilityFunctions::toString(newBounds.second.at(i)));
 
-			if (!processInfo->originalProblem->hasVariableBoundsBeenTightened(i))
+			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				processInfo->originalProblem->setVariableBoundsAsTightened(i);
+				originalProblem->setVariableBoundsAsTightened(i);
 				processInfo->numVariableBoundsTightenedInPresolve++;
 			}
 		}
@@ -300,14 +300,52 @@ void MILPSolverBase::presolveAndUpdateBounds()
 	}
 }
 
+void MILPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+{
+	if (isVariablesFixed)
+	{
+		unfixVariables();
+	}
+
+	int size = variableIndexes.size();
+
+	if (size == 0) return;
+
+	vector < pair<double, double> > originalBounds(size);
+
+	activateDiscreteVariables(false);
+
+	for (int i = 0; i < size; i++)
+	{
+		originalBounds.at(i) = this->getCurrentVariableBounds(variableIndexes.at(i));
+		this->fixVariable(variableIndexes.at(i), variableValues.at(i));
+	}
+
+	fixedVariableIndexes = variableIndexes;
+	fixedVariableOriginalBounds = originalBounds;
+
+	isVariablesFixed = true;
+}
+
+void MILPSolverBase::unfixVariables()
+{
+	for (int i = 0; i < fixedVariableIndexes.size(); i++)
+	{
+		updateVariableBound(fixedVariableIndexes.at(i), fixedVariableOriginalBounds.at(i).first,
+				fixedVariableOriginalBounds.at(i).second);
+	}
+
+	isVariablesFixed = false;
+}
+
 void MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
 {
-	if (!processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	if (!originalProblem->isObjectiveFunctionNonlinear())
 	{
 		return;
 	}
 
-	auto varIdx = processInfo->originalProblem->getNonlinearObjectiveVariableIdx();
+	auto varIdx = originalProblem->getNonlinearObjectiveVariableIdx();
 
 	auto newLB = processInfo->getDualBound();
 	auto newUB = processInfo->getPrimalBound();

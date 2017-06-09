@@ -2,14 +2,14 @@
 #include "IMILPSolver.h"
 #include "MILPSolverBase.h"
 
-#include <ilcplex/ilocplex.h>
+#include "ilcplex/ilocplex.h"
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
-#include "Tasks/TaskInitializeLinesearch.h"
-#include "Tasks/TaskSelectHyperplanePointsLinesearch.h"
-#include "Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
-#include "Tasks/TaskSelectHyperplanePointsSolution.h"
+#include "../Tasks/TaskInitializeLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 
 class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
 {
@@ -41,6 +41,17 @@ class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
 		}
 
 		virtual void fixVariable(int varIndex, double value);
+
+		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+		{
+			MILPSolverBase::fixVariables(variableIndexes, variableValues);
+		}
+
+		virtual void unfixVariables()
+		{
+			MILPSolverBase::unfixVariables();
+		}
+
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
 
@@ -116,7 +127,7 @@ class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
 		IloRangeArray cplexLazyConstrs;
 		vector<IloConversion> cplexVarConvers;
 
-		bool modelUpdated = false;
+		bool modelUpdated /*= false*/;
 
 	protected:
 

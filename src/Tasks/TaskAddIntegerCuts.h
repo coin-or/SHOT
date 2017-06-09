@@ -7,7 +7,7 @@
 class TaskAddIntegerCuts: public TaskBase
 {
 	public:
-		TaskAddIntegerCuts();
+		TaskAddIntegerCuts(IMILPSolver *MILPSolver);
 		virtual ~TaskAddIntegerCuts();
 
 		virtual void run();
@@ -16,5 +16,6 @@ class TaskAddIntegerCuts: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+		IMILPSolver *MILPSolver;
 };
 

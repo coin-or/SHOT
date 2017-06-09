@@ -14,7 +14,7 @@
 class TaskSolveIteration: public TaskBase
 {
 	public:
-		TaskSolveIteration();
+		TaskSolveIteration(IMILPSolver *MILPSolver);
 		virtual ~TaskSolveIteration();
 
 		virtual void run();
@@ -23,5 +23,7 @@ class TaskSolveIteration: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+
+		IMILPSolver *MILPSolver;
 };
 

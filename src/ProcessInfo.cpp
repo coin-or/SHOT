@@ -368,7 +368,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 			break;
 	}
 
-	if (std::isnan(primalSol.objValue))
+	if (UtilityFunctions::isnan(primalSol.objValue))
 	{
 		tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
 	}
@@ -391,7 +391,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		for (int i = 0; i < discreteVarIndexes.size(); i++)
 		{
 			int idx = discreteVarIndexes.at(i);
-			double rounded = round(tmpPoint.at(idx));
+			double rounded = UtilityFunctions::round(tmpPoint.at(idx));
 
 			if (abs(rounded - tmpPoint.at(idx)) > 0)
 			{
@@ -472,7 +472,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		auto tmpLine = boost::format("     New primal bound %1% with dev. %2% (%3%) %4% %5%") % tmpObjVal
 				% mostDev.value % sourceDesc % HPadded % HPobjadded;
 
-		this->outputInfo(tmpLine.str());
+		this->outputWarning(tmpLine.str());
 
 		primalSol.objValue = tmpObjVal;
 		primalSol.point = tmpPoint;

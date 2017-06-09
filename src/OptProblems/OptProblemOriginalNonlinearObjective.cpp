@@ -2,7 +2,6 @@
 
 OptProblemOriginalNonlinearObjective::OptProblemOriginalNonlinearObjective()
 {
-
 }
 
 OptProblemOriginalNonlinearObjective::~OptProblemOriginalNonlinearObjective()
@@ -34,9 +33,8 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 	this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
 	this->addedObjectiveVariableName = "addobjvar";
-	this->addedObjectiveVariableLowerBound = -settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-
-	this->addedObjectiveVariableUpperBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
+	this->addedObjectiveVariableLowerBound = -settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	this->addedObjectiveVariableUpperBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 

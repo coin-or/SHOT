@@ -14,14 +14,6 @@ int main(int argc, char *argv[])
 	// Adds a file output
 	osoutput->AddChannel("shotlogfile");
 
-	/*osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_always, "Always\n");
-	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_warning, "Warning\n");
-	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_debug, "Debug\n");
-	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, "Detailed trace\n");
-	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, "Error\n");
-	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Info\n");
-	 osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_summary, "Summary\n");*/
-	//osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_trace, "Trace\n");
 	startmessage = ""
 			"┌─────────────────────────────────────────────────────────────────────┐\n"
 			"│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
