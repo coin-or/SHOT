@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskCreateMILPProblem.h>
+#include "TaskCreateMILPProblem.h"
 
 TaskCreateMILPProblem::TaskCreateMILPProblem(IMILPSolver *MILPSolver)
 {

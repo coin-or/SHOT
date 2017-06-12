@@ -183,7 +183,9 @@ void OptProblem::printProblemStatistics()
 
 	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 
-#else
+#endif
+
+#if linux
 
 	processInfo->outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 

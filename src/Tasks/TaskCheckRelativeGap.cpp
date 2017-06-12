@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskCheckRelativeGap.h>
+#include "TaskCheckRelativeGap.h"
 
 TaskCheckRelativeGap::TaskCheckRelativeGap(std::string taskIDTrue)
 {

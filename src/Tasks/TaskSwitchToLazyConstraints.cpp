@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskSwitchToLazyConstraints.h>
+#include "TaskSwitchToLazyConstraints.h"
 
 TaskSwitchToLazyConstraints::TaskSwitchToLazyConstraints(IMILPSolver *MILPSolver)
 {

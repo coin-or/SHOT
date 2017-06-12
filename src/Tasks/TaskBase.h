@@ -1,8 +1,8 @@
 #pragma once
-#include "Enums.h"
+#include "../Enums.h"
 #include <iostream>
 #include <typeinfo>
-#include "Tasks/TaskException.h"
+#include "TaskException.h"
 
 class TaskBase
 {

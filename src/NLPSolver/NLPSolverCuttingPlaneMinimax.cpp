@@ -1,4 +1,4 @@
-/*
+﻿/*
  * NLPSolverCuttingPlaneMinimax.cpp
  *
  *  Created on: Apr 16, 2015
@@ -161,13 +161,28 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			numHyperTot = 0;
 
 			std::stringstream tmpLine;
-			tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
 
-			tmpLine
+			#ifdef _WIN32
+				tmpLine << "\nÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+
+				tmpLine
 					<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
-							% "Obj. LS" % "Abs. diff" % "Rel. diff";
+					% "Obj. LS" % "Abs. diff" % "Rel. diff";
 
-			tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
+				tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+			#endif
+
+			#ifdef linux
+				tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
+
+				tmpLine
+					<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
+					% "Obj. LS" % "Abs. diff" % "Rel. diff";
+
+				tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
+			#endif
+
+			
 
 			processInfo->outputSummary(tmpLine.str());
 		}

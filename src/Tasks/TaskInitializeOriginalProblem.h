@@ -1,7 +1,7 @@
 #pragma once
-#include <TaskBase.h>
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
-#include "UtilityFunctions.h"
+#include "../UtilityFunctions.h"
 #include "../OptProblems/OptProblemOriginal.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"

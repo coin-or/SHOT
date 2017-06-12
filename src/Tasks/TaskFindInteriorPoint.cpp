@@ -1,4 +1,4 @@
-#include <TaskFindInteriorPoint.h>
+#include "TaskFindInteriorPoint.h"
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
 {

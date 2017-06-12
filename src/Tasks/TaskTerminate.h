@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <TaskBase.h>
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
 
 class TaskTerminate: public TaskBase

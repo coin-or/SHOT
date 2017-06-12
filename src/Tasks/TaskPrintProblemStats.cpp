@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskPrintProblemStats.h>
+#include "TaskPrintProblemStats.h"
 
 TaskPrintProblemStats::TaskPrintProblemStats()
 {

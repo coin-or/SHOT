@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskSelectPrimalCandidatesFromNLP.h>
+#include "TaskSelectPrimalCandidatesFromNLP.h"
 
 TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
 {

@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskAddHyperplanes.h>
+#include "TaskAddHyperplanes.h"
 
 TaskAddHyperplanes::TaskAddHyperplanes(IMILPSolver *MILPSolver)
 {

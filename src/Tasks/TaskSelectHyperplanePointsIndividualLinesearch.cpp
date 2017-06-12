@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskSelectHyperplanePointsIndividualLinesearch.h>
+#include "TaskSelectHyperplanePointsIndividualLinesearch.h"
 
 TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch()
 {

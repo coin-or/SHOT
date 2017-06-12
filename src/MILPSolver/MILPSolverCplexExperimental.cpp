@@ -1509,7 +1509,7 @@ double MILPSolverCplexExperimental::getDualObjectiveValue()
 {
 
 	bool isMILP = getDiscreteVariableStatus();
-	double objVal = NAN;
+	double objVal;
 
 	try
 	{

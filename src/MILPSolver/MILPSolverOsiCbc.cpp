@@ -3,7 +3,7 @@
 #include "CoinPragma.hpp"
 #include "CbcModel.hpp"
 #include "OsiClpSolverInterface.hpp"
-
+#include <math.h>
 #include "vector"
 
 MILPSolverOsiCbc::MILPSolverOsiCbc()
@@ -525,8 +525,8 @@ pair<double, double> MILPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
 {
 	pair<double, double> tmpBounds;
 
-	tmpBounds.first = NAN;
-	tmpBounds.second = NAN;
+	tmpBounds.first;
+	tmpBounds.second;
 
 	return (tmpBounds);
 }

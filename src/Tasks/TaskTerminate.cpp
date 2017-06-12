@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskTerminate.h>
+#include "TaskTerminate.h"
 
 TaskTerminate::TaskTerminate()
 {

@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskInitializeMILPSolver.h>
+#include "TaskInitializeMILPSolver.h"
 
 TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 {

@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskSolveIteration.h>
+#include "TaskSolveIteration.h"
 
 TaskSolveIteration::TaskSolveIteration(IMILPSolver *MILPSolver)
 {

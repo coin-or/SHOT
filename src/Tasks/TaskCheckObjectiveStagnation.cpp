@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskCheckObjectiveStagnation.h>
+#include "TaskCheckObjectiveStagnation.h"
 
 TaskCheckObjectiveStagnation::TaskCheckObjectiveStagnation(std::string taskIDTrue)
 {

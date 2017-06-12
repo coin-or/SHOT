@@ -1,5 +1,5 @@
 #pragma once
-#include <TaskBase.h>
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
 
 //#include "../OptProblems/OptProblemOriginal.h"
@@ -17,6 +17,6 @@ class TaskPrintSolutionBoundReport: public TaskBase
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
 
-		int itersSinceLastPrintout = 0;
-		double timeLastPrintout = 0;
+		int itersSinceLastPrintout;
+		double timeLastPrintout;
 };

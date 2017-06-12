@@ -16,7 +16,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	originalNLPIter = settings->getIntSetting("NLPFixedMaxIters", "PrimalBound");
 
 	//NLPSolver = new NLPSolverIPOptRelaxed();
-	NLPSolver = new NLPSolverCuttingPlaneRelaxed();
+	NLPSolver = new NLPSolverIPOptRelaxed();
 	NLPSolver->setProblem(processInfo->originalProblem->getProblemInstance());
 
 }

@@ -3,6 +3,7 @@
 #include "IMILPSolver.h"
 #include "gurobi_c++.h"
 #include "MILPSolverBase.h"
+
 class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 {
 	public:

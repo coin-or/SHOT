@@ -1,4 +1,5 @@
 #include "MILPSolverBase.h"
+#include "../UtilityFunctions.h"
 
 MILPSolverBase::MILPSolverBase()
 {

@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskPrintIterationReport.h>
+#include "TaskPrintIterationReport.h"
 
 TaskPrintIterationReport::TaskPrintIterationReport()
 {
