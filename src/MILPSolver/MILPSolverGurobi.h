@@ -3,6 +3,7 @@
 #include "IMILPSolver.h"
 #include "gurobi_c++.h"
 #include "MILPSolverBase.h"
+
 class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 {
 	public:
@@ -32,6 +33,17 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 		}
 
 		virtual void fixVariable(int varIndex, double value);
+
+		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+		{
+			MILPSolverBase::fixVariables(variableIndexes, variableValues);
+		}
+
+		virtual void unfixVariables()
+		{
+			MILPSolverBase::unfixVariables();
+		}
+
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
 

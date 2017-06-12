@@ -1,9 +1,10 @@
-#include <TaskAddIntegerCuts.h>
+#include "TaskAddIntegerCuts.h"
 
-TaskAddIntegerCuts::TaskAddIntegerCuts()
+TaskAddIntegerCuts::TaskAddIntegerCuts(IMILPSolver *MILPSolver)
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+	this->MILPSolver = MILPSolver;
 }
 
 TaskAddIntegerCuts::~TaskAddIntegerCuts()
@@ -37,7 +38,7 @@ void TaskAddIntegerCuts::run()
 				elements.push_back(pair);
 			}
 
-			processInfo->MILPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
+			this->MILPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
 			processInfo->numIntegerCutsAdded++;
 		}
 

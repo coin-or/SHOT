@@ -477,10 +477,11 @@ namespace SHOTSettings
 		}
 	}
 
+	
 	struct SortPred
 	{
-			bool operator()(const typename boost::property_tree::ptree::value_type &v1,
-					const typename boost::property_tree::ptree::value_type &v2) const
+			bool operator()(const boost::property_tree::ptree::value_type &v1,
+					const boost::property_tree::ptree::value_type &v2) const
 			{
 				if (v1.first == "solverOption" && v2.first == "solverOption")
 				{
@@ -531,17 +532,13 @@ namespace SHOTSettings
 		OSoLWriter *osolwriter = new OSoLWriter();
 		osolwriter->m_bWhiteSpace = false;
 
-		//using boost::property_tree::ptree;
 		boost::property_tree::ptree pt;
-		//boost::property_tree::info_writer_settings < std::string > settings(' ', 1);
-
+		
 		stringstream ss;
 		ss << osolwriter->writeOSoL(getSettingsAsOSOption());
 
 		read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
-
-		//boost::property_tree::ptree subPt = pt.get_child("osol.optimization.solverOptions");
-
+		
 		// This sort the options according to category first and name after
 		pt.get_child("osol.optimization.solverOptions").sort(SortPred());
 
@@ -551,11 +548,11 @@ namespace SHOTSettings
 
 		for (auto& child : pt.get_child("osol.optimization.solverOptions"))
 		{
-			if (child.second.get < std::string > ("<xmlattr>.name", "") == "") continue;
-			oss << (oss.tellp() == 0 ? "[" : ", [");
-			oss << child.second.get < std::string > ("<xmlattr>.category", "") << ",";
-			oss << child.second.get < std::string > ("<xmlattr>.name", "") << "] = ";
-			oss << child.second.get < std::string > ("<xmlattr>.value", "");
+			if (child.second.get < std::string >("<xmlattr>.name", "") == "") continue;
+			oss << (((int) oss.tellp()) == 0 ? "[" : ", [");
+			oss << child.second.get < std::string >("<xmlattr>.category", "") << ",";
+			oss << child.second.get < std::string >("<xmlattr>.name", "") << "] = ";
+			oss << child.second.get < std::string >("<xmlattr>.value", "");
 		}
 
 		delete osolwriter;

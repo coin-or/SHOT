@@ -1,5 +1,5 @@
 #pragma once
-#include <TaskBase.h>
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
 
 #include "../MILPSolver/IMILPSolver.h"
@@ -7,7 +7,7 @@
 class TaskPresolve: public TaskBase
 {
 	public:
-		TaskPresolve();
+		TaskPresolve(IMILPSolver *MILPSolver);
 		virtual ~TaskPresolve();
 
 		virtual void run();
@@ -16,6 +16,7 @@ class TaskPresolve: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
-		bool isPresolved = false;
+		bool isPresolved;
+		IMILPSolver *MILPSolver;
 };
 

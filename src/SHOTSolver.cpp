@@ -303,17 +303,17 @@ void SHOTSolver::initializeSettings()
 	// NLP solver
 	std::vector < std::string > enumNLPSolver;
 	enumNLPSolver.push_back("CuttingPlaneMinimax");
-	enumNLPSolver.push_back("IPOptMinimax");
-	enumNLPSolver.push_back("IPOptRelaxed");
-	enumNLPSolver.push_back("IPOptMinimax and IPOptRelaxed");
-	//enumNLPSolver.push_back("CouenneMiniMax");
-	settings->createSetting("NLPSolver", "NLP", static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax), "NLP solver",
-			enumNLPSolver);
+	enumNLPSolver.push_back("IpoptMinimax");
+	enumNLPSolver.push_back("IpoptRelaxed");
+	enumNLPSolver.push_back("IpoptMinimax and IpoptRelaxed");
+
+	settings->createSetting("InteriorPointSolver", "InteriorPoint", static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax),
+			"NLP solver", enumNLPSolver);
 	enumNLPSolver.clear();
 
 	// NLP empty bound
-	settings->createSetting("NLPObjectiveBound", "NLP", 10000000000.0, "Value for obj. function in NLP problem", 0,
-			OSDBL_MAX);
+	settings->createSetting("MinimaxObjectiveBound", "InteriorPoint", 10000000000.0,
+			"Value for obj. function in NLP minimax problem", 0, OSDBL_MAX);
 
 	std::vector < std::string > enumIPOptSolver;
 	enumIPOptSolver.push_back("ma27");
@@ -321,31 +321,37 @@ void SHOTSolver::initializeSettings()
 	enumIPOptSolver.push_back("ma86");
 	enumIPOptSolver.push_back("ma97");
 	enumIPOptSolver.push_back("mumps");
-	enumIPOptSolver.push_back("multiple");
-	settings->createSetting("IPOptSolver", "NLP", static_cast<int>(ES_IPOptSolver::ma57), "Linear subsolver in IPOpt",
+	settings->createSetting("IpoptSolver", "Ipopt", static_cast<int>(ES_IPOptSolver::ma57), "Linear subsolver in Ipopt",
 			enumIPOptSolver);
 	enumIPOptSolver.clear();
 
+	settings->createSetting("ToleranceInteriorPointStrategy", "Ipopt", 1E-8,
+			"Relative convergence tolerance in interior point search strategy");
+	settings->createSetting("MaxIterInteriorPointStrategy", "Ipopt", 1000,
+			"Maximum number of iterations in interior point search strategy");
+	settings->createSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt", 1E-8, "Constraint violation tolerance",
+			-OSDBL_MAX, OSDBL_MAX);
+
 	//SHOT cutting plane Minimax NLP solver
-	settings->createSetting("IterLimit", "MinimaxNLP", 200, "LP iteration limit for solver", 0, OSINT_MAX);
-	settings->createSetting("IterLimitSubsolver", "MinimaxNLP", 1000, "Iteration limit for minimization subsolver", 0,
+	settings->createSetting("IterLimit", "InteriorPointCuttingPlane", 200, "LP iteration limit for solver", 0,
 			OSINT_MAX);
-	settings->createSetting("BitPrecision", "MinimaxNLP", 8, "Required bit precision for minimization subsolver", 1,
-			64);
-	settings->createSetting("TermToleranceAbs", "MinimaxNLP", 0.5,
+	settings->createSetting("IterLimitSubsolver", "InteriorPointCuttingPlane", 1000,
+			"Iteration limit for minimization subsolver", 0, OSINT_MAX);
+	settings->createSetting("BitPrecision", "InteriorPointCuttingPlane", 8,
+			"Required bit precision for minimization subsolver", 1, 64);
+	settings->createSetting("TermToleranceAbs", "InteriorPointCuttingPlane", 0.5,
 			"Absolute termination tolerance for the difference between LP and linesearch objective", 0.0, OSDBL_MAX);
-	settings->createSetting("TermToleranceRel", "MinimaxNLP", 0.1,
+	settings->createSetting("TermToleranceRel", "InteriorPointCuttingPlane", 0.1,
 			"Relative termination tolerance for the difference between LP and linesearch objective", 0.0, OSDBL_MAX);
-	settings->createSetting("ConstraintSelectionTolerance", "MinimaxNLP", 0.05,
+	settings->createSetting("ConstraintSelectionTolerance", "InteriorPointCuttingPlane", 0.05,
 			"The tolerance for selecting the most constraint with largest deviation", 0.0, 1.0);
 
-	settings->createSetting("CopyMinimaxCuttingPlanes", "MinimaxNLP", true,
+	settings->createSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane", true,
 			"Copy over the valid cutting planes in the minimax solver to main problem.");
 
-	// Interior point feasibility epsilon
-	settings->createSetting("InteriorPointFeasEps", "NLP", 0.000001, "Interior point feasibility epsilon", 0.0,
-			OSDBL_MAX);
-	settings->createSetting("OriginalObjectiveWeight", "NLP", 0.0,
+	settings->createSetting("MinimaxUpperBound", "InteriorPoint", 0.1, "Upper bound for minimax objective variable",
+			-OSDBL_MAX, OSDBL_MAX);
+	settings->createSetting("OriginalObjectiveWeight", "InteriorPointRelaxed", 0.0,
 			"The weight of the original objective function in NLP relaxation", -OSDBL_MAX, OSDBL_MAX);
 
 	// MILP/LP solver

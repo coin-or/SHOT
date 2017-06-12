@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <SolutionStrategySHOT.h>
+#include "SolutionStrategySHOT.h"
 
 SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 {
@@ -16,16 +16,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	processInfo->createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("NLPSolver", "NLP"));
-
-	if (solver == ES_NLPSolver::CuttingPlaneMiniMax || solver == ES_NLPSolver::IPOptMiniMax)
-	{
-		processInfo->createTimer("InteriorPointMinimax", " - Solving minimax NLP problem");
-	}
-	else if (solver == ES_NLPSolver::IPOptRelaxed)
-	{
-		processInfo->createTimer("InteriorPointRelaxed", " - Solving relaxed NLP problem");
-	}
+	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("InteriorPointSolver", "InteriorPoint"));
+	processInfo->createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
 	processInfo->createTimer("Subproblems", "Time spent solving subproblems");
 	processInfo->createTimer("LP", " - Relaxed problems");
@@ -46,6 +38,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(osInstance);
 	processInfo->tasks->addTask(tInitMILPSolver, "InitMILPSolver");
 
+	auto MILPSolver = processInfo->MILPSolver;
+
 	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
 	processInfo->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
@@ -59,7 +53,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		processInfo->tasks->addTask(tFindIntPoint, "FindIntPoint");
 	}
 
-	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem();
+	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem(MILPSolver);
 	processInfo->tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
 
 	TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
@@ -68,10 +62,10 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
 	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
 
-	TaskBase *tAddHPs = new TaskAddHyperplanes();
+	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
 	processInfo->tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
+	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
 	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
@@ -86,11 +80,11 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	if (static_cast<ES_PresolveStrategy>(settings->getIntSetting("PresolveStrategy", "Presolve"))
 			!= ES_PresolveStrategy::Never)
 	{
-		TaskBase *tPresolve = new TaskPresolve();
+		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
 		processInfo->tasks->addTask(tPresolve, "Presolve");
 	}
 
-	TaskBase *tSolveIteration = new TaskSolveIteration();
+	TaskBase *tSolveIteration = new TaskSolveIteration(MILPSolver);
 	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
 
 	if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
@@ -134,7 +128,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
 	{
-		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem();
+		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem(MILPSolver);
 		processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
 		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
@@ -256,7 +250,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	//TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
 	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
-	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy();
+	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MILPSolver);
 	processInfo->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
 	if (solverMILP != ES_MILPSolver::CplexExperimental)
@@ -293,7 +287,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 		if (settings->getBoolSetting("AddIntegerCuts", "Algorithm"))
 		{
-			TaskBase *tAddICs = new TaskAddIntegerCuts();
+			TaskBase *tAddICs = new TaskAddIntegerCuts(MILPSolver);
 			processInfo->tasks->addTask(tAddICs, "AddICs");
 		}
 
@@ -365,7 +359,9 @@ bool SolutionStrategySHOT::solveProblem()
 
 	while (processInfo->tasks->getNextTask(nextTask))
 	{
+		processInfo->outputInfo("┌─── Started task:  " + nextTask->getType());
 		nextTask->run();
+		processInfo->outputInfo("└─── Finished task: " + nextTask->getType());
 	}
 
 	processInfo->tasks->clearTasks();

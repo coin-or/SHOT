@@ -4,7 +4,7 @@
 class MILPSolutionLimitStrategyUnlimited: public IMILPSolutionLimitStrategy
 {
 	public:
-		MILPSolutionLimitStrategyUnlimited();
+		MILPSolutionLimitStrategyUnlimited(IMILPSolver *MILPSolver);
 		~MILPSolutionLimitStrategyUnlimited();
 
 		virtual bool updateLimit();

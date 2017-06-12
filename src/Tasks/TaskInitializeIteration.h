@@ -1,7 +1,7 @@
 #pragma once
-#include <TaskBase.h>
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
-#include "UtilityFunctions.h"
+#include "../UtilityFunctions.h"
 
 class TaskInitializeIteration: public TaskBase
 {

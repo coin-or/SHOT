@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskSelectPrimalCandidatesFromLinesearch.h>
+#include "TaskSelectPrimalCandidatesFromLinesearch.h"
 
 TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch()
 {

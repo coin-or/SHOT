@@ -1,9 +1,8 @@
 #include "RelaxationStrategyNone.h"
 
-RelaxationStrategyNone::RelaxationStrategyNone()
+RelaxationStrategyNone::RelaxationStrategyNone(IMILPSolver *MILPSolver)
 {
-	//relaxationActive = false;
-
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
@@ -34,6 +33,6 @@ void RelaxationStrategyNone::setInactive()
 
 E_IterationProblemType RelaxationStrategyNone::getProblemType()
 {
-	if (processInfo->MILPSolver->getDiscreteVariableStatus()) return E_IterationProblemType::MIP;
+	if (MILPSolver->getDiscreteVariableStatus()) return E_IterationProblemType::MIP;
 	else return E_IterationProblemType::Relaxed;
 }

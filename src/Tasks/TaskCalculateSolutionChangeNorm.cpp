@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskCalculateSolutionChangeNorm.h>
+#include "TaskCalculateSolutionChangeNorm.h"
 
 TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm()
 {

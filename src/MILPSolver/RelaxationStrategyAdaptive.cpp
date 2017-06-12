@@ -1,9 +1,8 @@
 #include "RelaxationStrategyAdaptive.h"
 
-RelaxationStrategyAdaptive::RelaxationStrategyAdaptive()
+RelaxationStrategyAdaptive::RelaxationStrategyAdaptive(IMILPSolver *MILPSolver)
 {
-	//processInfo->MILPSolver = solver;
-	//relaxationActive = false;
+	this->MILPSolver = MILPSolver;
 
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
@@ -78,11 +77,11 @@ void RelaxationStrategyAdaptive::executeStrategy()
 
 void RelaxationStrategyAdaptive::setActive()
 {
-	if (processInfo->MILPSolver->getDiscreteVariableStatus())
+	if (MILPSolver->getDiscreteVariableStatus())
 	{
 		processInfo->stopTimer("MILP");
 		processInfo->startTimer("LP");
-		processInfo->MILPSolver->activateDiscreteVariables(false);
+		MILPSolver->activateDiscreteVariables(false);
 
 		processInfo->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
 
@@ -91,11 +90,11 @@ void RelaxationStrategyAdaptive::setActive()
 
 void RelaxationStrategyAdaptive::setInactive()
 {
-	if (!processInfo->MILPSolver->getDiscreteVariableStatus())
+	if (!MILPSolver->getDiscreteVariableStatus())
 	{
 		processInfo->stopTimer("LP");
 		processInfo->startTimer("MILP");
-		processInfo->MILPSolver->activateDiscreteVariables(true);
+		MILPSolver->activateDiscreteVariables(true);
 
 		processInfo->getCurrentIteration()->type = E_IterationProblemType::MIP;
 	}
@@ -103,7 +102,7 @@ void RelaxationStrategyAdaptive::setInactive()
 
 E_IterationProblemType RelaxationStrategyAdaptive::getProblemType()
 {
-	if (processInfo->MILPSolver->getDiscreteVariableStatus()) return E_IterationProblemType::MIP;
+	if (MILPSolver->getDiscreteVariableStatus()) return E_IterationProblemType::MIP;
 	else return E_IterationProblemType::Relaxed;
 }
 

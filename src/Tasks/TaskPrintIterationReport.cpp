@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskPrintIterationReport.h>
+#include "TaskPrintIterationReport.h"
 
 TaskPrintIterationReport::TaskPrintIterationReport()
 {
@@ -100,7 +100,7 @@ void TaskPrintIterationReport::run()
 		}
 		else
 		{
-			hyperplanesExpr = " ";
+			hyperplanesExpr = "      ";
 		}
 
 		std::string primalBoundExpr;

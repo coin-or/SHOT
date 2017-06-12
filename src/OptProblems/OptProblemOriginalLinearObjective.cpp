@@ -13,7 +13,13 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 	this->setObjectiveFunctionType(E_ObjectiveFunctionType::Linear);
 	this->setProblemInstance(instance);
 	this->setTypeOfObjectiveMinimize(instance->instanceData->objectives->obj[0]->maxOrMin == "min");
-	this->setObjectiveFunctionNonlinear(isConstraintNonlinear(-1));
+	this->setObjectiveFunctionNonlinear(false);
+	if (!isObjectiveFunctionNonlinear())
+	{
+		this->setNonlinearObjectiveConstraintIdx(-COIN_INT_MAX);
+		this->setNonlinearObjectiveVariableIdx(-COIN_INT_MAX);
+	}
+
 	this->repairNonboundedObjectiveVariable(instance);
 	this->setNonlinearConstraintIndexes();
 

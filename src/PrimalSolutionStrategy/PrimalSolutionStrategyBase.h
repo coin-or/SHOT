@@ -7,7 +7,7 @@
  */
 
 #pragma once
-#include <PrimalSolutionStrategy/IPrimalSolutionStrategy.h>
+#include "../PrimalSolutionStrategy/IPrimalSolutionStrategy.h"
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"

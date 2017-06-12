@@ -1,12 +1,12 @@
 #pragma once
 #include "IRelaxationStrategy.h"
 #include "RelaxationStrategyBase.h"
-#include <algorithm>
+#include "algorithm"
 
 class RelaxationStrategyAdaptive: public IRelaxationStrategy, RelaxationStrategyBase
 {
 	public:
-		RelaxationStrategyAdaptive();
+		RelaxationStrategyAdaptive(IMILPSolver *MILPSolver);
 		~RelaxationStrategyAdaptive();
 
 		virtual void executeStrategy();
@@ -34,4 +34,6 @@ class RelaxationStrategyAdaptive: public IRelaxationStrategy, RelaxationStrategy
 		int iterLastMILP;
 
 		std::vector<double> distanceLevels;
+
+		IMILPSolver *MILPSolver;
 };

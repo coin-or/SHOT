@@ -1,32 +1,22 @@
 #pragma once
 #include "NLPSolverIPOptBase.h"
 #include "../OptProblems/OptProblemNLPMinimax.h"
-#include "OSnl2OS.h"
-#include "../UtilityFunctions.h"
 
-#include "IpIpoptCalculatedQuantities.hpp"
-#include "IpIpoptData.hpp"
-#include "IpTNLPAdapter.hpp"
-#include "IpOrigIpoptNLP.hpp"
-
-class NLPSolverIPOptMinimax: public INLPSolver, public NLPSolverIPOptBase
+class NLPSolverIPOptMinimax: public NLPSolverBase, public NLPSolverIPOptBase
 {
 	public:
 		NLPSolverIPOptMinimax();
 		~NLPSolverIPOptMinimax();
 
-		virtual bool createProblem(OSInstance * origInstance);
-		virtual bool solveProblem();
-		virtual void saveProblemModelToFile(std::string fileName);
+		std::vector<double> getSolution();
+
+	protected:
+		bool createProblemInstance(OSInstance * origInstance);
+
+		void setSolverSpecificInitialSettings();
 
 	private:
-		//OSOption* osOption;
 
-		OptProblemNLPMinimax *NLPProblem;
-		//DefaultSolver *NLPSolver;
-		//std::vector<double> solution;
-		//SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
-		//bool isPointValueCached;
-
+		SHOTSettings::Settings *settings;
+		ProcessInfo *processInfo;
 };

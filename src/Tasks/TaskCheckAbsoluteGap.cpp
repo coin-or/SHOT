@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskCheckAbsoluteGap.h>
+#include "TaskCheckAbsoluteGap.h"
 
 TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(std::string taskIDTrue)
 {

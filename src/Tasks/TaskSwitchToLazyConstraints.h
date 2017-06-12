@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <TaskBase.h>
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../MILPSolver/IMILPSolver.h"
 #include "../MILPSolver/MILPSolverBase.h"
@@ -15,7 +15,7 @@
 class TaskSwitchToLazyConstraints: public TaskBase
 {
 	public:
-		TaskSwitchToLazyConstraints();
+		TaskSwitchToLazyConstraints(IMILPSolver *MILPSolver);
 		virtual ~TaskSwitchToLazyConstraints();
 
 		void run();
@@ -25,5 +25,7 @@ class TaskSwitchToLazyConstraints: public TaskBase
 
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+
+		IMILPSolver *MILPSolver;
 };
 

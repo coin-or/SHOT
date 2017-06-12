@@ -1,4 +1,4 @@
-#include "OptProblem.h"
+﻿#include "OptProblem.h"
 
 OptProblem::OptProblem()
 {
@@ -70,6 +70,7 @@ std::vector<char> OptProblem::getVariableTypes()
 std::vector<double> OptProblem::getVariableLowerBounds()
 {
 	double* tmpArray = getProblemInstance()->getVariableLowerBounds();
+
 	std::vector<double> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
 	return tmpVector;
@@ -165,8 +166,27 @@ std::vector<int> OptProblem::getIntegerVariableIndices()
 
 void OptProblem::printProblemStatistics()
 {
+#if _WIN32
 	processInfo->outputSummary(
 			"                                                                                     \n");
+	processInfo->outputSummary("ÚÄÄÄ Problem statistics ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+
+	processInfo->outputSummary(
+			"³ Number of constraints (total/linear/nonlinear):   "
+			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
+			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
+
+	processInfo->outputSummary(
+			"³ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
+			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
+			+ to_string(getNumberOfIntegerVariables()) + "/");
+
+	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+
+#endif
+
+#if linux
+
 	processInfo->outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
 	processInfo->outputSummary(
@@ -180,8 +200,8 @@ void OptProblem::printProblemStatistics()
 					+ to_string(getNumberOfIntegerVariables()) + "/");
 
 	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
-	processInfo->outputSummary(
-			"                                                                                     \n");
+#endif
+
 }
 
 void OptProblem::exportProblemToOsil(std::string fileName)
@@ -223,6 +243,13 @@ std::string OptProblem::exportProblemToOsil()
 
 IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 {
+	if (point.size() != this->getNumberOfVariables())
+	{
+		processInfo->outputError(
+				"     Error: point size (" + to_string(point.size()) + ") does not match number of variables ("
+						+ to_string(this->getNumberOfVariables()) + ")!");
+	}
+
 	IndexValuePair valpair;
 
 	std::vector<int> idxNLCs = this->getNonlinearConstraintIndexes();
@@ -333,9 +360,9 @@ vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<doubl
 			{
 				if (constrDevs.at(i) >= compVal)
 				{
-					IndexValuePair tmpPair
-					{ idxNLCs.at(i), constrDevs.at(i) };
-
+					IndexValuePair tmpPair;
+					tmpPair.idx = idxNLCs.at(i);
+					tmpPair.value = constrDevs.at(i);
 					valpairs.push_back(tmpPair);
 				}
 			}
@@ -569,7 +596,7 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 
 		for (int i = 0; i < nvar; i++)
 		{
-			if (destination->instanceData->variables->var[i]->lb <= -OSDBL_MAX)
+			if (destination->instanceData->variables->var[i]->lb < -OSDBL_MAX)
 			{
 				processInfo->outputInfo(
 						"Corrected lower bound for variable " + varname[i] + " from "
@@ -578,7 +605,7 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 				destination->instanceData->variables->var[i]->lb = -OSDBL_MAX;
 			}
 
-			if (destination->instanceData->variables->var[i]->ub >= OSDBL_MAX)
+			if (destination->instanceData->variables->var[i]->ub > OSDBL_MAX)
 			{
 				processInfo->outputInfo(
 						"Corrected upper bound for variable " + varname[i] + " from "
@@ -587,7 +614,6 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 				destination->instanceData->variables->var[i]->ub = OSDBL_MAX;
 			}
 		}
-
 	}
 
 	destination->bVariablesModified = true;
@@ -641,56 +667,55 @@ void OptProblem::copyQuadraticTerms(OSInstance *source, OSInstance *destination)
 	{
 		int nquad = source->getNumberOfQuadraticTerms();
 		QuadraticTerms* qcoef = source->getQuadraticTerms();
+#ifdef linux
+		if (!destination->setQuadraticCoefficients(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
+						qcoef->coefficients, 0, nquad - 1)) throw ErrorClass("Error duplicating quadratic coefficients");
 
+#elif _WIN32
+		if (!destination->setQuadraticTerms(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
+						qcoef->coefficients, 0, nquad - 1)) throw ErrorClass("Error duplicating quadratic coefficients");
+
+#else
 		if (!destination->setQuadraticCoefficients(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
 				qcoef->coefficients, 0, nquad - 1)) throw ErrorClass("Error duplicating quadratic coefficients");
+#endif
+
 	}
 }
 
 void OptProblem::copyNonlinearExpressions(OSInstance *source, OSInstance *destination)
 {
-	/*Nl** root = NULL;
-
-	 if (source->instanceData->nonlinearExpressions != NULL)
-	 {
-	 int nexpr = source->getNumberOfNonlinearExpressions();
-	 //            root = osinstance->getNonlinearExpressions();
-	 root = new Nl*[source->getNumberOfNonlinearExpressions()];
-	 for (int i=0; i < source->getNumberOfNonlinearExpressions(); i++)
-	 {
-	 root[i] = source->instanceData->nonlinearExpressions->nl[i];
-	 }
-
-	 if (!destination->setNonlinearExpressions(nexpr, root))
-	 throw ErrorClass("Error duplicating nonlinear expressions");
-	 }*/
-
 	int numNonlinearExpressions = source->getNumberOfNonlinearExpressions();
 	destination->instanceData->nonlinearExpressions = new NonlinearExpressions();
 	destination->instanceData->nonlinearExpressions->numberOfNonlinearExpressions = numNonlinearExpressions;
 
 	if (numNonlinearExpressions > 0)
 	{
-		//destination->instanceData->nonlinearExpressions = new NonlinearExpressions();
 		destination->instanceData->nonlinearExpressions->nl = new Nl*[numNonlinearExpressions];
 
 		for (int i = 0; i < numNonlinearExpressions; i++)
 		{
 			int rowIdx = source->instanceData->nonlinearExpressions->nl[i]->idx;
 
-			//int valsAdded = 0;
-
 			auto nlNodeVec = source->getNonlinearExpressionTreeInPrefix(rowIdx);
 
 			destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
+
+#ifdef linux
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
 					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
-			//auto tmp = ((OSnLNode*)nlNodeVec[0])->createExpressionTreeFromPrefix(nlNodeVec);
-			//destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree->m_treeRoot = tmp;
+
+#elif _WIN32
+			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
+					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+
+#else
+			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#endif
+
 			destination->instanceData->nonlinearExpressions->nl[i]->idx = rowIdx;
 			nlNodeVec.clear();
-			//valsAdded++;
-
 		}
 	}
 }
@@ -1057,7 +1082,7 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 
 	if (instance->getObjectiveCoefficientNumbers()[0] == 1)
 	{
-		double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
+		double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 		int varIdx = instance->getObjectiveCoefficients()[0]->indexes[0];
 		;
 
@@ -1127,10 +1152,10 @@ void OptProblem::fixVariable(int varIdx, double value)
 	else
 	{
 		processInfo->outputError(
-				"Cannot fix variable value for variable with index " + to_string(varIdx) + ": not within bounds ("
-						+ to_string(getProblemInstance()->instanceData->variables->var[varIdx]->lb) + " < "
-						+ to_string(value) + " < "
-						+ to_string(getProblemInstance()->instanceData->variables->var[varIdx]->ub));
+				"     Cannot fix variable value for variable with index " + to_string(varIdx) + ": not within bounds ("
+						+ UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->lb)
+						+ " < " + UtilityFunctions::toString(value) + " < "
+						+ UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->ub));
 	}
 }
 

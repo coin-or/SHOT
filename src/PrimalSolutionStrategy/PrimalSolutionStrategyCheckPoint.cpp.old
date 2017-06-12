@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <PrimalSolutionStrategyCheckPoint.h>
+#include "PrimalSolutionStrategyCheckPoint.h"
 
 PrimalSolutionStrategyCheckPoint::~PrimalSolutionStrategyCheckPoint()
 {

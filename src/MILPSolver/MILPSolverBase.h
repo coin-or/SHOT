@@ -1,5 +1,5 @@
 #pragma once
-#include <vector>
+#include "vector"
 #include "OSInstance.h"
 #include "IMILPSolver.h"
 #include "SHOTSettings.h"
@@ -9,7 +9,11 @@ class MILPSolverBase
 {
 	private:
 		std::vector<GeneratedHyperplane> generatedHyperplanes;
-		int addedHyperplanes = 0;
+		int addedHyperplanes;
+
+		std::vector<int> fixedVariableIndexes;
+		vector<pair<double, double> > fixedVariableOriginalBounds;
+
 	protected:
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
@@ -17,16 +21,17 @@ class MILPSolverBase
 		bool discreteVariablesActivated;
 		bool cachedSolutionHasChanged;
 
+		bool isVariablesFixed;
+
 		std::vector<SolutionPoint> lastSolutions;
 
 		std::vector<double> lastLazyUpdateConstrSlacks;
 		std::vector<double> lastSolutionConstrSlacks;
 
-		//std::vector<E_HyperplaneSource> hyperplaneSource;
-		//std::vector<bool> isConstraintLazy;
-
 		virtual void startTimer();
 		virtual void stopTimer();
+
+		OptProblem *originalProblem;
 
 	public:
 		MILPSolverBase();
@@ -49,7 +54,15 @@ class MILPSolverBase
 
 		virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
 
+		virtual void fixVariable(int varIndex, double value) = 0;
+		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+		virtual void unfixVariables();
 		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
 		virtual void updateNonlinearObjectiveFromPrimalDualBounds();
+
+		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
+		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan) = 0;
+
+		virtual void activateDiscreteVariables(bool activate) = 0;
 };

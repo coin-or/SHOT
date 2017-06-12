@@ -5,13 +5,13 @@
  *      Author: alundell
  */
 
-#include <TaskSwitchToLazyConstraints.h>
+#include "TaskSwitchToLazyConstraints.h"
 
-TaskSwitchToLazyConstraints::TaskSwitchToLazyConstraints()
+TaskSwitchToLazyConstraints::TaskSwitchToLazyConstraints(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
-
 }
 
 TaskSwitchToLazyConstraints::~TaskSwitchToLazyConstraints()
@@ -22,7 +22,7 @@ TaskSwitchToLazyConstraints::~TaskSwitchToLazyConstraints()
 void TaskSwitchToLazyConstraints::run()
 {
 
-	auto genHyperplanes = processInfo->MILPSolver->getGeneratedHyperplanes();
+	auto genHyperplanes = MILPSolver->getGeneratedHyperplanes();
 	auto currIter = processInfo->getCurrentIteration();
 
 	if (!currIter->isMILP()) return;
@@ -45,17 +45,17 @@ void TaskSwitchToLazyConstraints::run()
 				|| genHyperplanes->at(i).source == E_HyperplaneSource::MIPSolutionPoolLinesearch)
 		{
 			//std::cout << "not changed: " << genHyperplanes->at(i).isLazy << std::endl;
-			processInfo->MILPSolver->changeConstraintToLazy(genHyperplanes->at(i));
+			MILPSolver->changeConstraintToLazy(genHyperplanes->at(i));
 			//std::cout << "is changed: " << genHyperplanes->at(i).isLazy << std::endl;
 		}
 
-		if (currIter->iterationNumber - genHyperplanes->at(i).generatedIter > 30) processInfo->MILPSolver->changeConstraintToLazy(
+		if (currIter->iterationNumber - genHyperplanes->at(i).generatedIter > 30) MILPSolver->changeConstraintToLazy(
 				genHyperplanes->at(i));
 
 		if ((genHyperplanes->at(i).source == E_HyperplaneSource::LPFixedIntegers
 				|| genHyperplanes->at(i).source == E_HyperplaneSource::LPRelaxedLinesearch
 				|| genHyperplanes->at(i).source == E_HyperplaneSource::LPRelaxedSolutionPoint)
-				&& currIter->iterationNumber - genHyperplanes->at(i).generatedIter > 1) processInfo->MILPSolver->changeConstraintToLazy(
+				&& currIter->iterationNumber - genHyperplanes->at(i).generatedIter > 1) MILPSolver->changeConstraintToLazy(
 				genHyperplanes->at(i));
 
 	}

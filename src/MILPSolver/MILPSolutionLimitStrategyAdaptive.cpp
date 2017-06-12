@@ -1,7 +1,8 @@
 #include "MILPSolutionLimitStrategyAdaptive.h"
 
-MILPSolutionLimitStrategyAdaptive::MILPSolutionLimitStrategyAdaptive()
+MILPSolutionLimitStrategyAdaptive::MILPSolutionLimitStrategyAdaptive(IMILPSolver *MILPSolver)
 {
+	this->MILPSolver = MILPSolver;
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
@@ -85,7 +86,7 @@ int MILPSolutionLimitStrategyAdaptive::getNewLimit()
 	int newLimit;
 	//int iterLargeIncrease = settings->getIntSetting("MILPSolIncreaseIter", "MILP");
 
-	newLimit = processInfo->MILPSolver->getSolutionLimit() + 1;
+	newLimit = MILPSolver->getSolutionLimit() + 1;
 	lastIterSolLimIncreased = currIter->iterationNumber;
 	// Update MILP solution limit
 	//if (numSolLimIncremented > settings->getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update

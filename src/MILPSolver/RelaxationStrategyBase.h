@@ -1,4 +1,5 @@
 #pragma once
+
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 #include "IMILPSolver.h"

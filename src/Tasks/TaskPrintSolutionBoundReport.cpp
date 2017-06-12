@@ -1,11 +1,11 @@
-/*
+﻿/*
  * TaskPrintSolutionBoundReport.cpp
  *
  *  Created on: Mar 27, 2015
  *      Author: alundell
  */
 
-#include <TaskPrintSolutionBoundReport.h>
+#include "TaskPrintSolutionBoundReport.h"
 
 TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport()
 {
@@ -33,8 +33,15 @@ void TaskPrintSolutionBoundReport::run()
 		processInfo->outputSummary(
 				"                                                                                     ");
 
-		processInfo->outputSummary(
+		#ifdef _WIN32
+			processInfo->outputSummary(
+				"ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+		#endif
+
+		#ifdef linux
+			processInfo->outputSummary(
 				"─────────────────────────────────────────────────────────────────────────────────────");
+		#endif
 
 		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
 				% processInfo->getElapsedTime("Total") % objLB % objUB % absGap % relGap;
@@ -57,8 +64,13 @@ void TaskPrintSolutionBoundReport::run()
 			processInfo->outputSummary(" Number of integer cuts added: " + to_string(processInfo->numIntegerCutsAdded));
 		}
 
-		processInfo->outputSummary(
-				"─────────────────────────────────────────────────────────────────────────────────────");
+		#ifdef _WIN32
+		processInfo->outputSummary("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+		#endif
+
+		#ifdef linux
+			processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
+		#endif
 
 		processInfo->outputSummary("");
 

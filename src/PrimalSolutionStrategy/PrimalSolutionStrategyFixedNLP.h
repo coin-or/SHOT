@@ -6,13 +6,13 @@
  */
 
 #pragma once
-#include <vector>
-#include <PrimalSolutionStrategyBase.h>
-#include "NLPSolverIPOptBase.h"
-#include "../OptProblems/OptProblemNLPRelaxed.h"
-#include "../MILPSolver/IMILPSolver.h"
+#include "vector"
+#include "PrimalSolutionStrategyBase.h"
+#include "../NLPSolver/INLPSolver.h"
+#include "../NLPSolver/NLPSolverIPOptRelaxed.h"
+#include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
 
-class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public INLPSolver, public NLPSolverIPOptBase
+class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 {
 	public:
 		PrimalSolutionStrategyFixedNLP();
@@ -20,20 +20,12 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public 
 
 		virtual bool runStrategy();
 
-		virtual bool createProblem(OSInstance * origInstance);
-		virtual bool solveProblem();
-		virtual void saveProblemModelToFile(std::string fileName);
-
-		virtual void initializeOSOption();
-
-		//void setFixedPoint(std::vector<double> fixedPt);
-
 	protected:
 		using PrimalSolutionStrategyBase::processInfo;
 		using PrimalSolutionStrategyBase::settings;
 
 	private:
-		OptProblemNLPRelaxed *NLPProblem;
+		INLPSolver *NLPSolver;
 
 		std::vector<int> discreteVariableIndexes;
 		std::vector<std::vector<double>> testedPoints;
@@ -46,3 +38,4 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase, public 
 		std::vector<double> originalUBs;
 
 };
+

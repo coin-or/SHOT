@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskGoto.h>
+#include "TaskGoto.h"
 
 TaskGoto::TaskGoto(std::string taskID)
 {

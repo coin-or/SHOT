@@ -1,6 +1,6 @@
 #include "OptProblemNLPSHOTMinimax.h"
 #include "OSExpressionTree.h"
-#include <vector>
+#include "vector"
 
 OptProblemNLPSHOTMinimax::OptProblemNLPSHOTMinimax()
 {
@@ -113,17 +113,17 @@ void OptProblemNLPSHOTMinimax::copyVariables(OSInstance *source, OSInstance *des
 		}
 	}
 
-	double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-	double tmpConstrFeas = settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
+	double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	double tmpObjUpperBound = settings->getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		destination->addVariable(numVar, "mu", -tmpObjBound, tmpObjBound, 'C');
-		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, tmpObjBound, 'C');
+		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, tmpObjUpperBound, 'C');
 	}
 	else
 	{
-		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, tmpObjBound, 'C');
+		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, tmpObjUpperBound, 'C');
 	}
 
 	destination->bVariablesModified = true;
@@ -179,7 +179,7 @@ void OptProblemNLPSHOTMinimax::copyConstraints(OSInstance *source, OSInstance *d
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		//double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
+		//double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
 				0.0);
 	}
@@ -355,8 +355,18 @@ void OptProblemNLPSHOTMinimax::copyQuadraticTerms(OSInstance *source, OSInstance
 
 		if (varOneIndexes.size() > 0)
 		{
+#ifdef linux
 			destination->setQuadraticCoefficients(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
 					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+
+#elif _WIN32
+			destination->setQuadraticTerms(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
+					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+
+#else
+			destination->setQuadraticCoefficients(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
+					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+#endif
 		}
 	}
 }
@@ -369,22 +379,27 @@ void OptProblemNLPSHOTMinimax::copyNonlinearExpressions(OSInstance *source, OSIn
 
 	if (numNonlinearExpressions > 0)
 	{
-		//destination->instanceData->nonlinearExpressions = new NonlinearExpressions();
 		destination->instanceData->nonlinearExpressions->nl = new Nl*[numNonlinearExpressions];
 
 		for (int i = 0; i < numNonlinearExpressions; i++)
 		{
 			int rowIdx = source->instanceData->nonlinearExpressions->nl[i]->idx;
 
-			//int valsAdded = 0;
-
 			auto nlNodeVec = source->getNonlinearExpressionTreeInPrefix(rowIdx);
 
 			destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
+#ifdef linux
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
 					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
-			//auto tmp = ((OSnLNode*)nlNodeVec[0])->createExpressionTreeFromPrefix(nlNodeVec);
-			//destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree->m_treeRoot = tmp;
+
+#elif _WIN32
+			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
+					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+
+#else
+			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#endif
 
 			if (rowIdx != -1)
 			{
@@ -394,9 +409,6 @@ void OptProblemNLPSHOTMinimax::copyNonlinearExpressions(OSInstance *source, OSIn
 			{
 				destination->instanceData->nonlinearExpressions->nl[i]->idx = source->getConstraintNumber();
 			}
-
-			nlNodeVec.clear();
-			//valsAdded++;
 
 		}
 	}
@@ -523,9 +535,9 @@ vector<IndexValuePair> OptProblemNLPSHOTMinimax::getMostDeviatingConstraints(std
 			{
 				if (constrDevs.at(i) >= compVal)
 				{
-					IndexValuePair tmpPair
-					{ idxNLCs.at(i), constrDevs.at(i) };
-
+					IndexValuePair tmpPair;
+					tmpPair.idx = idxNLCs.at(i);
+					tmpPair.value = constrDevs.at(i);
 					valpairs.push_back(tmpPair);
 				}
 			}

@@ -1,3 +1,4 @@
+#pragma once 
 #include "IConstraintSelectionStrategy.h"
 class ConstraintSelectionStrategyMostDeviating :
 	public IConstraintSelectionStrategy

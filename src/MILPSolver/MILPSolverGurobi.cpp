@@ -13,6 +13,9 @@ MILPSolverGurobi::MILPSolverGurobi()
 	gurobiEnv = new GRBEnv();
 	gurobiModel = new GRBModel(*gurobiEnv);
 
+	cachedSolutionHasChanged = true;
+	isVariablesFixed = false;
+
 	checkParameters();
 }
 
@@ -24,6 +27,8 @@ MILPSolverGurobi::~MILPSolverGurobi()
 
 bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 {
+	originalProblem = origProblem;
+
 	try
 	{
 		auto numVar = origProblem->getNumberOfVariables();
@@ -357,8 +362,8 @@ int MILPSolverGurobi::getNumberOfSolutions()
 
 void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 {
-	auto variableTypes = processInfo->originalProblem->getVariableTypes();
-	int numVar = processInfo->originalProblem->getNumberOfVariables();
+	auto variableTypes = originalProblem->getVariableTypes();
+	int numVar = originalProblem->getNumberOfVariables();
 
 	if (activate)
 	{
@@ -543,7 +548,7 @@ void MILPSolverGurobi::setCutOff(double cutOff)
 		// Gurobi has problems if not an epsilon value is added to the cutoff...
 		gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + 0.0000001);
 
-		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
 			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
@@ -734,7 +739,7 @@ double MILPSolverGurobi::getDualObjectiveValue()
 {
 
 	bool isMILP = getDiscreteVariableStatus();
-	double objVal = NAN;
+	double objVal;
 
 	try
 	{
@@ -766,6 +771,5 @@ void MILPSolverGurobi::checkParameters()
 
 std::pair<std::vector<double>, std::vector<double> > MILPSolverGurobi::presolveAndGetNewBounds()
 {
-	return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
-			processInfo->originalProblem->getVariableLowerBounds()));
+	return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 }

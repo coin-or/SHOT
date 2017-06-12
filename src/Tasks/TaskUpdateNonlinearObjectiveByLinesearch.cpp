@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskUpdateNonlinearObjectiveByLinesearch.h>
+#include "TaskUpdateNonlinearObjectiveByLinesearch.h"
 
 TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesearch()
 {

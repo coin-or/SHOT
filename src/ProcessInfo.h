@@ -1,12 +1,15 @@
 #pragma once
 #include "Enums.h"
-#include <vector>
-#include <map>
+#include "vector"
+#include "map"
 #include "Iteration.h"
 #include "Timer.h"
 
+
+#include "UtilityFunctions.h"
+
 // Used for OSOutput
-#include <cstdio>
+#include "cstdio"
 #define HAVE_STDIO_H 1
 #include "OSOutput.h"
 
@@ -20,19 +23,19 @@
 
 #include "MILPSolver/IRelaxationStrategy.h"
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
+#include "boost/property_tree/ptree.hpp"
+#include "boost/property_tree/xml_parser.hpp"
 
 class OptProblemOriginal;
 class IMILPSolver;
 class ILinesearchMethod;
 
-#include <LinesearchMethod/ILinesearchMethod.h>
+#include "LinesearchMethod/ILinesearchMethod.h"
 
 struct InteriorPoint
 {
 		vector<double> point;
-		int NLPSolver;
+		ES_NLPSolver NLPSolver;
 		IndexValuePair maxDevatingConstraint;
 };
 
@@ -196,6 +199,8 @@ class ProcessInfo
 		std::vector<InteriorPoint> interiorPts;
 
 		std::vector<Hyperplane> hyperplaneWaitingList;
+
+		std::vector<Hyperplane> addedHyperplanes;
 
 		std::vector<std::vector<int>> integerCutWaitingList;
 

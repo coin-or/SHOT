@@ -1,4 +1,4 @@
-#include <TaskFindInteriorPoint.h>
+#include "TaskFindInteriorPoint.h"
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
 {
@@ -17,13 +17,13 @@ void TaskFindInteriorPoint::run()
 	processInfo->startTimer("InteriorPointTotal");
 
 	processInfo->outputDebug("Initializing NLP solver");
-	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("NLPSolver", "NLP"));
+	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("InteriorPointSolver", "InteriorPoint"));
 
 	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
 	{
-		NLPSolvers.emplace_back(new NLPSolverCuttingPlane());
+		NLPSolvers.emplace_back(new NLPSolverCuttingPlaneMinimax());
 
-		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
 
 		processInfo->outputDebug("Cutting plane minimax selected as NLP solver.");
 	}
@@ -31,7 +31,7 @@ void TaskFindInteriorPoint::run()
 	{
 		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
 
-		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
 
 		processInfo->outputDebug("IPOpt minimax selected as NLP solver.");
 	}
@@ -39,7 +39,7 @@ void TaskFindInteriorPoint::run()
 	{
 		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
 
-		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
 
 		processInfo->outputDebug("IPOpt relaxed selected as NLP solver.");
 
@@ -48,22 +48,14 @@ void TaskFindInteriorPoint::run()
 	{
 		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
 
-		NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
 
 		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
 
-		NLPSolvers[1]->createProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[1]->setProblem(processInfo->originalProblem->getProblemInstance());
 
 		processInfo->outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
 	}
-	/*else if (solver == ES_NLPSolver::CouenneMiniMax)
-	 {
-	 NLPSolvers.emplace_back(new NLPSolverCouenneMinimax());
-
-	 NLPSolvers[0]->createProblem(processInfo->originalProblem->getProblemInstance());
-
-	 processInfo->outputDebug("Couenne minimax selected as NLP solver.");
-	 }*/
 	else
 	{
 		throw new TaskExceptionInteriorPoint("Error in NLP solver definition.");
@@ -79,7 +71,7 @@ void TaskFindInteriorPoint::run()
 			ss << i;
 			ss << ".txt";
 
-			NLPSolvers.at(i)->saveProblemModelToFile(ss.str());
+			NLPSolvers.at(i)->saveProblemToFile(ss.str());
 		}
 	}
 
@@ -89,7 +81,21 @@ void TaskFindInteriorPoint::run()
 
 	for (int i = 0; i < NLPSolvers.size(); i++)
 	{
-		foundNLPPoint = NLPSolvers.at(i)->solveProblem() || foundNLPPoint;
+		auto solutionStatus = NLPSolvers.at(i)->solveProblem();
+
+		auto tmpIP = new InteriorPoint();
+		tmpIP->NLPSolver = ES_NLPSolver::CuttingPlaneMiniMax;
+		tmpIP->point = NLPSolvers.at(i)->getSolution();
+
+		auto maxDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpIP->point);
+		tmpIP->maxDevatingConstraint = maxDev;
+
+		processInfo->interiorPts.push_back(*tmpIP);
+
+		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
+
+		//foundNLPPoint = (solutionStatus == E_NLPSolutionStatus::Feasible
+		//		|| solutionStatus == E_NLPSolutionStatus::Optimal) || foundNLPPoint;
 	}
 
 	if (!foundNLPPoint)

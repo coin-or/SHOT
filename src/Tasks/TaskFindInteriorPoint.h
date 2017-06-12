@@ -1,12 +1,11 @@
 #pragma once
-#include <TaskBase.h>
+#include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+#include "TaskBase.h"
 #include "../ProcessInfo.h"
 
 #include "../NLPSolver/INLPSolver.h"
 #include "../NLPSolver/NLPSolverIPOptMinimax.h"
 #include "../NLPSolver/NLPSolverIPOptRelaxed.h"
-//#include "../NLPSolver/NLPSolverCouenneMinimax.h"
-#include "../NLPSolver/NLPSolverCuttingPlane.h"
 
 class TaskFindInteriorPoint: public TaskBase
 {

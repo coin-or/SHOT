@@ -2,11 +2,11 @@
 
 #include "Enums.h"
 #include "SHOTSettings.h"
-#include <SolutionStrategy/ISolutionStrategy.h>
-#include <SolutionStrategy/SolutionStrategySHOT.h>
+#include "SolutionStrategy/ISolutionStrategy.h"
+#include "SolutionStrategy/SolutionStrategySHOT.h"
 #include "ProcessInfo.h"
 #include "OSnl2OS.h"
-#include <boost/filesystem.hpp>
+#include "boost/filesystem.hpp"
 #include "TaskHandler.h"
 
 class SHOTSolver

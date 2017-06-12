@@ -6,7 +6,7 @@
  */
 
 #pragma once
-#include <vector>
+#include "vector"
 #include "PrimalSolutionStrategyBase.h"
 
 class PrimalSolutionStrategyCheckPoint: public PrimalSolutionStrategyBase

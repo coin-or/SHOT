@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <TaskSelectHyperplanePointsSolution.h>
+#include "TaskSelectHyperplanePointsSolution.h"
 
 TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution()
 {

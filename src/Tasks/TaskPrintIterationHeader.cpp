@@ -1,11 +1,11 @@
-/*
+﻿/*
  * TaskPrintIterationHeader.cpp
  *
  *  Created on: Mar 27, 2015
  *      Author: alundell
  */
 
-#include <TaskPrintIterationHeader.h>
+#include "TaskPrintIterationHeader.h"
 
 TaskPrintIterationHeader::TaskPrintIterationHeader()
 {
@@ -20,15 +20,32 @@ TaskPrintIterationHeader::~TaskPrintIterationHeader()
 
 void TaskPrintIterationHeader::run()
 {
+
 	std::stringstream tmpLine;
 	tmpLine << "                                                                                     \n";
+
+#ifdef _WIN32
+	tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+
+	tmpLine
+		<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB"
+		% "max constr.";
+
+	tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+
+#endif
+
+#ifdef linux
 	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 
 	tmpLine
-			<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB"
-					% "max constr.";
+		<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB"
+		% "max constr.";
 
 	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
+
+
+#endif
 
 	processInfo->outputSummary(tmpLine.str());
 }

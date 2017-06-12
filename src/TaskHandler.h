@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
-#include <list>
-#include <unordered_map>
-#include <algorithm>
+#include "vector"
+#include "list"
+#include "unordered_map"
+#include "algorithm"
 #include "Tasks/TaskBase.h"
 #include "Tasks/TaskException.h"
 

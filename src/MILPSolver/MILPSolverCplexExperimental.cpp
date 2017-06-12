@@ -1,6 +1,6 @@
 #include "IMILPSolver.h"
 #include "MILPSolverCplexExperimental.h"
-//#include <ilcplex/cplex.h>
+//#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
 //ProcessInfo* processInfo;
@@ -16,7 +16,7 @@ ILOSTLBEGIN
  IloNumArray val(env, xVar.getSize());
  getValues(val, xVar);
 
- int numVar = processInfo->originalProblem->getNumberOfVariables();
+ int numVar = originalProblem->getNumberOfVariables();
 
  std::vector<double> pt(numVar);
 
@@ -25,7 +25,7 @@ ILOSTLBEGIN
  pt.at(i) = val[i];
  }
 
- auto tmpVal = processInfo->originalProblem->getMostDeviatingConstraint(pt).value;
+ auto tmpVal = originalProblem->getMostDeviatingConstraint(pt).value;
  std::cout << "Callback value " << tmpVal << std::endl;
  if (processInfo->iterations.size() > 10 && tmpVal > 0)
  {
@@ -108,7 +108,7 @@ void HCallbackI::main() // Called at each node...
 	 std::cout << "Has incumbent" << std::endl;
 	 auto primalBound = processInfo->getPrimalBound();
 
-	 bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+	 bool isMinimization = originalProblem->isTypeOfObjectiveMinimize();
 
 	 bool betterPrimalThanIncumbent = ((isMinimization && primalBound < this->getIncumbentObjValue())
 	 || (!isMinimization && primalBound > this->getIncumbentObjValue()));
@@ -322,16 +322,16 @@ IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, ProcessInfo 
 bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
-	auto originalProblem = processInfo->originalProblem;
+	//auto originalProblem = originalProblem;
 	std::vector < IndexValuePair > elements;
 
-	auto varNames = originalProblem->getVariableNames();
+	auto varNames = processInfo->originalProblem->getVariableNames();
 
-	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
+	double constant = processInfo->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
 
 	if (hyperplane.sourceConstraintIndex == -1
-			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
+			|| hyperplane.sourceConstraintIndex == processInfo->originalProblem->getNonlinearObjectiveConstraintIdx())
 	{
 		processInfo->outputDebug("     HP point generated for auxiliary objective function constraint");
 
@@ -370,8 +370,8 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
 		processInfo->outputDebug(
 				"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
 
-		auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
-				hyperplane.generatedPoint);
+		auto nablag = processInfo->originalProblem->calculateConstraintFunctionGradient(
+				hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
 
 		for (int i = 0; i < nablag->number; i++)
 		{
@@ -625,6 +625,7 @@ MILPSolverCplexExperimental::MILPSolverCplexExperimental()
 	itersSinceNLPCall = 0;
 
 	cachedSolutionHasChanged = true;
+	isVariablesFixed = false;
 
 	checkParameters();
 
@@ -637,6 +638,8 @@ MILPSolverCplexExperimental::~MILPSolverCplexExperimental()
 
 bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 {
+	originalProblem = origProblem;
+
 	auto numVar = origProblem->getNumberOfVariables();
 	auto tmpLBs = origProblem->getVariableLowerBounds();
 	auto tmpUBs = origProblem->getVariableUpperBounds();
@@ -816,7 +819,7 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 
 void MILPSolverCplexExperimental::initializeSolverSettings()
 {
-	firstNonLazyHyperplane = processInfo->originalProblem->getNumberOfLinearConstraints();
+	firstNonLazyHyperplane = originalProblem->getNumberOfLinearConstraints();
 
 	try
 	{
@@ -954,7 +957,7 @@ int MILPSolverCplexExperimental::addLinearConstraint(std::vector<IndexValuePair>
 
 void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 {
-	auto variableTypes = processInfo->originalProblem->getVariableTypes();
+	auto variableTypes = originalProblem->getVariableTypes();
 
 	try
 	{
@@ -969,7 +972,7 @@ void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 		{
 			processInfo->outputDebug("     Activating MILP strategy");
 
-			for (int i = 0; i < processInfo->originalProblem->getNumberOfVariables(); i++)
+			for (int i = 0; i < originalProblem->getNumberOfVariables(); i++)
 			{
 				if (variableTypes.at(i) == 'I')
 				{
@@ -992,7 +995,7 @@ void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 		else
 		{
 			processInfo->outputDebug("     Activating LP strategy");
-			for (int i = 0; i < processInfo->originalProblem->getNumberOfVariables(); i++)
+			for (int i = 0; i < originalProblem->getNumberOfVariables(); i++)
 			{
 				if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
 				{
@@ -1141,7 +1144,7 @@ int MILPSolverCplexExperimental::increaseSolutionLimit(int increment)
 
 void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 {
-	if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
+	if (originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
 	{
 		limit = settings->getIntSetting("MILPSolLimitInitial", "MILP");
 	}
@@ -1337,7 +1340,7 @@ void MILPSolverCplexExperimental::setCutOff(double cutOff)
 {
 	try
 	{
-		if (processInfo->originalProblem->isTypeOfObjectiveMinimize())
+		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
 			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
@@ -1506,7 +1509,7 @@ double MILPSolverCplexExperimental::getDualObjectiveValue()
 {
 
 	bool isMILP = getDiscreteVariableStatus();
-	double objVal = NAN;
+	double objVal;
 
 	try
 	{
@@ -1533,8 +1536,7 @@ void MILPSolverCplexExperimental::checkParameters()
 
 std::pair<std::vector<double>, std::vector<double> > MILPSolverCplexExperimental::presolveAndGetNewBounds()
 {
-	return (std::make_pair(processInfo->originalProblem->getVariableLowerBounds(),
-			processInfo->originalProblem->getVariableLowerBounds()));
+	return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 }
 
 void MILPSolverCplexExperimental::writePresolvedToFile(std::string filename)

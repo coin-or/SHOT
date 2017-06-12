@@ -1,6 +1,6 @@
 #include "OptProblemNLPMinimax.h"
 #include "OSExpressionTree.h"
-#include <vector>
+#include "vector"
 
 OptProblemNLPMinimax::OptProblemNLPMinimax()
 {
@@ -125,20 +125,20 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 		}
 	}
 
-	double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
-	//double tmpConstrFeas = settings->getDoubleSetting("InteriorPointFeasEps", "NLP");
+	double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	double tmpObjUpperBound = settings->getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		destination->addVariable(numVar, "mu", -tmpObjBound, tmpObjBound, 'C');
-		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, 0.1, 'C');
+		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, tmpObjUpperBound, 'C');
 	}
 	else
 	{
-		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, 0.1, 'C');
+		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, tmpObjUpperBound, 'C');
 	}
 
-	//destination->bVariablesModified = true;
+	destination->bVariablesModified = true;
 }
 
 void OptProblemNLPMinimax::copyObjectiveFunction(OSInstance *source, OSInstance *destination)
@@ -191,7 +191,7 @@ void OptProblemNLPMinimax::copyConstraints(OSInstance *source, OSInstance *desti
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		//double tmpObjBound = settings->getDoubleSetting("NLPObjectiveBound", "NLP");
+		//double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
 				0.0);
 	}
@@ -362,8 +362,19 @@ void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *de
 
 		if (varOneIndexes.size() > 0)
 		{
+#ifdef linux
 			destination->setQuadraticCoefficients(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
 					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+
+#elif _WIN32
+			destination->setQuadraticTerms(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
+					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+
+#else
+			destination->setQuadraticCoefficients(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
+					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+#endif
+
 		}
 	}
 }
@@ -388,8 +399,19 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 			auto nlNodeVec = source->getNonlinearExpressionTreeInPrefix(rowIdx);
 
 			destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
+#ifdef linux
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
 					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+
+#elif _WIN32
+			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
+					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+
+#else
+			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#endif
+
 			//auto tmp = ((OSnLNode*)nlNodeVec[0])->createExpressionTreeFromPrefix(nlNodeVec);
 			//destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree->m_treeRoot = tmp;
 

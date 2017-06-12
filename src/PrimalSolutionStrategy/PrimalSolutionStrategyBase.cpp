@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <PrimalSolutionStrategy/PrimalSolutionStrategyBase.h>
+#include "PrimalSolutionStrategyBase.h"
 
 PrimalSolutionStrategyBase::PrimalSolutionStrategyBase()
 {
