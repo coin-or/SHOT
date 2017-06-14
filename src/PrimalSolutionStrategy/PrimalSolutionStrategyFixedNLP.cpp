@@ -15,8 +15,16 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	originalNLPTime = settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
 	originalNLPIter = settings->getIntSetting("NLPFixedMaxIters", "PrimalBound");
 
-	//NLPSolver = new NLPSolverIPOptRelaxed();
-	NLPSolver = new NLPSolverIPOptRelaxed();
+	if (static_cast<ES_PrimalNLPSolver>(settings->getIntSetting("PrimalNLPSolver", "PrimalBound"))
+			== ES_PrimalNLPSolver::IPOpt)
+	{
+		NLPSolver = new NLPSolverIPOptRelaxed();
+	}
+	else
+	{
+		NLPSolver = new NLPSolverCuttingPlaneRelaxed();
+	}
+
 	NLPSolver->setProblem(processInfo->originalProblem->getProblemInstance());
 
 }
@@ -30,17 +38,17 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 {
 	auto currIter = processInfo->getCurrentIteration();
 	NLPSolver->initializeProblem();
-	int numVars = NLPSolver->NLPProblem->getNumberOfVariables();
+	int numVars = processInfo->originalProblem->getNumberOfVariables();
 
-	auto discreteVariableIndexes = NLPSolver->NLPProblem->getDiscreteVariableIndices();
-	auto realVariableIndexes = NLPSolver->NLPProblem->getRealVariableIndices();
+	auto discreteVariableIndexes = processInfo->originalProblem->getDiscreteVariableIndices();
+	auto realVariableIndexes = processInfo->originalProblem->getRealVariableIndices();
 
 	bool isSolved;
 
 	vector < PrimalFixedNLPCandidate > testPts;
 
 	// Fix variables
-	auto varTypes = NLPSolver->NLPProblem->getVariableTypes();
+	auto varTypes = processInfo->originalProblem->getVariableTypes();
 
 	if (processInfo->primalFixedNLPCandidates.size() == 0)
 	{
@@ -175,23 +183,26 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			double tmpObj = NLPSolver->getObjectiveValue();
 			auto variableSolution = NLPSolver->getSolution();
 
-			if (NLPSolver->NLPProblem->isObjectiveFunctionNonlinear())
+			if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
 			{
 				variableSolution.push_back(tmpObj);
 			}
 
-			auto mostDevConstr = NLPSolver->NLPProblem->getMostDeviatingConstraint(variableSolution);
+			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(variableSolution);
+
 			std::string tmpConstr;
-			if (mostDevConstr.idx != -1)
+			if (NLPSolver->isObjectiveFunctionNonlinear()
+					&& (mostDevConstr.idx == NLPSolver->NLPProblem->getNonlinearObjectiveConstraintIdx()
+							|| mostDevConstr.idx == -1))
 			{
-				tmpConstr = NLPSolver->NLPProblem->getConstraintNames()[mostDevConstr.idx] + ": "
+				tmpConstr = processInfo->originalProblem->getConstraintNames().at(
+						processInfo->originalProblem->getNonlinearObjectiveConstraintIdx()) + ": "
 						+ ((boost::format("%.5f") % mostDevConstr.value).str());
 			}
 			else
 			{
-				tmpConstr =
-						NLPSolver->NLPProblem->getConstraintNames()[NLPSolver->NLPProblem->getNonlinearObjectiveConstraintIdx()]
-								+ ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
+				tmpConstr = processInfo->originalProblem->getConstraintNames().at(mostDevConstr.idx) + ": "
+						+ ((boost::format("%.5f") % mostDevConstr.value).str());
 			}
 
 			std::string tmpObjVal = UtilityFunctions::toStringFormat(tmpObj, "%.3f");

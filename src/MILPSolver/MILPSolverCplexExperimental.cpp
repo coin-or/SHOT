@@ -628,6 +628,8 @@ MILPSolverCplexExperimental::MILPSolverCplexExperimental()
 	isVariablesFixed = false;
 
 	checkParameters();
+	addedHyperplanes = 0;
+	modelUpdated = false;
 
 }
 
@@ -1509,7 +1511,7 @@ double MILPSolverCplexExperimental::getDualObjectiveValue()
 {
 
 	bool isMILP = getDiscreteVariableStatus();
-	double objVal;
+	double objVal = NAN;
 
 	try
 	{

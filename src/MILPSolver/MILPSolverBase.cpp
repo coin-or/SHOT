@@ -164,6 +164,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 		genHyperplane.generatedPoint = hyperplane.generatedPoint;
 		genHyperplane.source = hyperplane.source;
 		genHyperplane.generatedIter = currIter->iterationNumber;
+		genHyperplane.isLazy = false;
+		genHyperplane.isRemoved = false;
 
 		generatedHyperplanes.push_back(genHyperplane);
 
@@ -266,6 +268,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 		if (newLB)
 		{
 			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			//processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
 			processInfo->outputInfo(
 					"     Lower bound for variable (" + to_string(i) + ") updated from "
 							+ UtilityFunctions::toString(currBounds.first) + " to "
@@ -273,6 +276,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 
 			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
+				//processInfo->originalProblem->setVariableBoundsAsTightened(i);
 				originalProblem->setVariableBoundsAsTightened(i);
 				processInfo->numVariableBoundsTightenedInPresolve++;
 			}
@@ -281,6 +285,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 		if (newUB)
 		{
 			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			//processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
 			processInfo->outputInfo(
 					"     Upper bound for variable (" + to_string(i) + ") updated from "
 							+ UtilityFunctions::toString(currBounds.second) + " to "
@@ -288,6 +293,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 
 			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
+				//processInfo->originalProblem->setVariableBoundsAsTightened(i);
 				originalProblem->setVariableBoundsAsTightened(i);
 				processInfo->numVariableBoundsTightenedInPresolve++;
 			}

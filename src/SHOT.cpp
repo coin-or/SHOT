@@ -15,30 +15,28 @@ int main(int argc, char *argv[])
 	osoutput->AddChannel("shotlogfile");
 
 	// Visual Studio does not play nice with unicode:
-	#ifdef _WIN32
+#ifdef _WIN32
 	startmessage = ""
-		"ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿\n"
-		"³          SHOT - Supporting Hyperplane Optimization Toolkit          ³\n"
-		"ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
-		"³ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        ³\n"
-		"³ - Based on the Extended Supporting Hyperplane (ESH) algorithm       ³\n"
-		"³   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            ³\n"
-		"³   bo Akademi University, Turku, Finland                            ³\n"
-		"ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n";
-	#endif
-
-	#ifdef linux
+	"ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿\n"
+	"³          SHOT - Supporting Hyperplane Optimization Toolkit          ³\n"
+	"ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
+	"³ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        ³\n"
+	"³ - Based on the Extended Supporting Hyperplane (ESH) algorithm       ³\n"
+	"³   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            ³\n"
+	"³   bo Akademi University, Turku, Finland                            ³\n"
+	"ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n";
+#else
 	startmessage = ""
-		"┌─────────────────────────────────────────────────────────────────────┐\n"
-		"│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
-		"├─────────────────────────────────────────────────────────────────────┤\n"
-		"│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
-		"│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
-		"│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
-		"│   Åbo Akademi University, Turku, Finland                            │\n"
-		"└─────────────────────────────────────────────────────────────────────┘\n";
+			"┌─────────────────────────────────────────────────────────────────────┐\n"
+			"│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
+			"├─────────────────────────────────────────────────────────────────────┤\n"
+			"│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
+			"│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
+			"│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
+			"│   Åbo Akademi University, Turku, Finland                            │\n"
+			"└─────────────────────────────────────────────────────────────────────┘\n";
 
-	#endif
+#endif
 
 	if (argc == 1)
 	{
@@ -179,7 +177,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
 	processInfo->outputSummary("\n"
-		"ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+			"ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
 	for (auto T : processInfo->timers)
 	{
@@ -194,29 +192,24 @@ int main(int argc, char *argv[])
 	}
 
 	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
-#endif
-
-#ifdef linux
-		processInfo->outputSummary("\n"
+#else
+	processInfo->outputSummary("\n"
 			"┌─── Solution time ──────────────────────────────────────────────────────────────┐");
 
-		for (auto T : processInfo->timers)
+	for (auto T : processInfo->timers)
+	{
+		auto elapsed = T.elapsed();
+
+		if (elapsed > 0)
 		{
-			auto elapsed = T.elapsed();
+			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-			if (elapsed > 0)
-			{
-				auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
-
-				processInfo->outputSummary("│ " + tmpLine.str());
-			}
+			processInfo->outputSummary("│ " + tmpLine.str());
 		}
+	}
 
-		processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
+	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
-
-
-
 
 	delete fileUtil, solver, processInfo;
 	return (0);

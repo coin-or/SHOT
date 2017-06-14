@@ -78,10 +78,10 @@ NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax()
 	delete NLPProblem, LPSolver;
 }
 
-void NLPSolverCuttingPlaneMinimax::saveProblemModelToFile(std::string fileName)
-{
-	NLPProblem->saveProblemModelToFile(fileName);
-}
+/*void NLPSolverCuttingPlaneMinimax::saveProblemModelToFile(std::string fileName)
+ {
+ NLPProblem->saveProblemModelToFile(fileName);
+ }*/
 
 E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 {
@@ -162,29 +162,26 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 			std::stringstream tmpLine;
 
-			#ifdef _WIN32
-				tmpLine << "\nÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+#ifdef _WIN32
+			tmpLine << "\nÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
 
-				tmpLine
+			tmpLine
+			<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
+			% "Obj. LS" % "Abs. diff" % "Rel. diff";
+
+			tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+#else
+			tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
+
+			tmpLine
 					<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
-					% "Obj. LS" % "Abs. diff" % "Rel. diff";
+							% "Obj. LS" % "Abs. diff" % "Rel. diff";
 
-				tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
-			#endif
-
-			#ifdef linux
-				tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
-
-				tmpLine
-					<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
-					% "Obj. LS" % "Abs. diff" % "Rel. diff";
-
-				tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
-			#endif
-
-			
+			tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
+#endif
 
 			processInfo->outputSummary(tmpLine.str());
+
 		}
 		else
 		{
@@ -395,10 +392,10 @@ void NLPSolverCuttingPlaneMinimax::clearStartingPoint()
 {
 }
 
-void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName)
-{
-	LPSolver->writeProblemToFile(fileName);
-}
+/*void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName)
+ {
+ NLPProblem->saveProblemModelToFile(fileName);
+ }*/
 
 void NLPSolverCuttingPlaneMinimax::saveOptionsToFile(std::string fileName)
 {

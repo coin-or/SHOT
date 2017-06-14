@@ -19,12 +19,20 @@ E_NLPSolutionStatus NLPSolverIPOptBase::solveProblemInstance()
 		NLPSolver->osinstance = NLPProblem->getProblemInstance();
 		updateSettings();
 
-		NLPSolver->solve();
+		std::string solStatus;
 
-		std::cout << "\e[A"; // Fix for removing unwanted output
-		std::cout << "\e[A";
-
-		std::string solStatus = NLPSolver->osresult->getSolutionStatusType(0);
+		try
+		{
+			NLPSolver->solve();
+			std::cout << "\e[A"; // Fix for removing unwanted output
+			std::cout << "\e[A";
+			solStatus = NLPSolver->osresult->getSolutionStatusType(0);
+		}
+		catch (ErrorClass e)
+		{
+			processInfo->outputError("     Error when solving NLP problem with Ipopt", e.errormsg);
+			solStatus == "other";
+		}
 
 		if (solStatus == "globallyOptimal")
 		{
@@ -270,10 +278,10 @@ void NLPSolverIPOptBase::setInitialSettings()
 			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
 			break;
 		case ENUM_OUTPUT_LEVEL_summary:
-			osOption->setAnotherSolverOption("print_level", "1", "ipopt", "", "integer", "");
+			osOption->setAnotherSolverOption("print_level", "2", "ipopt", "", "integer", "");
 			break;
 		case ENUM_OUTPUT_LEVEL_warning:
-			osOption->setAnotherSolverOption("print_level", "1", "ipopt", "", "integer", "");
+			osOption->setAnotherSolverOption("print_level", "2", "ipopt", "", "integer", "");
 			break;
 		case ENUM_OUTPUT_LEVEL_info:
 			osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");

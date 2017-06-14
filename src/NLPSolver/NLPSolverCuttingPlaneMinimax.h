@@ -22,7 +22,7 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 		NLPSolverCuttingPlaneMinimax();
 		virtual ~NLPSolverCuttingPlaneMinimax();
 
-		virtual void saveProblemModelToFile(std::string fileName);
+		//virtual void saveProblemModelToFile(std::string fileName);
 
 		virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
 		virtual void clearStartingPoint();
@@ -60,7 +60,7 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 		//virtual E_NLPSolutionStatus fixVariablesAndSolve(std::vector<int> variableIndexes,
 		//std::vector<double> variableValues);
 
-		virtual void saveProblemToFile(std::string fileName);
+		//virtual void saveProblemToFile(std::string fileName);
 		virtual void saveOptionsToFile(std::string fileName);
 
 		bool isProblemCreated;

@@ -9,7 +9,6 @@ class MILPSolverBase
 {
 	private:
 		std::vector<GeneratedHyperplane> generatedHyperplanes;
-		int addedHyperplanes;
 
 		std::vector<int> fixedVariableIndexes;
 		vector<pair<double, double> > fixedVariableOriginalBounds;
@@ -32,6 +31,7 @@ class MILPSolverBase
 		virtual void stopTimer();
 
 		OptProblem *originalProblem;
+		int addedHyperplanes;
 
 	public:
 		MILPSolverBase();

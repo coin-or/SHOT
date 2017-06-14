@@ -151,7 +151,7 @@ void TaskSolveFixedLinearProblem::run()
 			{
 
 				processInfo->outputWarning(
-						"Cannot find solution with linesearch for fixed LP, using solution point instead:");
+						"     Cannot find solution with linesearch for fixed LP, using solution point instead:");
 				processInfo->outputWarning(e.what());
 			}
 

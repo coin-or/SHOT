@@ -48,10 +48,10 @@ NLPSolverCuttingPlaneRelaxed::~NLPSolverCuttingPlaneRelaxed()
 	delete NLPProblem, LPSolver;
 }
 
-void NLPSolverCuttingPlaneRelaxed::saveProblemModelToFile(std::string fileName)
-{
-	NLPProblem->saveProblemModelToFile(fileName);
-}
+/*void NLPSolverCuttingPlaneRelaxed::saveProblemModelToFile(std::string fileName)
+ {
+ NLPProblem->saveProblemModelToFile(fileName);
+ }*/
 
 E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 {
@@ -65,7 +65,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 	int bitPrecision = settings->getIntSetting("BitPrecision", "InteriorPointCuttingPlane");
 
 	// currSol is the current LP solution, and prevSol the previous one
-	vector<double> currSol, prevSol;
+	vector<double> currSol, prevSol, LPVarSol;
 
 	double LPObjVar;
 
@@ -80,6 +80,15 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 		if (processInfo->addedHyperplanes.at(i).source == E_HyperplaneSource::LPFixedIntegers) continue;
 
 		LPSolver->createHyperplane(processInfo->addedHyperplanes.at(i));
+	}
+
+	for (int i = 0; i < numVar; i++)
+	{
+		if (NLPProblem->hasVariableBoundsBeenTightened(i))
+		{
+			LPSolver->updateVariableBound(i, NLPProblem->getVariableLowerBound(i),
+					NLPProblem->getVariableUpperBound(i));
+		}
 	}
 
 	lastHyperplaneAdded = processInfo->addedHyperplanes.size();
@@ -127,7 +136,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 			break;
 		}
 
-		auto LPVarSol = LPSolver->getVariableSolution(0);
+		LPVarSol = LPSolver->getVariableSolution(0);
 		LPObjVar = LPSolver->getObjectiveValue();
 
 		if (true)
@@ -146,7 +155,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 				internalPoint = xNewc.first;
 				externalPoint = xNewc.second;
 
-				processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::LPFixedIntegers,
+				processInfo->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::NLPRelaxed,
 						processInfo->getCurrentIteration()->iterationNumber);
 
 				auto errorExternal = processInfo->originalProblem->getMostDeviatingConstraints(externalPoint,
@@ -186,6 +195,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 
 				currSol = externalPoint;
 				prevSol = currSol;
+
 				if (errorExternal.at(0).value <= termTol)
 				{
 					statusCode = E_NLPSolutionStatus::Optimal;
@@ -202,7 +212,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 			{
 
 				processInfo->outputWarning(
-						"Cannot find solution with linesearch for fixed LP, using solution point instead:");
+						"     Cannot find solution with linesearch for fixed LP, using solution point instead:");
 				processInfo->outputWarning(e.what());
 			}
 
@@ -272,9 +282,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
 	}
 
-	if (isObjectiveFunctionNonlinear()) currSol.pop_back();
-
-	solution = currSol;
+	solution = LPVarSol;
 	objectiveValue = LPObjVar;
 
 	return (statusCode);
@@ -288,6 +296,13 @@ double NLPSolverCuttingPlaneRelaxed::getSolution(int i)
 std::vector<double> NLPSolverCuttingPlaneRelaxed::getSolution()
 {
 	auto tmpSol = solution;
+
+	if (tmpSol.size() > 0
+			&& (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::GeneralNonlinear
+					|| NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic))
+	{
+		tmpSol.pop_back();
+	}
 
 	return (tmpSol);
 }

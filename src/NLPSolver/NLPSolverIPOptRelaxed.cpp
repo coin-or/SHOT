@@ -59,10 +59,5 @@ std::vector<double> NLPSolverIPOptRelaxed::getSolution()
 		tmpPoint.at(i) = NLPSolverIPOptBase::getSolution(i);
 	}
 
-	/*if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
-	 {
-	 tmpPoint.pop_back();
-	 }*/
-
 	return (tmpPoint);
 }

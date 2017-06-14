@@ -11,6 +11,10 @@ TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport()
 {
 	processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
+
+	itersSinceLastPrintout = 0;
+	timeLastPrintout = 0;
+
 }
 
 TaskPrintSolutionBoundReport::~TaskPrintSolutionBoundReport()
@@ -33,15 +37,13 @@ void TaskPrintSolutionBoundReport::run()
 		processInfo->outputSummary(
 				"                                                                                     ");
 
-		#ifdef _WIN32
-			processInfo->outputSummary(
+#ifdef _WIN32
+		processInfo->outputSummary(
 				"ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-		#endif
-
-		#ifdef linux
-			processInfo->outputSummary(
+#else
+		processInfo->outputSummary(
 				"─────────────────────────────────────────────────────────────────────────────────────");
-		#endif
+#endif
 
 		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
 				% processInfo->getElapsedTime("Total") % objLB % objUB % absGap % relGap;
@@ -64,13 +66,12 @@ void TaskPrintSolutionBoundReport::run()
 			processInfo->outputSummary(" Number of integer cuts added: " + to_string(processInfo->numIntegerCutsAdded));
 		}
 
-		#ifdef _WIN32
+#ifdef _WIN32
 		processInfo->outputSummary("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-		#endif
-
-		#ifdef linux
-			processInfo->outputSummary("─────────────────────────────────────────────────────────────────────────────────────");
-		#endif
+#else
+		processInfo->outputSummary(
+				"─────────────────────────────────────────────────────────────────────────────────────");
+#endif
 
 		processInfo->outputSummary("");
 

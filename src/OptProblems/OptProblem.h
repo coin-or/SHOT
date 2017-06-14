@@ -75,6 +75,9 @@ class OptProblem
 		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
 		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
+		virtual bool isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps);
+		virtual bool isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps);
+
 		virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point);
 		virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 

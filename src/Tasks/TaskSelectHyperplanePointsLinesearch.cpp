@@ -65,7 +65,8 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 					processInfo->stopTimer("HyperplaneLinesearch");
 					externalPoint = solPoints.at(i).point;
 
-					processInfo->outputWarning("Cannot find solution with linesearch, using solution point instead.");
+					processInfo->outputWarning(
+							"     Cannot find solution with linesearch, using solution point instead.");
 				}
 
 				auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(externalPoint);

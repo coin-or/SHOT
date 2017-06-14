@@ -191,13 +191,13 @@ void OptProblem::printProblemStatistics()
 
 	processInfo->outputSummary(
 			"│ Number of constraints (total/linear/nonlinear):   "
-					+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
-					+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
+			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
+			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
 	processInfo->outputSummary(
 			"│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
-					+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
-					+ to_string(getNumberOfIntegerVariables()) + "/");
+			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
+			+ to_string(getNumberOfIntegerVariables()) + "/");
 
 	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
@@ -275,15 +275,18 @@ std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstrai
 		std::vector<double> constrDevs(constrIdxs.size());
 
 		for (int i = 0; i < constrIdxs.size(); i++)
+
 		{
 			constrDevs.at(i) = calculateConstraintFunctionValue(constrIdxs.at(i), point);
 
 			if (constrDevs.at(i) >= 0) activeConstraints.push_back(constrIdxs.at(i));
+
 		}
 
 		auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
 		valpair.idx = constrIdxs.at(std::distance(std::begin(constrDevs), biggest));
 		valpair.value = *biggest;
+
 	}
 
 	return (std::make_pair(valpair, activeConstraints));
@@ -300,10 +303,15 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
 
 	for (int i = 0; i < numConstr; i++)
 	{
-		constrDevs.at(i) = calculateConstraintFunctionValue(i, point);
+		if (getProblemInstance()->getConstraintTypes()[i] == 'E')
+		{
+			constrDevs.at(i) = abs(calculateConstraintFunctionValue(i, point));
+		}
+		else
+		{
+			constrDevs.at(i) = calculateConstraintFunctionValue(i, point);
+		}
 	}
-
-//UtilityFunctions::displayVector(constrDevs);
 
 	auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
 	valpair.idx = std::distance(std::begin(constrDevs), biggest);
@@ -396,16 +404,39 @@ bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point)
 	return isConstraintsFulfilledInPoint(point, 0);
 }
 
+bool OptProblem::isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps)
+{
+	std::vector<int> idxDiscrete = this->getDiscreteVariableIndices();
+
+	for (int i = 0; i < idxDiscrete.size(); i++)
+	{
+		if (abs(point.at(i) - round(point.at(i))) > eps) return (false);
+	}
+
+	return (true);
+}
+
+bool OptProblem::isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps)
+{
+	int numVars = this->getNumberOfVariables();
+
+	for (int i = 0; i < numVars; i++)
+	{
+		if (point.at(i) - eps > this->getVariableUpperBound(i))
+		{
+			return (false);
+		}
+		if (point.at(i) + eps < this->getVariableLowerBound(i))
+		{
+			return (false);
+		}
+	}
+}
+
 bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps)
 {
+
 	std::vector<int> idxLCs = this->getLinearConstraintIndexes();
-
-	/*
-
-	 for (int i = 0; i < idxLCs.size(); i++)
-	 {
-	 std::cout << "Linear constraint index: " << idxLCs.at(i) << std::endl;
-	 }*/
 
 	int numLC = idxLCs.size();
 
@@ -413,7 +444,7 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point, 
 	{
 		double tmpVal = calculateConstraintFunctionValue(idxLCs.at(i), point);
 		//std::cout << "Lin :" << tmpVal << std::endl;
-		if (tmpVal > eps) return false;
+		if (abs(tmpVal) > eps) return false;
 	}
 
 	return true;
@@ -667,15 +698,11 @@ void OptProblem::copyQuadraticTerms(OSInstance *source, OSInstance *destination)
 	{
 		int nquad = source->getNumberOfQuadraticTerms();
 		QuadraticTerms* qcoef = source->getQuadraticTerms();
-#ifdef linux
+#ifdef _WIN32
 		if (!destination->setQuadraticCoefficients(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
 						qcoef->coefficients, 0, nquad - 1)) throw ErrorClass("Error duplicating quadratic coefficients");
-
-#elif _WIN32
-		if (!destination->setQuadraticTerms(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
-						qcoef->coefficients, 0, nquad - 1)) throw ErrorClass("Error duplicating quadratic coefficients");
-
 #else
+
 		if (!destination->setQuadraticCoefficients(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
 				qcoef->coefficients, 0, nquad - 1)) throw ErrorClass("Error duplicating quadratic coefficients");
 #endif
@@ -701,14 +728,9 @@ void OptProblem::copyNonlinearExpressions(OSInstance *source, OSInstance *destin
 
 			destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
 
-#ifdef linux
-			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
-					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
-
-#elif _WIN32
+#ifdef _WIN32
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
 					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
-
 #else
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
 					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
@@ -880,6 +902,9 @@ bool OptProblem::hasVariableBoundsBeenTightened(int varIndex)
 
 void OptProblem::setVariableBoundsAsTightened(int varIndex)
 {
+	if (m_variableBoundTightened.size() == 0) m_variableBoundTightened = std::vector<bool>(this->getNumberOfVariables(),
+			false);
+
 	m_variableBoundTightened.at(varIndex) = true;
 }
 

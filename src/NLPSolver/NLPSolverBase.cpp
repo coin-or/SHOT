@@ -29,7 +29,7 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
 	if (!isProblemInitialized) initializeProblem();
 
-	if (settings->getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve"))
+	if (settings->getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")) // Does not seem to work with Ipopt...
 	{
 		auto numVar = processInfo->originalProblem->getNumberOfVariables();
 
@@ -41,6 +41,7 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 			{
 				NLPProblem->setVariableLowerBound(i, processInfo->originalProblem->getVariableLowerBound(i));
 				NLPProblem->setVariableUpperBound(i, processInfo->originalProblem->getVariableUpperBound(i));
+				NLPProblem->setVariableBoundsAsTightened(i);
 			}
 		}
 	}

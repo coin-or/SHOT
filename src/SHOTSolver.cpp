@@ -137,7 +137,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 	else
 	{
 		//getOSol();
-		initializeDebugMode(); // Does not work without this...
+		//initializeDebugMode(); // Does not work without this...
 		//std::cout << getOSol(); // Needed due to unknown reason
 
 		//FileUtil* fileUtil = new FileUtil();
@@ -300,7 +300,7 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("MaxHyperplanesPerIteration", "Algorithm", 200,
 			"Maximal extra number of hyperplanes to add per iteration", 0, OSINT_MAX);
 
-	// NLP solver
+	// Interiorpoint solver
 	std::vector < std::string > enumNLPSolver;
 	enumNLPSolver.push_back("CuttingPlaneMinimax");
 	enumNLPSolver.push_back("IpoptMinimax");
@@ -389,8 +389,8 @@ void SHOTSolver::initializeSettings()
 			"What presolve strategy to use", enumPresolve);
 	enumPresolve.clear();
 
-	settings->createSetting("UsePresolveBoundsForPrimalNLP", "Presolve", true,
-			"Use updated bounds from the MIP solver when solving primal NLP problems");
+	settings->createSetting("UsePresolveBoundsForPrimalNLP", "Presolve", false,
+			"Warning! Does not seem to work. Use updated bounds from the MIP solver when solving primal NLP problems");
 	settings->createSetting("UsePresolveBoundsForMIP", "Presolve", true,
 			"Use updated bounds from the MIP solver in new MIP iterations");
 	settings->createSetting("RemoveRedundantConstraintsFromMIP", "Presolve", false,
@@ -480,6 +480,14 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("Debug", "SHOTSolver", false, "Use debug functionality");
 
 	// Primal bound
+	std::vector < std::string > enumPrimalNLPSolver;
+	enumPrimalNLPSolver.push_back("CuttingPlane");
+	enumPrimalNLPSolver.push_back("Ipopt");
+
+	settings->createSetting("PrimalNLPSolver", "PrimalBound", static_cast<int>(ES_PrimalNLPSolver::IPOpt),
+			"NLP solver from fixed NLP primal bound strategy.", enumPrimalNLPSolver);
+	enumPrimalNLPSolver.clear();
+
 	std::vector < std::string > enumPrimalNLPStrategy;
 	enumPrimalNLPStrategy.push_back("Use each iteration");
 	enumPrimalNLPStrategy.push_back("Don't use");
@@ -523,11 +531,14 @@ void SHOTSolver::initializeSettings()
 			enumPrimalBoundNLPStartingPoint);
 	enumPrimalBoundNLPStartingPoint.clear();
 
-	settings->createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-8,
+	settings->createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-7,
 			"The nonlinear constraint tolerance for accepting primal bounds ");
 
-	settings->createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-9,
+	settings->createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-6,
 			"The linear constraint tolerance for accepting primal bounds ");
+
+	settings->createSetting("PrimalBoundIntegerTolerance", "PrimalBound", 1e-6,
+			"The tolerance for accepting primal bounds ");
 
 	processInfo->outputInfo("Initialization of settings complete.");
 
