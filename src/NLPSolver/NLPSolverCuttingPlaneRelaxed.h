@@ -21,7 +21,7 @@ class NLPSolverCuttingPlaneRelaxed: virtual public NLPSolverBase
 		NLPSolverCuttingPlaneRelaxed();
 		virtual ~NLPSolverCuttingPlaneRelaxed();
 
-		virtual void saveProblemModelToFile(std::string fileName);
+		//virtual void saveProblemModelToFile(std::string fileName);
 
 		virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
 		virtual void clearStartingPoint();

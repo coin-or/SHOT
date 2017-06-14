@@ -23,6 +23,9 @@ MILPSolverCplex::MILPSolverCplex()
 	isVariablesFixed = false;
 
 	checkParameters();
+	addedHyperplanes = 0;
+	modelUpdated = false;
+
 }
 
 MILPSolverCplex::~MILPSolverCplex()

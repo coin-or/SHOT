@@ -24,37 +24,37 @@ void TaskPrintSolution::run()
 	if (processInfo->terminationReason == E_TerminationReason::ConstraintTolerance)
 	{
 		processInfo->outputSummary(
-			"³ Optimal solution found to constraint tolerance "
-			+ to_string(processInfo->getCurrentIteration()->maxDeviation) + " <= "
-			+ to_string(settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")));
+				"³ Optimal solution found to constraint tolerance "
+				+ to_string(processInfo->getCurrentIteration()->maxDeviation) + " <= "
+				+ to_string(settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::AbsoluteGap)
 	{
 		processInfo->outputSummary(
-			"³ Optimal solution found to absolute gap tolerance "
-			+ to_string(processInfo->getAbsoluteObjectiveGap()) + " <= "
-			+ to_string(settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
+				"³ Optimal solution found to absolute gap tolerance "
+				+ to_string(processInfo->getAbsoluteObjectiveGap()) + " <= "
+				+ to_string(settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::RelativeGap)
 	{
 		processInfo->outputSummary(
-			"³ Optimal solution found to relative gap tolerance "
-			+ to_string(processInfo->getRelativeObjectiveGap()) + " <= "
-			+ to_string(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
-}
+				"³ Optimal solution found to relative gap tolerance "
+				+ to_string(processInfo->getRelativeObjectiveGap()) + " <= "
+				+ to_string(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
+	}
 	else if (processInfo->terminationReason == E_TerminationReason::TimeLimit)
 	{
 		processInfo->outputSummary(
-			"³ Nonoptimal solution found due to time limit " + to_string(processInfo->getElapsedTime("Total"))
-			+ " > " + to_string(settings->getDoubleSetting("TimeLimit", "Algorithm")));
+				"³ Nonoptimal solution found due to time limit " + to_string(processInfo->getElapsedTime("Total"))
+				+ " > " + to_string(settings->getDoubleSetting("TimeLimit", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::IterationLimit)
 	{
 		processInfo->outputSummary(
-			"³ Nonoptimal solution found due to iteration limit "
-			+ to_string(
-				settings->getIntSetting("IterLimitLP", "Algorithm")
-				+ settings->getIntSetting("IterLimitMILP", "Algorithm")));
+				"³ Nonoptimal solution found due to iteration limit "
+				+ to_string(
+						settings->getIntSetting("IterLimitLP", "Algorithm")
+						+ settings->getIntSetting("IterLimitMILP", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::ObjectiveStagnation)
 	{
@@ -81,19 +81,19 @@ void TaskPrintSolution::run()
 	{
 
 		processInfo->outputSummary(
-			"³ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
-			+ " (minimization)");
+				"³ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
+				+ " (minimization)");
 	}
 	else
 	{
 		processInfo->outputSummary(
-			"³ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
-			+ " (maximization)");
+				"³ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
+				+ " (maximization)");
 	}
 
 	processInfo->outputSummary(
-		"³ Relative duality gap: " + to_string(processInfo->getRelativeObjectiveGap()) + " Absolute duality gap: "
-		+ to_string(processInfo->getAbsoluteObjectiveGap()));
+			"³ Relative duality gap: " + to_string(processInfo->getRelativeObjectiveGap()) + " Absolute duality gap: "
+			+ to_string(processInfo->getAbsoluteObjectiveGap()));
 
 	processInfo->outputSummary("ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´");
 	processInfo->outputSummary("³ Optimal MIP problems solved:      " + to_string(processInfo->iterOptMILP));
@@ -103,59 +103,57 @@ void TaskPrintSolution::run()
 	processInfo->outputSummary("³ Relaxed problems solved:          " + to_string(processInfo->iterLP));
 
 	processInfo->outputSummary(
-		"³ Total problems solved:            "
-		+ to_string(processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP));
+			"³ Total problems solved:            "
+			+ to_string(processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP));
 
 	processInfo->outputSummary(
-		"³ Fixed primal NLP problems solved: " + to_string(processInfo->numPrimalFixedNLPProbsSolved));
+			"³ Fixed primal NLP problems solved: " + to_string(processInfo->numPrimalFixedNLPProbsSolved));
 
 	processInfo->outputSummary("³ Total NLP problems solved:        " + to_string(processInfo->numNLPProbsSolved));
 
 	processInfo->outputSummary("³ Function evaluations (in SHOT):   " + to_string(processInfo->numFunctionEvals));
 
 	processInfo->outputSummary("³ Gradient evaluations (in SHOT):   " + to_string(processInfo->numGradientEvals));
-	
+
 	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 
-#endif
-
-#ifdef linux
+#else
 	processInfo->outputSummary("┌─── Solution report ────────────────────────────────────────────────────────────┐");
 
 	if (processInfo->terminationReason == E_TerminationReason::ConstraintTolerance)
 	{
 		processInfo->outputSummary(
-			"│ Optimal solution found to constraint tolerance "
-			+ to_string(processInfo->getCurrentIteration()->maxDeviation) + " <= "
-			+ to_string(settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")));
+				"│ Optimal solution found to constraint tolerance "
+						+ to_string(processInfo->getCurrentIteration()->maxDeviation) + " <= "
+						+ to_string(settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::AbsoluteGap)
 	{
 		processInfo->outputSummary(
-			"│ Optimal solution found to absolute gap tolerance "
-			+ to_string(processInfo->getAbsoluteObjectiveGap()) + " <= "
-			+ to_string(settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
+				"│ Optimal solution found to absolute gap tolerance "
+						+ to_string(processInfo->getAbsoluteObjectiveGap()) + " <= "
+						+ to_string(settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::RelativeGap)
 	{
 		processInfo->outputSummary(
-			"│ Optimal solution found to relative gap tolerance "
-			+ to_string(processInfo->getRelativeObjectiveGap()) + " <= "
-			+ to_string(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
+				"│ Optimal solution found to relative gap tolerance "
+						+ to_string(processInfo->getRelativeObjectiveGap()) + " <= "
+						+ to_string(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::TimeLimit)
 	{
 		processInfo->outputSummary(
-			"│ Nonoptimal solution found due to time limit " + to_string(processInfo->getElapsedTime("Total"))
-			+ " > " + to_string(settings->getDoubleSetting("TimeLimit", "Algorithm")));
+				"│ Nonoptimal solution found due to time limit " + to_string(processInfo->getElapsedTime("Total"))
+						+ " > " + to_string(settings->getDoubleSetting("TimeLimit", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::IterationLimit)
 	{
 		processInfo->outputSummary(
-			"│ Nonoptimal solution found due to iteration limit "
-			+ to_string(
-				settings->getIntSetting("IterLimitLP", "Algorithm")
-				+ settings->getIntSetting("IterLimitMILP", "Algorithm")));
+				"│ Nonoptimal solution found due to iteration limit "
+						+ to_string(
+								settings->getIntSetting("IterLimitLP", "Algorithm")
+										+ settings->getIntSetting("IterLimitMILP", "Algorithm")));
 	}
 	else if (processInfo->terminationReason == E_TerminationReason::ObjectiveStagnation)
 	{
@@ -182,19 +180,19 @@ void TaskPrintSolution::run()
 	{
 
 		processInfo->outputSummary(
-			"│ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
-			+ " (minimization)");
+				"│ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
+						+ " (minimization)");
 	}
 	else
 	{
 		processInfo->outputSummary(
-			"│ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
-			+ " (maximization)");
+				"│ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
+						+ " (maximization)");
 	}
 
 	processInfo->outputSummary(
-		"│ Relative duality gap: " + to_string(processInfo->getRelativeObjectiveGap()) + " Absolute duality gap: "
-		+ to_string(processInfo->getAbsoluteObjectiveGap()));
+			"│ Relative duality gap: " + to_string(processInfo->getRelativeObjectiveGap()) + " Absolute duality gap: "
+					+ to_string(processInfo->getAbsoluteObjectiveGap()));
 
 	processInfo->outputSummary("├────────────────────────────────────────────────────────────────────────────────┤");
 
@@ -205,11 +203,11 @@ void TaskPrintSolution::run()
 	processInfo->outputSummary("│ Relaxed problems solved:          " + to_string(processInfo->iterLP));
 
 	processInfo->outputSummary(
-		"│ Total problems solved:            "
-		+ to_string(processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP));
+			"│ Total problems solved:            "
+					+ to_string(processInfo->iterOptMILP + processInfo->iterFeasMILP + processInfo->iterLP));
 
 	processInfo->outputSummary(
-		"│ Fixed primal NLP problems solved: " + to_string(processInfo->numPrimalFixedNLPProbsSolved));
+			"│ Fixed primal NLP problems solved: " + to_string(processInfo->numPrimalFixedNLPProbsSolved));
 
 	processInfo->outputSummary("│ Total NLP problems solved:        " + to_string(processInfo->numNLPProbsSolved));
 
@@ -219,8 +217,6 @@ void TaskPrintSolution::run()
 
 	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
-
-	
 
 }
 

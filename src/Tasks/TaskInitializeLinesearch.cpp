@@ -10,12 +10,12 @@ TaskInitializeLinesearch::TaskInitializeLinesearch()
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Bisection))
 	{
 		processInfo->linesearchMethod = new LinesearchMethodBisection();
-		processInfo->outputSummary("Bisection linesearch implementation selected.");
+		processInfo->outputInfo("Bisection linesearch implementation selected.");
 	}
 	else
 	{
 		processInfo->linesearchMethod = new LinesearchMethodBoost();
-		processInfo->outputSummary("Boost linesearch implementation selected.");
+		processInfo->outputInfo("Boost linesearch implementation selected.");
 	}
 
 	processInfo->stopTimer("HyperplaneLinesearch");

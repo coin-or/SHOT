@@ -63,6 +63,11 @@ enum class ES_NLPSolver
 	CuttingPlaneMiniMax, IPOptMiniMax, IPOptRelaxed, IPOptMiniMaxAndRelaxed
 };
 
+enum class ES_PrimalNLPSolver
+{
+	CuttingPlane, IPOpt
+};
+
 enum class ES_IPOptSolver
 {
 	ma27, ma57, ma86, ma97, mumps

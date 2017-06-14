@@ -114,7 +114,8 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			}
 			catch (std::exception &e)
 			{
-				processInfo->outputWarning("Cannot find solution with linesearch for updating nonlinear objective.");
+				processInfo->outputWarning(
+						"     Cannot find solution with linesearch for updating nonlinear objective.");
 			}
 		}
 	}

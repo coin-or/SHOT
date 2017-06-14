@@ -38,13 +38,6 @@ void TaskSolveIteration::run()
 		MILPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
 	}
 
-	/*
-	 if (currIter->iterationNumber == 100)
-	 {
-	 MILPSolver->setCutOff(21380.0);
-	 MILPSolver->setSolutionLimit(2100000);
-	 }*/
-
 	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolutions.size() > 0)
 	{
 		//MILPSolver->deleteMIPStarts();

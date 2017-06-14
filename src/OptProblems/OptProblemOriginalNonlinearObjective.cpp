@@ -154,17 +154,22 @@ IndexValuePair OptProblemOriginalNonlinearObjective::getMostDeviatingAllConstrai
 
 	for (int i = 0; i < numConstr; i++)
 	{
-		if (i == this->getNonlinearObjectiveConstraintIdx())
+		if (i == this->getNonlinearObjectiveConstraintIdx() || i == -1)
 		{
 			constrDevs.at(i) = 0.0;
 		}
 		else
 		{
-			constrDevs.at(i) = calculateConstraintFunctionValue(i, point);
+			if (getProblemInstance()->getConstraintTypes()[i] != 'E')
+			{
+				constrDevs.at(i) = calculateConstraintFunctionValue(i, point);
+			}
+			else
+			{
+				constrDevs.at(i) = abs(calculateConstraintFunctionValue(i, point));
+			}
 		}
 	}
-
-	//UtilityFunctions::displayVector(constrDevs);
 
 	auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
 	valpair.idx = std::distance(std::begin(constrDevs), biggest);
