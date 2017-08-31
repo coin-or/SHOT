@@ -1,4 +1,5 @@
 #include "SHOTSolver.h"
+#include "GAMS2OS.h"
 
 SHOTSolver::SHOTSolver()
 {
@@ -102,6 +103,13 @@ bool SHOTSolver::setProblem(std::string fileName)
 			nl2os->readNl(tmpFilename);
 			nl2os->createOSObjects();
 			tmpInstance = nl2os->osinstance;
+		}
+		else if (file_extension == "gms")
+		{
+			GAMS2OS *gms2os = new GAMS2OS();
+			gms2os->readGms(tmpFilename);
+			gms2os->createOSObjects();
+			tmpInstance = gms2os->osinstance;
 		}
 		else
 		{
