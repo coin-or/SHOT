@@ -2,8 +2,8 @@
 
 #include "OSInstance.h"
 
-typedef void* gmoHandle_t;
-typedef void* gevHandle_t;
+#include "gmomcc.h"
+#include "gevmcc.h"
 
 class GAMS2OS
 {
@@ -15,6 +15,6 @@ class GAMS2OS
       GAMS2OS();
       void readGms(const std::string& filename);
       void createOSObjects();
-      
+
       OSInstance* osinstance;
 };

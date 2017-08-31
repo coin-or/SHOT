@@ -42,6 +42,11 @@ include_directories("/opt/gurobi600/linux64/include")
 include_directories("/opt/ibm/ILOG/CPLEX_Studio1263/cplex/include")
 include_directories("/opt/ibm/ILOG/CPLEX_Studio1263/concert/include")
 
+set(GAMS_DIR /home/stefan/work/gams/gams)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
+set(Foo_SOURCES ${Foo_SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
+set(Foo_SOURCES ${Foo_SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
+include_directories("${GAMS_DIR}/apifiles/C/api")
 
 
 include_directories ("${PROJECT_SOURCE_DIR}/SHOTSettings")
