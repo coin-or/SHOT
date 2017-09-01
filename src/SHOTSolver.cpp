@@ -491,6 +491,7 @@ void SHOTSolver::initializeSettings()
 	std::vector < std::string > enumPrimalNLPSolver;
 	enumPrimalNLPSolver.push_back("CuttingPlane");
 	enumPrimalNLPSolver.push_back("Ipopt");
+	enumPrimalNLPSolver.push_back("GAMS");
 
 	settings->createSetting("PrimalNLPSolver", "PrimalBound", static_cast<int>(ES_PrimalNLPSolver::IPOpt),
 			"NLP solver from fixed NLP primal bound strategy.", enumPrimalNLPSolver);
