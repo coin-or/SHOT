@@ -6,6 +6,18 @@
 #include "gevmcc.h"
 #include "GamsNLinstr.h"
 
+class GAMSOSInstance : public OSInstance
+{
+public:
+    gmoHandle_t gmo;
+
+    GAMSOSInstance(gmoHandle_t gmo_)
+    : gmo(gmo_),
+	  OSInstance()
+    { }
+
+};
+
 class GAMS2OS
 {
    private:

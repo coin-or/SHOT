@@ -91,7 +91,7 @@ void GAMS2OS::createOSObjects()
 
    // delete possible old instance and create a new one
    delete osinstance;
-   osinstance = new OSInstance();
+   osinstance = new GAMSOSInstance(gmo);
 
    gmoNameInput(gmo, buffer);
    osinstance->setInstanceName(buffer);
