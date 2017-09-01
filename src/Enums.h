@@ -65,7 +65,7 @@ enum class ES_NLPSolver
 
 enum class ES_PrimalNLPSolver
 {
-	CuttingPlane, IPOpt
+	CuttingPlane, IPOpt, GAMS
 };
 
 enum class ES_IPOptSolver

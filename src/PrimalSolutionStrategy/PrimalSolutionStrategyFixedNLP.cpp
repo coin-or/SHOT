@@ -15,14 +15,25 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	originalNLPTime = settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
 	originalNLPIter = settings->getIntSetting("NLPFixedMaxIters", "PrimalBound");
 
-	if (static_cast<ES_PrimalNLPSolver>(settings->getIntSetting("PrimalNLPSolver", "PrimalBound"))
-			== ES_PrimalNLPSolver::IPOpt)
+	switch (static_cast<ES_PrimalNLPSolver>(settings->getIntSetting("PrimalNLPSolver", "PrimalBound")))
 	{
-		NLPSolver = new NLPSolverIPOptRelaxed();
-	}
-	else
+	case ES_PrimalNLPSolver::CuttingPlane:
 	{
 		NLPSolver = new NLPSolverCuttingPlaneRelaxed();
+		break;
+	}
+	case ES_PrimalNLPSolver::IPOpt:
+	{
+		NLPSolver = new NLPSolverIPOptRelaxed();
+		break;
+	}
+	case ES_PrimalNLPSolver::GAMS:
+	{
+		NLPSolver = new NLPSolverGAMS();
+		break;
+	}
+	default :
+		throw std::logic_error("Unknown PrimalNLPSolver setting.");
 	}
 
 	NLPSolver->setProblem(processInfo->originalProblem->getProblemInstance());

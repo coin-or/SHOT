@@ -11,6 +11,7 @@
 #include "../NLPSolver/INLPSolver.h"
 #include "../NLPSolver/NLPSolverIPOptRelaxed.h"
 #include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
+#include "../NLPSolver/NLPSolverGAMS.h"
 
 class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 {
