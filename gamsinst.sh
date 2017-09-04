@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Installs SHOT binary as solver in GAMS.
+# Installs SHOT binary as solver in GAMS (Unix).
 # Usage: ./gamsinst.sh /path/to/gamssysdir /path/to/SHOTbinary
 
 gamspath="${1:-gams}"
