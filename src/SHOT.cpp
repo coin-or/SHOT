@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
 
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
 
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[1]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Problem file not found!" << std::endl;
+			std::cout << "Problem file " << argv[1] << " not found!" << std::endl;
 
 			delete fileUtil, solver, processInfo;
 
