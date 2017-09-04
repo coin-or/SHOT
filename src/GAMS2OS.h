@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OSInstance.h"
+#include "OSResult.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"
@@ -36,6 +37,7 @@ class GAMS2OS
       GAMS2OS();
       ~GAMS2OS();
       void readGms(const std::string& filename);
+      void writeResult(OSResult& osresult);
       void clear();
       void createOSObjects();
 

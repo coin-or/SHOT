@@ -1037,6 +1037,139 @@ OSnLNode* GAMS2OS::parseGamsInstructions(
 #undef debugout
 }
 
+void GAMS2OS::writeResult(OSResult& osresult)
+{
+	if( osresult.general == NULL )
+	{
+		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
+		gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
+		gevLogStat(gev, "Error: OS result does not have header.");
+		return;
+	}
+	else if( osresult.getGeneralStatusType() == "error" )
+	{
+		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
+		gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
+		gevLogStatPChar(gev, "Error: OS result reports error: ");
+		gevLogStatPChar(gev, osresult.getGeneralMessage().c_str());
+		gevLogStat(gev, "");
+		return;
+	}
+	else if( osresult.getGeneralStatusType() == "warning" )
+	{
+		gevLogStatPChar(gev, "Warning: OS result reports warning: ");
+		gevLogStatPChar(gev, osresult.getGeneralMessage().c_str());
+		gevLogStat(gev, "");
+	}
+
+	gmoSolveStatSet(gmo, gmoSolveStat_Normal);
+
+	if( osresult.getSolutionNumber() == 0 )
+		gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
+	else if( osresult.getSolutionStatusType(0) == "unbounded" )
+		gmoModelStatSet(gmo, gmoModelStat_Unbounded);
+	else if( osresult.getSolutionStatusType(0) == "globallyOptimal" )
+		gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+	else if( osresult.getSolutionStatusType(0) == "locallyOptimal" )
+		gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
+	else if( osresult.getSolutionStatusType(0) == "optimal" )
+		gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+	else if( osresult.getSolutionStatusType(0) == "bestSoFar" )
+		gmoModelStatSet(gmo, gmoModelStat_Feasible); // TODO report integer solution if integer var.?
+	else if( osresult.getSolutionStatusType(0) == "feasible" )
+		gmoModelStatSet(gmo, gmoModelStat_Feasible); // TODO report integer solution if integer var.?
+	else if( osresult.getSolutionStatusType(0) == "infeasible" )
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleGlobal);
+	else if( osresult.getSolutionStatusType(0) == "stoppedByLimit" )
+	{
+		gmoSolveStatSet(gmo, gmoSolveStat_Resource); // just a guess
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
+	}
+	else if (osresult.getSolutionStatusType(0) == "unsure" )
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
+	else if (osresult.getSolutionStatusType(0) == "error" )
+		gmoModelStatSet(gmo, gmoModelStat_ErrorUnknown);
+	else if (osresult.getSolutionStatusType(0) == "other" )
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
+	else
+		gmoModelStatSet(gmo, gmoModelStat_ErrorUnknown);
+
+	if( osresult.getVariableNumber() != gmoN(gmo) )
+	{
+		gevLogStat(gev, "Error: Number of variables in OS result does not match with gams model.");
+		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
+		gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
+		return;
+	}
+	if( osresult.getConstraintNumber() != gmoM(gmo) )
+	{
+		gevLogStat(gev, "Error: Number of constraints in OS result does not match with gams model.");
+		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
+		gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
+		return;
+	}
+
+	// TODO some more statistics we can get from OSrL?
+	gmoSetHeadnTail(gmo, gmoHresused, osresult.getTimeValue());
+
+	if( osresult.getSolutionNumber() == 0 )
+		return;
+
+	OptimizationSolution* sol = osresult.optimization->solution[0];
+	assert(sol != NULL);
+
+	double* colMarg = CoinCopyOfArray((double*)NULL, gmoN(gmo), gmoValNA(gmo));
+	double* colLev  = CoinCopyOfArray((double*)NULL, gmoN(gmo), gmoValNA(gmo));
+	double* rowLev  = CoinCopyOfArray((double*)NULL, gmoM(gmo), gmoValNA(gmo));
+	double* rowMarg = CoinCopyOfArray((double*)NULL, gmoM(gmo), gmoValNA(gmo));
+
+	// TODO use get-functions
+
+	// TODO constraint values
+//	if (sol->constraints && sol->constraints->values) // set row levels, if available
+//		for (std::vector<ConValue*>::iterator it(sol->constraints->values->con.begin());
+//				it!=sol->constraints->values->con.end(); ++it)
+//			rowLev[(*it)->idx]=(*it)->value;
+
+	// set row dual values, if available
+	if( sol->constraints != NULL && sol->constraints->dualValues != NULL )
+		for( int i = 0; i < sol->constraints->dualValues->numberOfCon; ++i )
+			rowMarg[sol->constraints->dualValues->con[i]->idx] = sol->constraints->dualValues->con[i]->value;
+
+	// set var values, if available
+	if( sol->variables != NULL && sol->variables->values != NULL )
+		for( int i = 0; i < sol->variables->values->numberOfVar; ++i )
+			colLev[sol->variables->values->var[i]->idx] = sol->variables->values->var[i]->value;
+
+	if( sol->variables != NULL )
+		for( int i = 0; i < sol->variables->numberOfOtherVariableResults; ++i )
+			if( sol->variables->other[i]->name == "reduced costs" )
+			{
+				for( int j = 0; j < sol->variables->other[i]->numberOfVar; ++j )
+					colMarg[sol->variables->other[i]->var[j]->idx] = atof(sol->variables->other[i]->var[j]->value.c_str());
+				break;
+			}
+
+	gmoSetSolution(gmo, colLev, colMarg, rowMarg, rowLev);
+
+	if( gmoModelType(gmo) == gmoProc_cns )
+		switch( gmoModelStat(gmo) )
+		{
+		case gmoModelStat_OptimalGlobal:
+		case gmoModelStat_OptimalLocal:
+		case gmoModelStat_Feasible:
+		case gmoModelStat_Integer:
+			gmoModelStatSet(gmo, gmoModelStat_Solved);
+		}
+
+	gmoUnloadSolutionLegacy(gmo);
+
+	delete[] rowLev;
+	delete[] rowMarg;
+	delete[] colLev;
+	delete[] colMarg;
+}
+
 void GAMS2OS::clear()
 {
 	if( gmo == NULL )
