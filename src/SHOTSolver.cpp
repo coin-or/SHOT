@@ -1,7 +1,7 @@
 #include "SHOTSolver.h"
-#include "GAMS2OS.h"
 
 SHOTSolver::SHOTSolver()
+: gms2os(NULL)
 {
 	settings = SHOTSettings::Settings::getInstance();
 	processInfo = ProcessInfo::getInstance();
@@ -14,6 +14,7 @@ SHOTSolver::~SHOTSolver()
 	delete settings;
 	delete processInfo;
 	delete solutionStrategy;
+	delete gms2os;
 }
 
 bool SHOTSolver::setOptions(std::string fileName)
@@ -106,7 +107,8 @@ bool SHOTSolver::setProblem(std::string fileName)
 		}
 		else if (file_extension == "gms")
 		{
-			GAMS2OS *gms2os = new GAMS2OS();
+			assert(gms2os == NULL);
+			gms2os = new GAMS2OS();
 			gms2os->readGms(tmpFilename);
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;

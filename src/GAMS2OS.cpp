@@ -10,8 +10,14 @@
 
 GAMS2OS::GAMS2OS()
 : gmo(NULL), gev(NULL), osinstance(NULL)
-{
+{ }
 
+GAMS2OS::~GAMS2OS()
+{
+	clear();
+
+	gmoLibraryUnload();
+	gevLibraryUnload();
 }
 
 void GAMS2OS::readGms(const std::string& filename)
@@ -1029,4 +1035,20 @@ OSnLNode* GAMS2OS::parseGamsInstructions(
 
    return stack[0];
 #undef debugout
+}
+
+void GAMS2OS::clear()
+{
+	if( gmo == NULL )
+		return;
+
+	gmoFree(&gmo);
+	gmo = NULL;
+
+	assert(gev != NULL);
+	gevFree(&gev);
+	gev = NULL;
+
+	/* remove temporary directory content (should have only files) and directory itself) */
+	system("rm loadgms.tmp/* && rmdir loadgms.tmp");
 }

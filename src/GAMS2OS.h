@@ -34,7 +34,9 @@ class GAMS2OS
 
    public:
       GAMS2OS();
+      ~GAMS2OS();
       void readGms(const std::string& filename);
+      void clear();
       void createOSObjects();
 
       OSInstance* osinstance;

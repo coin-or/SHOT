@@ -8,6 +8,7 @@
 #include "OSnl2OS.h"
 #include "boost/filesystem.hpp"
 #include "TaskHandler.h"
+#include "GAMS2OS.h"
 
 class SHOTSolver
 {
@@ -15,6 +16,7 @@ class SHOTSolver
 		ISolutionStrategy *solutionStrategy;
 		SHOTSettings::Settings *settings;
 		ProcessInfo *processInfo;
+		GAMS2OS* gms2os;
 
 		void initializeSettings();
 		void initializeDebugMode();
