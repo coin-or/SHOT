@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <sys/stat.h>   // for mkdir
 #include "CoinHelperFunctions.hpp" // for CoinCopyOfArrayOrZero, maybe should eliminate this
+#include "ProcessInfo.h"
 
 // set to 3 to see gams log
 #define GAMSLOGOPTION 0
@@ -1173,6 +1174,81 @@ void GAMS2OS::writeResult(OSResult& osresult)
 	delete[] rowMarg;
 	delete[] colLev;
 	delete[] colMarg;
+}
+
+void GAMS2OS::writeResult(ProcessInfo& info)
+{
+	int numPrimalSols = info.primalSolutions.size();
+
+	gmoSetHeadnTail(gmo, gmoTmipbest, info.getDualBound());
+	gmoSetHeadnTail(gmo, gmoHresused, info.getElapsedTime("Total"));
+
+	if( !info.primalSolutions.empty() )
+	{
+		assert(info.primalSolutions[0].point.size() == gmoN(gmo));
+		gmoSetSolutionPrimal(gmo, &info.primalSolutions[0].point[0]);
+	}
+
+	gmoSolveStatSet(gmo, gmoSolveStat_Normal);
+	gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
+
+	switch( info.getCurrentIteration()->solutionStatus )
+	{
+	case E_ProblemSolutionStatus::Optimal :
+		assert(!info.primalSolutions.empty());
+		gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+		break;
+
+	case E_ProblemSolutionStatus::Feasible :
+		assert(!info.primalSolutions.empty());
+		gmoModelStatSet(gmo, gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible);
+		break;
+
+	case E_ProblemSolutionStatus::Unbounded :
+		gmoModelStatSet(gmo, info.primalSolutions.empty() ? gmoModelStat_UnboundedNoSolution : gmoModelStat_Unbounded);
+		break;
+
+	case E_ProblemSolutionStatus::Error :
+		gmoModelStatSet(gmo, info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
+		break;
+
+	case E_ProblemSolutionStatus::Infeasible :
+		assert(info.primalSolutions.empty());
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleNoSolution);
+		break;
+
+	case E_ProblemSolutionStatus::IterationLimit :
+		gmoModelStatSet(gmo, info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
+		break;
+
+	case E_ProblemSolutionStatus::SolutionLimit :
+		gmoModelStatSet(gmo, info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_Solver);
+		break;
+
+	case E_ProblemSolutionStatus::TimeLimit :
+		gmoModelStatSet(gmo, info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_Resource);
+		break;
+
+	default :
+		gmoModelStatSet(gmo, info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
+		gevLogStat(gev, "Unknown solution status returned from SHOT.");
+		break;
+	}
+
+	if( gmoModelType(gmo) == gmoProc_cns )
+		switch( gmoModelStat(gmo) )
+		{
+		case gmoModelStat_OptimalGlobal:
+		case gmoModelStat_OptimalLocal:
+		case gmoModelStat_Feasible:
+		case gmoModelStat_Integer:
+			gmoModelStatSet(gmo, gmoModelStat_Solved);
+		}
 }
 
 void GAMS2OS::clear()

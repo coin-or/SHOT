@@ -7,6 +7,8 @@
 #include "gevmcc.h"
 #include "GamsNLinstr.h"
 
+class ProcessInfo;
+
 class GAMSOSInstance : public OSInstance
 {
 public:
@@ -40,6 +42,7 @@ class GAMS2OS
       void readGms(const std::string& filename);
       void readCntr(const std::string& filename);
       void writeResult(OSResult& osresult);
+      void writeResult(ProcessInfo& info);
       void clear();
       void createOSObjects();
 

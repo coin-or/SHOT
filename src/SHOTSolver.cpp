@@ -211,9 +211,7 @@ bool SHOTSolver::solveProblem()
 
 	if( result && gms2os != NULL )
 	{
-		if( processInfo->osResult == NULL )
-			throw std::logic_error("No osResult in processInfo after solveProblem()");
-		gms2os->writeResult(*processInfo->osResult);
+		gms2os->writeResult(*processInfo);
 	}
 
 	return result;
