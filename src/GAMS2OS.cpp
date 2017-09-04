@@ -3,14 +3,16 @@
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h>   // for mkdir
+#include "boost/filesystem.hpp"
 #include "CoinHelperFunctions.hpp" // for CoinCopyOfArrayOrZero, maybe should eliminate this
 #include "ProcessInfo.h"
+#include "OSoLReader.h"
 
 // set to 3 to see gams log
 #define GAMSLOGOPTION 0
 
 GAMS2OS::GAMS2OS()
-: gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
+: gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL), osoptions(NULL)
 { }
 
 GAMS2OS::~GAMS2OS()
@@ -92,6 +94,23 @@ void GAMS2OS::readCntr(const std::string& filename)
 void GAMS2OS::createOSObjects()
 {
    char buffer[GMS_SSSIZE];
+
+   // read options file, if specified; assuming OSoL format
+   delete osoptions;
+   osoptions = NULL;
+   if( gmoOptFile(gmo) > 0 )
+   {
+	   gmoNameOptFile(gmo, buffer);
+	   if( !boost::filesystem::exists(buffer) )
+		   throw std::logic_error("Options file not found.");
+
+	   gevLogPChar(gev, "Reading options from ");
+	   gevLog(gev, buffer);
+
+	   OSoLReader* osolreader = new OSoLReader();
+	   osoptions = osolreader->readOSoL(buffer);
+	   delete osolreader;
+   }
 
    /* reformulate objective variable out of model, if possible */
    gmoObjReformSet(gmo, 1);
@@ -1273,4 +1292,8 @@ void GAMS2OS::clear()
 	}
 
 	delete osinstance;
+	osinstance = NULL;
+
+	delete osoptions;
+	osoptions = NULL;
 }

@@ -112,6 +112,9 @@ bool SHOTSolver::setProblem(std::string fileName)
 			gms2os->readGms(tmpFilename);
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;
+
+			if( gms2os->osoptions )
+				settings->readSettings(gms2os->osoptions);
 		}
 		else if (file_extension == "dat")
 		{
