@@ -24,6 +24,7 @@ class GAMS2OS
    private:
       gmoHandle_t gmo;
       gevHandle_t gev;
+      bool createdtmpdir;
 
       OSnLNode* parseGamsInstructions(
          int                codelen,            /**< length of GAMS instructions */
@@ -37,6 +38,7 @@ class GAMS2OS
       GAMS2OS();
       ~GAMS2OS();
       void readGms(const std::string& filename);
+      void readCntr(const std::string& filename);
       void writeResult(OSResult& osresult);
       void clear();
       void createOSObjects();

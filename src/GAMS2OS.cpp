@@ -9,7 +9,7 @@
 #define GAMSLOGOPTION 0
 
 GAMS2OS::GAMS2OS()
-: gmo(NULL), gev(NULL), osinstance(NULL)
+: gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
 { }
 
 GAMS2OS::~GAMS2OS()
@@ -32,6 +32,7 @@ void GAMS2OS::readGms(const std::string& filename)
 
    /* create temporary directory */
    mkdir("loadgms.tmp", S_IRWXU);
+   createdtmpdir = true;
 
    /* create empty convertd options file */
    convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
@@ -52,12 +53,19 @@ void GAMS2OS::readGms(const std::string& filename)
       throw std::logic_error(buffer);
    }
 
+   readCntr("loadgms.tmp/gamscntr.dat");
+}
+
+void GAMS2OS::readCntr(const std::string& filename)
+{
+	char buffer[GMS_SSSIZE];
+
    /* initialize GMO and GEV libraries */
    if( !gmoCreateDD(&gmo, GAMSDIR, buffer, sizeof(buffer)) || !gevCreateDD(&gev, GAMSDIR, buffer, sizeof(buffer)) )
       throw std::logic_error(buffer);
 
    /* load control file */
-   if( gevInitEnvironmentLegacy(gev, "loadgms.tmp/gamscntr.dat") )
+   if( gevInitEnvironmentLegacy(gev, filename.c_str()) )
    {
       gmoFree(&gmo);
       gevFree(&gev);
@@ -78,9 +86,6 @@ void GAMS2OS::readGms(const std::string& filename)
       gevFree(&gev);
       throw std::logic_error("Could not load model data.");
    }
-
-
-   //std::cout << "Number of variables: " << gmoN(gmo) << std::endl;
 }
 
 void GAMS2OS::createOSObjects()
@@ -1039,6 +1044,7 @@ OSnLNode* GAMS2OS::parseGamsInstructions(
 
 void GAMS2OS::writeResult(OSResult& osresult)
 {
+#if 0
 	if( osresult.general == NULL )
 	{
 		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
@@ -1061,6 +1067,7 @@ void GAMS2OS::writeResult(OSResult& osresult)
 		gevLogStatPChar(gev, osresult.getGeneralMessage().c_str());
 		gevLogStat(gev, "");
 	}
+#endif
 
 	gmoSolveStatSet(gmo, gmoSolveStat_Normal);
 
@@ -1162,8 +1169,6 @@ void GAMS2OS::writeResult(OSResult& osresult)
 			gmoModelStatSet(gmo, gmoModelStat_Solved);
 		}
 
-	gmoUnloadSolutionLegacy(gmo);
-
 	delete[] rowLev;
 	delete[] rowMarg;
 	delete[] colLev;
@@ -1175,6 +1180,8 @@ void GAMS2OS::clear()
 	if( gmo == NULL )
 		return;
 
+	gmoUnloadSolutionLegacy(gmo);
+
 	gmoFree(&gmo);
 	gmo = NULL;
 
@@ -1183,5 +1190,11 @@ void GAMS2OS::clear()
 	gev = NULL;
 
 	/* remove temporary directory content (should have only files) and directory itself) */
-	system("rm loadgms.tmp/* && rmdir loadgms.tmp");
+	if( createdtmpdir )
+	{
+		system("rm loadgms.tmp/* && rmdir loadgms.tmp");
+		createdtmpdir = false;
+	}
+
+	delete osinstance;
 }

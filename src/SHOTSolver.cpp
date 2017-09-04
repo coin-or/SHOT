@@ -113,6 +113,14 @@ bool SHOTSolver::setProblem(std::string fileName)
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;
 		}
+		else if (file_extension == "dat")
+		{
+			assert(gms2os == NULL);
+			gms2os = new GAMS2OS();
+			gms2os->readCntr(tmpFilename);
+			gms2os->createOSObjects();
+			tmpInstance = gms2os->osinstance;
+		}
 		else
 		{
 			processInfo->outputError("Wrong filetype specified.");
