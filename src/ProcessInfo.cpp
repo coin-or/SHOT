@@ -1,8 +1,6 @@
 #include "ProcessInfo.h"
 #include "OptProblems/OptProblemOriginal.h"
 
-bool ProcessInfo::instanceFlag = false;
-ProcessInfo* ProcessInfo::single = NULL;
 OSResult *osResult = NULL;
 
 extern const OSSmartPtr<OSOutput> osoutput;
@@ -795,18 +793,9 @@ ProcessInfo::ProcessInfo()
 	objectiveUpdatedByLinesearch = false;
 }
 
-ProcessInfo * ProcessInfo::getInstance()
+ProcessInfo::~ProcessInfo()
 {
-	if (!instanceFlag)
-	{
-		single = new ProcessInfo();
-		instanceFlag = true;
-		return (single);
-	}
-	else
-	{
-		return (single);
-	}
+
 }
 
 void ProcessInfo::setOriginalProblem(OptProblemOriginal *problem)

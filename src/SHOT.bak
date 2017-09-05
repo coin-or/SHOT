@@ -7,9 +7,9 @@ std::string startmessage;
 
 int main(int argc, char *argv[])
 {
-	ProcessInfo *processInfo;
-	processInfo = ProcessInfo::getInstance();
-	processInfo->startTimer("Total");
+	//ProcessInfo *processInfo;
+	//processInfo = ProcessInfo::getInstance();
+	ProcessInfo::getInstance().startTimer("Total");
 
 	// Adds a file output
 	osoutput->AddChannel("shotlogfile");
@@ -17,26 +17,26 @@ int main(int argc, char *argv[])
 	// Visual Studio does not play nice with unicode:
 	#ifdef _WIN32
 	startmessage = ""
-		"И▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌╗\n"
-		"Э          SHOT - Supporting Hyperplane Optimization Toolkit          Э\n"
-		"г▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌О\n"
-		"Э - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        Э\n"
-		"Э - Based on the Extended Supporting Hyperplane (ESH) algorithm       Э\n"
-		"Э   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            Э\n"
-		"Э   ?bo Akademi University, Turku, Finland                            Э\n"
-		"╥▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌▌К\n";
+		"И▌▌О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫\n"
+		"О©╫          SHOT - Supporting Hyperplane Optimization Toolkit          О©╫\n"
+		"г▌О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫\n"
+		"О©╫ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        О©╫\n"
+		"О©╫ - Based on the Extended Supporting Hyperplane (ESH) algorithm       О©╫\n"
+		"О©╫   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            О©╫\n"
+		"О©╫   ?bo Akademi University, Turku, Finland                            О©╫\n"
+		"О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫\n";
 	#endif
 
 	#ifdef linux
 	startmessage = ""
-		"зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©\n"
-		"Ё          SHOT - Supporting Hyperplane Optimization Toolkit          Ё\n"
-		"цддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд╢\n"
-		"Ё - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        Ё\n"
-		"Ё - Based on the Extended Supporting Hyperplane (ESH) algorithm       Ё\n"
-		"Ё   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            Ё\n"
-		"Ё   ▐bo Akademi University, Turku, Finland                            Ё\n"
-		"юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды\n";
+		"О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫д©\n"
+		"О©╫          SHOT - Supporting Hyperplane Optimization Toolkit          О©╫\n"
+		"О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫д╢\n"
+		"О©╫ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        О©╫\n"
+		"О©╫ - Based on the Extended Supporting Hyperplane (ESH) algorithm       О©╫\n"
+		"О©╫   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            О©╫\n"
+		"О©╫   О©╫bo Akademi University, Turku, Finland                            О©╫\n"
+		"О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫\n";
 
 	#endif
 
@@ -140,11 +140,11 @@ int main(int argc, char *argv[])
 		}
 
 		// Prints out the welcome message to the logging facility
-		processInfo->outputSummary(startmessage);
+		ProcessInfo::getInstance().outputSummary(startmessage);
 
 		if (!solver->setProblem(osilFileName))
 		{
-			processInfo->outputError("Error when reading problem file.");
+			ProcessInfo::getInstance().outputError("Error when reading problem file.");
 
 			delete fileUtil, solver, processInfo;
 
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 
 		if (!solver->solveProblem()) // solve problem
 		{
-			processInfo->outputError("Error when solving problem.");
+			ProcessInfo::getInstance().outputError("Error when solving problem.");
 
 			delete fileUtil, solver, processInfo;
 
@@ -162,13 +162,13 @@ int main(int argc, char *argv[])
 	}
 	catch (const ErrorClass& eclass)
 	{
-		processInfo->outputError(eclass.errormsg);
+		ProcessInfo::getInstance().outputError(eclass.errormsg);
 		delete fileUtil, solver, processInfo;
 
 		return (0);
 	}
 
-	processInfo->stopTimer("Total");
+	ProcessInfo::getInstance().stopTimer("Total");
 
 	std::string osrl = solver->getOSrl();
 
@@ -177,10 +177,10 @@ int main(int argc, char *argv[])
 	std::string trace = solver->getTraceResult();
 	fileUtil->writeFileFromString(traceFile.string(), trace);
 
-	processInfo->outputSummary("\n"
-			"зддд Solution time дддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©");
+	ProcessInfo::getInstance().outputSummary("\n"
+			"О©╫О©╫О©╫О©╫ Solution time О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫д©");
 
-	for (auto T : processInfo->timers)
+	for (auto T : ProcessInfo::getInstance().timers)
 	{
 		auto elapsed = T.elapsed();
 
@@ -188,11 +188,11 @@ int main(int argc, char *argv[])
 		{
 			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-			processInfo->outputSummary("Ё " + tmpLine.str());
+			ProcessInfo::getInstance().outputSummary("О©╫ " + tmpLine.str());
 		}
 	}
 
-	processInfo->outputSummary("юдддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды");
+	ProcessInfo::getInstance().outputSummary("О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫О©╫");
 
 	delete fileUtil, solver, processInfo;
 	return (0);

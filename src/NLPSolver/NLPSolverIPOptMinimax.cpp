@@ -2,7 +2,7 @@
 
 NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	osolwriter = new OSoLWriter();
@@ -29,7 +29,7 @@ std::vector<double> NLPSolverIPOptMinimax::getSolution()
 		tmpPoint.at(i) = NLPSolverIPOptBase::getSolution(i);
 	}
 
-	if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+	if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
 	{
 		tmpPoint.pop_back();
 	}
@@ -43,11 +43,11 @@ std::vector<double> NLPSolverIPOptMinimax::getSolution()
 bool NLPSolverIPOptMinimax::createProblemInstance(OSInstance * origInstance)
 {
 
-	processInfo->outputInfo("     Creating Ipopt minimax problem.");
+	ProcessInfo::getInstance().outputInfo("     Creating Ipopt minimax problem.");
 
 	dynamic_cast<OptProblemNLPMinimax*>(NLPProblem)->reformulate(origInstance);
 
-	processInfo->outputInfo("     Ipopt minimax problem created.");
+	ProcessInfo::getInstance().outputInfo("     Ipopt minimax problem created.");
 
 	return (true);
 }

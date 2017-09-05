@@ -24,5 +24,5 @@ class TaskCheckAbsoluteGap: public TaskBase
 		std::string taskIDIfTrue;
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };

@@ -78,7 +78,7 @@ class SolutionStrategySHOT: public ISolutionStrategy
 	protected:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 		//TaskSequential *mainTask;
 
 };

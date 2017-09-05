@@ -15,7 +15,7 @@ class MILPSolverBase
 
 	protected:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		bool discreteVariablesActivated;
 		bool cachedSolutionHasChanged;

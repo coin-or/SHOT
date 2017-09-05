@@ -3,7 +3,7 @@
 MILPSolutionLimitStrategyIncrease::MILPSolutionLimitStrategyIncrease(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	//MILPSolver = solver;
@@ -20,8 +20,8 @@ MILPSolutionLimitStrategyIncrease::~MILPSolutionLimitStrategyIncrease()
 
 bool MILPSolutionLimitStrategyIncrease::updateLimit()
 {
-	auto currIter = processInfo->getCurrentIteration();
-	auto prevIter = processInfo->getPreviousIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (!currIter->isMILP())
 	{
@@ -50,7 +50,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 					&& currIter->iterationNumber - lastIterOptimal
 							> settings->getIntSetting("MILPSolIncreaseIter", "MILP")))
 	{
-		processInfo->outputInfo("     Force solution limit update.");
+		ProcessInfo::getInstance().outputInfo("     Force solution limit update.");
 		return (true);
 	}
 
@@ -82,7 +82,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 		if (prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")) return (true);
 
 		/*std::cout << "test: " << prevIter->maxDeviationConstraint << " == "
-		 << processInfo->originalProblem->getNonlinearObjectiveConstraintIdx() << ": "
+		 << ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveConstraintIdx() << ": "
 		 << settings->getDoubleSetting("MILPSolLimitUpdateTol", "MILP") * max(1.0, abs(prevIter->objectiveValue))
 		 << std::endl;*/
 
@@ -136,7 +136,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 int MILPSolutionLimitStrategyIncrease::getNewLimit()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	int newLimit;
 //int iterLargeIncrease = settings->getIntSetting("MILPSolIncreaseIter", "MILP");

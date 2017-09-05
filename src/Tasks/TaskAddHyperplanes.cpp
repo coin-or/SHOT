@@ -9,7 +9,7 @@
 
 TaskAddHyperplanes::TaskAddHyperplanes(IMILPSolver *MILPSolver)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	itersWithoutAddedHPs = 0;
 
@@ -24,18 +24,18 @@ TaskAddHyperplanes::~TaskAddHyperplanes()
 void TaskAddHyperplanes::run()
 {
 	this->MILPSolver = MILPSolver;
-	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
 	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
 			|| !currIter->MILPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
 		int addedHyperplanes = 0;
 
-		for (int k = processInfo->hyperplaneWaitingList.size(); k > 0; k--)
+		for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
 		{
 			if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) break;
 
-			auto tmpItem = processInfo->hyperplaneWaitingList.at(k - 1);
+			auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
 
 			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
 			{
@@ -44,12 +44,12 @@ void TaskAddHyperplanes::run()
 			else
 			{
 				MILPSolver->createHyperplane(tmpItem);
-				processInfo->addedHyperplanes.push_back(tmpItem);
+				ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
 				addedHyperplanes++;
 			}
 		}
 
-		processInfo->hyperplaneWaitingList.clear();
+		ProcessInfo::getInstance().hyperplaneWaitingList.clear();
 		itersWithoutAddedHPs = 0;
 	}
 	else

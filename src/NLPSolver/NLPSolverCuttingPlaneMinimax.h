@@ -36,7 +36,7 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 		//OSInstance* originalInstance;
 
 		//OptProblemNLPMinimax *NLPProblem;

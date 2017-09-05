@@ -12,7 +12,7 @@ class RelaxationStrategyBase
 
 	protected:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 		bool isRelaxedSolutionEpsilonValid();
 		bool isRelaxedSolutionInterior();
 		bool isCurrentToleranceReached();

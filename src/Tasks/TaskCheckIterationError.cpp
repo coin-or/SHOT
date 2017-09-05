@@ -9,7 +9,7 @@
 
 TaskCheckIterationError::TaskCheckIterationError(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	taskIDIfTrue = taskIDTrue;
 }
@@ -21,17 +21,17 @@ TaskCheckIterationError::~TaskCheckIterationError()
 
 void TaskCheckIterationError::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
 	{
-		processInfo->terminationReason = E_TerminationReason::Error;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::Error;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 	else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
 	{
-		processInfo->terminationReason = E_TerminationReason::InfeasibleProblem;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::InfeasibleProblem;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

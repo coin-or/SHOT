@@ -24,7 +24,7 @@ class TaskSwitchToLazyConstraints: public TaskBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		IMILPSolver *MILPSolver;
 };

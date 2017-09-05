@@ -19,6 +19,6 @@ class TaskSimple: public TaskBase
 		std::function<bool()> task;
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 };

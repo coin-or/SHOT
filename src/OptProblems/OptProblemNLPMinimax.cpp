@@ -5,7 +5,7 @@
 OptProblemNLPMinimax::OptProblemNLPMinimax()
 {
 	//problemInstance = NULL;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -479,7 +479,7 @@ double OptProblemNLPMinimax::calculateConstraintFunctionValue(int idx, std::vect
 	//if (idx != this->getNonlinearObjectiveConstraintIdx())	// Not the objective function
 	//{
 	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-	processInfo->numFunctionEvals++;
+	ProcessInfo::getInstance().numFunctionEvals++;
 
 	if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 	{
@@ -506,7 +506,7 @@ SparseVector* OptProblemNLPMinimax::calculateConstraintFunctionGradient(int idx,
 
 	SparseVector* tmpVector;
 	tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-	processInfo->numGradientEvals++;
+	ProcessInfo::getInstance().numGradientEvals++;
 
 	int number = tmpVector->number;
 

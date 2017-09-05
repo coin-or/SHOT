@@ -25,7 +25,7 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 		IConstraintToleranceUpdateStrategy *constrTolUpdateStrategy;
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		IMILPSolver *MILPSolver;
 

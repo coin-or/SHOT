@@ -41,29 +41,29 @@ class MinimizationFunction
 
 NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	auto solver = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
 
 	if (solver == ES_MILPSolver::Cplex)
 	{
 		LPSolver = new MILPSolverCplex();
-		processInfo->outputInfo("Cplex selected as MILP solver for minimax solver.");
+		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::Gurobi)
 	{
 		LPSolver = new MILPSolverGurobi();
-		processInfo->outputInfo("Gurobi selected as MILP solver for minimax solver.");
+		ProcessInfo::getInstance().outputInfo("Gurobi selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::Cbc)
 	{
 		LPSolver = new MILPSolverOsiCbc();
-		processInfo->outputInfo("Cbc selected as MILP solver for minimax solver.");
+		ProcessInfo::getInstance().outputInfo("Cbc selected as MILP solver for minimax solver.");
 	}
 	else if (solver == ES_MILPSolver::CplexExperimental)
 	{
 		LPSolver = new MILPSolverCplex();
-		processInfo->outputInfo("Cplex selected as MILP solver for minimax solver.");
+		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");
 	}
 	else
 	{
@@ -180,7 +180,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 #endif
 
-			processInfo->outputSummary(tmpLine.str());
+			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
 		}
 		else
@@ -231,7 +231,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 					% hyperplanesExpr % tmpObjLP % tmpObjLS % tmpAbsDiff % tmpRelDiff;
 		}
 
-		processInfo->outputSummary(tmpLine.str());
+		ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
 		if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
 		{
@@ -251,7 +251,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 			// Calculates the gradient
 			auto nablag = NLPProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).idx, currSol);
-			processInfo->numGradientEvals++;
+			ProcessInfo::getInstance().numGradientEvals++;
 
 			for (int i = 0; i < nablag->number; i++)
 			{
@@ -287,7 +287,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 				hyperplane.generatedPoint = tmpPoint;
 				hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
 
-				processInfo->hyperplaneWaitingList.push_back(hyperplane);
+				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 
 			}
 		}
@@ -325,7 +325,7 @@ std::vector<double> NLPSolverCuttingPlaneMinimax::getSolution()
 {
 	auto tmpSol = solution;
 
-	if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+	if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
 	{
 		tmpSol.pop_back();
 	}
@@ -340,15 +340,15 @@ double NLPSolverCuttingPlaneMinimax::getObjectiveValue()
 
 bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance * origInstance)
 {
-	processInfo->outputInfo("Creating NLP problem for minimax solver");
+	ProcessInfo::getInstance().outputInfo("Creating NLP problem for minimax solver");
 	dynamic_cast<OptProblemNLPMinimax*>(NLPProblem)->reformulate(origInstance);
-	processInfo->outputInfo("NLP problem for minimax solver created");
+	ProcessInfo::getInstance().outputInfo("NLP problem for minimax solver created");
 
-	processInfo->outputInfo("Creating LP problem for minimax solver");
+	ProcessInfo::getInstance().outputInfo("Creating LP problem for minimax solver");
 	LPSolver->createLinearProblem(NLPProblem);
 	LPSolver->initializeSolverSettings();
 	LPSolver->activateDiscreteVariables(false);
-	processInfo->outputInfo("MILP problem for minimax solver created");
+	ProcessInfo::getInstance().outputInfo("MILP problem for minimax solver created");
 
 	return (true);
 }

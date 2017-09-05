@@ -2,7 +2,7 @@
 
 NLPSolverIPOptRelaxed::NLPSolverIPOptRelaxed()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	osolwriter = new OSoLWriter();
@@ -21,11 +21,11 @@ NLPSolverIPOptRelaxed::~NLPSolverIPOptRelaxed()
 
 bool NLPSolverIPOptRelaxed::createProblemInstance(OSInstance * origInstance)
 {
-	processInfo->outputInfo("     Creating relaxed Ipopt problem.");
+	ProcessInfo::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
 
 	dynamic_cast<OptProblemNLPRelaxed*>(NLPProblem)->reformulate(origInstance);
 
-	processInfo->outputInfo("     Ipopt relaxed NLP problem created.");
+	ProcessInfo::getInstance().outputInfo("     Ipopt relaxed NLP problem created.");
 
 	return (true);
 }

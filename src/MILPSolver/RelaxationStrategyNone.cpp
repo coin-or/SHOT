@@ -3,7 +3,7 @@
 RelaxationStrategyNone::RelaxationStrategyNone(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -18,7 +18,7 @@ void RelaxationStrategyNone::setInitial()
 
 void RelaxationStrategyNone::executeStrategy()
 {
-	processInfo->getCurrentIteration()->type = E_IterationProblemType::MIP;
+	ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
 }
 
 void RelaxationStrategyNone::setActive()

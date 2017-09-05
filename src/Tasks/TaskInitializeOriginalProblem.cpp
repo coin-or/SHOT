@@ -2,10 +2,10 @@
 
 TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *originalInstance)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
-	processInfo->startTimer("Reformulation");
+	ProcessInfo::getInstance().startTimer("Reformulation");
 
 	instance = originalInstance;
 
@@ -21,42 +21,42 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
 	if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
 	{
-		processInfo->outputInfo("Nonlinear objective function detected.");
-		processInfo->originalProblem = new OptProblemOriginalNonlinearObjective();
+		ProcessInfo::getInstance().outputInfo("Nonlinear objective function detected.");
+		ProcessInfo::getInstance().originalProblem = new OptProblemOriginalNonlinearObjective();
 	}
 	else if (isObjQuadratic && isQuadraticUsed)
 	{
-		processInfo->outputInfo("Quadratic objective function detected.");
-		processInfo->originalProblem = new OptProblemOriginalQuadraticObjective();
+		ProcessInfo::getInstance().outputInfo("Quadratic objective function detected.");
+		ProcessInfo::getInstance().originalProblem = new OptProblemOriginalQuadraticObjective();
 	}
 	else //Linear objective function
 	{
-		processInfo->outputInfo("Linear objective function detected.");
-		processInfo->originalProblem = new OptProblemOriginalLinearObjective();
+		ProcessInfo::getInstance().outputInfo("Linear objective function detected.");
+		ProcessInfo::getInstance().originalProblem = new OptProblemOriginalLinearObjective();
 	}
 
-	processInfo->originalProblem->setProblem(originalInstance);
+	ProcessInfo::getInstance().originalProblem->setProblem(originalInstance);
 	auto debugPath = settings->getStringSetting("DebugPath", "SHOTSolver");
 
 	if (settings->getBoolSetting("Debug", "SHOTSolver"))
 	{
-		processInfo->originalProblem->saveProblemModelToFile(
+		ProcessInfo::getInstance().originalProblem->saveProblemModelToFile(
 				settings->getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
 	}
 
-	int numConstr = processInfo->originalProblem->getNumberOfConstraints();
+	int numConstr = ProcessInfo::getInstance().originalProblem->getNumberOfConstraints();
 
-	int numVar = processInfo->originalProblem->getNumberOfVariables();
+	int numVar = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
 
-	if (processInfo->originalProblem->isObjectiveFunctionNonlinear())
+	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear())
 	{
 		numVar = numVar - 1; // Removes the extra objective variable
 		numConstr = numConstr - 1; // Removes the extra objective constraint
 	}
 
-	processInfo->initializeResults(1, numVar, numConstr);
+	ProcessInfo::getInstance().initializeResults(1, numVar, numConstr);
 
-	processInfo->stopTimer("Reformulation");
+	ProcessInfo::getInstance().stopTimer("Reformulation");
 }
 
 TaskInitializeOriginalProblem::~TaskInitializeOriginalProblem()

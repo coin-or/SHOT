@@ -28,6 +28,6 @@ class TaskInitializeMILPSolver: public TaskBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };
 

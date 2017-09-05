@@ -1,10 +1,9 @@
 #include "SHOTSolver.h"
 
-SHOTSolver::SHOTSolver()
-: gms2os(NULL)
+SHOTSolver::SHOTSolver() :
+		gms2os(NULL)
 {
 	settings = SHOTSettings::Settings::getInstance();
-	processInfo = ProcessInfo::getInstance();
 
 	initializeSettings();
 }
@@ -12,7 +11,6 @@ SHOTSolver::SHOTSolver()
 SHOTSolver::~SHOTSolver()
 {
 	delete settings;
-	delete processInfo;
 	delete solutionStrategy;
 	delete gms2os;
 }
@@ -29,7 +27,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 	}
 	catch (const ErrorClass& eclass)
 	{
-		processInfo->outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
+		ProcessInfo::getInstance().outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
 		delete fileUtil;
 		delete osolreader;
 		return (false);
@@ -41,7 +39,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 	osoutput->SetPrintLevel("shotlogfile",
 			(ENUM_OUTPUT_LEVEL)(settings->getIntSetting("LogLevelFile", "SHOTSolver") + 1));
 
-	processInfo->outputInfo("Options read from file \"" + fileName + "\"");
+	ProcessInfo::getInstance().outputInfo("Options read from file \"" + fileName + "\"");
 
 	delete fileUtil;
 	delete osolreader;
@@ -58,12 +56,12 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
 	catch (ErrorClass &eclass)
 	{
 
-		processInfo->outputError("Error when reading options.", eclass.errormsg);
+		ProcessInfo::getInstance().outputError("Error when reading options.", eclass.errormsg);
 
 		return (false);
 	}
 
-	processInfo->outputInfo("Options read.");
+	ProcessInfo::getInstance().outputInfo("Options read.");
 
 	return (true);
 }
@@ -123,7 +121,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 		}
 		else
 		{
-			processInfo->outputError("Wrong filetype specified.");
+			ProcessInfo::getInstance().outputError("Wrong filetype specified.");
 			return (false);
 		}
 
@@ -134,7 +132,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 		delete fileUtil;
 		delete osilreader;
 
-		processInfo->outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
+		ProcessInfo::getInstance().outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
 
 		return (false);
 	}
@@ -165,17 +163,17 @@ bool SHOTSolver::setProblem(std::string fileName)
 
 		 if (boost::filesystem::exists(debugDir))
 		 {
-		 processInfo->logger.message(1) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
+		 ProcessInfo::getInstance().logger.message(1) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
 		 }
 		 else
 		 {
 		 if (boost::filesystem::create_directories(debugDir))
 		 {
-		 processInfo->logger.message(1) << "Debug directory " << debugPath << " created." << CoinMessageEol;
+		 ProcessInfo::getInstance().logger.message(1) << "Debug directory " << debugPath << " created." << CoinMessageEol;
 		 }
 		 else
 		 {
-		 processInfo->logger.message(1) << "Could not create debug directory " << debugPath << "!"
+		 ProcessInfo::getInstance().logger.message(1) << "Could not create debug directory " << debugPath << "!"
 		 << CoinMessageEol;
 		 }
 		 }
@@ -209,9 +207,10 @@ bool SHOTSolver::solveProblem()
 {
 	bool result = solutionStrategy->solveProblem();
 
-	if( result && gms2os != NULL )
+	if (result && gms2os != NULL)
 	{
-		gms2os->writeResult(*processInfo);
+		//gms2os->writeResult(*processInfo);
+		gms2os->writeResult(ProcessInfo::getInstance());
 	}
 
 	return result;
@@ -219,7 +218,7 @@ bool SHOTSolver::solveProblem()
 
 std::string SHOTSolver::getOSrl()
 {
-	return (processInfo->getOSrl());
+	return (ProcessInfo::getInstance().getOSrl());
 }
 
 std::string SHOTSolver::getOSol()
@@ -231,18 +230,19 @@ std::string SHOTSolver::getOSol()
 
 std::string SHOTSolver::getTraceResult()
 {
-	return (processInfo->getTraceResult());
+	return (ProcessInfo::getInstance().getTraceResult());
 }
 
 void SHOTSolver::initializeSettings()
 {
 	if (settings->settingsInitialized)
 	{
-		processInfo->outputWarning("Warning! Settings have already been initialized. Ignoring new settings.");
+		ProcessInfo::getInstance().outputWarning(
+				"Warning! Settings have already been initialized. Ignoring new settings.");
 		return;
 	}
 
-	processInfo->outputInfo("Starting initialization of settings:");
+	ProcessInfo::getInstance().outputInfo("Starting initialization of settings:");
 
 	// Logging setting
 	std::vector < std::string > enumLogLevel;
@@ -566,7 +566,7 @@ void SHOTSolver::initializeSettings()
 	settings->createSetting("PrimalBoundIntegerTolerance", "PrimalBound", 1e-6,
 			"The tolerance for accepting primal bounds ");
 
-	processInfo->outputInfo("Initialization of settings complete.");
+	ProcessInfo::getInstance().outputInfo("Initialization of settings complete.");
 
 	settings->settingsInitialized = true;
 }
@@ -580,17 +580,17 @@ void SHOTSolver::initializeDebugMode()
 
 	if (boost::filesystem::exists(debugDir))
 	{
-		processInfo->outputInfo("Debug directory " + debugPath + " already exists.");
+		ProcessInfo::getInstance().outputInfo("Debug directory " + debugPath + " already exists.");
 	}
 	else
 	{
 		if (boost::filesystem::create_directories(debugDir))
 		{
-			processInfo->outputInfo("Debug directory " + debugPath + " created.");
+			ProcessInfo::getInstance().outputInfo("Debug directory " + debugPath + " created.");
 		}
 		else
 		{
-			processInfo->outputWarning("Could not create debug directory.");
+			ProcessInfo::getInstance().outputWarning("Could not create debug directory.");
 		}
 	}
 

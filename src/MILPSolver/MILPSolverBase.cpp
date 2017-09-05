@@ -11,14 +11,14 @@ MILPSolverBase::~MILPSolverBase()
 
 void MILPSolverBase::startTimer()
 {
-	if (discreteVariablesActivated) processInfo->startTimer("MILP");
-	else processInfo->startTimer("LP");
+	if (discreteVariablesActivated) ProcessInfo::getInstance().startTimer("MILP");
+	else ProcessInfo::getInstance().startTimer("LP");
 }
 
 void MILPSolverBase::stopTimer()
 {
-	if (discreteVariablesActivated) processInfo->stopTimer("MILP");
-	else processInfo->stopTimer("LP");
+	if (discreteVariablesActivated) ProcessInfo::getInstance().stopTimer("MILP");
+	else ProcessInfo::getInstance().stopTimer("LP");
 }
 
 double MILPSolverBase::getObjectiveValue()
@@ -58,7 +58,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 
 		tmpSolPt.point = tmpPt;
 		tmpSolPt.objectiveValue = getObjectiveValue(i);
-		tmpSolPt.iterFound = processInfo->getCurrentIteration()->iterationNumber;
+		tmpSolPt.iterFound = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
 		tmpSolPt.maxDeviation = maxDev;
 
 		allSolutions.at(i) = tmpSolPt;
@@ -72,7 +72,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 
 void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
-	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	std::vector < IndexValuePair > elements;
 
 	auto varNames = originalProblem->getVariableNames();
@@ -83,13 +83,13 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	if (hyperplane.sourceConstraintIndex == -1
 			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
 	{
-		processInfo->outputInfo("     HP point generated for auxiliary objective function constraint");
+		ProcessInfo::getInstance().outputInfo("     HP point generated for auxiliary objective function constraint");
 
 		auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 				&hyperplane.generatedPoint.at(0), -1, true);
 		int number = originalProblem->getNumberOfVariables();
 
-		processInfo->numGradientEvals++;
+		ProcessInfo::getInstance().numGradientEvals++;
 
 		for (int i = 0; i < number - 1; i++)
 		{
@@ -102,11 +102,11 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 				elements.push_back(pair);
 				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
 
-				processInfo->outputInfo("     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
+				ProcessInfo::getInstance().outputInfo("     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
 			}
 		}
 
-		processInfo->outputInfo("     Gradient for obj.var.: -1");
+		ProcessInfo::getInstance().outputInfo("     Gradient for obj.var.: -1");
 
 		IndexValuePair pair;
 		pair.idx = originalProblem->getNonlinearObjectiveVariableIdx();
@@ -117,7 +117,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	}
 	else
 	{
-		processInfo->outputInfo(
+		ProcessInfo::getInstance().outputInfo(
 				"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
 		int number = originalProblem->getNumberOfVariables();
 
@@ -133,7 +133,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 			elements.push_back(pair);
 			constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
 
-			processInfo->outputInfo(
+			ProcessInfo::getInstance().outputInfo(
 					"     Gradient for variable" + varNames.at(nablag->indexes[i]) + ": "
 							+ to_string(nablag->values[i]));
 		}
@@ -146,7 +146,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 		if (E.value != E.value) //Check for NaN
 		{
 
-			processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+			ProcessInfo::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}
@@ -176,7 +176,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
-	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	std::vector < IndexValuePair > elements;
 
 	auto varNames = originalProblem->getVariableNames();
@@ -187,7 +187,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
 			&hyperplane.generatedPoint.at(0), -1, true);
 	int number = originalProblem->getNumberOfVariables();
-	processInfo->numGradientEvals++;
+	ProcessInfo::getInstance().numGradientEvals++;
 
 	for (int i = 0; i < number - 1; i++)
 	{
@@ -215,7 +215,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			processInfo->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+			ProcessInfo::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
 
 			hyperplaneIsOk = false;
 			break;
@@ -240,7 +240,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 		currIter->totNumHyperplanes++;
 	}
 
-	currIter->totNumHyperplanes = processInfo->getPreviousIteration()->totNumHyperplanes
+	currIter->totNumHyperplanes = ProcessInfo::getInstance().getPreviousIteration()->totNumHyperplanes
 			+ currIter->numHyperplanesAdded;
 }
 
@@ -268,41 +268,41 @@ void MILPSolverBase::presolveAndUpdateBounds()
 		if (newLB)
 		{
 			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-			//processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-			processInfo->outputInfo(
+			//ProcessInfo::getInstance().originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			ProcessInfo::getInstance().outputInfo(
 					"     Lower bound for variable (" + to_string(i) + ") updated from "
 							+ UtilityFunctions::toString(currBounds.first) + " to "
 							+ UtilityFunctions::toString(newBounds.first.at(i)));
 
 			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				//processInfo->originalProblem->setVariableBoundsAsTightened(i);
+				//ProcessInfo::getInstance().originalProblem->setVariableBoundsAsTightened(i);
 				originalProblem->setVariableBoundsAsTightened(i);
-				processInfo->numVariableBoundsTightenedInPresolve++;
+				ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve++;
 			}
 		}
 
 		if (newUB)
 		{
 			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-			//processInfo->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-			processInfo->outputInfo(
+			//ProcessInfo::getInstance().originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
+			ProcessInfo::getInstance().outputInfo(
 					"     Upper bound for variable (" + to_string(i) + ") updated from "
 							+ UtilityFunctions::toString(currBounds.second) + " to "
 							+ UtilityFunctions::toString(newBounds.second.at(i)));
 
 			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				//processInfo->originalProblem->setVariableBoundsAsTightened(i);
+				//ProcessInfo::getInstance().originalProblem->setVariableBoundsAsTightened(i);
 				originalProblem->setVariableBoundsAsTightened(i);
-				processInfo->numVariableBoundsTightenedInPresolve++;
+				ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve++;
 			}
 		}
 
 		if (settings->getBoolSetting("UsePresolveBoundsForMIP", "Presolve") && (newLB || newUB))
 		{
 			updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
-			processInfo->outputInfo("     Bounds updated also in MIP problem");
+			ProcessInfo::getInstance().outputInfo("     Bounds updated also in MIP problem");
 		}
 	}
 }
@@ -354,15 +354,15 @@ void MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
 
 	auto varIdx = originalProblem->getNonlinearObjectiveVariableIdx();
 
-	auto newLB = processInfo->getDualBound();
-	auto newUB = processInfo->getPrimalBound();
+	auto newLB = ProcessInfo::getInstance().getDualBound();
+	auto newUB = ProcessInfo::getInstance().getPrimalBound();
 
 	auto currBounds = this->getCurrentVariableBounds(varIdx);
 
 	if (newLB > currBounds.first || newUB < currBounds.second)
 	{
 		this->updateVariableBound(varIdx, newLB, newUB);
-		processInfo->outputInfo(
+		ProcessInfo::getInstance().outputInfo(
 				"     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and "
 						+ UtilityFunctions::toString(newUB));
 	}

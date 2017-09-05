@@ -2,7 +2,7 @@
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -14,47 +14,47 @@ TaskFindInteriorPoint::~TaskFindInteriorPoint()
 void TaskFindInteriorPoint::run()
 {
 
-	processInfo->startTimer("InteriorPointTotal");
+	ProcessInfo::getInstance().startTimer("InteriorPointTotal");
 
-	processInfo->outputDebug("Initializing NLP solver");
+	ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
 	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("InteriorPointSolver", "InteriorPoint"));
 
 	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
 	{
 		NLPSolvers.emplace_back(new NLPSolverCuttingPlaneMinimax());
 
-		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		processInfo->outputDebug("Cutting plane minimax selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("Cutting plane minimax selected as NLP solver.");
 	}
 	else if (solver == ES_NLPSolver::IPOptMiniMax)
 	{
 		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
 
-		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		processInfo->outputDebug("IPOpt minimax selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("IPOpt minimax selected as NLP solver.");
 	}
 	else if (solver == ES_NLPSolver::IPOptRelaxed)
 	{
 		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
 
-		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		processInfo->outputDebug("IPOpt relaxed selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("IPOpt relaxed selected as NLP solver.");
 
 	}
 	else if (solver == ES_NLPSolver::IPOptMiniMaxAndRelaxed)
 	{
 		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
 
-		NLPSolvers[0]->setProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
 		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
 
-		NLPSolvers[1]->setProblem(processInfo->originalProblem->getProblemInstance());
+		NLPSolvers[1]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		processInfo->outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
 	}
 	else
 	{
@@ -75,7 +75,7 @@ void TaskFindInteriorPoint::run()
 		}
 	}
 
-	processInfo->outputDebug("Solving NLP problem.");
+	ProcessInfo::getInstance().outputDebug("Solving NLP problem.");
 
 	bool foundNLPPoint = false;
 
@@ -87,10 +87,10 @@ void TaskFindInteriorPoint::run()
 		tmpIP->NLPSolver = ES_NLPSolver::CuttingPlaneMiniMax;
 		tmpIP->point = NLPSolvers.at(i)->getSolution();
 
-		auto maxDev = processInfo->originalProblem->getMostDeviatingConstraint(tmpIP->point);
+		auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpIP->point);
 		tmpIP->maxDevatingConstraint = maxDev;
 
-		processInfo->interiorPts.push_back(*tmpIP);
+		ProcessInfo::getInstance().interiorPts.push_back(*tmpIP);
 
 		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
 
@@ -100,15 +100,15 @@ void TaskFindInteriorPoint::run()
 
 	if (!foundNLPPoint)
 	{
-		processInfo->stopTimer("InteriorPointTotal");
+		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
 		throw TaskExceptionInteriorPoint("No interior point found");
 	}
 
-	processInfo->outputDebug("Finished solving NLP problem.");
+	ProcessInfo::getInstance().outputDebug("Finished solving NLP problem.");
 
-	processInfo->numOriginalInteriorPoints = processInfo->interiorPts.size();
+	ProcessInfo::getInstance().numOriginalInteriorPoints = ProcessInfo::getInstance().interiorPts.size();
 
-	processInfo->stopTimer("InteriorPointTotal");
+	ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
 }
 
 std::string TaskFindInteriorPoint::getType()

@@ -119,7 +119,7 @@ class OptProblem
 
 	protected:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		void setNonlinearConstraintIndexes();
 		//void setQuadraticConstraintIndexes();

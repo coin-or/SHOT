@@ -9,7 +9,7 @@
 
 TaskCheckDualSolutionCandidates::TaskCheckDualSolutionCandidates()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -20,27 +20,27 @@ TaskCheckDualSolutionCandidates::~TaskCheckDualSolutionCandidates()
 
 void TaskCheckDualSolutionCandidates::run()
 {
-	bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+	bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
-	double currDualBound = processInfo->getDualBound();
-	double currPrimalBound = processInfo->getPrimalBound();
+	double currDualBound = ProcessInfo::getInstance().getDualBound();
+	double currPrimalBound = ProcessInfo::getInstance().getPrimalBound();
 
-	for (auto C : processInfo->dualSolutionCandidates)
+	for (auto C : ProcessInfo::getInstance().dualSolutionCandidates)
 	{
 
 		if ((isMinimization && (C.objValue > currDualBound && C.objValue <= currPrimalBound))
 				|| (!isMinimization && (C.objValue < currDualBound && C.objValue >= currPrimalBound)))
 		{
 			// New dual solution
-			processInfo->currentObjectiveBounds.first = C.objValue;
+			ProcessInfo::getInstance().currentObjectiveBounds.first = C.objValue;
 			currDualBound = C.objValue;
-			processInfo->iterLastDualBoundUpdate = processInfo->getCurrentIteration()->iterationNumber;
-			processInfo->timeLastDualBoundUpdate = processInfo->getElapsedTime("Total");
+			ProcessInfo::getInstance().iterLastDualBoundUpdate = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
+			ProcessInfo::getInstance().timeLastDualBoundUpdate = ProcessInfo::getInstance().getElapsedTime("Total");
 
 			// If the solution is MILP feasible we only have a bound, no variable solutions
 			if (C.sourceType != E_DualSolutionSource::MILPSolutionFeasible)
 			{
-				processInfo->addDualSolution(C);
+				ProcessInfo::getInstance().addDualSolution(C);
 			}
 
 			std::string sourceDesc;
@@ -68,12 +68,12 @@ void TaskCheckDualSolutionCandidates::run()
 
 			auto tmpLine = boost::format("     New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
 
-			processInfo->outputInfo(tmpLine.str());
+			ProcessInfo::getInstance().outputInfo(tmpLine.str());
 
 		}
 	}
 
-	processInfo->dualSolutionCandidates.clear();
+	ProcessInfo::getInstance().dualSolutionCandidates.clear();
 }
 
 std::string TaskCheckDualSolutionCandidates::getType()

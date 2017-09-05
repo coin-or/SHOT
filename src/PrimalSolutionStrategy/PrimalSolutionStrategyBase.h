@@ -20,7 +20,7 @@ class PrimalSolutionStrategyBase: public IPrimalSolutionStrategy
 
 	protected:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 	private:
 

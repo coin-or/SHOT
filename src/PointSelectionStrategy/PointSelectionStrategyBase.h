@@ -13,5 +13,5 @@ public:
 
 protected:
 	SHOTSettings::Settings *settings;
-	ProcessInfo *processInfo;
+	//ProcessInfo *processInfo;
 };

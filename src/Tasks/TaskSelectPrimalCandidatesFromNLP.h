@@ -20,7 +20,7 @@ class TaskSelectPrimalCandidatesFromNLP: public TaskBase
 		virtual std::string getType();
 	private:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		PrimalSolutionStrategyFixedNLP *primalStrategyFixedNLP;
 };

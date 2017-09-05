@@ -3,7 +3,7 @@
 MILPSolutionLimitStrategyAdaptive::MILPSolutionLimitStrategyAdaptive(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	//MILPSolver = solver;
@@ -19,8 +19,8 @@ MILPSolutionLimitStrategyAdaptive::~MILPSolutionLimitStrategyAdaptive()
 
 bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 {
-	auto currIter = processInfo->getCurrentIteration();
-	auto prevIter = processInfo->getPreviousIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (!currIter->isMILP())
 	{
@@ -81,7 +81,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 
 int MILPSolutionLimitStrategyAdaptive::getNewLimit()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	int newLimit;
 	//int iterLargeIncrease = settings->getIntSetting("MILPSolIncreaseIter", "MILP");

@@ -2,7 +2,7 @@
 
 TaskInitializeIteration::TaskInitializeIteration()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -12,11 +12,11 @@ TaskInitializeIteration::~TaskInitializeIteration()
 
 void TaskInitializeIteration::run()
 {
-	processInfo->startTimer("Subproblems");
-	processInfo->createIteration();
+	ProcessInfo::getInstance().startTimer("Subproblems");
+	ProcessInfo::getInstance().createIteration();
 
 	//TODO: fix line below...
-	//processInfo->getCurrentIteration()->type = processInfo->relaxationStrategy->getProblemType();
+	//ProcessInfo::getInstance().getCurrentIteration()->type = ProcessInfo::getInstance().relaxationStrategy->getProblemType();
 
 }
 

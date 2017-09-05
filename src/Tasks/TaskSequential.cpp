@@ -2,13 +2,13 @@
 
 TaskSequential::TaskSequential()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
 TaskSequential::TaskSequential(int numberOfTasks)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	m_tasks.reserve(numberOfTasks);
 }

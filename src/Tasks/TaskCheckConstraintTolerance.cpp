@@ -9,7 +9,7 @@
 
 TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	taskIDIfTrue = taskIDTrue;
 }
@@ -21,14 +21,14 @@ TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance()
 
 void TaskCheckConstraintTolerance::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")
 			&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& currIter->type == E_IterationProblemType::MIP)
 	{
-		processInfo->terminationReason = E_TerminationReason::ConstraintTolerance;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 
 	return;

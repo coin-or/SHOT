@@ -3,7 +3,7 @@
 OptProblem::OptProblem()
 {
 	m_problemInstance = NULL;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -167,39 +167,39 @@ std::vector<int> OptProblem::getIntegerVariableIndices()
 void OptProblem::printProblemStatistics()
 {
 #if _WIN32
-	processInfo->outputSummary(
+	ProcessInfo::getInstance().outputSummary(
 			"                                                                                     \n");
-	processInfo->outputSummary("ÚÄÄÄ Problem statistics ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+	ProcessInfo::getInstance().outputSummary("ÚÄÄÄ Problem statistics ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
-	processInfo->outputSummary(
+	ProcessInfo::getInstance().outputSummary(
 			"³ Number of constraints (total/linear/nonlinear):   "
 			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
 			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
-	processInfo->outputSummary(
+	ProcessInfo::getInstance().outputSummary(
 			"³ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
 			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
 			+ to_string(getNumberOfIntegerVariables()) + "/");
 
-	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+	ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 
 #endif
 
 #if linux
 
-	processInfo->outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
+	ProcessInfo::getInstance().outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
-	processInfo->outputSummary(
+	ProcessInfo::getInstance().outputSummary(
 			"│ Number of constraints (total/linear/nonlinear):   "
 			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
 			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
-	processInfo->outputSummary(
+	ProcessInfo::getInstance().outputSummary(
 			"│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
 			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
 			+ to_string(getNumberOfIntegerVariables()) + "/");
 
-	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
+	ProcessInfo::getInstance().outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
 
 }
@@ -212,7 +212,7 @@ void OptProblem::exportProblemToOsil(std::string fileName)
 	std::string osil = osilWriter->writeOSiL(getProblemInstance());
 	if (!fileUtil->writeFileFromString(fileName, osil))
 	{
-		processInfo->outputError("Error when writing to file " + fileName);
+		ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
 	}
 
 	delete fileUtil;
@@ -226,7 +226,7 @@ void OptProblem::saveProblemModelToFile(std::string fileName)
 
 	if (!fileUtil->writeFileFromString(fileName, problem))
 	{
-		processInfo->outputError("Error when writing to file " + fileName);
+		ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
 	}
 
 	delete fileUtil;
@@ -245,7 +245,7 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 {
 	if (point.size() != this->getNumberOfVariables())
 	{
-		processInfo->outputError(
+		ProcessInfo::getInstance().outputError(
 				"     Error: point size (" + to_string(point.size()) + ") does not match number of variables ("
 						+ to_string(this->getNumberOfVariables()) + ")!");
 	}
@@ -457,7 +457,7 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
 
 SparseVector* OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
 {
-	processInfo->numGradientEvals++;
+	ProcessInfo::getInstance().numGradientEvals++;
 	return getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 }
 
@@ -465,7 +465,7 @@ double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 {
 	auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
 
-	processInfo->numFunctionEvals++;
+	ProcessInfo::getInstance().numFunctionEvals++;
 //std::cout << "Obj value calculated: " << tmpVal << std::endl;
 	return tmpVal;
 }
@@ -477,7 +477,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 	if (idx != getNonlinearObjectiveConstraintIdx())	// Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-		processInfo->numFunctionEvals++;
+		ProcessInfo::getInstance().numFunctionEvals++;
 
 		if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 		{
@@ -504,7 +504,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
 		tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub; // -problemInstance->getConstraintConstants()[idx];
-		processInfo->numFunctionEvals++;
+		ProcessInfo::getInstance().numFunctionEvals++;
 	}
 
 //else if (idx == -1)
@@ -629,7 +629,7 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 		{
 			if (destination->instanceData->variables->var[i]->lb < -OSDBL_MAX)
 			{
-				processInfo->outputInfo(
+				ProcessInfo::getInstance().outputInfo(
 						"Corrected lower bound for variable " + varname[i] + " from "
 								+ to_string(destination->instanceData->variables->var[i]->lb) + " to "
 								+ to_string(-OSDBL_MAX));
@@ -638,7 +638,7 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 
 			if (destination->instanceData->variables->var[i]->ub > OSDBL_MAX)
 			{
-				processInfo->outputInfo(
+				ProcessInfo::getInstance().outputInfo(
 						"Corrected upper bound for variable " + varname[i] + " from "
 								+ to_string(destination->instanceData->variables->var[i]->ub) + " to "
 								+ to_string(OSDBL_MAX));
@@ -1176,7 +1176,7 @@ void OptProblem::fixVariable(int varIdx, double value)
 	}
 	else
 	{
-		processInfo->outputError(
+		ProcessInfo::getInstance().outputError(
 				"     Cannot fix variable value for variable with index " + to_string(varIdx) + ": not within bounds ("
 						+ UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->lb)
 						+ " < " + UtilityFunctions::toString(value) + " < "

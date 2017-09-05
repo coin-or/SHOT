@@ -15,7 +15,7 @@ class TaskPrintSolutionBoundReport: public TaskBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		int itersSinceLastPrintout;
 		double timeLastPrintout;

@@ -7,7 +7,7 @@ class ConstraintToleranceUpdateStrategyBase
 {
 protected:
 	SHOTSettings::Settings *settings;
-	ProcessInfo *processInfo;
+	//ProcessInfo *processInfo;
 public:
 	ConstraintToleranceUpdateStrategyBase();
 	~ConstraintToleranceUpdateStrategyBase();

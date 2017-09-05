@@ -2,7 +2,7 @@
 
 LinesearchMethodBisection::LinesearchMethodBisection()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -17,7 +17,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
 	try
 	{
 		int length = ptA.size();
-		bool validB = processInfo->originalProblem->isConstraintsFulfilledInPoint(ptB);
+		bool validB = ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptB);
 
 		std::vector<double> ptNew(length);
 		std::vector<double> ptNew2(length);
@@ -36,7 +36,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
 				ptNew2.at(i) = c * ptB.at(i) + (1 - c) * ptA.at(i);
 			}
 
-			validNewPt = processInfo->originalProblem->isConstraintsFulfilledInPoint(ptNew);
+			validNewPt = ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
 			if ((b - a) / 2 < lambdaTol)
 			{
@@ -56,7 +56,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
 			}
 		}
 
-		processInfo->outputInfo("Linesearch completed in " + to_string(n) + "iterations.");
+		ProcessInfo::getInstance().outputInfo("Linesearch completed in " + to_string(n) + "iterations.");
 		if (!validNewPt)
 		{
 			std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
@@ -70,12 +70,12 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
 	}
 	catch (...)
 	{
-		processInfo->outputError("Error while doing linesearch.");
+		ProcessInfo::getInstance().outputError("Error while doing linesearch.");
 
-		if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptA))
+		if (!ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptA))
 		//Returns the NLP point if not on the interior
 
-		if (!processInfo->originalProblem->isConstraintsFulfilledInPoint(ptA))
+		if (!ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptA))
 		{
 
 			std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);

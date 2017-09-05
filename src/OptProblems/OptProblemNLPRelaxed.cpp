@@ -3,7 +3,7 @@
 OptProblemNLPRelaxed::OptProblemNLPRelaxed()
 {
 	//problemInstance = NULL;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 

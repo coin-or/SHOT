@@ -3,7 +3,7 @@
 ConstraintToleranceUpdateStrategyDecreasing::ConstraintToleranceUpdateStrategyDecreasing()
 {
 	settings = SHOTSettings::Settings::getInstance();
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 
 	originalTolerance = settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm");
 	initialToleranceFactor = settings->getDoubleSetting("ConstrTermTolInitialFactor", "Algorithm");
@@ -16,7 +16,7 @@ ConstraintToleranceUpdateStrategyDecreasing::~ConstraintToleranceUpdateStrategyD
 
 void ConstraintToleranceUpdateStrategyDecreasing::calculateNewTolerance()
 {
-	Iteration *currIter = processInfo->getCurrentIteration();
+	Iteration *currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	// We are at the first iteration
 	if (currIter->iterationNumber == 1)
@@ -25,7 +25,7 @@ void ConstraintToleranceUpdateStrategyDecreasing::calculateNewTolerance()
 	}
 	else
 	{
-		Iteration *prevIter = processInfo->getPreviousIteration();
+		Iteration *prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 		int NL = prevIter->usedMILPSolutionLimit;
 

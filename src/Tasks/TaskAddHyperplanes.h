@@ -25,7 +25,7 @@ class TaskAddHyperplanes: public TaskBase
 		//void createHyperplane(int constrIdx, std::vector<double> point);
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		int itersWithoutAddedHPs;
 

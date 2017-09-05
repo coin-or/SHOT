@@ -2,23 +2,23 @@
 
 TaskInitializeLinesearch::TaskInitializeLinesearch()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
-	processInfo->startTimer("HyperplaneLinesearch");
+	ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 
 	if (settings->getIntSetting("LinesearchMethod", "Linesearch") == static_cast<int>(ES_LinesearchMethod::Bisection))
 	{
-		processInfo->linesearchMethod = new LinesearchMethodBisection();
-		processInfo->outputInfo("Bisection linesearch implementation selected.");
+		ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBisection();
+		ProcessInfo::getInstance().outputInfo("Bisection linesearch implementation selected.");
 	}
 	else
 	{
-		processInfo->linesearchMethod = new LinesearchMethodBoost();
-		processInfo->outputInfo("Boost linesearch implementation selected.");
+		ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBoost();
+		ProcessInfo::getInstance().outputInfo("Boost linesearch implementation selected.");
 	}
 
-	processInfo->stopTimer("HyperplaneLinesearch");
+	ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 }
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()

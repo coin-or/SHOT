@@ -35,7 +35,7 @@ class NLPSolverCuttingPlaneRelaxed: virtual public NLPSolverBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		IMILPSolver *LPSolver;
 

@@ -9,10 +9,10 @@
 
 TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
-	processInfo->startTimer("MILP");
+	ProcessInfo::getInstance().startTimer("MILP");
 
 	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
 			== ES_QPStrategy::QuadraticObjective;
@@ -28,37 +28,37 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 
 	if (solver == ES_MILPSolver::Cplex)
 	{
-		processInfo->MILPSolver = new MILPSolverCplex();
-		processInfo->outputInfo("Cplex selected as MIP solver.");
+		ProcessInfo::getInstance().MILPSolver = new MILPSolverCplex();
+		ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver.");
 	}
 	else if (solver == ES_MILPSolver::Gurobi)
 	{
-		processInfo->MILPSolver = new MILPSolverGurobi();
-		processInfo->outputInfo("Gurobi selected as MIP solver.");
+		ProcessInfo::getInstance().MILPSolver = new MILPSolverGurobi();
+		ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver.");
 	}
 	else if (solver == ES_MILPSolver::Cbc)
 	{
-		processInfo->MILPSolver = new MILPSolverOsiCbc();
-		processInfo->outputInfo("Cbc selected as MIP solver.");
+		ProcessInfo::getInstance().MILPSolver = new MILPSolverOsiCbc();
+		ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver.");
 	}
 	else if (solver == ES_MILPSolver::CplexExperimental)
 	{
 		if (isObjQuadratic && isQuadraticUsed)
 		{
-			processInfo->MILPSolver = new MILPSolverCplex();
-			processInfo->outputInfo("Cplex selected as MIP solver.");
+			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplex();
+			ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver.");
 			settings->updateSetting("MILPSolver", "MILP", 0);
 		}
 		else if (useQuadraticConstraint && originalInstance->getNumberOfQuadraticTerms() > 0)
 		{
-			processInfo->MILPSolver = new MILPSolverCplex();
-			processInfo->outputInfo("Cplex selected as MIP solver.");
+			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplex();
+			ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver.");
 			settings->updateSetting("MILPSolver", "MILP", 0);
 		}
 		else
 		{
-			processInfo->MILPSolver = new MILPSolverCplexExperimental();
-			processInfo->outputInfo("Cplex (lazy, experimental) selected as MIP solver.");
+			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexExperimental();
+			ProcessInfo::getInstance().outputInfo("Cplex (lazy, experimental) selected as MIP solver.");
 		}
 	}
 	else
@@ -66,7 +66,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		throw new ErrorClass("Error in MIP solver definition.");
 	}
 
-	processInfo->stopTimer("MILP");
+	ProcessInfo::getInstance().stopTimer("MILP");
 }
 
 TaskInitializeMILPSolver::~TaskInitializeMILPSolver()

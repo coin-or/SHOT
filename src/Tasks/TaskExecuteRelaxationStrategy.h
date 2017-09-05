@@ -20,7 +20,7 @@ class TaskExecuteRelaxationStrategy: public TaskBase
 		IRelaxationStrategy *relaxationStrategy;
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		bool isInitialized;
 

@@ -9,7 +9,7 @@
 
 TaskPrintIterationHeader::TaskPrintIterationHeader()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -44,7 +44,7 @@ void TaskPrintIterationHeader::run()
 
 #endif
 
-	processInfo->outputSummary(tmpLine.str());
+	ProcessInfo::getInstance().outputSummary(tmpLine.str());
 }
 
 std::string TaskPrintIterationHeader::getType()

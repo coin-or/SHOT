@@ -23,6 +23,6 @@ class TaskInitializeOriginalProblem: public TaskBase
 		OSInstance * instance;
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };
 

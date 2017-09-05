@@ -139,7 +139,7 @@ class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
  private:
  //build solution index
  IloNumVarArray xVar;
- ProcessInfo *processInfo;
+ //ProcessInfo *processInfo;
 
  public:
  SolutionFilterCallbackI(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo) :

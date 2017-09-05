@@ -3,7 +3,7 @@
 MILPSolutionLimitStrategyUnlimited::MILPSolutionLimitStrategyUnlimited(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 

@@ -19,7 +19,7 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	this->repairNonboundedObjectiveVariable(instance);
 
-	processInfo->setOriginalProblem(this);
+	ProcessInfo::getInstance().setOriginalProblem(this);
 
 	this->setNonlinearConstraintIndexes();
 
@@ -52,7 +52,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 	if (idx != -1 && idx != this->getNonlinearObjectiveConstraintIdx())	// Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-		processInfo->numFunctionEvals++;
+		ProcessInfo::getInstance().numFunctionEvals++;
 
 		if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 		{
@@ -68,7 +68,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 		}
 		else
 		{
-			processInfo->outputWarning(
+			ProcessInfo::getInstance().outputWarning(
 					"Constraint with index " + to_string(idx) + " of type "
 							+ to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
 		}
@@ -76,7 +76,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 	else // The nonlinear objective function constraint
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
-		processInfo->numFunctionEvals++;
+		ProcessInfo::getInstance().numFunctionEvals++;
 
 		tmpVal = tmpVal - point.at(this->getNonlinearObjectiveVariableIdx());
 	}
@@ -93,7 +93,7 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 	if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
 	{
 		auto tmpArray = getProblemInstance()->calculateObjectiveFunctionGradient(&point.at(0), -1, true);
-		processInfo->numGradientEvals++;
+		ProcessInfo::getInstance().numGradientEvals++;
 		number = getProblemInstance()->getVariableNumber();
 		tmpVector = new SparseVector(number);
 		std::vector<int> tmpIndexes;
@@ -126,7 +126,7 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 	else
 	{
 		tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-		processInfo->numGradientEvals++;
+		ProcessInfo::getInstance().numGradientEvals++;
 
 		number = tmpVector->number;
 

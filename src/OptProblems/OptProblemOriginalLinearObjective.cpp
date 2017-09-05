@@ -29,7 +29,7 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 		settings->updateSetting("MILPSolLimitInitial", "MILP", 1000);
 	}
 
-	processInfo->setOriginalProblem(this);
+	ProcessInfo::getInstance().setOriginalProblem(this);
 
 	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

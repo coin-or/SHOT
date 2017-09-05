@@ -4,7 +4,7 @@ RelaxationStrategyAdaptive::RelaxationStrategyAdaptive(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
 
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	currentDistanceLevel = 1.0;
@@ -38,7 +38,7 @@ void RelaxationStrategyAdaptive::executeStrategy()
 	//	return;
 	//}
 
-	//if (processInfo->getPreviousIteration()->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
+	//if (ProcessInfo::getInstance().getPreviousIteration()->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 	//{
 	//	//this->setInactive();
 	//	return;
@@ -79,11 +79,11 @@ void RelaxationStrategyAdaptive::setActive()
 {
 	if (MILPSolver->getDiscreteVariableStatus())
 	{
-		processInfo->stopTimer("MILP");
-		processInfo->startTimer("LP");
+		ProcessInfo::getInstance().stopTimer("MILP");
+		ProcessInfo::getInstance().startTimer("LP");
 		MILPSolver->activateDiscreteVariables(false);
 
-		processInfo->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
+		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::Relaxed;
 
 	}
 }
@@ -92,11 +92,11 @@ void RelaxationStrategyAdaptive::setInactive()
 {
 	if (!MILPSolver->getDiscreteVariableStatus())
 	{
-		processInfo->stopTimer("LP");
-		processInfo->startTimer("MILP");
+		ProcessInfo::getInstance().stopTimer("LP");
+		ProcessInfo::getInstance().startTimer("MILP");
 		MILPSolver->activateDiscreteVariables(true);
 
-		processInfo->getCurrentIteration()->type = E_IterationProblemType::MIP;
+		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
 	}
 }
 
@@ -108,23 +108,23 @@ E_IterationProblemType RelaxationStrategyAdaptive::getProblemType()
 
 bool RelaxationStrategyAdaptive::isRelaxationDistanceSmall()
 {
-	/*if (processInfo->iterations.size() <= 2)
+	/*if (ProcessInfo::getInstance().iterations.size() <= 2)
 	 {
 	 return false;
 	 }
 
-	 if (processInfo->getCurrentIteration()->hyperplanePoints.size() == 0 || processInfo->getPreviousIteration()->hyperplanePoints.size() == 0)
+	 if (ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.size() == 0 || ProcessInfo::getInstance().getPreviousIteration()->hyperplanePoints.size() == 0)
 	 {
 	 return true;
 	 }
 
-	 auto currIterSol = processInfo->getCurrentIteration()->hyperplanePoints[0];
-	 auto prevIterSol = processInfo->getPreviousIteration()->hyperplanePoints[0];
+	 auto currIterSol = ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints[0];
+	 auto prevIterSol = ProcessInfo::getInstance().getPreviousIteration()->hyperplanePoints[0];
 
 	 double distance = calculateDistance(currIterSol, prevIterSol);
 	 */
 
-	if (processInfo->getPreviousIteration()->boundaryDistance < currentDistanceLevel
+	if (ProcessInfo::getInstance().getPreviousIteration()->boundaryDistance < currentDistanceLevel
 			&& currentDistanceLevel < OSDBL_MAX)
 	{
 
@@ -136,7 +136,7 @@ bool RelaxationStrategyAdaptive::isRelaxationDistanceSmall()
 
 bool RelaxationStrategyAdaptive::isCurrentToleranceReached()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolLP", "Algorithm"))
 	{
@@ -148,7 +148,7 @@ bool RelaxationStrategyAdaptive::isCurrentToleranceReached()
 
 bool RelaxationStrategyAdaptive::isIterationLimitReached()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->iterationNumber - iterLastMILP == settings->getIntSetting("IterLimitLP", "Algorithm"))
 	{
@@ -161,11 +161,11 @@ bool RelaxationStrategyAdaptive::isIterationLimitReached()
 
 void RelaxationStrategyAdaptive::updateCurrentDistanceLevel()
 {
-	if (processInfo->getPreviousIteration()->boundaryDistance < OSDBL_MAX)
+	if (ProcessInfo::getInstance().getPreviousIteration()->boundaryDistance < OSDBL_MAX)
 	{
 		double tmpVal = 0.0;
 
-		distanceLevels.push_back(processInfo->getPreviousIteration()->boundaryDistance);
+		distanceLevels.push_back(ProcessInfo::getInstance().getPreviousIteration()->boundaryDistance);
 		int numVals = distanceLevels.size();
 
 		int considerVals = std::min(numVals, 5);

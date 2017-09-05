@@ -7,9 +7,9 @@ std::string startmessage;
 
 int main(int argc, char *argv[])
 {
-	ProcessInfo *processInfo;
-	processInfo = ProcessInfo::getInstance();
-	processInfo->startTimer("Total");
+	solver = new SHOTSolver();
+
+	ProcessInfo::getInstance().startTimer("Total");
 
 	// Adds a file output
 	osoutput->AddChannel("shotlogfile");
@@ -43,15 +43,12 @@ int main(int argc, char *argv[])
 		std::cout << startmessage << std::endl;
 		std::cout << "Usage: filename.osil options.osol results.osrl trace.trc" << std::endl;
 
-		delete processInfo;
-
 		return (0);
 	}
 
 	boost::filesystem::path resultFile, optionsFile, traceFile;
 
 	fileUtil = new FileUtil();
-	solver = new SHOTSolver();
 
 	if (argc == 2)
 	{
@@ -72,7 +69,8 @@ int main(int argc, char *argv[])
 			std::cout << startmessage << std::endl;
 			std::cout << "Options file not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			return (0);
 		}
@@ -88,7 +86,8 @@ int main(int argc, char *argv[])
 			std::cout << startmessage << std::endl;
 			std::cout << "Options file not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			return (0);
 		}
@@ -104,7 +103,8 @@ int main(int argc, char *argv[])
 			std::cout << startmessage << std::endl;
 			std::cout << "Options file not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			return (0);
 		}
@@ -121,7 +121,8 @@ int main(int argc, char *argv[])
 			std::cout << startmessage << std::endl;
 			std::cout << "Problem file not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			return (0);
 		}
@@ -130,7 +131,8 @@ int main(int argc, char *argv[])
 
 		if (!solver->setOptions(optionsFile.string()))
 		{
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			std::cout << startmessage << std::endl;
 			std::cout << "Cannot set options!" << std::endl;
@@ -138,35 +140,38 @@ int main(int argc, char *argv[])
 		}
 
 		// Prints out the welcome message to the logging facility
-		processInfo->outputSummary(startmessage);
+		ProcessInfo::getInstance().outputSummary(startmessage);
 
 		if (!solver->setProblem(osilFileName))
 		{
-			processInfo->outputError("Error when reading problem file.");
+			ProcessInfo::getInstance().outputError("Error when reading problem file.");
 
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			return (0);
 		}
 
 		if (!solver->solveProblem()) // solve problem
 		{
-			processInfo->outputError("Error when solving problem.");
+			ProcessInfo::getInstance().outputError("Error when solving problem.");
 
-			delete fileUtil, solver, processInfo;
+			delete fileUtil;
+			delete solver;
 
 			return (0);
 		}
 	}
 	catch (const ErrorClass& eclass)
 	{
-		processInfo->outputError(eclass.errormsg);
-		delete fileUtil, solver, processInfo;
+		ProcessInfo::getInstance().outputError(eclass.errormsg);
+		delete fileUtil;
+		delete solver;
 
 		return (0);
 	}
 
-	processInfo->stopTimer("Total");
+	ProcessInfo::getInstance().stopTimer("Total");
 
 	std::string osrl = solver->getOSrl();
 
@@ -176,10 +181,10 @@ int main(int argc, char *argv[])
 	fileUtil->writeFileFromString(traceFile.string(), trace);
 
 #ifdef _WIN32
-	processInfo->outputSummary("\n"
+	ProcessInfo::getInstance().outputSummary("\n"
 			"ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
-	for (auto T : processInfo->timers)
+	for (auto T : ProcessInfo::getInstance().timers)
 	{
 		auto elapsed = T.elapsed();
 
@@ -187,16 +192,16 @@ int main(int argc, char *argv[])
 		{
 			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-			processInfo->outputSummary("³ " + tmpLine.str());
+			ProcessInfo::getInstance().outputSummary("³ " + tmpLine.str());
 		}
 	}
 
-	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+	ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 #else
-	processInfo->outputSummary("\n"
+	ProcessInfo::getInstance().outputSummary("\n"
 			"┌─── Solution time ──────────────────────────────────────────────────────────────┐");
 
-	for (auto T : processInfo->timers)
+	for (auto T : ProcessInfo::getInstance().timers)
 	{
 		auto elapsed = T.elapsed();
 
@@ -204,13 +209,16 @@ int main(int argc, char *argv[])
 		{
 			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-			processInfo->outputSummary("│ " + tmpLine.str());
+			ProcessInfo::getInstance().outputSummary("│ " + tmpLine.str());
 		}
 	}
 
-	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
+	ProcessInfo::getInstance().outputSummary(
+			"└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
 
-	delete fileUtil, solver, processInfo;
+	delete fileUtil;
+	//delete processInfo;
+	delete solver;
 	return (0);
 }

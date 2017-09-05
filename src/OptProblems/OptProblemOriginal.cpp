@@ -2,7 +2,7 @@
 
 OptProblemOriginal::OptProblemOriginal()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -16,11 +16,11 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 	double tmpVal = 0.0;
 
 	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-	processInfo->numFunctionEvals++;
+	ProcessInfo::getInstance().numFunctionEvals++;
 
 	if (idx == -1)
 	{
-		processInfo->outputWarning("Objective function constraint should not be calculated here! ");
+		ProcessInfo::getInstance().outputWarning("Objective function constraint should not be calculated here! ");
 	}
 	else if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 	{
@@ -39,7 +39,7 @@ double OptProblemOriginal::calculateConstraintFunctionValue(int idx, std::vector
 	}
 	else
 	{
-		processInfo->outputWarning(
+		ProcessInfo::getInstance().outputWarning(
 				"Constraint with index " + to_string(idx) + " of type "
 						+ to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
 	}
@@ -51,7 +51,7 @@ SparseVector* OptProblemOriginal::calculateConstraintFunctionGradient(int idx, s
 {
 	SparseVector* tmpVector;
 	tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-	processInfo->numGradientEvals++;
+	ProcessInfo::getInstance().numGradientEvals++;
 
 	int number = tmpVector->number;
 

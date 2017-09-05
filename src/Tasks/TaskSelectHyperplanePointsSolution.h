@@ -24,6 +24,6 @@ class TaskSelectHyperplanePointsSolution: public TaskBase
 
 	private:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };
 

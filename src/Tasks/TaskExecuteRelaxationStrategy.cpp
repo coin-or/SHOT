@@ -3,7 +3,7 @@
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
 	if (settings->getIntSetting("RelaxationStrategy", "Algorithm") == static_cast<int>(ES_RelaxationStrategy::Adaptive))
@@ -21,7 +21,7 @@ TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMILPSolver *MILPSo
 		relaxationStrategy = new RelaxationStrategyNone(this->MILPSolver);
 	}
 
-	processInfo->relaxationStrategy = relaxationStrategy;
+	ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
 
 	isInitialized = false;
 

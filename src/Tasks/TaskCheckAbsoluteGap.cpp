@@ -9,7 +9,7 @@
 
 TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	taskIDIfTrue = taskIDTrue;
 }
@@ -21,10 +21,10 @@ TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
 
 void TaskCheckAbsoluteGap::run()
 {
-	if (processInfo->isAbsoluteObjectiveGapToleranceMet())
+	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
 	{
-		processInfo->terminationReason = E_TerminationReason::AbsoluteGap;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::AbsoluteGap;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

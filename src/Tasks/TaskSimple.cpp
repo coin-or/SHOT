@@ -2,7 +2,7 @@
 
 TaskSimple::TaskSimple()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 

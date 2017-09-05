@@ -9,7 +9,7 @@
 
 TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -20,28 +20,28 @@ TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm()
 
 void TaskCalculateSolutionChangeNorm::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	currIter->boundaryDistance = OSDBL_MAX;
 
-	if (processInfo->iterations.size() < 3)
+	if (ProcessInfo::getInstance().iterations.size() < 3)
 	{
 		return;
 	}
 
-	if (processInfo->getCurrentIteration()->hyperplanePoints.size() == 0
-			|| processInfo->getCurrentIteration()->isMILP())
+	if (ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.size() == 0
+			|| ProcessInfo::getInstance().getCurrentIteration()->isMILP())
 	{
 		return;
 	}
 
-	auto currIterSol = processInfo->getCurrentIteration()->hyperplanePoints.at(0);
+	auto currIterSol = ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.at(0);
 
-	for (int i = processInfo->iterations.size() - 2; i >= 1; i--)
+	for (int i = ProcessInfo::getInstance().iterations.size() - 2; i >= 1; i--)
 	{
-		if (processInfo->iterations.size() > 0 && !processInfo->iterations.at(i).isMILP())
+		if (ProcessInfo::getInstance().iterations.size() > 0 && !ProcessInfo::getInstance().iterations.at(i).isMILP())
 		{
-			auto prevIterSol = processInfo->iterations.at(i).hyperplanePoints.at(0);
+			auto prevIterSol = ProcessInfo::getInstance().iterations.at(i).hyperplanePoints.at(0);
 
 			double distance = 0;
 

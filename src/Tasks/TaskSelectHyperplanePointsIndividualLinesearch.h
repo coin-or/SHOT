@@ -22,7 +22,7 @@ class TaskSelectHyperplanePointsIndividualLinesearch: public TaskBase
 		virtual std::string getType();
 	private:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		std::vector<int> nonlinearConstraintIdxs;
 };

@@ -21,5 +21,5 @@ class TaskSelectPrimalCandidatesFromSolutionPool: public TaskBase
 		virtual std::string getType();
 	private:
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };

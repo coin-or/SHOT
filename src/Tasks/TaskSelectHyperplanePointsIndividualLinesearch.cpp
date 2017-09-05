@@ -9,12 +9,12 @@
 
 TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 
-	nonlinearConstraintIdxs = processInfo->originalProblem->getNonlinearConstraintIndexes();
+	nonlinearConstraintIdxs = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
 
-	processInfo->stopTimer("HyperplaneLinesearch");
+	ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 }
 
 TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndividualLinesearch()
@@ -23,22 +23,22 @@ TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndiv
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run()
 {
-	this->run(processInfo->getPreviousIteration()->solutionPoints);
+	this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
 }
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> solPoints)
 {
 	int addedHyperplanes = 0;
 
-	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
 	// Contains boolean array that indicates if a constraint has been added or not
-	std::vector<bool> hyperplaneAddedToConstraint(processInfo->originalProblem->getNumberOfNonlinearConstraints(),
+	std::vector<bool> hyperplaneAddedToConstraint(ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints(),
 			false);
 
 	for (int i = 0; i < solPoints.size(); i++)
 	{
-		auto maxDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(solPoints.at(i).point);
+		auto maxDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solPoints.at(i).point);
 
 		if (maxDevConstr.value <= 0)
 		{
@@ -46,9 +46,9 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 		}
 		else
 		{
-			for (int j = 0; j < processInfo->interiorPts.size(); j++)
+			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
-				auto xNLP = processInfo->interiorPts.at(j).point;
+				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j).point;
 
 				for (int k = 0; k < nonlinearConstraintIdxs.size(); k++)
 				{
@@ -58,7 +58,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 					if ((currConstrIdx != -1 && hyperplaneAddedToConstraint.at(k))
 							|| ((currConstrIdx == -1) && hyperplaneAddedToConstraint.back())) continue;
 
-					auto constrDevExterior = processInfo->originalProblem->calculateConstraintFunctionValue(
+					auto constrDevExterior = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(
 							currConstrIdx, solPoints.at(i).point);
 
 					if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
@@ -79,29 +79,29 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 
 					try
 					{
-						processInfo->startTimer("HyperplaneLinesearch");
-						auto xNewc = processInfo->linesearchMethod->findZero(xNLP, solPoints.at(i).point,
+						ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
+						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
 								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
 								settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
 								settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"), currentIndexes);
 
-						processInfo->stopTimer("HyperplaneLinesearch");
+						ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 						internalPoint = xNewc.first;
 						externalPoint = xNewc.second;
 					}
 					catch (std::exception &e)
 					{
-						processInfo->stopTimer("HyperplaneLinesearch");
+						ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 						externalPoint = solPoints.at(i).point;
 
-						processInfo->outputError(
+						ProcessInfo::getInstance().outputError(
 								"     Cannot find solution with linesearch. Interior value: "
-										+ to_string(processInfo->interiorPts.at(j).maxDevatingConstraint.value)
+										+ to_string(ProcessInfo::getInstance().interiorPts.at(j).maxDevatingConstraint.value)
 										+ " exterior value: " + to_string(constrDevExterior));
 
 					}
 
-					auto constrDevBoundary = processInfo->originalProblem->calculateConstraintFunctionValue(
+					auto constrDevBoundary = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(
 							currConstrIdx, externalPoint);
 
 					if (constrDevBoundary >= 0)
@@ -123,13 +123,13 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 							hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
 						}
 
-						processInfo->hyperplaneWaitingList.push_back(hyperplane);
+						ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 						addedHyperplanes++;
 
 						if (currConstrIdx != -1) hyperplaneAddedToConstraint.at(k) = true;
 						else hyperplaneAddedToConstraint.at(hyperplaneAddedToConstraint.back()) = true;
 
-						processInfo->outputInfo(
+						ProcessInfo::getInstance().outputInfo(
 								"     Added hyperplane to constraint " + to_string(currConstrIdx) + " original dev: "
 										+ to_string(constrDevExterior));
 

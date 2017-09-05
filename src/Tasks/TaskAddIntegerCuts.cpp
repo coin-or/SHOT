@@ -2,7 +2,7 @@
 
 TaskAddIntegerCuts::TaskAddIntegerCuts(IMILPSolver *MILPSolver)
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 	this->MILPSolver = MILPSolver;
 }
@@ -14,17 +14,17 @@ TaskAddIntegerCuts::~TaskAddIntegerCuts()
 
 void TaskAddIntegerCuts::run()
 {
-	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (processInfo->integerCutWaitingList.size() == 0) return;
+	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0) return;
 
 	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
 			|| !currIter->MILPSolutionLimitUpdated)
 	{
 
-		for (int j = 0; j < processInfo->integerCutWaitingList.size(); j++)
+		for (int j = 0; j < ProcessInfo::getInstance().integerCutWaitingList.size(); j++)
 		{
-			auto tmpBinaryCombination = processInfo->integerCutWaitingList.at(j);
+			auto tmpBinaryCombination = ProcessInfo::getInstance().integerCutWaitingList.at(j);
 			int numOnes = tmpBinaryCombination.size();
 
 			std::vector < IndexValuePair > elements;
@@ -39,14 +39,14 @@ void TaskAddIntegerCuts::run()
 			}
 
 			this->MILPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
-			processInfo->numIntegerCutsAdded++;
+			ProcessInfo::getInstance().numIntegerCutsAdded++;
 		}
 
-		processInfo->outputInfo(
-				"     Added " + to_string(processInfo->integerCutWaitingList.size())
+		ProcessInfo::getInstance().outputInfo(
+				"     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size())
 						+ " integer cut(s).                                        ");
 
-		processInfo->integerCutWaitingList.clear();
+		ProcessInfo::getInstance().integerCutWaitingList.clear();
 	}
 }
 

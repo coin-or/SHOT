@@ -20,5 +20,5 @@ class NLPSolverIPOptRelaxed: public NLPSolverBase, public NLPSolverIPOptBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };

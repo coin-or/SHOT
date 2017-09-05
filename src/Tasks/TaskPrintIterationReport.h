@@ -15,7 +15,7 @@ class TaskPrintIterationReport: public TaskBase
 	private:
 
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 
 		double lastDualBound;
 		double lastPrimalBound;

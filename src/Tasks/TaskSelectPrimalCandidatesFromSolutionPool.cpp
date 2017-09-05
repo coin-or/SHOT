@@ -9,7 +9,7 @@
 
 TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool()
 {
-	processInfo = ProcessInfo::getInstance();
+	//processInfo = ProcessInfo::getInstance();
 	settings = SHOTSettings::Settings::getInstance();
 }
 
@@ -20,17 +20,17 @@ TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolut
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->isMILP()/*
-	 && processInfo->getRelativeObjectiveGap() > settings->getDoubleSetting("GapTermTolRelative", "Algorithm")*/)
+	 && ProcessInfo::getInstance().getRelativeObjectiveGap() > settings->getDoubleSetting("GapTermTolRelative", "Algorithm")*/)
 	{
-		processInfo->startTimer("PrimalBoundTotal");
-		auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
+		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
+		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
 
-		processInfo->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MILPSolutionPool);
+		ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MILPSolutionPool);
 
-		processInfo->stopTimer("PrimalBoundTotal");
+		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
 	}
 }
 

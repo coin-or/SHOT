@@ -21,5 +21,5 @@ class TaskCheckIterationLimit: public TaskBase
 	private:
 		std::string taskIDIfTrue;
 		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//ProcessInfo *processInfo;
 };

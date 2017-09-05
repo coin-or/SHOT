@@ -11,7 +11,7 @@
 
 bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
 {
-	auto prevIter = processInfo->getPreviousIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	//if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
@@ -24,7 +24,7 @@ bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
 
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
-	auto prevIter = processInfo->getPreviousIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (prevIter->maxDeviation < 0)
 	//if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
@@ -37,7 +37,7 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 
 bool RelaxationStrategyBase::isCurrentToleranceReached()
 {
-	auto prevIter = processInfo->getPreviousIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolLP", "Algorithm"))
 	{
@@ -49,14 +49,14 @@ bool RelaxationStrategyBase::isCurrentToleranceReached()
 
 bool RelaxationStrategyBase::isGapReached()
 {
-	auto prevIter = processInfo->getPreviousIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (processInfo->getAbsoluteObjectiveGap() < 2 * settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	if (ProcessInfo::getInstance().getAbsoluteObjectiveGap() < 2 * settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 	{
 		return true;
 	}
 
-	if (processInfo->getRelativeObjectiveGap() < 2 * settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (ProcessInfo::getInstance().getRelativeObjectiveGap() < 2 * settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 		return true;
 	}
