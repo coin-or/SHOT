@@ -50,7 +50,14 @@ int main(int argc, char *argv[])
 
 	fileUtil = new FileUtil();
 
-	if (argc == 2)
+	if( strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1])-4), ".dat") == 0 )
+	{
+		// special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
+		// TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
+
+		osoutput->SetPrintLevel("stdout", ENUM_OUTPUT_LEVEL_summary);
+	}
+	else if (argc == 2)
 	{
 		optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
 
@@ -67,7 +74,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete fileUtil;
 			delete solver;
@@ -84,7 +91,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete fileUtil;
 			delete solver;
@@ -101,7 +108,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete fileUtil;
 			delete solver;
@@ -119,7 +126,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[1]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Problem file not found!" << std::endl;
+			std::cout << "Problem file " << argv[1] << " not found!" << std::endl;
 
 			delete fileUtil;
 			delete solver;
@@ -129,7 +136,7 @@ int main(int argc, char *argv[])
 
 		std::string osilFileName = argv[1];
 
-		if (!solver->setOptions(optionsFile.string()))
+		if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
 		{
 			delete fileUtil;
 			delete solver;
@@ -173,12 +180,17 @@ int main(int argc, char *argv[])
 
 	ProcessInfo::getInstance().stopTimer("Total");
 
-	std::string osrl = solver->getOSrl();
+	if( !resultFile.empty() )
+	{
+		std::string osrl = solver->getOSrl();
+		fileUtil->writeFileFromString(resultFile.string(), osrl);
+	}
 
-	fileUtil->writeFileFromString(resultFile.string(), osrl);
-
-	std::string trace = solver->getTraceResult();
-	fileUtil->writeFileFromString(traceFile.string(), trace);
+	if( !traceFile.empty() )
+	{
+		std::string trace = solver->getTraceResult();
+		fileUtil->writeFileFromString(traceFile.string(), trace);
+	}
 
 #ifdef _WIN32
 	ProcessInfo::getInstance().outputSummary("\n"
