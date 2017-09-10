@@ -109,7 +109,12 @@ void GAMS2OS::createOSObjects()
 		gevLog(gev, buffer);
 
 		OSoLReader* osolreader = new OSoLReader();
-		osoptions = osolreader->readOSoL(buffer);
+		FileUtil *fileUtil = new FileUtil();
+
+		std::string fileContents = fileUtil->getFileAsString(buffer);
+		osoptions = osolreader->readOSoL(fileContents);
+
+		delete fileUtil;
 		delete osolreader;
 	}
 
