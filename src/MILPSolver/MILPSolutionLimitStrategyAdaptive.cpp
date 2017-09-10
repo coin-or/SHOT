@@ -3,14 +3,10 @@
 MILPSolutionLimitStrategyAdaptive::MILPSolutionLimitStrategyAdaptive(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
-	//MILPSolver = solver;
 
 	//lastIterSolLimIncreased = 1;
 	numSolLimIncremented = 1;
-	//currentLimit = settings->getIntSetting("MILPSolLimitInitial", "MILP");
+	//currentLimit = Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
 }
 
 MILPSolutionLimitStrategyAdaptive::~MILPSolutionLimitStrategyAdaptive()
@@ -39,7 +35,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 	}
 	/*
 
-	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	 {
 	 return true;
 	 }*/
@@ -47,7 +43,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 	// Solution limit has not been updated in the maximal number of iterations
 	if (prevIter->isMILP()
 			&& currIter->iterationNumber - lastIterSolLimIncreased
-					> settings->getIntSetting("MILPSolIncreaseIter", "MILP"))
+					> Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP"))
 	{
 		//std::cout << "Force sol lim update" << std::endl;
 		return true;
@@ -56,7 +52,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 	// We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
 			&& prevIter->maxDeviation < prevIter->usedConstraintTolerance)
-	//	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	//	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	{
 		return true;
 	}
@@ -70,7 +66,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 
 	// The solution fulfills the intermediate epsilon tolerance but not the final one
 	/*
-	 if (prevIter->maxDeviation > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
+	 if (prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
 	 {
 	 return true;
 	 }*/
@@ -84,12 +80,12 @@ int MILPSolutionLimitStrategyAdaptive::getNewLimit()
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	int newLimit;
-	//int iterLargeIncrease = settings->getIntSetting("MILPSolIncreaseIter", "MILP");
+	//int iterLargeIncrease = Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP");
 
 	newLimit = MILPSolver->getSolutionLimit() + 1;
 	lastIterSolLimIncreased = currIter->iterationNumber;
 	// Update MILP solution limit
-	//if (numSolLimIncremented > settings->getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update
+	//if (numSolLimIncremented > Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update
 	//{
 	//	newLimit = MILPSolver->getSolutionLimit() + 1;
 	//	//numSolLimIncremented = 1;
@@ -108,5 +104,5 @@ int MILPSolutionLimitStrategyAdaptive::getNewLimit()
 
 int MILPSolutionLimitStrategyAdaptive::getInitialLimit()
 {
-	return settings->getIntSetting("MILPSolLimitInitial", "MILP");
+	return Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
 }

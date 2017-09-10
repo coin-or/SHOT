@@ -1,7 +1,7 @@
 #pragma once
 class IConstraintSelectionStrategy
 {
-public:
-	IConstraintSelectionStrategy();
-	~IConstraintSelectionStrategy();
+	public:
+		IConstraintSelectionStrategy();
+		~IConstraintSelectionStrategy();
 };

@@ -5,7 +5,6 @@ double lastActiveConstraintUpdateValue;
 
 Test::Test()
 {
-
 }
 
 void Test::determineActiveConstraints(double constrTol)
@@ -83,12 +82,8 @@ double Test::operator()(const double x)
 
 LinesearchMethodBoost::LinesearchMethodBoost()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	test = new Test();
 	test->originalProblem = (ProcessInfo::getInstance().originalProblem);
-
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
@@ -166,7 +161,7 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 
 	Result r1;
 
-	if (static_cast<ES_LinesearchMethod>(settings->getIntSetting("LinesearchMethod", "Linesearch"))
+	if (static_cast<ES_LinesearchMethod>(Settings::getInstance().getIntSetting("LinesearchMethod", "Linesearch"))
 			== ES_LinesearchMethod::BoostTOMS748)
 	{
 		r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);

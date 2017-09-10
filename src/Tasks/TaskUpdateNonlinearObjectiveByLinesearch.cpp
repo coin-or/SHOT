@@ -9,8 +9,7 @@
 
 TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesearch()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesearch()
@@ -43,7 +42,8 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			if (dualSol.maxDeviation.value < 0) continue;
 
 			double mu = dualSol.objectiveValue;
-			double error = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
+			double error = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(-1,
+					dualSol.point);
 
 			vector<double> tmpPoint(dualSol.point);
 			tmpPoint.back() = mu + 1.05 * error;
@@ -54,23 +54,25 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			try
 			{
 				auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(tmpPoint, dualSol.point,
-						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0, constrIdxs);
+						Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
+						Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0, constrIdxs);
 
 				internalPoint = xNewc.first;
 				externalPoint = xNewc.second;
 
-				auto mostDevInner = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(internalPoint);
-				auto mostDevOuter = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(externalPoint);
+				auto mostDevInner = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+						internalPoint);
+				auto mostDevOuter = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+						externalPoint);
 
 				allSolutions.at(i).maxDeviation = mostDevOuter;
-				allSolutions.at(i).objectiveValue = ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(
-						externalPoint);
+				allSolutions.at(i).objectiveValue =
+						ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(externalPoint);
 				allSolutions.at(i).point.back() = externalPoint.back();
 
 				auto diffobj = abs(oldObjVal - allSolutions.at(i).objectiveValue);
 
-				if (diffobj > settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+				if (diffobj > Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 				{
 					Hyperplane hyperplane;
 					hyperplane.sourceConstraintIndex = mostDevOuter.idx;
@@ -92,7 +94,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 									+ to_string(allSolutions.at(i).objectiveValue) + " (diff:" + to_string(diffobj)
 									+ ")  #");
 					// Change the status of the solution if it has been updated much
-					if (diffobj > settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+					if (diffobj > Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 					{
 						if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 						{

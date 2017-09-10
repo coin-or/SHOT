@@ -3,8 +3,6 @@
 TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	isInitialized = false;
 	temporaryOptLimitUsed = false;
@@ -40,22 +38,26 @@ void TaskExecuteSolutionLimitStrategy::run()
 	}
 
 	if (currIter->iterationNumber - ProcessInfo::getInstance().iterLastDualBoundUpdate
-			> settings->getIntSetting("ForceOptimalIter", "MILP") && ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
+			> Settings::getInstance().getIntSetting("ForceOptimalIter", "MILP")
+			&& ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit;
 		MILPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MILPSolutionLimitUpdated = true;
-		ProcessInfo::getInstance().outputInfo("     Forced optimal iteration since too many iterations since last dual bound update");
+		ProcessInfo::getInstance().outputInfo(
+				"     Forced optimal iteration since too many iterations since last dual bound update");
 	}
 	else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().timeLastDualBoundUpdate
-			> settings->getDoubleSetting("ForceOptimalTime", "MILP") && ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
+			> Settings::getInstance().getDoubleSetting("ForceOptimalTime", "MILP")
+			&& ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit;
 		MILPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MILPSolutionLimitUpdated = true;
-		ProcessInfo::getInstance().outputAlways("     Forced optimal iteration since too long time since last dual bound update");
+		ProcessInfo::getInstance().outputAlways(
+				"     Forced optimal iteration since too long time since last dual bound update");
 	}
 	else if (ProcessInfo::getInstance().getPrimalBound() < OSDBL_MAX
 			&& abs(prevIter->objectiveValue - ProcessInfo::getInstance().getPrimalBound()) < 0.001)

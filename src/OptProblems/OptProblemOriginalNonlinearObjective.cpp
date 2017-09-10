@@ -25,16 +25,18 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	if (this->getNonlinearConstraintIndexes().size() == 0)
 	{
-		settings->updateSetting("IterLimitLP", "Algorithm", 0);
-		settings->updateSetting("MILPSolLimitInitial", "MILP", 1000);
+		Settings::getInstance().updateSetting("IterLimitLP", "Algorithm", 0);
+		Settings::getInstance().updateSetting("MILPSolLimitInitial", "MILP", 1000);
 	}
 
 	this->addedConstraintName = "objconstr";
 	this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
 	this->addedObjectiveVariableName = "addobjvar";
-	this->addedObjectiveVariableLowerBound = -settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
-	this->addedObjectiveVariableUpperBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound",
+			"InteriorPoint");
+	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound",
+			"InteriorPoint");
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
@@ -196,7 +198,7 @@ std::vector<std::string> OptProblemOriginalNonlinearObjective::getConstraintName
 {
 	std::string* tmpArray = getProblemInstance()->getConstraintNames();
 
-	std::vector < std::string > tmpVector;
+	std::vector<std::string> tmpVector;
 
 	for (int i = 0; i < getProblemInstance()->getConstraintNumber(); i++)
 	{
@@ -222,7 +224,7 @@ int OptProblemOriginalNonlinearObjective::getNumberOfRealVariables()
 std::vector<std::string> OptProblemOriginalNonlinearObjective::getVariableNames()
 {
 	std::string* tmpArray = getProblemInstance()->getVariableNames();
-	std::vector < std::string > tmpVector;
+	std::vector<std::string> tmpVector;
 
 	for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)
 	{

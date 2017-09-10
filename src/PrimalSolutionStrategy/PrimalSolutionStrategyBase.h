@@ -19,8 +19,6 @@ class PrimalSolutionStrategyBase: public IPrimalSolutionStrategy
 		virtual ~PrimalSolutionStrategyBase();
 
 	protected:
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 
 	private:
 

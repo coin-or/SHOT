@@ -2,18 +2,16 @@
 
 TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *originalInstance)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	ProcessInfo::getInstance().startTimer("Reformulation");
 
 	instance = originalInstance;
 
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
-			== ES_QPStrategy::QuadraticObjective;
+	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
+			"Algorithm"))) == ES_QPStrategy::QuadraticObjective;
 
-	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
-			== ES_QPStrategy::QuadraticallyConstrained;
+	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
+			"Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained;
 
 	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
 	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
@@ -36,12 +34,12 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 	}
 
 	ProcessInfo::getInstance().originalProblem->setProblem(originalInstance);
-	auto debugPath = settings->getStringSetting("DebugPath", "SHOTSolver");
+	auto debugPath = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		ProcessInfo::getInstance().originalProblem->saveProblemModelToFile(
-				settings->getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
+				Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
 	}
 
 	int numConstr = ProcessInfo::getInstance().originalProblem->getNumberOfConstraints();

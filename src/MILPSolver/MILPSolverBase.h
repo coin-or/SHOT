@@ -14,9 +14,6 @@ class MILPSolverBase
 		vector<pair<double, double> > fixedVariableOriginalBounds;
 
 	protected:
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
-
 		bool discreteVariablesActivated;
 		bool cachedSolutionHasChanged;
 

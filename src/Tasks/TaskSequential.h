@@ -20,6 +20,4 @@ class TaskSequential: public TaskBase
 	private:
 		std::vector<TaskBase*> m_tasks;
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 };

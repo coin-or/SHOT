@@ -17,6 +17,4 @@ class NLPSolverIPOptMinimax: public NLPSolverBase, public NLPSolverIPOptBase
 
 	private:
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 };

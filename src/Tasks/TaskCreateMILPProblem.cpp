@@ -10,8 +10,6 @@
 TaskCreateMILPProblem::TaskCreateMILPProblem(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	ProcessInfo::getInstance().startTimer("Reformulation");
 
@@ -21,9 +19,9 @@ TaskCreateMILPProblem::TaskCreateMILPProblem(IMILPSolver *MILPSolver)
 
 	MILPSolver->initializeSolverSettings();
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
-		MILPSolver->writeProblemToFile(settings->getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
+		MILPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
 	}
 
 	ProcessInfo::getInstance().outputDebug("MILP problem created");

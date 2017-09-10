@@ -9,8 +9,6 @@
 
 TaskGoto::TaskGoto(std::string taskID)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	gotoTaskID = taskID;
 }

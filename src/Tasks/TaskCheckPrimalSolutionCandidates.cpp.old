@@ -9,8 +9,8 @@
 
 TaskCheckPrimalSolutionCandidates::TaskCheckPrimalSolutionCandidates()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+	
+	
 
 	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 	primalStrategyCheckPoint = new PrimalSolutionStrategyCheckPoint();

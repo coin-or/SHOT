@@ -23,6 +23,5 @@ class TaskConditional: public TaskBase
 		TaskBase *taskIfFalse;
 		bool taskFalseIsSet;
 	protected:
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
+
 };

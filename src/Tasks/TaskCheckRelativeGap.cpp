@@ -9,8 +9,7 @@
 
 TaskCheckRelativeGap::TaskCheckRelativeGap(std::string taskIDTrue)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 TaskCheckRelativeGap::~TaskCheckRelativeGap()

@@ -18,8 +18,6 @@ class IMILPSolutionLimitStrategy
 
 		virtual int getInitialLimit() = 0;
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 		IMILPSolver *MILPSolver;
 
 	protected:

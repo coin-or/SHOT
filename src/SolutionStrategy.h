@@ -1,25 +1,25 @@
 #pragma once
 class SolutionStrategy
 {
-public:
+	public:
 
-	class Builder;
-	//SolutionStrategy();
-	//~SolutionStrategy();
+		class Builder;
+		//SolutionStrategy();
+		//~SolutionStrategy();
 
-private:
-	int i;
-	float f;
-	char c;
+	private:
+		int i;
+		float f;
+		char c;
 
-	// Only one simple constructor - rest is handled by Builder
-	SolutionStrategy();
+		// Only one simple constructor - rest is handled by Builder
+		SolutionStrategy();
 
-public:
-	// Product specific functionality
-	void print();
-	void doSomething();
-	void doSomethingElse();
+	public:
+		// Product specific functionality
+		void print();
+		void doSomething();
+		void doSomethingElse();
 
 };
 

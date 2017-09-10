@@ -1,9 +1,8 @@
 #pragma once 
 #include "IConstraintSelectionStrategy.h"
-class ConstraintSelectionStrategyMostDeviating :
-	public IConstraintSelectionStrategy
+class ConstraintSelectionStrategyMostDeviating: public IConstraintSelectionStrategy
 {
-public:
-	ConstraintSelectionStrategyMostDeviating();
-	~ConstraintSelectionStrategyMostDeviating();
+	public:
+		ConstraintSelectionStrategyMostDeviating();
+		~ConstraintSelectionStrategyMostDeviating();
 };

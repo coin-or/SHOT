@@ -118,8 +118,6 @@ class OptProblem
 		virtual void fixVariable(int varIdx, double value);
 
 	protected:
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 
 		void setNonlinearConstraintIndexes();
 		//void setQuadraticConstraintIndexes();

@@ -3,8 +3,6 @@
 RelaxationStrategyStandard::RelaxationStrategyStandard(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 }
 
@@ -16,8 +14,8 @@ void RelaxationStrategyStandard::setInitial()
 {
 	LPFinished = false;
 
-	if (settings->getIntSetting("IterLimitLP", "Algorithm") > 0
-			&& settings->getDoubleSetting("TimeLimitLP", "Algorithm") > 0)
+	if (Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm") > 0
+			&& Settings::getInstance().getDoubleSetting("TimeLimitLP", "Algorithm") > 0)
 	{
 		this->setActive();
 	}
@@ -29,7 +27,7 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
-	int iterInterval = settings->getIntSetting("IterSolveLPRelaxation", "Algorithm");
+	int iterInterval = Settings::getInstance().getIntSetting("IterSolveLPRelaxation", "Algorithm");
 	if (iterInterval != 0 && ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % iterInterval == 0)
 	{
 		return (this->setActive());
@@ -87,7 +85,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 {
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (prevIter->iterationNumber < settings->getIntSetting("IterLimitLP", "Algorithm"))
+	if (prevIter->iterationNumber < Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm"))
 	{
 		return (false);
 	}
@@ -97,7 +95,8 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-	if (ProcessInfo::getInstance().getElapsedTime("LP") < settings->getDoubleSetting("TimeLimitLP", "Algorithm"))
+	if (ProcessInfo::getInstance().getElapsedTime("LP")
+			< Settings::getInstance().getDoubleSetting("TimeLimitLP", "Algorithm"))
 	{
 		return (false);
 	}

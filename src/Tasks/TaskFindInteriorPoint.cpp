@@ -2,8 +2,7 @@
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskFindInteriorPoint::~TaskFindInteriorPoint()
@@ -17,7 +16,8 @@ void TaskFindInteriorPoint::run()
 	ProcessInfo::getInstance().startTimer("InteriorPointTotal");
 
 	ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
-	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("InteriorPointSolver", "InteriorPoint"));
+	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
+			"InteriorPoint"));
 
 	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
 	{
@@ -61,12 +61,12 @@ void TaskFindInteriorPoint::run()
 		throw new TaskExceptionInteriorPoint("Error in NLP solver definition.");
 	}
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		for (int i = 0; i < NLPSolvers.size(); i++)
 		{
 			stringstream ss;
-			ss << settings->getStringSetting("DebugPath", "SHOTSolver");
+			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
 			ss << "/nlp";
 			ss << i;
 			ss << ".txt";

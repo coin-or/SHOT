@@ -2,8 +2,7 @@
 
 PointSelectionStrategyBase::PointSelectionStrategyBase()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 PointSelectionStrategyBase::~PointSelectionStrategyBase()

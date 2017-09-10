@@ -9,8 +9,7 @@
 
 TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(std::string taskIDTrue)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 
@@ -23,7 +22,7 @@ void TaskCheckConstraintTolerance::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")
+	if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")
 			&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& currIter->type == E_IterationProblemType::MIP)
 	{

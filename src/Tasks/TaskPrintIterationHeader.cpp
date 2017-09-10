@@ -9,8 +9,7 @@
 
 TaskPrintIterationHeader::TaskPrintIterationHeader()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskPrintIterationHeader::~TaskPrintIterationHeader()

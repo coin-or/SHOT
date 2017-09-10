@@ -9,31 +9,29 @@
 
 PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
-	originalNLPTime = settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
-	originalNLPIter = settings->getIntSetting("NLPFixedMaxIters", "PrimalBound");
+	originalNLPTime = Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
+	originalNLPIter = Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound");
 
-	switch (static_cast<ES_PrimalNLPSolver>(settings->getIntSetting("PrimalNLPSolver", "PrimalBound")))
+	switch (static_cast<ES_PrimalNLPSolver>(Settings::getInstance().getIntSetting("PrimalNLPSolver", "PrimalBound")))
 	{
-	case ES_PrimalNLPSolver::CuttingPlane:
-	{
-		NLPSolver = new NLPSolverCuttingPlaneRelaxed();
-		break;
-	}
-	case ES_PrimalNLPSolver::IPOpt:
-	{
-		NLPSolver = new NLPSolverIPOptRelaxed();
-		break;
-	}
-	case ES_PrimalNLPSolver::GAMS:
-	{
-		NLPSolver = new NLPSolverGAMS();
-		break;
-	}
-	default :
-		throw std::logic_error("Unknown PrimalNLPSolver setting.");
+		case ES_PrimalNLPSolver::CuttingPlane:
+		{
+			NLPSolver = new NLPSolverCuttingPlaneRelaxed();
+			break;
+		}
+		case ES_PrimalNLPSolver::IPOpt:
+		{
+			NLPSolver = new NLPSolverIPOptRelaxed();
+			break;
+		}
+		case ES_PrimalNLPSolver::GAMS:
+		{
+			NLPSolver = new NLPSolverGAMS();
+			break;
+		}
+		default:
+			throw std::logic_error("Unknown PrimalNLPSolver setting.");
 	}
 
 	NLPSolver->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
@@ -56,7 +54,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	bool isSolved;
 
-	vector < PrimalFixedNLPCandidate > testPts;
+	vector<PrimalFixedNLPCandidate> testPts;
 
 	// Fix variables
 	auto varTypes = ProcessInfo::getInstance().originalProblem->getVariableTypes();
@@ -74,7 +72,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			for (int i = 0; i < testedPoints.size(); i++)
 			{
 				if (UtilityFunctions::isDifferentRoundedSelectedElements(
-						ProcessInfo::getInstance().primalFixedNLPCandidates.at(j).point, testedPoints.at(i), discreteVariableIndexes))
+						ProcessInfo::getInstance().primalFixedNLPCandidates.at(j).point, testedPoints.at(i),
+						discreteVariableIndexes))
 				{
 					testPts.push_back(ProcessInfo::getInstance().primalFixedNLPCandidates.at(j));
 					testedPoints.push_back(ProcessInfo::getInstance().primalFixedNLPCandidates.at(j).point);
@@ -119,7 +118,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			fixedVariableValues.at(k) = tmpSolPt;
 
 			// Sets the starting point to the fixed value
-			if (settings->getBoolSetting("NLPFixedWarmstart", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("NLPFixedWarmstart", "PrimalBound"))
 			{
 				startingPointIndexes.at(currVarIndex) = currVarIndex;
 				startingPointValues.at(currVarIndex) = tmpSolPt;
@@ -127,7 +126,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 		}
 
-		if (settings->getBoolSetting("NLPFixedWarmstart", "PrimalBound"))
+		if (Settings::getInstance().getBoolSetting("NLPFixedWarmstart", "PrimalBound"))
 		{
 			for (int k = 0; k < realVariableIndexes.size(); k++)
 			{
@@ -150,9 +149,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 		NLPSolver->fixVariables(discreteVariableIndexes, fixedVariableValues);
 
-		if (settings->getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 		{
-			std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/primalnlp"
+			std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/primalnlp"
 					+ to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + "_" + to_string(j);
 			NLPSolver->saveProblemToFile(filename + ".txt");
 			NLPSolver->saveOptionsToFile(filename + ".osrl");
@@ -199,7 +198,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				variableSolution.push_back(tmpObj);
 			}
 
-			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(variableSolution);
+			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+					variableSolution);
 
 			std::string tmpConstr;
 			if (NLPSolver->isObjectiveFunctionNonlinear()
@@ -212,8 +212,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			}
 			else
 			{
-				tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().at(mostDevConstr.idx) + ": "
-						+ ((boost::format("%.5f") % mostDevConstr.value).str());
+				tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().at(mostDevConstr.idx)
+						+ ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
 			}
 
 			std::string tmpObjVal = UtilityFunctions::toStringFormat(tmpObj, "%.3f");
@@ -227,31 +227,33 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			}
 
 			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
-					% ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % tmpObjVal
-					% tmpPrimal % tmpConstr;
+					% ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % ""
+					% tmpObjVal % tmpPrimal % tmpConstr;
 
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
-			int iters = max(ceil(settings->getIntSetting("NLPFixedMaxIters", "PrimalBound") * 0.98), originalNLPIter);
-			settings->updateSetting("NLPFixedMaxIters", "PrimalBound", iters);
+			int iters = max(ceil(Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound") * 0.98),
+					originalNLPIter);
+			Settings::getInstance().updateSetting("NLPFixedMaxIters", "PrimalBound", iters);
 
-			double interval = max(0.9 * settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"),
+			double interval = max(
+					0.9 * Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"),
 					originalNLPTime);
-			settings->updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
+			Settings::getInstance().updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
 
-			ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution, E_PrimalSolutionSource::NLPFixedIntegers,
-					currIter->iterationNumber);
+			ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution,
+					E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 		}
 		else
 		{
-			int iters = ceil(settings->getIntSetting("NLPFixedMaxIters", "PrimalBound") * 1.02);
-			settings->updateSetting("NLPFixedMaxIters", "PrimalBound", iters);
-			double interval = 1.1 * settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
-			settings->updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
+			int iters = ceil(Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound") * 1.02);
+			Settings::getInstance().updateSetting("NLPFixedMaxIters", "PrimalBound", iters);
+			double interval = 1.1 * Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
+			Settings::getInstance().updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
 
 			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
-					% ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % "infeasible"
-					% "" % "";
+					% ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % ""
+					% "infeasible" % "" % "";
 
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
@@ -259,7 +261,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 					"     Duration:  " + to_string(timeEnd - timeStart) + " s. New interval: " + to_string(interval)
 							+ " s or " + to_string(iters) + " iters.");
 
-			if (settings->getBoolSetting("AddIntegerCuts", "Algorithm")
+			if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm")
 					&& NLPSolver->NLPProblem->getNumberOfIntegerVariables() == 0)
 			{
 				//Add integer cut.

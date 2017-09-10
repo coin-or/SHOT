@@ -9,8 +9,8 @@
 
 TaskCheckDualSolutionCandidates::TaskCheckDualSolutionCandidates()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+	
+	
 }
 
 TaskCheckDualSolutionCandidates::~TaskCheckDualSolutionCandidates()

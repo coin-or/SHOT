@@ -2,8 +2,7 @@
 
 TaskConditional::TaskConditional()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskFalseIsSet = false;
 }
 

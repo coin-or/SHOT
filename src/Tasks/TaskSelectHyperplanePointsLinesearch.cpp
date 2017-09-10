@@ -9,8 +9,7 @@
 
 TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSelectHyperplanePointsLinesearch::~TaskSelectHyperplanePointsLinesearch()
@@ -41,7 +40,8 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 		{
 			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
-				if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+				if (addedHyperplanes
+						>= Settings::getInstance().getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j).point;
 
 				std::vector<double> externalPoint;
@@ -52,9 +52,9 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 
 					ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 					auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-							settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-							settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-							settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+							Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
+							Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+							Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
 
 					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 					internalPoint = xNewc.first;

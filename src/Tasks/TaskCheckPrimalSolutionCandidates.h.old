@@ -22,8 +22,8 @@ class TaskCheckPrimalSolutionCandidates: public TaskBase
 
 	private:
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
+		
+		
 
 		PrimalSolutionStrategyCheckPoint *primalStrategyCheckPoint;
 };

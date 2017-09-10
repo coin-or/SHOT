@@ -9,8 +9,7 @@
 
 TaskPrintProblemStats::TaskPrintProblemStats()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskPrintProblemStats::~TaskPrintProblemStats()

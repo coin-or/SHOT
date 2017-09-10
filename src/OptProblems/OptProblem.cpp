@@ -3,8 +3,7 @@
 OptProblem::OptProblem()
 {
 	m_problemInstance = NULL;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 OptProblem::~OptProblem()
@@ -25,7 +24,7 @@ int OptProblem::getNumberOfConstraints()
 std::vector<std::string> OptProblem::getConstraintNames()
 {
 	std::string* tmpArray = getProblemInstance()->getConstraintNames();
-	std::vector < std::string > tmpVector(tmpArray, tmpArray + getProblemInstance()->getConstraintNumber());
+	std::vector<std::string> tmpVector(tmpArray, tmpArray + getProblemInstance()->getConstraintNumber());
 
 	return tmpVector;
 }
@@ -54,7 +53,7 @@ int OptProblem::getNumberOfRealVariables()
 std::vector<std::string> OptProblem::getVariableNames()
 {
 	std::string* tmpArray = getProblemInstance()->getVariableNames();
-	std::vector < std::string > tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+	std::vector<std::string> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
 	return tmpVector;
 }
@@ -187,19 +186,21 @@ void OptProblem::printProblemStatistics()
 
 #if linux
 
-	ProcessInfo::getInstance().outputSummary("┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
+	ProcessInfo::getInstance().outputSummary(
+			"┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
 	ProcessInfo::getInstance().outputSummary(
 			"│ Number of constraints (total/linear/nonlinear):   "
-			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
-			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
+					+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
+					+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
 	ProcessInfo::getInstance().outputSummary(
 			"│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
-			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
-			+ to_string(getNumberOfIntegerVariables()) + "/");
+					+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
+					+ to_string(getNumberOfIntegerVariables()) + "/");
 
-	ProcessInfo::getInstance().outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
+	ProcessInfo::getInstance().outputSummary(
+			"└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
 
 }
@@ -322,7 +323,7 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
 
 vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<double> point, double tolerance)
 {
-	vector < IndexValuePair > valpairs;
+	vector<IndexValuePair> valpairs;
 
 	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
 
@@ -528,7 +529,7 @@ int OptProblem::getNumberOfNonlinearConstraints()
 		if (tmpIndex != -1) isNonlinear.at(tmpIndex) = true;
 	}
 
-	if (!((static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
+	if (!((static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm")))
 			== ES_QPStrategy::QuadraticallyConstrained))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
@@ -786,8 +787,8 @@ void OptProblem::setNonlinearConstraintIndexes()
 		}
 	}
 
-//	if (settings->getBoolSetting("UseQuadraticProgramming", "Algorithm"))
-	if (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm"))
+//	if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
+	if (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"))
 			== ES_QPStrategy::QuadraticallyConstrained)
 	{
 		for (int i = 0; i < numQuadTerms; i++)
@@ -838,7 +839,7 @@ void OptProblem::setNonlinearConstraintIndexes()
  {
  std::vector<int> quadraticIndexes;
 
- if (settings->getBoolSetting("UseQuadraticProgramming", "Algorithm"))
+ if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
  {
  std::vector<bool> isQuadratic(this->getProblemInstance()->getConstraintNumber(), false);
 
@@ -1013,10 +1014,10 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
 		if (tmpIndex == constrIdx) return true;
 	}
 
-	auto QPStrategy = static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm"));
+	auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"));
 
 	if (QPStrategy == ES_QPStrategy::Nonlinear || QPStrategy != ES_QPStrategy::QuadraticallyConstrained)
-//	if (!settings->getBoolSetting("UseQuadraticProgramming", "Algorithm"))
+//	if (!Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
 		{
@@ -1031,10 +1032,10 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
 
 bool OptProblem::isConstraintQuadratic(int constrIdx)
 {
-	auto QPStrategy = static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm"));
+	auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"));
 
 	if (QPStrategy == ES_QPStrategy::QuadraticallyConstrained || QPStrategy == ES_QPStrategy::QuadraticObjective)
-//	if (settings->getBoolSetting("UseQuadraticProgramming", "Algorithm"))
+//	if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
 		{
@@ -1107,7 +1108,7 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 
 	if (instance->getObjectiveCoefficientNumbers()[0] == 1)
 	{
-		double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+		double tmpObjBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 		int varIdx = instance->getObjectiveCoefficients()[0]->indexes[0];
 		;
 
@@ -1131,7 +1132,7 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 std::vector<QuadraticTerm*> OptProblem::getQuadraticTermsInConstraint(int constrIdx)
 {
 
-	auto QPStrategy = static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm"));
+	auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"));
 	std::vector<QuadraticTerm*> quadTerms;
 
 	if (constrIdx != -1 && QPStrategy == ES_QPStrategy::QuadraticallyConstrained)

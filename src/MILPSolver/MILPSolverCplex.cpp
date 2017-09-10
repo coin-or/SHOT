@@ -3,11 +3,8 @@
 //#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
-MILPSolverCplex::MILPSolverCplex()
+MILPSolverCplex ::MILPSolverCplex()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	discreteVariablesActivated = true;
 
 	cplexModel = IloModel(cplexEnv);
@@ -67,7 +64,8 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		}
 		else
 		{
-			ProcessInfo::getInstance().outputWarning("Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+			ProcessInfo::getInstance().outputWarning(
+			"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -217,21 +215,24 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setOut(cplexEnv.getNullStream());
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
-		cplexInstance.setParam(IloCplex::SolnPoolIntensity, settings->getIntSetting("SolnPoolIntensity", "CPLEX"));	// Don't use 3 with heuristics
-		cplexInstance.setParam(IloCplex::SolnPoolReplace, settings->getIntSetting("SolnPoolReplace", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
+				Settings::getInstance().getIntSetting("SolnPoolIntensity", "CPLEX"));	// Don't use 3 with heuristics
+		cplexInstance.setParam(IloCplex::SolnPoolReplace,
+				Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
 
 		//cplexInstance.setParam(IloCplex::RepairTries, 5);
 		//cplexInstance.setParam(IloCplex::HeurFreq,2);
 		//cplexInstance.setParam(IloCplex::AdvInd,2);
 
-		cplexInstance.setParam(IloCplex::SolnPoolGap, settings->getDoubleSetting("SolnPoolGap", "CPLEX"));
-		cplexInstance.setParam(IloCplex::SolnPoolCapacity, settings->getIntSetting("SolutionPoolSize", "MILP"));
+		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("SolnPoolGap", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
+				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
 
-		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
-		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Probe", "CPLEX"));
+		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("MIPEmphasis", "CPLEX"));
 
-		cplexInstance.setParam(IloCplex::ParallelMode, settings->getIntSetting("ParallelMode", "CPLEX"));
-		cplexInstance.setParam(IloCplex::Threads, settings->getIntSetting("Threads", "CPLEX"));
+		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("ParallelMode", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("Threads", "CPLEX"));
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
@@ -310,11 +311,11 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 //std::cout << "Last nonlazy: " << this->firstNonLazyHyperplane << std::endl;
 
 //if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber == 10)
-//if (settings->getBoolSetting("DelayedConstraints", "MILP") && currIter->isMILP() && currIter->MILPSolutionLimitUpdated)
+//if (Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP") && currIter->isMILP() && currIter->MILPSolutionLimitUpdated)
 
 	if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber - iterLastLazyConvert > 10)
 	{
-		//if (!ProcessInfo::getInstance().getCurrentIteration()->isMILP() || !(settings->getBoolSetting("DelayedConstraints", "MILP") && ProcessInfo::getInstance().getCurrentIteration()->MILPSolutionLimitUpdated))
+		//if (!ProcessInfo::getInstance().getCurrentIteration()->isMILP() || !(Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP") && ProcessInfo::getInstance().getCurrentIteration()->MILPSolutionLimitUpdated))
 		//{
 		std::vector<int> idxs;
 
@@ -431,7 +432,8 @@ void MILPSolverCplex::activateDiscreteVariables(bool activate)
 	}
 	catch (IloException& e)
 	{
-		if (activate) ProcessInfo::getInstance().outputError("Error when activating discrete variables", e.getMessage());
+		if (activate) ProcessInfo::getInstance().outputError("Error when activating discrete variables",
+				e.getMessage());
 	}
 }
 
@@ -511,7 +513,7 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 		{
 			cplexInstance.extract(cplexModel);
 
-			if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+			if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
 			{
 				//Extract the model if we have updated the constraints
 				cplexInstance.extract(cplexModel);
@@ -641,7 +643,8 @@ std::vector<double> MILPSolverCplex::getVariableSolution(int solIdx)
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx), e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
+				e.getMessage());
 	}
 
 	return (solution);
@@ -693,8 +696,8 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (objVal);
@@ -776,12 +779,14 @@ void MILPSolverCplex::setCutOff(double cutOff)
 		{
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
-			ProcessInfo::getInstance().outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
 			cplexInstance.setParam(IloCplex::CutLo, cutOff);
-			ProcessInfo::getInstance().outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (IloException &e)
@@ -900,8 +905,8 @@ void MILPSolverCplex::updateVariableBound(int varIndex, double lowerBound, doubl
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when updating variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 }
 
@@ -916,8 +921,8 @@ pair<double, double> MILPSolverCplex::getCurrentVariableBounds(int varIndex)
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when obtaining variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 	return (tmpBounds);
 }
@@ -977,7 +982,7 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 			newUBs.push_back(redubs[i]);
 		}
 
-		if (settings->getBoolSetting("RemoveRedundantConstraintsFromMIP", "Presolve"))
+		if (Settings::getInstance().getBoolSetting("RemoveRedundantConstraintsFromMIP", "Presolve"))
 		{
 			int numconstr = 0;
 

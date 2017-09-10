@@ -2,8 +2,7 @@
 
 TaskAddIntegerCuts::TaskAddIntegerCuts(IMILPSolver *MILPSolver)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	this->MILPSolver = MILPSolver;
 }
 
@@ -18,7 +17,7 @@ void TaskAddIntegerCuts::run()
 
 	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0) return;
 
-	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
+	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP")
 			|| !currIter->MILPSolutionLimitUpdated)
 	{
 
@@ -27,7 +26,7 @@ void TaskAddIntegerCuts::run()
 			auto tmpBinaryCombination = ProcessInfo::getInstance().integerCutWaitingList.at(j);
 			int numOnes = tmpBinaryCombination.size();
 
-			std::vector < IndexValuePair > elements;
+			std::vector<IndexValuePair> elements;
 
 			for (int i = 0; i < numOnes; i++)
 			{

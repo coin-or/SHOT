@@ -6,15 +6,15 @@
 #include "GAMS2OS.h"
 #include "OptProblemNLPRelaxed.h"
 
-NLPSolverGAMS::NLPSolverGAMS()
-: gmo(NULL), gev(NULL)
+NLPSolverGAMS::NLPSolverGAMS() :
+		gmo(NULL), gev(NULL)
 {
 	NLPProblem = new OptProblemNLPRelaxed();
 }
 
 void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
 {
-	for( size_t i = 0; i < variableIndexes.size(); ++i )
+	for (size_t i = 0; i < variableIndexes.size(); ++i)
 	{
 		assert(variableIndexes[i] < gmoN(gmo));
 		gmoSetVarLOne(gmo, variableIndexes[i], variableValues[i]);
@@ -22,12 +22,12 @@ void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vect
 }
 
 void NLPSolverGAMS::clearStartingPoint()
-{ }
-
+{
+}
 
 void NLPSolverGAMS::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
 {
-	for( size_t i = 0; i < variableIndexes.size(); ++i )
+	for (size_t i = 0; i < variableIndexes.size(); ++i)
 	{
 		assert(variableIndexes[i] < gmoN(gmo));
 		gmoSetAltVarLowerOne(gmo, variableIndexes[i], variableValues[i]);
@@ -35,22 +35,19 @@ void NLPSolverGAMS::fixVariables(std::vector<int> variableIndexes, std::vector<d
 	}
 }
 
-
 void NLPSolverGAMS::unfixVariables()
 {
-	for( size_t i = 0; i < gmoN(gmo); ++i )
+	for (size_t i = 0; i < gmoN(gmo); ++i)
 	{
 		gmoSetAltVarLowerOne(gmo, i, gmoGetVarLowerOne(gmo, i));
 		gmoSetAltVarUpperOne(gmo, i, gmoGetVarUpperOne(gmo, i));
 	}
 }
 
-
 void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
 {
 	throw std::logic_error("saveOptionsToFile() not implemented");
 }
-
 
 std::vector<double> NLPSolverGAMS::getSolution()
 {
@@ -74,55 +71,53 @@ double NLPSolverGAMS::getObjectiveValue()
 E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 {
 	char msg[GMS_SSSIZE];
-    gmoAltBoundsSet(gmo, 1);  /* use alternative bounds */
+	gmoAltBoundsSet(gmo, 1); /* use alternative bounds */
 	gmoForceContSet(gmo, 1);
-	gevCallSolver(gev, gmo, "", "conopt", gevSolveLinkLoadLibrary,
-			gevSolverSameStreams, "", "",
-			1000.0, ITERLIM_INFINITY, 0,
-			0.0, 0.0, NULL, msg);
-    gmoAltBoundsSet(gmo, 0);
+	gevCallSolver(gev, gmo, "", "conopt", gevSolveLinkLoadLibrary, gevSolverSameStreams, "", "", 1000.0,
+			ITERLIM_INFINITY, 0, 0.0, 0.0, NULL, msg);
+	gmoAltBoundsSet(gmo, 0);
 	gmoForceContSet(gmo, 0);
 
-	switch( gmoModelStat(gmo) )
+	switch (gmoModelStat(gmo))
 	{
-	case gmoModelStat_OptimalGlobal:
-	case gmoModelStat_OptimalLocal:
-	case gmoModelStat_SolvedUnique:
-	case gmoModelStat_Solved:
-	case gmoModelStat_SolvedSingular:
-		return E_NLPSolutionStatus::Optimal;
-	case gmoModelStat_Unbounded :
-	case gmoModelStat_UnboundedNoSolution :
-		return E_NLPSolutionStatus::Unbounded;
-	case gmoModelStat_InfeasibleGlobal :
-	case gmoModelStat_InfeasibleLocal :
-	case gmoModelStat_IntegerInfeasible :
-	case gmoModelStat_InfeasibleNoSolution :
-		return E_NLPSolutionStatus::Infeasible;
-	case gmoModelStat_Feasible :
-	case gmoModelStat_Integer :
-		return E_NLPSolutionStatus::Feasible;
-
-	case gmoModelStat_InfeasibleIntermed :
-	case gmoModelStat_NonIntegerIntermed :
-	case gmoModelStat_NoSolutionReturned :
-		switch( gmoSolveStat(gmo) )
-		{
-		case gmoSolveStat_Iteration :
-			return E_NLPSolutionStatus::IterationLimit;
-		case gmoSolveStat_Resource :
-			return E_NLPSolutionStatus::TimeLimit;
-		case gmoSolveStat_Normal:
-		case gmoSolveStat_User:
+		case gmoModelStat_OptimalGlobal:
+		case gmoModelStat_OptimalLocal:
+		case gmoModelStat_SolvedUnique:
+		case gmoModelStat_Solved:
+		case gmoModelStat_SolvedSingular:
+			return E_NLPSolutionStatus::Optimal;
+		case gmoModelStat_Unbounded:
+		case gmoModelStat_UnboundedNoSolution:
+			return E_NLPSolutionStatus::Unbounded;
+		case gmoModelStat_InfeasibleGlobal:
+		case gmoModelStat_InfeasibleLocal:
+		case gmoModelStat_IntegerInfeasible:
+		case gmoModelStat_InfeasibleNoSolution:
 			return E_NLPSolutionStatus::Infeasible;
-		default :
-			return E_NLPSolutionStatus::Error;
-		}
+		case gmoModelStat_Feasible:
+		case gmoModelStat_Integer:
+			return E_NLPSolutionStatus::Feasible;
 
-	case gmoModelStat_LicenseError :
-	case gmoModelStat_ErrorUnknown :
-	case gmoModelStat_ErrorNoSolution :
-		return E_NLPSolutionStatus::Error;
+		case gmoModelStat_InfeasibleIntermed:
+		case gmoModelStat_NonIntegerIntermed:
+		case gmoModelStat_NoSolutionReturned:
+			switch (gmoSolveStat(gmo))
+			{
+				case gmoSolveStat_Iteration:
+					return E_NLPSolutionStatus::IterationLimit;
+				case gmoSolveStat_Resource:
+					return E_NLPSolutionStatus::TimeLimit;
+				case gmoSolveStat_Normal:
+				case gmoSolveStat_User:
+					return E_NLPSolutionStatus::Infeasible;
+				default:
+					return E_NLPSolutionStatus::Error;
+			}
+
+		case gmoModelStat_LicenseError:
+		case gmoModelStat_ErrorUnknown:
+		case gmoModelStat_ErrorNoSolution:
+			return E_NLPSolutionStatus::Error;
 	}
 }
 

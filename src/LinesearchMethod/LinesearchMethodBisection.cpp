@@ -2,8 +2,6 @@
 
 LinesearchMethodBisection::LinesearchMethodBisection()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 }
 
 LinesearchMethodBisection::~LinesearchMethodBisection()

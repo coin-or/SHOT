@@ -215,11 +215,11 @@ class ProcessInfo
 		static ProcessInfo& getInstance()
 		{
 			static ProcessInfo inst;
-			return inst;
+			return (inst);
 		}
 
 	private:
-		SHOTSettings::Settings *settings;
+
 		bool objectiveUpdatedByLinesearch;
 
 		bool checkPrimalSolutionPoint(PrimalSolution primalSol);

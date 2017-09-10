@@ -5,8 +5,7 @@
 OptProblemNLPSHOTMinimax::OptProblemNLPSHOTMinimax()
 {
 	//problemInstance = NULL;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 OptProblemNLPSHOTMinimax::~OptProblemNLPSHOTMinimax()
@@ -113,8 +112,8 @@ void OptProblemNLPSHOTMinimax::copyVariables(OSInstance *source, OSInstance *des
 		}
 	}
 
-	double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
-	double tmpObjUpperBound = settings->getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
+	double tmpObjBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
@@ -179,7 +178,7 @@ void OptProblemNLPSHOTMinimax::copyConstraints(OSInstance *source, OSInstance *d
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		//double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+		//double tmpObjBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
 				0.0);
 	}
@@ -489,7 +488,7 @@ IndexValuePair OptProblemNLPSHOTMinimax::getMostDeviatingConstraint(std::vector<
 vector<IndexValuePair> OptProblemNLPSHOTMinimax::getMostDeviatingConstraints(std::vector<double> point,
 		double tolerance)
 {
-	vector < IndexValuePair > valpairs;
+	vector<IndexValuePair> valpairs;
 
 	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
 

@@ -10,8 +10,7 @@
 TaskSwitchToLazyConstraints::TaskSwitchToLazyConstraints(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSwitchToLazyConstraints::~TaskSwitchToLazyConstraints()

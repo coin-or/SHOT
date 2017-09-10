@@ -9,8 +9,7 @@
 
 TaskAddHyperplanes::TaskAddHyperplanes(IMILPSolver *MILPSolver)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	itersWithoutAddedHPs = 0;
 
 	this->MILPSolver = MILPSolver;
@@ -26,14 +25,14 @@ void TaskAddHyperplanes::run()
 	this->MILPSolver = MILPSolver;
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (!currIter->isMILP() || !settings->getBoolSetting("DelayedConstraints", "MILP")
+	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP")
 			|| !currIter->MILPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
 		int addedHyperplanes = 0;
 
 		for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
 		{
-			if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) break;
+			if (addedHyperplanes >= Settings::getInstance().getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) break;
 
 			auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
 

@@ -7,10 +7,10 @@
 
 #pragma once
 
-class IPrimalSolutionStrategy {
-public:
-	//IPrimalSolutionStrategy();
-	virtual ~IPrimalSolutionStrategy();
+class IPrimalSolutionStrategy
+{
+	public:
+		virtual ~IPrimalSolutionStrategy();
 
-	virtual bool runStrategy() = 0;
+		virtual bool runStrategy() = 0;
 };

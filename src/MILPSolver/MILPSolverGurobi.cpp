@@ -5,9 +5,6 @@ GRBModel *gurobiModel;
 
 MILPSolverGurobi::MILPSolverGurobi()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	discreteVariablesActivated = true;
 
 	gurobiEnv = new GRBEnv();
@@ -256,12 +253,14 @@ void MILPSolverGurobi::initializeSolverSettings()
 		//gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, 2100000000);
-		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, settings->getIntSetting("SolutionPoolSize", "MILP") + 1);
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber,
+				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP") + 1);
 	}
 	catch (GRBException &e)
 	{
 		{
-			ProcessInfo::getInstance().outputError("Error when initializing parameters for linear solver", e.getMessage());
+			ProcessInfo::getInstance().outputError("Error when initializing parameters for linear solver",
+					e.getMessage());
 		}
 	}
 }
@@ -278,7 +277,7 @@ int MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, 
 			*expr = *expr + elements.at(i).value * variable;
 		}
 
-		/*if (settings->getBoolSetting("UseLazyConstraints", "MILP")) // Not implemented yet in Gurobi
+		/*if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP")) // Not implemented yet in Gurobi
 		 {
 		 if (discreteVariablesActivated)
 		 {
@@ -346,7 +345,8 @@ std::vector<double> MILPSolverGurobi::getVariableSolution(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx), e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
+				e.getMessage());
 	}
 
 	return (solution);
@@ -551,11 +551,13 @@ void MILPSolverGurobi::setCutOff(double cutOff)
 
 		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
-			ProcessInfo::getInstance().outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
-			ProcessInfo::getInstance().outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (GRBException &e)
@@ -643,8 +645,8 @@ double MILPSolverGurobi::getObjectiveValue(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (objVal);
@@ -700,8 +702,8 @@ void MILPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doub
 	}
 	catch (GRBException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when updating variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 }
 
@@ -720,8 +722,8 @@ pair<double, double> MILPSolverGurobi::getCurrentVariableBounds(int varIndex)
 	}
 	catch (GRBException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when obtaining variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 
 	return (tmpBounds);

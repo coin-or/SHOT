@@ -41,9 +41,8 @@ class MinimizationFunction
 
 NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-	auto solver = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
+
+	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
 
 	if (solver == ES_MILPSolver::Cplex)
 	{
@@ -88,12 +87,14 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 	int numVar = NLPProblem->getNumberOfVariables();
 
 	// Sets the maximal number of iterations
-	int maxIter = settings->getIntSetting("IterLimit", "InteriorPointCuttingPlane");
-	double termObjTolAbs = settings->getDoubleSetting("TermToleranceAbs", "InteriorPointCuttingPlane");
-	double termObjTolRel = settings->getDoubleSetting("TermToleranceRel", "InteriorPointCuttingPlane");
-	double constrSelTol = settings->getDoubleSetting("ConstraintSelectionTolerance", "InteriorPointCuttingPlane");
-	boost::uintmax_t maxIterSubsolver = settings->getIntSetting("IterLimitSubsolver", "InteriorPointCuttingPlane");
-	int bitPrecision = settings->getIntSetting("BitPrecision", "InteriorPointCuttingPlane");
+	int maxIter = Settings::getInstance().getIntSetting("IterLimit", "InteriorPointCuttingPlane");
+	double termObjTolAbs = Settings::getInstance().getDoubleSetting("TermToleranceAbs", "InteriorPointCuttingPlane");
+	double termObjTolRel = Settings::getInstance().getDoubleSetting("TermToleranceRel", "InteriorPointCuttingPlane");
+	double constrSelTol = Settings::getInstance().getDoubleSetting("ConstraintSelectionTolerance",
+			"InteriorPointCuttingPlane");
+	boost::uintmax_t maxIterSubsolver = Settings::getInstance().getIntSetting("IterLimitSubsolver",
+			"InteriorPointCuttingPlane");
+	int bitPrecision = Settings::getInstance().getIntSetting("BitPrecision", "InteriorPointCuttingPlane");
 
 	// currSol is the current LP solution, and prevSol the previous one
 	vector<double> currSol, prevSol;
@@ -115,10 +116,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 	{
 		boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 		// Saves the LP problem to file if in debug mode
-		if (settings->getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 		{
 			stringstream ss;
-			ss << settings->getStringSetting("DebugPath", "SHOTSolver");
+			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
 			ss << "/lpminimax";
 			ss << i;
 			ss << ".lp";
@@ -245,7 +246,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 		for (int j = 0; j < numHyperAdded; j++)
 		{
-			std::vector < IndexValuePair > elements; // Contains the terms in the hyperplane
+			std::vector<IndexValuePair> elements; // Contains the terms in the hyperplane
 
 			double constant = NLPProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).idx, currSol);
 
@@ -277,7 +278,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			// Adds the linear constraint
 			LPSolver->addLinearConstraint(elements, constant);
 
-			if (mu >= 0 && settings->getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane"))
+			if (mu >= 0 && Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane"))
 			{
 
 				auto tmpPoint = currSol;
@@ -301,10 +302,11 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 		}
 	}
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		auto tmpVars = NLPProblem->getVariableNames();
-		std::string filename = settings->getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint_minimaxcp.txt";
+		std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver")
+				+ "/nlppoint_minimaxcp.txt";
 		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
 	}
 

@@ -9,8 +9,6 @@
 
 TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	itersSinceLastPrintout = 0;
 	timeLastPrintout = 0;
@@ -49,21 +47,25 @@ void TaskPrintSolutionBoundReport::run()
 				% ProcessInfo::getInstance().getElapsedTime("Total") % objLB % objUB % absGap % relGap;
 		ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
-		if (ProcessInfo::getInstance().numConstraintsRemovedInPresolve > 0 || ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve > 0)
+		if (ProcessInfo::getInstance().numConstraintsRemovedInPresolve > 0
+				|| ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve > 0)
 		{
 			tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.")
-					% ProcessInfo::getInstance().numConstraintsRemovedInPresolve % ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve;
+					% ProcessInfo::getInstance().numConstraintsRemovedInPresolve
+					% ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve;
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 		}
 
 		if (ProcessInfo::getInstance().interiorPts.size() > 1)
 		{
-			ProcessInfo::getInstance().outputSummary(" Number of interior points: " + to_string(ProcessInfo::getInstance().interiorPts.size()));
+			ProcessInfo::getInstance().outputSummary(
+					" Number of interior points: " + to_string(ProcessInfo::getInstance().interiorPts.size()));
 		}
 
 		if (ProcessInfo::getInstance().numIntegerCutsAdded > 0)
 		{
-			ProcessInfo::getInstance().outputSummary(" Number of integer cuts added: " + to_string(ProcessInfo::getInstance().numIntegerCutsAdded));
+			ProcessInfo::getInstance().outputSummary(
+					" Number of integer cuts added: " + to_string(ProcessInfo::getInstance().numIntegerCutsAdded));
 		}
 
 #ifdef _WIN32

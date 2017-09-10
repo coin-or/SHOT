@@ -24,9 +24,6 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 		IMILPSolutionLimitStrategy *solutionLimitStrategy;
 		IConstraintToleranceUpdateStrategy *constrTolUpdateStrategy;
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
-
 		IMILPSolver *MILPSolver;
 
 		bool isInitialized;

@@ -13,8 +13,8 @@ bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
 {
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-	//if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	//if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	{
 		return true;
 	}
@@ -27,7 +27,7 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (prevIter->maxDeviation < 0)
-	//if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	//if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	{
 		return true;
 	}
@@ -39,7 +39,7 @@ bool RelaxationStrategyBase::isCurrentToleranceReached()
 {
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (prevIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolLP", "Algorithm"))
+	if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolLP", "Algorithm"))
 	{
 		return true;
 	}
@@ -51,12 +51,14 @@ bool RelaxationStrategyBase::isGapReached()
 {
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (ProcessInfo::getInstance().getAbsoluteObjectiveGap() < 2 * settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	if (ProcessInfo::getInstance().getAbsoluteObjectiveGap()
+			< 2 * Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 	{
 		return true;
 	}
 
-	if (ProcessInfo::getInstance().getRelativeObjectiveGap() < 2 * settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (ProcessInfo::getInstance().getRelativeObjectiveGap()
+			< 2 * Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 		return true;
 	}

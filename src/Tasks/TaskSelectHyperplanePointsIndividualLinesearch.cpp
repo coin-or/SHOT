@@ -9,8 +9,6 @@
 
 TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	nonlinearConstraintIdxs = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
 
@@ -33,12 +31,13 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
 	// Contains boolean array that indicates if a constraint has been added or not
-	std::vector<bool> hyperplaneAddedToConstraint(ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints(),
-			false);
+	std::vector<bool> hyperplaneAddedToConstraint(
+			ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints(), false);
 
 	for (int i = 0; i < solPoints.size(); i++)
 	{
-		auto maxDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solPoints.at(i).point);
+		auto maxDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+				solPoints.at(i).point);
 
 		if (maxDevConstr.value <= 0)
 		{
@@ -58,17 +57,21 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 					if ((currConstrIdx != -1 && hyperplaneAddedToConstraint.at(k))
 							|| ((currConstrIdx == -1) && hyperplaneAddedToConstraint.back())) continue;
 
-					auto constrDevExterior = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(
-							currConstrIdx, solPoints.at(i).point);
+					auto constrDevExterior =
+							ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(currConstrIdx,
+									solPoints.at(i).point);
 
-					if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+					if (addedHyperplanes
+							>= Settings::getInstance().getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 
 					// Do not add hyperplane if less than this tolerance or negative
-					if (constrDevExterior < settings->getDoubleSetting("LinesearchConstraintTolerance", "ESH")) continue;
+					if (constrDevExterior
+							< Settings::getInstance().getDoubleSetting("LinesearchConstraintTolerance", "ESH")) continue;
 
 					// Do not add hyperplane if constraint value is much less than largest
 					if (constrDevExterior
-							< settings->getDoubleSetting("LinesearchConstraintFactor", "ESH") * maxDevConstr.value) continue;
+							< Settings::getInstance().getDoubleSetting("LinesearchConstraintFactor", "ESH")
+									* maxDevConstr.value) continue;
 
 					std::vector<double> externalPoint;
 					std::vector<double> internalPoint;
@@ -81,9 +84,10 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 					{
 						ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-								settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-								settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"), currentIndexes);
+								Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
+								Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+								Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"),
+								currentIndexes);
 
 						ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 						internalPoint = xNewc.first;
@@ -96,13 +100,15 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 
 						ProcessInfo::getInstance().outputError(
 								"     Cannot find solution with linesearch. Interior value: "
-										+ to_string(ProcessInfo::getInstance().interiorPts.at(j).maxDevatingConstraint.value)
+										+ to_string(
+												ProcessInfo::getInstance().interiorPts.at(j).maxDevatingConstraint.value)
 										+ " exterior value: " + to_string(constrDevExterior));
 
 					}
 
-					auto constrDevBoundary = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(
-							currConstrIdx, externalPoint);
+					auto constrDevBoundary =
+							ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(currConstrIdx,
+									externalPoint);
 
 					if (constrDevBoundary >= 0)
 					{

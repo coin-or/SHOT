@@ -9,8 +9,7 @@
 
 TaskCheckIterationError::TaskCheckIterationError(std::string taskIDTrue)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 

@@ -9,8 +9,7 @@
 
 TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolutionPool()
@@ -23,7 +22,7 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->isMILP()/*
-	 && ProcessInfo::getInstance().getRelativeObjectiveGap() > settings->getDoubleSetting("GapTermTolRelative", "Algorithm")*/)
+	 && ProcessInfo::getInstance().getRelativeObjectiveGap() > Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")*/)
 	{
 		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;

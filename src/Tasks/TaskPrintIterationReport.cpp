@@ -9,8 +9,6 @@
 
 TaskPrintIterationReport::TaskPrintIterationReport()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	lastNumHyperplane = 0;
 }
@@ -30,7 +28,8 @@ void TaskPrintIterationReport::run()
 
 		bool hasSolution = true;
 
-		bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
+		bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
+				== E_ObjectiveFunctionType::Quadratic);
 		bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
 		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP);
 
@@ -110,7 +109,8 @@ void TaskPrintIterationReport::run()
 		auto dualBound = ProcessInfo::getInstance().getDualBound();
 
 		if (primalBound != lastPrimalBound && ProcessInfo::getInstance().primalSolutions.size() > 0
-				&& ProcessInfo::getInstance().primalSolutions.at(0).sourceType == E_PrimalSolutionSource::MILPSolutionPool)
+				&& ProcessInfo::getInstance().primalSolutions.at(0).sourceType
+						== E_PrimalSolutionSource::MILPSolutionPool)
 		{
 			primalBoundExpr = UtilityFunctions::toString(primalBound);
 			lastPrimalBound = primalBound;
@@ -142,8 +142,9 @@ void TaskPrintIterationReport::run()
 
 		if (hasSolution && currIter->maxDeviationConstraint != -1)
 		{
-			tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames()[currIter->maxDeviationConstraint] + ": "
-					+ tmpConstrExpr;
+			tmpConstr =
+					ProcessInfo::getInstance().originalProblem->getConstraintNames()[currIter->maxDeviationConstraint]
+							+ ": " + tmpConstrExpr;
 		}
 		else if (hasSolution)
 		{

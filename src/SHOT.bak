@@ -7,8 +7,8 @@ std::string startmessage;
 
 int main(int argc, char *argv[])
 {
-	//ProcessInfo *processInfo;
-	//processInfo = ProcessInfo::getInstance();
+	
+	
 	ProcessInfo::getInstance().startTimer("Total");
 
 	// Adds a file output

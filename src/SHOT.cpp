@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
 	fileUtil = new FileUtil();
 
-	if( strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1])-4), ".dat") == 0 )
+	if (strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
 	{
 		// special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
 		// TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
@@ -180,13 +180,13 @@ int main(int argc, char *argv[])
 
 	ProcessInfo::getInstance().stopTimer("Total");
 
-	if( !resultFile.empty() )
+	if (!resultFile.empty())
 	{
 		std::string osrl = solver->getOSrl();
 		fileUtil->writeFileFromString(resultFile.string(), osrl);
 	}
 
-	if( !traceFile.empty() )
+	if (!traceFile.empty())
 	{
 		std::string trace = solver->getTraceResult();
 		fileUtil->writeFileFromString(traceFile.string(), trace);
@@ -230,7 +230,6 @@ int main(int argc, char *argv[])
 #endif
 
 	delete fileUtil;
-	//delete processInfo;
 	delete solver;
 	return (0);
 }

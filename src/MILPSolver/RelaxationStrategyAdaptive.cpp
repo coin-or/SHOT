@@ -4,9 +4,6 @@ RelaxationStrategyAdaptive::RelaxationStrategyAdaptive(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
 
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	currentDistanceLevel = 1.0;
 	//initialDistanceLevel = 1.0;
 	maxLPToleranceReached = false;
@@ -20,7 +17,7 @@ RelaxationStrategyAdaptive::~RelaxationStrategyAdaptive()
 
 void RelaxationStrategyAdaptive::setInitial()
 {
-	if (settings->getIntSetting("IterLimitLP", "Algorithm") > 0)
+	if (Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm") > 0)
 	{
 		this->setActive();
 	}
@@ -138,7 +135,7 @@ bool RelaxationStrategyAdaptive::isCurrentToleranceReached()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->maxDeviation < settings->getDoubleSetting("ConstrTermTolLP", "Algorithm"))
+	if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolLP", "Algorithm"))
 	{
 		return true;
 	}
@@ -150,7 +147,7 @@ bool RelaxationStrategyAdaptive::isIterationLimitReached()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->iterationNumber - iterLastMILP == settings->getIntSetting("IterLimitLP", "Algorithm"))
+	if (currIter->iterationNumber - iterLastMILP == Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm"))
 	{
 		iterLastMILP = currIter->iterationNumber;
 		return true;

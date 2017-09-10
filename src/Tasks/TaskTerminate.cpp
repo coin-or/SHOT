@@ -9,8 +9,7 @@
 
 TaskTerminate::TaskTerminate()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskTerminate::~TaskTerminate()

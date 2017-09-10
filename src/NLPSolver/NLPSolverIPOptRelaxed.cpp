@@ -2,8 +2,6 @@
 
 NLPSolverIPOptRelaxed::NLPSolverIPOptRelaxed()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	osolwriter = new OSoLWriter();
 
@@ -32,18 +30,20 @@ bool NLPSolverIPOptRelaxed::createProblemInstance(OSInstance * origInstance)
 
 void NLPSolverIPOptRelaxed::setSolverSpecificInitialSettings()
 {
-	auto constrTol = settings->getDoubleSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt");
+	auto constrTol = Settings::getInstance().getDoubleSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt");
 	osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
 			"", "double", "");
 
 	osOption->setAnotherSolverOption("tol",
-			UtilityFunctions::toStringFormat(settings->getDoubleSetting("ToleranceInteriorPointStrategy", "Ipopt"),
-					"%.10f"), "ipopt", "", "double", "");
+			UtilityFunctions::toStringFormat(
+					Settings::getInstance().getDoubleSetting("ToleranceInteriorPointStrategy", "Ipopt"), "%.10f"),
+			"ipopt", "", "double", "");
 
 	osOption->setAnotherSolverOption("max_iter",
-			to_string(settings->getIntSetting("MaxIterInteriorPointStrategy", "Ipopt")), "ipopt", "", "integer", "");
+			to_string(Settings::getInstance().getIntSetting("MaxIterInteriorPointStrategy", "Ipopt")), "ipopt", "",
+			"integer", "");
 
-	auto timeLimit = settings->getDoubleSetting("NLPTimeLimit", "PrimalBound");
+	auto timeLimit = Settings::getInstance().getDoubleSetting("NLPTimeLimit", "PrimalBound");
 	osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
 			"number", "");
 

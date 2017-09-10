@@ -9,14 +9,11 @@
 
 SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
-
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("InteriorPointSolver", "InteriorPoint"));
+	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
+			"InteriorPoint"));
 	ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
 	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
@@ -31,7 +28,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
 	ProcessInfo::getInstance().createTimer("PrimalBoundFixedLP", "    - Fixed LP");
 
-	auto solverMILP = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
+	auto solverMILP = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
@@ -77,7 +74,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
 
-	if (static_cast<ES_PresolveStrategy>(settings->getIntSetting("PresolveStrategy", "Presolve"))
+	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve"))
 			!= ES_PresolveStrategy::Never)
 	{
 		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
@@ -88,7 +85,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear()
-			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
+			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
 			&& solverMILP != ES_MILPSolver::CplexExperimental)
 	{
 		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
@@ -114,7 +111,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
 			== ES_SolutionStrategy::ESH)
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
@@ -126,7 +123,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
+	if (Settings::getInstance().getBoolSetting("SolveFixedLP", "Algorithm"))
 	{
 		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem(MILPSolver);
 		ProcessInfo::getInstance().tasks->addTask(tSolveFixedLP, "SolveFixedLP");
@@ -134,7 +131,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (settings->getIntSetting("NLPFixedStrategy", "PrimalBound") != static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
+	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound")
+			!= static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
 			&& ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0)
 	{
 		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
@@ -147,7 +145,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	}
 
 	/*
-	 if (settings->getBoolSetting("UseNLPCall", "PrimalBound"))
+	 if (Settings::getInstance().getBoolSetting("UseNLPCall", "PrimalBound"))
 	 {
 	 TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
 
@@ -165,17 +163,17 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	 return (false);
 	 }
 
-	 if ( ProcessInfo::getInstance().itersMILPWithoutNLPCall >= settings->getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 if ( ProcessInfo::getInstance().itersMILPWithoutNLPCall >= Settings::getInstance().getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 	 {
 	 return (true);
 	 }
 
-	 //if ( ProcessInfo::getInstance().itersWithStagnationMILP >= settings->getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 //if ( ProcessInfo::getInstance().itersWithStagnationMILP >= Settings::getInstance().getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 	 //{
 	 //return (true);
 	 //}
 
-	 if (ProcessInfo::getInstance().getElapsedTime("Total") -ProcessInfo::getInstance().solTimeLastNLPCall > settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 if (ProcessInfo::getInstance().getElapsedTime("Total") -ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 	 {
 	 return (true);
 	 }
@@ -256,11 +254,11 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	if (solverMILP != ES_MILPSolver::CplexExperimental)
 	{
 
-		if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+		if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
 				== ES_SolutionStrategy::ESH)
 		{
-			if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy",
-					"ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 			{
 				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 				ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
@@ -285,14 +283,14 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		//TaskBase *tAddHPs = new TaskAddHyperplanes();
 		ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-		if (settings->getBoolSetting("AddIntegerCuts", "Algorithm"))
+		if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
 		{
 			TaskBase *tAddICs = new TaskAddIntegerCuts(MILPSolver);
 			ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
 		}
 
 		/*
-		 if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+		 if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
 		 {
 		 TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
 		 ProcessInfo::getInstance().tasks->addTask(tSwitchLazy, "SwitchLazy");
@@ -319,7 +317,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 				{
 					auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-					if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+					if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 					{
 						return (true);
 					}
@@ -329,7 +327,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setTaskIfTrue(tForcedHyperplaneAddition);
 
-		ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition, "ForceSupportingHyperplaneAddition");
+		ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition,
+				"ForceSupportingHyperplaneAddition");
 	}
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();

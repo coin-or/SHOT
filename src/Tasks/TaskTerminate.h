@@ -21,7 +21,5 @@ class TaskTerminate: public TaskBase
 
 	private:
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 };
 

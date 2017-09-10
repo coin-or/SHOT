@@ -19,9 +19,6 @@ class TaskExecuteRelaxationStrategy: public TaskBase
 	private:
 		IRelaxationStrategy *relaxationStrategy;
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
-
 		bool isInitialized;
 
 		IMILPSolver *MILPSolver;

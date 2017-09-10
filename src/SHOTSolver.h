@@ -14,8 +14,7 @@ class SHOTSolver
 {
 	private:
 		ISolutionStrategy *solutionStrategy;
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
+
 		GAMS2OS* gms2os;
 
 		void initializeSettings();

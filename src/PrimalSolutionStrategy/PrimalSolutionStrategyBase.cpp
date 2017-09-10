@@ -9,8 +9,7 @@
 
 PrimalSolutionStrategyBase::PrimalSolutionStrategyBase()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 PrimalSolutionStrategyBase::~PrimalSolutionStrategyBase()

@@ -22,8 +22,6 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 		virtual bool runStrategy();
 
 	protected:
-		//using PrimalSolutionStrategyBase::processInfo;
-		using PrimalSolutionStrategyBase::settings;
 
 	private:
 		INLPSolver *NLPSolver;

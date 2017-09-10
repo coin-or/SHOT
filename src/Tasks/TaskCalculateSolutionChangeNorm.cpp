@@ -9,8 +9,7 @@
 
 TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm()

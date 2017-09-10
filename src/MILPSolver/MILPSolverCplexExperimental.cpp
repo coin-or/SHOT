@@ -3,7 +3,7 @@
 //#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
-//ProcessInfo* processInfo;
+//
 
 /*void SolutionFilterCallbackI::main()
  {
@@ -56,9 +56,6 @@ class HCallbackI: public IloCplex::HeuristicCallbackI
 {
 		IloNumVarArray cplexVars;
 
-		//ProcessInfo *processInfo;
-		SHOTSettings::Settings *settings;
-
 	private:
 
 	public:
@@ -71,7 +68,6 @@ class HCallbackI: public IloCplex::HeuristicCallbackI
 		{
 			//this->processInfo = pInfo;
 
-			settings = SHOTSettings::Settings::getInstance();
 		}
 		void main();	// the call back function
 };
@@ -186,16 +182,13 @@ class IncCallbackI: public IloCplex::IncumbentCallbackI
 {
 		IloNumVarArray cplexVars;
 
-		//ProcessInfo *processInfo;
-		SHOTSettings::Settings *settings;
-
 		//int numLazyConstrs;
 		//int lastIterNum;
 		//int numLazyAdded;
 		//bool isBusy;
 
 	private:
-		////ProcessInfo *processInfo;
+		//
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const
@@ -207,7 +200,6 @@ class IncCallbackI: public IloCplex::IncumbentCallbackI
 		{
 			//this->processInfo = pInfo;
 
-			settings = SHOTSettings::Settings::getInstance();
 		}
 		void main();	// the call back function
 };
@@ -244,7 +236,7 @@ void IncCallbackI::main() // Called at each node...
 		timestampLastNLPCall = ProcessInfo::getInstance().getElapsedTime("Total");
 	}
 
-	if (mostDevConstr.value <= settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	{
 		ProcessInfo::getInstance().addPrimalSolutionCandidate(solution, E_PrimalSolutionSource::IncumbentCallback, 0);
 		//std::cout << "Most dev: " << mostDevConstr.value << std::endl;
@@ -260,9 +252,6 @@ void IncCallbackI::main() // Called at each node...
 class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 {
 		IloNumVarArray cplexVars;
-
-		//ProcessInfo *processInfo;
-		SHOTSettings::Settings *settings;
 
 		//bool isBusy;
 		bool isMinimization;
@@ -286,15 +275,13 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 			itersSinceNLPCall = 0;
 			cbCalls = 0;
 
-			settings = SHOTSettings::Settings::getInstance();
-
 			auto taskInitLinesearch = new TaskInitializeLinesearch();
 
-			if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+			if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
 					== ES_SolutionStrategy::ESH)
 			{
-				if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy",
-						"ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+				if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+						"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 				{
 					taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 				}
@@ -324,7 +311,7 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	//auto originalProblem = originalProblem;
-	std::vector < IndexValuePair > elements;
+	std::vector<IndexValuePair> elements;
 
 	auto varNames = ProcessInfo::getInstance().originalProblem->getVariableNames();
 
@@ -471,11 +458,12 @@ void CtCallbackI::main()
 
 	auto relMIPGap = this->getMIPRelativeGap();
 
-	if (abs(relMIPGap) < settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (abs(relMIPGap) < Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 		ProcessInfo::getInstance().outputInfo(
 				"Terminated by relative MIP gap tolerance: " + UtilityFunctions::toString(relMIPGap) + " < "
-						+ UtilityFunctions::toString(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
+						+ UtilityFunctions::toString(
+								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
 		return;
 	}
 
@@ -483,7 +471,8 @@ void CtCallbackI::main()
 	{
 		ProcessInfo::getInstance().outputInfo(
 				"Terminated by relative objective gap tolerance: " + UtilityFunctions::toString(relObjGap) + " < "
-						+ UtilityFunctions::toString(settings->getDoubleSetting("GapTermTolRelative", "Algorithm")));
+						+ UtilityFunctions::toString(
+								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
 		return;
 	}
 
@@ -491,14 +480,16 @@ void CtCallbackI::main()
 	{
 		ProcessInfo::getInstance().outputInfo(
 				"Terminated by absolute objective gap tolerance: " + UtilityFunctions::toString(absObjGap) + " < "
-						+ UtilityFunctions::toString(settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
+						+ UtilityFunctions::toString(
+								Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
 		return;
 	}
 
 	double elapsedTime = ProcessInfo::getInstance().getElapsedTime("Total") - timestampLastNLPCall;
 	if ((elapsedTime > 5)
 			|| ((itersSinceNLPCall > 50)
-					&& mostDevConstr.value < (1000 * settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+					&& mostDevConstr.value
+							< (1000 * Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
 			|| (itersSinceNLPCall > 200))
 	{
 		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution,
@@ -515,7 +506,7 @@ void CtCallbackI::main()
 		itersSinceNLPCall++;
 	}
 
-	std::vector < SolutionPoint > solutionPoints(1);
+	std::vector<SolutionPoint> solutionPoints(1);
 
 	SolutionPoint tmpSolPt;
 
@@ -526,11 +517,11 @@ void CtCallbackI::main()
 
 	solutionPoints.at(0) = tmpSolPt;
 
-	if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
 			== ES_SolutionStrategy::ESH)
 	{
-		if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy", "ESH"))
-				== ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+				"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 		{
 			dynamic_cast<TaskSelectHyperplanePointsLinesearch*>(taskSelectHPPts)->run(solutionPoints);
 		}
@@ -615,8 +606,6 @@ void CtCallbackI::main()
 
 MILPSolverCplexExperimental::MILPSolverCplexExperimental()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	discreteVariablesActivated = true;
 
@@ -678,7 +667,7 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 		else
 		{
 			ProcessInfo::getInstance().outputWarning(
-					"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+			"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -835,18 +824,21 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 		cplexInstance.setOut(cplexEnv.getNullStream());
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
-		cplexInstance.setParam(IloCplex::SolnPoolIntensity, settings->getIntSetting("SolnPoolIntensity", "CPLEX")); // Don't use 3 with heuristics
-		cplexInstance.setParam(IloCplex::SolnPoolReplace, settings->getIntSetting("SolnPoolReplace", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
+				Settings::getInstance().getIntSetting("SolnPoolIntensity", "CPLEX")); // Don't use 3 with heuristics
+		cplexInstance.setParam(IloCplex::SolnPoolReplace,
+				Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
 
 		cplexInstance.setParam(IloCplex::RepairTries, 5);
 //cplexInstance.setParam(IloCplex::HeurFreq,2);
 //cplexInstance.setParam(IloCplex::AdvInd,2);
 
-		cplexInstance.setParam(IloCplex::SolnPoolGap, settings->getDoubleSetting("SolnPoolGap", "CPLEX"));
-		cplexInstance.setParam(IloCplex::SolnPoolCapacity, settings->getIntSetting("SolutionPoolSize", "MILP"));
+		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("SolnPoolGap", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
+				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
 
-		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
-		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Probe", "CPLEX"));
+		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("MIPEmphasis", "CPLEX"));
 		//cplexInstance.setParam(IloCplex::NodeSel, CPX_NODESEL_BESTEST);
 
 //cplexInstance.setParam(IloCplex::ParallelMode, 1);
@@ -908,7 +900,7 @@ int MILPSolverCplexExperimental::addLinearConstraint(std::vector<IndexValuePair>
 			cplexModel.add(tmpRange);
 		}
 
-		/*if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+		/*if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
 		 {
 		 if (discreteVariablesActivated)
 		 {
@@ -1155,7 +1147,7 @@ void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 {
 	if (originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
 	{
-		limit = settings->getIntSetting("MILPSolLimitInitial", "MILP");
+		limit = Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
 	}
 
 	try

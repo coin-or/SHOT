@@ -3,8 +3,7 @@
 RelaxationStrategyNone::RelaxationStrategyNone(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 RelaxationStrategyNone::~RelaxationStrategyNone()

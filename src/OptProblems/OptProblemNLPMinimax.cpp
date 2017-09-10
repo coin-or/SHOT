@@ -5,8 +5,7 @@
 OptProblemNLPMinimax::OptProblemNLPMinimax()
 {
 	//problemInstance = NULL;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 OptProblemNLPMinimax::~OptProblemNLPMinimax()
@@ -66,7 +65,7 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 		destination->setVariableNumber(numVar + 1);
 	}
 
-	vector < std::string > varNames;
+	vector<std::string> varNames;
 	varNames.assign(source->getVariableNames(), source->getVariableNames() + numVar);
 
 	vector<char> varTypes;
@@ -125,8 +124,8 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 		}
 	}
 
-	double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
-	double tmpObjUpperBound = settings->getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
+	double tmpObjBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
@@ -191,7 +190,7 @@ void OptProblemNLPMinimax::copyConstraints(OSInstance *source, OSInstance *desti
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		//double tmpObjBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+		//double tmpObjBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
 		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
 				0.0);
 	}

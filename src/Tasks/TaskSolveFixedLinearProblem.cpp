@@ -3,8 +3,6 @@
 TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 	ProcessInfo::getInstance().startTimer("PrimalBoundFixedLP");
@@ -35,7 +33,7 @@ void TaskSolveFixedLinearProblem::run()
 		return;
 	}
 
-	if (currIter->maxDeviation <= settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm"))
+	if (currIter->maxDeviation <= Settings::getInstance().getDoubleSetting("SolveFixedLPConstrTol", "Algorithm"))
 	{
 		ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
 		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
@@ -102,9 +100,9 @@ void TaskSolveFixedLinearProblem::run()
 	double prevObjVal = COIN_DBL_MAX;
 
 	int iterLastObjUpdate = 0;
-	int maxIter = settings->getIntSetting("SolveFixedLPMaxIter", "Algorithm");
-	double objTol = settings->getDoubleSetting("SolveFixedLPObjTol", "Algorithm");
-	double constrTol = settings->getDoubleSetting("SolveFixedLPConstrTol", "Algorithm");
+	int maxIter = Settings::getInstance().getIntSetting("SolveFixedLPMaxIter", "Algorithm");
+	double objTol = Settings::getInstance().getDoubleSetting("SolveFixedLPObjTol", "Algorithm");
+	double constrTol = Settings::getInstance().getDoubleSetting("SolveFixedLPConstrTol", "Algorithm");
 
 	for (int k = 0; k < maxIter; k++)
 	{
@@ -129,15 +127,16 @@ void TaskSolveFixedLinearProblem::run()
 			try
 			{
 				auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
-						settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-						settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-						settings->getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+						Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
+						Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+						Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
 
 				ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 				internalPoint = xNewc.first;
 				externalPoint = xNewc.second;
 
-				auto errorExternal = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(externalPoint);
+				auto errorExternal = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+						externalPoint);
 
 				Hyperplane hyperplane;
 				hyperplane.sourceConstraintIndex = errorExternal.idx;

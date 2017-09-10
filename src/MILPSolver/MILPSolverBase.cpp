@@ -39,11 +39,11 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	int numSol = getNumberOfSolutions();
 	int numVar = originalProblem->getNumberOfVariables();
 
-	std::vector < SolutionPoint > allSolutions(numSol);
+	std::vector<SolutionPoint> allSolutions(numSol);
 
 	// Should be moved to separate task
 	bool isMILP = getDiscreteVariableStatus();
-	if (isMILP && settings->getBoolSetting("PopulateSolutionPool", "MILP"))
+	if (isMILP && Settings::getInstance().getBoolSetting("PopulateSolutionPool", "MILP"))
 	{
 		populateSolutionPool();
 	}
@@ -73,7 +73,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-	std::vector < IndexValuePair > elements;
+	std::vector<IndexValuePair> elements;
 
 	auto varNames = originalProblem->getVariableNames();
 
@@ -102,7 +102,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 				elements.push_back(pair);
 				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
 
-				ProcessInfo::getInstance().outputInfo("     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
+				ProcessInfo::getInstance().outputInfo(
+						"     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
 			}
 		}
 
@@ -146,7 +147,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 		if (E.value != E.value) //Check for NaN
 		{
 
-			ProcessInfo::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+			ProcessInfo::getInstance().outputWarning(
+					"     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}
@@ -177,7 +179,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-	std::vector < IndexValuePair > elements;
+	std::vector<IndexValuePair> elements;
 
 	auto varNames = originalProblem->getVariableNames();
 
@@ -215,7 +217,8 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			ProcessInfo::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+			ProcessInfo::getInstance().outputWarning(
+					"     Warning: hyperplane not generated, NaN found in linear terms!");
 
 			hyperplaneIsOk = false;
 			break;
@@ -299,7 +302,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 			}
 		}
 
-		if (settings->getBoolSetting("UsePresolveBoundsForMIP", "Presolve") && (newLB || newUB))
+		if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForMIP", "Presolve") && (newLB || newUB))
 		{
 			updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
 			ProcessInfo::getInstance().outputInfo("     Bounds updated also in MIP problem");
@@ -318,7 +321,7 @@ void MILPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<
 
 	if (size == 0) return;
 
-	vector < pair<double, double> > originalBounds(size);
+	vector<pair<double, double> > originalBounds(size);
 
 	activateDiscreteVariables(false);
 

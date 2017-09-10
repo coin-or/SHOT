@@ -9,8 +9,7 @@
 
 TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
@@ -31,7 +30,7 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 
 	auto originalProblem = ProcessInfo::getInstance().originalProblem;
 
-	auto constrSelFactor = settings->getDoubleSetting("LinesearchConstraintSelectionFactor", "ECP");
+	auto constrSelFactor = Settings::getInstance().getDoubleSetting("LinesearchConstraintSelectionFactor", "ECP");
 
 	for (int i = 0; i < solPoints.size(); i++)
 	{
@@ -39,7 +38,7 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 
 		for (int j = 0; j < tmpMostDevConstrs.size(); j++)
 		{
-			if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+			if (addedHyperplanes >= Settings::getInstance().getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 
 			if (tmpMostDevConstrs.at(j).value < 0)
 			{

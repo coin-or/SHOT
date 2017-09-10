@@ -2,12 +2,10 @@
 
 ConstraintToleranceUpdateStrategyDecreasing::ConstraintToleranceUpdateStrategyDecreasing()
 {
-	settings = SHOTSettings::Settings::getInstance();
-	//processInfo = ProcessInfo::getInstance();
 
-	originalTolerance = settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm");
-	initialToleranceFactor = settings->getDoubleSetting("ConstrTermTolInitialFactor", "Algorithm");
-	solutionLimitDepthFinal = settings->getDoubleSetting("MILPSolLimitEnd", "MILP");
+	originalTolerance = Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm");
+	initialToleranceFactor = Settings::getInstance().getDoubleSetting("ConstrTermTolInitialFactor", "Algorithm");
+	solutionLimitDepthFinal = Settings::getInstance().getDoubleSetting("MILPSolLimitEnd", "MILP");
 }
 
 ConstraintToleranceUpdateStrategyDecreasing::~ConstraintToleranceUpdateStrategyDecreasing()

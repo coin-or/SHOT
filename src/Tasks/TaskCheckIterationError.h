@@ -20,6 +20,5 @@ class TaskCheckIterationError: public TaskBase
 		virtual std::string getType();
 	private:
 		std::string taskIDIfTrue;
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
+
 };

@@ -9,8 +9,7 @@
 
 TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(std::string taskIDTrue)
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 

@@ -10,8 +10,7 @@
 TaskSolveIteration::TaskSolveIteration(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSolveIteration::~TaskSolveIteration()
@@ -24,7 +23,8 @@ void TaskSolveIteration::run()
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	// Sets the iteration time limit
-	auto timeLim = settings->getDoubleSetting("TimeLimit", "Algorithm") - ProcessInfo::getInstance().getElapsedTime("Total");
+	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")
+			- ProcessInfo::getInstance().getElapsedTime("Total");
 	MILPSolver->setTimeLimit(timeLim);
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
@@ -32,7 +32,7 @@ void TaskSolveIteration::run()
 		MILPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
 	}
 
-	if (settings->getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP")
+	if (Settings::getInstance().getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP")
 			&& !currIter->MILPSolutionLimitUpdated)
 	{
 		MILPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
@@ -44,10 +44,10 @@ void TaskSolveIteration::run()
 		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		stringstream ss;
-		ss << settings->getStringSetting("DebugPath", "SHOTSolver");
+		ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
 		ss << "/lp";
 		ss << currIter->iterationNumber - 1;
 		ss << ".lp";
@@ -72,7 +72,8 @@ void TaskSolveIteration::run()
 		{
 			currIter->objectiveValue = MILPSolver->getObjectiveValue();
 
-			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(sols.at(0).point);
+			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+					sols.at(0).point);
 
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
 			currIter->maxDeviation = mostDevConstr.value;

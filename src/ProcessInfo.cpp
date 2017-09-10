@@ -125,7 +125,7 @@ void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource sou
 	PrimalSolution sol =
 	{ pt.point, source, pt.objectiveValue, pt.iterFound };
 
-	if (settings->getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
 	{
 		primalSolutions.push_back(sol);
 	}
@@ -293,7 +293,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 
 bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
 {
-	if (this->getRelativeObjectiveGap() <= settings->getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (this->getRelativeObjectiveGap() <= Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
 		return (true);
 	}
@@ -305,7 +305,7 @@ bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
 
 bool ProcessInfo::isAbsoluteObjectiveGapToleranceMet()
 {
-	if (this->getAbsoluteObjectiveGap() <= settings->getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	if (this->getAbsoluteObjectiveGap() <= Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
 	{
 		return (true);
 	}
@@ -466,7 +466,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	// Check that it fulfills integer constraints, round otherwise
 	if (originalProblem->getNumberOfBinaryVariables() > 0 || originalProblem->getNumberOfIntegerVariables() > 0)
 	{
-		auto integerTol = settings->getDoubleSetting("PrimalBoundIntegerTolerance", "PrimalBound");
+		auto integerTol = Settings::getInstance().getDoubleSetting("PrimalBoundIntegerTolerance", "PrimalBound");
 
 		bool isRounded = false;
 
@@ -516,7 +516,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	}
 	else
 	{
-		auto linTol = settings->getDoubleSetting("PrimalBoundLinearTolerance", "PrimalBound");
+		auto linTol = Settings::getInstance().getDoubleSetting("PrimalBoundLinearTolerance", "PrimalBound");
 
 		auto nonLinearIndexes = originalProblem->getLinearConstraintIndexes();
 
@@ -554,7 +554,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		mostDevNonlinearConstraints = this->originalProblem->getMostDeviatingConstraint(tmpPoint,
 				originalProblem->getNonlinearConstraintIndexes()).first;
 
-		auto nonlinTol = settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound");
+		auto nonlinTol = Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound");
 		isNonLinConstrFulfilled = (mostDevNonlinearConstraints.value < nonlinTol);
 
 		if (!isNonLinConstrFulfilled)
@@ -612,7 +612,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	{
 		char HPobjadded = ' ';
 
-		if (settings->getBoolSetting("UsePrimalObjectiveCut", "MILP")
+		if (Settings::getInstance().getBoolSetting("UsePrimalObjectiveCut", "MILP")
 				&& this->originalProblem->isObjectiveFunctionNonlinear())
 		{
 			auto objConstrVal = this->originalProblem->calculateConstraintFunctionValue(-1, primalSol.point)
@@ -657,7 +657,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 			primalSol.maxDevatingConstraint = mostDevNonlinearConstraints;
 		}
 
-		if (settings->getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
 		{
 			this->primalSolutions.push_back(primalSol);
 		}
@@ -689,7 +689,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 				this->interiorPts.back() = tmpIP;
 			}
-			else if (settings->getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
+			else if (Settings::getInstance().getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
 					== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
 					&& mostDevNonlinearConstraints.value < 0)
 			{
@@ -709,7 +709,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 					this->interiorPts.back() = tmpIP;
 				}
 			}
-			else if (settings->getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
+			else if (Settings::getInstance().getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
 					== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew)
 					&& mostDevNonlinearConstraints.value < 0)
 			{
@@ -724,7 +724,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 				this->interiorPts.back() = tmpIP;
 
 			}
-			else if (settings->getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
+			else if (Settings::getInstance().getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm")
 					== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
 					&& mostDevNonlinearConstraints.value < 0)
 			{
@@ -785,8 +785,6 @@ ProcessInfo::ProcessInfo()
 
 	currentObjectiveBounds.first = -OSDBL_MAX;
 	currentObjectiveBounds.second = OSDBL_MAX;
-
-	settings = SHOTSettings::Settings::getInstance();
 
 	tasks = new TaskHandler();
 
@@ -909,8 +907,8 @@ std::string ProcessInfo::getOSrl()
 	osResult->setNumberOfOtherGeneralResults(1);
 	osResult->setOtherGeneralResultName(0, "UsedOptions");
 
-//std::cout << settings->getSettingsAsString() << std::endl;
-	osResult->setOtherGeneralResultValue(0, settings->getSettingsAsString());
+//std::cout << Settings::getInstance().getSettingsAsString() << std::endl;
+	osResult->setOtherGeneralResultValue(0, Settings::getInstance().getSettingsAsString());
 
 	if (numPrimalSols == 0)
 	{
@@ -1132,7 +1130,7 @@ std::string ProcessInfo::getOSrl()
 
 	using boost::property_tree::ptree;
 	ptree pt;
-	boost::property_tree::xml_writer_settings < std::string > settings('\t', 1);
+	boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
 
 	stringstream ss;
 	ss << writer.writeOSrL(osResult);

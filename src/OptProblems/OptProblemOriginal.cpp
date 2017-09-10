@@ -2,8 +2,7 @@
 
 OptProblemOriginal::OptProblemOriginal()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 OptProblemOriginal::~OptProblemOriginal()

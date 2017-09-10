@@ -22,9 +22,6 @@ class TaskGoto: public TaskBase
 
 	private:
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
-
 		std::string gotoTaskID;
 };
 

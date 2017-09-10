@@ -1,18 +1,17 @@
 #pragma once
 #include "IConstraintToleranceUpdateStrategy.h"
 #include "ConstraintToleranceUpdateStrategyBase.h"
-class ConstraintToleranceUpdateStrategyDecreasing :
-	public IConstraintToleranceUpdateStrategy, ConstraintToleranceUpdateStrategyBase
+class ConstraintToleranceUpdateStrategyDecreasing: public IConstraintToleranceUpdateStrategy, ConstraintToleranceUpdateStrategyBase
 {
-public:
-	ConstraintToleranceUpdateStrategyDecreasing();
-	virtual ~ConstraintToleranceUpdateStrategyDecreasing();
+	public:
+		ConstraintToleranceUpdateStrategyDecreasing();
+		virtual ~ConstraintToleranceUpdateStrategyDecreasing();
 
-	virtual void calculateNewTolerance();
+		virtual void calculateNewTolerance();
 
-private:
-	double originalTolerance;
-	double initialToleranceFactor;
-	double solutionLimitDepthFinal;
+	private:
+		double originalTolerance;
+		double initialToleranceFactor;
+		double solutionLimitDepthFinal;
 };
 

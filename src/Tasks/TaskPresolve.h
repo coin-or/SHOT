@@ -14,8 +14,6 @@ class TaskPresolve: public TaskBase
 		virtual std::string getType();
 	private:
 
-		SHOTSettings::Settings *settings;
-		//ProcessInfo *processInfo;
 		bool isPresolved;
 		IMILPSolver *MILPSolver;
 };

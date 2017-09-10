@@ -2,8 +2,7 @@
 
 TaskInitializeIteration::TaskInitializeIteration()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskInitializeIteration::~TaskInitializeIteration()

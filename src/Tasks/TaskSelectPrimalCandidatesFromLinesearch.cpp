@@ -9,8 +9,7 @@
 
 TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch()
 {
-	//processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesearch()
@@ -52,20 +51,23 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 				}
 
 				auto maxDevNLP2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(xNLP2);
-				auto maxDevMILP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(allSolutions.at(i).point);
+				auto maxDevMILP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(
+						allSolutions.at(i).point);
 
 				if (maxDevNLP2.value <= 0 && maxDevMILP.value > 0)
 				{
 					try
 					{
 						ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
-						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2, allSolutions.at(i).point,
-								settings->getIntSetting("LinesearchMaxIter", "Linesearch"),
-								settings->getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0);
+						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2,
+								allSolutions.at(i).point,
+								Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
+								Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0);
 
 						ProcessInfo::getInstance().stopTimer("PrimalBoundLinesearch");
 
-						ProcessInfo::getInstance().addPrimalSolutionCandidate(xNewc.first, E_PrimalSolutionSource::Linesearch,
+						ProcessInfo::getInstance().addPrimalSolutionCandidate(xNewc.first,
+								E_PrimalSolutionSource::Linesearch,
 								ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
 					}
 					catch (std::exception &e)
