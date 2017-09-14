@@ -104,6 +104,15 @@ void GAMS2OS::createOSObjects()
 	delete osoptions;
 	osoptions = NULL;
 
+	/* TODO pass GAMS options to SHOT:
+	time limit: gevGetDblOpt(gev, gevResLim);
+	absolute gap limit: gevGetDblOpt(gev, gevOptCA);
+	relative gap limit: gevGetDblOpt(gev, gevOptCR);
+
+	probably have to create an OSoL object for this
+	if options file is given, then values from options file should overwrite those set in GAMS
+	*/
+
 	if (gmoOptFile(gmo) > 0)
 	{
 		gmoNameOptFile(gmo, buffer);
