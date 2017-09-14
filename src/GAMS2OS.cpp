@@ -90,6 +90,8 @@ void GAMS2OS::readCntr(const std::string& filename)
 		gevFree (&gev);
 		throw std::logic_error("Could not load model data.");
 	}
+
+	gevTerminateUninstall(gev);
 }
 
 void GAMS2OS::createOSObjects()
