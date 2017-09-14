@@ -2,7 +2,14 @@
 #include "IMILPSolver.h"
 #include "MILPSolverBase.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
 #include "ilcplex/ilocplex.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic warning "-Wignored-attributes"
+#endif
+
 
 class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 {
