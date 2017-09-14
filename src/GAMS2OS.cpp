@@ -6,13 +6,12 @@
 #include "boost/filesystem.hpp"
 #include "CoinHelperFunctions.hpp" // for CoinCopyOfArrayOrZero, maybe should eliminate this
 #include "ProcessInfo.h"
-#include "OSoLReader.h"
 
 // set to 3 to see gams log
 #define GAMSLOGOPTION 0
 
 GAMS2OS::GAMS2OS() :
-		gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL), osoptions(NULL)
+		gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL), osoptions(NULL), osolreader(NULL)
 {
 }
 
@@ -58,6 +57,9 @@ void GAMS2OS::readGms(const std::string& filename)
 	}
 
 	readCntr("loadgms.tmp/gamscntr.dat");
+
+	/* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use as a SHOT options file */
+	gmoOptFileSet(gmo, 0);
 }
 
 void GAMS2OS::readCntr(const std::string& filename)
@@ -105,19 +107,17 @@ void GAMS2OS::createOSObjects()
 	if (gmoOptFile(gmo) > 0)
 	{
 		gmoNameOptFile(gmo, buffer);
-		if (!boost::filesystem::exists(buffer)) throw std::logic_error("Options file not found.");
-
 		gevLogPChar(gev, "Reading options from ");
 		gevLog(gev, buffer);
 
-		OSoLReader* osolreader = new OSoLReader();
+		if (!boost::filesystem::exists(buffer)) throw std::logic_error("Options file not found.");
+
 		FileUtil *fileUtil = new FileUtil();
-
 		std::string fileContents = fileUtil->getFileAsString(buffer);
-		osoptions = osolreader->readOSoL(fileContents);
-
 		delete fileUtil;
-		delete osolreader;
+
+		osolreader = new OSoLReader();
+		osoptions = osolreader->readOSoL(fileContents);
 	}
 
 	/* reformulate objective variable out of model, if possible */
@@ -1318,6 +1318,7 @@ void GAMS2OS::clear()
 	delete osinstance;
 	osinstance = NULL;
 
-	delete osoptions;
+	delete osolreader;
+	osolreader = NULL;
 	osoptions = NULL;
 }

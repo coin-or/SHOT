@@ -3,6 +3,7 @@
 #include "OSInstance.h"
 #include "OSResult.h"
 #include "OSOption.h"
+#include "OSoLReader.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"
@@ -49,4 +50,5 @@ class GAMS2OS
 
       OSInstance* osinstance;
       OSOption* osoptions;
+      OSoLReader* osolreader;
 };

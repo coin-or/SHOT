@@ -108,8 +108,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 			gms2os->createOSObjects();
 
 			tmpInstance = gms2os->osinstance;
-
-			if (gms2os->osoptions) setOptions(gms2os->osoptions);
 		}
 		else if (file_extension == "dat")
 		{
@@ -118,6 +116,8 @@ bool SHOTSolver::setProblem(std::string fileName)
 			gms2os->readCntr(tmpFilename);
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;
+
+			if (gms2os->osoptions) setOptions(gms2os->osoptions);
 		}
 		else
 		{
