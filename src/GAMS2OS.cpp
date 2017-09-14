@@ -1225,7 +1225,8 @@ void GAMS2OS::writeResult(ProcessInfo& info)
 	{
 		case E_ProblemSolutionStatus::Optimal:
 			assert(!info.primalSolutions.empty());
-			gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+			/* return only locally optimal, as we don't know whether the problem was convex (unless it's a MIP, ok) */
+			gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
 			break;
 
 		case E_ProblemSolutionStatus::Feasible:
