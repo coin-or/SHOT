@@ -7,9 +7,12 @@
 #include "OptProblemNLPRelaxed.h"
 
 NLPSolverGAMS::NLPSolverGAMS() :
-		gmo(NULL), gev(NULL)
+		gmo(NULL), gev(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)
 {
 	NLPProblem = new OptProblemNLPRelaxed();
+
+	strcpy(nlpsolver, "conopt");
+	*nlpsolveropt = '\0';
 }
 
 void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
@@ -71,12 +74,32 @@ double NLPSolverGAMS::getObjectiveValue()
 E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 {
 	char msg[GMS_SSSIZE];
+
+	/* set which options file to use */
+	if( *nlpsolveropt )
+	{
+		gmoOptFileSet(gmo, 1);
+		gmoNameOptFileSet(gmo, nlpsolveropt);
+	}
+	else
+	{
+		/* don't read SHOT options file */
+		gmoOptFileSet(gmo, 0);
+	}
+
 	gmoAltBoundsSet(gmo, 1); /* use alternative bounds */
 	gmoForceContSet(gmo, 1);
-	gevCallSolver(gev, gmo, "", "conopt", gevSolveLinkLoadLibrary, gevSolverSameStreams, "", "", 1000.0,
-			ITERLIM_INFINITY, 0, 0.0, 0.0, NULL, msg);
+
+	if( gevCallSolver(gev, gmo, "", nlpsolver, gevSolveLinkLoadLibrary, showlog ? gevSolverSameStreams : gevSolverQuiet, NULL, NULL,
+			timelimit, iterlimit, 0, 0.0, 0.0, NULL, msg) != 0 )
+	{
+		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
+		//throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
+	}
+
 	gmoAltBoundsSet(gmo, 0);
 	gmoForceContSet(gmo, 0);
+
 	/* the callSolver calls installs a SIGINT handler again, which prevents stopping on Ctrl+C */
 	gevTerminateUninstall(gev);
 

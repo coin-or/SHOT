@@ -14,6 +14,12 @@ class NLPSolverGAMS: public NLPSolverBase
 		gmoHandle_t gmo;
 		gevHandle_t gev;
 
+		char nlpsolver[GMS_SSSIZE];
+		char nlpsolveropt[GMS_SSSIZE];
+		double timelimit;
+		int iterlimit;
+		bool showlog;
+
 	public:
 		NLPSolverGAMS();
 
