@@ -246,7 +246,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 		for (int j = 0; j < numHyperAdded; j++)
 		{
-			std::vector<IndexValuePair> elements; // Contains the terms in the hyperplane
+			std::vector < IndexValuePair > elements; // Contains the terms in the hyperplane
 
 			double constant = NLPProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).idx, currSol);
 

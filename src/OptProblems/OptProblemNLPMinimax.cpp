@@ -18,9 +18,13 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	OSInstance *newInstance = NULL;
 	newInstance = new OSInstance();
 
+	std::cout << "h221" << std::endl;
 	this->setObjectiveFunctionNonlinear(isConstraintNonlinear(originalInstance, -1));
 
+	std::cout << "h222" << std::endl;
 	this->setTypeOfObjectiveMinimize(true /*originalInstance->instanceData->objectives->obj[0]->maxOrMin == "min"*/);
+
+	std::cout << "h223" << std::endl;
 	this->copyVariables(originalInstance, newInstance, true);
 
 	this->copyObjectiveFunction(originalInstance, newInstance);
@@ -65,7 +69,7 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 		destination->setVariableNumber(numVar + 1);
 	}
 
-	vector<std::string> varNames;
+	vector < std::string > varNames;
 	varNames.assign(source->getVariableNames(), source->getVariableNames() + numVar);
 
 	vector<char> varTypes;
@@ -395,7 +399,7 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 
 			//int valsAdded = 0;
 
-			auto nlNodeVec = source->getNonlinearExpressionTreeInPrefix(rowIdx);
+			//auto nlNodeVec = source->getNonlinearExpressionTreeInPrefix(rowIdx);
 
 			destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
 #ifdef linux
@@ -423,11 +427,12 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 				destination->instanceData->nonlinearExpressions->nl[i]->idx = source->getConstraintNumber();
 			}
 
-			nlNodeVec.clear();
+			//nlNodeVec.clear();
 			//valsAdded++;
 
 		}
 	}
+
 }
 
 IndexValuePair OptProblemNLPMinimax::getMostDeviatingConstraint(std::vector<double> point)

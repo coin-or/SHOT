@@ -19,6 +19,9 @@ class SHOTSolver
 
 		void initializeSettings();
 		void initializeDebugMode();
+
+		bool isProblemInitialized;
+
 	public:
 
 		SHOTSolver();
@@ -32,8 +35,9 @@ class SHOTSolver
 
 		bool solveProblem();
 
-		std::string getOSol();
+		std::string getOSoL();
+		std::string getGAMSOptFile();
 
-		std::string getOSrl();
+		std::string getOSrL();
 		std::string getTraceResult();
 };

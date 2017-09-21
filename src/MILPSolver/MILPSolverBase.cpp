@@ -39,7 +39,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	int numSol = getNumberOfSolutions();
 	int numVar = originalProblem->getNumberOfVariables();
 
-	std::vector<SolutionPoint> allSolutions(numSol);
+	std::vector < SolutionPoint > allSolutions(numSol);
 
 	// Should be moved to separate task
 	bool isMILP = getDiscreteVariableStatus();
@@ -73,7 +73,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-	std::vector<IndexValuePair> elements;
+	std::vector < IndexValuePair > elements;
 
 	auto varNames = originalProblem->getVariableNames();
 
@@ -179,7 +179,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-	std::vector<IndexValuePair> elements;
+	std::vector < IndexValuePair > elements;
 
 	auto varNames = originalProblem->getVariableNames();
 
@@ -321,7 +321,7 @@ void MILPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<
 
 	if (size == 0) return;
 
-	vector<pair<double, double> > originalBounds(size);
+	vector < pair<double, double> > originalBounds(size);
 
 	activateDiscreteVariables(false);
 

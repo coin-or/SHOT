@@ -4,11 +4,12 @@ SHOTSolver::SHOTSolver() :
 		gms2os(NULL)
 {
 	initializeSettings();
+	isProblemInitialized = false;
 }
 
 SHOTSolver::~SHOTSolver()
 {
-	delete solutionStrategy;
+	if (isProblemInitialized) delete solutionStrategy;
 	delete gms2os;
 }
 
@@ -19,8 +20,25 @@ bool SHOTSolver::setOptions(std::string fileName)
 
 	try
 	{
-		std::string osol = fileUtil->getFileAsString(fileName.c_str());
-		Settings::getInstance().readSettings(osol);
+		std::string fileContents;
+		std::string fileExtension = boost::filesystem::extension(fileName);
+
+		if (fileExtension == ".xml" || fileExtension == ".osol")
+		{
+			fileContents = fileUtil->getFileAsString(fileName.c_str());
+			Settings::getInstance().readSettingsFromOSoL(fileContents);
+		}
+		else if (fileExtension == ".opt")
+		{
+			fileContents = fileUtil->getFileAsString(fileName.c_str());
+			Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+		}
+		else
+		{
+			ProcessInfo::getInstance().outputError(
+					"Error when reading options from \"" + fileName + "\". File extension must be osol, xml or opt.");
+		}
+
 	}
 	catch (const ErrorClass& eclass)
 	{
@@ -30,7 +48,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 		return (false);
 	}
 
-	// Sets the correct log levels
+// Sets the correct log levels
 	osoutput->SetPrintLevel("stdout",
 			(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") + 1));
 	osoutput->SetPrintLevel("shotlogfile",
@@ -48,7 +66,7 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
 {
 	try
 	{
-		Settings::getInstance().readSettings(osOptions);
+		Settings::getInstance().readSettingsFromOSOption(osOptions);
 	}
 	catch (ErrorClass &eclass)
 	{
@@ -65,8 +83,6 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
 
 bool SHOTSolver::setProblem(std::string fileName)
 {
-	FileUtil *fileUtil = new FileUtil();
-	OSiLReader *osilreader = new OSiLReader();
 	OSInstance *tmpInstance;
 
 	try
@@ -84,14 +100,24 @@ bool SHOTSolver::setProblem(std::string fileName)
 		}
 		else
 		{
-			// No extension found
+			ProcessInfo::getInstance().outputError("No filetype specified.");
+
+			delete tmpInstance;
+
+			return (false);
 		}
 
-		if (file_extension == "osil")
+		if (file_extension == "osil" || file_extension == "xml")
 		{
+			FileUtil *fileUtil = new FileUtil();
 			std::string fileContents = fileUtil->getFileAsString(tmpFilename.c_str());
+			delete fileUtil;
+
+			OSiLReader *osilreader = new OSiLReader();
 			tmpInstance = osilreader->readOSiL(fileContents);
 
+			//delete osilreader;
+			//TODO: Why can't osilreader be deleted
 		}
 		else if (file_extension == "nl")
 		{
@@ -122,6 +148,11 @@ bool SHOTSolver::setProblem(std::string fileName)
 		else
 		{
 			ProcessInfo::getInstance().outputError("Wrong filetype specified.");
+
+			//delete fileUtil;
+			//delete osilreader;
+			delete tmpInstance;
+
 			return (false);
 		}
 
@@ -129,10 +160,11 @@ bool SHOTSolver::setProblem(std::string fileName)
 	}
 	catch (const ErrorClass& eclass)
 	{
-		delete fileUtil;
-		delete osilreader;
-
 		ProcessInfo::getInstance().outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
+
+		//delete fileUtil;
+		//delete osilreader;
+		delete tmpInstance;
 
 		return (false);
 	}
@@ -150,48 +182,12 @@ bool SHOTSolver::setProblem(std::string fileName)
 	Settings::getInstance().updateSetting("DebugPath", "SHOTSolver", "problemdebug/" + tmpFile);
 
 	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver")) initializeDebugMode();
-	else
-	{
-		//getOSol();
-		//initializeDebugMode(); // Does not work without this...
-		//std::cout << getOSol(); // Needed due to unknown reason
-
-		//FileUtil* fileUtil = new FileUtil();
-		/*auto debugPath = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
-
-		 boost::filesystem::path debugDir(boost::filesystem::current_path() / debugPath);
-
-		 if (boost::filesystem::exists(debugDir))
-		 {
-		 ProcessInfo::getInstance().logger.message(1) << "Debug directory " << debugPath << " already exists." << CoinMessageEol;
-		 }
-		 else
-		 {
-		 if (boost::filesystem::create_directories(debugDir))
-		 {
-		 ProcessInfo::getInstance().logger.message(1) << "Debug directory " << debugPath << " created." << CoinMessageEol;
-		 }
-		 else
-		 {
-		 ProcessInfo::getInstance().logger.message(1) << "Could not create debug directory " << debugPath << "!"
-		 << CoinMessageEol;
-		 }
-		 }
-
-		 boost::filesystem::path source(Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver"));
-		 boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
-		 boost::filesystem::copy_option::overwrite_if_exists);
-
-		 //fileUtil->writeFileFromString(debugPath + "/options.xml", getOSol());
-		 */
-		//delete fileUtil;
-		//std::cout << "HEJ" << std::endl;
-	}
 
 	bool status = this->setProblem(tmpInstance);
 
-	delete fileUtil;
-	fileUtil = NULL;
+	//delete fileUtil;
+	//fileUtil = NULL;
+	//delete osilreader;
 
 	return (status);
 }
@@ -199,6 +195,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
 	solutionStrategy = new SolutionStrategySHOT(osInstance);
+	isProblemInitialized = true;
 
 	return (true);
 }
@@ -213,19 +210,26 @@ bool SHOTSolver::solveProblem()
 		gms2os->writeResult(ProcessInfo::getInstance());
 	}
 
-	return result;
+	return (result);
 }
 
-std::string SHOTSolver::getOSrl()
+std::string SHOTSolver::getOSrL()
 {
 	return (ProcessInfo::getInstance().getOSrl());
 }
 
-std::string SHOTSolver::getOSol()
+std::string SHOTSolver::getOSoL()
 {
 	if (!Settings::getInstance().settingsInitialized) initializeSettings();
 
-	return (Settings::getInstance().getSettingsAsOSol());
+	return (Settings::getInstance().getSettingsInOSolFormat());
+}
+
+std::string SHOTSolver::getGAMSOptFile()
+{
+	if (!Settings::getInstance().settingsInitialized) initializeSettings();
+
+	return (Settings::getInstance().getSettingsInGAMSOptFormat());
 }
 
 std::string SHOTSolver::getTraceResult()
@@ -244,7 +248,7 @@ void SHOTSolver::initializeSettings()
 
 	ProcessInfo::getInstance().outputInfo("Starting initialization of settings:");
 
-	// Logging setting
+// Logging setting
 	std::vector < std::string > enumLogLevel;
 	enumLogLevel.push_back("error");
 	enumLogLevel.push_back("summary");
@@ -264,7 +268,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("SaveAllPrimalSolutions", "SHOTSolver", false,
 			"Should all intermediate solutions (primal and dual) be saved.");
 
-	// Solution strategy
+// Solution strategy
 	std::vector < std::string > enumSolutionStrategy;
 	enumSolutionStrategy.push_back("ESH");
 	enumSolutionStrategy.push_back("ECP");
@@ -272,7 +276,7 @@ void SHOTSolver::initializeSettings()
 			"Solution strategy", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
 
-	// Relaxation
+// Relaxation
 	Settings::getInstance().createSetting("IterLimitLP", "Algorithm", 200, "LP iteration limit for solver", 0,
 			OSINT_MAX);
 	Settings::getInstance().createSetting("TimeLimitLP", "Algorithm", 30.0, "LP time limit for solver", 0, OSDBL_MAX);
@@ -303,7 +307,7 @@ void SHOTSolver::initializeSettings()
 			static_cast<int>(ES_RelaxationStrategy::Standard), "Relaxation strategy", enumRelaxationStrategy);
 	enumSolutionStrategy.clear();
 
-	// Termination tolerance setting
+// Termination tolerance setting
 	Settings::getInstance().createSetting("ConstrTermTolMILP", "Algorithm", 1e-8,
 			"Final termination tolerance for constraints", 0, OSDBL_MAX);
 	Settings::getInstance().createSetting("ConstrTermTolInitialFactor", "Algorithm", 100.0,
@@ -322,13 +326,13 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("IterLimitMILP", "Algorithm", 2000, "MILP iteration limit for solver", 1,
 			OSINT_MAX);
 
-	// Max Solution pool size
+// Max Solution pool size
 	Settings::getInstance().createSetting("SolutionPoolSize", "MILP", 100, "Solution pool capacity", 0, OSINT_MAX);
 
 	Settings::getInstance().createSetting("MaxHyperplanesPerIteration", "Algorithm", 200,
 			"Maximal extra number of hyperplanes to add per iteration", 0, OSINT_MAX);
 
-	// Interiorpoint solver
+// Interiorpoint solver
 	std::vector < std::string > enumNLPSolver;
 	enumNLPSolver.push_back("CuttingPlaneMinimax");
 	enumNLPSolver.push_back("IpoptMinimax");
@@ -339,7 +343,7 @@ void SHOTSolver::initializeSettings()
 			static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver);
 	enumNLPSolver.clear();
 
-	// NLP empty bound
+// NLP empty bound
 	Settings::getInstance().createSetting("MinimaxObjectiveBound", "InteriorPoint", 10000000000.0,
 			"Value for obj. function in NLP minimax problem", 0, OSDBL_MAX);
 
@@ -360,7 +364,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt", 1E-8,
 			"Constraint violation tolerance", -OSDBL_MAX, OSDBL_MAX);
 
-	//SHOT cutting plane Minimax NLP solver
+//SHOT cutting plane Minimax NLP solver
 	Settings::getInstance().createSetting("IterLimit", "InteriorPointCuttingPlane", 200,
 			"LP iteration limit for solver", 0, OSINT_MAX);
 	Settings::getInstance().createSetting("IterLimitSubsolver", "InteriorPointCuttingPlane", 1000,
@@ -382,7 +386,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("OriginalObjectiveWeight", "InteriorPointRelaxed", 0.0,
 			"The weight of the original objective function in NLP relaxation", -OSDBL_MAX, OSDBL_MAX);
 
-	// MILP/LP solver
+// MILP/LP solver
 	std::vector < std::string > enumMILPSolver;
 	enumMILPSolver.push_back("Cplex");
 	enumMILPSolver.push_back("Gurobi");
@@ -395,7 +399,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("PopulateSolutionPool", "MILP", false,
 			"Try to fill the solution pool after solver finishes");
 
-	// Initial MILP solution depth
+// Initial MILP solution depth
 	Settings::getInstance().createSetting("MILPSolLimitInitial", "MILP", 1, "Initial MILP solution limit", 1,
 			OSINT_MAX);
 	Settings::getInstance().createSetting("MILPSolLimitEnd", "MILP", 10.0,
@@ -409,7 +413,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("MILPSolLimitUpdateTol", "MILP", 0.001,
 			"The constraint tolerance to update solution limit at", 0, OSDBL_MAX);
 
-	// Presolve
+// Presolve
 	std::vector < std::string > enumPresolve;
 	enumPresolve.push_back("Never");
 	enumPresolve.push_back("Once");
@@ -425,7 +429,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("RemoveRedundantConstraintsFromMIP", "Presolve", false,
 			"Removes the constraints flagged as redundant by presolve");
 
-	// Add constraints as lazy constraints
+// Add constraints as lazy constraints
 	Settings::getInstance().createSetting("UseLazyConstraints", "MILP", false,
 			"Add supporting hyperplanes as lazy constraints");
 	Settings::getInstance().createSetting("UsePrimalObjectiveCut", "MILP", true,
@@ -436,7 +440,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("DelayedConstraints", "MILP", true,
 			"Add supporting hyperplanes only after optimal MILP solution (=1).");
 
-	//Settings::getInstance().createSetting("UseQuadraticProgramming", "Algorithm", true, "Solve QP problems if objective function is quadratic,");
+//Settings::getInstance().createSetting("UseQuadraticProgramming", "Algorithm", true, "Solve QP problems if objective function is quadratic,");
 
 	std::vector < std::string > enumQPStrategy;
 	enumQPStrategy.push_back("All nonlinear");
@@ -445,7 +449,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("QPStrategy", "Algorithm",
 			static_cast<int>(ES_QPStrategy::QuadraticObjective), "QP strategy", enumQPStrategy);
 
-	// CPLEX
+// CPLEX
 	Settings::getInstance().createSetting("SolnPoolIntensity", "CPLEX", 0,
 			"0 = automatic, 1 = mild, 2 = moderate, 3 = aggressive, 4 = very aggressive", 0, 4);
 	Settings::getInstance().createSetting("SolnPoolReplace", "CPLEX", 2,
@@ -464,7 +468,7 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("Threads", "CPLEX", 0, "Number of threads to use, 0 = automatic", 0, 999);
 
-	// Linesearch
+// Linesearch
 	std::vector < std::string > enumLinesearchMethod;
 	enumLinesearchMethod.push_back("BoostTOMS748");
 	enumLinesearchMethod.push_back("BoostBisection");
@@ -503,8 +507,8 @@ void SHOTSolver::initializeSettings()
 			"No linesearch on a constraint if its solution point value is less than this factor of the maximum.", 1e-6,
 			1.0);
 
-	// Tracefile
-	//createSetting("TraceFile", "Algorithm", "esh.trc", "The filename for the trace file. If empty trace information will not be saved.");
+// Tracefile
+//createSetting("TraceFile", "Algorithm", "esh.trc", "The filename for the trace file. If empty trace information will not be saved.");
 
 	std::string empty = "empty";
 
@@ -513,7 +517,7 @@ void SHOTSolver::initializeSettings()
 			"The path where to save the debug information", true);
 	Settings::getInstance().createSetting("Debug", "SHOTSolver", false, "Use debug functionality");
 
-	// Primal bound
+// Primal bound
 	std::vector < std::string > enumPrimalNLPSolver;
 	enumPrimalNLPSolver.push_back("CuttingPlane");
 	enumPrimalNLPSolver.push_back("Ipopt");
@@ -608,7 +612,7 @@ void SHOTSolver::initializeDebugMode()
 	boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
 			boost::filesystem::copy_option::overwrite_if_exists);
 
-	fileUtil->writeFileFromString(debugPath + "/options.xml", getOSol());
+	fileUtil->writeFileFromString(debugPath + "/options.xml", getOSoL());
 
 	delete fileUtil;
 }

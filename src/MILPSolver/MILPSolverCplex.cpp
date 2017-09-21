@@ -3,7 +3,7 @@
 //#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
-MILPSolverCplex ::MILPSolverCplex()
+MILPSolverCplex::MILPSolverCplex()
 {
 	discreteVariablesActivated = true;
 
@@ -65,7 +65,7 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		else
 		{
 			ProcessInfo::getInstance().outputWarning(
-			"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+					"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 

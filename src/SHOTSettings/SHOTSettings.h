@@ -2,6 +2,7 @@
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 #include "OSOption.h"
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
@@ -40,11 +41,14 @@ class Settings
 		{
 		}
 
-		void readSettings(std::string osol);
-		void readSettings(OSOption* options);
-		std::string getSettingsAsOSol();
+		void readSettingsFromOSoL(std::string osol);
+		void readSettingsFromOSOption(OSOption* options);
+		void readSettingsFromGAMSOptFormat(std::string options);
+
+		std::string getSettingsInOSolFormat();
 		std::string getSettingsAsString();
 		OSOption* getSettingsAsOSOption();
+		std::string getSettingsInGAMSOptFormat();
 
 		// String settings
 		void createSetting(std::string name, std::string category, std::string value, std::string description,

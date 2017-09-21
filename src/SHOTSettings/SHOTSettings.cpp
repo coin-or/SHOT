@@ -30,7 +30,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
 	if (oldvalue == value)
 	{
 		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-				"Setting <" + key.first + "," + key.second + "> not updated. Same value " + oldvalue + " given.");
+				"Setting " + key.first + "." + key.second + " not updated. Same value " + oldvalue + " given.");
 		return;
 	}
 	else
@@ -38,8 +38,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
 		_settings[key] = value;
 
 		osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-				"Setting <" + key.first + "," + key.second + "> = " + oldvalue + " updated. New value = " + oldvalue
-						+ ".");
+				"Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
 	}
 }
 
@@ -477,7 +476,7 @@ struct SortPred
 		}
 };
 
-std::string Settings::getSettingsAsOSol()
+std::string Settings::getSettingsInOSolFormat()
 {
 	OSoLWriter *osolwriter = new OSoLWriter();
 	osolwriter->m_bWhiteSpace = false;
@@ -595,30 +594,153 @@ OSOption* Settings::getSettingsAsOSOption()
 	return options;
 }
 
-void Settings::readSettings(std::string osol)
+std::string Settings::getSettingsInGAMSOptFormat()
+{
+	OSoLWriter *osolwriter = new OSoLWriter();
+	osolwriter->m_bWhiteSpace = false;
+
+	boost::property_tree::ptree pt;
+
+	stringstream ss;
+	ss << osolwriter->writeOSoL(getSettingsAsOSOption());
+
+	read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
+
+	// This sort the options according to category first and name after
+	pt.get_child("osol.optimization.solverOptions").sort(SortPred());
+
+	auto tmp = pt.get_child("osol.optimization.solverOptions");
+
+	std::ostringstream oss;
+
+	for (auto& child : pt.get_child("osol.optimization.solverOptions"))
+	{
+		std::stringstream desc;
+
+		std::string name = child.second.get < std::string > ("<xmlattr>.name", "");
+		std::string category = child.second.get < std::string > ("<xmlattr>.category", "");
+		std::string value = child.second.get < std::string > ("<xmlattr>.value", "");
+
+		auto key = make_pair(name, category);
+
+		if (_settingsEnum[make_pair(name, category)] == true)
+		{
+			desc << _settingsDesc[key] << ": " << getEnumDescriptionList(name, category);
+		}
+		else
+		{
+			desc << _settingsDesc[key] << ". ";
+		}
+
+		if (name == "") continue;
+		oss << std::endl;
+		if ("desc" != "") oss << "* " << desc.str() << std::endl;
+		oss << category << ".";
+		oss << name << " = ";
+		oss << value;
+		oss << std::endl;
+	}
+
+	delete osolwriter;
+
+	return (oss.str());
+}
+
+void Settings::readSettingsFromOSoL(std::string osol)
 {
 
 	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Starting conversion of settings from OSoL.");
 
-	OSoLReader *osolreader = NULL;
-	osolreader = new OSoLReader();
+	OSoLReader *osolreader = new OSoLReader();
 
-	OSOption * options = NULL;
+	readSettingsFromOSOption(osolreader->readOSoL(osol));
 
-	options = osolreader->readOSoL(osol);
-	readSettings(options);
-
+	delete osolreader;
 }
 
-void Settings::readSettings(OSOption* options)
+void Settings::readSettingsFromGAMSOptFormat(std::string options)
+{
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
+			"Starting conversion of settings from GAMS options format.");
+
+	std::istringstream f(options);
+	std::string line;
+
+	while (std::getline(f, line))
+	{
+		//Ignore empty lines and comments (starting with an asterisk)
+		if (line == "" || boost::algorithm::starts_with(line, "*")) continue;
+
+		std::vector < string > nameCategoryPair;
+		std::vector < string > keyValuePair;
+		boost::split(keyValuePair, line, boost::is_any_of("="));
+		boost::split(nameCategoryPair, keyValuePair.front(), boost::is_any_of("."));
+
+		if (nameCategoryPair.size() != 2 || keyValuePair.size() != 2)
+		{
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Error when reading line \"" + line + "\" in the options file; ignoring the option.");
+
+			continue;
+		}
+
+		std::string category = nameCategoryPair.at(0);
+		std::string name = nameCategoryPair.at(1);
+		std::string value = keyValuePair.at(1);
+
+		boost::trim(category);
+		boost::trim(name);
+		boost::trim(value);
+
+		std::pair < std::string, std::string > key = make_pair(name, category);
+		_settingsIter = _settings.find(key);
+
+		if (_settingsIter == _settings.end())
+		{
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+
+			throw SettingKeyNotFoundException(name, category);
+		}
+
+		try
+		{
+			switch (_settingsType[key])
+			{
+				case ESettingsType::String:
+					updateSetting(name, category, value);
+					break;
+				case ESettingsType::Integer:
+					updateSetting(name, category, boost::lexical_cast<int>(value));
+					break;
+				case ESettingsType::Boolean:
+					updateSetting(name, category, boost::lexical_cast<bool>(value));
+					break;
+				case ESettingsType::Double:
+					updateSetting(name, category, boost::lexical_cast<double>(value));
+					break;
+				case ESettingsType::Enum:
+					updateSetting(name, category, boost::lexical_cast<int>(value));
+					break;
+				default:
+					break;
+			}
+		}
+		catch (boost::bad_lexical_cast &)
+		{
+			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
+					"Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
+		}
+	}
+}
+
+void Settings::readSettingsFromOSOption(OSOption* options)
 {
 	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Conversion of settings from OSOptions.");
 
-	SolverOption** optionscntr = options->getAllSolverOptions();
-
 	for (int i = 0; i < options->getNumberOfSolverOptions(); i++)
 	{
-		SolverOption *so = optionscntr[i];
+		SolverOption *so = options->getAllSolverOptions()[i];
 
 		if (so->solver == "SHOT")
 		{
@@ -694,5 +816,4 @@ void Settings::readSettings(OSOption* options)
 	}
 
 	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Conversion of settings from OSoL completed.");
-
 }

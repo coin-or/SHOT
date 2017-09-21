@@ -67,7 +67,7 @@ void TaskFindInteriorPoint::run()
 		{
 			stringstream ss;
 			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
-			ss << "/nlp";
+			ss << "/interiorpointnlp";
 			ss << i;
 			ss << ".txt";
 

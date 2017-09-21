@@ -24,7 +24,7 @@ int OptProblem::getNumberOfConstraints()
 std::vector<std::string> OptProblem::getConstraintNames()
 {
 	std::string* tmpArray = getProblemInstance()->getConstraintNames();
-	std::vector<std::string> tmpVector(tmpArray, tmpArray + getProblemInstance()->getConstraintNumber());
+	std::vector < std::string > tmpVector(tmpArray, tmpArray + getProblemInstance()->getConstraintNumber());
 
 	return tmpVector;
 }
@@ -53,7 +53,7 @@ int OptProblem::getNumberOfRealVariables()
 std::vector<std::string> OptProblem::getVariableNames()
 {
 	std::string* tmpArray = getProblemInstance()->getVariableNames();
-	std::vector<std::string> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+	std::vector < std::string > tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
 	return tmpVector;
 }
@@ -191,13 +191,13 @@ void OptProblem::printProblemStatistics()
 
 	ProcessInfo::getInstance().outputSummary(
 			"│ Number of constraints (total/linear/nonlinear):   "
-					+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
-					+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
+			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
+			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
 	ProcessInfo::getInstance().outputSummary(
 			"│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
-					+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
-					+ to_string(getNumberOfIntegerVariables()) + "/");
+			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
+			+ to_string(getNumberOfIntegerVariables()) + "/");
 
 	ProcessInfo::getInstance().outputSummary(
 			"└────────────────────────────────────────────────────────────────────────────────┘");
@@ -323,7 +323,7 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
 
 vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<double> point, double tolerance)
 {
-	vector<IndexValuePair> valpairs;
+	vector < IndexValuePair > valpairs;
 
 	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
 
@@ -988,6 +988,7 @@ void OptProblem::setObjectiveFunctionNonlinear(bool value)
 
 bool OptProblem::isConstraintNonlinear(OSInstance *instance, int constrIdx)
 {
+
 	for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
 	{
 		int tmpIndex = instance->instanceData->nonlinearExpressions->nl[i]->idx;
