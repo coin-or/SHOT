@@ -11,7 +11,7 @@
 #define GAMSLOGOPTION 0
 
 GAMS2OS::GAMS2OS() :
-		gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL), osoptions(NULL), osolreader(NULL)
+		gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
 {
 }
 
@@ -93,27 +93,14 @@ void GAMS2OS::readCntr(const std::string& filename)
 		throw std::logic_error("Could not load model data.");
 	}
 
-	gevTerminateUninstall(gev);
+	gevTerminateUninstall (gev);
 }
 
 void GAMS2OS::createOSObjects()
 {
 	char buffer[GMS_SSSIZE];
 
-	// read options file, if specified; assuming OSoL format
-	delete osoptions;
-	osoptions = NULL;
-
-	/* TODO pass GAMS options to SHOT:
-	time limit: gevGetDblOpt(gev, gevResLim);
-	absolute gap limit: gevGetDblOpt(gev, gevOptCA);
-	relative gap limit: gevGetDblOpt(gev, gevOptCR);
-
-	probably have to create an OSoL object for this
-	if options file is given, then values from options file should overwrite those set in GAMS
-	*/
-
-	if (gmoOptFile(gmo) > 0)
+	if (gmoOptFile(gmo) > 0) // GAMS provides an option file
 	{
 		gmoNameOptFile(gmo, buffer);
 		gevLogPChar(gev, "Reading options from ");
@@ -125,9 +112,31 @@ void GAMS2OS::createOSObjects()
 		std::string fileContents = fileUtil->getFileAsString(buffer);
 		delete fileUtil;
 
-		osolreader = new OSoLReader();
-		osoptions = osolreader->readOSoL(fileContents);
+		Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
 	}
+	else // get default settings from GAMS
+	{
+		Settings::getInstance().updateSetting("TimeLimit", "Algorithm", gevGetDblOpt(gev, gevResLim));
+		Settings::getInstance().updateSetting("GapTermTolAbsolute", "Algorithm", gevGetDblOpt(gev, gevOptCA));
+
+		ProcessInfo::getInstance().outputInfo(
+				"Time limit set to "
+						+ UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm"))
+						+ " by GAMS");
+		ProcessInfo::getInstance().outputInfo(
+				"Absolute termination tolerance set to "
+						+ UtilityFunctions::toString(
+								Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+						+ " by GAMS");
+		ProcessInfo::getInstance().outputInfo(
+				"Relative termination tolerance set to "
+						+ UtilityFunctions::toString(
+								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
+						+ " by GAMS");
+	}
+
+	// want to solve the NLP problems with GAMS
+	Settings::getInstance().updateSetting("PrimalNLPSolver", "PrimalBound", (int) ES_PrimalNLPSolver::GAMS);
 
 	/* reformulate objective variable out of model, if possible */
 	gmoObjReformSet(gmo, 1);
@@ -1327,8 +1336,4 @@ void GAMS2OS::clear()
 
 	delete osinstance;
 	osinstance = NULL;
-
-	delete osolreader;
-	osolreader = NULL;
-	osoptions = NULL;
 }

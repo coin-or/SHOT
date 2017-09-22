@@ -48,7 +48,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 		return (false);
 	}
 
-// Sets the correct log levels
+	// Sets the correct log levels
 	osoutput->SetPrintLevel("stdout",
 			(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") + 1));
 	osoutput->SetPrintLevel("shotlogfile",
@@ -142,15 +142,11 @@ bool SHOTSolver::setProblem(std::string fileName)
 			gms2os->readCntr(tmpFilename);
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;
-
-			if (gms2os->osoptions) setOptions(gms2os->osoptions);
 		}
 		else
 		{
 			ProcessInfo::getInstance().outputError("Wrong filetype specified.");
 
-			//delete fileUtil;
-			//delete osilreader;
 			delete tmpInstance;
 
 			return (false);
@@ -162,8 +158,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 	{
 		ProcessInfo::getInstance().outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
 
-		//delete fileUtil;
-		//delete osilreader;
 		delete tmpInstance;
 
 		return (false);
@@ -185,10 +179,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 
 	bool status = this->setProblem(tmpInstance);
 
-	//delete fileUtil;
-	//fileUtil = NULL;
-	//delete osilreader;
-
 	return (status);
 }
 
@@ -206,7 +196,6 @@ bool SHOTSolver::solveProblem()
 
 	if (result && gms2os != NULL)
 	{
-		//gms2os->writeResult(*processInfo);
 		gms2os->writeResult(ProcessInfo::getInstance());
 	}
 
@@ -507,9 +496,6 @@ void SHOTSolver::initializeSettings()
 			"No linesearch on a constraint if its solution point value is less than this factor of the maximum.", 1e-6,
 			1.0);
 
-// Tracefile
-//createSetting("TraceFile", "Algorithm", "esh.trc", "The filename for the trace file. If empty trace information will not be saved.");
-
 	std::string empty = "empty";
 
 	Settings::getInstance().createSetting("ProblemFile", "SHOTSolver", empty, "The filename of the problem.", true);
@@ -587,7 +573,6 @@ void SHOTSolver::initializeSettings()
 
 void SHOTSolver::initializeDebugMode()
 {
-	FileUtil* fileUtil = new FileUtil();
 	auto debugPath = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
 
 	boost::filesystem::path debugDir(boost::filesystem::current_path() / debugPath);
@@ -611,6 +596,8 @@ void SHOTSolver::initializeDebugMode()
 	boost::filesystem::path source(Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver"));
 	boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
 			boost::filesystem::copy_option::overwrite_if_exists);
+
+	FileUtil* fileUtil = new FileUtil();
 
 	fileUtil->writeFileFromString(debugPath + "/options.xml", getOSoL());
 

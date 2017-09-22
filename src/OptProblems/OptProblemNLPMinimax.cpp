@@ -18,13 +18,10 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	OSInstance *newInstance = NULL;
 	newInstance = new OSInstance();
 
-	std::cout << "h221" << std::endl;
 	this->setObjectiveFunctionNonlinear(isConstraintNonlinear(originalInstance, -1));
 
-	std::cout << "h222" << std::endl;
 	this->setTypeOfObjectiveMinimize(true /*originalInstance->instanceData->objectives->obj[0]->maxOrMin == "min"*/);
 
-	std::cout << "h223" << std::endl;
 	this->copyVariables(originalInstance, newInstance, true);
 
 	this->copyObjectiveFunction(originalInstance, newInstance);

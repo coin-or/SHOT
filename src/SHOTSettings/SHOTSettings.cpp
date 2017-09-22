@@ -481,7 +481,6 @@ std::string Settings::getSettingsInOSolFormat()
 	OSoLWriter *osolwriter = new OSoLWriter();
 	osolwriter->m_bWhiteSpace = false;
 
-	//using boost::property_tree::ptree;
 	boost::property_tree::ptree pt;
 	boost::property_tree::xml_writer_settings < std::string > settings(' ', 1);
 

@@ -157,7 +157,6 @@ int main(int argc, char *argv[])
 			return (0);
 		}
 
-		std::cout << "h1" << std::endl;
 		// Prints out the welcome message to the logging facility
 		ProcessInfo::getInstance().outputSummary(startmessage);
 
@@ -175,10 +174,8 @@ int main(int argc, char *argv[])
 		{
 			ProcessInfo::getInstance().outputError("Error when solving problem.");
 
-			std::cout << "h4" << std::endl;
 			delete solver;
 
-			std::cout << "h5" << std::endl;
 			return (0);
 		}
 	}

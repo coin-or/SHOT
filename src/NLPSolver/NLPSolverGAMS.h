@@ -55,7 +55,4 @@ class NLPSolverGAMS: public NLPSolverBase
 
 	private:
 
-//	
-//	ProcessInfo *processInfo;
-
 };
