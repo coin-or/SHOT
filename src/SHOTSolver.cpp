@@ -533,6 +533,16 @@ void SHOTSolver::initializeSettings()
 			"Maximal elapsed time between calls", 0, OSDBL_MAX);
 	Settings::getInstance().createSetting("NLPTimeLimit", "PrimalBound", 10.0,
 			"Maximal time allowed per fixed NLP problem", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("NLPIterLimit", "PrimalBound", 10000000,
+			"Maximum number of iterations allowed per fixed NLP problem", 0, OSINT_MAX);
+
+	std::string solver = "conopt";
+	std::string optfile = "conopt.opt";
+
+	Settings::getInstance().createSetting("NLPSolver", "GAMS", solver, "Name of the NLP solver to use in GAMS");
+	Settings::getInstance().createSetting("NLPOptionsFile", "GAMS", optfile,
+			"Name of the options file for the NLP solver in GAMS");
+	Settings::getInstance().createSetting("ShowOutput", "GAMS", false, "Show GAMS output");
 
 	std::vector < std::string > enumAddPrimalPointAsInteriorPoint;
 	enumAddPrimalPointAsInteriorPoint.push_back("Keep original");

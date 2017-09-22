@@ -13,6 +13,16 @@ NLPSolverGAMS::NLPSolverGAMS() :
 
 	strcpy(nlpsolver, "conopt");
 	*nlpsolveropt = '\0';
+
+	strcpy(nlpsolver, Settings::getInstance().getStringSetting("NLPSolver", "GAMS").c_str());
+	strcpy(nlpsolveropt, Settings::getInstance().getStringSetting("NLPOptionsFile", "GAMS").c_str());
+
+	timelimit = Settings::getInstance().getDoubleSetting("NLPTimeLimit", "PrimalBound");
+	iterlimit = Settings::getInstance().getIntSetting("NLPIterLimit", "PrimalBound");
+
+	// TODO: showlog seems to have no effect...
+	showlog = Settings::getInstance().getBoolSetting("ShowOutput", "GAMS");
+
 }
 
 void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
@@ -54,7 +64,7 @@ void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
 
 std::vector<double> NLPSolverGAMS::getSolution()
 {
-	std::vector<double> sol(gmoN(gmo));
+	std::vector<double> sol(gmoN (gmo));
 
 	gmoGetVarL(gmo, &sol[0]);
 
@@ -76,7 +86,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 	char msg[GMS_SSSIZE];
 
 	/* set which options file to use */
-	if( *nlpsolveropt )
+	if (*nlpsolveropt)
 	{
 		gmoOptFileSet(gmo, 1);
 		gmoNameOptFileSet(gmo, nlpsolveropt);
@@ -90,8 +100,8 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 	gmoAltBoundsSet(gmo, 1); /* use alternative bounds */
 	gmoForceContSet(gmo, 1);
 
-	if( gevCallSolver(gev, gmo, "", nlpsolver, gevSolveLinkLoadLibrary, showlog ? gevSolverSameStreams : gevSolverQuiet, NULL, NULL,
-			timelimit, iterlimit, 0, 0.0, 0.0, NULL, msg) != 0 )
+	if (gevCallSolver(gev, gmo, "", nlpsolver, gevSolveLinkLoadLibrary, showlog ? gevSolverSameStreams : gevSolverQuiet,
+			NULL, NULL, timelimit, iterlimit, 0, 0.0, 0.0, NULL, msg) != 0)
 	{
 		gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
 		//throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
@@ -101,7 +111,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 	gmoForceContSet(gmo, 0);
 
 	/* the callSolver calls installs a SIGINT handler again, which prevents stopping on Ctrl+C */
-	gevTerminateUninstall(gev);
+	gevTerminateUninstall (gev);
 
 	switch (gmoModelStat(gmo))
 	{
@@ -110,39 +120,39 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 		case gmoModelStat_SolvedUnique:
 		case gmoModelStat_Solved:
 		case gmoModelStat_SolvedSingular:
-			return E_NLPSolutionStatus::Optimal;
+		return E_NLPSolutionStatus::Optimal;
 		case gmoModelStat_Unbounded:
 		case gmoModelStat_UnboundedNoSolution:
-			return E_NLPSolutionStatus::Unbounded;
+		return E_NLPSolutionStatus::Unbounded;
 		case gmoModelStat_InfeasibleGlobal:
 		case gmoModelStat_InfeasibleLocal:
 		case gmoModelStat_IntegerInfeasible:
 		case gmoModelStat_InfeasibleNoSolution:
-			return E_NLPSolutionStatus::Infeasible;
+		return E_NLPSolutionStatus::Infeasible;
 		case gmoModelStat_Feasible:
 		case gmoModelStat_Integer:
-			return E_NLPSolutionStatus::Feasible;
+		return E_NLPSolutionStatus::Feasible;
 
 		case gmoModelStat_InfeasibleIntermed:
 		case gmoModelStat_NonIntegerIntermed:
 		case gmoModelStat_NoSolutionReturned:
-			switch (gmoSolveStat(gmo))
-			{
-				case gmoSolveStat_Iteration:
-					return E_NLPSolutionStatus::IterationLimit;
-				case gmoSolveStat_Resource:
-					return E_NLPSolutionStatus::TimeLimit;
-				case gmoSolveStat_Normal:
-				case gmoSolveStat_User:
-					return E_NLPSolutionStatus::Infeasible;
-				default:
-					return E_NLPSolutionStatus::Error;
-			}
+		switch (gmoSolveStat(gmo))
+		{
+			case gmoSolveStat_Iteration:
+			return E_NLPSolutionStatus::IterationLimit;
+			case gmoSolveStat_Resource:
+			return E_NLPSolutionStatus::TimeLimit;
+			case gmoSolveStat_Normal:
+			case gmoSolveStat_User:
+			return E_NLPSolutionStatus::Infeasible;
+			default:
+			return E_NLPSolutionStatus::Error;
+		}
 
 		case gmoModelStat_LicenseError:
 		case gmoModelStat_ErrorUnknown:
 		case gmoModelStat_ErrorNoSolution:
-			return E_NLPSolutionStatus::Error;
+		return E_NLPSolutionStatus::Error;
 	}
 }
 
@@ -187,7 +197,7 @@ std::vector<double> NLPSolverGAMS::getCurrentVariableLowerBounds()
 {
 	assert(gmo != NULL);
 
-	std::vector<double> lb(gmoN(gmo));
+	std::vector<double> lb(gmoN (gmo));
 
 	gmoGetVarLower(gmo, &lb[0]);
 
@@ -198,7 +208,7 @@ std::vector<double> NLPSolverGAMS::getCurrentVariableUpperBounds()
 {
 	assert(gmo != NULL);
 
-	std::vector<double> ub(gmoN(gmo));
+	std::vector<double> ub(gmoN (gmo));
 
 	gmoGetVarUpper(gmo, &ub[0]);
 
