@@ -619,7 +619,7 @@ int MILPSolverCplex::getSolutionLimit()
 
 std::vector<double> MILPSolverCplex::getVariableSolution(int solIdx)
 {
-	bool isMILP = getDiscreteVariableStatus();
+	bool isMILP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 	int numVar = cplexVars.getSize();
 	std::vector<double> solution(numVar);
 
@@ -657,8 +657,15 @@ int MILPSolverCplex::getNumberOfSolutions()
 
 	try
 	{
-		if (isMILP) numSols = cplexInstance.getSolnPoolNsolns();
-		else numSols = 1;
+		if (ProcessInfo::getInstance().originalProblem->isProblemDiscrete() && isMILP)
+		{
+			numSols = cplexInstance.getSolnPoolNsolns();
+		}
+		else
+		{
+			numSols = 1;
+		}
+
 	}
 	catch (IloException &e)
 	{
@@ -670,7 +677,7 @@ int MILPSolverCplex::getNumberOfSolutions()
 
 double MILPSolverCplex::getObjectiveValue(int solIdx)
 {
-	bool isMILP = getDiscreteVariableStatus();
+	bool isMILP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 
 	double objVal = NAN;
 
@@ -690,7 +697,6 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 		else
 		{
 			objVal = cplexInstance.getObjValue();
-
 		}
 
 	}
@@ -701,7 +707,6 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 	}
 
 	return (objVal);
-
 }
 
 void MILPSolverCplex::populateSolutionPool()
@@ -1022,7 +1027,7 @@ void MILPSolverCplex::writePresolvedToFile(std::string filename)
 {
 	try
 	{
-		//Not implemented
+//Not implemented
 	}
 	catch (IloException &e)
 	{

@@ -37,8 +37,8 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	if (cachedSolutionHasChanged == false) return (lastSolutions);
 
 	int numSol = getNumberOfSolutions();
-	int numVar = originalProblem->getNumberOfVariables();
 
+	int numVar = originalProblem->getNumberOfVariables();
 	std::vector < SolutionPoint > allSolutions(numSol);
 
 	// Should be moved to separate task
@@ -62,6 +62,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 		tmpSolPt.maxDeviation = maxDev;
 
 		allSolutions.at(i) = tmpSolPt;
+
 	}
 
 	cachedSolutionHasChanged = false;

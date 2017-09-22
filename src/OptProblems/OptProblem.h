@@ -109,6 +109,8 @@ class OptProblem
 		bool isConstraintNonlinear(OSInstance *instance, int idx);
 		bool isProblemNonlinear(OSInstance *instance);
 
+		bool isProblemDiscrete();
+
 		bool hasVariableBoundsBeenTightened(int varIndex);
 		void setVariableBoundsAsTightened(int varIndex);
 		void setVariableBoundsTightened(std::vector<bool> status);

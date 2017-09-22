@@ -31,7 +31,8 @@ void TaskPrintIterationReport::run()
 		bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
 				== E_ObjectiveFunctionType::Quadratic);
 		bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
-		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP);
+		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP)
+				&& ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 
 		if (isMIQCP && isDiscrete) tmpType << "MIQCP";
 		else if (isMIQCP) tmpType << "QCP";

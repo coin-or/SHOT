@@ -62,8 +62,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	/*if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
+	 + ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
+	 {
+	 TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+	 ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	 }*/
 
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
@@ -245,7 +249,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	//TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
+	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MILPSolver);

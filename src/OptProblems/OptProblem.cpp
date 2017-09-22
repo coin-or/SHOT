@@ -1186,3 +1186,9 @@ void OptProblem::fixVariable(int varIdx, double value)
 	}
 }
 
+bool OptProblem::isProblemDiscrete()
+{
+	if (this->getNumberOfIntegerVariables() + this->getNumberOfBinaryVariables() > 0) return (true);
+
+	return (false);
+}

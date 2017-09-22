@@ -40,7 +40,6 @@ void TaskExecuteRelaxationStrategy::run()
 	}
 	else
 	{
-
 		relaxationStrategy->executeStrategy();
 	}
 }

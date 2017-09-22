@@ -132,7 +132,6 @@ void TaskSolveIteration::run()
 		{
 			ProcessInfo::getInstance().iterLP = ProcessInfo::getInstance().iterLP + 1;
 		}
-
 	}
 	else if (currIter->type == E_IterationProblemType::MIP
 			&& (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
