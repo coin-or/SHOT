@@ -537,7 +537,7 @@ void SHOTSolver::initializeSettings()
 			"Maximum number of iterations allowed per fixed NLP problem", 0, OSINT_MAX);
 
 	std::string solver = "conopt";
-	std::string optfile = "conopt.opt";
+	std::string optfile = "";
 
 	Settings::getInstance().createSetting("NLPSolver", "GAMS", solver, "Name of the NLP solver to use in GAMS");
 	Settings::getInstance().createSetting("NLPOptionsFile", "GAMS", optfile,
