@@ -74,7 +74,8 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 
 NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax()
 {
-	delete NLPProblem, LPSolver;
+	delete NLPProblem;
+	delete LPSolver;
 }
 
 /*void NLPSolverCuttingPlaneMinimax::saveProblemModelToFile(std::string fileName)
@@ -280,7 +281,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 			if (mu >= 0 && Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane"))
 			{
-
 				auto tmpPoint = currSol;
 				tmpPoint.pop_back();
 				Hyperplane hyperplane;
@@ -289,7 +289,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 				hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
 
 				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
-
 			}
 		}
 
@@ -393,11 +392,6 @@ std::vector<double> NLPSolverCuttingPlaneMinimax::getCurrentVariableUpperBounds(
 void NLPSolverCuttingPlaneMinimax::clearStartingPoint()
 {
 }
-
-/*void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName)
- {
- NLPProblem->saveProblemModelToFile(fileName);
- }*/
 
 void NLPSolverCuttingPlaneMinimax::saveOptionsToFile(std::string fileName)
 {

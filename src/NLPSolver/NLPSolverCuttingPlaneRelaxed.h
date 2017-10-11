@@ -8,7 +8,6 @@
 #pragma once
 
 #include "NLPSolverBase.h"
-#include "../OptProblems/OptProblemNLPSHOTMinimax.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 #include "../MILPSolver/MILPSolverCplex.h"
 #include "../MILPSolver/MILPSolverGurobi.h"

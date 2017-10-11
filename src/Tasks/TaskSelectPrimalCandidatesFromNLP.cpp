@@ -33,6 +33,7 @@ void TaskSelectPrimalCandidatesFromNLP::run()
 	{
 		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 		ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+
 		primalStrategyFixedNLP->runStrategy();
 
 		ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");

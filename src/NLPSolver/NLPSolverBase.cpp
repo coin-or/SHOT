@@ -14,7 +14,7 @@ void NLPSolverBase::initializeProblem()
 {
 	if (!isProblemInitialized)
 	{
-		createProblemInstance(originalInstance);
+		createProblemInstance (originalInstance);
 
 		isProblemInitialized = true;
 	}

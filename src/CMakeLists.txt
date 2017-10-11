@@ -24,8 +24,7 @@ list(REMOVE_DUPLICATES Foo_INCLUDE_DIRS)
 
 set(Boost_INCLUDE_DIR /usr/include)
 set(Boost_LIBRARY_DIR /usr/lib)
-set(COINOS_DIR /opt/OS-2.10.1)
-#set(COINOS_DIR /opt/OS-2.9.1-working)
+set(COINOS_DIR /opt/OS-2.10)
 find_package(Boost 1.63.0 COMPONENTS system filesystem REQUIRED)
 
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )

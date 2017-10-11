@@ -18,8 +18,8 @@ class OptProblemOriginal: public OptProblem
 
 		//virtual bool isConstraintsFulfilledInPoint(std::vector<double> point) ;
 		//virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
-		virtual double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-		virtual SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+		//virtual double calculateConstraintFunctionValue(int idx, std::vector<double> point);
+		//virtual SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
 
 		//virtual int getNumberOfNonlinearConstraints();
 		//virtual int getNumberOfConstraints();

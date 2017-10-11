@@ -3,7 +3,6 @@
 OptProblem::OptProblem()
 {
 	m_problemInstance = NULL;
-
 }
 
 OptProblem::~OptProblem()
@@ -37,6 +36,11 @@ int OptProblem::getNumberOfVariables()
 int OptProblem::getNumberOfBinaryVariables()
 {
 	return getProblemInstance()->getNumberOfBinaryVariables();
+}
+
+int OptProblem::getNumberOfDiscreteVariables()
+{
+	return (getProblemInstance()->getNumberOfBinaryVariables() + getProblemInstance()->getNumberOfIntegerVariables());
 }
 
 int OptProblem::getNumberOfIntegerVariables()
@@ -458,24 +462,55 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
 
 SparseVector* OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
 {
+	auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 	ProcessInfo::getInstance().numGradientEvals++;
-	return getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
+
+	if (idx != -1 && getProblemInstance()->getConstraintTypes()[idx] == 'G')
+	{
+		for (int i = 0; i < gradient->number; i++)
+		{
+			gradient->values[i] = -gradient->values[i];
+		}
+	}
+
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	{
+		auto numGradient = calculateGradientNumerically(idx, point);
+
+		std::vector<double> nonSparseGrad(point.size(), 0.0);
+
+		for (int i = 0; i < gradient->number; i++)
+		{
+			nonSparseGrad.at(gradient->indexes[i]) = gradient->values[i];
+		}
+
+		for (int i = 0; i < point.size(); i++)
+		{
+			if (abs((numGradient.at(i) - nonSparseGrad.at(i)) / nonSparseGrad.at(i)) >= 0.1)
+			{
+				ProcessInfo::getInstance().outputWarning(
+						"Numerical gradient component error: "
+								+ UtilityFunctions::toString(abs(numGradient.at(i) - nonSparseGrad.at(i))));
+			}
+		}
+	}
+
+	return (gradient);
 }
 
 double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 {
 	auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
-
 	ProcessInfo::getInstance().numFunctionEvals++;
-//std::cout << "Obj value calculated: " << tmpVal << std::endl;
+
 	return tmpVal;
 }
 
 double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double> point)
 {
 
-	double tmpVal;
-	if (idx != getNonlinearObjectiveConstraintIdx())	// Not the objective function
+	double tmpVal = 0.0;
+	if (isObjectiveFunctionNonlinear() && (idx != getNonlinearObjectiveConstraintIdx() || idx != -1))// Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
 		ProcessInfo::getInstance().numFunctionEvals++;
@@ -748,11 +783,14 @@ void OptProblem::copyLinearTerms(OSInstance *source, OSInstance *destination)
 	if (source->instanceData->linearConstraintCoefficients != NULL)
 	{
 		int ncoef = source->getLinearConstraintCoefficientNumber();
+
+		if (ncoef == 0) return;
+
 		bool isColMajor = source->getLinearConstraintCoefficientMajor();
 		int nstart;
 		SparseMatrix* coeff;
 
-		// getLinearConstraintCoefficients returns a pointer to a sparse matrix structure
+// getLinearConstraintCoefficients returns a pointer to a sparse matrix structure
 		if (isColMajor)
 		{
 			nstart = source->getVariableNumber();
@@ -1066,6 +1104,26 @@ OSInstance * OptProblem::getProblemInstance()
 void OptProblem::setVariableBoundsTightened(std::vector<bool> status)
 {
 	m_variableBoundTightened = status;
+}
+
+std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex, std::vector<double> point)
+{
+	double stepSize = 0.000001;
+
+	std::vector<double> point2(point);
+	std::vector<double> numGradient(point.size());
+
+	for (int i = 0; i < point.size(); i++)
+	{
+		point2.at(i) = point2.at(i) + stepSize;
+
+		numGradient.at(i) = (this->calculateConstraintFunctionValue(constraintIndex, point2)
+				- this->calculateConstraintFunctionValue(constraintIndex, point)) / stepSize;
+
+		point2.at(i) = point.at(i);
+	}
+
+	return (numGradient);
 }
 
 void OptProblem::setProblemInstance(OSInstance * instance)

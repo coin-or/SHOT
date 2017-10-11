@@ -3,7 +3,6 @@
 RelaxationStrategyStandard::RelaxationStrategyStandard(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-
 }
 
 RelaxationStrategyStandard::~RelaxationStrategyStandard()
@@ -31,7 +30,6 @@ void RelaxationStrategyStandard::executeStrategy()
 	if (iterInterval != 0 && ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % iterInterval == 0)
 	{
 		return (this->setActive());
-
 	}
 
 	if (isLPStepFinished() || isCurrentToleranceReached() || isGapReached() || isIterationLimitReached()
@@ -54,7 +52,6 @@ void RelaxationStrategyStandard::setActive()
 		MILPSolver->activateDiscreteVariables(false);
 
 		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::Relaxed;
-
 	}
 }
 

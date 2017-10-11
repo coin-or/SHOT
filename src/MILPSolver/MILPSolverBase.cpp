@@ -29,7 +29,14 @@ double MILPSolverBase::getObjectiveValue()
 
 bool MILPSolverBase::getDiscreteVariableStatus()
 {
-	return (discreteVariablesActivated);
+	if (ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() == 0)
+	{
+		return (false);
+	}
+	else
+	{
+		return (discreteVariablesActivated);
+	}
 }
 
 std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
@@ -41,7 +48,7 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	int numVar = originalProblem->getNumberOfVariables();
 	std::vector < SolutionPoint > allSolutions(numSol);
 
-	// Should be moved to separate task
+// Should be moved to separate task
 	bool isMILP = getDiscreteVariableStatus();
 	if (isMILP && Settings::getInstance().getBoolSetting("PopulateSolutionPool", "MILP"))
 	{
@@ -81,64 +88,25 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
 
-	if (hyperplane.sourceConstraintIndex == -1
-			|| hyperplane.sourceConstraintIndex == originalProblem->getNonlinearObjectiveConstraintIdx())
+	ProcessInfo::getInstance().outputInfo(
+			"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
+	int number = originalProblem->getNumberOfVariables();
+
+	auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
+			hyperplane.generatedPoint);
+
+	for (int i = 0; i < nablag->number; i++)
 	{
-		ProcessInfo::getInstance().outputInfo("     HP point generated for auxiliary objective function constraint");
-
-		auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
-				&hyperplane.generatedPoint.at(0), -1, true);
-		int number = originalProblem->getNumberOfVariables();
-
-		ProcessInfo::getInstance().numGradientEvals++;
-
-		for (int i = 0; i < number - 1; i++)
-		{
-			if (tmpArray[i] != 0)
-			{
-				IndexValuePair pair;
-				pair.idx = i;
-				pair.value = tmpArray[i];
-
-				elements.push_back(pair);
-				constant += -tmpArray[i] * hyperplane.generatedPoint.at(i);
-
-				ProcessInfo::getInstance().outputInfo(
-						"     Gradient for variable " + varNames.at(i) + ": " + to_string(tmpArray[i]));
-			}
-		}
-
-		ProcessInfo::getInstance().outputInfo("     Gradient for obj.var.: -1");
-
 		IndexValuePair pair;
-		pair.idx = originalProblem->getNonlinearObjectiveVariableIdx();
-		pair.value = -1.0;
+		pair.idx = nablag->indexes[i];
+		pair.value = nablag->values[i];
 
 		elements.push_back(pair);
-		constant += /*-(-1) **/hyperplane.generatedPoint.at(pair.idx);
-	}
-	else
-	{
+
+		constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
+
 		ProcessInfo::getInstance().outputInfo(
-				"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
-		int number = originalProblem->getNumberOfVariables();
-
-		auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
-				hyperplane.generatedPoint);
-
-		for (int i = 0; i < nablag->number; i++)
-		{
-			IndexValuePair pair;
-			pair.idx = nablag->indexes[i];
-			pair.value = nablag->values[i];
-
-			elements.push_back(pair);
-			constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
-
-			ProcessInfo::getInstance().outputInfo(
-					"     Gradient for variable" + varNames.at(nablag->indexes[i]) + ": "
-							+ to_string(nablag->values[i]));
-		}
+				"     Gradient for variable " + varNames.at(nablag->indexes[i]) + ": " + to_string(nablag->values[i]));
 	}
 
 	bool hyperplaneIsOk = true;

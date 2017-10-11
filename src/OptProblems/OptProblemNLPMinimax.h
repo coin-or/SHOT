@@ -21,7 +21,7 @@ class OptProblemNLPMinimax: public OptProblem
 		bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
 		double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-		SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+		//SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
 
 	private:
 

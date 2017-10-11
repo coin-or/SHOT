@@ -5,7 +5,6 @@
 OptProblemNLPMinimax::OptProblemNLPMinimax()
 {
 	//problemInstance = NULL;
-
 }
 
 OptProblemNLPMinimax::~OptProblemNLPMinimax()
@@ -17,6 +16,8 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 {
 	OSInstance *newInstance = NULL;
 	newInstance = new OSInstance();
+
+	this->setObjectiveFunctionType(E_ObjectiveFunctionType::Linear);
 
 	this->setObjectiveFunctionNonlinear(isConstraintNonlinear(originalInstance, -1));
 
@@ -477,46 +478,28 @@ double OptProblemNLPMinimax::calculateConstraintFunctionValue(int idx, std::vect
 {
 	double tmpVal = 0.0;
 
-	//if (idx != this->getNonlinearObjectiveConstraintIdx())	// Not the objective function
-	//{
-	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-	ProcessInfo::getInstance().numFunctionEvals++;
+	tmpVal = OptProblem::calculateConstraintFunctionValue(idx, point);
 
-	if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
-	{
-		tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub; // -problemInstance->getConstraintConstants()[idx];
-	}
-	else if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
-	{
-		tmpVal = -tmpVal + getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
-		//std::cout << "Lin value is: "<< tmpVal << std::endl;
-	}
-	else if (getProblemInstance()->getConstraintTypes()[idx] == 'E')
-	{
-		tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
-		//std::cout << "Lin value is: "<< tmpVal << std::endl;
-	}
-
-	if (point.size() > muindex) tmpVal = tmpVal + point.at(muindex);
-
+	tmpVal += point.at(muindex);
 	return tmpVal;
 }
 
-SparseVector* OptProblemNLPMinimax::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
-{
+/*SparseVector* OptProblemNLPMinimax::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
+ {
 
-	SparseVector* tmpVector;
-	tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-	ProcessInfo::getInstance().numGradientEvals++;
+ SparseVector* tmpVector;
+ tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
+ ProcessInfo::getInstance().numGradientEvals++;
 
-	int number = tmpVector->number;
+ int number = tmpVector->number;
 
-	if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
-	{
-		for (int i = 0; i < number; i++)
-		{
-			tmpVector->values[i] = -tmpVector->values[i];
-		}
-	}
-	return tmpVector;
-}
+ if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
+ {
+ for (int i = 0; i < number; i++)
+ {
+ tmpVector->values[i] = -tmpVector->values[i];
+ }
+ }
+ return tmpVector;
+ }
+ */

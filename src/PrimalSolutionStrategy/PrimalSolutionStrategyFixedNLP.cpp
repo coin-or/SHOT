@@ -9,7 +9,6 @@
 
 PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 {
-
 	originalNLPTime = Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
 	originalNLPIter = Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound");
 
@@ -46,7 +45,9 @@ PrimalSolutionStrategyFixedNLP::~PrimalSolutionStrategyFixedNLP()
 bool PrimalSolutionStrategyFixedNLP::runStrategy()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+
 	NLPSolver->initializeProblem();
+
 	int numVars = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
 
 	auto discreteVariableIndexes = ProcessInfo::getInstance().originalProblem->getDiscreteVariableIndices();
@@ -54,7 +55,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	bool isSolved;
 
-	vector<PrimalFixedNLPCandidate> testPts;
+	vector < PrimalFixedNLPCandidate > testPts;
 
 	// Fix variables
 	auto varTypes = ProcessInfo::getInstance().originalProblem->getVariableTypes();

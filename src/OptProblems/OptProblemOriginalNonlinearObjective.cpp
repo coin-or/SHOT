@@ -92,12 +92,13 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 	int number;
 	SparseVector* tmpVector;
 
+	// If this is the nonlinear objective constraint, we need to add the gradient for the mu variable at the end.
 	if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
 	{
 		auto tmpArray = getProblemInstance()->calculateObjectiveFunctionGradient(&point.at(0), -1, true);
 		ProcessInfo::getInstance().numGradientEvals++;
+
 		number = getProblemInstance()->getVariableNumber();
-		tmpVector = new SparseVector(number);
 		std::vector<int> tmpIndexes;
 		std::vector<double> tmpValues;
 
@@ -112,6 +113,8 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 			}
 		}
 
+		tmpVector = new SparseVector(nonZeroVals + 1);
+
 		tmpIndexes.push_back(this->getNonlinearObjectiveVariableIdx());
 		tmpValues.push_back(-1);
 
@@ -120,28 +123,13 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 			tmpVector->indexes[i] = tmpIndexes.at(i);
 			tmpVector->values[i] = tmpValues.at(i);
 		}
-
-		delete tmpArray;
-
-		return tmpVector;
 	}
 	else
 	{
-		tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-		ProcessInfo::getInstance().numGradientEvals++;
-
-		number = tmpVector->number;
-
-		if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
-		{
-			for (int i = 0; i < number; i++)
-			{
-				tmpVector->values[i] = -tmpVector->values[i];
-			}
-		}
-
-		return tmpVector;
+		tmpVector = OptProblem::calculateConstraintFunctionGradient(idx, point);
 	}
+
+	return (tmpVector);
 }
 
 // For all objectives except the additional nonlinear objective constraint
@@ -198,7 +186,7 @@ std::vector<std::string> OptProblemOriginalNonlinearObjective::getConstraintName
 {
 	std::string* tmpArray = getProblemInstance()->getConstraintNames();
 
-	std::vector<std::string> tmpVector;
+	std::vector < std::string > tmpVector;
 
 	for (int i = 0; i < getProblemInstance()->getConstraintNumber(); i++)
 	{
@@ -224,7 +212,7 @@ int OptProblemOriginalNonlinearObjective::getNumberOfRealVariables()
 std::vector<std::string> OptProblemOriginalNonlinearObjective::getVariableNames()
 {
 	std::string* tmpArray = getProblemInstance()->getVariableNames();
-	std::vector<std::string> tmpVector;
+	std::vector < std::string > tmpVector;
 
 	for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)
 	{

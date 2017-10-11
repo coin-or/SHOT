@@ -20,10 +20,15 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 	this->setTypeOfObjectiveMinimize(originalInstance->instanceData->objectives->obj[0]->maxOrMin == "min");
 
 	this->copyVariables(originalInstance, newInstance, true);
+
 	this->copyObjectiveFunction(originalInstance, newInstance);
+
 	this->copyConstraints(originalInstance, newInstance);
+
 	this->copyLinearTerms(originalInstance, newInstance);
+
 	this->copyQuadraticTerms(originalInstance, newInstance);
+
 	this->copyNonlinearExpressions(originalInstance, newInstance);
 
 	this->setProblemInstance(newInstance);

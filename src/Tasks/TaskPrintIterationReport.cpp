@@ -9,7 +9,8 @@
 
 TaskPrintIterationReport::TaskPrintIterationReport()
 {
-
+	lastDualBound = -COIN_DBL_MAX;
+	lastPrimalBound = COIN_DBL_MAX;
 	lastNumHyperplane = 0;
 }
 

@@ -8,7 +8,6 @@
 #pragma once
 
 #include "NLPSolverBase.h"
-#include "../OptProblems/OptProblemNLPSHOTMinimax.h"
 #include "../OptProblems/OptProblemNLPMinimax.h"
 #include "../MILPSolver/MILPSolverCplex.h"
 #include "../MILPSolver/MILPSolverGurobi.h"
@@ -22,8 +21,6 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 		NLPSolverCuttingPlaneMinimax();
 		virtual ~NLPSolverCuttingPlaneMinimax();
 
-		//virtual void saveProblemModelToFile(std::string fileName);
-
 		virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
 		virtual void clearStartingPoint();
 
@@ -35,9 +32,6 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 
 	private:
 
-		//OSInstance* originalInstance;
-
-		//OptProblemNLPMinimax *NLPProblem;
 		IMILPSolver *LPSolver;
 
 		virtual double getSolution(int i);
@@ -50,15 +44,8 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 
 		virtual void unfixVariables();
 
-		//virtual void initializeProblem(OSInstance * origInstance);
-
 		virtual E_NLPSolutionStatus solveProblemInstance();
 
-		//virtual E_NLPSolutionStatus solveProblem();
-		//virtual E_NLPSolutionStatus fixVariablesAndSolve(std::vector<int> variableIndexes,
-		//std::vector<double> variableValues);
-
-		//virtual void saveProblemToFile(std::string fileName);
 		virtual void saveOptionsToFile(std::string fileName);
 
 		bool isProblemCreated;

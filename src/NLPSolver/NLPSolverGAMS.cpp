@@ -59,7 +59,7 @@ void NLPSolverGAMS::unfixVariables()
 
 void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
 {
-	throw std::logic_error("saveOptionsToFile() not implemented");
+	//throw std::logic_error("saveOptionsToFile() not implemented");
 }
 
 std::vector<double> NLPSolverGAMS::getSolution()

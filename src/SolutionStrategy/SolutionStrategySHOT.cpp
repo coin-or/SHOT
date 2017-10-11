@@ -62,12 +62,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	/*if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
-	 + ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
-	 {
-	 TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
-	 ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
-	 }*/
+	if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
+			+ ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
+	{
+		TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+		ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	}
 
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
@@ -137,7 +137,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound")
 			!= static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
-			&& ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0)
+			&& ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0
+			&& ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{
 		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
