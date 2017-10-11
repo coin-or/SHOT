@@ -24,28 +24,28 @@ void TaskPrintSolution::run()
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"³ Optimal solution found to constraint tolerance "
-				+ to_string(ProcessInfo::getInstance().getCurrentIteration()->maxDeviation) + " <= "
-				+ to_string(Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")));
+				+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getCurrentIteration()->maxDeviation, "%.5f") + " <= "
+				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::AbsoluteGap)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"³ Optimal solution found to absolute gap tolerance "
-				+ to_string(ProcessInfo::getInstance().getAbsoluteObjectiveGap()) + " <= "
-				+ to_string(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
+				+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%.5f") + " <= "
+				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::RelativeGap)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"³ Optimal solution found to relative gap tolerance "
-				+ to_string(ProcessInfo::getInstance().getRelativeObjectiveGap()) + " <= "
-				+ to_string(Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
+				+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%.5f") + " <= "
+				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::TimeLimit)
 	{
 		ProcessInfo::getInstance().outputSummary(
-				"³ Nonoptimal solution found due to time limit " + to_string(ProcessInfo::getInstance().getElapsedTime("Total"))
-				+ " > " + to_string(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")));
+				"³ Nonoptimal solution found due to time limit " + UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getElapsedTime("Total"))
+				+ " > " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::IterationLimit)
 	{
@@ -80,19 +80,19 @@ void TaskPrintSolution::run()
 	{
 
 		ProcessInfo::getInstance().outputSummary(
-				"³ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
+				"³ Dual bound: " + UtilityFunctions::toStringFormat(dualBound, "%.8f") + " Primal bound: " + UtilityFunctions::toStringFormat(primalBound, "%.8f")
 				+ " (minimization)");
 	}
 	else
 	{
 		ProcessInfo::getInstance().outputSummary(
-				"³ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
+				"³ Dual bound: " + UtilityFunctions::toStringFormat(dualBound), "%.8f" + " Primal bound: " + UtilityFunctions::toStringFormat(primalBound, "%.8f")
 				+ " (maximization)");
 	}
 
 	ProcessInfo::getInstance().outputSummary(
-			"³ Relative duality gap: " + to_string(ProcessInfo::getInstance().getRelativeObjectiveGap()) + " Absolute duality gap: "
-			+ to_string(ProcessInfo::getInstance().getAbsoluteObjectiveGap()));
+			"³ Relative duality gap: " + UtilityFunctions::toString(ProcessInfo::getInstance().getRelativeObjectiveGap()) + " Absolute duality gap: "
+			+ UtilityFunctions::toString(ProcessInfo::getInstance().getAbsoluteObjectiveGap()));
 
 	ProcessInfo::getInstance().outputSummary("ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´");
 	ProcessInfo::getInstance().outputSummary("³ Optimal MIP problems solved:      " + to_string(ProcessInfo::getInstance().iterOptMILP));
@@ -124,29 +124,36 @@ void TaskPrintSolution::run()
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"│ Optimal solution found to constraint tolerance "
-						+ to_string(ProcessInfo::getInstance().getCurrentIteration()->maxDeviation) + " <= "
-						+ to_string(Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")));
+						+ UtilityFunctions::toStringFormat(
+								ProcessInfo::getInstance().getCurrentIteration()->maxDeviation, "%.5f") + " <= "
+						+ UtilityFunctions::toStringFormat(
+								Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::AbsoluteGap)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"│ Optimal solution found to absolute gap tolerance "
-						+ to_string(ProcessInfo::getInstance().getAbsoluteObjectiveGap()) + " <= "
-						+ to_string(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
+						+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%.5f")
+						+ " <= "
+						+ UtilityFunctions::toStringFormat(
+								Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::RelativeGap)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"│ Optimal solution found to relative gap tolerance "
-						+ to_string(ProcessInfo::getInstance().getRelativeObjectiveGap()) + " <= "
-						+ to_string(Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
+						+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%.5f")
+						+ " <= "
+						+ UtilityFunctions::toStringFormat(
+								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::TimeLimit)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"│ Nonoptimal solution found due to time limit "
-						+ to_string(ProcessInfo::getInstance().getElapsedTime("Total")) + " > "
-						+ to_string(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")));
+						+ UtilityFunctions::toString(ProcessInfo::getInstance().getElapsedTime("Total")) + " > "
+						+ UtilityFunctions::toString(
+								Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::IterationLimit)
 	{
@@ -182,19 +189,21 @@ void TaskPrintSolution::run()
 	{
 
 		ProcessInfo::getInstance().outputSummary(
-				"│ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
-						+ " (minimization)");
+				"│ Dual bound: " + UtilityFunctions::toStringFormat(dualBound, "%.8f") + " Primal bound: "
+						+ UtilityFunctions::toStringFormat(primalBound, "%.8f") + " (minimization)");
 	}
 	else
 	{
 		ProcessInfo::getInstance().outputSummary(
-				"│ Dual bound: " + to_string(dualBound) + " Primal bound: " + to_string(primalBound)
-						+ " (maximization)");
+				"│ Dual bound: " + UtilityFunctions::toStringFormat(dualBound, "%.8f") + " Primal bound: "
+						+ UtilityFunctions::toStringFormat(primalBound, "%.8f") + " (maximization)");
 	}
 
 	ProcessInfo::getInstance().outputSummary(
-			"│ Relative duality gap: " + to_string(ProcessInfo::getInstance().getRelativeObjectiveGap())
-					+ " Absolute duality gap: " + to_string(ProcessInfo::getInstance().getAbsoluteObjectiveGap()));
+			"│ Relative duality gap: "
+					+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%.8f")
+					+ " Absolute duality gap: "
+					+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%.8f"));
 
 	ProcessInfo::getInstance().outputSummary(
 			"├────────────────────────────────────────────────────────────────────────────────┤");

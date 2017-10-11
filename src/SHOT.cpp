@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 		std::cout << startmessage << std::endl;
-		std::cout << "Usage: filename.osil options.[opt|xml|osol] results.osrl trace.trc" << std::endl;
+		std::cout << "Usage: filename.[osil|gms] options.[opt|xml|osol] results.osrl trace.trc" << std::endl;
 
 		return (0);
 	}
@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 			return (0);
 		}
 
-		std::string osilFileName = argv[1];
+		std::string fileName = argv[1];
 
 		if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
 		{
@@ -160,8 +160,7 @@ int main(int argc, char *argv[])
 		// Prints out the welcome message to the logging facility
 		ProcessInfo::getInstance().outputSummary(startmessage);
 
-		std::cout << osilFileName << std::endl;
-		if (!solver->setProblem(osilFileName))
+		if (!solver->setProblem(fileName))
 		{
 			ProcessInfo::getInstance().outputError("Error when reading problem file.");
 
