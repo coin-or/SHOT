@@ -10,8 +10,6 @@ TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(IMILPSolver *
 	solutionLimitStrategy = new MILPSolutionLimitStrategyIncrease(this->MILPSolver);
 	auto initLim = solutionLimitStrategy->getInitialLimit();
 	MILPSolver->setSolutionLimit(initLim);
-
-	constrTolUpdateStrategy = new ConstraintToleranceUpdateStrategyDecreasing();
 }
 
 TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy()
@@ -28,8 +26,6 @@ void TaskExecuteSolutionLimitStrategy::run()
 
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
-
-	constrTolUpdateStrategy->calculateNewTolerance();
 
 	if (temporaryOptLimitUsed)
 	{
