@@ -510,7 +510,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 {
 
 	double tmpVal = 0.0;
-	if (isObjectiveFunctionNonlinear() && (idx != getNonlinearObjectiveConstraintIdx() || idx != -1))// Not the objective function
+	if (!isObjectiveFunctionNonlinear() || idx != getNonlinearObjectiveConstraintIdx() || idx != -1)// Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
 		ProcessInfo::getInstance().numFunctionEvals++;
