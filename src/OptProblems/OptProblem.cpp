@@ -186,22 +186,20 @@ void OptProblem::printProblemStatistics()
 
 	ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 
-#endif
-
-#if linux
+#else
 
 	ProcessInfo::getInstance().outputSummary(
 			"┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
 	ProcessInfo::getInstance().outputSummary(
 			"│ Number of constraints (total/linear/nonlinear):   "
-			+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
-			+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
+					+ to_string(getProblemInstance()->getConstraintNumber()) + "/"
+					+ to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
 	ProcessInfo::getInstance().outputSummary(
 			"│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/"
-			+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
-			+ to_string(getNumberOfIntegerVariables()) + "/");
+					+ to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/"
+					+ to_string(getNumberOfIntegerVariables()) + "/");
 
 	ProcessInfo::getInstance().outputSummary(
 			"└────────────────────────────────────────────────────────────────────────────────┘");

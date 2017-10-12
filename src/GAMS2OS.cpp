@@ -44,9 +44,9 @@ void GAMS2OS::readGms(const std::string& filename)
 	fclose(convertdopt);
 
 	/* call GAMS with convertd solver to get compiled model instance in temporary directory
-    * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP) solvers later
-    * but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null for this gams call
-    */
+	 * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP) solvers later
+	 * but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null for this gams call
+	 */
 	snprintf(gamscall, sizeof(gamscall), GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > /dev/null", filename.c_str());
 	/* printf(gamscall); fflush(stdout); */
 	rc = system(gamscall);
