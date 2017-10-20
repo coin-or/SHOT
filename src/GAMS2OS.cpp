@@ -1232,7 +1232,7 @@ void GAMS2OS::writeResult(ProcessInfo& info)
 
 	if (!info.primalSolutions.empty())
 	{
-		assert(info.primalSolutions[0].point.size() == gmoN(gmo));
+		assert(info.primalSolutions[0].point.size() >= gmoN(gmo)); /* solution reported by SHOT can be larger than gmoN, e.g., if nonlin. obj. is moved into constraints, but we assume that the first gmoN variables are the one we are interested in */
 		gmoSetSolutionPrimal(gmo, &info.primalSolutions[0].point[0]);
 	}
 
