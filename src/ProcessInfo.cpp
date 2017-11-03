@@ -243,8 +243,8 @@ void ProcessInfo::checkDualSolutionCandidates()
 	for (auto C : this->dualSolutionCandidates)
 	{
 
-		if ((isMinimization && (C.objValue > currDualBound && C.objValue <= currPrimalBound))
-				|| (!isMinimization && (C.objValue < currDualBound && C.objValue >= currPrimalBound)))
+		if ((isMinimization && (C.objValue > currDualBound && C.objValue <= currPrimalBound + 10 ^ -6))
+				|| (!isMinimization && (C.objValue < currDualBound && C.objValue >= currPrimalBound - 10 ^ -6)))
 		{
 			// New dual solution
 			this->currentObjectiveBounds.first = C.objValue;
@@ -678,11 +678,11 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		if (this->interiorPts.size() > 0)
 		{
 			// Add the new point if it is deeper within the feasible region
-			if (primalSol.maxDevatingConstraint.value < this->interiorPts.at(0).maxDevatingConstraint.value)
+			if (primalSol.maxDevatingConstraint.value < this->interiorPts.at(0)->maxDevatingConstraint.value)
 			{
-				InteriorPoint tmpIP;
-				tmpIP.point = tmpPoint;
-				tmpIP.maxDevatingConstraint = mostDevNonlinearConstraints;
+				std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
+				tmpIP->point = tmpPoint;
+				tmpIP->maxDevatingConstraint = mostDevNonlinearConstraints;
 
 				this->outputWarning(
 						"      Interior point replaced with primal solution point due to constraint deviation.");
@@ -693,10 +693,10 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 					== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
 					&& mostDevNonlinearConstraints.value < 0)
 			{
-				InteriorPoint tmpIP;
+				std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
 
-				tmpIP.point = tmpPoint;
-				tmpIP.maxDevatingConstraint = mostDevNonlinearConstraints;
+				tmpIP->point = tmpPoint;
+				tmpIP->maxDevatingConstraint = mostDevNonlinearConstraints;
 
 				this->outputWarning("      Primal solution point used as additional interior point.");
 
@@ -713,11 +713,11 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 					== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew)
 					&& mostDevNonlinearConstraints.value < 0)
 			{
-				InteriorPoint tmpIP;
+				std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
 
 				// Add the new point only
-				tmpIP.point = tmpPoint;
-				tmpIP.maxDevatingConstraint = mostDevNonlinearConstraints;
+				tmpIP->point = tmpPoint;
+				tmpIP->maxDevatingConstraint = mostDevNonlinearConstraints;
 
 				this->outputWarning("      Interior point replaced with primal solution point.");
 
@@ -728,16 +728,16 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 					== static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
 					&& mostDevNonlinearConstraints.value < 0)
 			{
-				InteriorPoint tmpIP;
+				std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
 
 				// Find a new point in the midpoint between the original and new
 				for (int i = 0; i < tmpPoint.size(); i++)
 				{
-					tmpPoint.at(i) = (0.5 * tmpPoint.at(i) + 0.5 * this->interiorPts.at(0).point.at(i));
+					tmpPoint.at(i) = (0.5 * tmpPoint.at(i) + 0.5 * this->interiorPts.at(0)->point.at(i));
 				}
 
-				tmpIP.point = tmpPoint;
-				tmpIP.maxDevatingConstraint = this->originalProblem->getMostDeviatingConstraint(tmpPoint);
+				tmpIP->point = tmpPoint;
+				tmpIP->maxDevatingConstraint = this->originalProblem->getMostDeviatingConstraint(tmpPoint);
 
 				this->outputWarning("      Interior point replaced with primal solution point.");
 
@@ -1130,7 +1130,7 @@ std::string ProcessInfo::getOSrl()
 
 	using boost::property_tree::ptree;
 	ptree pt;
-	boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
+	boost::property_tree::xml_writer_settings < std::string > settings('\t', 1);
 
 	stringstream ss;
 	ss << writer.writeOSrL(osResult);

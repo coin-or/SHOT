@@ -143,7 +143,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 		if (true)
 		{
 			std::vector<double> externalPoint = LPVarSol;
-			std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0).point;
+			std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0)->point;
 
 			try
 			{

@@ -32,7 +32,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 		{
 			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
-				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j).point;
+				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
 
 				auto varTypes = ProcessInfo::getInstance().originalProblem->getVariableTypes();
 

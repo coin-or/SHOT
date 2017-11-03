@@ -22,6 +22,8 @@ void TaskSolveIteration::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
+	bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
+
 	// Sets the iteration time limit
 	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")
 			- ProcessInfo::getInstance().getElapsedTime("Total");
@@ -29,7 +31,18 @@ void TaskSolveIteration::run()
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
+		if (isMinimization)
+		{
+			MILPSolver->setCutOff(
+					ProcessInfo::getInstance().getPrimalBound()
+							+ Settings::getInstance().getDoubleSetting("CutOffTolerance", "MILP"));
+		}
+		else
+		{
+			MILPSolver->setCutOff(
+					ProcessInfo::getInstance().getPrimalBound()
+							- Settings::getInstance().getDoubleSetting("CutOffTolerance", "MILP"));
+		}
 	}
 
 	if (Settings::getInstance().getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP")
@@ -40,7 +53,6 @@ void TaskSolveIteration::run()
 
 	if (MILPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		//MILPSolver->deleteMIPStarts();
 		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
@@ -70,7 +82,34 @@ void TaskSolveIteration::run()
 
 		if (sols.size() > 0)
 		{
+			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			{
+				stringstream ss;
+				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << "/lpsolpt";
+				ss << currIter->iterationNumber - 1;
+				ss << ".txt";
+				UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point,
+						ProcessInfo::getInstance().originalProblem->getVariableNames(), ss.str());
+			}
+
 			currIter->objectiveValue = MILPSolver->getObjectiveValue();
+
+			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			{
+				std::vector<double> tmpObjValue;
+				std::vector < std::string > tmpObjName;
+
+				tmpObjValue.push_back(MILPSolver->getObjectiveValue());
+				tmpObjName.push_back("objective");
+
+				stringstream ss;
+				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << "/lpobjsol";
+				ss << currIter->iterationNumber - 1;
+				ss << ".txt";
+				UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
+			}
 
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
 					sols.at(0).point);
@@ -78,7 +117,21 @@ void TaskSolveIteration::run()
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
 			currIter->maxDeviation = mostDevConstr.value;
 
-			bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
+			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			{
+				std::vector<double> tmpMostDevValue;
+				std::vector < std::string > tmpConstrIndex;
+
+				tmpMostDevValue.push_back(mostDevConstr.value);
+				tmpConstrIndex.push_back(std::to_string(mostDevConstr.idx));
+
+				stringstream ss;
+				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << "/lpmostdevm";
+				ss << currIter->iterationNumber - 1;
+				ss << ".txt";
+				UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+			}
 
 			if (currIter->isMILP() && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
 			{

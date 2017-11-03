@@ -33,7 +33,7 @@ class MinimizationFunction
 				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
 			}
 
-			auto validNewPt = NLPProblem->getMostDeviatingConstraint(ptNew).value;
+			auto validNewPt = NLPProblem->getMostDeviatingConstraint(ptNew).value + ptNew.back();
 
 			return (validNewPt);
 		}
@@ -133,14 +133,17 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 		if (solStatus == E_ProblemSolutionStatus::Infeasible)
 		{
 			statusCode = E_NLPSolutionStatus::Infeasible;
+			break;
 		}
 		else if (solStatus == E_ProblemSolutionStatus::Error)
 		{
 			statusCode = E_NLPSolutionStatus::Error;
+			break;
 		}
 		else if (solStatus == E_ProblemSolutionStatus::Unbounded)
 		{
 			statusCode = E_NLPSolutionStatus::Unbounded;
+			break;
 		}
 		else if (solStatus == E_ProblemSolutionStatus::TimeLimit)
 		{
@@ -257,32 +260,38 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 			for (int i = 0; i < nablag->number; i++)
 			{
-				if (nablag->indexes[i] != numVar - 1)
-				{
-					IndexValuePair pair;
-					pair.idx = nablag->indexes[i];
-					pair.value = nablag->values[i];
+				//if (nablag->indexes[i] != numVar - 1)
+				//{
+				IndexValuePair pair;
+				pair.idx = nablag->indexes[i];
+				pair.value = nablag->values[i];
 
-					elements.push_back(pair);
+				elements.push_back(pair);
 
-					constant += -nablag->values[i] * currSol.at(nablag->indexes[i]);
-				}
+				constant += -nablag->values[i] * currSol.at(nablag->indexes[i]);
+				//}
 			}
 
 			// Creates the term -mu
-			IndexValuePair pair;
-			pair.idx = numVar - 1;
-			pair.value = -1;
+			//IndexValuePair pair;
+			//pair.idx = numVar - 1;
+			//pair.value = -1;
 
-			elements.push_back(pair);
+			//elements.push_back(pair);
 
 			// Adds the linear constraint
 			LPSolver->addLinearConstraint(elements, constant);
 
-			if (mu >= 0 && Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane"))
+			if (mu >= 0 && Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane")
+					&& tmpMostDevs.at(j).idx != NLPProblem->getNonlinearObjectiveConstraintIdx())
 			{
 				auto tmpPoint = currSol;
-				tmpPoint.pop_back();
+
+				while (tmpPoint.size() > ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+				{
+					tmpPoint.pop_back();
+				}
+
 				Hyperplane hyperplane;
 				hyperplane.sourceConstraintIndex = j;
 				hyperplane.generatedPoint = tmpPoint;

@@ -83,23 +83,36 @@ void TaskFindInteriorPoint::run()
 	{
 		auto solutionStatus = NLPSolvers.at(i)->solveProblem();
 
-		auto tmpIP = new InteriorPoint();
-		tmpIP->NLPSolver = ES_NLPSolver::CuttingPlaneMiniMax;
+		std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
+
+		tmpIP->NLPSolver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
+				"InteriorPoint"));
+
 		tmpIP->point = NLPSolvers.at(i)->getSolution();
+
+		if (solver == ES_NLPSolver::IPOptRelaxed
+				&& tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+		{
+			tmpIP->point.push_back(
+					ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
+		}
+
+		while (tmpIP->point.size() > ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+		{
+			tmpIP->point.pop_back();
+		}
 
 		auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpIP->point);
 		tmpIP->maxDevatingConstraint = maxDev;
 
-		ProcessInfo::getInstance().interiorPts.push_back(*tmpIP);
+		ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 
 		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
-
-		//foundNLPPoint = (solutionStatus == E_NLPSolutionStatus::Feasible
-		//		|| solutionStatus == E_NLPSolutionStatus::Optimal) || foundNLPPoint;
 	}
 
 	if (!foundNLPPoint)
 	{
+		ProcessInfo::getInstance().outputError("No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
 		throw TaskExceptionInteriorPoint("No interior point found");
 	}

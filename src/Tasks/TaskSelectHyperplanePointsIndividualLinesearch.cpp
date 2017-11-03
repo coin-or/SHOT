@@ -47,7 +47,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 		{
 			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
-				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j).point;
+				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
 
 				for (int k = 0; k < nonlinearConstraintIdxs.size(); k++)
 				{
@@ -101,7 +101,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 						ProcessInfo::getInstance().outputError(
 								"     Cannot find solution with linesearch. Interior value: "
 										+ to_string(
-												ProcessInfo::getInstance().interiorPts.at(j).maxDevatingConstraint.value)
+												ProcessInfo::getInstance().interiorPts.at(j)->maxDevatingConstraint.value)
 										+ " exterior value: " + to_string(constrDevExterior));
 
 					}

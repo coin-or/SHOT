@@ -283,7 +283,6 @@ std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstrai
 			constrDevs.at(i) = calculateConstraintFunctionValue(constrIdxs.at(i), point);
 
 			if (constrDevs.at(i) >= 0) activeConstraints.push_back(constrIdxs.at(i));
-
 		}
 
 		auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
@@ -471,7 +470,7 @@ SparseVector* OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 		}
 	}
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (false && Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		auto numGradient = calculateGradientNumerically(idx, point);
 
@@ -484,11 +483,21 @@ SparseVector* OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 
 		for (int i = 0; i < point.size(); i++)
 		{
-			if (abs((numGradient.at(i) - nonSparseGrad.at(i)) / nonSparseGrad.at(i)) >= 0.1)
+			if (abs((numGradient.at(i) - nonSparseGrad.at(i)) / max(nonSparseGrad.at(i), numGradient.at(i))) >= 0.1)
 			{
-				ProcessInfo::getInstance().outputWarning(
-						"Numerical gradient component error: "
-								+ UtilityFunctions::toString(abs(numGradient.at(i) - nonSparseGrad.at(i))));
+				ProcessInfo::getInstance().outputAlways(
+						"Gradient calculation error (constraint " + std::to_string(idx) + ", variable "
+								+ std::to_string(i) + "): numerical " + UtilityFunctions::toString(numGradient.at(i))
+								+ " exact " + UtilityFunctions::toString(nonSparseGrad.at(i)));
+
+				for (int i = 0; i < gradient->number; i++)
+				{
+					ProcessInfo::getInstance().outputAlways(
+							"Variable value (index: " + std::to_string(gradient->indexes[i]) + "): "
+									+ UtilityFunctions::toString(point.at(gradient->indexes[i])));
+				}
+
+				ProcessInfo::getInstance().outputAlways(getProblemInstance()->printModel(idx));
 			}
 		}
 	}
@@ -506,6 +515,12 @@ double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 
 double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double> point)
 {
+	if (point.size() != this->getNumberOfVariables())
+	{
+		ProcessInfo::getInstance().outputError(
+				"Point size (" + std::to_string(point.size()) + ") does not equal number of variables ("
+						+ std::to_string(this->getNumberOfVariables()) + ") when calculating function value!");
+	}
 
 	double tmpVal = 0.0;
 	if (!isObjectiveFunctionNonlinear() || idx != getNonlinearObjectiveConstraintIdx() || idx != -1)// Not the objective function
@@ -515,36 +530,26 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 
 		if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 		{
-			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub; // -problemInstance->getConstraintConstants()[idx];
-			//std::cout << "Lin value is: "<< tmpVal << std::endl;
+			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub;
 		}
 		else if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
 		{
-			tmpVal = -tmpVal + getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
-			//std::cout << "Lin value is: "<< tmpVal << std::endl;
+			tmpVal = -tmpVal + getProblemInstance()->instanceData->constraints->con[idx]->lb;
 		}
 		else if (getProblemInstance()->getConstraintTypes()[idx] == 'E')
 		{
-			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
-			//std::cout << "Lin value is: "<< tmpVal << std::endl;
+			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->lb;
+		}
+		else
+		{
+			std::cout << "Should not happen" << std::endl;
 		}
 	}
-	/*else if (idx != -1)
-	 {
-	 tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true)
-	 - getProblemInstance()->instanceData->constraints->con[idx]->ub;
-	 }*/
 	else
 	{
-		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-		tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub; // -problemInstance->getConstraintConstants()[idx];
+		tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
 		ProcessInfo::getInstance().numFunctionEvals++;
 	}
-
-//else if (idx == -1)
-//{
-//	tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-//}
 
 	return tmpVal;
 }
@@ -1106,18 +1111,22 @@ void OptProblem::setVariableBoundsTightened(std::vector<bool> status)
 
 std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex, std::vector<double> point)
 {
-	double stepSize = 0.000001;
-
+	std::vector<double> point1(point);
 	std::vector<double> point2(point);
-	std::vector<double> numGradient(point.size());
+	std::vector<double> numGradient(point.size(), 0.0);
 
 	for (int i = 0; i < point.size(); i++)
 	{
-		point2.at(i) = point2.at(i) + stepSize;
+		double stepSize = (point.at(i) != 0) ? point.at(i) * 0.00000001 : 0.001;
+		double dblStepSize = 2 * stepSize;
 
-		numGradient.at(i) = (this->calculateConstraintFunctionValue(constraintIndex, point2)
-				- this->calculateConstraintFunctionValue(constraintIndex, point)) / stepSize;
+		point1.at(i) += stepSize;
+		point2.at(i) -= stepSize;
 
+		numGradient.at(i) = (this->calculateConstraintFunctionValue(constraintIndex, point1)
+				- this->calculateConstraintFunctionValue(constraintIndex, point2)) / dblStepSize;
+
+		point1.at(i) = point.at(i);
 		point2.at(i) = point.at(i);
 	}
 

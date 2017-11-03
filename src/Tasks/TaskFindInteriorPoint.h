@@ -34,7 +34,6 @@ class TaskExceptionInteriorPoint: public std::exception
 		{
 			std::stringstream message;
 			message << explanation;
-
 			return message.str().c_str();
 		}
 	private:

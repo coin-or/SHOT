@@ -122,7 +122,10 @@ void TaskSolveFixedLinearProblem::run()
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(varSol);
 
 			std::vector<double> externalPoint = varSol;
-			std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0).point;
+			std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0)->point;
+
+			auto tmpMostDevConstr2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+					internalPoint);
 
 			try
 			{

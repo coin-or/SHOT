@@ -43,8 +43,10 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic
-			|| ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0)
+	if (Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm") == (int) ES_SolutionStrategy::ESH
+			&& (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
+					!= E_ObjectiveFunctionType::Quadratic
+					|| ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");

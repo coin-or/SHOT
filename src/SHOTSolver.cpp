@@ -388,6 +388,9 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("PopulateSolutionPool", "MILP", false,
 			"Try to fill the solution pool after solver finishes");
 
+	Settings::getInstance().createSetting("CutOffTolerance", "MILP", 0.0001,
+			"An extra tolerance for the objective cutoff value", 0.0, OSDBL_MAX);
+
 // Initial MILP solution depth
 	Settings::getInstance().createSetting("MILPSolLimitInitial", "MILP", 1, "Initial MILP solution limit", 1,
 			OSINT_MAX);

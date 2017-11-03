@@ -35,6 +35,12 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
 	this->copyNonlinearExpressions(originalInstance, newInstance);
 
+	// The following four lines fixes some problems with OSInstance...
+	OSiLWriter *osilWriter = new OSiLWriter();
+	std::string osil = osilWriter->writeOSiL(newInstance);
+	OSiLReader *osilReader = new OSiLReader();
+	newInstance = osilReader->readOSiL(osil);
+
 	this->setProblemInstance(newInstance);
 
 	this->setNonlinearConstraintIndexes();
@@ -52,6 +58,7 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	{
 		muindex = originalInstance->getVariableNumber();
 	}
+
 }
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)
@@ -164,7 +171,7 @@ void OptProblemNLPMinimax::copyObjectiveFunction(OSInstance *source, OSInstance 
 	destination->addObjective(-1, "newobj", "min", 0.0, 1.0, newobjcoeff);
 	delete newobjcoeff;
 
-	//destination->bObjectivesModified = true;
+	destination->bObjectivesModified = true;
 }
 
 void OptProblemNLPMinimax::copyConstraints(OSInstance *source, OSInstance *destination)
@@ -197,7 +204,7 @@ void OptProblemNLPMinimax::copyConstraints(OSInstance *source, OSInstance *desti
 				0.0);
 	}
 
-	//destination->bConstraintsModified = true;
+	destination->bConstraintsModified = true;
 }
 
 void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *destination)
@@ -322,7 +329,7 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
 			const_cast<double*>(matrix->getElements()), valuesBegin, valuesEnd, const_cast<int*>(matrix->getIndices()),
 			indexesBegin, indexesEnd, const_cast<int*>(matrix->getVectorStarts()), startsBegin, startsEnd);
 
-	//destination->bConstraintsModified = true;
+	destination->bConstraintsModified = true;
 
 }
 
@@ -378,6 +385,8 @@ void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *de
 
 		}
 	}
+
+	destination->bConstraintsModified = true;
 }
 
 void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstance *destination)
@@ -431,58 +440,60 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 		}
 	}
 
+	destination->bConstraintsModified = true;
+
 }
 
-IndexValuePair OptProblemNLPMinimax::getMostDeviatingConstraint(std::vector<double> point)
-{
-	IndexValuePair valpair;
+/*IndexValuePair OptProblemNLPMinimax::getMostDeviatingConstraint(std::vector<double> point)
+ {
+ IndexValuePair valpair;
 
-	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
+ std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
 
-	if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
-	{
-		valpair.idx = -1;
-		valpair.value = 0.0;
-	}
-	else
-	{
-		std::vector<double> constrDevs(idxNLCs.size());
+ if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
+ {
+ valpair.idx = -1;
+ valpair.value = 0.0;
+ }
+ else
+ {
+ std::vector<double> constrDevs(idxNLCs.size());
 
-		for (int i = 0; i < idxNLCs.size(); i++)
-		{
-			constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
-		}
+ for (int i = 0; i < idxNLCs.size(); i++)
+ {
+ constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
+ }
 
-		auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-		valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
-		valpair.value = *biggest;
-	}
+ auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
+ valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
+ valpair.value = *biggest;
+ }
 
-	return valpair;
-}
+ return valpair;
+ }
 
-bool OptProblemNLPMinimax::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
-{
-	std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
+ bool OptProblemNLPMinimax::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
+ {
+ std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
 
-	for (int i = 0; i < getNumberOfNonlinearConstraints(); i++)
-	{
-		double tmpVal = calculateConstraintFunctionValue(idxNLCs.at(i), point);
-		if (tmpVal > eps) return false;
-	}
+ for (int i = 0; i < getNumberOfNonlinearConstraints(); i++)
+ {
+ double tmpVal = calculateConstraintFunctionValue(idxNLCs.at(i), point);
+ if (tmpVal > eps) return false;
+ }
 
-	return true;
-}
+ return true;
+ }*/
 
-double OptProblemNLPMinimax::calculateConstraintFunctionValue(int idx, std::vector<double> point)
-{
-	double tmpVal = 0.0;
+/*double OptProblemNLPMinimax::calculateConstraintFunctionValue(int idx, std::vector<double> point)
+ {
+ double tmpVal = 0.0;
 
-	tmpVal = OptProblem::calculateConstraintFunctionValue(idx, point);
+ tmpVal = OptProblem::calculateConstraintFunctionValue(idx, point);
 
-	tmpVal += point.at(muindex);
-	return tmpVal;
-}
+ tmpVal += point.at(muindex);
+ return tmpVal;
+ }*/
 
 /*SparseVector* OptProblemNLPMinimax::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
  {

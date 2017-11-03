@@ -12,8 +12,49 @@ INCLUDE(FindPkgConfig)
 add_definitions(-DIL_STD)
 add_definitions(-LDFLAGS="-Wl,--no-as-needed")
 
-file(GLOB_RECURSE Foo_SOURCES "*.cpp")
-file(GLOB_RECURSE Foo_HEADERS "*.h")
+file(GLOB_RECURSE Foo_SOURCES
+  "GAMS2OS.cpp"
+  "Iteration.cpp"
+  "ProcessInfo.cpp"
+  "SHOT.cpp"
+  "SHOTSolver.cpp"
+  "SolutionStrategy.cpp"
+  "TaskHandler.cpp"
+  "Timer.cpp"
+  "UtilityFunctions.cpp"
+  "./ConstraintSelectionStrategy/*.cpp"
+  "./LinesearchMethod/*.cpp"
+  "./MILPSolver/*.cpp"
+  "./NLPSolver/*.cpp"
+  "./OptProblems/*.cpp"
+  "./PointSelectionStrategy/*.cpp"
+  "./PrimalSolutionStrategy/*.cpp"
+  "./SolutionStrategy/*.cpp"
+  "./Tasks/*.cpp"
+  )
+
+#file(GLOB_RECURSE Foo_HEADERS "*.h")
+file(GLOB_RECURSE Foo_HEADERS
+  "Enums.h"
+  "GAMS2OS.h"
+  "GamsNLinstr.h"
+  "Iteration.h"
+  "ProcessInfo.h"
+  "SHOTSolver.h"
+  "SolutionStrategy.h"
+  "TaskHandler.h"
+  "Timer.h"
+  "UtilityFunctions.h"
+  "./ConstraintSelectionStrategy/*.h"
+  "./LinesearchMethod/*.h"
+  "./MILPSolver/*.h"
+  "./NLPSolver/*.h"
+  "./OptProblems/*.h"
+  "./PointSelectionStrategy/*.h"
+  "./PrimalSolutionStrategy/*.h"
+  "./SolutionStrategy/*.h"
+  "./Tasks/*.h"
+  )
 
 set (Foo_INCLUDE_DIRS "")
 foreach (_headerFile ${Foo_HEADERS})
@@ -24,7 +65,10 @@ list(REMOVE_DUPLICATES Foo_INCLUDE_DIRS)
 
 set(Boost_INCLUDE_DIR /usr/include)
 set(Boost_LIBRARY_DIR /usr/lib)
-set(COINOS_DIR /opt/OS-2.10)
+#set(COINOS_DIR /opt/OS-2.10.1)
+set(COINOS_DIR /opt/OS-2.10-andreasfix)
+#set(COINOS_DIR /opt/OS-2.10.1-pre_stefan_fix)
+#set(COINOS_DIR /opt/OS-2.10-stefanfix)
 find_package(Boost 1.63.0 COMPONENTS system filesystem REQUIRED)
 
 INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )

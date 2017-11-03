@@ -17,10 +17,10 @@ class OptProblemNLPMinimax: public OptProblem
 		virtual void copyQuadraticTerms(OSInstance *source, OSInstance *destination);
 		virtual void copyNonlinearExpressions(OSInstance *source, OSInstance *destination);
 
-		IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
-		bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+		//IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
+		//bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
-		double calculateConstraintFunctionValue(int idx, std::vector<double> point);
+		//double calculateConstraintFunctionValue(int idx, std::vector<double> point);
 		//SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
 
 	private:

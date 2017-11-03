@@ -188,7 +188,7 @@ class ProcessInfo
 
 		void createIteration();
 
-		std::vector<InteriorPoint> interiorPts;
+		std::vector<shared_ptr<InteriorPoint>> interiorPts;
 
 		std::vector<Hyperplane> hyperplaneWaitingList;
 
