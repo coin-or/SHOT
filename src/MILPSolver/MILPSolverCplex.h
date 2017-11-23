@@ -10,7 +10,7 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
-class MILPSolverCplex: public IMILPSolver, MILPSolverBase
+class MILPSolverCplex: public IMILPSolver, public MILPSolverBase
 {
 	public:
 
@@ -108,7 +108,7 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 			return (MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
 		}
 
-	private:
+	protected:
 		std::vector<double> iterDurations;
 
 		IloEnv cplexEnv;
@@ -119,7 +119,5 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		vector<IloConversion> cplexVarConvers;
 
 		bool modelUpdated /*= true*/;
-
-	protected:
 
 };

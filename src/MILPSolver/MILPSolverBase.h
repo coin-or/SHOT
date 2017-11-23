@@ -14,21 +14,6 @@ class MILPSolverBase
 		vector<pair<double, double> > fixedVariableOriginalBounds;
 
 	protected:
-		bool discreteVariablesActivated;
-		bool cachedSolutionHasChanged;
-
-		bool isVariablesFixed;
-
-		std::vector<SolutionPoint> lastSolutions;
-
-		//std::vector<double> lastLazyUpdateConstrSlacks;
-		//std::vector<double> lastSolutionConstrSlacks;
-
-		virtual void startTimer();
-		virtual void stopTimer();
-
-		OptProblem *originalProblem;
-		int addedHyperplanes;
 
 	public:
 		MILPSolverBase();
@@ -62,4 +47,18 @@ class MILPSolverBase
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan) = 0;
 
 		virtual void activateDiscreteVariables(bool activate) = 0;
+
+		bool discreteVariablesActivated;
+		bool cachedSolutionHasChanged;
+
+		bool isVariablesFixed;
+
+		std::vector<SolutionPoint> lastSolutions;
+
+		virtual void startTimer();
+		virtual void stopTimer();
+
+		OptProblem *originalProblem;
+		int addedHyperplanes;
+
 };
