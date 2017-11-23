@@ -59,7 +59,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 		LPSolver = new MILPSolverOsiCbc();
 		ProcessInfo::getInstance().outputInfo("Cbc selected as MILP solver for minimax solver.");
 	}
-	else if (solver == ES_MILPSolver::CplexExperimental)
+	else if (solver == ES_MILPSolver::CplexLazy)
 	{
 		LPSolver = new MILPSolverCplex();
 		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");

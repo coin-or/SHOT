@@ -28,7 +28,7 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
 		LPSolver = new MILPSolverOsiCbc();
 		ProcessInfo::getInstance().outputInfo("Cbc selected as MILP solver for minimax solver.");
 	}
-	else if (solver == ES_MILPSolver::CplexExperimental)
+	else if (solver == ES_MILPSolver::CplexLazy)
 	{
 		LPSolver = new MILPSolverCplex();
 		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");
@@ -329,7 +329,7 @@ bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance * origInstan
 
 	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
 
-	if (solver == ES_MILPSolver::Cplex || solver == ES_MILPSolver::CplexExperimental)
+	if (solver == ES_MILPSolver::Cplex || solver == ES_MILPSolver::CplexLazy)
 	{
 		if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
 		{

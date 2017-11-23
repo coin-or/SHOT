@@ -1,5 +1,5 @@
+#include <MILPSolverCplexLazy.h>
 #include "IMILPSolver.h"
-#include "MILPSolverCplexExperimental.h"
 //#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
@@ -604,7 +604,7 @@ void CtCallbackI::main()
 	//isBusy = false;
 }
 
-MILPSolverCplexExperimental::MILPSolverCplexExperimental()
+MILPSolverCplexLazy::MILPSolverCplexLazy()
 {
 
 	discreteVariablesActivated = true;
@@ -627,12 +627,12 @@ MILPSolverCplexExperimental::MILPSolverCplexExperimental()
 
 }
 
-MILPSolverCplexExperimental::~MILPSolverCplexExperimental()
+MILPSolverCplexLazy::~MILPSolverCplexLazy()
 {
 	cplexEnv.end();
 }
 
-bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
+bool MILPSolverCplexLazy::createLinearProblem(OptProblem * origProblem)
 {
 	originalProblem = origProblem;
 
@@ -814,7 +814,7 @@ bool MILPSolverCplexExperimental::createLinearProblem(OptProblem * origProblem)
 	return (true);
 }
 
-void MILPSolverCplexExperimental::initializeSolverSettings()
+void MILPSolverCplexLazy::initializeSolverSettings()
 {
 	firstNonLazyHyperplane = originalProblem->getNumberOfLinearConstraints();
 
@@ -875,7 +875,7 @@ void MILPSolverCplexExperimental::initializeSolverSettings()
 	}
 }
 
-int MILPSolverCplexExperimental::addLinearConstraint(std::vector<IndexValuePair> elements, double constant,
+int MILPSolverCplexLazy::addLinearConstraint(std::vector<IndexValuePair> elements, double constant,
 		bool isGreaterThan)
 {
 	try
@@ -955,7 +955,7 @@ int MILPSolverCplexExperimental::addLinearConstraint(std::vector<IndexValuePair>
 	return (true);
 }
 
-void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
+void MILPSolverCplexLazy::activateDiscreteVariables(bool activate)
 {
 	auto variableTypes = originalProblem->getVariableTypes();
 
@@ -1017,7 +1017,7 @@ void MILPSolverCplexExperimental::activateDiscreteVariables(bool activate)
 	}
 }
 
-E_ProblemSolutionStatus MILPSolverCplexExperimental::getSolutionStatus()
+E_ProblemSolutionStatus MILPSolverCplexLazy::getSolutionStatus()
 {
 	E_ProblemSolutionStatus MILPSolutionStatus;
 
@@ -1080,7 +1080,7 @@ E_ProblemSolutionStatus MILPSolverCplexExperimental::getSolutionStatus()
 	return (MILPSolutionStatus);
 }
 
-E_ProblemSolutionStatus MILPSolverCplexExperimental::solveProblem()
+E_ProblemSolutionStatus MILPSolverCplexLazy::solveProblem()
 {
 	startTimer();
 
@@ -1125,7 +1125,7 @@ E_ProblemSolutionStatus MILPSolverCplexExperimental::solveProblem()
 	return (MILPSolutionStatus);
 }
 
-int MILPSolverCplexExperimental::increaseSolutionLimit(int increment)
+int MILPSolverCplexLazy::increaseSolutionLimit(int increment)
 {
 	int sollim;
 
@@ -1143,7 +1143,7 @@ int MILPSolverCplexExperimental::increaseSolutionLimit(int increment)
 
 }
 
-void MILPSolverCplexExperimental::setSolutionLimit(int limit)
+void MILPSolverCplexLazy::setSolutionLimit(int limit)
 {
 	if (originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
 	{
@@ -1160,7 +1160,7 @@ void MILPSolverCplexExperimental::setSolutionLimit(int limit)
 	}
 }
 
-int MILPSolverCplexExperimental::getSolutionLimit()
+int MILPSolverCplexLazy::getSolutionLimit()
 {
 	int solLim = 0;
 
@@ -1178,7 +1178,7 @@ int MILPSolverCplexExperimental::getSolutionLimit()
 	return (solLim);
 }
 
-std::vector<double> MILPSolverCplexExperimental::getVariableSolution(int solIdx)
+std::vector<double> MILPSolverCplexLazy::getVariableSolution(int solIdx)
 {
 	bool isMILP = getDiscreteVariableStatus();
 	int numVar = cplexVars.getSize();
@@ -1210,7 +1210,7 @@ std::vector<double> MILPSolverCplexExperimental::getVariableSolution(int solIdx)
 	return (solution);
 }
 
-int MILPSolverCplexExperimental::getNumberOfSolutions()
+int MILPSolverCplexLazy::getNumberOfSolutions()
 {
 	int numSols = 0;
 	bool isMILP = getDiscreteVariableStatus();
@@ -1228,7 +1228,7 @@ int MILPSolverCplexExperimental::getNumberOfSolutions()
 	return (numSols);
 }
 
-double MILPSolverCplexExperimental::getObjectiveValue(int solIdx)
+double MILPSolverCplexLazy::getObjectiveValue(int solIdx)
 {
 	bool isMILP = getDiscreteVariableStatus();
 
@@ -1267,7 +1267,7 @@ double MILPSolverCplexExperimental::getObjectiveValue(int solIdx)
 
 }
 
-void MILPSolverCplexExperimental::populateSolutionPool()
+void MILPSolverCplexLazy::populateSolutionPool()
 {
 	ProcessInfo::getInstance().startTimer("PopulateSolutionPool");
 	double initialPopulateTimeLimit = 0.5;
@@ -1318,7 +1318,7 @@ void MILPSolverCplexExperimental::populateSolutionPool()
 	ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
 }
 
-void MILPSolverCplexExperimental::setTimeLimit(double seconds)
+void MILPSolverCplexLazy::setTimeLimit(double seconds)
 {
 	try
 	{
@@ -1337,7 +1337,7 @@ void MILPSolverCplexExperimental::setTimeLimit(double seconds)
 	}
 }
 
-void MILPSolverCplexExperimental::setCutOff(double cutOff)
+void MILPSolverCplexLazy::setCutOff(double cutOff)
 {
 	try
 	{
@@ -1362,7 +1362,7 @@ void MILPSolverCplexExperimental::setCutOff(double cutOff)
 	}
 }
 
-void MILPSolverCplexExperimental::addMIPStart(std::vector<double> point)
+void MILPSolverCplexLazy::addMIPStart(std::vector<double> point)
 {
 	IloNumArray startVal(cplexEnv);
 
@@ -1386,7 +1386,7 @@ void MILPSolverCplexExperimental::addMIPStart(std::vector<double> point)
 	ProcessInfo::getInstance().outputInfo("     Added MIP starting point.");
 }
 
-void MILPSolverCplexExperimental::deleteMIPStarts()
+void MILPSolverCplexLazy::deleteMIPStarts()
 {
 	int numStarts = cplexInstance.getNMIPStarts();
 
@@ -1406,7 +1406,7 @@ void MILPSolverCplexExperimental::deleteMIPStarts()
 	}
 }
 
-void MILPSolverCplexExperimental::writeProblemToFile(std::string filename)
+void MILPSolverCplexLazy::writeProblemToFile(std::string filename)
 {
 	try
 	{
@@ -1427,7 +1427,7 @@ void MILPSolverCplexExperimental::writeProblemToFile(std::string filename)
 	}
 }
 
-void MILPSolverCplexExperimental::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
+void MILPSolverCplexLazy::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
 {
 	try
 	{
@@ -1463,12 +1463,12 @@ void MILPSolverCplexExperimental::changeConstraintToLazy(GeneratedHyperplane &hy
 	}
 }
 
-void MILPSolverCplexExperimental::fixVariable(int varIndex, double value)
+void MILPSolverCplexLazy::fixVariable(int varIndex, double value)
 {
 	updateVariableBound(varIndex, value, value);
 }
 
-void MILPSolverCplexExperimental::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+void MILPSolverCplexLazy::updateVariableBound(int varIndex, double lowerBound, double upperBound)
 {
 	try
 	{
@@ -1482,7 +1482,7 @@ void MILPSolverCplexExperimental::updateVariableBound(int varIndex, double lower
 	}
 }
 
-pair<double, double> MILPSolverCplexExperimental::getCurrentVariableBounds(int varIndex)
+pair<double, double> MILPSolverCplexLazy::getCurrentVariableBounds(int varIndex)
 {
 	pair<double, double> tmpBounds;
 
@@ -1499,16 +1499,16 @@ pair<double, double> MILPSolverCplexExperimental::getCurrentVariableBounds(int v
 	return (tmpBounds);
 }
 
-bool MILPSolverCplexExperimental::supportsQuadraticObjective()
+bool MILPSolverCplexLazy::supportsQuadraticObjective()
 {
 	return (true);
 }
-bool MILPSolverCplexExperimental::supportsQuadraticConstraints()
+bool MILPSolverCplexLazy::supportsQuadraticConstraints()
 {
 	return (true);
 }
 
-double MILPSolverCplexExperimental::getDualObjectiveValue()
+double MILPSolverCplexLazy::getDualObjectiveValue()
 {
 
 	bool isMILP = getDiscreteVariableStatus();
@@ -1527,22 +1527,22 @@ double MILPSolverCplexExperimental::getDualObjectiveValue()
 	return (objVal);
 }
 
-bool MILPSolverCplexExperimental::supportsLazyConstraints()
+bool MILPSolverCplexLazy::supportsLazyConstraints()
 {
 	return (true);
 }
 
-void MILPSolverCplexExperimental::checkParameters()
+void MILPSolverCplexLazy::checkParameters()
 {
 
 }
 
-std::pair<std::vector<double>, std::vector<double> > MILPSolverCplexExperimental::presolveAndGetNewBounds()
+std::pair<std::vector<double>, std::vector<double> > MILPSolverCplexLazy::presolveAndGetNewBounds()
 {
 	return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 }
 
-void MILPSolverCplexExperimental::writePresolvedToFile(std::string filename)
+void MILPSolverCplexLazy::writePresolvedToFile(std::string filename)
 {
 	try
 	{

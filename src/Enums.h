@@ -50,7 +50,7 @@ enum class ES_RelaxationStrategy
 
 enum class ES_MILPSolver
 {
-	Cplex, Gurobi, Cbc, CplexExperimental
+	Cplex, Gurobi, Cbc, CplexLazy
 };
 
 enum class ES_QPStrategy

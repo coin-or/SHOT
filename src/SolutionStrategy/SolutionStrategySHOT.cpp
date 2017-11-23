@@ -92,7 +92,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear()
 			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
-			&& solverMILP != ES_MILPSolver::CplexExperimental)
+			&& solverMILP != ES_MILPSolver::CplexLazy)
 	{
 		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
@@ -258,7 +258,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
-	if (solverMILP != ES_MILPSolver::CplexExperimental)
+	if (solverMILP != ES_MILPSolver::CplexLazy)
 	{
 
 		if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))

@@ -39,7 +39,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		ProcessInfo::getInstance().MILPSolver = new MILPSolverOsiCbc();
 		ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver.");
 	}
-	else if (solver == ES_MILPSolver::CplexExperimental)
+	else if (solver == ES_MILPSolver::CplexLazy)
 	{
 		if (isObjQuadratic && isQuadraticUsed)
 		{
@@ -55,7 +55,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		}
 		else
 		{
-			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexExperimental();
+			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazy();
 			ProcessInfo::getInstance().outputInfo("Cplex (lazy, experimental) selected as MIP solver.");
 		}
 	}

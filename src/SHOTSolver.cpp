@@ -380,7 +380,7 @@ void SHOTSolver::initializeSettings()
 	enumMILPSolver.push_back("Cplex");
 	enumMILPSolver.push_back("Gurobi");
 	enumMILPSolver.push_back("Cbc");
-	enumMILPSolver.push_back("CplexExperimental");
+	enumMILPSolver.push_back("Cplex lazy");
 	Settings::getInstance().createSetting("MILPSolver", "MILP", static_cast<int>(ES_MILPSolver::Cplex), "MILP solver",
 			enumMILPSolver);
 	enumMILPSolver.clear();

@@ -17,12 +17,12 @@
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 
-class MILPSolverCplexExperimental: public IMILPSolver, MILPSolverBase
+class MILPSolverCplexLazy: public IMILPSolver, MILPSolverBase
 {
 	public:
 
-		MILPSolverCplexExperimental();
-		virtual ~MILPSolverCplexExperimental();
+		MILPSolverCplexLazy();
+		virtual ~MILPSolverCplexLazy();
 
 		virtual void checkParameters();
 
