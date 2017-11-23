@@ -7,8 +7,7 @@ class NLPSolverIPOptBase: virtual public INLPSolver
 {
 	private:
 
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+		//
 
 	protected:
 		OSOption* osOption;

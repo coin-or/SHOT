@@ -9,8 +9,7 @@
 
 TaskCheckObjectiveStagnation::TaskCheckObjectiveStagnation(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 
@@ -21,46 +20,47 @@ TaskCheckObjectiveStagnation::~TaskCheckObjectiveStagnation()
 
 void TaskCheckObjectiveStagnation::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (!currIter->isMILP())
 	{
 		return;
 	}
 
-	if (processInfo->iterFeasMILP + processInfo->iterOptMILP
-			<= settings->getIntSetting("ObjectiveStagnationIterationLimit", "Algorithm"))
+	if (ProcessInfo::getInstance().iterFeasMILP + ProcessInfo::getInstance().iterOptMILP
+			<= Settings::getInstance().getIntSetting("ObjectiveStagnationIterationLimit", "Algorithm"))
 	{
 		return;
 	}
 
-	if (processInfo->iterSignificantObjectiveUpdate == 0) // First MILP solution
+	if (ProcessInfo::getInstance().iterSignificantObjectiveUpdate == 0) // First MILP solution
 	{
-		processInfo->iterSignificantObjectiveUpdate = currIter->iterationNumber;
-		processInfo->itersWithStagnationMILP = 0;
+		ProcessInfo::getInstance().iterSignificantObjectiveUpdate = currIter->iterationNumber;
+		ProcessInfo::getInstance().itersWithStagnationMILP = 0;
 		return;
 	}
 
 	if (std::abs(
 			(currIter->objectiveValue
-					- processInfo->iterations[processInfo->iterSignificantObjectiveUpdate - 1].objectiveValue))
-			> settings->getDoubleSetting("ObjectiveStagnationTolerance", "Algorithm"))
+					- ProcessInfo::getInstance().iterations[ProcessInfo::getInstance().iterSignificantObjectiveUpdate
+							- 1].objectiveValue))
+			> Settings::getInstance().getDoubleSetting("ObjectiveStagnationTolerance", "Algorithm"))
 	{
-		processInfo->iterSignificantObjectiveUpdate = currIter->iterationNumber;
-		processInfo->itersWithStagnationMILP = 0;
+		ProcessInfo::getInstance().iterSignificantObjectiveUpdate = currIter->iterationNumber;
+		ProcessInfo::getInstance().itersWithStagnationMILP = 0;
 
 		return;
 	}
 
-	if (processInfo->itersWithStagnationMILP
-			>= settings->getIntSetting("ObjectiveStagnationIterationLimit", "Algorithm"))
+	if (ProcessInfo::getInstance().itersWithStagnationMILP
+			>= Settings::getInstance().getIntSetting("ObjectiveStagnationIterationLimit", "Algorithm"))
 	{
-		processInfo->terminationReason = E_TerminationReason::ObjectiveStagnation;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::ObjectiveStagnation;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 
 	}
 
-	processInfo->itersWithStagnationMILP++;
+	ProcessInfo::getInstance().itersWithStagnationMILP++;
 }
 
 std::string TaskCheckObjectiveStagnation::getType()

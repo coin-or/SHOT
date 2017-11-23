@@ -10,9 +10,6 @@ class NLPSolverBase: virtual public INLPSolver
 {
 	private:
 
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
-
 	protected:
 
 		OSInstance* originalInstance;

@@ -2,8 +2,7 @@
 
 TaskSimple::TaskSimple()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSimple::TaskSimple(std::function<bool()> taskFunction)

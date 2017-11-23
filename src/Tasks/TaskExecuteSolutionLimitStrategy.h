@@ -7,9 +7,6 @@
 #include "../MILPSolver/MILPSolutionLimitStrategyIncrease.h"
 #include "../MILPSolver/MILPSolutionLimitStrategyAdaptive.h"
 
-#include "../ConstraintToleranceUpdateStrategy/IConstraintToleranceUpdateStrategy.h"
-#include "../ConstraintToleranceUpdateStrategy/ConstraintToleranceUpdateStrategyDecreasing.h"
-
 class TaskExecuteSolutionLimitStrategy: public TaskBase
 {
 	public:
@@ -22,10 +19,6 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 	private:
 
 		IMILPSolutionLimitStrategy *solutionLimitStrategy;
-		IConstraintToleranceUpdateStrategy *constrTolUpdateStrategy;
-
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 
 		IMILPSolver *MILPSolver;
 

@@ -11,6 +11,7 @@
 #include "../NLPSolver/INLPSolver.h"
 #include "../NLPSolver/NLPSolverIPOptRelaxed.h"
 #include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
+#include "../NLPSolver/NLPSolverGAMS.h"
 
 class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 {
@@ -21,8 +22,6 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 		virtual bool runStrategy();
 
 	protected:
-		using PrimalSolutionStrategyBase::processInfo;
-		using PrimalSolutionStrategyBase::settings;
 
 	private:
 		INLPSolver *NLPSolver;

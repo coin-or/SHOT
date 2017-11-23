@@ -8,16 +8,20 @@
 #include "OSnl2OS.h"
 #include "boost/filesystem.hpp"
 #include "TaskHandler.h"
+#include "GAMS2OS.h"
 
 class SHOTSolver
 {
 	private:
 		ISolutionStrategy *solutionStrategy;
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+
+		GAMS2OS* gms2os;
 
 		void initializeSettings();
 		void initializeDebugMode();
+
+		bool isProblemInitialized;
+
 	public:
 
 		SHOTSolver();
@@ -31,8 +35,9 @@ class SHOTSolver
 
 		bool solveProblem();
 
-		std::string getOSol();
+		std::string getOSoL();
+		std::string getGAMSOptFile();
 
-		std::string getOSrl();
+		std::string getOSrL();
 		std::string getTraceResult();
 };

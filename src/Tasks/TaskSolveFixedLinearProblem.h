@@ -13,8 +13,6 @@ class TaskSolveFixedLinearProblem: public TaskBase
 		virtual void run();
 		virtual std::string getType();
 	private:
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 
 		std::vector<int> discreteVariableIndexes;
 		std::vector<std::vector<double>> testedPoints;

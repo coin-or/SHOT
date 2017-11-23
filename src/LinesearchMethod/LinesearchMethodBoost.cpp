@@ -5,7 +5,6 @@ double lastActiveConstraintUpdateValue;
 
 Test::Test()
 {
-
 }
 
 void Test::determineActiveConstraints(double constrTol)
@@ -83,12 +82,8 @@ double Test::operator()(const double x)
 
 LinesearchMethodBoost::LinesearchMethodBoost()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	test = new Test();
-	test->originalProblem = (processInfo->originalProblem);
-
+	test->originalProblem = (ProcessInfo::getInstance().originalProblem);
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
@@ -108,7 +103,7 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 {
 	if (ptA.size() != ptB.size())
 	{
-		processInfo->outputError(
+		ProcessInfo::getInstance().outputError(
 				"     Linesearch error: sizes of points vary: " + std::to_string(ptA.size()) + " != "
 						+ std::to_string(ptB.size()));
 	}
@@ -130,8 +125,8 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 	else
 	{
 		test->setActiveConstraints(constrIdxs);
-		test->valFirstPt = processInfo->originalProblem->getMostDeviatingConstraint(ptA).value;
-		test->valSecondPt = processInfo->originalProblem->getMostDeviatingConstraint(ptB).value;
+		test->valFirstPt = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(ptA).value;
+		test->valSecondPt = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(ptB).value;
 	}
 
 	/*
@@ -162,11 +157,11 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		return (tmpPair);
 	}
 
-	int tempFEvals = processInfo->numFunctionEvals;
+	int tempFEvals = ProcessInfo::getInstance().numFunctionEvals;
 
 	Result r1;
 
-	if (static_cast<ES_LinesearchMethod>(settings->getIntSetting("LinesearchMethod", "Linesearch"))
+	if (static_cast<ES_LinesearchMethod>(Settings::getInstance().getIntSetting("LinesearchMethod", "Linesearch"))
 			== ES_LinesearchMethod::BoostTOMS748)
 	{
 		r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
@@ -176,15 +171,15 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		r1 = boost::math::tools::bisect(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
 	}
 
-	int resFVals = processInfo->numFunctionEvals - tempFEvals;
+	int resFVals = ProcessInfo::getInstance().numFunctionEvals - tempFEvals;
 	if (max_iter == Nmax)
 	{
-		processInfo->outputWarning(
+		ProcessInfo::getInstance().outputWarning(
 				"     Warning, number of line search iterations " + to_string(max_iter) + " reached!");
 	}
 	else
 	{
-		processInfo->outputInfo(
+		ProcessInfo::getInstance().outputInfo(
 				"     Line search iterations: " + to_string(max_iter) + ". Function evaluations: "
 						+ to_string(resFVals));
 	}
@@ -195,20 +190,20 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		ptNew2.at(i) = r1.second * ptA.at(i) + (1 - r1.second) * ptB.at(i);
 	}
 
-	auto validNewPt = processInfo->originalProblem->isConstraintsFulfilledInPoint(ptNew);
+	auto validNewPt = ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
 	if (!validNewPt) // ptNew Outside feasible region
 	{
-		processInfo->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
-				processInfo->getCurrentIteration()->iterationNumber);
+		ProcessInfo::getInstance().addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
+				ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
 
 		std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
 		return (tmpPair);
 	}
 	else
 	{
-		processInfo->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
-				processInfo->getCurrentIteration()->iterationNumber);
+		ProcessInfo::getInstance().addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
+				ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
 
 		std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptNew2);
 		return (tmpPair);

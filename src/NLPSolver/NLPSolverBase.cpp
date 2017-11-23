@@ -2,8 +2,10 @@
 
 void NLPSolverBase::setProblem(OSInstance* origInstance)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+	//
+
+	ProcessInfo *processInfo = &ProcessInfo::getInstance();
+
 	originalInstance = origInstance;
 	isProblemInitialized = false;
 }
@@ -29,18 +31,20 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
 	if (!isProblemInitialized) initializeProblem();
 
-	if (settings->getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")) // Does not seem to work with Ipopt...
+	if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")) // Does not seem to work with Ipopt...
 	{
-		auto numVar = processInfo->originalProblem->getNumberOfVariables();
+		auto numVar = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
 
 		for (int i = 0; i < numVar; i++)
 		{
-			if (i == processInfo->originalProblem->getNonlinearObjectiveVariableIdx()) continue;
+			if (i == ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveVariableIdx()) continue;
 
-			if (processInfo->originalProblem->hasVariableBoundsBeenTightened(i))
+			if (ProcessInfo::getInstance().originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				NLPProblem->setVariableLowerBound(i, processInfo->originalProblem->getVariableLowerBound(i));
-				NLPProblem->setVariableUpperBound(i, processInfo->originalProblem->getVariableUpperBound(i));
+				NLPProblem->setVariableLowerBound(i,
+						ProcessInfo::getInstance().originalProblem->getVariableLowerBound(i));
+				NLPProblem->setVariableUpperBound(i,
+						ProcessInfo::getInstance().originalProblem->getVariableUpperBound(i));
 				NLPProblem->setVariableBoundsAsTightened(i);
 			}
 		}
@@ -48,7 +52,7 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 
 	auto solStatus = solveProblemInstance();
 
-	processInfo->numNLPProbsSolved++;
+	ProcessInfo::getInstance().numNLPProbsSolved++;
 	return (solStatus);
 }
 

@@ -8,11 +8,12 @@
 #include "IPrimalSolutionStrategy.h"
 
 /*IPrimalSolutionStrategy::IPrimalSolutionStrategy() {
-	// TODO Auto-generated constructor stub
+ // TODO Auto-generated constructor stub
 
-}*/
+ }*/
 
-IPrimalSolutionStrategy::~IPrimalSolutionStrategy() {
+IPrimalSolutionStrategy::~IPrimalSolutionStrategy()
+{
 	// TODO Auto-generated destructor stub
 }
 

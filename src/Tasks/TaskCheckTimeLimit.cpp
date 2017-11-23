@@ -9,8 +9,7 @@
 
 TaskCheckTimeLimit::TaskCheckTimeLimit(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 
@@ -21,12 +20,13 @@ TaskCheckTimeLimit::~TaskCheckTimeLimit()
 
 void TaskCheckTimeLimit::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (processInfo->getElapsedTime("Total") >= settings->getDoubleSetting("TimeLimit", "Algorithm"))
+	if (ProcessInfo::getInstance().getElapsedTime("Total")
+			>= Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm"))
 	{
-		processInfo->terminationReason = E_TerminationReason::TimeLimit;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::TimeLimit;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

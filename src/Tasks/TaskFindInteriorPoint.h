@@ -19,8 +19,6 @@ class TaskFindInteriorPoint: public TaskBase
 	private:
 		std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
 
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 };
 
 class TaskExceptionInteriorPoint: public std::exception
@@ -36,13 +34,9 @@ class TaskExceptionInteriorPoint: public std::exception
 		{
 			std::stringstream message;
 			message << explanation;
-
 			return message.str().c_str();
 		}
 	private:
 		std::string explanation;
-
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 
 };

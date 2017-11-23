@@ -2,8 +2,6 @@
 
 NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	osolwriter = new OSoLWriter();
 
@@ -29,7 +27,7 @@ std::vector<double> NLPSolverIPOptMinimax::getSolution()
 		tmpPoint.at(i) = NLPSolverIPOptBase::getSolution(i);
 	}
 
-	if (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+	if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
 	{
 		tmpPoint.pop_back();
 	}
@@ -43,29 +41,31 @@ std::vector<double> NLPSolverIPOptMinimax::getSolution()
 bool NLPSolverIPOptMinimax::createProblemInstance(OSInstance * origInstance)
 {
 
-	processInfo->outputInfo("     Creating Ipopt minimax problem.");
+	ProcessInfo::getInstance().outputInfo("     Creating Ipopt minimax problem.");
 
 	dynamic_cast<OptProblemNLPMinimax*>(NLPProblem)->reformulate(origInstance);
 
-	processInfo->outputInfo("     Ipopt minimax problem created.");
+	ProcessInfo::getInstance().outputInfo("     Ipopt minimax problem created.");
 
 	return (true);
 }
 
 void NLPSolverIPOptMinimax::setSolverSpecificInitialSettings()
 {
-	auto constrTol = settings->getDoubleSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt");
+	auto constrTol = Settings::getInstance().getDoubleSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt");
 	osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
 			"", "double", "");
 
 	osOption->setAnotherSolverOption("tol",
-			UtilityFunctions::toStringFormat(settings->getDoubleSetting("ToleranceInteriorPointStrategy", "Ipopt"),
-					"%.10f"), "ipopt", "", "double", "");
+			UtilityFunctions::toStringFormat(
+					Settings::getInstance().getDoubleSetting("ToleranceInteriorPointStrategy", "Ipopt"), "%.10f"),
+			"ipopt", "", "double", "");
 
 	osOption->setAnotherSolverOption("max_iter",
-			to_string(settings->getIntSetting("MaxIterInteriorPointStrategy", "Ipopt")), "ipopt", "", "integer", "");
+			to_string(Settings::getInstance().getIntSetting("MaxIterInteriorPointStrategy", "Ipopt")), "ipopt", "",
+			"integer", "");
 
-	auto timeLimit = settings->getDoubleSetting("NLPTimeLimit", "PrimalBound");
+	auto timeLimit = Settings::getInstance().getDoubleSetting("NLPTimeLimit", "PrimalBound");
 	osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
 			"number", "");
 }

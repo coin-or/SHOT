@@ -9,155 +9,160 @@
 
 SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
+	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	processInfo->createTimer("Reformulation", "Time spent reformulating problem");
+	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
+			"InteriorPoint"));
+	ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
-	processInfo->createTimer("InteriorPointTotal", "Time spent finding interior point");
+	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
+	ProcessInfo::getInstance().createTimer("LP", " - Relaxed problems");
+	ProcessInfo::getInstance().createTimer("MILP", " - MIP problems");
+	ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - Populate solution pool");
+	ProcessInfo::getInstance().createTimer("LazyChange", " - Change to lazy constraints");
+	ProcessInfo::getInstance().createTimer("HyperplaneLinesearch", " - Linesearch");
+	ProcessInfo::getInstance().createTimer("ObjectiveLinesearch", " - Objective linesearch");
+	ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
+	ProcessInfo::getInstance().createTimer("PrimalBoundSearchNLP", "    - NLP");
+	ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
+	ProcessInfo::getInstance().createTimer("PrimalBoundFixedLP", "    - Fixed LP");
 
-	auto solver = static_cast<ES_NLPSolver>(settings->getIntSetting("InteriorPointSolver", "InteriorPoint"));
-	processInfo->createTimer("InteriorPoint", " - Solving interior point NLP problem");
-
-	processInfo->createTimer("Subproblems", "Time spent solving subproblems");
-	processInfo->createTimer("LP", " - Relaxed problems");
-	processInfo->createTimer("MILP", " - MIP problems");
-	processInfo->createTimer("PopulateSolutionPool", " - Populate solution pool");
-	processInfo->createTimer("LazyChange", " - Change to lazy constraints");
-	processInfo->createTimer("HyperplaneLinesearch", " - Linesearch");
-	processInfo->createTimer("ObjectiveLinesearch", " - Objective linesearch");
-	processInfo->createTimer("PrimalBoundTotal", " - Primal solution search");
-	processInfo->createTimer("PrimalBoundSearchNLP", "    - NLP");
-	processInfo->createTimer("PrimalBoundLinesearch", "    - Linesearch");
-	processInfo->createTimer("PrimalBoundFixedLP", "    - Fixed LP");
-
-	auto solverMILP = static_cast<ES_MILPSolver>(settings->getIntSetting("MILPSolver", "MILP"));
+	auto solverMILP = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
 	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(osInstance);
-	processInfo->tasks->addTask(tInitMILPSolver, "InitMILPSolver");
+	ProcessInfo::getInstance().tasks->addTask(tInitMILPSolver, "InitMILPSolver");
 
-	auto MILPSolver = processInfo->MILPSolver;
+	auto MILPSolver = ProcessInfo::getInstance().MILPSolver;
 
 	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
-	processInfo->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+	ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
-	processInfo->tasks->addTask(tPrintProblemStats, "PrintProbStat");
+	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (processInfo->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic
-			|| processInfo->originalProblem->getNumberOfNonlinearConstraints() != 0)
+	if (Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm") == (int) ES_SolutionStrategy::ESH
+			&& (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
+					!= E_ObjectiveFunctionType::Quadratic
+					|| ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
-		processInfo->tasks->addTask(tFindIntPoint, "FindIntPoint");
+		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
 	}
 
 	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem(MILPSolver);
-	processInfo->tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
+	ProcessInfo::getInstance().tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
 
 	TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
-	processInfo->tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
+	ProcessInfo::getInstance().tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
 
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
-	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
+	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
 	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
-	processInfo->tasks->addTask(tAddHPs, "AddHPs");
+	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
-	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
+			+ ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
+	{
+		TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+		ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	}
 
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
 
 	dynamic_cast<TaskConditional*>(tPrintIterHeaderCheck)->setCondition([this]()
-	{	return (processInfo->getCurrentIteration()->iterationNumber % 50 == 1);});
+	{	return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1);});
 	dynamic_cast<TaskConditional*>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
 
-	processInfo->tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
+	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
 
-	if (static_cast<ES_PresolveStrategy>(settings->getIntSetting("PresolveStrategy", "Presolve"))
+	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve"))
 			!= ES_PresolveStrategy::Never)
 	{
 		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
-		processInfo->tasks->addTask(tPresolve, "Presolve");
+		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
 	}
 
 	TaskBase *tSolveIteration = new TaskSolveIteration(MILPSolver);
-	processInfo->tasks->addTask(tSolveIteration, "SolveIter");
+	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
-	if (processInfo->originalProblem->isObjectiveFunctionNonlinear()
-			&& settings->getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
+	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear()
+			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
 			&& solverMILP != ES_MILPSolver::CplexExperimental)
 	{
 		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
-		processInfo->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
+		ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
 	}
 
 	TaskBase *tPrintIterReport = new TaskPrintIterationReport();
-	processInfo->tasks->addTask(tPrintIterReport, "PrintIterReport");
+	ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
 	TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckIterError, "CheckIterError");
+	ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
 
 	TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
 	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
 	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+	ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
 	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-	processInfo->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
 			== ES_SolutionStrategy::ESH)
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-		processInfo->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
+		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
 
-		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (settings->getBoolSetting("SolveFixedLP", "Algorithm"))
+	if (Settings::getInstance().getBoolSetting("SolveFixedLP", "Algorithm"))
 	{
 		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem(MILPSolver);
-		processInfo->tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+		ProcessInfo::getInstance().tasks->addTask(tSolveFixedLP, "SolveFixedLP");
+		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (settings->getIntSetting("NLPFixedStrategy", "PrimalBound") != static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
-			&& processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
+	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound")
+			!= static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
+			&& ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0
+			&& ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{
 		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
-		processInfo->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+		ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
 		TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP();
-		processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+		ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 	}
 
 	/*
-	 if (settings->getBoolSetting("UseNLPCall", "PrimalBound"))
+	 if (Settings::getInstance().getBoolSetting("UseNLPCall", "PrimalBound"))
 	 {
 	 TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
 
-	 if (processInfo->originalProblem->getNumberOfNonlinearConstraints() > 0)
+	 if (ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0)
 	 {
 	 TaskBase *tSelectPrimNLPCheck = new TaskConditional();
 
 	 dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
 	 {
-	 auto currIter = processInfo->getCurrentIteration();
+	 auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	 // Added MILPSollimit updated krav mars 2016
 	 if (!currIter->isMILP() || currIter->solutionPoints.size() == 0 || currIter->MILPSolutionLimitUpdated)
@@ -165,17 +170,17 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	 return (false);
 	 }
 
-	 if ( processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 if ( ProcessInfo::getInstance().itersMILPWithoutNLPCall >= Settings::getInstance().getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 	 {
 	 return (true);
 	 }
 
-	 //if ( processInfo->itersWithStagnationMILP >= settings->getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 //if ( ProcessInfo::getInstance().itersWithStagnationMILP >= Settings::getInstance().getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 	 //{
 	 //return (true);
 	 //}
 
-	 if (processInfo->getElapsedTime("Total") -processInfo->solTimeLastNLPCall > settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+	 if (ProcessInfo::getInstance().getElapsedTime("Total") -ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 	 {
 	 return (true);
 	 }
@@ -187,13 +192,13 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	 for (int i = 1; i < maxItersNoMIPChange; i++)
 	 {
-	 if (processInfo->iterations.size() <= i)
+	 if (ProcessInfo::getInstance().iterations.size() <= i)
 	 {
 	 noMIPChange = false;
 	 break;
 	 }
 
-	 auto prevIter = &processInfo->iterations.at(currIter->iterationNumber -1 - i);
+	 auto prevIter = &ProcessInfo::getInstance().iterations.at(currIter->iterationNumber -1 - i);
 
 	 if (!prevIter->isMILP())
 	 {
@@ -201,7 +206,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	 break;
 	 }
 
-	 auto discreteIdxs = processInfo->originalProblem->getDiscreteVariableIndices();
+	 auto discreteIdxs = ProcessInfo::getInstance().originalProblem->getDiscreteVariableIndices();
 
 	 bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
 	 discreteIdxs);
@@ -215,87 +220,87 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	 if (noMIPChange)
 	 {
-	 processInfo->outputWarning("     MIP solution has not changed in " + to_string( maxItersNoMIPChange)+ " iterations. Solving NLP problem...");
+	 ProcessInfo::getInstance().outputWarning("     MIP solution has not changed in " + to_string( maxItersNoMIPChange)+ " iterations. Solving NLP problem...");
 	 return (true);
 	 }
 
-	 processInfo->itersMILPWithoutNLPCall++;
+	 ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
 
 	 return (false);
 	 });
 
 	 dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
 
-	 processInfo->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+	 ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
 	 dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
 
-	 processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-	 processInfo->tasks->addTask(tCheckDualCands, "CheckDualCands");
-	 processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-	 processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+	 ProcessInfo::getInstance().tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+	 ProcessInfo::getInstance().tasks->addTask(tCheckDualCands, "CheckDualCands");
+	 ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	 ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	 }
 	 }*/
 
 	TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckObjStag, "CheckObjStag");
+	ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
 
 	TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckIterLim, "CheckIterLim");
+	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
 
 	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-	processInfo->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-	processInfo->tasks->addTask(tInitializeIteration, "InitIter");
+	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	//TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy();
-	processInfo->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
+	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MILPSolver);
-	processInfo->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
+	ProcessInfo::getInstance().tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
 	if (solverMILP != ES_MILPSolver::CplexExperimental)
 	{
 
-		if (static_cast<ES_SolutionStrategy>(settings->getIntSetting("SolutionStrategy", "Algorithm"))
+		if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
 				== ES_SolutionStrategy::ESH)
 		{
-			if (static_cast<ES_LinesearchConstraintStrategy>(settings->getIntSetting("LinesearchConstraintStrategy",
-					"ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 			{
 				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-				processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+				ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
 			}
 			else
 			{
 				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-				processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+				ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
 			}
 
 		}
 		else
 		{
 			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
-			processInfo->tasks->addTask(tSelectHPPts, "SelectHPPts");
+			ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
 		}
 
-		//processInfo->tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-		processInfo->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-		processInfo->tasks->addTask(tCheckRelGap, "CheckRelGap");
+		//ProcessInfo::getInstance().tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
 		//TaskBase *tAddHPs = new TaskAddHyperplanes();
-		processInfo->tasks->addTask(tAddHPs, "AddHPs");
+		ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-		if (settings->getBoolSetting("AddIntegerCuts", "Algorithm"))
+		if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
 		{
 			TaskBase *tAddICs = new TaskAddIntegerCuts(MILPSolver);
-			processInfo->tasks->addTask(tAddICs, "AddICs");
+			ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
 		}
 
 		/*
-		 if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+		 if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
 		 {
 		 TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
-		 processInfo->tasks->addTask(tSwitchLazy, "SwitchLazy");
+		 ProcessInfo::getInstance().tasks->addTask(tSwitchLazy, "SwitchLazy");
 		 }*/
 	}
 	else
@@ -317,9 +322,9 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setCondition(
 				[this]()
 				{
-					auto prevIter = processInfo->getPreviousIteration();
+					auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-					if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > settings->getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+					if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 					{
 						return (true);
 					}
@@ -329,22 +334,23 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setTaskIfTrue(tForcedHyperplaneAddition);
 
-		processInfo->tasks->addTask(tForceSupportingHyperplaneAddition, "ForceSupportingHyperplaneAddition");
+		ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition,
+				"ForceSupportingHyperplaneAddition");
 	}
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
-	processInfo->tasks->addTask(tPrintBoundReport, "PrintBoundReport");
+	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 
 	TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
-	processInfo->tasks->addTask(tGoto, "Goto");
+	ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
 	//dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckPrimCands);
 	//dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckDualCands);
 
-	processInfo->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+	ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
 	TaskBase *tPrintSol = new TaskPrintSolution();
-	processInfo->tasks->addTask(tPrintSol, "PrintSol");
+	ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
 
 }
 
@@ -357,14 +363,14 @@ bool SolutionStrategySHOT::solveProblem()
 {
 	TaskBase *nextTask = new TaskBase;
 
-	while (processInfo->tasks->getNextTask(nextTask))
+	while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
 	{
-		processInfo->outputInfo("┌─── Started task:  " + nextTask->getType());
+		ProcessInfo::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
 		nextTask->run();
-		processInfo->outputInfo("└─── Finished task: " + nextTask->getType());
+		ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
 	}
 
-	processInfo->tasks->clearTasks();
+	ProcessInfo::getInstance().tasks->clearTasks();
 
 	return (true);
 }

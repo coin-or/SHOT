@@ -1,19 +1,11 @@
 ﻿#include "SHOTSolver.h"
 
 SHOTSolver *solver = NULL;
-FileUtil *fileUtil = NULL;
 
 std::string startmessage;
 
 int main(int argc, char *argv[])
 {
-	ProcessInfo *processInfo;
-	processInfo = ProcessInfo::getInstance();
-	processInfo->startTimer("Total");
-
-	// Adds a file output
-	osoutput->AddChannel("shotlogfile");
-
 	// Visual Studio does not play nice with unicode:
 #ifdef _WIN32
 	startmessage = ""
@@ -41,27 +33,55 @@ int main(int argc, char *argv[])
 	if (argc == 1)
 	{
 		std::cout << startmessage << std::endl;
-		std::cout << "Usage: filename.osil options.osol results.osrl trace.trc" << std::endl;
-
-		delete processInfo;
+		std::cout << "Usage: filename.[osil|gms] options.[opt|xml|osol] results.osrl trace.trc" << std::endl;
 
 		return (0);
 	}
 
-	boost::filesystem::path resultFile, optionsFile, traceFile;
-
-	fileUtil = new FileUtil();
 	solver = new SHOTSolver();
 
-	if (argc == 2)
-	{
-		optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
+	ProcessInfo::getInstance().startTimer("Total");
 
-		if (!boost::filesystem::exists(optionsFile))
+	// Adds a file output
+	osoutput->AddChannel("shotlogfile");
+
+	boost::filesystem::path resultFile, optionsFile, traceFile;
+
+	if (strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
+	{
+		// special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
+		// TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
+
+		osoutput->SetPrintLevel("stdout", ENUM_OUTPUT_LEVEL_summary);
+	}
+	else if (argc == 2) // No options file specified, use or create defaults
+	{
+		bool GAMSOptFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.opt");
+		bool OSoLFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.xml");
+
+		if (GAMSOptFileExists)
 		{
-			fileUtil->writeFileFromString(optionsFile.string(), solver->getOSol());
+			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
+		}
+		else if (OSoLFileExists)
+		{
+			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
+		}
+		else
+		{
+			FileUtil *fileUtil;
+			fileUtil = new FileUtil();
+
+			// Create OSoL-file
+			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
+			fileUtil->writeFileFromString(optionsFile.string(), solver->getOSoL());
+
+			// Create GAMS option file
+			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
+			fileUtil->writeFileFromString(optionsFile.string(), solver->getGAMSOptFile());
 		}
 
+		// Define names for result files
 		resultFile = boost::filesystem::path(boost::filesystem::current_path() / "results.osrl");
 		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
 	}
@@ -70,9 +90,9 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			return (0);
 		}
@@ -86,9 +106,9 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			return (0);
 		}
@@ -102,9 +122,9 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file not found!" << std::endl;
+			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			return (0);
 		}
@@ -119,18 +139,18 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[1]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Problem file not found!" << std::endl;
+			std::cout << "Problem file " << argv[1] << " not found!" << std::endl;
 
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			return (0);
 		}
 
-		std::string osilFileName = argv[1];
+		std::string fileName = argv[1];
 
-		if (!solver->setOptions(optionsFile.string()))
+		if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
 		{
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			std::cout << startmessage << std::endl;
 			std::cout << "Cannot set options!" << std::endl;
@@ -138,48 +158,60 @@ int main(int argc, char *argv[])
 		}
 
 		// Prints out the welcome message to the logging facility
-		processInfo->outputSummary(startmessage);
+		ProcessInfo::getInstance().outputSummary(startmessage);
 
-		if (!solver->setProblem(osilFileName))
+		if (!solver->setProblem(fileName))
 		{
-			processInfo->outputError("Error when reading problem file.");
+			ProcessInfo::getInstance().outputError("Error when reading problem file.");
 
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			return (0);
 		}
 
 		if (!solver->solveProblem()) // solve problem
 		{
-			processInfo->outputError("Error when solving problem.");
+			ProcessInfo::getInstance().outputError("Error when solving problem.");
 
-			delete fileUtil, solver, processInfo;
+			delete solver;
 
 			return (0);
 		}
 	}
 	catch (const ErrorClass& eclass)
 	{
-		processInfo->outputError(eclass.errormsg);
-		delete fileUtil, solver, processInfo;
+		ProcessInfo::getInstance().outputError(eclass.errormsg);
+
+		delete solver;
 
 		return (0);
 	}
 
-	processInfo->stopTimer("Total");
+	ProcessInfo::getInstance().stopTimer("Total");
 
-	std::string osrl = solver->getOSrl();
+	FileUtil *fileUtil;
+	fileUtil = new FileUtil();
 
-	fileUtil->writeFileFromString(resultFile.string(), osrl);
+	if (!resultFile.empty())
+	{
+		std::string osrl = solver->getOSrL();
 
-	std::string trace = solver->getTraceResult();
-	fileUtil->writeFileFromString(traceFile.string(), trace);
+		fileUtil->writeFileFromString(resultFile.string(), osrl);
+	}
+
+	if (!traceFile.empty())
+	{
+		std::string trace = solver->getTraceResult();
+		fileUtil->writeFileFromString(traceFile.string(), trace);
+	}
+
+	delete fileUtil;
 
 #ifdef _WIN32
-	processInfo->outputSummary("\n"
+	ProcessInfo::getInstance().outputSummary("\n"
 			"ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
-	for (auto T : processInfo->timers)
+	for (auto T : ProcessInfo::getInstance().timers)
 	{
 		auto elapsed = T.elapsed();
 
@@ -187,16 +219,16 @@ int main(int argc, char *argv[])
 		{
 			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-			processInfo->outputSummary("³ " + tmpLine.str());
+			ProcessInfo::getInstance().outputSummary("³ " + tmpLine.str());
 		}
 	}
 
-	processInfo->outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+	ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 #else
-	processInfo->outputSummary("\n"
+	ProcessInfo::getInstance().outputSummary("\n"
 			"┌─── Solution time ──────────────────────────────────────────────────────────────┐");
 
-	for (auto T : processInfo->timers)
+	for (auto T : ProcessInfo::getInstance().timers)
 	{
 		auto elapsed = T.elapsed();
 
@@ -204,13 +236,13 @@ int main(int argc, char *argv[])
 		{
 			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-			processInfo->outputSummary("│ " + tmpLine.str());
+			ProcessInfo::getInstance().outputSummary("│ " + tmpLine.str());
 		}
 	}
 
-	processInfo->outputSummary("└────────────────────────────────────────────────────────────────────────────────┘");
+	ProcessInfo::getInstance().outputSummary(
+			"└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
-
-	delete fileUtil, solver, processInfo;
+	delete solver;
 	return (0);
 }

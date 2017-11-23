@@ -19,22 +19,24 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	this->repairNonboundedObjectiveVariable(instance);
 
-	processInfo->setOriginalProblem(this);
+	ProcessInfo::getInstance().setOriginalProblem(this);
 
 	this->setNonlinearConstraintIndexes();
 
 	if (this->getNonlinearConstraintIndexes().size() == 0)
 	{
-		settings->updateSetting("IterLimitLP", "Algorithm", 0);
-		settings->updateSetting("MILPSolLimitInitial", "MILP", 1000);
+		Settings::getInstance().updateSetting("IterLimitLP", "Algorithm", 0);
+		Settings::getInstance().updateSetting("MILPSolLimitInitial", "MILP", 1000);
 	}
 
 	this->addedConstraintName = "objconstr";
 	this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
 	this->addedObjectiveVariableName = "addobjvar";
-	this->addedObjectiveVariableLowerBound = -settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
-	this->addedObjectiveVariableUpperBound = settings->getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
+	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound",
+			"InteriorPoint");
+	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound",
+			"InteriorPoint");
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
@@ -52,7 +54,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 	if (idx != -1 && idx != this->getNonlinearObjectiveConstraintIdx())	// Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-		processInfo->numFunctionEvals++;
+		ProcessInfo::getInstance().numFunctionEvals++;
 
 		if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 		{
@@ -68,7 +70,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 		}
 		else
 		{
-			processInfo->outputWarning(
+			ProcessInfo::getInstance().outputWarning(
 					"Constraint with index " + to_string(idx) + " of type "
 							+ to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
 		}
@@ -76,7 +78,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 	else // The nonlinear objective function constraint
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
-		processInfo->numFunctionEvals++;
+		ProcessInfo::getInstance().numFunctionEvals++;
 
 		tmpVal = tmpVal - point.at(this->getNonlinearObjectiveVariableIdx());
 	}
@@ -90,12 +92,13 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 	int number;
 	SparseVector* tmpVector;
 
+	// If this is the nonlinear objective constraint, we need to add the gradient for the mu variable at the end.
 	if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
 	{
 		auto tmpArray = getProblemInstance()->calculateObjectiveFunctionGradient(&point.at(0), -1, true);
-		processInfo->numGradientEvals++;
+		ProcessInfo::getInstance().numGradientEvals++;
+
 		number = getProblemInstance()->getVariableNumber();
-		tmpVector = new SparseVector(number);
 		std::vector<int> tmpIndexes;
 		std::vector<double> tmpValues;
 
@@ -110,6 +113,8 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 			}
 		}
 
+		tmpVector = new SparseVector(nonZeroVals + 1);
+
 		tmpIndexes.push_back(this->getNonlinearObjectiveVariableIdx());
 		tmpValues.push_back(-1);
 
@@ -118,28 +123,13 @@ SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 			tmpVector->indexes[i] = tmpIndexes.at(i);
 			tmpVector->values[i] = tmpValues.at(i);
 		}
-
-		delete tmpArray;
-
-		return tmpVector;
 	}
 	else
 	{
-		tmpVector = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
-		processInfo->numGradientEvals++;
-
-		number = tmpVector->number;
-
-		if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
-		{
-			for (int i = 0; i < number; i++)
-			{
-				tmpVector->values[i] = -tmpVector->values[i];
-			}
-		}
-
-		return tmpVector;
+		tmpVector = OptProblem::calculateConstraintFunctionGradient(idx, point);
 	}
+
+	return (tmpVector);
 }
 
 // For all objectives except the additional nonlinear objective constraint

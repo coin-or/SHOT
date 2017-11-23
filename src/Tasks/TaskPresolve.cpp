@@ -2,8 +2,7 @@
 
 TaskPresolve::TaskPresolve(IMILPSolver *MILPSolver)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	isPresolved = false;
 	this->MILPSolver = MILPSolver;
 }
@@ -15,9 +14,10 @@ TaskPresolve::~TaskPresolve()
 
 void TaskPresolve::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	auto strategy = static_cast<ES_PresolveStrategy>(settings->getIntSetting("PresolveStrategy", "Presolve"));
+	auto strategy = static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy",
+			"Presolve"));
 
 	if (!currIter->isMILP())
 	{
@@ -34,21 +34,22 @@ void TaskPresolve::run()
 	}
 
 	// Sets the iteration time limit
-	auto timeLim = settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
+	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")
+			- ProcessInfo::getInstance().getElapsedTime("Total");
 	MILPSolver->setTimeLimit(timeLim);
 
-	if (processInfo->primalSolutions.size() > 0)
+	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->setCutOff(processInfo->getPrimalBound());
+		MILPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
 	}
 
-	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolutions.size() > 0)
+	if (MILPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->addMIPStart(processInfo->primalSolution);
+		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
-	if (settings->getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")
-			|| settings->getBoolSetting("UsePresolveBoundsForMIP", "Presolve"))
+	if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")
+			|| Settings::getInstance().getBoolSetting("UsePresolveBoundsForMIP", "Presolve"))
 	{
 		MILPSolver->presolveAndUpdateBounds();
 		isPresolved = true;

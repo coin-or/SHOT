@@ -5,9 +5,6 @@ ILOSTLBEGIN
 
 MILPSolverCplex::MILPSolverCplex()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	discreteVariablesActivated = true;
 
 	cplexModel = IloModel(cplexEnv);
@@ -67,7 +64,8 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		}
 		else
 		{
-			processInfo->outputWarning("Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+			ProcessInfo::getInstance().outputWarning(
+					"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -217,21 +215,24 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setOut(cplexEnv.getNullStream());
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
-		cplexInstance.setParam(IloCplex::SolnPoolIntensity, settings->getIntSetting("SolnPoolIntensity", "CPLEX"));	// Don't use 3 with heuristics
-		cplexInstance.setParam(IloCplex::SolnPoolReplace, settings->getIntSetting("SolnPoolReplace", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
+				Settings::getInstance().getIntSetting("SolnPoolIntensity", "CPLEX"));	// Don't use 3 with heuristics
+		cplexInstance.setParam(IloCplex::SolnPoolReplace,
+				Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
 
 		//cplexInstance.setParam(IloCplex::RepairTries, 5);
 		//cplexInstance.setParam(IloCplex::HeurFreq,2);
 		//cplexInstance.setParam(IloCplex::AdvInd,2);
 
-		cplexInstance.setParam(IloCplex::SolnPoolGap, settings->getDoubleSetting("SolnPoolGap", "CPLEX"));
-		cplexInstance.setParam(IloCplex::SolnPoolCapacity, settings->getIntSetting("SolutionPoolSize", "MILP"));
+		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("SolnPoolGap", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
+				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
 
-		cplexInstance.setParam(IloCplex::Probe, settings->getIntSetting("Probe", "CPLEX"));
-		cplexInstance.setParam(IloCplex::MIPEmphasis, settings->getIntSetting("MIPEmphasis", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Probe", "CPLEX"));
+		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("MIPEmphasis", "CPLEX"));
 
-		cplexInstance.setParam(IloCplex::ParallelMode, settings->getIntSetting("ParallelMode", "CPLEX"));
-		cplexInstance.setParam(IloCplex::Threads, settings->getIntSetting("Threads", "CPLEX"));
+		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("ParallelMode", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("Threads", "CPLEX"));
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
@@ -300,7 +301,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 	}
 	catch (IloException& e)
 	{
-		processInfo->outputError("Error when adding linear constraint", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when adding linear constraint", e.getMessage());
 
 		return (-1);
 	}
@@ -309,12 +310,12 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 
 //std::cout << "Last nonlazy: " << this->firstNonLazyHyperplane << std::endl;
 
-//if (processInfo->getCurrentIteration()->iterationNumber == 10)
-//if (settings->getBoolSetting("DelayedConstraints", "MILP") && currIter->isMILP() && currIter->MILPSolutionLimitUpdated)
+//if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber == 10)
+//if (Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP") && currIter->isMILP() && currIter->MILPSolutionLimitUpdated)
 
-	if (processInfo->getCurrentIteration()->iterationNumber - iterLastLazyConvert > 10)
+	if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber - iterLastLazyConvert > 10)
 	{
-		//if (!processInfo->getCurrentIteration()->isMILP() || !(settings->getBoolSetting("DelayedConstraints", "MILP") && processInfo->getCurrentIteration()->MILPSolutionLimitUpdated))
+		//if (!ProcessInfo::getInstance().getCurrentIteration()->isMILP() || !(Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP") && ProcessInfo::getInstance().getCurrentIteration()->MILPSolutionLimitUpdated))
 		//{
 		std::vector<int> idxs;
 
@@ -324,7 +325,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 		 idxs.push_back(2);
 		 idxs.push_back(3);*/
 
-		int percentage = max(20.0, ceil(processInfo->getCurrentIteration()->numHyperplanesAdded * 0.05));
+		int percentage = max(20.0, ceil(ProcessInfo::getInstance().getCurrentIteration()->numHyperplanesAdded * 0.05));
 
 		//std::cout << "perc: " << percentage << std::endl;
 
@@ -366,7 +367,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 			//changeConstraintsToLazy(idxs);
 
 			this->firstNonLazyHyperplane = idxs.at(idxs.size() - 1) + 1;
-			iterLastLazyConvert = processInfo->getCurrentIteration()->iterationNumber;
+			iterLastLazyConvert = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
 			lastLazyUpdateConstrSlacks = lastSolutionConstrSlacks;
 		}
 		//}
@@ -431,7 +432,8 @@ void MILPSolverCplex::activateDiscreteVariables(bool activate)
 	}
 	catch (IloException& e)
 	{
-		if (activate) processInfo->outputError("Error when activating discrete variables", e.getMessage());
+		if (activate) ProcessInfo::getInstance().outputError("Error when activating discrete variables",
+				e.getMessage());
 	}
 }
 
@@ -480,18 +482,18 @@ E_ProblemSolutionStatus MILPSolverCplex::getSolutionStatus()
 		}
 		else if (status == IloAlgorithm::Status::Unknown)
 		{
-			processInfo->outputError("MILP solver return status " + to_string(status) + " (unknown)");
+			ProcessInfo::getInstance().outputError("MILP solver return status " + to_string(status) + " (unknown)");
 			MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 		}
 		else
 		{
-			processInfo->outputError("MILP solver return status " + to_string(status));
+			ProcessInfo::getInstance().outputError("MILP solver return status " + to_string(status));
 			MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when obtaining solution status", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when obtaining solution status", e.getMessage());
 
 	}
 
@@ -511,7 +513,7 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 		{
 			cplexInstance.extract(cplexModel);
 
-			if (settings->getBoolSetting("UseLazyConstraints", "MILP"))
+			if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
 			{
 				//Extract the model if we have updated the constraints
 				cplexInstance.extract(cplexModel);
@@ -519,27 +521,27 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 
 				if (cplexLazyConstrs.getSize() > 0)
 				{
-					processInfo->startTimer("LazyChange");
+					ProcessInfo::getInstance().startTimer("LazyChange");
 					cplexInstance.addLazyConstraints(cplexLazyConstrs);
 
-					processInfo->outputSummary("     Readded lazy constraints to model.");
+					ProcessInfo::getInstance().outputSummary("     Readded lazy constraints to model.");
 
-					processInfo->stopTimer("LazyChange");
+					ProcessInfo::getInstance().stopTimer("LazyChange");
 				}
 			}
 
 			modelUpdated = false;
 		}
 
-		double timeStart = processInfo->getElapsedTime("Total");
+		double timeStart = ProcessInfo::getInstance().getElapsedTime("Total");
 
 		cplexInstance.solve();
-		double timeEnd = processInfo->getElapsedTime("Total");
+		double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
 
 		iterDurations.push_back(timeEnd - timeStart);
 		MILPSolutionStatus = getSolutionStatus();
 
-		/*if (!processInfo->getCurrentIteration()->isMILP())
+		/*if (!ProcessInfo::getInstance().getCurrentIteration()->isMILP())
 		 {
 
 		 auto numVar = originalProblem->getNumberOfVariables();
@@ -560,7 +562,7 @@ E_ProblemSolutionStatus MILPSolverCplex::solveProblem()
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when solving MILP/LP problem", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when solving MILP/LP problem", e.getMessage());
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -580,7 +582,7 @@ int MILPSolverCplex::increaseSolutionLimit(int increment)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when increasing solution limit", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when increasing solution limit", e.getMessage());
 	}
 
 	return (sollim);
@@ -595,7 +597,7 @@ void MILPSolverCplex::setSolutionLimit(int limit)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when setting solution limit", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when setting solution limit", e.getMessage());
 	}
 }
 
@@ -609,7 +611,7 @@ int MILPSolverCplex::getSolutionLimit()
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when obtaining solution limit", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when obtaining solution limit", e.getMessage());
 	}
 
 	return (solLim);
@@ -617,7 +619,7 @@ int MILPSolverCplex::getSolutionLimit()
 
 std::vector<double> MILPSolverCplex::getVariableSolution(int solIdx)
 {
-	bool isMILP = getDiscreteVariableStatus();
+	bool isMILP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 	int numVar = cplexVars.getSize();
 	std::vector<double> solution(numVar);
 
@@ -641,7 +643,8 @@ std::vector<double> MILPSolverCplex::getVariableSolution(int solIdx)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when reading solution with index " + to_string(solIdx), e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
+				e.getMessage());
 	}
 
 	return (solution);
@@ -654,12 +657,19 @@ int MILPSolverCplex::getNumberOfSolutions()
 
 	try
 	{
-		if (isMILP) numSols = cplexInstance.getSolnPoolNsolns();
-		else numSols = 1;
+		if (ProcessInfo::getInstance().originalProblem->isProblemDiscrete() && isMILP)
+		{
+			numSols = cplexInstance.getSolnPoolNsolns();
+		}
+		else
+		{
+			numSols = 1;
+		}
+
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when obtaining number of solutions", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when obtaining number of solutions", e.getMessage());
 	}
 
 	return (numSols);
@@ -667,13 +677,13 @@ int MILPSolverCplex::getNumberOfSolutions()
 
 double MILPSolverCplex::getObjectiveValue(int solIdx)
 {
-	bool isMILP = getDiscreteVariableStatus();
+	bool isMILP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 
 	double objVal = NAN;
 
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
-		processInfo->outputError(
+		ProcessInfo::getInstance().outputError(
 				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 		return (objVal);
 	}
@@ -687,23 +697,21 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 		else
 		{
 			objVal = cplexInstance.getObjValue();
-
 		}
 
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (objVal);
-
 }
 
 void MILPSolverCplex::populateSolutionPool()
 {
-	processInfo->startTimer("PopulateSolutionPool");
+	ProcessInfo::getInstance().startTimer("PopulateSolutionPool");
 	double initialPopulateTimeLimit = 0.5;
 	double timeLimitIncreaseFactor = 2.0;
 
@@ -711,7 +719,7 @@ void MILPSolverCplex::populateSolutionPool()
 	{
 		int poolSizeBefore = cplexInstance.getSolnPoolNsolns();
 
-		if (processInfo->getCurrentIteration()->iterationNumber == 0)
+		if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber == 0)
 		{
 			setTimeLimit(initialPopulateTimeLimit);
 		}
@@ -725,7 +733,7 @@ void MILPSolverCplex::populateSolutionPool()
 			setTimeLimit(newTimeLimit);
 		}
 
-		double newSolnPoolGap = min(1.0e+75, processInfo->getAbsoluteObjectiveGap());
+		double newSolnPoolGap = min(1.0e+75, ProcessInfo::getInstance().getAbsoluteObjectiveGap());
 		cplexInstance.setParam(IloCplex::SolnPoolGap, newSolnPoolGap);
 
 		cplexInstance.populate();
@@ -734,19 +742,19 @@ void MILPSolverCplex::populateSolutionPool()
 
 		if (poolSizeAfter > poolSizeBefore)
 		{
-			processInfo->outputInfo(
+			ProcessInfo::getInstance().outputInfo(
 					"     Solution pool populated from: " + to_string(poolSizeBefore) + " to "
 							+ to_string(poolSizeAfter));
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when populating solution pool", e.getMessage());
-		processInfo->stopTimer("PopulateSolutionPool");
+		ProcessInfo::getInstance().outputError("Error when populating solution pool", e.getMessage());
+		ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
 
 	}
 
-	processInfo->stopTimer("PopulateSolutionPool");
+	ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
 }
 
 void MILPSolverCplex::setTimeLimit(double seconds)
@@ -764,7 +772,7 @@ void MILPSolverCplex::setTimeLimit(double seconds)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when setting time limit", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when setting time limit", e.getMessage());
 	}
 }
 
@@ -776,17 +784,19 @@ void MILPSolverCplex::setCutOff(double cutOff)
 		{
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
-			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
 			cplexInstance.setParam(IloCplex::CutLo, cutOff);
-			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when setting cut off value", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when setting cut off value", e.getMessage());
 	}
 }
 
@@ -808,10 +818,10 @@ void MILPSolverCplex::addMIPStart(std::vector<double> point)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->outputInfo("     Added MIP starting point.");
+	ProcessInfo::getInstance().outputInfo("     Added MIP starting point.");
 }
 
 void MILPSolverCplex::deleteMIPStarts()
@@ -827,10 +837,10 @@ void MILPSolverCplex::deleteMIPStarts()
 		}
 		catch (IloException &e)
 		{
-			processInfo->outputError("Error when deleting MIP starting points", e.getMessage());
+			ProcessInfo::getInstance().outputError("Error when deleting MIP starting points", e.getMessage());
 		}
 
-		processInfo->outputDebug("    Deleted " + to_string(numStarts) + " MIP starting points.");
+		ProcessInfo::getInstance().outputDebug("    Deleted " + to_string(numStarts) + " MIP starting points.");
 	}
 }
 
@@ -851,7 +861,7 @@ void MILPSolverCplex::writeProblemToFile(std::string filename)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when saving model to file", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when saving model to file", e.getMessage());
 	}
 }
 
@@ -869,20 +879,20 @@ void MILPSolverCplex::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
 			cplexLazyConstrs.add(tmpRange);
 			modelUpdated = true;
 			hyperplane.isLazy = true;
-			hyperplane.convertedToLazyIter = processInfo->getCurrentIteration()->iterationNumber;
+			hyperplane.convertedToLazyIter = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
 
-			processInfo->outputInfo(
+			ProcessInfo::getInstance().outputInfo(
 					"     Changed constraint " + to_string(hyperplane.generatedConstraintIndex)
 							+ "generated in iteration" + to_string(hyperplane.generatedIter) + "to lazy.");
 		}
 		catch (IloException &e)
 		{
-			processInfo->outputError("Error when changing constraint type to lazy", e.getMessage());
+			ProcessInfo::getInstance().outputError("Error when changing constraint type to lazy", e.getMessage());
 		}
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError(e.getMessage());
+		ProcessInfo::getInstance().outputError(e.getMessage());
 	}
 }
 
@@ -900,8 +910,8 @@ void MILPSolverCplex::updateVariableBound(int varIndex, double lowerBound, doubl
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when updating variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 }
 
@@ -916,8 +926,8 @@ pair<double, double> MILPSolverCplex::getCurrentVariableBounds(int varIndex)
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when obtaining variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 	return (tmpBounds);
 }
@@ -944,7 +954,7 @@ double MILPSolverCplex::getDualObjectiveValue()
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when obtaining dual objective value", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when obtaining dual objective value", e.getMessage());
 	}
 
 	return (objVal);
@@ -977,7 +987,7 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 			newUBs.push_back(redubs[i]);
 		}
 
-		if (settings->getBoolSetting("RemoveRedundantConstraintsFromMIP", "Presolve"))
+		if (Settings::getInstance().getBoolSetting("RemoveRedundantConstraintsFromMIP", "Presolve"))
 		{
 			int numconstr = 0;
 
@@ -996,9 +1006,9 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 			if (isUpdated)
 			{
 				cplexInstance.extract(cplexModel);
-				processInfo->outputInfo(
+				ProcessInfo::getInstance().outputInfo(
 						"     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
-				processInfo->numConstraintsRemovedInPresolve = numconstr;
+				ProcessInfo::getInstance().numConstraintsRemovedInPresolve = numconstr;
 			}
 		}
 
@@ -1007,7 +1017,7 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error during presolve", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error during presolve", e.getMessage());
 
 		return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 	}
@@ -1017,11 +1027,11 @@ void MILPSolverCplex::writePresolvedToFile(std::string filename)
 {
 	try
 	{
-		//Not implemented
+//Not implemented
 	}
 	catch (IloException &e)
 	{
-		processInfo->outputError("Error when saving presolved model to file", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when saving presolved model to file", e.getMessage());
 	}
 }
 

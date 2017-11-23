@@ -9,8 +9,7 @@
 
 TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
@@ -20,18 +19,18 @@ TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
 
 void TaskSelectHyperplanePointsSolution::run()
 {
-	this->run(processInfo->getPreviousIteration()->solutionPoints);
+	this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
 }
 
 void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 {
 	int addedHyperplanes = 0;
 
-	auto currIter = processInfo->getCurrentIteration(); // The unsolved new iteration
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	auto originalProblem = processInfo->originalProblem;
+	auto originalProblem = ProcessInfo::getInstance().originalProblem;
 
-	auto constrSelFactor = settings->getDoubleSetting("LinesearchConstraintSelectionFactor", "ECP");
+	auto constrSelFactor = Settings::getInstance().getDoubleSetting("LinesearchConstraintSelectionFactor", "ECP");
 
 	for (int i = 0; i < solPoints.size(); i++)
 	{
@@ -39,11 +38,11 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 
 		for (int j = 0; j < tmpMostDevConstrs.size(); j++)
 		{
-			if (addedHyperplanes >= settings->getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+			if (addedHyperplanes >= Settings::getInstance().getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
 
 			if (tmpMostDevConstrs.at(j).value < 0)
 			{
-				processInfo->outputWarning("LP point is in the interior!");
+				ProcessInfo::getInstance().outputWarning("LP point is in the interior!");
 			}
 			else
 			{
@@ -64,7 +63,7 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 					hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
 				}
 
-				processInfo->hyperplaneWaitingList.push_back(hyperplane);
+				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 
 				addedHyperplanes++;
 			}

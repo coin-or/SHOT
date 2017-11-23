@@ -10,8 +10,7 @@
 TaskSwitchToLazyConstraints::TaskSwitchToLazyConstraints(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSwitchToLazyConstraints::~TaskSwitchToLazyConstraints()
@@ -23,12 +22,12 @@ void TaskSwitchToLazyConstraints::run()
 {
 
 	auto genHyperplanes = MILPSolver->getGeneratedHyperplanes();
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (!currIter->isMILP()) return;
 	if (currIter->MILPSolutionLimitUpdated) return;
 
-	processInfo->startTimer("LazyChange");
+	ProcessInfo::getInstance().startTimer("LazyChange");
 
 	for (int i = 0; i < genHyperplanes->size(); i++)
 	{
@@ -59,7 +58,7 @@ void TaskSwitchToLazyConstraints::run()
 				genHyperplanes->at(i));
 
 	}
-	processInfo->stopTimer("LazyChange");
+	ProcessInfo::getInstance().stopTimer("LazyChange");
 
 }
 std::string TaskSwitchToLazyConstraints::getType()

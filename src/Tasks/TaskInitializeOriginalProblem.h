@@ -22,7 +22,5 @@ class TaskInitializeOriginalProblem: public TaskBase
 		OptProblemOriginal *problem;
 		OSInstance * instance;
 
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 };
 

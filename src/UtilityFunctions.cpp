@@ -76,6 +76,29 @@ void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<dou
 	std::cout << str.str() << std::endl;
 }
 
+void UtilityFunctions::displayDifferencesInVector(std::vector<double> point1, std::vector<double> point2, double tol)
+{
+	std::stringstream str;
+
+	if (point1.size() != point2.size()) return;
+
+	for (int i = 0; i < point1.size(); i++)
+	{
+		if (std::abs(point1.at(i) - point2.at(i)) > tol)
+		{
+			str << i;
+			str << "\t";
+			str << point1.at(i);
+
+			str << "\t";
+			str << point2.at(i);
+			str << std::endl;
+		}
+	}
+
+	std::cout << str.str() << std::endl;
+}
+
 void UtilityFunctions::displayVector(std::vector<int> point)
 {
 	std::stringstream str;

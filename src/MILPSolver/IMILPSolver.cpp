@@ -2,11 +2,11 @@
 #include "OSInstance.h"
 
 /*
-IMILPSolver::IMILPSolver()
-{
-}
+ IMILPSolver::IMILPSolver()
+ {
+ }
 
-IMILPSolver::~IMILPSolver()
-{
-}
-*/
+ IMILPSolver::~IMILPSolver()
+ {
+ }
+ */

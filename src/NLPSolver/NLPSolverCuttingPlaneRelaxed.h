@@ -8,7 +8,6 @@
 #pragma once
 
 #include "NLPSolverBase.h"
-#include "../OptProblems/OptProblemNLPSHOTMinimax.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 #include "../MILPSolver/MILPSolverCplex.h"
 #include "../MILPSolver/MILPSolverGurobi.h"
@@ -33,9 +32,6 @@ class NLPSolverCuttingPlaneRelaxed: virtual public NLPSolverBase
 		virtual std::vector<double> getCurrentVariableUpperBounds();
 
 	private:
-
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 
 		IMILPSolver *LPSolver;
 

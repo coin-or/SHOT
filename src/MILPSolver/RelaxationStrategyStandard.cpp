@@ -3,9 +3,6 @@
 RelaxationStrategyStandard::RelaxationStrategyStandard(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 }
 
 RelaxationStrategyStandard::~RelaxationStrategyStandard()
@@ -16,8 +13,8 @@ void RelaxationStrategyStandard::setInitial()
 {
 	LPFinished = false;
 
-	if (settings->getIntSetting("IterLimitLP", "Algorithm") > 0
-			&& settings->getDoubleSetting("TimeLimitLP", "Algorithm") > 0)
+	if (Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm") > 0
+			&& Settings::getInstance().getDoubleSetting("TimeLimitLP", "Algorithm") > 0)
 	{
 		this->setActive();
 	}
@@ -29,11 +26,10 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
-	int iterInterval = settings->getIntSetting("IterSolveLPRelaxation", "Algorithm");
-	if (iterInterval != 0 && processInfo->getCurrentIteration()->iterationNumber % iterInterval == 0)
+	int iterInterval = Settings::getInstance().getIntSetting("IterSolveLPRelaxation", "Algorithm");
+	if (iterInterval != 0 && ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % iterInterval == 0)
 	{
 		return (this->setActive());
-
 	}
 
 	if (isLPStepFinished() || isCurrentToleranceReached() || isGapReached() || isIterationLimitReached()
@@ -51,12 +47,11 @@ void RelaxationStrategyStandard::setActive()
 {
 	if (MILPSolver->getDiscreteVariableStatus())
 	{
-		processInfo->stopTimer("MILP");
-		processInfo->startTimer("LP");
+		ProcessInfo::getInstance().stopTimer("MILP");
+		ProcessInfo::getInstance().startTimer("LP");
 		MILPSolver->activateDiscreteVariables(false);
 
-		processInfo->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
-
+		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::Relaxed;
 	}
 }
 
@@ -64,11 +59,11 @@ void RelaxationStrategyStandard::setInactive()
 {
 	if (!MILPSolver->getDiscreteVariableStatus())
 	{
-		processInfo->stopTimer("LP");
-		processInfo->startTimer("MILP");
+		ProcessInfo::getInstance().stopTimer("LP");
+		ProcessInfo::getInstance().startTimer("MILP");
 		MILPSolver->activateDiscreteVariables(true);
 
-		processInfo->getCurrentIteration()->type = E_IterationProblemType::MIP;
+		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
 
 		LPFinished = true;
 
@@ -85,9 +80,9 @@ E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 
 bool RelaxationStrategyStandard::isIterationLimitReached()
 {
-	auto prevIter = processInfo->getPreviousIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (prevIter->iterationNumber < settings->getIntSetting("IterLimitLP", "Algorithm"))
+	if (prevIter->iterationNumber < Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm"))
 	{
 		return (false);
 	}
@@ -97,7 +92,8 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-	if (processInfo->getElapsedTime("LP") < settings->getDoubleSetting("TimeLimitLP", "Algorithm"))
+	if (ProcessInfo::getInstance().getElapsedTime("LP")
+			< Settings::getInstance().getDoubleSetting("TimeLimitLP", "Algorithm"))
 	{
 		return (false);
 	}
@@ -115,11 +111,11 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
 	int numSteps = 10;
 
-	auto prevIter = processInfo->getPreviousIteration();
+	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
 	if (prevIter->iterationNumber < numSteps) return (false);
 
-	auto prevIter2 = &processInfo->iterations[prevIter->iterationNumber - numSteps];
+	auto prevIter2 = &ProcessInfo::getInstance().iterations[prevIter->iterationNumber - numSteps];
 
 //TODO: should be substituted with parameter
 	if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001) return (true);

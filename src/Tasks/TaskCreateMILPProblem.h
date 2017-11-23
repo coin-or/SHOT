@@ -22,9 +22,6 @@ class TaskCreateMILPProblem: public TaskBase
 
 	private:
 
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
-
 		IMILPSolver *MILPSolver;
 };
 

@@ -5,7 +5,6 @@
 #include "Iteration.h"
 #include "Timer.h"
 
-
 #include "UtilityFunctions.h"
 
 // Used for OSOutput
@@ -75,8 +74,6 @@ struct Hyperplane
 class ProcessInfo
 {
 	public:
-		static ProcessInfo* getInstance();
-
 		OSResult *osResult;
 		OptProblemOriginal *originalProblem;
 
@@ -86,11 +83,6 @@ class ProcessInfo
 		TaskHandler *tasks;
 
 		void initializeResults(int numObj, int numVar, int numConstr);
-
-		~ProcessInfo()
-		{
-			instanceFlag = false;
-		}
 
 		vector<double> primalSolution; // TODO remove
 		//double lastObjectiveValue; // TODO remove
@@ -196,7 +188,7 @@ class ProcessInfo
 
 		void createIteration();
 
-		std::vector<InteriorPoint> interiorPts;
+		std::vector<shared_ptr<InteriorPoint>> interiorPts;
 
 		std::vector<Hyperplane> hyperplaneWaitingList;
 
@@ -217,10 +209,17 @@ class ProcessInfo
 		void outputDetailedTrace(std::string message);
 
 		ILinesearchMethod *linesearchMethod;
+
+		~ProcessInfo();
+
+		static ProcessInfo& getInstance()
+		{
+			static ProcessInfo inst;
+			return (inst);
+		}
+
 	private:
-		static bool instanceFlag;
-		static ProcessInfo *single;
-		SHOTSettings::Settings *settings;
+
 		bool objectiveUpdatedByLinesearch;
 
 		bool checkPrimalSolutionPoint(PrimalSolution primalSol);

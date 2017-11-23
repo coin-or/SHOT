@@ -9,8 +9,7 @@
 
 TaskCheckIterationLimit::TaskCheckIterationLimit(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 
@@ -21,14 +20,14 @@ TaskCheckIterationLimit::~TaskCheckIterationLimit()
 
 void TaskCheckIterationLimit::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->iterationNumber
-			>= settings->getIntSetting("IterLimitLP", "Algorithm")
-					+ settings->getIntSetting("IterLimitMILP", "Algorithm"))
+			>= Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm")
+					+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm"))
 	{
-		processInfo->terminationReason = E_TerminationReason::IterationLimit;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::IterationLimit;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

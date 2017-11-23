@@ -41,6 +41,8 @@ namespace UtilityFunctions
 	void displayVector(std::vector<std::vector<int>> points);
 	void displayVector(std::vector<std::vector<std::string>> points);
 
+	void displayDifferencesInVector(std::vector<double> point1, std::vector<double> point2, double tol);
+
 	double L2Norm(std::vector<double> ptA, std::vector<double> ptB);
 	std::vector<double> L2Norms(std::vector<std::vector<double>> ptsA, std::vector<double> ptB);
 	std::vector<double> calculateCenterPoint(std::vector<std::vector<double>> pts);

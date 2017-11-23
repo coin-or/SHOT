@@ -3,25 +3,24 @@
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
-	if (settings->getIntSetting("RelaxationStrategy", "Algorithm") == static_cast<int>(ES_RelaxationStrategy::Adaptive))
+	if (Settings::getInstance().getIntSetting("RelaxationStrategy", "Algorithm")
+			== static_cast<int>(ES_RelaxationStrategy::Adaptive))
 	{
 		relaxationStrategy = new RelaxationStrategyAdaptive(this->MILPSolver);
 	}
-	else if (settings->getIntSetting("RelaxationStrategy", "Algorithm")
+	else if (Settings::getInstance().getIntSetting("RelaxationStrategy", "Algorithm")
 			== static_cast<int>(ES_RelaxationStrategy::Standard))
 	{
 		relaxationStrategy = new RelaxationStrategyStandard(this->MILPSolver);
 	}
-	else if (settings->getIntSetting("RelaxationStrategy", "Algorithm")
+	else if (Settings::getInstance().getIntSetting("RelaxationStrategy", "Algorithm")
 			== static_cast<int>(ES_RelaxationStrategy::None))
 	{
 		relaxationStrategy = new RelaxationStrategyNone(this->MILPSolver);
 	}
 
-	processInfo->relaxationStrategy = relaxationStrategy;
+	ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
 
 	isInitialized = false;
 
@@ -41,7 +40,6 @@ void TaskExecuteRelaxationStrategy::run()
 	}
 	else
 	{
-
 		relaxationStrategy->executeStrategy();
 	}
 }

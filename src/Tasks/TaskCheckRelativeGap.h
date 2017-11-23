@@ -20,6 +20,5 @@ class TaskCheckRelativeGap: public TaskBase
 
 	private:
 		std::string taskIDIfTrue;
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+
 };

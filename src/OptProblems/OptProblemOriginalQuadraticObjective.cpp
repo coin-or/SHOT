@@ -18,11 +18,11 @@ bool OptProblemOriginalQuadraticObjective::setProblem(OSInstance *instance)
 
 	if (this->getNonlinearConstraintIndexes().size() == 0)
 	{
-		settings->updateSetting("IterLimitLP", "Algorithm", 0);
-		settings->updateSetting("MILPSolLimitInitial", "MILP", 1000);
+		Settings::getInstance().updateSetting("IterLimitLP", "Algorithm", 0);
+		Settings::getInstance().updateSetting("MILPSolLimitInitial", "MILP", 1000);
 	}
 
-	processInfo->setOriginalProblem(this);
+	ProcessInfo::getInstance().setOriginalProblem(this);
 
 	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

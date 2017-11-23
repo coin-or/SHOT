@@ -10,8 +10,7 @@
 TaskSolveIteration::TaskSolveIteration(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSolveIteration::~TaskSolveIteration()
@@ -21,33 +20,46 @@ TaskSolveIteration::~TaskSolveIteration()
 
 void TaskSolveIteration::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+
+	bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
 	// Sets the iteration time limit
-	auto timeLim = settings->getDoubleSetting("TimeLimit", "Algorithm") - processInfo->getElapsedTime("Total");
+	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")
+			- ProcessInfo::getInstance().getElapsedTime("Total");
 	MILPSolver->setTimeLimit(timeLim);
 
-	if (processInfo->primalSolutions.size() > 0)
+	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->setCutOff(processInfo->getPrimalBound());
+		if (isMinimization)
+		{
+			MILPSolver->setCutOff(
+					ProcessInfo::getInstance().getPrimalBound()
+							+ Settings::getInstance().getDoubleSetting("CutOffTolerance", "MILP"));
+		}
+		else
+		{
+			MILPSolver->setCutOff(
+					ProcessInfo::getInstance().getPrimalBound()
+							- Settings::getInstance().getDoubleSetting("CutOffTolerance", "MILP"));
+		}
 	}
 
-	if (settings->getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP")
+	if (Settings::getInstance().getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP")
 			&& !currIter->MILPSolutionLimitUpdated)
 	{
 		MILPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
 	}
 
-	if (MILPSolver->getDiscreteVariableStatus() && processInfo->primalSolutions.size() > 0)
+	if (MILPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		//MILPSolver->deleteMIPStarts();
-		MILPSolver->addMIPStart(processInfo->primalSolution);
+		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
-	if (settings->getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		stringstream ss;
-		ss << settings->getStringSetting("DebugPath", "SHOTSolver");
+		ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
 		ss << "/lp";
 		ss << currIter->iterationNumber - 1;
 		ss << ".lp";
@@ -70,14 +82,56 @@ void TaskSolveIteration::run()
 
 		if (sols.size() > 0)
 		{
+			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			{
+				stringstream ss;
+				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << "/lpsolpt";
+				ss << currIter->iterationNumber - 1;
+				ss << ".txt";
+				UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point,
+						ProcessInfo::getInstance().originalProblem->getVariableNames(), ss.str());
+			}
+
 			currIter->objectiveValue = MILPSolver->getObjectiveValue();
 
-			auto mostDevConstr = processInfo->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
+			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			{
+				std::vector<double> tmpObjValue;
+				std::vector < std::string > tmpObjName;
+
+				tmpObjValue.push_back(MILPSolver->getObjectiveValue());
+				tmpObjName.push_back("objective");
+
+				stringstream ss;
+				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << "/lpobjsol";
+				ss << currIter->iterationNumber - 1;
+				ss << ".txt";
+				UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
+			}
+
+			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+					sols.at(0).point);
 
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
 			currIter->maxDeviation = mostDevConstr.value;
 
-			bool isMinimization = processInfo->originalProblem->isTypeOfObjectiveMinimize();
+			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			{
+				std::vector<double> tmpMostDevValue;
+				std::vector < std::string > tmpConstrIndex;
+
+				tmpMostDevValue.push_back(mostDevConstr.value);
+				tmpConstrIndex.push_back(std::to_string(mostDevConstr.idx));
+
+				stringstream ss;
+				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << "/lpmostdevm";
+				ss << currIter->iterationNumber - 1;
+				ss << ".txt";
+				UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+			}
 
 			if (currIter->isMILP() && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
 			{
@@ -86,7 +140,7 @@ void TaskSolveIteration::run()
 				DualSolution sol =
 				{ sols.at(0).point, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound,
 						currIter->iterationNumber };
-				processInfo->addDualSolutionCandidate(sol);
+				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}
 
 			if (currIter->isMILP() && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
@@ -94,7 +148,7 @@ void TaskSolveIteration::run()
 				DualSolution sol =
 				{ sols.at(0).point, E_DualSolutionSource::MILPSolutionOptimal, currIter->objectiveValue,
 						currIter->iterationNumber };
-				processInfo->addDualSolutionCandidate(sol);
+				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}
 
 			if (!currIter->isMILP()) // Have a dual solution
@@ -102,7 +156,7 @@ void TaskSolveIteration::run()
 				DualSolution sol =
 				{ sols.at(0).point, E_DualSolutionSource::LPSolution, currIter->objectiveValue,
 						currIter->iterationNumber };
-				processInfo->addDualSolutionCandidate(sol);
+				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}
 		}
 	}
@@ -112,38 +166,37 @@ void TaskSolveIteration::run()
 // Update solution stats
 	if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 	{
-		if (processInfo->originalProblem->isConstraintQuadratic(-1))
+		if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
 		{
-			processInfo->iterOptMIQP = processInfo->iterOptMIQP + 1;
+			ProcessInfo::getInstance().iterOptMIQP = ProcessInfo::getInstance().iterOptMIQP + 1;
 		}
 		else
 		{
-			processInfo->iterOptMILP = processInfo->iterOptMILP + 1;
+			ProcessInfo::getInstance().iterOptMILP = ProcessInfo::getInstance().iterOptMILP + 1;
 		}
 	}
 	else if (currIter->type == E_IterationProblemType::Relaxed)
 	{
-		if (processInfo->originalProblem->isConstraintQuadratic(-1))
+		if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
 		{
-			processInfo->iterQP = processInfo->iterQP + 1;
+			ProcessInfo::getInstance().iterQP = ProcessInfo::getInstance().iterQP + 1;
 		}
 		else
 		{
-			processInfo->iterLP = processInfo->iterLP + 1;
+			ProcessInfo::getInstance().iterLP = ProcessInfo::getInstance().iterLP + 1;
 		}
-
 	}
 	else if (currIter->type == E_IterationProblemType::MIP
 			&& (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
 					|| currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit))
 	{
-		if (processInfo->originalProblem->isConstraintQuadratic(-1))
+		if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
 		{
-			processInfo->iterFeasMIQP = processInfo->iterFeasMIQP + 1;
+			ProcessInfo::getInstance().iterFeasMIQP = ProcessInfo::getInstance().iterFeasMIQP + 1;
 		}
 		else
 		{
-			processInfo->iterFeasMILP = processInfo->iterFeasMILP + 1;
+			ProcessInfo::getInstance().iterFeasMILP = ProcessInfo::getInstance().iterFeasMILP + 1;
 		}
 	}
 }

@@ -17,6 +17,4 @@ class TaskInitializeLinesearch: public TaskBase
 	private:
 		ILinesearchMethod *linesearchMethod;
 
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 };

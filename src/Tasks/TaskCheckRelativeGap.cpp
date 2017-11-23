@@ -9,8 +9,7 @@
 
 TaskCheckRelativeGap::TaskCheckRelativeGap(std::string taskIDTrue)
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 	taskIDIfTrue = taskIDTrue;
 }
 TaskCheckRelativeGap::~TaskCheckRelativeGap()
@@ -20,10 +19,10 @@ TaskCheckRelativeGap::~TaskCheckRelativeGap()
 
 void TaskCheckRelativeGap::run()
 {
-	if (processInfo->isRelativeObjectiveGapToleranceMet())
+	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 	{
-		processInfo->terminationReason = E_TerminationReason::RelativeGap;
-		processInfo->tasks->setNextTask(taskIDIfTrue);
+		ProcessInfo::getInstance().terminationReason = E_TerminationReason::RelativeGap;
+		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

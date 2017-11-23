@@ -5,9 +5,6 @@ GRBModel *gurobiModel;
 
 MILPSolverGurobi::MILPSolverGurobi()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
 	discreteVariablesActivated = true;
 
 	gurobiEnv = new GRBEnv();
@@ -65,7 +62,7 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			}
 			else
 			{
-				processInfo->outputWarning(
+				ProcessInfo::getInstance().outputWarning(
 						"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 			}
 		}
@@ -236,7 +233,7 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 	catch (GRBException &e)
 	{
 		{
-			processInfo->outputError("Error when creating linear problem:", e.getMessage());
+			ProcessInfo::getInstance().outputError("Error when creating linear problem:", e.getMessage());
 		}
 
 		return (false);
@@ -256,12 +253,14 @@ void MILPSolverGurobi::initializeSolverSettings()
 		//gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, 2100000000);
-		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, settings->getIntSetting("SolutionPoolSize", "MILP") + 1);
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber,
+				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP") + 1);
 	}
 	catch (GRBException &e)
 	{
 		{
-			processInfo->outputError("Error when initializing parameters for linear solver", e.getMessage());
+			ProcessInfo::getInstance().outputError("Error when initializing parameters for linear solver",
+					e.getMessage());
 		}
 	}
 }
@@ -278,7 +277,7 @@ int MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, 
 			*expr = *expr + elements.at(i).value * variable;
 		}
 
-		/*if (settings->getBoolSetting("UseLazyConstraints", "MILP")) // Not implemented yet in Gurobi
+		/*if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP")) // Not implemented yet in Gurobi
 		 {
 		 if (discreteVariablesActivated)
 		 {
@@ -307,7 +306,7 @@ int MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, 
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when adding linear constraint", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when adding linear constraint", e.getMessage());
 
 		return (-1);
 
@@ -346,7 +345,8 @@ std::vector<double> MILPSolverGurobi::getVariableSolution(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when reading solution with index " + to_string(solIdx), e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
+				e.getMessage());
 	}
 
 	return (solution);
@@ -368,7 +368,7 @@ void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 
 	if (activate)
 	{
-		processInfo->outputSummary("Activating MILP strategy.");
+		ProcessInfo::getInstance().outputSummary("Activating MILP strategy.");
 
 		for (int i = 0; i < numVar; i++)
 		{
@@ -390,7 +390,7 @@ void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 	}
 	else
 	{
-		processInfo->outputSummary("Activating LP strategy.");
+		ProcessInfo::getInstance().outputSummary("Activating LP strategy.");
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -476,7 +476,7 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 //}
 	else
 	{
-		processInfo->outputError("MILP solver return status " + to_string(status));
+		ProcessInfo::getInstance().outputError("MILP solver return status " + to_string(status));
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -496,7 +496,7 @@ E_ProblemSolutionStatus MILPSolverGurobi::solveProblem()
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when solving MILP/LP problem", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when solving MILP/LP problem", e.getMessage());
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -537,7 +537,7 @@ void MILPSolverGurobi::setTimeLimit(double seconds)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when setting time limit", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when setting time limit", e.getMessage());
 	}
 
 }
@@ -551,16 +551,18 @@ void MILPSolverGurobi::setCutOff(double cutOff)
 
 		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
-			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
-			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when setting cut off value", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when setting cut off value", e.getMessage());
 	}
 }
 
@@ -580,10 +582,10 @@ void MILPSolverGurobi::addMIPStart(std::vector<double> point)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when adding MIP starting point", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
-	processInfo->outputInfo("      Added MIP starting point.");
+	ProcessInfo::getInstance().outputInfo("      Added MIP starting point.");
 }
 
 void MILPSolverGurobi::writeProblemToFile(std::string filename)
@@ -594,7 +596,7 @@ void MILPSolverGurobi::writeProblemToFile(std::string filename)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when saving model to file", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when saving model to file", e.getMessage());
 	}
 }
 
@@ -606,7 +608,7 @@ double MILPSolverGurobi::getObjectiveValue(int solIdx)
 
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
-		processInfo->outputError(
+		ProcessInfo::getInstance().outputError(
 				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
 		return (objVal);
@@ -643,8 +645,8 @@ double MILPSolverGurobi::getObjectiveValue(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (objVal);
@@ -672,10 +674,10 @@ void MILPSolverGurobi::deleteMIPStarts()
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when deleting MIP starting points", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when deleting MIP starting points", e.getMessage());
 	}
 
-	processInfo->outputDebug("    Deleted MIP starting points.");
+	ProcessInfo::getInstance().outputDebug("    Deleted MIP starting points.");
 }
 
 void MILPSolverGurobi::populateSolutionPool()
@@ -700,8 +702,8 @@ void MILPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doub
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when updating variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 }
 
@@ -720,8 +722,8 @@ pair<double, double> MILPSolverGurobi::getCurrentVariableBounds(int varIndex)
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when obtaining variable bounds for variable index" + to_string(varIndex),
-				e.getMessage());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 
 	return (tmpBounds);
@@ -749,7 +751,7 @@ double MILPSolverGurobi::getDualObjectiveValue()
 	}
 	catch (GRBException &e)
 	{
-		processInfo->outputError("Error when obtaining dual objective value", e.getMessage());
+		ProcessInfo::getInstance().outputError("Error when obtaining dual objective value", e.getMessage());
 
 	}
 

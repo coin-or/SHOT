@@ -9,9 +9,8 @@
 
 TaskPrintIterationReport::TaskPrintIterationReport()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
-
+	lastDualBound = -COIN_DBL_MAX;
+	lastPrimalBound = COIN_DBL_MAX;
 	lastNumHyperplane = 0;
 }
 
@@ -22,7 +21,7 @@ TaskPrintIterationReport::~TaskPrintIterationReport()
 
 void TaskPrintIterationReport::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	try
 	{
@@ -30,9 +29,11 @@ void TaskPrintIterationReport::run()
 
 		bool hasSolution = true;
 
-		bool isMIQP = (processInfo->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-		bool isMIQCP = (processInfo->originalProblem->getQuadraticConstraintIndexes().size() > 0);
-		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP);
+		bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
+				== E_ObjectiveFunctionType::Quadratic);
+		bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
+		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP)
+				&& ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 
 		if (isMIQCP && isDiscrete) tmpType << "MIQCP";
 		else if (isMIQCP) tmpType << "QCP";
@@ -106,11 +107,12 @@ void TaskPrintIterationReport::run()
 		std::string primalBoundExpr;
 		std::string dualBoundExpr;
 
-		auto primalBound = processInfo->getPrimalBound();
-		auto dualBound = processInfo->getDualBound();
+		auto primalBound = ProcessInfo::getInstance().getPrimalBound();
+		auto dualBound = ProcessInfo::getInstance().getDualBound();
 
-		if (primalBound != lastPrimalBound && processInfo->primalSolutions.size() > 0
-				&& processInfo->primalSolutions.at(0).sourceType == E_PrimalSolutionSource::MILPSolutionPool)
+		if (primalBound != lastPrimalBound && ProcessInfo::getInstance().primalSolutions.size() > 0
+				&& ProcessInfo::getInstance().primalSolutions.at(0).sourceType
+						== E_PrimalSolutionSource::MILPSolutionPool)
 		{
 			primalBoundExpr = UtilityFunctions::toString(primalBound);
 			lastPrimalBound = primalBound;
@@ -142,12 +144,13 @@ void TaskPrintIterationReport::run()
 
 		if (hasSolution && currIter->maxDeviationConstraint != -1)
 		{
-			tmpConstr = processInfo->originalProblem->getConstraintNames()[currIter->maxDeviationConstraint] + ": "
-					+ tmpConstrExpr;
+			tmpConstr =
+					ProcessInfo::getInstance().originalProblem->getConstraintNames()[currIter->maxDeviationConstraint]
+							+ ": " + tmpConstrExpr;
 		}
 		else if (hasSolution)
 		{
-			tmpConstr = processInfo->originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
+			tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
 		}
 		else
 		{
@@ -158,12 +161,12 @@ void TaskPrintIterationReport::run()
 				% currIter->iterationNumber % tmpType.str() % hyperplanesExpr % dualBoundExpr % tmpObjVal
 				% primalBoundExpr % tmpConstr;
 
-		processInfo->outputSummary(tmpLine.str());
+		ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
 	}
 	catch (...)
 	{
-		processInfo->outputError("ERROR, cannot write iteration solution report!");
+		ProcessInfo::getInstance().outputError("ERROR, cannot write iteration solution report!");
 	}
 }
 std::string TaskPrintIterationReport::getType()

@@ -9,8 +9,6 @@
 
 TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	itersSinceLastPrintout = 0;
 	timeLastPrintout = 0;
@@ -24,56 +22,60 @@ TaskPrintSolutionBoundReport::~TaskPrintSolutionBoundReport()
 
 void TaskPrintSolutionBoundReport::run()
 {
-	double currElapsedTime = processInfo->getElapsedTime("Total");
+	double currElapsedTime = ProcessInfo::getInstance().getElapsedTime("Total");
 
 	if (itersSinceLastPrintout > 20 || currElapsedTime - timeLastPrintout > 10.0)
 	{
-		double absGap = processInfo->getAbsoluteObjectiveGap();
-		double relGap = processInfo->getRelativeObjectiveGap();
-		auto objBounds = processInfo->getCorrectedObjectiveBounds();
+		double absGap = ProcessInfo::getInstance().getAbsoluteObjectiveGap();
+		double relGap = ProcessInfo::getInstance().getRelativeObjectiveGap();
+		auto objBounds = ProcessInfo::getInstance().getCorrectedObjectiveBounds();
 		double objLB = objBounds.first;
 		double objUB = objBounds.second;
 
-		processInfo->outputSummary(
+		ProcessInfo::getInstance().outputSummary(
 				"                                                                                     ");
 
 #ifdef _WIN32
-		processInfo->outputSummary(
+		ProcessInfo::getInstance().outputSummary(
 				"ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
 #else
-		processInfo->outputSummary(
+		ProcessInfo::getInstance().outputSummary(
 				"─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
 		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
-				% processInfo->getElapsedTime("Total") % objLB % objUB % absGap % relGap;
-		processInfo->outputSummary(tmpLine.str());
+				% ProcessInfo::getInstance().getElapsedTime("Total") % objLB % objUB % absGap % relGap;
+		ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
-		if (processInfo->numConstraintsRemovedInPresolve > 0 || processInfo->numVariableBoundsTightenedInPresolve > 0)
+		if (ProcessInfo::getInstance().numConstraintsRemovedInPresolve > 0
+				|| ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve > 0)
 		{
 			tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.")
-					% processInfo->numConstraintsRemovedInPresolve % processInfo->numVariableBoundsTightenedInPresolve;
-			processInfo->outputSummary(tmpLine.str());
+					% ProcessInfo::getInstance().numConstraintsRemovedInPresolve
+					% ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve;
+			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 		}
 
-		if (processInfo->interiorPts.size() > 1)
+		if (ProcessInfo::getInstance().interiorPts.size() > 1)
 		{
-			processInfo->outputSummary(" Number of interior points: " + to_string(processInfo->interiorPts.size()));
+			ProcessInfo::getInstance().outputSummary(
+					" Number of interior points: " + to_string(ProcessInfo::getInstance().interiorPts.size()));
 		}
 
-		if (processInfo->numIntegerCutsAdded > 0)
+		if (ProcessInfo::getInstance().numIntegerCutsAdded > 0)
 		{
-			processInfo->outputSummary(" Number of integer cuts added: " + to_string(processInfo->numIntegerCutsAdded));
+			ProcessInfo::getInstance().outputSummary(
+					" Number of integer cuts added: " + to_string(ProcessInfo::getInstance().numIntegerCutsAdded));
 		}
 
 #ifdef _WIN32
-		processInfo->outputSummary("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+		ProcessInfo::getInstance().outputSummary("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
 #else
-		processInfo->outputSummary(
+		ProcessInfo::getInstance().outputSummary(
 				"─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
-		processInfo->outputSummary("");
+		ProcessInfo::getInstance().outputSummary("");
 
 		itersSinceLastPrintout = 0;
 		timeLastPrintout = currElapsedTime;

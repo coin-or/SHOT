@@ -23,7 +23,6 @@ class TaskSelectHyperplanePointsSolution: public TaskBase
 		virtual std::string getType();
 
 	private:
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
+
 };
 

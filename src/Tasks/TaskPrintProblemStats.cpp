@@ -9,8 +9,7 @@
 
 TaskPrintProblemStats::TaskPrintProblemStats()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskPrintProblemStats::~TaskPrintProblemStats()
@@ -21,7 +20,7 @@ TaskPrintProblemStats::~TaskPrintProblemStats()
 void TaskPrintProblemStats::run()
 {
 	//TODO: Refactor print stats from problem class
-	processInfo->originalProblem->printProblemStatistics();
+	ProcessInfo::getInstance().originalProblem->printProblemStatistics();
 }
 
 std::string TaskPrintProblemStats::getType()

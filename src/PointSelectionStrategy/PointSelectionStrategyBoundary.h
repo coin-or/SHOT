@@ -3,10 +3,9 @@
 #include "IPointSelectionStrategy.h"
 #include "PointSelectionStrategyBase.h"
 
-class PointSelectionStrategyBoundary :
-	public IPointSelectionStrategy, PointSelectionStrategyBase
+class PointSelectionStrategyBoundary: public IPointSelectionStrategy, PointSelectionStrategyBase
 {
-public:
-	PointSelectionStrategyBoundary();
-	~PointSelectionStrategyBoundary();
+	public:
+		PointSelectionStrategyBoundary();
+		~PointSelectionStrategyBoundary();
 };

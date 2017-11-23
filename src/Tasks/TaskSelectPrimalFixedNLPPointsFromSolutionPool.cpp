@@ -2,8 +2,7 @@
 
 TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsFromSolutionPool()
@@ -13,8 +12,8 @@ TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsF
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {
-	auto currIter = processInfo->getCurrentIteration();
-	auto allSolutions = processInfo->getCurrentIteration()->solutionPoints;
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+	auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
 
 	bool callNLPSolver = false;
 	bool useFeasibleSolutionExtra = false;
@@ -31,22 +30,22 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
 	if (currIter->MILPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
 	{
-		processInfo->itersMILPWithoutNLPCall++;
+		ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
 		return;
 	}
 
-	processInfo->startTimer("PrimalBoundTotal");
-	processInfo->startTimer("PrimalBoundSearchNLP");
+	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
+	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
 
-	auto userSettingStrategy = settings->getIntSetting("NLPFixedStrategy", "PrimalBound");
-	auto userSetting = settings->getIntSetting("NLPFixedSource", "PrimalBound");
+	auto userSettingStrategy = Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound");
+	auto userSetting = Settings::getInstance().getIntSetting("NLPFixedSource", "PrimalBound");
 
 	if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::DoNotUse))
 	{
 		callNLPSolver = false;
 	}
 	else if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
-			&& abs(allSolutions.at(0).objectiveValue - processInfo->getDualBound()) < 0.1)
+			&& abs(allSolutions.at(0).objectiveValue - ProcessInfo::getInstance().getDualBound()) < 0.1)
 	{
 		callNLPSolver = true;
 		useFeasibleSolutionExtra = true;
@@ -63,16 +62,17 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 		 useFeasibleSolution = true;
 		 }*/
 
-		if (processInfo->itersMILPWithoutNLPCall >= settings->getIntSetting("NLPFixedMaxIters", "PrimalBound"))
+		if (ProcessInfo::getInstance().itersMILPWithoutNLPCall
+				>= Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound"))
 		{
-			processInfo->outputInfo(
+			ProcessInfo::getInstance().outputInfo(
 					"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
 			callNLPSolver = true;
 		}
-		else if (processInfo->getElapsedTime("Total") - processInfo->solTimeLastNLPCall
-				> settings->getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall
+				> Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
 		{
-			processInfo->outputInfo(
+			ProcessInfo::getInstance().outputInfo(
 					"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
 			callNLPSolver = true;
 		}
@@ -81,33 +81,35 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	if (useFeasibleSolutionExtra)
 	{
 		auto tmpSol = allSolutions.at(0);
-		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
-				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point,
+				E_PrimalNLPSource::FirstSolutionNewDualBound, tmpSol.objectiveValue, tmpSol.iterFound,
+				tmpSol.maxDeviation);
 	}
 	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviationSolution))
 	{
 		auto tmpSol = currIter->getSolutionPointWithSmallestDeviation();
-		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::SmallestDeviationSolution,
-				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point,
+				E_PrimalNLPSource::SmallestDeviationSolution, tmpSol.objectiveValue, tmpSol.iterFound,
+				tmpSol.maxDeviation);
 	}
 	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstSolution))
 	{
 		auto tmpSol = allSolutions.at(0);
-		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
-				tmpSol.iterFound, tmpSol.maxDeviation);
+		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
+				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 	}
 	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstAndFeasibleSolutions))
 	{
 		auto tmpSol = allSolutions.at(0);
-		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
-				tmpSol.iterFound, tmpSol.maxDeviation);
+		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
+				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 
 		auto smallestDevSolIdx = currIter->getSolutionPointWithSmallestDeviationIndex();
 
 		if (smallestDevSolIdx != 0)
 		{
 			tmpSol = allSolutions.at(smallestDevSolIdx);
-			processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
+			ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
 					tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 		}
 	}
@@ -116,16 +118,17 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	{
 		auto tmpSol = allSolutions.at(0);
 
-		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
-				tmpSol.iterFound, tmpSol.maxDeviation);
+		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
+				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 
 		for (int i = 1; i < allSolutions.size(); i++)
 		{
 			auto tmpSol = allSolutions.at(i);
 
-			if (tmpSol.maxDeviation.value <= settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
+			if (tmpSol.maxDeviation.value
+					<= Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
 			{
-				processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
+				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
 						tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 			}
 		}
@@ -134,35 +137,37 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	{
 		auto tmpSol = allSolutions.at(0);
 
-		processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
-				tmpSol.iterFound, tmpSol.maxDeviation);
+		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
+				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 
 		for (int i = 1; i < allSolutions.size(); i++)
 		{
 			tmpSol = allSolutions.at(i);
 
-			if (tmpSol.maxDeviation.value <= settings->getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
+			if (tmpSol.maxDeviation.value
+					<= Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
 			{
-				processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
+				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
 						tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 			}
 			else
 			{
-				processInfo->addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::UnFeasibleSolution,
-						tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point,
+						E_PrimalNLPSource::UnFeasibleSolution, tmpSol.objectiveValue, tmpSol.iterFound,
+						tmpSol.maxDeviation);
 			}
 		}
 	}
 	else
 	{
-		//processInfo->itersMILPWithoutNLPCall++;
+		//ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
 
-		processInfo->stopTimer("PrimalBoundSearchNLP");
-		processInfo->stopTimer("PrimalBoundTotal");
+		ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
+		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
 
 	}
 
-	//std::cout << "Num NLP cands: " << processInfo->primalFixedNLPCandidates.size() << std::endl;
+	//std::cout << "Num NLP cands: " << ProcessInfo::getInstance().primalFixedNLPCandidates.size() << std::endl;
 }
 
 std::string TaskSelectPrimalFixedNLPPointsFromSolutionPool::getType()

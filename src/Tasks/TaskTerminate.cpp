@@ -9,8 +9,7 @@
 
 TaskTerminate::TaskTerminate()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
+
 }
 
 TaskTerminate::~TaskTerminate()
@@ -20,7 +19,7 @@ TaskTerminate::~TaskTerminate()
 
 void TaskTerminate::run()
 {
-	//processInfo->tasks->clearTasks();
+	//ProcessInfo::getInstance().tasks->clearTasks();
 }
 
 std::string TaskTerminate::getType()

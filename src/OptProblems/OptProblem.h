@@ -33,6 +33,7 @@ class OptProblem
 
 		virtual int getNumberOfVariables();
 		virtual int getNumberOfBinaryVariables();
+		virtual int getNumberOfDiscreteVariables();
 		virtual int getNumberOfIntegerVariables();
 		virtual int getNumberOfRealVariables();
 		virtual std::vector<std::string> getVariableNames();
@@ -109,17 +110,19 @@ class OptProblem
 		bool isConstraintNonlinear(OSInstance *instance, int idx);
 		bool isProblemNonlinear(OSInstance *instance);
 
+		bool isProblemDiscrete();
+
 		bool hasVariableBoundsBeenTightened(int varIndex);
 		void setVariableBoundsAsTightened(int varIndex);
 		void setVariableBoundsTightened(std::vector<bool> status);
 
 		OSInstance * getProblemInstance();
 
+		std::vector<double> calculateGradientNumerically(int constraintIndex, std::vector<double> point);
+
 		virtual void fixVariable(int varIdx, double value);
 
 	protected:
-		SHOTSettings::Settings *settings;
-		ProcessInfo *processInfo;
 
 		void setNonlinearConstraintIndexes();
 		//void setQuadraticConstraintIndexes();

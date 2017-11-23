@@ -8,8 +8,6 @@
 
 MILPSolverOsiCbc::MILPSolverOsiCbc()
 {
-	processInfo = ProcessInfo::getInstance();
-	settings = SHOTSettings::Settings::getInstance();
 
 	discreteVariablesActivated = true;
 
@@ -62,7 +60,8 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 		}
 		else
 		{
-			processInfo->outputWarning("Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+			ProcessInfo::getInstance().outputWarning(
+					"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -175,7 +174,7 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 
 	osiInterface->loadFromCoinModel(*coinModel);
 	cbcModel = new CbcModel(*osiInterface);
-	CbcMain0 (*cbcModel);
+	CbcMain0(*cbcModel);
 	cbcModel->setLogLevel(0);
 	osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
 
@@ -210,7 +209,7 @@ void MILPSolverOsiCbc::activateDiscreteVariables(bool activate)
 
 	if (activate)
 	{
-		processInfo->outputDebug("Activating MILP strategy");
+		ProcessInfo::getInstance().outputDebug("Activating MILP strategy");
 
 		for (int i = 0; i < numVar; i++)
 		{
@@ -224,7 +223,7 @@ void MILPSolverOsiCbc::activateDiscreteVariables(bool activate)
 	}
 	else
 	{
-		processInfo->outputDebug("Activating LP strategy");
+		ProcessInfo::getInstance().outputDebug("Activating LP strategy");
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -304,7 +303,7 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::getSolutionStatus()
 	 }*/
 	else
 	{
-		processInfo->outputError("MILP solver return status unknown.");
+		ProcessInfo::getInstance().outputError("MILP solver return status unknown.");
 	}
 
 	return (MILPSolutionStatus);
@@ -323,7 +322,7 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::solveProblem()
 		cbcModel->setMaximumSolutions(solLimit);
 		cbcModel->setMaximumSavedSolutions(solLimit);
 		cbcModel->setCutoff(this->cutOff = cutOff);
-		CbcMain0 (*cbcModel);
+		CbcMain0(*cbcModel);
 		cbcModel->setLogLevel(0);
 		cbcModel->branchAndBound();
 
@@ -332,7 +331,7 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::solveProblem()
 	}
 	catch (exception &e)
 	{
-		processInfo->outputError(e.what());
+		ProcessInfo::getInstance().outputError(e.what());
 		MILPSolutionStatus = E_ProblemSolutionStatus::Error;
 	}
 
@@ -373,16 +372,18 @@ void MILPSolverOsiCbc::setCutOff(double cutOff)
 
 		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
-			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
-			processInfo->outputInfo("     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+			ProcessInfo::getInstance().outputInfo(
+					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (exception &e)
 	{
-		processInfo->outputError("Error when setting cut off value", e.what());
+		ProcessInfo::getInstance().outputError("Error when setting cut off value", e.what());
 	}
 }
 
@@ -399,7 +400,7 @@ void MILPSolverOsiCbc::writeProblemToFile(std::string filename)
 	}
 	catch (exception &e)
 	{
-		processInfo->outputError("Error when saving model to file", e.what());
+		ProcessInfo::getInstance().outputError("Error when saving model to file", e.what());
 	}
 }
 
@@ -411,7 +412,7 @@ double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
-		processInfo->outputError(
+		ProcessInfo::getInstance().outputError(
 				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
 		return (objVal);
@@ -445,8 +446,8 @@ double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 	}
 	catch (exception &e)
 	{
-		processInfo->outputError("Error when obtaining objective value for solution index " + to_string(solIdx),
-				e.what());
+		ProcessInfo::getInstance().outputError(
+				"Error when obtaining objective value for solution index " + to_string(solIdx), e.what());
 
 	}
 
@@ -455,7 +456,7 @@ double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 
 void MILPSolverOsiCbc::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
 {
-	processInfo->outputError("Lazy constraints not implemented in Cbc interface!");
+	ProcessInfo::getInstance().outputError("Lazy constraints not implemented in Cbc interface!");
 }
 
 void MILPSolverOsiCbc::deleteMIPStarts()
@@ -491,7 +492,7 @@ std::vector<double> MILPSolverOsiCbc::getVariableSolution(int solIdx)
 	}
 	catch (exception&e)
 	{
-		processInfo->outputError("Error when reading solution with index " + to_string(solIdx), e.what());
+		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx), e.what());
 	}
 	return (solution);
 }
@@ -508,7 +509,7 @@ int MILPSolverOsiCbc::getNumberOfSolutions()
 	}
 	catch (exception &e)
 	{
-		processInfo->outputError("Error when obtaining number of solutions", e.what());
+		ProcessInfo::getInstance().outputError("Error when obtaining number of solutions", e.what());
 	}
 
 	return (numSols);
@@ -571,24 +572,24 @@ void MILPSolverOsiCbc::checkParameters()
 // Checks if quadratic objective functions or constraints are allowed in the settings, and corrects
 // it since we do not support this for Cbc.
 
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
-			== ES_QPStrategy::QuadraticObjective;
+	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
+			"Algorithm"))) == ES_QPStrategy::QuadraticObjective;
 
-	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(settings->getIntSetting("QPStrategy", "Algorithm")))
-			== ES_QPStrategy::QuadraticallyConstrained;
+	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
+			"Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained;
 
 	if (useQuadraticObjective)
 	{
 		// MIP solver does not support quadratic objectives, reseting both settings
-		settings->updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
-		processInfo->outputWarning(
+		Settings::getInstance().updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
+		ProcessInfo::getInstance().outputWarning(
 				"Quadratic objective setting activated, but MIP solver does not support it. Resetting setting!");
 	}
 	else if (useQuadraticConstraint)
 	{
 		// MIP solver supports quadratic objectives but not quadratic constraints, reseting setting
-		settings->updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
-		processInfo->outputWarning(
+		Settings::getInstance().updateSetting("QPStrategy", "Algorithm", (int) ES_QPStrategy::Nonlinear);
+		ProcessInfo::getInstance().outputWarning(
 				"Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!");
 	}
 }
