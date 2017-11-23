@@ -22,7 +22,7 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 			return (addLinearConstraint(elements, constant, false));
 		}
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
-		virtual void changeConstraintToLazy(GeneratedHyperplane &hyperplane);
+
 		virtual void createHyperplane(Hyperplane hyperplane)
 		{
 			MILPSolverBase::createHyperplane(hyperplane);
@@ -90,7 +90,6 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 
 		virtual bool supportsQuadraticObjective();
 		virtual bool supportsQuadraticConstraints();
-		virtual bool supportsLazyConstraints();
 
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
 		{

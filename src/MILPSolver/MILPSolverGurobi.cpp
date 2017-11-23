@@ -63,7 +63,7 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			else
 			{
 				ProcessInfo::getInstance().outputWarning(
-						"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+						"Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 			}
 		}
 
@@ -345,7 +345,7 @@ std::vector<double> MILPSolverGurobi::getVariableSolution(int solIdx)
 	}
 	catch (GRBException &e)
 	{
-		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
+		ProcessInfo::getInstance().outputError("Error when reading solution with index " + std::to_string(solIdx),
 				e.getMessage());
 	}
 
@@ -653,11 +653,6 @@ double MILPSolverGurobi::getObjectiveValue(int solIdx)
 
 }
 
-void MILPSolverGurobi::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
-{
-
-}
-
 void MILPSolverGurobi::deleteMIPStarts()
 {
 	int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
@@ -760,11 +755,6 @@ double MILPSolverGurobi::getDualObjectiveValue()
 
 void MILPSolverGurobi::writePresolvedToFile(std::string filename)
 {
-}
-
-bool MILPSolverGurobi::supportsLazyConstraints()
-{
-	return (false);
 }
 
 void MILPSolverGurobi::checkParameters()

@@ -18,7 +18,6 @@ struct GeneratedHyperplane
 		bool isRemoved;
 		int generatedIter;
 		int removedIter;
-		int convertedToLazyIter;
 };
 
 class IMILPSolver
@@ -67,8 +66,6 @@ class IMILPSolver
 		virtual void addMIPStart(std::vector<double> point) = 0;
 		virtual void deleteMIPStarts() = 0;
 
-		virtual void changeConstraintToLazy(GeneratedHyperplane &hyperplane) = 0;
-
 		virtual void populateSolutionPool() = 0;
 
 		virtual void fixVariable(int varIndex, double value) = 0;
@@ -87,7 +84,6 @@ class IMILPSolver
 
 		virtual bool supportsQuadraticObjective() = 0;
 		virtual bool supportsQuadraticConstraints() = 0;
-		virtual bool supportsLazyConstraints() = 0;
 
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes() = 0;
 

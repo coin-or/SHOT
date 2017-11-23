@@ -174,7 +174,7 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 
 	osiInterface->loadFromCoinModel(*coinModel);
 	cbcModel = new CbcModel(*osiInterface);
-	CbcMain0(*cbcModel);
+	CbcMain0 (*cbcModel);
 	cbcModel->setLogLevel(0);
 	osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
 
@@ -322,7 +322,7 @@ E_ProblemSolutionStatus MILPSolverOsiCbc::solveProblem()
 		cbcModel->setMaximumSolutions(solLimit);
 		cbcModel->setMaximumSavedSolutions(solLimit);
 		cbcModel->setCutoff(this->cutOff = cutOff);
-		CbcMain0(*cbcModel);
+		CbcMain0 (*cbcModel);
 		cbcModel->setLogLevel(0);
 		cbcModel->branchAndBound();
 
@@ -454,11 +454,6 @@ double MILPSolverOsiCbc::getObjectiveValue(int solIdx)
 	return (objVal);
 }
 
-void MILPSolverOsiCbc::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
-{
-	ProcessInfo::getInstance().outputError("Lazy constraints not implemented in Cbc interface!");
-}
-
 void MILPSolverOsiCbc::deleteMIPStarts()
 {
 }
@@ -560,11 +555,6 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverOsiCbc::presolveA
 
 void MILPSolverOsiCbc::writePresolvedToFile(std::string filename)
 {
-}
-
-bool MILPSolverOsiCbc::supportsLazyConstraints()
-{
-	return (false);
 }
 
 void MILPSolverOsiCbc::checkParameters()

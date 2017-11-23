@@ -20,7 +20,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	ProcessInfo::getInstance().createTimer("LP", " - Relaxed problems");
 	ProcessInfo::getInstance().createTimer("MILP", " - MIP problems");
 	ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - Populate solution pool");
-	ProcessInfo::getInstance().createTimer("LazyChange", " - Change to lazy constraints");
 	ProcessInfo::getInstance().createTimer("HyperplaneLinesearch", " - Linesearch");
 	ProcessInfo::getInstance().createTimer("ObjectiveLinesearch", " - Objective linesearch");
 	ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
@@ -295,13 +294,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 			TaskBase *tAddICs = new TaskAddIntegerCuts(MILPSolver);
 			ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
 		}
-
-		/*
-		 if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
-		 {
-		 TaskBase *tSwitchLazy = new TaskSwitchToLazyConstraints();
-		 ProcessInfo::getInstance().tasks->addTask(tSwitchLazy, "SwitchLazy");
-		 }*/
 	}
 	else
 	{

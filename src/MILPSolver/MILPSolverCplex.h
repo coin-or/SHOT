@@ -10,7 +10,6 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
-
 class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 {
 	public:
@@ -31,7 +30,6 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 			return (addLinearConstraint(elements, constant, false));
 		}
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
-		virtual void changeConstraintToLazy(GeneratedHyperplane &hyperplane);
 		virtual void createHyperplane(Hyperplane hyperplane)
 		{
 			MILPSolverBase::createHyperplane(hyperplane);
@@ -99,7 +97,6 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 
 		virtual bool supportsQuadraticObjective();
 		virtual bool supportsQuadraticConstraints();
-		virtual bool supportsLazyConstraints();
 
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
 		{
@@ -112,54 +109,17 @@ class MILPSolverCplex: public IMILPSolver, MILPSolverBase
 		}
 
 	private:
-
-		int firstNonLazyHyperplane;
-		int iterLastLazyConvert;
-		//double timeLastIter;
 		std::vector<double> iterDurations;
-
-		//double bestCutoff = DBL_MAX;
 
 		IloEnv cplexEnv;
 		IloModel cplexModel;
 		IloCplex cplexInstance;
 		IloNumVarArray cplexVars;
 		IloRangeArray cplexConstrs;
-		IloRangeArray cplexLazyConstrs;
 		vector<IloConversion> cplexVarConvers;
 
 		bool modelUpdated /*= true*/;
 
 	protected:
 
-}
-;
-
-/*
- class SolutionFilterCallbackI: public IloCplex::IncumbentCallbackI
- {
- private:
- //build solution index
- IloNumVarArray xVar;
- 
-
- public:
- SolutionFilterCallbackI(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo) :
- IloCplex::IncumbentCallbackI(env), xVar(x)
- {
-
- this->processInfo = pInfo;
- }
- ;
- void main();	// the call back function
- //the duplicate function to create new call back object
- IloCplex::CallbackI* duplicateCallback() const
- {
- return (new (getEnv()) SolutionFilterCallbackI(*this));
- }
-
- };
-
- IloCplex::Callback SolutionFilterCallback(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo);
- */
-
+};

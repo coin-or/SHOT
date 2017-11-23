@@ -21,8 +21,8 @@ class MILPSolverBase
 
 		std::vector<SolutionPoint> lastSolutions;
 
-		std::vector<double> lastLazyUpdateConstrSlacks;
-		std::vector<double> lastSolutionConstrSlacks;
+		//std::vector<double> lastLazyUpdateConstrSlacks;
+		//std::vector<double> lastSolutionConstrSlacks;
 
 		virtual void startTimer();
 		virtual void stopTimer();

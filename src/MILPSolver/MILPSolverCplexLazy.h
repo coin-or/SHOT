@@ -36,7 +36,7 @@ class MILPSolverCplexLazy: public IMILPSolver, MILPSolverBase
 			return (addLinearConstraint(elements, constant, false));
 		}
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
-		virtual void changeConstraintToLazy(GeneratedHyperplane &hyperplane);
+
 		virtual void createHyperplane(Hyperplane hyperplane)
 		{
 			MILPSolverBase::createHyperplane(hyperplane);
@@ -104,7 +104,6 @@ class MILPSolverCplexLazy: public IMILPSolver, MILPSolverBase
 
 		virtual bool supportsQuadraticObjective();
 		virtual bool supportsQuadraticConstraints();
-		virtual bool supportsLazyConstraints();
 
 		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
 		{
@@ -118,12 +117,7 @@ class MILPSolverCplexLazy: public IMILPSolver, MILPSolverBase
 
 	private:
 
-		int firstNonLazyHyperplane;
-		int iterLastLazyConvert;
-		//double timeLastIter;
 		std::vector<double> iterDurations;
-
-		//double bestCutoff = DBL_MAX;
 
 		IloEnv cplexEnv;
 		IloModel cplexModel;
@@ -138,32 +132,3 @@ class MILPSolverCplexLazy: public IMILPSolver, MILPSolverBase
 	protected:
 
 };
-
-/*
- class SolutionFilterCallbackI: public IloCplex::IncumbentCallbackI
- {
- private:
- //build solution index
- IloNumVarArray xVar;
- 
-
- public:
- SolutionFilterCallbackI(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo) :
- IloCplex::IncumbentCallbackI(env), xVar(x)
- {
-
- this->processInfo = pInfo;
- }
- ;
- void main();	// the call back function
- //the duplicate function to create new call back object
- IloCplex::CallbackI* duplicateCallback() const
- {
- return (new (getEnv()) SolutionFilterCallbackI(*this));
- }
-
- };
-
- IloCplex::Callback SolutionFilterCallback(IloEnv env, IloNumVarArray x, ProcessInfo *pInfo);
- */
-

@@ -311,7 +311,7 @@ bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	//auto originalProblem = originalProblem;
-	std::vector<IndexValuePair> elements;
+	std::vector < IndexValuePair > elements;
 
 	auto varNames = ProcessInfo::getInstance().originalProblem->getVariableNames();
 
@@ -506,7 +506,7 @@ void CtCallbackI::main()
 		itersSinceNLPCall++;
 	}
 
-	std::vector<SolutionPoint> solutionPoints(1);
+	std::vector < SolutionPoint > solutionPoints(1);
 
 	SolutionPoint tmpSolPt;
 
@@ -615,7 +615,6 @@ MILPSolverCplexLazy::MILPSolverCplexLazy()
 	cplexConstrs = IloRangeArray(cplexEnv);
 	cplexLazyConstrs = IloRangeArray(cplexEnv);
 
-	iterLastLazyConvert = 0;
 	itersSinceNLPCall = 0;
 
 	cachedSolutionHasChanged = true;
@@ -667,7 +666,7 @@ bool MILPSolverCplexLazy::createLinearProblem(OptProblem * origProblem)
 		else
 		{
 			ProcessInfo::getInstance().outputWarning(
-			"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+					"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
@@ -807,7 +806,7 @@ bool MILPSolverCplexLazy::createLinearProblem(OptProblem * origProblem)
 	}
 	catch (IloException& e)
 	{
-		std::cout << "CPLEX exception caught when creating model: " << e << std::endl;
+		ProcessInfo::getInstance().outputError("CPLEX exception caught when creating model", e.getMessage());
 		return (false);
 	}
 
@@ -816,8 +815,6 @@ bool MILPSolverCplexLazy::createLinearProblem(OptProblem * origProblem)
 
 void MILPSolverCplexLazy::initializeSolverSettings()
 {
-	firstNonLazyHyperplane = originalProblem->getNumberOfLinearConstraints();
-
 	try
 	{
 // Disable CPLEX output
@@ -871,12 +868,12 @@ void MILPSolverCplexLazy::initializeSolverSettings()
 	}
 	catch (IloException& e)
 	{
-		std::cout << "Error when initializing parameters for linear solver: " << e << std::endl;
+		ProcessInfo::getInstance().outputError("CPLEX error when initializing parameters for linear solver",
+				e.getMessage());
 	}
 }
 
-int MILPSolverCplexLazy::addLinearConstraint(std::vector<IndexValuePair> elements, double constant,
-		bool isGreaterThan)
+int MILPSolverCplexLazy::addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan)
 {
 	try
 	{
@@ -900,25 +897,7 @@ int MILPSolverCplexLazy::addLinearConstraint(std::vector<IndexValuePair> element
 			cplexModel.add(tmpRange);
 		}
 
-		/*if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP"))
-		 {
-		 if (discreteVariablesActivated)
-		 {
-		 cplexInstance.addLazyConstraint(tmpRange);
-		 }
-		 else
-		 {
-		 cplexModel.add(tmpRange);
-		 cplexInstance.extract(cplexModel);
-		 }
-		 }
-		 else
-		 {
-		 */
-
 		modelUpdated = true;
-
-//}
 
 		expr.end();
 	}
@@ -930,29 +909,6 @@ int MILPSolverCplexLazy::addLinearConstraint(std::vector<IndexValuePair> element
 	}
 
 	return (cplexInstance.getNrows() - 1);
-
-	if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber - iterLastLazyConvert > 10)
-	{
-		std::vector<int> idxs;
-
-		int percentage = max(20.0, ceil(ProcessInfo::getInstance().getCurrentIteration()->numHyperplanesAdded * 0.05));
-
-		for (int i = this->firstNonLazyHyperplane; i < cplexConstrs.getSize() - percentage; i++)
-		{
-			idxs.push_back(i);
-		}
-
-		if (idxs.size() > 0)
-		{
-			this->firstNonLazyHyperplane = idxs.at(idxs.size() - 1) + 1;
-			iterLastLazyConvert = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
-			lastLazyUpdateConstrSlacks = lastSolutionConstrSlacks;
-		}
-	}
-
-	if (cplexLazyConstrs.getSize() > 0) cplexInstance.addLazyConstraints(cplexLazyConstrs);
-
-	return (true);
 }
 
 void MILPSolverCplexLazy::activateDiscreteVariables(bool activate)
@@ -1427,42 +1383,6 @@ void MILPSolverCplexLazy::writeProblemToFile(std::string filename)
 	}
 }
 
-void MILPSolverCplexLazy::changeConstraintToLazy(GeneratedHyperplane &hyperplane)
-{
-	try
-	{
-//std::cout << "Starting conversion to lazy "<< std::endl;
-//std::cout << "Number start " << cplexConstrs.getSize()<< std::endl;
-
-//UtilityFunctions::displayVector(constrIdxs);
-//std::cout << "Converted to lazy: " << constrIdxs[i] << std::endl;
-		IloRange tmpRange = cplexConstrs[hyperplane.generatedConstraintIndex];
-
-		try
-		{
-			cplexModel.remove(tmpRange);
-			cplexInstance.extract(cplexModel);
-			//cplexInstance.addLazyConstraint(tmpRange);
-			cplexLazyConstrs.add(tmpRange);
-			modelUpdated = true;
-			hyperplane.isLazy = true;
-			hyperplane.convertedToLazyIter = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
-
-			ProcessInfo::getInstance().outputInfo(
-					"     Changed constraint " + to_string(hyperplane.generatedConstraintIndex)
-							+ "generated in iteration" + to_string(hyperplane.generatedIter) + "to lazy.");
-		}
-		catch (IloException &e)
-		{
-			ProcessInfo::getInstance().outputError(e.getMessage());
-		}
-	}
-	catch (IloException &e)
-	{
-		ProcessInfo::getInstance().outputError(e.getMessage());
-	}
-}
-
 void MILPSolverCplexLazy::fixVariable(int varIndex, double value)
 {
 	updateVariableBound(varIndex, value, value);
@@ -1525,11 +1445,6 @@ double MILPSolverCplexLazy::getDualObjectiveValue()
 	}
 
 	return (objVal);
-}
-
-bool MILPSolverCplexLazy::supportsLazyConstraints()
-{
-	return (true);
 }
 
 void MILPSolverCplexLazy::checkParameters()

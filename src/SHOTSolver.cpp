@@ -421,9 +421,6 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("RemoveRedundantConstraintsFromMIP", "Presolve", false,
 			"Removes the constraints flagged as redundant by presolve");
 
-// Add constraints as lazy constraints
-	Settings::getInstance().createSetting("UseLazyConstraints", "MILP", false,
-			"Add supporting hyperplanes as lazy constraints");
 	Settings::getInstance().createSetting("UsePrimalObjectiveCut", "MILP", true,
 			"Add an objective cut in the primal solution");
 	Settings::getInstance().createSetting("UpdateNonlinearObjectiveVariableBounds", "MILP", false,
