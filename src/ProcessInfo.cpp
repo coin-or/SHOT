@@ -1284,11 +1284,17 @@ void ProcessInfo::createIteration()
 	iter.boundaryDistance = OSDBL_MAX;
 	iter.MILPSolutionLimitUpdated = false;
 
-	iter.type = relaxationStrategy->getProblemType();
-//getCurrentIteration()->type = relaxationStrategy->getProblemType();
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
+			== ES_SolutionStrategy::Lazy)
+	{
+		iter.type = E_IterationProblemType::MIP;
+	}
+	else
+	{
+		iter.type = relaxationStrategy->getProblemType();
+	}
 
 	iterations.push_back(iter);
-
 }
 
 Iteration * ProcessInfo::getCurrentIteration()

@@ -40,11 +40,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	auto userSettingStrategy = Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound");
 	auto userSetting = Settings::getInstance().getIntSetting("NLPFixedSource", "PrimalBound");
 
-	if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::DoNotUse))
-	{
-		callNLPSolver = false;
-	}
-	else if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+	if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& abs(allSolutions.at(0).objectiveValue - ProcessInfo::getInstance().getDualBound()) < 0.1)
 	{
 		callNLPSolver = true;
@@ -160,14 +156,9 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	}
 	else
 	{
-		//ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
-
 		ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
 		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
-
 	}
-
-	//std::cout << "Num NLP cands: " << ProcessInfo::getInstance().primalFixedNLPCandidates.size() << std::endl;
 }
 
 std::string TaskSelectPrimalFixedNLPPointsFromSolutionPool::getType()

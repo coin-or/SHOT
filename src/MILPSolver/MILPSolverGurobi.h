@@ -76,7 +76,7 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 		}
 
 		virtual int increaseSolutionLimit(int increment);
-		virtual void setSolutionLimit(int limit);
+		virtual void setSolutionLimit(long limit);
 		virtual int getSolutionLimit();
 
 		virtual void setTimeLimit(double seconds);

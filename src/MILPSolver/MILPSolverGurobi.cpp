@@ -15,6 +15,7 @@ MILPSolverGurobi::MILPSolverGurobi()
 
 	checkParameters();
 	addedHyperplanes = 0;
+
 }
 
 MILPSolverGurobi::~MILPSolverGurobi()
@@ -229,6 +230,8 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 		}
 
 		gurobiModel->update();
+
+		setSolutionLimit(9223372036800000000);
 	}
 	catch (GRBException &e)
 	{
@@ -511,7 +514,7 @@ int MILPSolverGurobi::increaseSolutionLimit(int increment)
 	return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit));
 }
 
-void MILPSolverGurobi::setSolutionLimit(int limit)
+void MILPSolverGurobi::setSolutionLimit(long limit)
 {
 	gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
 }

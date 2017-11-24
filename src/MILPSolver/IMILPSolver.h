@@ -49,7 +49,7 @@ class IMILPSolver
 		virtual double getObjectiveValue(int solIdx) = 0;
 
 		virtual int increaseSolutionLimit(int increment) = 0;
-		virtual void setSolutionLimit(int limit) = 0;
+		virtual void setSolutionLimit(long limit) = 0;
 		virtual int getSolutionLimit() = 0;
 
 		virtual void writeProblemToFile(std::string filename) = 0;

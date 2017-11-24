@@ -184,7 +184,18 @@ bool SHOTSolver::setProblem(std::string fileName)
 
 bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
-	solutionStrategy = new SolutionStrategySHOT(osInstance);
+	switch (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm")))
+	{
+		case (ES_SolutionStrategy::Lazy):
+			solutionStrategy = new SolutionStrategyLazy(osInstance);
+			break;
+		case (ES_SolutionStrategy::Normal):
+			solutionStrategy = new SolutionStrategyNormal(osInstance);
+			break;
+		default:
+			break;
+	}
+
 	isProblemInitialized = true;
 
 	return (true);
@@ -259,11 +270,20 @@ void SHOTSolver::initializeSettings()
 
 // Solution strategy
 	std::vector < std::string > enumSolutionStrategy;
-	enumSolutionStrategy.push_back("ESH");
-	enumSolutionStrategy.push_back("ECP");
-	Settings::getInstance().createSetting("SolutionStrategy", "Algorithm", static_cast<int>(ES_SolutionStrategy::ESH),
+	enumSolutionStrategy.push_back("Normal");
+	enumSolutionStrategy.push_back("Lazy");
+	Settings::getInstance().createSetting("SolutionStrategy", "Algorithm", static_cast<int>(ES_SolutionStrategy::Lazy),
 			"Solution strategy", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
+
+	// Hyperplane generation point strategy
+	std::vector < std::string > enumHyperplanePointStrategy;
+	enumHyperplanePointStrategy.push_back("ESH");
+	enumHyperplanePointStrategy.push_back("ECP");
+	Settings::getInstance().createSetting("HyperplanePointStrategy", "Algorithm",
+			static_cast<int>(ES_HyperplanePointStrategy::ESH), "Hyperplane point strategy",
+			enumHyperplanePointStrategy);
+	enumHyperplanePointStrategy.clear();
 
 // Relaxation
 	Settings::getInstance().createSetting("IterLimitLP", "Algorithm", 200, "LP iteration limit for solver", 0,
@@ -342,7 +362,7 @@ void SHOTSolver::initializeSettings()
 	enumIPOptSolver.push_back("ma86");
 	enumIPOptSolver.push_back("ma97");
 	enumIPOptSolver.push_back("mumps");
-	Settings::getInstance().createSetting("IpoptSolver", "Ipopt", static_cast<int>(ES_IPOptSolver::ma57),
+	Settings::getInstance().createSetting("IpoptSolver", "Ipopt", static_cast<int>(ES_IPOptSolver::mumps),
 			"Linear subsolver in Ipopt", enumIPOptSolver);
 	enumIPOptSolver.clear();
 
@@ -360,9 +380,9 @@ void SHOTSolver::initializeSettings()
 			"Iteration limit for minimization subsolver", 0, OSINT_MAX);
 	Settings::getInstance().createSetting("BitPrecision", "InteriorPointCuttingPlane", 8,
 			"Required bit precision for minimization subsolver", 1, 64);
-	Settings::getInstance().createSetting("TermToleranceAbs", "InteriorPointCuttingPlane", 0.5,
+	Settings::getInstance().createSetting("TermToleranceAbs", "InteriorPointCuttingPlane", 1.0,
 			"Absolute termination tolerance for the difference between LP and linesearch objective", 0.0, OSDBL_MAX);
-	Settings::getInstance().createSetting("TermToleranceRel", "InteriorPointCuttingPlane", 0.1,
+	Settings::getInstance().createSetting("TermToleranceRel", "InteriorPointCuttingPlane", 1.0,
 			"Relative termination tolerance for the difference between LP and linesearch objective", 0.0, OSDBL_MAX);
 	Settings::getInstance().createSetting("ConstraintSelectionTolerance", "InteriorPointCuttingPlane", 0.05,
 			"The tolerance for selecting the most constraint with largest deviation", 0.0, 1.0);
@@ -504,6 +524,13 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("Debug", "SHOTSolver", false, "Use debug functionality");
 
 // Primal bound
+
+	Settings::getInstance().createSetting("PrimalStrategyLinesearch", "PrimalBound", true,
+			"Use the dedicated linesearch method for finding primal solutions");
+
+	Settings::getInstance().createSetting("PrimalStrategyFixedNLP", "PrimalBound", true,
+			"Solved integer-fixed NLP problems for finding primal solutions");
+
 	std::vector < std::string > enumPrimalNLPSolver;
 	enumPrimalNLPSolver.push_back("CuttingPlane");
 	enumPrimalNLPSolver.push_back("Ipopt");
@@ -515,7 +542,6 @@ void SHOTSolver::initializeSettings()
 
 	std::vector < std::string > enumPrimalNLPStrategy;
 	enumPrimalNLPStrategy.push_back("Use each iteration");
-	enumPrimalNLPStrategy.push_back("Don't use");
 	enumPrimalNLPStrategy.push_back("Based on iteration or time");
 	enumPrimalNLPStrategy.push_back("Based on iteration or time, and for all feasible MIP solutions");
 

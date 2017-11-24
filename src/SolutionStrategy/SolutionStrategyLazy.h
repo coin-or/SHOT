@@ -1,11 +1,3 @@
-/*
-
- * SolutionStrategySHOT.h
- *
- *  Created on: Mar 30, 2015
- *      Author: alundell
- */
-
 #pragma once
 
 #include "ISolutionStrategy.h"
@@ -64,18 +56,16 @@
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 
-class SolutionStrategySHOT: public ISolutionStrategy
+class SolutionStrategyLazy: public ISolutionStrategy
 {
 	public:
-		SolutionStrategySHOT(OSInstance *osInstance);
-		virtual ~SolutionStrategySHOT();
+		SolutionStrategyLazy(OSInstance *osInstance);
+		virtual ~SolutionStrategyLazy();
 
 		virtual bool solveProblem();
 		virtual void initializeStrategy();
 
 	protected:
-
-		//TaskSequential *mainTask;
 
 };
 

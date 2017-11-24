@@ -193,6 +193,8 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		return (false);
 	}
 
+	setSolutionLimit(9223372036800000000);
+
 	return (true);
 }
 
@@ -471,7 +473,7 @@ int MILPSolverCplex::increaseSolutionLimit(int increment)
 	return (sollim);
 }
 
-void MILPSolverCplex::setSolutionLimit(int limit)
+void MILPSolverCplex::setSolutionLimit(long limit)
 {
 
 	try

@@ -40,6 +40,11 @@ enum class E_ProblemConstraintType
 
 enum class ES_SolutionStrategy
 {
+	Normal, Lazy
+};
+
+enum class ES_HyperplanePointStrategy
+{
 	ESH, ECP
 };
 
@@ -50,7 +55,7 @@ enum class ES_RelaxationStrategy
 
 enum class ES_MILPSolver
 {
-	Cplex, Gurobi, Cbc, CplexLazy
+	Cplex, Gurobi, Cbc
 };
 
 enum class ES_QPStrategy
@@ -80,7 +85,7 @@ enum class ES_LinesearchMethod
 
 enum class ES_PrimalNLPStrategy
 {
-	AlwaysUse, DoNotUse, IterationOrTime, IterationOrTimeAndAllFeasibleSolutions
+	AlwaysUse, IterationOrTime, IterationOrTimeAndAllFeasibleSolutions
 };
 
 enum class ES_PrimalBoundNLPFixedPoint

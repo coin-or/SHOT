@@ -5,9 +5,9 @@
  *      Author: alundell
  */
 
-#include "SolutionStrategySHOT.h"
+#include <SolutionStrategyNormal.h>
 
-SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
+SolutionStrategyNormal::SolutionStrategyNormal(OSInstance* osInstance)
 {
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
@@ -42,7 +42,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm") == (int) ES_SolutionStrategy::ESH
+	if (Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm")
+			== (int) ES_HyperplanePointStrategy::ESH
 			&& (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
 					!= E_ObjectiveFunctionType::Quadratic
 					|| ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
@@ -63,12 +64,15 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
-			+ ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
-	{
-		TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
-		ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
-	}
+	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+
+	/*if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
+	 + ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
+	 {
+	 TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+	 ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	 }*/
 
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
@@ -90,8 +94,7 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear()
-			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound")
-			&& solverMILP != ES_MILPSolver::CplexLazy)
+			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
 	{
 		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
@@ -116,8 +119,8 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
-			== ES_SolutionStrategy::ESH)
+	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
+			"Algorithm")) == ES_HyperplanePointStrategy::ESH)
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
@@ -137,7 +140,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 	}
 
 	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound")
-			!= static_cast<int>(ES_PrimalNLPStrategy::DoNotUse)
 			&& ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0
 			&& ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{
@@ -150,96 +152,6 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 	}
 
-	/*
-	 if (Settings::getInstance().getBoolSetting("UseNLPCall", "PrimalBound"))
-	 {
-	 TaskBase *tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
-
-	 if (ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0)
-	 {
-	 TaskBase *tSelectPrimNLPCheck = new TaskConditional();
-
-	 dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setCondition([this]()
-	 {
-	 auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-
-	 // Added MILPSollimit updated krav mars 2016
-	 if (!currIter->isMILP() || currIter->solutionPoints.size() == 0 || currIter->MILPSolutionLimitUpdated)
-	 {
-	 return (false);
-	 }
-
-	 if ( ProcessInfo::getInstance().itersMILPWithoutNLPCall >= Settings::getInstance().getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
-	 {
-	 return (true);
-	 }
-
-	 //if ( ProcessInfo::getInstance().itersWithStagnationMILP >= Settings::getInstance().getIntSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
-	 //{
-	 //return (true);
-	 //}
-
-	 if (ProcessInfo::getInstance().getElapsedTime("Total") -ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
-	 {
-	 return (true);
-	 }
-
-	 int maxItersNoMIPChange = 20;
-	 auto currSolPt = currIter->solutionPoints.at(0).point;
-
-	 bool noMIPChange = true;
-
-	 for (int i = 1; i < maxItersNoMIPChange; i++)
-	 {
-	 if (ProcessInfo::getInstance().iterations.size() <= i)
-	 {
-	 noMIPChange = false;
-	 break;
-	 }
-
-	 auto prevIter = &ProcessInfo::getInstance().iterations.at(currIter->iterationNumber -1 - i);
-
-	 if (!prevIter->isMILP())
-	 {
-	 noMIPChange = false;
-	 break;
-	 }
-
-	 auto discreteIdxs = ProcessInfo::getInstance().originalProblem->getDiscreteVariableIndices();
-
-	 bool isDifferent = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter->solutionPoints.at(0).point,
-	 discreteIdxs);
-
-	 if (isDifferent)
-	 {
-	 noMIPChange = false;
-	 break;
-	 }
-	 }
-
-	 if (noMIPChange)
-	 {
-	 ProcessInfo::getInstance().outputWarning("     MIP solution has not changed in " + to_string( maxItersNoMIPChange)+ " iterations. Solving NLP problem...");
-	 return (true);
-	 }
-
-	 ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
-
-	 return (false);
-	 });
-
-	 dynamic_cast<TaskConditional*>(tSelectPrimNLPCheck)->setTaskIfTrue(tSelectPrimNLP);
-
-	 ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-	 dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLP);
-
-	 ProcessInfo::getInstance().tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-	 ProcessInfo::getInstance().tasks->addTask(tCheckDualCands, "CheckDualCands");
-	 ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-	 ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
-	 }
-	 }*/
-
 	TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
 
@@ -251,83 +163,43 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
 	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
-	if (solverMILP != ES_MILPSolver::CplexLazy)
+	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
+			"Algorithm")) == ES_HyperplanePointStrategy::ESH)
 	{
-
-		if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm"))
-				== ES_SolutionStrategy::ESH)
+		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+				"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 		{
-			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
-			{
-				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-				ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
-			}
-			else
-			{
-				TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-				ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
-			}
-
+			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
 		}
 		else
 		{
-			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
 			ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
-		}
-
-		//ProcessInfo::getInstance().tasks->addTask(tCheckPrimCands, "CheckPrimCands");
-		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
-
-		//TaskBase *tAddHPs = new TaskAddHyperplanes();
-		ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
-
-		if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
-		{
-			TaskBase *tAddICs = new TaskAddIntegerCuts(MILPSolver);
-			ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
 		}
 	}
 	else
 	{
-		// Needed because e.g. fac2 terminates with optimal linear solution but not optimal nonlinear solution
-		TaskBase *tForcedHyperplaneAddition = new TaskSequential();
+		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+		ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+	}
 
-		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tSelectHPPts);
-		//dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckPrimCands);
-		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckAbsGap);
-		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckRelGap);
+	//ProcessInfo::getInstance().tasks->addTask(tCheckPrimCands, "CheckPrimCands");
+	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-		//TaskBase *tAddHPs = new TaskAddHyperplanes();
-		dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tAddHPs);
+	//TaskBase *tAddHPs = new TaskAddHyperplanes();
+	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-		TaskBase *tForceSupportingHyperplaneAddition = new TaskConditional();
-
-		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setCondition(
-				[this]()
-				{
-					auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
-
-					if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-					{
-						return (true);
-					}
-
-					return (false);
-				});
-
-		dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setTaskIfTrue(tForcedHyperplaneAddition);
-
-		ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition,
-				"ForceSupportingHyperplaneAddition");
+	if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
+	{
+		TaskBase *tAddICs = new TaskAddIntegerCuts(MILPSolver);
+		ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
 	}
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
@@ -346,12 +218,12 @@ SolutionStrategySHOT::SolutionStrategySHOT(OSInstance* osInstance)
 
 }
 
-SolutionStrategySHOT::~SolutionStrategySHOT()
+SolutionStrategyNormal::~SolutionStrategyNormal()
 {
 // TODO Auto-generated destructor stub
 }
 
-bool SolutionStrategySHOT::solveProblem()
+bool SolutionStrategyNormal::solveProblem()
 {
 	TaskBase *nextTask = new TaskBase;
 
@@ -367,7 +239,7 @@ bool SolutionStrategySHOT::solveProblem()
 	return (true);
 }
 
-void SolutionStrategySHOT::initializeStrategy()
+void SolutionStrategyNormal::initializeStrategy()
 {
 
 }

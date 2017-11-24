@@ -18,6 +18,7 @@ MILPSolverOsiCbc::MILPSolverOsiCbc()
 
 	checkParameters();
 	addedHyperplanes = 0;
+
 }
 
 MILPSolverOsiCbc::~MILPSolverOsiCbc()
@@ -177,6 +178,8 @@ bool MILPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 	CbcMain0 (*cbcModel);
 	cbcModel->setLogLevel(0);
 	osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+
+	setSolutionLimit(9223372036800000000);
 
 	return (true);
 }
@@ -348,7 +351,7 @@ int MILPSolverOsiCbc::increaseSolutionLimit(int increment)
 	return (this->solLimit);
 }
 
-void MILPSolverOsiCbc::setSolutionLimit(int limit)
+void MILPSolverOsiCbc::setSolutionLimit(long int limit)
 {
 	this->solLimit = limit;
 	cbcModel->setMaximumSolutions(limit);
