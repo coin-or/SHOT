@@ -1,4 +1,4 @@
-#include "TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+#include <TaskSelectPrimalFixedNLPPointsFromSolutionPool.h>
 
 TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool()
 {
@@ -53,11 +53,6 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime)
 			|| userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
 	{
-		/*if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
-		 {
-		 useFeasibleSolution = true;
-		 }*/
-
 		if (ProcessInfo::getInstance().itersMILPWithoutNLPCall
 				>= Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound"))
 		{

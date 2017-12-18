@@ -116,23 +116,28 @@ void GAMS2OS::createOSObjects()
 	}
 	else // get default settings from GAMS
 	{
-		Settings::getInstance().updateSetting("TimeLimit", "Algorithm", gevGetDblOpt(gev, gevResLim));
-		Settings::getInstance().updateSetting("GapTermTolAbsolute", "Algorithm", gevGetDblOpt(gev, gevOptCA));
+		// Removed this functionality, since otherwise we cannot control the time limit from an options file when SHOT is called on a gms file
+		/*Settings::getInstance().updateSetting("TimeLimit", "Algorithm", gevGetDblOpt(gev, gevResLim));
+		 Settings::getInstance().updateSetting("GapTermTolAbsolute", "Algorithm", gevGetDblOpt(gev, gevOptCA));
+		 Settings::getInstance().updateSetting("GapTermTolRelative", "Algorithm", gevGetDblOpt(gev, gevOptCR));
 
-		ProcessInfo::getInstance().outputInfo(
-				"Time limit set to "
-						+ UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm"))
-						+ " by GAMS");
-		ProcessInfo::getInstance().outputInfo(
-				"Absolute termination tolerance set to "
-						+ UtilityFunctions::toString(
-								Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
-						+ " by GAMS");
-		ProcessInfo::getInstance().outputInfo(
-				"Relative termination tolerance set to "
-						+ UtilityFunctions::toString(
-								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
-						+ " by GAMS");
+
+		 ProcessInfo::getInstance().outputInfo(
+		 "Time limit set to "
+		 + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm"))
+		 + " by GAMS");
+		 ProcessInfo::getInstance().outputInfo(
+		 "Absolute termination tolerance set to "
+		 + UtilityFunctions::toString(
+		 Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+		 + " by GAMS");
+		 ProcessInfo::getInstance().outputInfo(
+		 "Relative termination tolerance set to "
+		 + UtilityFunctions::toString(
+		 Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
+		 + " by GAMS");
+
+		 */
 	}
 
 	// want to solve the NLP problems with GAMS
@@ -1301,6 +1306,7 @@ void GAMS2OS::writeResult(ProcessInfo& info)
 							(gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
 			gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
 			gevLogStat(gev, "Unknown solution status returned from SHOT.");
+			std::cout << "Solstatus: " << (int) info.getCurrentIteration()->solutionStatus << std::endl;
 			break;
 	}
 

@@ -17,7 +17,7 @@ MILPSolverCplex::MILPSolverCplex()
 	isVariablesFixed = false;
 
 	checkParameters();
-	addedHyperplanes = 0;
+	//addedHyperplanes = 0;
 	modelUpdated = false;
 }
 
@@ -890,4 +890,75 @@ void MILPSolverCplex::writePresolvedToFile(std::string filename)
 void MILPSolverCplex::checkParameters()
 {
 
+}
+
+void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
+		std::function<IloConstraint(IloRange)> addConstraintFunction)
+{
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+
+	auto tmpPair = createHyperplaneTerms(hyperplane);
+
+	bool hyperplaneIsOk = true;
+
+	for (auto E : tmpPair.first)
+	{
+		if (E.value != E.value) //Check for NaN
+		{
+
+			ProcessInfo::getInstance().outputWarning(
+					"     Warning: hyperplane not generated, NaN found in linear terms!");
+			hyperplaneIsOk = false;
+			break;
+		}
+	}
+
+	if (hyperplaneIsOk)
+	{
+		GeneratedHyperplane genHyperplane;
+
+		IloExpr expr(cplexEnv);
+
+		for (int i = 0; i < tmpPair.first.size(); i++)
+		{
+			expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).idx];
+		}
+
+		IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
+
+		auto addedConstr = addConstraintFunction(tmpRange);
+
+		int constrIndex = 0;
+
+		genHyperplane.generatedConstraintIndex = constrIndex;
+		genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
+		genHyperplane.generatedPoint = hyperplane.generatedPoint;
+		genHyperplane.source = hyperplane.source;
+		genHyperplane.generatedIter = currIter->iterationNumber;
+		genHyperplane.isLazy = false;
+		genHyperplane.isRemoved = false;
+
+		generatedHyperplanes.push_back(genHyperplane);
+
+		currIter->numHyperplanesAdded++;
+		currIter->totNumHyperplanes++;
+		expr.end();
+	}
+
+}
+
+void MILPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
+		std::function<IloConstraint(IloRange)> addConstraintFunction)
+{
+	IloExpr expr(cplexEnv);
+
+	for (int i = 0; i < binaryIndexes.size(); i++)
+	{
+		expr += 1.0 * cplexVars[binaryIndexes.at(i)];
+	}
+
+	IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
+
+	auto addedConstr = addConstraintFunction(tmpRange);
+	ProcessInfo::getInstance().numIntegerCutsAdded++;
 }

@@ -28,7 +28,6 @@ bool TaskHandler::getNextTask(TaskBase* &task)
 {
 	if (nextTask == taskIDMap.end()) return (false);
 
-	//std::cout << "Next task is : " << nextTask->first << std::endl;//
 	task = (nextTask->second);
 	nextTask++;
 
@@ -70,4 +69,19 @@ void TaskHandler::clearTasks()
 	taskIDMap.clear();
 	nextTask == taskIDMap.end();
 
+}
+
+TaskBase* TaskHandler::getTask(std::string taskID)
+{
+	for (std::list<std::pair<std::string, TaskBase*>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+	{
+		if (it->first == taskID)
+		{
+			return (it->second);
+		}
+	}
+
+	// Cannot find the specified task
+	TaskExceptionNotFound e(taskID);
+	throw(e);
 }

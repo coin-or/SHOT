@@ -78,7 +78,56 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	return (lastSolutions);
 }
 
+/*
+ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
+ {
+ auto fp = std::bind(&addLinearConstraint, _1, _2);
+
+ createHyperplane(hyperplane, fp);
+ }*/
+
 void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
+{
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+
+	auto tmpPair = createHyperplaneTerms(hyperplane);
+
+	bool hyperplaneIsOk = true;
+
+	for (auto E : tmpPair.first)
+	{
+		if (E.value != E.value) //Check for NaN
+		{
+
+			ProcessInfo::getInstance().outputWarning(
+					"     Warning: hyperplane not generated, NaN found in linear terms!");
+			hyperplaneIsOk = false;
+			break;
+		}
+	}
+
+	if (hyperplaneIsOk)
+	{
+		GeneratedHyperplane genHyperplane;
+
+		int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second);
+
+		genHyperplane.generatedConstraintIndex = constrIndex;
+		genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
+		genHyperplane.generatedPoint = hyperplane.generatedPoint;
+		genHyperplane.source = hyperplane.source;
+		genHyperplane.generatedIter = currIter->iterationNumber;
+		genHyperplane.isLazy = false;
+		genHyperplane.isRemoved = false;
+
+		generatedHyperplanes.push_back(genHyperplane);
+
+		currIter->numHyperplanesAdded++;
+		currIter->totNumHyperplanes++;
+	}
+}
+
+std::pair<std::vector<IndexValuePair>, double> MILPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	std::vector < IndexValuePair > elements;
@@ -109,40 +158,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 				"     Gradient for variable " + varNames.at(nablag->indexes[i]) + ": " + to_string(nablag->values[i]));
 	}
 
-	bool hyperplaneIsOk = true;
-
-	for (auto E : elements)
-	{
-		if (E.value != E.value) //Check for NaN
-		{
-
-			ProcessInfo::getInstance().outputWarning(
-					"     Warning: hyperplane not generated, NaN found in linear terms!");
-			hyperplaneIsOk = false;
-			break;
-		}
-	}
-
-	if (hyperplaneIsOk)
-	{
-		int constrIndex = addLinearConstraint(elements, constant);
-
-		addedHyperplanes++;
-		GeneratedHyperplane genHyperplane;
-
-		genHyperplane.generatedConstraintIndex = constrIndex;
-		genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-		genHyperplane.generatedPoint = hyperplane.generatedPoint;
-		genHyperplane.source = hyperplane.source;
-		genHyperplane.generatedIter = currIter->iterationNumber;
-		genHyperplane.isLazy = false;
-		genHyperplane.isRemoved = false;
-
-		generatedHyperplanes.push_back(genHyperplane);
-
-		currIter->numHyperplanesAdded++;
-		currIter->totNumHyperplanes++;
-	}
+	return (std::make_pair(elements, constant));
 }
 
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
@@ -197,7 +213,7 @@ void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	if (hyperplaneIsOk)
 	{
 		int constrIndex = addLinearConstraint(elements, constant, false);
-		addedHyperplanes++;
+		//addedHyperplanes++;
 		GeneratedHyperplane genHyperplane;
 
 		genHyperplane.generatedConstraintIndex = constrIndex;
@@ -338,4 +354,21 @@ void MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
 				"     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and "
 						+ UtilityFunctions::toString(newUB));
 	}
+}
+
+void MILPSolverBase::createIntegerCut(std::vector<int> binaryIndexes)
+{
+	std::vector < IndexValuePair > elements;
+
+	for (int i = 0; i < binaryIndexes.size(); i++)
+	{
+		IndexValuePair pair;
+		pair.idx = binaryIndexes.at(i);
+		pair.value = 1.0;
+
+		elements.push_back(pair);
+	}
+
+	this->addLinearConstraint(elements, -(binaryIndexes.size() - 1.0));
+	ProcessInfo::getInstance().numIntegerCutsAdded++;
 }

@@ -2,6 +2,8 @@
 #include "IMILPSolver.h"
 #include "MILPSolverBase.h"
 
+#include <functional>
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
@@ -16,6 +18,7 @@
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
+#include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 
 class MILPSolverCplexLazy: public MILPSolverCplex
 {
@@ -28,17 +31,17 @@ class MILPSolverCplexLazy: public MILPSolverCplex
 
 		virtual void initializeSolverSettings();
 
-		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
-		{
-			return (addLinearConstraint(elements, constant, false));
-		}
-		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
-
 		virtual E_ProblemSolutionStatus solveProblem();
 
 		virtual int increaseSolutionLimit(int increment);
 		virtual void setSolutionLimit(long limit);
 		virtual int getSolutionLimit();
+
+		bool isBusy = false;
+		int lastSummaryIter = 0;
+		int currIter = 0;
+		double lastSummaryTimeStamp = 0.0;
+		int lastHeaderIter = 0;
 
 	private:
 
@@ -46,4 +49,66 @@ class MILPSolverCplexLazy: public MILPSolverCplex
 
 	protected:
 
+};
+
+class HCallbackI: public IloCplex::HeuristicCallbackI
+{
+		IloNumVarArray cplexVars;
+
+	private:
+
+	public:
+		IloCplex::CallbackI* duplicateCallback() const;
+		HCallbackI(IloEnv env, IloNumVarArray xx2);
+		void main();	// the call back function
+};
+
+class InfoCallbackI: public IloCplex::MIPInfoCallbackI
+{
+		IloNumVarArray cplexVars;
+
+	private:
+
+	public:
+		IloCplex::CallbackI* duplicateCallback() const;
+		InfoCallbackI(IloEnv env, IloNumVarArray xx2);
+		void main();	// the call back function
+};
+
+class IncCallbackI: public IloCplex::IncumbentCallbackI
+{
+		IloNumVarArray cplexVars;
+
+	private:
+	public:
+		IloCplex::CallbackI* duplicateCallback() const;
+		IncCallbackI(IloEnv env, IloNumVarArray xx2);
+		void main();
+};
+
+class CtCallbackI: public IloCplex::LazyConstraintCallbackI
+{
+		IloNumVarArray cplexVars;
+
+		TaskBase *tSelectPrimNLP;
+		bool isMinimization = true;
+		int cbCalls = 0;
+		int lastNumAddedHyperplanes = 0;
+
+		TaskBase *taskSelectHPPts;
+		TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
+		MILPSolverCplexLazy *cplexSolver;
+
+		bool checkFixedNLPStrategy(SolutionPoint point);
+		void printIterationReport(SolutionPoint point);
+
+		bool checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point);
+		bool checkRelativeObjectiveGapToleranceMet(SolutionPoint point);
+		bool checkRelativeMIPGapToleranceMet(SolutionPoint point);
+
+	public:
+		IloCplex::CallbackI* duplicateCallback() const;
+
+		CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazy *solver);
+		void main();	// the call back function
 };

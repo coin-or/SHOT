@@ -19,6 +19,9 @@ class TaskUpdateNonlinearObjectiveByLinesearch: public TaskBase
 		virtual ~TaskUpdateNonlinearObjectiveByLinesearch();
 		virtual void run();
 		virtual std::string getType();
+
+		bool updateObjectiveInPoint(SolutionPoint &solution);
+
 	private:
 
 };

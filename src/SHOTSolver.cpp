@@ -392,8 +392,6 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("MinimaxUpperBound", "InteriorPoint", 0.1,
 			"Upper bound for minimax objective variable", -OSDBL_MAX, OSDBL_MAX);
-	Settings::getInstance().createSetting("OriginalObjectiveWeight", "InteriorPointRelaxed", 0.0,
-			"The weight of the original objective function in NLP relaxation", -OSDBL_MAX, OSDBL_MAX);
 
 // MILP/LP solver
 	std::vector < std::string > enumMILPSolver;
@@ -466,7 +464,7 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("SolnPoolGap", "CPLEX", 1.0e+75,
 			"The relative tolerance on the objective values in the solution pool", 0, 1.0e+75);
-	Settings::getInstance().createSetting("MIPEmphasis", "CPLEX", 1,
+	Settings::getInstance().createSetting("MIPEmphasis", "CPLEX", 0,
 			"0 = balanced, 1 = feasibility, 2 = optimality, 3 = best bound, 4 = hidden feasible", 0, 4);
 
 	Settings::getInstance().createSetting("Probe", "CPLEX", 0,
@@ -475,7 +473,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ParallelMode", "CPLEX", 0,
 			"-1 = opportunistic, 0 = automatic, 1 = deterministic", -1, 1);
 
-	Settings::getInstance().createSetting("Threads", "CPLEX", 0, "Number of threads to use, 0 = automatic", 0, 999);
+	Settings::getInstance().createSetting("Threads", "CPLEX", 7, "Number of threads to use, 0 = automatic", 0, 999);
 
 // Linesearch
 	std::vector < std::string > enumLinesearchMethod;
@@ -505,7 +503,7 @@ void SHOTSolver::initializeSettings()
 	enumLinesearchConstraintStrategy.push_back("Max function");
 	enumLinesearchConstraintStrategy.push_back("Individual constraints");
 	Settings::getInstance().createSetting("LinesearchConstraintStrategy", "ESH",
-			static_cast<int>(ES_LinesearchConstraintStrategy::AllAsMaxFunct),
+			static_cast<int>(ES_LinesearchConstraintStrategy::IndividualConstraints),
 			"Strategy for grouping the constraints for linesearches", enumLinesearchConstraintStrategy);
 	enumLinesearchMethod.clear();
 
@@ -529,7 +527,7 @@ void SHOTSolver::initializeSettings()
 			"Use the dedicated linesearch method for finding primal solutions");
 
 	Settings::getInstance().createSetting("PrimalStrategyFixedNLP", "PrimalBound", true,
-			"Solved integer-fixed NLP problems for finding primal solutions");
+			"Solve integer-fixed NLP problems for finding primal solutions");
 
 	std::vector < std::string > enumPrimalNLPSolver;
 	enumPrimalNLPSolver.push_back("CuttingPlane");

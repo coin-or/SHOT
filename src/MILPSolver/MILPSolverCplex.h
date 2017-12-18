@@ -30,10 +30,23 @@ class MILPSolverCplex: public IMILPSolver, public MILPSolverBase
 			return (addLinearConstraint(elements, constant, false));
 		}
 		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
+
 		virtual void createHyperplane(Hyperplane hyperplane)
 		{
 			MILPSolverBase::createHyperplane(hyperplane);
 		}
+
+		virtual void createIntegerCut(std::vector<int> binaryIndexes)
+		{
+			MILPSolverBase::createIntegerCut(binaryIndexes);
+		}
+
+		virtual void createIntegerCut(std::vector<int> binaryIndexes,
+				std::function<IloConstraint(IloRange)> addConstraintFunction);
+
+		virtual void createHyperplane(Hyperplane hyperplane,
+				std::function<IloConstraint(IloRange)> addConstraintFunction);
+
 		virtual void createInteriorHyperplane(Hyperplane hyperplane)
 		{
 			MILPSolverBase::createInteriorHyperplane(hyperplane);

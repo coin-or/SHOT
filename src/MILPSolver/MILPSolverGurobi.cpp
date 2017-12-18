@@ -14,8 +14,6 @@ MILPSolverGurobi::MILPSolverGurobi()
 	isVariablesFixed = false;
 
 	checkParameters();
-	addedHyperplanes = 0;
-
 }
 
 MILPSolverGurobi::~MILPSolverGurobi()

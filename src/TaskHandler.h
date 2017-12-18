@@ -17,6 +17,8 @@ class TaskHandler
 		void setNextTask(std::string taskID);
 		void clearTasks();
 
+		TaskBase* getTask(std::string taskID);
+
 	private:
 		//std::list<TaskBase*> allTasks;
 		std::list<std::pair<std::string, TaskBase*>>::iterator nextTask;

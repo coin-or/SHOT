@@ -263,11 +263,11 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 							+ " s or " + to_string(iters) + " iters.");
 
 			if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm")
-					&& NLPSolver->NLPProblem->getNumberOfIntegerVariables() == 0)
+					&& ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
 			{
 				//Add integer cut.
 
-				auto binVars = NLPSolver->NLPProblem->getBinaryVariableIndices();
+				auto binVars = ProcessInfo::getInstance().originalProblem->getBinaryVariableIndices();
 
 				if (binVars.size() > 0)
 				{
@@ -280,7 +280,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 							elements.push_back(binVars.at(i));
 						}
 					}
-
 					ProcessInfo::getInstance().integerCutWaitingList.push_back(elements);
 				}
 			}

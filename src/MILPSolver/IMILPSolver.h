@@ -80,6 +80,7 @@ class IMILPSolver
 		virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
 
 		virtual void createHyperplane(Hyperplane hyperplane)= 0;
+		virtual void createIntegerCut(std::vector<int> binaryIndexes)= 0;
 		virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
 		virtual bool supportsQuadraticObjective() = 0;

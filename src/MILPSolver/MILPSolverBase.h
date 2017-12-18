@@ -8,18 +8,21 @@
 class MILPSolverBase
 {
 	private:
-		std::vector<GeneratedHyperplane> generatedHyperplanes;
 
 		std::vector<int> fixedVariableIndexes;
 		vector<pair<double, double> > fixedVariableOriginalBounds;
 
 	protected:
+		virtual std::pair<std::vector<IndexValuePair>, double> createHyperplaneTerms(Hyperplane hyperplane);
+		std::vector<GeneratedHyperplane> generatedHyperplanes;
 
 	public:
 		MILPSolverBase();
 		~MILPSolverBase();
 
 		virtual void createHyperplane(Hyperplane hyperplane);
+		virtual void createIntegerCut(std::vector<int> binaryIndexes);
+
 		virtual void createInteriorHyperplane(Hyperplane hyperplane);
 		virtual bool getDiscreteVariableStatus();
 		virtual void populateSolutionPool() = 0;
@@ -59,6 +62,6 @@ class MILPSolverBase
 		virtual void stopTimer();
 
 		OptProblem *originalProblem;
-		int addedHyperplanes;
+		//int addedHyperplanes;
 
 };

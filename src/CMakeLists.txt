@@ -79,7 +79,7 @@ include_directories(${Foo_INCLUDE_DIRS})
 #include_directories("." "..")
 
 set(GUROBI_DIR /opt/gurobi751)
-set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio127)
+set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio1271)
 
 include_directories("${COINOS_DIR}/include/coin")
 include_directories("${COINOS_DIR}/include/cppad")

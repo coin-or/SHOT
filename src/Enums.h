@@ -114,13 +114,7 @@ enum class E_PrimalNLPSource
 
 enum class E_DualSolutionSource
 {
-	LPSolution, MILPSolutionOptimal, MILPSolutionFeasible,
-	//Linesearch,
-	//LinesearchFixedIntegers,
-	//NLPFixedIntegers,
-	//NLPRelaxed,
-	ObjectiveConstraint,
-//LPFixedIntegers
+	LPSolution, MILPSolutionOptimal, MILPSolutionFeasible, ObjectiveConstraint
 };
 
 enum class E_HyperplaneSource
@@ -149,5 +143,5 @@ enum class ES_PresolveStrategy
 
 enum class ES_LinesearchConstraintStrategy
 {
-	AllAsMaxFunct, IndividualConstrains
+	AllAsMaxFunct, IndividualConstraints
 };

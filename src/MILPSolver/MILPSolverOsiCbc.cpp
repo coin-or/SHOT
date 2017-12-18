@@ -17,8 +17,6 @@ MILPSolverOsiCbc::MILPSolverOsiCbc()
 	isVariablesFixed = false;
 
 	checkParameters();
-	addedHyperplanes = 0;
-
 }
 
 MILPSolverOsiCbc::~MILPSolverOsiCbc()

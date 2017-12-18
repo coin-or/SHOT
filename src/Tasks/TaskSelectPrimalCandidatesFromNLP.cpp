@@ -9,7 +9,6 @@
 
 TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
 {
-
 	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
 

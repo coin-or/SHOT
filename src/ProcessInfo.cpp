@@ -511,7 +511,8 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	// Assume linear constraints are valid for MIP/LP solutions
 
 	if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
-			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
+			|| primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
+			|| primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback)
 	{
 	}
 	else
@@ -1295,6 +1296,7 @@ void ProcessInfo::createIteration()
 	}
 
 	iterations.push_back(iter);
+
 }
 
 Iteration * ProcessInfo::getCurrentIteration()

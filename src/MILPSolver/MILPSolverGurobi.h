@@ -27,6 +27,12 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 		{
 			MILPSolverBase::createHyperplane(hyperplane);
 		}
+
+		virtual void createIntegerCut(std::vector<int> binaryIndexes)
+		{
+			MILPSolverBase::createIntegerCut(binaryIndexes);
+		}
+
 		virtual void createInteriorHyperplane(Hyperplane hyperplane)
 		{
 			MILPSolverBase::createInteriorHyperplane(hyperplane);

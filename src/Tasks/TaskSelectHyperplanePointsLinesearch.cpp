@@ -93,6 +93,14 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 					ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 					addedHyperplanes++;
 
+					ProcessInfo::getInstance().outputInfo(
+							"     Added hyperplane to waiting list with deviation: "
+									+ UtilityFunctions::toString(tmpMostDevConstr.value));
+
+				}
+				else
+				{
+					ProcessInfo::getInstance().outputAlways("     Could not add hyperplane to waiting list.");
 				}
 			}
 		}

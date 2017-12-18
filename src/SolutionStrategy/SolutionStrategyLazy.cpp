@@ -57,14 +57,9 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
 
-	dynamic_cast<TaskConditional*>(tPrintIterHeaderCheck)->setCondition([this]()
-	{	return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1);});
-	dynamic_cast<TaskConditional*>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
-
-	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
+	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
 	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve"))
 			!= ES_PresolveStrategy::Never)
@@ -95,17 +90,15 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-			"Algorithm")) == ES_HyperplanePointStrategy::ESH)
+	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
 		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
-
-		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-
-		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
+
+	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
 	TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
@@ -115,19 +108,14 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	// Needed because e.g. fac2 terminates with optimal linear solution but not optimal nonlinear solution
-	TaskBase *tForcedHyperplaneAddition = new TaskSequential();
-
 	/*
-	 TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+	 // Needed because e.g. fac2 terminates with optimal linear solution but not optimal nonlinear solution
+	 // TODO: figure out why and fix...
+	 TaskBase *tForcedHyperplaneAddition = new TaskSequential();
+
+	 TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
 	 dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tSelectHPPts);
-	 //dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckPrimCands);
-	 dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckAbsGap);
-	 dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tCheckRelGap);
-
-	 //TaskBase *tAddHPs = new TaskAddHyperplanes();
 	 dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tAddHPs);
-
 
 	 TaskBase *tForceSupportingHyperplaneAddition = new TaskConditional();
 
@@ -138,6 +126,8 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 
 	 if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	 {
+	 ProcessInfo::getInstance().outputError(
+	 "     Forced addition of cutting plane in solution point.");
 	 return (true);
 	 }
 
@@ -146,8 +136,8 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 
 	 dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setTaskIfTrue(tForcedHyperplaneAddition);
 
-	 ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition, "ForceSupportingHyperplaneAddition");*/
-
+	 ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition, "ForceSupportingHyperplaneAddition");
+	 */
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 

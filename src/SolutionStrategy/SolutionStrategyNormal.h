@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <TaskSelectPrimalFixedNLPPointsFromSolutionPool.h>
 #include "ISolutionStrategy.h"
 #include "../Tasks/TaskAddIntegerCuts.h"
 #include "../Tasks/TaskFindInteriorPoint.h"
@@ -52,7 +53,6 @@
 #include "../Tasks/TaskAddHyperplanes.h"
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
-#include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
