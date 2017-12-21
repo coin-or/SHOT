@@ -60,12 +60,6 @@ void TaskHandler::setNextTask(std::string taskID)
 
 void TaskHandler::clearTasks()
 {
-	/*for (auto task : taskIDMap)
-	 {
-	 delete task.second;
-	 //delete task;
-	 }*/
-
 	taskIDMap.clear();
 	nextTask == taskIDMap.end();
 

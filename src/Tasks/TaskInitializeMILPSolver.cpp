@@ -25,15 +25,6 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
 	bool isQuadraticUsed = (useQuadraticObjective || (useQuadraticConstraint));
 
-	if (isObjQuadratic && isQuadraticUsed)
-	{
-		useLazyStrategy = false;
-	}
-	else if (useQuadraticConstraint && originalInstance->getNumberOfQuadraticTerms() > 0)
-	{
-		useLazyStrategy = false;
-	}
-
 	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
 
 	if (useLazyStrategy)

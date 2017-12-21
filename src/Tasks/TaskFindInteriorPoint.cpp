@@ -107,6 +107,12 @@ void TaskFindInteriorPoint::run()
 
 		ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 
+		if (maxDev.value > 0)
+		{
+			ProcessInfo::getInstance().outputWarning(
+					"Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+		}
+
 		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
 	}
 

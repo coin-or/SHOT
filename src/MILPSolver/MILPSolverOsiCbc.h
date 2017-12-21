@@ -43,6 +43,11 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 			MILPSolverBase::createInteriorHyperplane(hyperplane);
 		}
 
+		virtual std::pair<std::vector<IndexValuePair>, double> createHyperplaneTerms(Hyperplane hyperplane)
+		{
+			MILPSolverBase::createHyperplaneTerms(hyperplane);
+		}
+
 		virtual void fixVariable(int varIndex, double value);
 
 		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)

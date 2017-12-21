@@ -106,7 +106,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+	//ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
 	/*
 	 // Needed because e.g. fac2 terminates with optimal linear solution but not optimal nonlinear solution
@@ -141,14 +141,13 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 
-	TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
-	ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
+	//TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
+	//ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
 	ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
 	TaskBase *tPrintSol = new TaskPrintSolution();
 	ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
-
 }
 
 SolutionStrategyLazy::~SolutionStrategyLazy()

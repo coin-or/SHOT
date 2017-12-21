@@ -896,9 +896,7 @@ void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
 		std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-
 	auto tmpPair = createHyperplaneTerms(hyperplane);
-
 	bool hyperplaneIsOk = true;
 
 	for (auto E : tmpPair.first)
@@ -944,7 +942,6 @@ void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
 		currIter->totNumHyperplanes++;
 		expr.end();
 	}
-
 }
 
 void MILPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
@@ -961,4 +958,6 @@ void MILPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
 
 	auto addedConstr = addConstraintFunction(tmpRange);
 	ProcessInfo::getInstance().numIntegerCutsAdded++;
+
+	expr.end();
 }

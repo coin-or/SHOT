@@ -3,6 +3,8 @@
 #include "MILPSolverBase.h"
 
 #include <functional>
+#include <thread>
+#include <mutex>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
@@ -37,11 +39,11 @@ class MILPSolverCplexLazy: public MILPSolverCplex
 		virtual void setSolutionLimit(long limit);
 		virtual int getSolutionLimit();
 
-		bool isBusy = false;
 		int lastSummaryIter = 0;
 		int currIter = 0;
 		double lastSummaryTimeStamp = 0.0;
 		int lastHeaderIter = 0;
+		bool isBusy = false;
 
 	private:
 
@@ -105,6 +107,8 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 		bool checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point);
 		bool checkRelativeObjectiveGapToleranceMet(SolutionPoint point);
 		bool checkRelativeMIPGapToleranceMet(SolutionPoint point);
+
+		void createHyperplane(Hyperplane hyperplane);
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
