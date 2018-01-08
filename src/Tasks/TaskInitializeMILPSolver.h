@@ -13,6 +13,8 @@
 #include "../UtilityFunctions.h"
 #include "../MILPSolver/IMILPSolver.h"
 #include "../MILPSolver/MILPSolverCplex.h"
+#include "../MILPSolver/MILPSolverCplexLazy.h"
+#include "../MILPSolver/MILPSolverCplexLazyOriginalCB.h"
 #include "../MILPSolver/MILPSolverGurobi.h"
 #include "../MILPSolver/MILPSolverOsiCbc.h"
 

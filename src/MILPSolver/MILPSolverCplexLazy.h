@@ -53,7 +53,7 @@ class MILPSolverCplexLazy: public MILPSolverCplex
 
 };
 
-class HCallbackI: public IloCplex::HeuristicCallbackI
+class HCallbackI2: public IloCplex::HeuristicCallbackI
 {
 		IloNumVarArray cplexVars;
 
@@ -61,11 +61,11 @@ class HCallbackI: public IloCplex::HeuristicCallbackI
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
-		HCallbackI(IloEnv env, IloNumVarArray xx2);
+		HCallbackI2(IloEnv env, IloNumVarArray xx2);
 		void main();	// the call back function
 };
 
-class InfoCallbackI: public IloCplex::MIPInfoCallbackI
+class InfoCallbackI2: public IloCplex::MIPInfoCallbackI
 {
 		IloNumVarArray cplexVars;
 
@@ -73,22 +73,22 @@ class InfoCallbackI: public IloCplex::MIPInfoCallbackI
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
-		InfoCallbackI(IloEnv env, IloNumVarArray xx2);
+		InfoCallbackI2(IloEnv env, IloNumVarArray xx2);
 		void main();	// the call back function
 };
 
-class IncCallbackI: public IloCplex::IncumbentCallbackI
+class IncCallbackI2: public IloCplex::IncumbentCallbackI
 {
 		IloNumVarArray cplexVars;
 
 	private:
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
-		IncCallbackI(IloEnv env, IloNumVarArray xx2);
+		IncCallbackI2(IloEnv env, IloNumVarArray xx2);
 		void main();
 };
 
-class CtCallbackI: public IloCplex::LazyConstraintCallbackI
+class CtCallbackI2: public IloCplex::LazyConstraintCallbackI
 {
 		IloNumVarArray cplexVars;
 
@@ -113,6 +113,6 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
 
-		CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazy *solver);
+		CtCallbackI2(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazy *solver);
 		void main();	// the call back function
 };

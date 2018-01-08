@@ -896,7 +896,17 @@ void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
 		std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-	auto tmpPair = createHyperplaneTerms(hyperplane);
+
+	auto optional = createHyperplaneTerms(hyperplane);
+
+	if (!optional)
+	{
+		return;
+	}
+
+	auto tmpPair = optional.get();
+
+	//auto tmpPair = createHyperplaneTerms(hyperplane);
 	bool hyperplaneIsOk = true;
 
 	for (auto E : tmpPair.first)

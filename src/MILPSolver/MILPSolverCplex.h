@@ -52,9 +52,10 @@ class MILPSolverCplex: public IMILPSolver, public MILPSolverBase
 			MILPSolverBase::createInteriorHyperplane(hyperplane);
 		}
 
-		virtual std::pair<std::vector<IndexValuePair>, double> createHyperplaneTerms(Hyperplane hyperplane)
+		virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(
+				Hyperplane hyperplane)
 		{
-			MILPSolverBase::createHyperplaneTerms(hyperplane);
+			return (MILPSolverBase::createHyperplaneTerms(hyperplane));
 		}
 
 		virtual void fixVariable(int varIndex, double value);

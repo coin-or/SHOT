@@ -25,7 +25,7 @@ class MILPSolverBase
 
 		virtual void createInteriorHyperplane(Hyperplane hyperplane);
 
-		virtual std::pair<std::vector<IndexValuePair>, double> createHyperplaneTerms(Hyperplane hyperplane);
+		boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(Hyperplane hyperplane);
 
 		virtual bool getDiscreteVariableStatus();
 		virtual void populateSolutionPool() = 0;

@@ -90,7 +90,14 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	auto tmpPair = createHyperplaneTerms(hyperplane);
+	auto optional = createHyperplaneTerms(hyperplane);
+
+	if (!optional)
+	{
+		return;
+	}
+
+	auto tmpPair = optional.get();
 
 	bool hyperplaneIsOk = true;
 
@@ -98,7 +105,7 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-
+			std::cout << E.value << std::endl;
 			ProcessInfo::getInstance().outputWarning(
 					"     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
@@ -127,7 +134,8 @@ void MILPSolverBase::createHyperplane(Hyperplane hyperplane)
 	}
 }
 
-std::pair<std::vector<IndexValuePair>, double> MILPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
+boost::optional<std::pair<std::vector<IndexValuePair>, double>> MILPSolverBase::createHyperplaneTerms(
+		Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	std::vector < IndexValuePair > elements;
@@ -137,12 +145,12 @@ std::pair<std::vector<IndexValuePair>, double> MILPSolverBase::createHyperplaneT
 	double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
 
-	ProcessInfo::getInstance().outputInfo(
-			"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex));
-	int number = originalProblem->getNumberOfVariables();
-
 	auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
 			hyperplane.generatedPoint);
+
+	ProcessInfo::getInstance().outputInfo(
+			"     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex) + " with "
+					+ to_string(nablag->number) + " elements.");
 
 	for (int i = 0; i < nablag->number; i++)
 	{
@@ -158,7 +166,10 @@ std::pair<std::vector<IndexValuePair>, double> MILPSolverBase::createHyperplaneT
 				"     Gradient for variable " + varNames.at(nablag->indexes[i]) + ": " + to_string(nablag->values[i]));
 	}
 
-	return (std::make_pair(elements, constant));
+	boost::optional<std::pair<std::vector<IndexValuePair>, double>> optional;
+	if (elements.size() > 0) optional = std::make_pair(elements, constant);
+
+	return (optional);
 }
 
 void MILPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)

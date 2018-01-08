@@ -29,10 +29,15 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 
 	if (useLazyStrategy)
 	{
-		if (solver == ES_MILPSolver::Cplex)
+		if (solver == ES_MILPSolver::Cplex && Settings::getInstance().getBoolSetting("UseNewCallbackType", "CPLEX"))
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazy();
 			ProcessInfo::getInstance().outputInfo("Cplex (lazy) selected as MIP solver.");
+		}
+		else if (solver == ES_MILPSolver::Cplex)
+		{
+			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazyOriginalCB();
+			ProcessInfo::getInstance().outputInfo("Cplex (lazy, original callback) selected as MIP solver.");
 		}
 		else if (solver == ES_MILPSolver::Gurobi)
 		{
@@ -46,6 +51,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		}
 		else
 		{
+			ProcessInfo::getInstance().outputError("Error in solver definition.");
 			throw new ErrorClass("Error in MIP solver definition.");
 		}
 	}
@@ -54,7 +60,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		if (solver == ES_MILPSolver::Cplex)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplex();
-			ProcessInfo::getInstance().outputInfo("Cplex (lazy) selected as MIP solver.");
+			ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver.");
 		}
 		else if (solver == ES_MILPSolver::Gurobi)
 		{
@@ -68,6 +74,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		}
 		else
 		{
+			ProcessInfo::getInstance().outputError("Error in solver definition.");
 			throw new ErrorClass("Error in MIP solver definition.");
 		}
 	}

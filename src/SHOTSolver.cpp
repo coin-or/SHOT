@@ -398,7 +398,6 @@ void SHOTSolver::initializeSettings()
 	enumMILPSolver.push_back("Cplex");
 	enumMILPSolver.push_back("Gurobi");
 	enumMILPSolver.push_back("Cbc");
-	enumMILPSolver.push_back("Cplex lazy");
 	Settings::getInstance().createSetting("MILPSolver", "MILP", static_cast<int>(ES_MILPSolver::Cplex), "MILP solver",
 			enumMILPSolver);
 	enumMILPSolver.clear();
@@ -457,6 +456,8 @@ void SHOTSolver::initializeSettings()
 			static_cast<int>(ES_QPStrategy::QuadraticObjective), "QP strategy", enumQPStrategy);
 
 // CPLEX
+	Settings::getInstance().createSetting("UseNewCallbackType", "CPLEX", true,
+			"Use the new callback introduced in CPLEX 12.8 with the lazy strategy");
 	Settings::getInstance().createSetting("SolnPoolIntensity", "CPLEX", 0,
 			"0 = automatic, 1 = mild, 2 = moderate, 3 = aggressive, 4 = very aggressive", 0, 4);
 	Settings::getInstance().createSetting("SolnPoolReplace", "CPLEX", 2,

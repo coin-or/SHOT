@@ -43,9 +43,12 @@ void TaskAddHyperplanes::run()
 			else
 			{
 				MILPSolver->createHyperplane(tmpItem);
+
 				ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
+
 				addedHyperplanes++;
 			}
+
 		}
 
 		ProcessInfo::getInstance().hyperplaneWaitingList.clear();

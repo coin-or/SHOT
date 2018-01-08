@@ -3,28 +3,28 @@
 //#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
-std::mutex cplexMutex;
-std::mutex addMutex;
+std::mutex cplexMutex2;
+std::mutex addMutex2;
 
-HCallbackI::HCallbackI(IloEnv env, IloNumVarArray xx2) :
+HCallbackI2::HCallbackI2(IloEnv env, IloNumVarArray xx2) :
 		IloCplex::HeuristicCallbackI(env), cplexVars(xx2)
 {
 }
 
-IloCplex::CallbackI* HCallbackI::duplicateCallback() const
+IloCplex::CallbackI* HCallbackI2::duplicateCallback() const
 {
-	return (new (getEnv()) HCallbackI(*this));
+	return (new (getEnv()) HCallbackI2(*this));
 }
 
-IloCplex::Callback HCallback(IloEnv env, IloNumVarArray cplexVars)
+IloCplex::Callback HCallback2(IloEnv env, IloNumVarArray cplexVars)
 {
-	return (IloCplex::Callback(new (env) HCallbackI(env, cplexVars)));
+	return (IloCplex::Callback(new (env) HCallbackI2(env, cplexVars)));
 }
 
 // This callback injects the best known primal solution into all threads.
-void HCallbackI::main() // Called at each node...
+void HCallbackI2::main() // Called at each node...
 {
-	cplexMutex.lock();
+	cplexMutex2.lock();
 
 	bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
@@ -46,29 +46,29 @@ void HCallbackI::main() // Called at each node...
 		setSolution(cplexVars, tmpVals);
 	}
 
-	cplexMutex.unlock();
+	cplexMutex2.unlock();
 	return;
 }
 
-InfoCallbackI::InfoCallbackI(IloEnv env, IloNumVarArray xx2) :
+InfoCallbackI2::InfoCallbackI2(IloEnv env, IloNumVarArray xx2) :
 		IloCplex::MIPInfoCallbackI(env), cplexVars(xx2)
 {
 }
 
-IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const
+IloCplex::CallbackI* InfoCallbackI2::duplicateCallback() const
 {
-	return (new (getEnv()) InfoCallbackI(*this));
+	return (new (getEnv()) InfoCallbackI2(*this));
 }
 
-IloCplex::Callback InfoCallback(IloEnv env, IloNumVarArray cplexVars)
+IloCplex::Callback InfoCallback2(IloEnv env, IloNumVarArray cplexVars)
 {
-	return (IloCplex::Callback(new (env) InfoCallbackI(env, cplexVars)));
+	return (IloCplex::Callback(new (env) InfoCallbackI2(env, cplexVars)));
 }
 
 // This callback injects the best known primal solution into all threads.
-void InfoCallbackI::main() // Called at each node...
+void InfoCallbackI2::main() // Called at each node...
 {
-	cplexMutex.lock();
+	cplexMutex2.lock();
 
 	bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
@@ -85,7 +85,7 @@ void InfoCallbackI::main() // Called at each node...
 						+ UtilityFunctions::toString(
 								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
 
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		this->abort();
 	}
 	else if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
@@ -96,7 +96,7 @@ void InfoCallbackI::main() // Called at each node...
 						+ UtilityFunctions::toString(
 								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
 
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		this->abort();
 	}
 	else if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
@@ -107,39 +107,39 @@ void InfoCallbackI::main() // Called at each node...
 						+ UtilityFunctions::toString(
 								Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
 
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		this->abort();
 	}
 
-	cplexMutex.unlock();
+	cplexMutex2.unlock();
 	return;
 }
 
-IncCallbackI::IncCallbackI(IloEnv env, IloNumVarArray xx2) :
+IncCallbackI2::IncCallbackI2(IloEnv env, IloNumVarArray xx2) :
 		IloCplex::IncumbentCallbackI(env), cplexVars(xx2)
 {
 }
 
-IloCplex::CallbackI* IncCallbackI::duplicateCallback() const
+IloCplex::CallbackI* IncCallbackI2::duplicateCallback() const
 {
-	return (new (getEnv()) IncCallbackI(*this));
+	return (new (getEnv()) IncCallbackI2(*this));
 }
 
-IloCplex::Callback IncCallback(IloEnv env, IloNumVarArray cplexVars)
+IloCplex::Callback IncCallback2(IloEnv env, IloNumVarArray cplexVars)
 {
-	return (IloCplex::Callback(new (env) IncCallbackI(env, cplexVars)));
+	return (IloCplex::Callback(new (env) IncCallbackI2(env, cplexVars)));
 }
 
 // This callback is called whenever the lazy callback does not cut away the solution
-void IncCallbackI::main()
+void IncCallbackI2::main()
 {
-	cplexMutex.lock();
+	cplexMutex2.lock();
 
 	IloNumArray tmpVals(this->getEnv());
 
 	if (!this->hasIncumbent())
 	{
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
@@ -158,36 +158,36 @@ void IncCallbackI::main()
 
 	if (abs(relMIPGap) < Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
 	{
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
 	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 	{
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
 	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
 	{
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
 	if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	{
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
 	reject();
-	cplexMutex.unlock();
+	cplexMutex2.unlock();
 }
 
-CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazy *solver) :
+CtCallbackI2::CtCallbackI2(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazy *solver) :
 		IloCplex::LazyConstraintCallbackI(env), cplexVars(xx2), cplexSolver(solver)
 {
-	std::lock_guard < std::mutex > lock(cplexMutex);
+	std::lock_guard < std::mutex > lock(cplexMutex2);
 
 	ProcessInfo::getInstance().lastLazyAddedIter = 0;
 	isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
@@ -221,20 +221,20 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazy *so
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
 	}
 
-	cplexMutex.unlock();
+	cplexMutex2.unlock();
 }
 
-IloCplex::CallbackI * CtCallbackI::duplicateCallback() const
+IloCplex::CallbackI * CtCallbackI2::duplicateCallback() const
 {
-	return (new (getEnv()) CtCallbackI(*this));
+	return (new (getEnv()) CtCallbackI2(*this));
 }
 
-IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, MILPSolverCplexLazy *cplexSolver)
+IloCplex::Callback CtCallback2(IloEnv env, IloNumVarArray cplexVars, MILPSolverCplexLazy *cplexSolver)
 {
-	return (IloCplex::Callback(new (env) CtCallbackI(env, cplexVars, cplexSolver)));
+	return (IloCplex::Callback(new (env) CtCallbackI2(env, cplexVars, cplexSolver)));
 }
 
-bool CtCallbackI::checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point)
+bool CtCallbackI2::checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point)
 {
 	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
 	{
@@ -248,7 +248,7 @@ bool CtCallbackI::checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point)
 	return (false);
 }
 
-bool CtCallbackI::checkRelativeObjectiveGapToleranceMet(SolutionPoint point)
+bool CtCallbackI2::checkRelativeObjectiveGapToleranceMet(SolutionPoint point)
 {
 	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 	{
@@ -262,7 +262,7 @@ bool CtCallbackI::checkRelativeObjectiveGapToleranceMet(SolutionPoint point)
 	return (false);
 }
 
-bool CtCallbackI::checkRelativeMIPGapToleranceMet(SolutionPoint point)
+bool CtCallbackI2::checkRelativeMIPGapToleranceMet(SolutionPoint point)
 {
 	auto relMIPGap = this->getMIPRelativeGap();
 
@@ -277,9 +277,9 @@ bool CtCallbackI::checkRelativeMIPGapToleranceMet(SolutionPoint point)
 	return (false);
 }
 
-void CtCallbackI::main()
+void CtCallbackI2::main()
 {
-	cplexMutex.lock();
+	cplexMutex2.lock();
 
 	lastNumAddedHyperplanes = 0;
 	this->cbCalls++;
@@ -350,21 +350,21 @@ void CtCallbackI::main()
 	if (this->checkRelativeMIPGapToleranceMet(tmpSolPt))
 	{
 		printIterationReport(tmpSolPt);
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
 	if (this->checkRelativeObjectiveGapToleranceMet(tmpSolPt))
 	{
 		printIterationReport(tmpSolPt);
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
 	if (this->checkAbsoluteObjectiveGapToleranceMet(tmpSolPt))
 	{
 		printIterationReport(tmpSolPt);
-		cplexMutex.unlock();
+		cplexMutex2.unlock();
 		return;
 	}
 
@@ -409,7 +409,7 @@ void CtCallbackI::main()
 
 		this->lastNumAddedHyperplanes++;
 	}
-	std::cout << "h6" << std::endl;
+
 	ProcessInfo::getInstance().hyperplaneWaitingList.clear();
 
 	/*
@@ -432,29 +432,29 @@ void CtCallbackI::main()
 
 	 ProcessInfo::getInstance().integerCutWaitingList.clear();
 	 }*/
-	std::cout << "h7" << std::endl;
 	printIterationReport(tmpSolPt);
-	std::cout << "h8" << std::endl;
-	cplexMutex.unlock();
-	std::cout << "h9" << std::endl;
+	cplexMutex2.unlock();
 }
 
-void CtCallbackI::createHyperplane(Hyperplane hyperplane)
+void CtCallbackI2::createHyperplane(Hyperplane hyperplane)
 {
-	std::cout << "h1" << std::endl;
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-	auto tmpPair = ProcessInfo::getInstance().MILPSolver->createHyperplaneTerms(hyperplane);
+	auto optional = ProcessInfo::getInstance().MILPSolver->createHyperplaneTerms(hyperplane);
+
+	if (!optional)
+	{
+		return;
+	}
+
+	auto tmpPair = optional.get();
+
+	//auto tmpPair = createHyperplaneTerms(hyperplane);
 	bool hyperplaneIsOk = true;
-
-	std::cout << tmpPair.first.at(0).idx << " " << tmpPair.first.at(0).value << " " << std::endl;
-
-	std::cout << "h2" << std::endl;
 
 	for (auto E : tmpPair.first)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-
 			ProcessInfo::getInstance().outputWarning(
 					"     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
@@ -462,7 +462,6 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 		}
 	}
 
-	std::cout << "h3" << std::endl;
 	if (hyperplaneIsOk)
 	{
 		GeneratedHyperplane genHyperplane;
@@ -479,7 +478,6 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 		auto addedConstr = add(tmpRange);
 
 		int constrIndex = 0;
-		std::cout << "h4" << std::endl;
 		genHyperplane.generatedConstraintIndex = constrIndex;
 		genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
 		genHyperplane.generatedPoint = hyperplane.generatedPoint;
@@ -494,10 +492,9 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 		currIter->totNumHyperplanes++;
 		expr.end();
 	}
-	std::cout << "h5" << std::endl;
 }
 
-bool CtCallbackI::checkFixedNLPStrategy(SolutionPoint point)
+bool CtCallbackI2::checkFixedNLPStrategy(SolutionPoint point)
 {
 	if (!Settings::getInstance().getBoolSetting("PrimalStrategyFixedNLP", "PrimalBound"))
 	{
@@ -580,10 +577,10 @@ void MILPSolverCplexLazy::initializeSolverSettings()
 	try
 	{
 		MILPSolverCplex::initializeSolverSettings();
-		cplexInstance.use(IncCallback(cplexEnv, cplexVars));
-		cplexInstance.use(CtCallback(cplexEnv, cplexVars, this));
-		cplexInstance.use(HCallback(cplexEnv, cplexVars));
-		cplexInstance.use(InfoCallback(cplexEnv, cplexVars));
+		cplexInstance.use(IncCallback2(cplexEnv, cplexVars));
+		cplexInstance.use(CtCallback2(cplexEnv, cplexVars, this));
+		cplexInstance.use(HCallback2(cplexEnv, cplexVars));
+		cplexInstance.use(InfoCallback2(cplexEnv, cplexVars));
 	}
 	catch (IloException& e)
 	{
@@ -685,7 +682,7 @@ void MILPSolverCplexLazy::checkParameters()
 
 }
 
-void CtCallbackI::printIterationReport(SolutionPoint solution)
+void CtCallbackI2::printIterationReport(SolutionPoint solution)
 {
 	auto MILPSolver = static_cast<MILPSolverCplexLazy*>(ProcessInfo::getInstance().MILPSolver);
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
