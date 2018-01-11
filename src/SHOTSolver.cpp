@@ -276,6 +276,9 @@ void SHOTSolver::initializeSettings()
 			"Solution strategy", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
 
+	Settings::getInstance().createSetting("AddHyperplanesForRelaxedLazySolutions", "Algorithm", false,
+			"Also adds cuts for relaxed solutions in the lazy strategy");
+
 	// Hyperplane generation point strategy
 	std::vector < std::string > enumHyperplanePointStrategy;
 	enumHyperplanePointStrategy.push_back("ESH");
@@ -456,11 +459,12 @@ void SHOTSolver::initializeSettings()
 			static_cast<int>(ES_QPStrategy::QuadraticObjective), "QP strategy", enumQPStrategy);
 
 // CPLEX
-	Settings::getInstance().createSetting("UseNewCallbackType", "CPLEX", true,
+	Settings::getInstance().createSetting("UseNewCallbackType", "CPLEX", false,
 			"Use the new callback introduced in CPLEX 12.8 with the lazy strategy");
+
 	Settings::getInstance().createSetting("SolnPoolIntensity", "CPLEX", 0,
 			"0 = automatic, 1 = mild, 2 = moderate, 3 = aggressive, 4 = very aggressive", 0, 4);
-	Settings::getInstance().createSetting("SolnPoolReplace", "CPLEX", 2,
+	Settings::getInstance().createSetting("SolnPoolReplace", "CPLEX", 1,
 			"0 = replace oldest solution, 1 = replace worst solution, 2 = find diverse solutions", 0, 2);
 
 	Settings::getInstance().createSetting("SolnPoolGap", "CPLEX", 1.0e+75,

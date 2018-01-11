@@ -34,7 +34,60 @@ void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, 
 	{
 		str << variables.at(i);
 		str << "\t";
-		str << point.at(i) << std::endl;
+		str << point.at(i);
+		str << std::endl;
+	}
+
+	fileUtil->writeFileFromString(fileName, str.str());
+
+	delete fileUtil;
+}
+
+void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables,
+		std::string fileName)
+{
+	FileUtil *fileUtil = new FileUtil();
+
+	std::stringstream str;
+
+	str << "Source: " << solution.sourceDescription;
+	str << std::endl;
+
+	str << "Iteration found: " << solution.iterFound;
+	str << std::endl;
+
+	str << "Objective value: " << toStringFormat(solution.objValue, "%.8f", false);
+	str << std::endl;
+
+	str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.idx << "): "
+			<< toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+	str << std::endl;
+
+	str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.idx << "): "
+			<< toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+	str << std::endl;
+
+	str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
+	str << std::endl;
+
+	str << "Integer rounding performed: " << (solution.integerRoundingPerformed ? "true" : "false");
+	str << std::endl;
+
+	str << "Max integer rounding error: " << toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
+
+	str << std::endl;
+	str << std::endl;
+
+	str << "Solution point: ";
+	str << std::endl;
+
+	for (int i = 0; i < solution.point.size(); i++)
+	{
+		str << i;
+		str << "\t";
+		str << toStringFormat(solution.point.at(i), "%.8f", false);
+		;
+		str << std::endl;
 	}
 
 	fileUtil->writeFileFromString(fileName, str.str());
@@ -50,7 +103,8 @@ void UtilityFunctions::displayVector(std::vector<double> point)
 	{
 		str << i;
 		str << "\t";
-		str << point.at(i) << std::endl;
+		str << point.at(i);
+		str << std::endl;
 	}
 
 	std::cout << str.str() << std::endl;
@@ -107,7 +161,8 @@ void UtilityFunctions::displayVector(std::vector<int> point)
 	{
 		str << i;
 		str << "\t";
-		str << point.at(i) << std::endl;
+		str << point.at(i);
+		str << std::endl;
 	}
 
 	std::cout << str.str() << std::endl;
@@ -122,7 +177,8 @@ void UtilityFunctions::displayVector(std::vector<std::string> point)
 	{
 		str << i;
 		str << "\t";
-		str << point.at(i) << std::endl;
+		str << point.at(i);
+		str << std::endl;
 	}
 
 	std::cout << str.str() << std::endl;
@@ -193,9 +249,9 @@ bool UtilityFunctions::isObjectiveGenerallyNonlinear(OSInstance *instance)
 	for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
 	{
 		int tmpIndex = instance->instanceData->nonlinearExpressions->nl[i]->idx;
-		if (tmpIndex == -1) return true;
+		if (tmpIndex == -1) return (true);
 	}
-	return false;
+	return (false);
 }
 
 bool UtilityFunctions::isObjectiveQuadratic(OSInstance *instance)
@@ -204,10 +260,10 @@ bool UtilityFunctions::isObjectiveQuadratic(OSInstance *instance)
 	{
 		int tmpIndex = instance->instanceData->quadraticCoefficients->qTerm[i]->idx;
 
-		if (tmpIndex == -1) return true;
+		if (tmpIndex == -1) return (true);
 	}
 
-	return false;
+	return (false);
 }
 
 double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB)
@@ -216,7 +272,7 @@ double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB
 
 	if (ptA.size() != ptB.size())
 	{
-		return -1.0;
+		return (-1.0);
 	}
 
 	for (int i = 0; i < ptA.size(); i++)
@@ -226,7 +282,7 @@ double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB
 
 	norm = sqrt(norm);
 
-	return norm;
+	return (norm);
 }
 
 std::vector<double> UtilityFunctions::L2Norms(std::vector<std::vector<double>> ptsA, std::vector<double> ptB)
@@ -238,7 +294,7 @@ std::vector<double> UtilityFunctions::L2Norms(std::vector<std::vector<double>> p
 		norms.at(i) = L2Norm(ptsA.at(i), ptB);
 	}
 
-	return norms;
+	return (norms);
 }
 
 std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vector<double>> pts)
@@ -314,7 +370,7 @@ std::string UtilityFunctions::toStringFormat(double value, std::string format, b
 	{
 		str = "-∞";
 	}
-	else if (useInfinitySymbol && value > 1.e100)
+	else if (useInfinitySymbol && value > 1.e20)
 	{
 		str = "∞";
 	}
@@ -370,4 +426,3 @@ void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<double
 
 	std::cout << str.str() << std::endl;
 }
-

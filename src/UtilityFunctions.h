@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <cmath>
 #include <boost/math/special_functions/fpclassify.hpp> // isnan
+#include "Structs.h"
 
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32
@@ -27,6 +28,9 @@ namespace UtilityFunctions
 
 	void saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
 			std::string fileName);
+
+	void savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables, std::string fileName);
+
 	bool isObjectiveGenerallyNonlinear(OSInstance *instance);
 	bool isObjectiveQuadratic(OSInstance *instance);
 

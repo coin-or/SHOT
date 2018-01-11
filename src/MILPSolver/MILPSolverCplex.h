@@ -2,6 +2,8 @@
 #include "IMILPSolver.h"
 #include "MILPSolverBase.h"
 
+#include <mutex>
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
@@ -127,16 +129,19 @@ class MILPSolverCplex: public IMILPSolver, public MILPSolverBase
 			return (MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
 		}
 
+		IloModel cplexModel;
+		IloCplex cplexInstance;
+
+		std::mutex cplexMutex;
+
 	protected:
 		std::vector<double> iterDurations;
 
 		IloEnv cplexEnv;
-		IloModel cplexModel;
-		IloCplex cplexInstance;
+
 		IloNumVarArray cplexVars;
 		IloRangeArray cplexConstrs;
 		vector<IloConversion> cplexVarConvers;
 
 		bool modelUpdated /*= true*/;
-
 };

@@ -899,10 +899,14 @@ void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
 
 	auto optional = createHyperplaneTerms(hyperplane);
 
+	std::cout << "heja1" << std::endl;
 	if (!optional)
 	{
+		std::cout << "hej36" << std::endl;
 		return;
 	}
+
+	std::cout << "heja2" << std::endl;
 
 	auto tmpPair = optional.get();
 

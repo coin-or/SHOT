@@ -57,6 +57,8 @@ class HCallbackI: public IloCplex::HeuristicCallbackI
 {
 		IloNumVarArray cplexVars;
 
+		TaskBase *taskSelectHPPts;
+
 	private:
 
 	public:
@@ -109,6 +111,8 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 		bool checkRelativeMIPGapToleranceMet(SolutionPoint point);
 
 		void createHyperplane(Hyperplane hyperplane);
+
+		void createIntegerCut(std::vector<int> binaryIndexes);
 
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;

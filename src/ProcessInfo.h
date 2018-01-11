@@ -1,5 +1,6 @@
 #pragma once
 #include "Enums.h"
+#include "Structs.h"
 #include "vector"
 #include "map"
 #include "Iteration.h"
@@ -30,46 +31,6 @@ class IMILPSolver;
 class ILinesearchMethod;
 
 #include "LinesearchMethod/ILinesearchMethod.h"
-
-struct InteriorPoint
-{
-		vector<double> point;
-		ES_NLPSolver NLPSolver;
-		IndexValuePair maxDevatingConstraint;
-};
-
-struct PrimalSolution
-{
-		vector<double> point;
-		E_PrimalSolutionSource sourceType;
-		double objValue;
-		int iterFound;
-		IndexValuePair maxDevatingConstraint;
-};
-
-struct PrimalFixedNLPCandidate
-{
-		vector<double> point;
-		E_PrimalNLPSource sourceType;
-		double objValue;
-		int iterFound;
-		IndexValuePair maxDevatingConstraint;
-};
-
-struct DualSolution
-{
-		vector<double> point;
-		E_DualSolutionSource sourceType;
-		double objValue;
-		int iterFound;
-};
-
-struct Hyperplane
-{
-		int sourceConstraintIndex;
-		std::vector<double> generatedPoint;
-		E_HyperplaneSource source;
-};
 
 class ProcessInfo
 {
