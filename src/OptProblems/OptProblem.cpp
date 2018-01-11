@@ -209,17 +209,15 @@ void OptProblem::printProblemStatistics()
 
 void OptProblem::exportProblemToOsil(std::string fileName)
 {
-	OSiLWriter *osilWriter = new OSiLWriter();
 	FileUtil *fileUtil = new FileUtil();
+	std::string osil = exportProblemToOsil();
 
-	std::string osil = osilWriter->writeOSiL(getProblemInstance());
 	if (!fileUtil->writeFileFromString(fileName, osil))
 	{
 		ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
 	}
 
 	delete fileUtil;
-	delete osilWriter;
 }
 
 void OptProblem::saveProblemModelToFile(std::string fileName)
