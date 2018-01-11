@@ -19,6 +19,17 @@ TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesea
 
 void TaskSelectPrimalCandidatesFromLinesearch::run()
 {
+	this->run(ProcessInfo::getInstance().getCurrentIteration()->solutionPoints);
+}
+
+std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
+{
+	std::string type = typeid(this).name();
+	return (type);
+}
+
+void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoints)
+{
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->isMILP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
@@ -26,9 +37,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 		ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
 
-		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
-
-		for (int i = 0; i < allSolutions.size(); i++)
+		for (int i = 0; i < solPoints.size(); i++)
 		{
 			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
@@ -41,7 +50,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 				{
 					if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
 					{
-						xNLP2.at(k) = allSolutions.at(i).point.at(k);
+						xNLP2.at(k) = solPoints.at(i).point.at(k);
 
 					}
 					else
@@ -52,15 +61,14 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 
 				auto maxDevNLP2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(xNLP2);
 				auto maxDevMILP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(
-						allSolutions.at(i).point);
+						solPoints.at(i).point);
 
 				if (maxDevNLP2.value <= 0 && maxDevMILP.value > 0)
 				{
 					try
 					{
 						ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
-						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2,
-								allSolutions.at(i).point,
+						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
 								Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
 								Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0);
 
@@ -85,10 +93,3 @@ void TaskSelectPrimalCandidatesFromLinesearch::run()
 		}
 	}
 }
-
-std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
-{
-	std::string type = typeid(this).name();
-	return (type);
-}
-

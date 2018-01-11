@@ -119,8 +119,7 @@ SolutionStrategyNormal::SolutionStrategyNormal(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-			"Algorithm")) == ES_HyperplanePointStrategy::ESH)
+	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");

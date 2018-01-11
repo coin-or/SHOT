@@ -62,6 +62,8 @@ void HCallbackI::main() // Called at each node...
 		}
 
 		setSolution(cplexVars, tmpVals);
+
+		tmpVals.end();
 	}
 
 	if (Settings::getInstance().getBoolSetting("AddHyperplanesForRelaxedLazySolutions", "Algorithm"))
@@ -78,6 +80,8 @@ void HCallbackI::main() // Called at each node...
 		{
 			solution.at(i) = tmpVals[i];
 		}
+
+		tmpVals.end();
 
 		auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
 
@@ -133,7 +137,6 @@ IloCplex::Callback InfoCallback(IloEnv env, IloNumVarArray cplexVars)
 	return (IloCplex::Callback(new (env) InfoCallbackI(env, cplexVars)));
 }
 
-// This callback injects the best known primal solution into all threads.
 void InfoCallbackI::main() // Called at each node...
 {
 	std::lock_guard < std::mutex
@@ -220,6 +223,8 @@ void IncCallbackI::main()
 		solution.at(i) = tmpVals[i];
 	}
 
+	tmpVals.end();
+
 	auto relMIPGap = this->getMIPRelativeGap();
 
 	if (abs(relMIPGap) < Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
@@ -283,6 +288,11 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazyOrig
 			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
 	{
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
+	}
+
+	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	{
+		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 	}
 }
 
@@ -360,6 +370,8 @@ void CtCallbackI::main()
 		solution.at(i) = tmpVals[i];
 	}
 
+	tmpVals.end();
+
 	auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
 
 	double tmpDualObjBound = this->getBestObjValue();
@@ -380,6 +392,7 @@ void CtCallbackI::main()
 		ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 	}
 
+	// Check if better primal solution
 	if (this->hasIncumbent())
 	{
 		double tmpPrimalObjBound = this->getIncumbentObjValue();
@@ -434,6 +447,15 @@ void CtCallbackI::main()
 		return;
 	}
 
+	std::vector < SolutionPoint > solutionPoints(1);
+
+	solutionPoints.at(0) = tmpSolPt;
+
+	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	{
+		taskSelectPrimalSolutionFromLinesearch->run(solutionPoints);
+	}
+
 	if (checkFixedNLPStrategy(tmpSolPt))
 	{
 		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution,
@@ -458,10 +480,6 @@ void CtCallbackI::main()
 			return;
 		}
 	}
-
-	std::vector < SolutionPoint > solutionPoints(1);
-
-	solutionPoints.at(0) = tmpSolPt;
 
 	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
 			"Algorithm")) == ES_HyperplanePointStrategy::ESH)

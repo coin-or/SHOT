@@ -20,6 +20,7 @@
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 
 class MILPSolverCplexLazy: public MILPSolverCplex
 {
@@ -74,12 +75,13 @@ class CplexCallback: public IloCplex::Callback::Function
 		TaskBase *tSelectPrimNLP;
 		TaskBase *taskSelectHPPts;
 		TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
+		TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
 
 		bool checkFixedNLPStrategy(SolutionPoint point, const IloCplex::Callback::Context& context);
 		void printIterationReport(SolutionPoint point, const IloCplex::Callback::Context& context);
 
-		bool checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point, const IloCplex::Callback::Context& context);
-		bool checkRelativeObjectiveGapToleranceMet(SolutionPoint point, const IloCplex::Callback::Context& context);
+		bool checkAbsoluteObjectiveGapToleranceMet(const IloCplex::Callback::Context& context);
+		bool checkRelativeObjectiveGapToleranceMet(const IloCplex::Callback::Context& context);
 		//bool checkRelativeMIPGapToleranceMet(SolutionPoint point, const IloCplex::Callback::Context& context);
 
 		void createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context& context);
@@ -88,7 +90,7 @@ class CplexCallback: public IloCplex::Callback::Function
 		/* Constructor with data */
 		CplexCallback(const IloNumVarArray &vars);
 
-		void lazyConstraintCallback(const IloCplex::Callback::Context &context);
+		void addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context &context);
 		//void heuristicCallback(const IloCplex::Callback::Context &context);
 
 		// This is the function that we have to implement and that CPLEX will call

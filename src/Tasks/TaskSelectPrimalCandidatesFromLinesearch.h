@@ -20,6 +20,8 @@ class TaskSelectPrimalCandidatesFromLinesearch: public TaskBase
 		TaskSelectPrimalCandidatesFromLinesearch();
 		virtual ~TaskSelectPrimalCandidatesFromLinesearch();
 		virtual void run();
+		virtual void run(vector<SolutionPoint> solPoints);
+
 		virtual std::string getType();
 	private:
 

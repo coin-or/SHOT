@@ -90,13 +90,6 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
-	{
-		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
-	}
-
 	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 

@@ -21,6 +21,7 @@
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 
 class MILPSolverCplexLazyOriginalCB: public MILPSolverCplex
 {
@@ -100,6 +101,7 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI
 		int lastNumAddedHyperplanes = 0;
 
 		TaskBase *taskSelectHPPts;
+		TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
 		TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
 		MILPSolverCplexLazyOriginalCB *cplexSolver;
 
