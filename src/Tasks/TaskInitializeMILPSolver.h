@@ -16,6 +16,7 @@
 #include "../MILPSolver/MILPSolverCplexLazy.h"
 #include "../MILPSolver/MILPSolverCplexLazyOriginalCB.h"
 #include "../MILPSolver/MILPSolverGurobi.h"
+#include "../MILPSolver/MILPSolverGurobiLazy.h"
 #include "../MILPSolver/MILPSolverOsiCbc.h"
 
 class TaskInitializeMILPSolver: public TaskBase

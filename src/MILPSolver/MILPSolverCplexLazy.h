@@ -14,7 +14,6 @@
 #endif
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
-
 #include "../Tasks/TaskInitializeLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
@@ -67,8 +66,6 @@ class CplexCallback: public IloCplex::Callback::Function
 		int lastNumAddedHyperplanes = 0;
 
 		double lastUpdatedPrimal;
-
-		//MILPSolverCplexLazy *cplexSolver;
 
 		IloNumVarArray cplexVars;
 

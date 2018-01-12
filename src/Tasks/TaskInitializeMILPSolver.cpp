@@ -32,17 +32,17 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
 		if (solver == ES_MILPSolver::Cplex && Settings::getInstance().getBoolSetting("UseNewCallbackType", "CPLEX"))
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazy();
-			ProcessInfo::getInstance().outputInfo("Cplex (lazy) selected as MIP solver.");
+			ProcessInfo::getInstance().outputInfo("Cplex with lazy callbacks selected as MIP solver.");
 		}
 		else if (solver == ES_MILPSolver::Cplex)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazyOriginalCB();
-			ProcessInfo::getInstance().outputInfo("Cplex (lazy, original callback) selected as MIP solver.");
+			ProcessInfo::getInstance().outputInfo("Cplex with original lazy callbacks selected as MIP solver.");
 		}
 		else if (solver == ES_MILPSolver::Gurobi)
 		{
-			ProcessInfo::getInstance().MILPSolver = new MILPSolverGurobi();
-			ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver.");
+			ProcessInfo::getInstance().MILPSolver = new MILPSolverGurobiLazy();
+			ProcessInfo::getInstance().outputInfo("Gurobi with lazy callbacks selected as MIP solver.");
 		}
 		else if (solver == ES_MILPSolver::Cbc)
 		{

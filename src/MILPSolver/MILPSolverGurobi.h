@@ -4,7 +4,7 @@
 #include "gurobi_c++.h"
 #include "MILPSolverBase.h"
 
-class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
+class MILPSolverGurobi: public IMILPSolver, public MILPSolverBase
 {
 	public:
 		MILPSolverGurobi();
@@ -113,7 +113,8 @@ class MILPSolverGurobi: public IMILPSolver, MILPSolverBase
 			return (MILPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
 		}
 
-	private:
 		GRBEnv *gurobiEnv;
 		GRBModel *gurobiModel;
+
+	private:
 };

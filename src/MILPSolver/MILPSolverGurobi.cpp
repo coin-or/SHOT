@@ -1,8 +1,5 @@
 #include "MILPSolverGurobi.h"
 
-GRBEnv *gurobiEnv;
-GRBModel *gurobiModel;
-
 MILPSolverGurobi::MILPSolverGurobi()
 {
 	discreteVariablesActivated = true;
@@ -39,10 +36,6 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 
 		for (int i = 0; i < numVar; i++)
 		{
-			//Variable *tmpVar = origInstance->instanceData->variables->var[i];
-
-			//tmpUB = 10000000.0;
-
 			if (tmpTypes.at(i) == 'C')
 			{
 				GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_CONTINUOUS, tmpNames.at(i));
@@ -228,8 +221,6 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 		}
 
 		gurobiModel->update();
-
-		setSolutionLimit(9223372036800000000);
 	}
 	catch (GRBException &e)
 	{
@@ -253,7 +244,7 @@ void MILPSolverGurobi::initializeSolverSettings()
 		//gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
-		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, 2100000000);
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber,
 				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP") + 1);
 	}
@@ -278,20 +269,6 @@ int MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, 
 			*expr = *expr + elements.at(i).value * variable;
 		}
 
-		/*if (Settings::getInstance().getBoolSetting("UseLazyConstraints", "MILP")) // Not implemented yet in Gurobi
-		 {
-		 if (discreteVariablesActivated)
-		 {
-		 gurobiModel->addConstr(*expr <= -constant, "");
-		 }
-		 else
-		 {
-		 gurobiModel->addConstr(*expr <= -constant, "");
-		 }
-		 }
-		 else
-		 {*/
-
 		if (isGreaterThan)
 		{
 			gurobiModel->addConstr(-constant >= *expr, "");
@@ -300,8 +277,6 @@ int MILPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, 
 		{
 			gurobiModel->addConstr(*expr <= -constant, "");
 		}
-
-		//}
 
 		gurobiModel->update();
 	}
@@ -369,7 +344,7 @@ void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 
 	if (activate)
 	{
-		ProcessInfo::getInstance().outputSummary("Activating MILP strategy.");
+		ProcessInfo::getInstance().outputInfo("Activating MILP strategy.");
 
 		for (int i = 0; i < numVar; i++)
 		{
@@ -391,7 +366,7 @@ void MILPSolverGurobi::activateDiscreteVariables(bool activate)
 	}
 	else
 	{
-		ProcessInfo::getInstance().outputSummary("Activating LP strategy.");
+		ProcessInfo::getInstance().outputInfo("Activating LP strategy.");
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -455,10 +430,10 @@ E_ProblemSolutionStatus MILPSolverGurobi::getSolutionStatus()
 	{
 		MILPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
 	}
-//else if (status == GRB_INTERRUPTED)
-//{
-//	MILPSolutionStatus = EMILPStatus::interrupted;
-//}
+	else if (status == GRB_INTERRUPTED)
+	{
+		MILPSolutionStatus = E_ProblemSolutionStatus::Optimal;
+	}
 //else if (status == GRB_NUMERIC)
 //{
 //	MILPSolutionStatus = EMILPStatus::numeric;
@@ -514,7 +489,8 @@ int MILPSolverGurobi::increaseSolutionLimit(int increment)
 
 void MILPSolverGurobi::setSolutionLimit(long limit)
 {
-	gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
+	if (limit > GRB_MAXINT) gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
+	else gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
 }
 
 int MILPSolverGurobi::getSolutionLimit()
@@ -524,7 +500,6 @@ int MILPSolverGurobi::getSolutionLimit()
 
 void MILPSolverGurobi::setTimeLimit(double seconds)
 {
-
 	try
 	{
 		if (seconds > 0)
@@ -548,15 +523,17 @@ void MILPSolverGurobi::setCutOff(double cutOff)
 	try
 	{
 		// Gurobi has problems if not an epsilon value is added to the cutoff...
-		gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + 0.0000001);
 
 		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
+			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + 0.0000001);
+
 			ProcessInfo::getInstance().outputInfo(
 					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
+			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - 0.0000001);
 			ProcessInfo::getInstance().outputInfo(
 					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}

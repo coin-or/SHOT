@@ -366,7 +366,7 @@ std::string UtilityFunctions::toStringFormat(double value, std::string format, b
 {
 	std::string str;
 
-	if (useInfinitySymbol && value < -1.e100)
+	if (useInfinitySymbol && value < -1.e20)
 	{
 		str = "-∞";
 	}

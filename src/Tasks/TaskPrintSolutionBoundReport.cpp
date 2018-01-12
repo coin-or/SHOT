@@ -44,7 +44,11 @@ void TaskPrintSolutionBoundReport::run()
 #endif
 
 		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%")
-				% ProcessInfo::getInstance().getElapsedTime("Total") % objLB % objUB % absGap % relGap;
+				% ProcessInfo::getInstance().getElapsedTime("Total")
+				% UtilityFunctions::toStringFormat(objLB, "%.3f", true)
+				% UtilityFunctions::toStringFormat(objUB, "%.3f", true)
+				% UtilityFunctions::toStringFormat(absGap, "%.4f", true)
+				% UtilityFunctions::toStringFormat(relGap, "%.4f", true);
 		ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
 		if (ProcessInfo::getInstance().numConstraintsRemovedInPresolve > 0
