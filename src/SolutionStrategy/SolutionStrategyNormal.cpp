@@ -31,7 +31,7 @@ SolutionStrategyNormal::SolutionStrategyNormal(OSInstance* osInstance)
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
-	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(osInstance);
+	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(solverMILP, false);
 	ProcessInfo::getInstance().tasks->addTask(tInitMILPSolver, "InitMILPSolver");
 
 	auto MILPSolver = ProcessInfo::getInstance().MILPSolver;
