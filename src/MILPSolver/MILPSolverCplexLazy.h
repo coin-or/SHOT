@@ -62,7 +62,6 @@ class CplexCallback: public IloCplex::Callback::Function
 		CplexCallback(const CplexCallback &tocopy);
 
 		bool isMinimization = true;
-		int cbCalls = 0;
 		int lastNumAddedHyperplanes = 0;
 
 		double lastUpdatedPrimal;
@@ -74,7 +73,7 @@ class CplexCallback: public IloCplex::Callback::Function
 		TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
 		TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
 
-		bool checkFixedNLPStrategy(SolutionPoint point, const IloCplex::Callback::Context& context);
+		bool checkFixedNLPStrategy(SolutionPoint point);
 		void printIterationReport(SolutionPoint point, const IloCplex::Callback::Context& context);
 
 		bool checkAbsoluteObjectiveGapToleranceMet(const IloCplex::Callback::Context& context);

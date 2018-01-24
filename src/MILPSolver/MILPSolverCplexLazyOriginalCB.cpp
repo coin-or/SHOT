@@ -85,12 +85,6 @@ void HCallbackI::main() // Called at each node...
 
 		auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
 
-		/*
-		 if (mostDevConstr.value > 100 * Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-		 {
-		 return;
-		 }*/
-
 		SolutionPoint tmpSolPt;
 
 		tmpSolPt.point = solution;

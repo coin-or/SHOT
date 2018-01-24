@@ -5,6 +5,8 @@
 #include "SolutionStrategy/ISolutionStrategy.h"
 #include "SolutionStrategy/SolutionStrategyLazy.h"
 #include "SolutionStrategy/SolutionStrategyNormal.h"
+#include "SolutionStrategy/SolutionStrategyMIQCQP.h"
+#include "SolutionStrategy/SolutionStrategyNLP.h"
 #include "ProcessInfo.h"
 #include "OSnl2OS.h"
 #include "boost/filesystem.hpp"

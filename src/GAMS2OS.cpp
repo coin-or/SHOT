@@ -66,6 +66,7 @@ void GAMS2OS::readCntr(const std::string& filename)
 {
 	char buffer[GMS_SSSIZE];
 
+	
 	/* initialize GMO and GEV libraries */
 	if (!gmoCreateDD(&gmo, GAMSDIR, buffer, sizeof(buffer)) || !gevCreateDD(&gev, GAMSDIR, buffer, sizeof(buffer))) throw std::logic_error(
 			buffer);

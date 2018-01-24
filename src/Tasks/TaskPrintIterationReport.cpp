@@ -148,8 +148,8 @@ void TaskPrintIterationReport::run()
 					ProcessInfo::getInstance().originalProblem->getConstraintNames()[currIter->maxDeviationConstraint]
 							+ ": " + tmpConstrExpr;
 		}
-		else if (hasSolution)
-		{
+		else if (hasSolution && ProcessInfo::getInstance().originalProblem->getNumberOfConstraints() > 0)
+		{ 
 			tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
 		}
 		else

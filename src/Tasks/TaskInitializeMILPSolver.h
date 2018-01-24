@@ -22,7 +22,7 @@
 class TaskInitializeMILPSolver: public TaskBase
 {
 	public:
-		TaskInitializeMILPSolver(OSInstance *originalInstance);
+		TaskInitializeMILPSolver(ES_MILPSolver solver, bool useLazyStrategy);
 		virtual ~TaskInitializeMILPSolver();
 
 		void run();

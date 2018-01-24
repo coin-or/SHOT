@@ -33,6 +33,9 @@ namespace UtilityFunctions
 
 	bool isObjectiveGenerallyNonlinear(OSInstance *instance);
 	bool isObjectiveQuadratic(OSInstance *instance);
+	bool areAllConstraintsLinear(OSInstance *instance);
+	bool areAllConstraintsQuadratic(OSInstance *instance);
+	bool areAllVariablesReal(OSInstance *instance);
 
 	void displayVector(std::vector<double> point);
 	void displayVector(std::vector<double> point1, std::vector<double> point2);

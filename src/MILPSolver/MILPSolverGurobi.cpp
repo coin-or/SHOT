@@ -203,15 +203,15 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 
 					if (constrTypes[rowIdx] == 'L')
 					{
-						gurobiModel->addConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
+						gurobiModel->addQConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
 					}
 					else if (constrTypes[rowIdx] == 'G')
 					{
-						gurobiModel->addConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
+						gurobiModel->addQConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
 					}
 					else if (constrTypes[rowIdx] == 'E')
 					{
-						gurobiModel->addConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
+						gurobiModel->addQConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
 					}
 					else
 					{

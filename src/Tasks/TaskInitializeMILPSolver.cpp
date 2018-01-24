@@ -7,25 +7,9 @@
 
 #include "TaskInitializeMILPSolver.h"
 
-TaskInitializeMILPSolver::TaskInitializeMILPSolver(OSInstance *originalInstance)
+TaskInitializeMILPSolver::TaskInitializeMILPSolver(ES_MILPSolver solver, bool useLazyStrategy)
 {
-
 	ProcessInfo::getInstance().startTimer("MILP");
-
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
-			"Algorithm"))) == ES_QPStrategy::QuadraticObjective;
-
-	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
-			"Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained;
-
-	bool useLazyStrategy = (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy",
-			"Algorithm"))) == ES_SolutionStrategy::Lazy;
-
-	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
-	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
-	bool isQuadraticUsed = (useQuadraticObjective || (useQuadraticConstraint));
-
-	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
 
 	if (useLazyStrategy)
 	{

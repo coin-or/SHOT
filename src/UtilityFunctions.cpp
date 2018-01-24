@@ -17,12 +17,12 @@ bool UtilityFunctions::isnan(double val)
 }
 
 void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
-		std::string fileName)
+													 std::string fileName)
 {
 	if (point.size() != variables.size())
 	{
 		std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
-				<< variables.size() << std::endl;
+				  << variables.size() << std::endl;
 		return;
 	}
 
@@ -44,7 +44,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, 
 }
 
 void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables,
-		std::string fileName)
+												std::string fileName)
 {
 	FileUtil *fileUtil = new FileUtil();
 
@@ -60,11 +60,11 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::ve
 	str << std::endl;
 
 	str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.idx << "): "
-			<< toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+		<< toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
 	str << std::endl;
 
 	str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.idx << "): "
-			<< toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+		<< toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
 	str << std::endl;
 
 	str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -114,7 +114,8 @@ void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<dou
 {
 	std::stringstream str;
 
-	if (point1.size() != point2.size()) return;
+	if (point1.size() != point2.size())
+		return;
 
 	for (int i = 0; i < point1.size(); i++)
 	{
@@ -134,7 +135,8 @@ void UtilityFunctions::displayDifferencesInVector(std::vector<double> point1, st
 {
 	std::stringstream str;
 
-	if (point1.size() != point2.size()) return;
+	if (point1.size() != point2.size())
+		return;
 
 	for (int i = 0; i < point1.size(); i++)
 	{
@@ -184,7 +186,7 @@ void UtilityFunctions::displayVector(std::vector<std::string> point)
 	std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<double> > points)
+void UtilityFunctions::displayVector(std::vector<std::vector<double>> points)
 {
 	std::stringstream str;
 
@@ -204,7 +206,7 @@ void UtilityFunctions::displayVector(std::vector<std::vector<double> > points)
 	std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<int> > points)
+void UtilityFunctions::displayVector(std::vector<std::vector<int>> points)
 {
 	std::stringstream str;
 
@@ -224,7 +226,7 @@ void UtilityFunctions::displayVector(std::vector<std::vector<int> > points)
 	std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<std::string> > points)
+void UtilityFunctions::displayVector(std::vector<std::vector<std::string>> points)
 {
 	std::stringstream str;
 
@@ -249,7 +251,8 @@ bool UtilityFunctions::isObjectiveGenerallyNonlinear(OSInstance *instance)
 	for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
 	{
 		int tmpIndex = instance->instanceData->nonlinearExpressions->nl[i]->idx;
-		if (tmpIndex == -1) return (true);
+		if (tmpIndex == -1)
+			return (true);
 	}
 	return (false);
 }
@@ -260,10 +263,59 @@ bool UtilityFunctions::isObjectiveQuadratic(OSInstance *instance)
 	{
 		int tmpIndex = instance->instanceData->quadraticCoefficients->qTerm[i]->idx;
 
-		if (tmpIndex == -1) return (true);
+		if (tmpIndex == -1)
+			return (true);
 	}
 
 	return (false);
+}
+
+bool UtilityFunctions::areAllConstraintsLinear(OSInstance *instance)
+{
+	int numNonlinearTreeIndexes = instance->getNumberOfNonlinearExpressionTreeIndexes();
+	int numQuadraticRowIndexes = instance->getNumberOfQuadraticRowIndexes();
+
+	for (int i = 0; i < numQuadraticRowIndexes; i++)
+	{
+		if (instance->getQuadraticRowIndexes()[i] != -1)
+			return (false);
+	}
+
+	if (numNonlinearTreeIndexes == 0)
+		return (true);
+
+	for (int i = 0; i < numNonlinearTreeIndexes; i++)
+	{
+		if (instance->getNonlinearExpressionTreeIndexes()[i] != -1)
+			return (false);
+	}
+
+	return (true);
+}
+
+bool UtilityFunctions::areAllConstraintsQuadratic(OSInstance *instance)
+{
+	int numNonlinearTreeIndexes = instance->getNumberOfNonlinearExpressionTreeIndexes();
+
+	if (numNonlinearTreeIndexes != 0)
+		return (false);
+
+	int numQuadraticRowIndexes = instance->getNumberOfQuadraticRowIndexes();
+
+	// return false if there are no quadratic rows
+	if (numQuadraticRowIndexes == 0)
+		return false;
+
+	return (true);
+}
+
+bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
+{
+	int numDiscreteVars = instance->getNumberOfBinaryVariables() + instance->getNumberOfIntegerVariables();
+	
+	if (numDiscreteVars > 0) return (false);
+	
+	return (true);
 }
 
 double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB)
@@ -319,7 +371,7 @@ std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vect
 }
 
 int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
-		std::vector<int> indexes)
+														  std::vector<int> indexes)
 {
 	int numDiff = 0;
 
@@ -334,27 +386,27 @@ int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> fi
 }
 
 bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
-		std::vector<int> indexes)
+														  std::vector<int> indexes)
 {
 	for (int i = 0; i < indexes.size(); i++)
 	{
-		if (UtilityFunctions::round(firstPt.at(indexes.at(i))) != UtilityFunctions::round(secondPt.at(indexes.at(i)))) return (true);
+		if (UtilityFunctions::round(firstPt.at(indexes.at(i))) != UtilityFunctions::round(secondPt.at(indexes.at(i))))
+			return (true);
 	}
 
 	return (false);
-
 }
 
 bool UtilityFunctions::isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
-		std::vector<int> indexes)
+												   std::vector<int> indexes)
 {
 	for (int i = 0; i < indexes.size(); i++)
 	{
-		if (firstPt.at(indexes.at(i)) != secondPt.at(indexes.at(i))) return (true);
+		if (firstPt.at(indexes.at(i)) != secondPt.at(indexes.at(i)))
+			return (true);
 	}
 
 	return (false);
-
 }
 
 std::string UtilityFunctions::toStringFormat(double value, std::string format)
@@ -391,7 +443,8 @@ void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<int> p
 {
 	std::stringstream str;
 
-	if (point1.size() != point2.size()) return;
+	if (point1.size() != point2.size())
+		return;
 
 	for (int i = 0; i < point1.size(); i++)
 	{
@@ -411,7 +464,8 @@ void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<double
 {
 	std::stringstream str;
 
-	if (point1.size() != point2.size()) return;
+	if (point1.size() != point2.size())
+		return;
 
 	for (int i = 0; i < point1.size(); i++)
 	{
