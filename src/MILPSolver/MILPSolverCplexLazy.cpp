@@ -3,11 +3,12 @@
 //#include "ilcplex/cplex.h"
 ILOSTLBEGIN
 
-CplexCallback::CplexCallback(const IloNumVarArray &vars)
+CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 {
-	std::lock_guard<std::mutex> lock((static_cast<MILPSolverCplexLazy *>(ProcessInfo::getInstance().MILPSolver))->cplexMutex);
+	std::lock_guard<std::mutex> lock(callbackMutex);
 
 	cplexVars = vars;
+	cplexEnv = env;
 
 	isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
@@ -50,9 +51,7 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars)
 
 void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 {
-	std::lock_guard<std::mutex> lock((static_cast<MILPSolverCplexLazy *>(ProcessInfo::getInstance().MILPSolver))->cplexMutex);
-
-	int iterationNumber = (static_cast<MILPSolverCplexLazy *>(ProcessInfo::getInstance().MILPSolver))->currIter;
+	std::lock_guard<std::mutex> lock(callbackMutex);
 
 	try
 	{
@@ -64,7 +63,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			std::vector<double> doubleSolution; // Empty since we have no point
 
 			DualSolution sol =
-				{doubleSolution, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound, iterationNumber};
+				{doubleSolution, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
 			ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 		}
 
@@ -85,7 +84,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			}
 
 			SolutionPoint tmpPt;
-			tmpPt.iterFound = iterationNumber;
+			tmpPt.iterFound = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
 			tmpPt.maxDeviation = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(primalSolution);
 			tmpPt.objectiveValue = ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(
 				primalSolution);
@@ -97,7 +96,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			tmpPrimalVals.end();
 		}
 
-		if (checkRelativeObjectiveGapToleranceMet(context) || checkAbsoluteObjectiveGapToleranceMet(context))
+		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
 		{
 			abort();
 			return;
@@ -128,7 +127,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
 				tmpSolPt.point = solution;
 				tmpSolPt.objectiveValue = context.getRelaxationObjective();
-				tmpSolPt.iterFound = iterationNumber;
+				tmpSolPt.iterFound = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
 				tmpSolPt.maxDeviation = mostDevConstr;
 
 				solutionPoints.at(0) = tmpSolPt;
@@ -202,14 +201,14 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			if (checkFixedNLPStrategy(candidatePoints.at(0)))
 			{
 				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(candidatePoints.at(0).point,
-																	  E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(), iterationNumber,
+																	  E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(), ProcessInfo::getInstance().getCurrentIteration()->iterationNumber,
 																	  candidatePoints.at(0).maxDeviation);
 
 				tSelectPrimNLP->run();
 
 				ProcessInfo::getInstance().checkPrimalSolutionCandidates();
 			}
-	
+
 			if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
 			{
 				bool addedIntegerCut = false;
@@ -229,9 +228,13 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 				ProcessInfo::getInstance().integerCutWaitingList.clear();
 			}
 
-			printIterationReport(candidatePoints.at(0), context);
+			auto bestBound = UtilityFunctions::toStringFormat(context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound), "%.3f", true);
+			auto threadId = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
+			auto openNodes = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount));
+		
+			printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
 
-			if (checkRelativeObjectiveGapToleranceMet(context) || checkAbsoluteObjectiveGapToleranceMet(context))
+			if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
 			{
 				abort();
 				return;
@@ -287,7 +290,6 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 /// Destructor
 CplexCallback::~CplexCallback()
 {
-	//cuts.endElements();
 }
 
 void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context &context)
@@ -347,200 +349,19 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
 void CplexCallback::createIntegerCut(std::vector<int> binaryIndexes, const IloCplex::Callback::Context &context)
 {
-	IloExpr expr(context.getEnv());
+	IloExpr expr(cplexEnv);
 
 	for (int i = 0; i < binaryIndexes.size(); i++)
 	{
 		expr += 1.0 * cplexVars[binaryIndexes.at(i)];
 	}
 
-	IloRange tmpRange(context.getEnv(), -IloInfinity, expr, binaryIndexes.size() - 1.0);
+	IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
 	context.rejectCandidate(tmpRange);
 	ProcessInfo::getInstance().numIntegerCutsAdded++;
 
 	expr.end();
-}
-
-bool CplexCallback::checkFixedNLPStrategy(SolutionPoint point)
-{
-	if (!Settings::getInstance().getBoolSetting("PrimalStrategyFixedNLP", "PrimalBound"))
-	{
-		ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
-		return (false);
-	}
-
-	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
-
-	bool callNLPSolver = false;
-
-	auto userSettingStrategy = Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound");
-	auto userSetting = Settings::getInstance().getIntSetting("NLPFixedSource", "PrimalBound");
-
-	if (abs(point.objectiveValue - ProcessInfo::getInstance().getDualBound()) < 0.1)
-	{
-		callNLPSolver = true;
-	}
-	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
-	{
-		callNLPSolver = true;
-	}
-	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
-	{
-		if (ProcessInfo::getInstance().itersMILPWithoutNLPCall >= Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound"))
-		{
-			ProcessInfo::getInstance().outputInfo(
-				"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
-			callNLPSolver = true;
-		}
-		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
-		{
-			ProcessInfo::getInstance().outputInfo(
-				"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
-			callNLPSolver = true;
-		}
-	}
-
-	if (!callNLPSolver)
-	{
-		ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
-	}
-
-	ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-	ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
-
-	return (callNLPSolver);
-}
-
-void CplexCallback::printIterationReport(SolutionPoint solution, const IloCplex::Callback::Context &context)
-{
-	auto MILPSolver = static_cast<MILPSolverCplexLazy *>(ProcessInfo::getInstance().MILPSolver);
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-
-	if (currIter->iterationNumber - MILPSolver->lastHeaderIter > 100)
-	{
-		MILPSolver->lastHeaderIter = MILPSolver->currIter;
-		ProcessInfo::getInstance().tasks->getTask("PrintIterHeader")->run();
-	}
-
-	std::stringstream tmpType;
-	tmpType << "LazyCB (" << context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId) << ")";
-
-	std::string hyperplanesExpr;
-
-	if (this->lastNumAddedHyperplanes > 0)
-	{
-		hyperplanesExpr = "+" + to_string(this->lastNumAddedHyperplanes) + " = " + to_string(currIter->totNumHyperplanes);
-	}
-	else
-	{
-		hyperplanesExpr = " ";
-	}
-
-	auto tmpConstrExpr = UtilityFunctions::toStringFormat(solution.maxDeviation.value, "%.5f");
-
-	if (solution.maxDeviation.idx != -1)
-	{
-		tmpConstrExpr = ProcessInfo::getInstance().originalProblem->getConstraintNames()[solution.maxDeviation.idx] + ": " + tmpConstrExpr;
-	}
-	else
-	{
-		tmpConstrExpr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
-	}
-
-	std::string primalBoundExpr;
-	std::string dualBoundExpr;
-	std::string objExpr;
-
-	primalBoundExpr = UtilityFunctions::toStringFormat(
-		ProcessInfo::getInstance().getPrimalBound(), "%.3f", true);
-
-	objExpr = UtilityFunctions::toStringFormat(solution.objectiveValue, "%.3f", true);
-	dualBoundExpr = UtilityFunctions::toStringFormat(
-		context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound), "%.3f", true);
-
-	auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % to_string(currIter->iterationNumber) % tmpType.str() % hyperplanesExpr % dualBoundExpr % objExpr % primalBoundExpr % tmpConstrExpr;
-
-	ProcessInfo::getInstance().outputSummary(tmpLine.str());
-
-	double timeStamp = ProcessInfo::getInstance().getElapsedTime("Total");
-
-	if (MILPSolver->currIter - MILPSolver->lastSummaryIter > 50 || timeStamp - MILPSolver->lastSummaryTimeStamp > 5)
-	{
-		MILPSolver->lastSummaryIter = MILPSolver->currIter;
-		MILPSolver->lastSummaryTimeStamp = timeStamp;
-		double absGap = ProcessInfo::getInstance().getAbsoluteObjectiveGap();
-		double relGap = ProcessInfo::getInstance().getRelativeObjectiveGap();
-		auto objBounds = ProcessInfo::getInstance().getCorrectedObjectiveBounds();
-		double objLB = objBounds.first;
-		double objUB = objBounds.second;
-
-		ProcessInfo::getInstance().outputSummary(
-			"                                                                                     ");
-
-#ifdef _WIN32
-		ProcessInfo::getInstance().outputSummary(
-			"ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-#else
-		ProcessInfo::getInstance().outputSummary(
-			"─────────────────────────────────────────────────────────────────────────────────────");
-#endif
-
-		auto tmpLineSummary = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/"
-											"rel gap %4% / %5%") %
-							  ProcessInfo::getInstance().getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
-
-		ProcessInfo::getInstance().outputSummary(tmpLineSummary.str());
-
-		std::stringstream tmpLine;
-
-		tmpLine << " Number of open nodes: " << context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount) << ".";
-
-		if (ProcessInfo::getInstance().interiorPts.size() > 1)
-		{
-			tmpLine << " Number of interior points: " << ProcessInfo::getInstance().interiorPts.size() << ".";
-		}
-
-		if (ProcessInfo::getInstance().numIntegerCutsAdded > 1)
-		{
-			tmpLine << " Number of integer cuts: " << ProcessInfo::getInstance().numIntegerCutsAdded << ".";
-		}
-
-		ProcessInfo::getInstance().outputSummary(tmpLine.str());
-
-#ifdef _WIN32
-		ProcessInfo::getInstance().outputSummary(
-			"ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-#else
-		ProcessInfo::getInstance().outputSummary(
-			"─────────────────────────────────────────────────────────────────────────────────────");
-#endif
-
-		ProcessInfo::getInstance().outputSummary("");
-	}
-}
-
-bool CplexCallback::checkAbsoluteObjectiveGapToleranceMet(const IloCplex::Callback::Context &context)
-{
-	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
-	{
-		ProcessInfo::getInstance().outputAlways(
-			"     Absolute objective gap tolerance met: " + UtilityFunctions::toString(ProcessInfo::getInstance().getAbsoluteObjectiveGap()) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
-		return (true);
-	}
-	return (false);
-}
-
-bool CplexCallback::checkRelativeObjectiveGapToleranceMet(const IloCplex::Callback::Context &context)
-{
-	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
-	{
-		ProcessInfo::getInstance().outputAlways(
-			"     Relative objective gap tolerance met: " + UtilityFunctions::toString(ProcessInfo::getInstance().getRelativeObjectiveGap()) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
-		return (true);
-	}
-	return (false);
 }
 
 void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints,
@@ -550,7 +371,6 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 	{
 		lastNumAddedHyperplanes = 0;
 		ProcessInfo::getInstance().getCurrentIteration()->numHyperplanesAdded++;
-		(static_cast<MILPSolverCplexLazy *>(ProcessInfo::getInstance().MILPSolver))->currIter++;
 
 		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
 																						  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
@@ -639,7 +459,7 @@ E_ProblemSolutionStatus MILPSolverCplexLazy::solveProblem()
 			cplexInstance.extract(cplexModel);
 		}
 
-		CplexCallback cCallback(cplexVars);
+		CplexCallback cCallback(cplexVars, cplexEnv);
 		CPXLONG contextMask = 0;
 
 		contextMask |= IloCplex::Callback::Context::Id::Candidate;

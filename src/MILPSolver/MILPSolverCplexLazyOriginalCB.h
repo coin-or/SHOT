@@ -1,6 +1,7 @@
 #pragma once
 #include "IMILPSolver.h"
 #include "MILPSolverBase.h"
+#include "MILPSolverCallbackBase.h"
 
 #include <functional>
 #include <thread>
@@ -13,15 +14,6 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
-
-#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
-
-#include "../Tasks/TaskInitializeLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsSolution.h"
-#include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
-#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 
 class MILPSolverCplexLazyOriginalCB: public MILPSolverCplex
 {
@@ -40,11 +32,13 @@ class MILPSolverCplexLazyOriginalCB: public MILPSolverCplex
 		virtual void setSolutionLimit(long limit);
 		virtual int getSolutionLimit();
 
-		int lastSummaryIter = 0;
+		/*int lastSummaryIter = 0;
 		int currIter = 0;
 		double lastSummaryTimeStamp = 0.0;
 		int lastHeaderIter = 0;
-		bool isBusy = false;
+		bool isBusy = false;*/
+
+		std::mutex callbackMutex2;
 
 	private:
 
@@ -54,7 +48,7 @@ class MILPSolverCplexLazyOriginalCB: public MILPSolverCplex
 
 };
 
-class HCallbackI: public IloCplex::HeuristicCallbackI
+class HCallbackI: public IloCplex::HeuristicCallbackI, public MILPSolverCallbackBase
 {
 		IloNumVarArray cplexVars;
 
@@ -91,26 +85,11 @@ class IncCallbackI: public IloCplex::IncumbentCallbackI
 		void main();
 };
 
-class CtCallbackI: public IloCplex::LazyConstraintCallbackI
+class CtCallbackI: public IloCplex::LazyConstraintCallbackI, public MILPSolverCallbackBase
 {
 		IloNumVarArray cplexVars;
 
-		TaskBase *tSelectPrimNLP;
-		bool isMinimization = true;
-		int cbCalls = 0;
-		int lastNumAddedHyperplanes = 0;
-
-		TaskBase *taskSelectHPPts;
-		TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
-		TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
 		MILPSolverCplexLazyOriginalCB *cplexSolver;
-
-		bool checkFixedNLPStrategy(SolutionPoint point);
-		void printIterationReport(SolutionPoint point);
-
-		bool checkAbsoluteObjectiveGapToleranceMet(SolutionPoint point);
-		bool checkRelativeObjectiveGapToleranceMet(SolutionPoint point);
-		bool checkRelativeMIPGapToleranceMet(SolutionPoint point);
 
 		void createHyperplane(Hyperplane hyperplane);
 

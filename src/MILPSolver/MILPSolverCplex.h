@@ -132,8 +132,6 @@ class MILPSolverCplex: public IMILPSolver, public MILPSolverBase
 		IloModel cplexModel;
 		IloCplex cplexInstance;
 
-		std::mutex cplexMutex;
-
 	protected:
 		std::vector<double> iterDurations;
 
