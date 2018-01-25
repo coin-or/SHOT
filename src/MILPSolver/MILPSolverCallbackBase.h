@@ -30,6 +30,8 @@ class MILPSolverCallbackBase
 
 		bool checkFixedNLPStrategy(SolutionPoint point);
 
+		bool checkIterationLimit();
+
 		void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 
 		void printIterationReport(SolutionPoint solution, std::string threadId, std::string bestBound, std::string openNodes);

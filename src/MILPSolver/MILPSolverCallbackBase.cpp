@@ -1,5 +1,18 @@
 #include "MILPSolverCallbackBase.h"
 
+bool MILPSolverCallbackBase::checkIterationLimit()
+{
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+
+	if (currIter->iterationNumber
+			>= Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm")
+					+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm"))
+	{
+		return (true);
+	}
+
+    return (false);
+}
 
 bool MILPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 {

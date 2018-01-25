@@ -261,7 +261,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 	for (auto C : this->dualSolutionCandidates)
 	{
 
-		if ((isMinimization && (C.objValue > currDualBound && (C.objValue <= currPrimalBound + 10 ^ -6))) || (!isMinimization && (C.objValue < currDualBound && (C.objValue >= currPrimalBound - 10 ^ -6))))
+		if ((isMinimization && (C.objValue > currDualBound && (C.objValue <= currPrimalBound))) || (!isMinimization && (C.objValue < currDualBound && (C.objValue >= currPrimalBound))))
 		{
 			// New dual solution
 			this->currentObjectiveBounds.first = C.objValue;
@@ -468,7 +468,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		}
 	}
 
-	if (isVariableBoundsFulfilled)
+	if (!isVariableBoundsFulfilled)
 	{
 		auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
 		this->outputWarning(tmpLine.str());

@@ -143,7 +143,7 @@ void GurobiCallback::callback()
 			}
 		}
 
-		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
+		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() || checkIterationLimit())
 		{
 			abort();
 			return;
@@ -207,6 +207,13 @@ void GurobiCallback::callback()
 			}
 
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
+
+			//Remove??
+			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+			{
+				return;
+			}
+
 			SolutionPoint solutionCandidate;
 
 			solutionCandidate.point = solution;
@@ -221,10 +228,9 @@ void GurobiCallback::callback()
 
 			currIter->maxDeviation = mostDevConstr.value;
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
-
 			currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
-
 			currIter->objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
+			
 			auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
 			currIter->currentObjectiveBounds = bounds;
 
@@ -269,7 +275,7 @@ void GurobiCallback::callback()
 
 			printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
 
-			if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
+			if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 			{
 				abort();
 				return;
@@ -305,10 +311,10 @@ void GurobiCallback::callback()
 			}
 			else
 			{
-				static_cast<MILPSolverGurobiLazy *>(ProcessInfo::getInstance().MILPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound /*- 0.0000001*/);
+				static_cast<MILPSolverGurobiLazy *>(ProcessInfo::getInstance().MILPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound /*- 0.0000001*/);
 
 				ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + UtilityFunctions::toString(primalBound /*- 0.0000001*/) + " for minimization.");
+					"     Setting cutoff value to " + UtilityFunctions::toString(-primalBound /*- 0.0000001*/) + " for minimization.");
 			}
 		}
 	}

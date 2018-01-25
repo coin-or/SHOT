@@ -173,6 +173,13 @@ void InfoCallbackI::main() // Called at each node...
 		this->abort();
 		return;
 	}
+	else if (checkIterationLimit())
+	{
+		ProcessInfo::getInstance().outputAlways("     Terminated since iteration limit reached in info callback.");
+
+		this->abort();
+		return;
+	}
 
 	return;
 }
@@ -222,12 +229,7 @@ void IncCallbackI::main()
 		return;
 	}
 
-	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
-	{
-		return;
-	}
-
-	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
+	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() || ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
 	{
 		return;
 	}
@@ -238,7 +240,7 @@ void IncCallbackI::main()
 	{
 		return;
 	}
-
+	
 	reject();
 }
 
@@ -366,12 +368,12 @@ void CtCallbackI::main()
 		}
 	}
 
-	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
-		{
-			abort();
-			return;
-		}
-
+	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() || checkIterationLimit())
+	{
+		abort();
+		return;
+	}
+	
 	ProcessInfo::getInstance().createIteration();
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
@@ -394,7 +396,7 @@ void CtCallbackI::main()
 
 		ProcessInfo::getInstance().checkPrimalSolutionCandidates();
 
-		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
+		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 		{
 			abort();
 			return;

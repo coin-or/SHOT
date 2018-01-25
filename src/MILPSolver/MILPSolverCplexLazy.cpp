@@ -96,7 +96,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			tmpPrimalVals.end();
 		}
 
-		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
+		if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() || checkIterationLimit())
 		{
 			abort();
 			return;
@@ -172,6 +172,13 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			tmpVals.end();
 
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
+
+			//Remove??
+			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+			{
+				return;
+			}
+
 			SolutionPoint solutionCandidate;
 
 			solutionCandidate.point = solution;
@@ -234,7 +241,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 		
 			printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
 
-			if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet()))
+			if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 			{
 				abort();
 				return;

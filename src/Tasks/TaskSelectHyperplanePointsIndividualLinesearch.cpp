@@ -144,7 +144,6 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 			}
 		}
 	}
-
 }
 
 std::string TaskSelectHyperplanePointsIndividualLinesearch::getType()

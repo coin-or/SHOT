@@ -62,7 +62,7 @@ class HCallbackI: public IloCplex::HeuristicCallbackI, public MILPSolverCallback
 		void main();	// the call back function
 };
 
-class InfoCallbackI: public IloCplex::MIPInfoCallbackI
+class InfoCallbackI: public IloCplex::MIPInfoCallbackI, public MILPSolverCallbackBase
 {
 		IloNumVarArray cplexVars;
 
@@ -74,7 +74,7 @@ class InfoCallbackI: public IloCplex::MIPInfoCallbackI
 		void main();	// the call back function
 };
 
-class IncCallbackI: public IloCplex::IncumbentCallbackI
+class IncCallbackI: public IloCplex::IncumbentCallbackI, public MILPSolverCallbackBase
 {
 		IloNumVarArray cplexVars;
 

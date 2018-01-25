@@ -74,6 +74,9 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 				*expr += +(tmpObjPairs.at(i).second) * (gurobiModel->getVar(tmpObjPairs.at(i).first));
 			}
 
+			double objConstant = origProblem->getObjectiveConstant();
+			if (objConstant != 0.0) *expr += objConstant;
+
 			gurobiModel->setObjective(*expr);
 		}
 		else
@@ -91,6 +94,9 @@ bool MILPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			{
 				*expr += (T->coef * gurobiModel->getVar(T->idxOne) * gurobiModel->getVar(T->idxTwo));
 			}
+
+			double objConstant = origProblem->getObjectiveConstant();
+			if (objConstant != 0.0) *expr += objConstant;
 
 			gurobiModel->setObjective(*expr);
 		}
@@ -238,6 +244,9 @@ void MILPSolverGurobi::initializeSolverSettings()
 {
 	try
 	{
+		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")/2.0);
+		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")/2.0);
+		
 		gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);

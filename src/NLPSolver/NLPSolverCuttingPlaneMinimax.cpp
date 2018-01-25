@@ -148,6 +148,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 		{
 			statusCode = E_NLPSolutionStatus::IterationLimit;
 		}
+		else
+		{
+			
+		}
 
 		auto LPVarSol = LPSolver->getVariableSolution(0);
 		LPObjVar = LPSolver->getObjectiveValue();

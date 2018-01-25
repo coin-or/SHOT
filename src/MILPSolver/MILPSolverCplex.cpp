@@ -211,6 +211,9 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setParam(IloCplex::SolnPoolReplace,
 				Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
 
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")/2.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")/2.0);
+
 		//cplexInstance.setParam(IloCplex::RepairTries, 5);
 		//cplexInstance.setParam(IloCplex::HeurFreq,2);
 		//cplexInstance.setParam(IloCplex::AdvInd,2);

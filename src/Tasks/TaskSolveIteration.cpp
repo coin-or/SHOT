@@ -145,7 +145,7 @@ void TaskSolveIteration::run()
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}
 
-			if (currIter->isMILP() && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
+			if (currIter->isMILP() && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal) // Have the point
 			{
 				DualSolution sol =
 					{sols.at(0).point, E_DualSolutionSource::MILPSolutionOptimal, currIter->objectiveValue,
