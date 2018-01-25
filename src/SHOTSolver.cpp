@@ -586,6 +586,10 @@ void SHOTSolver::initializeSettings()
 										  "Maximal number of iterations between calls", 0, OSINT_MAX);
 	Settings::getInstance().createSetting("NLPFixedMaxElapsedTime", "PrimalBound", 5.0,
 										  "Maximal elapsed time between calls", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound", true,
+										  "If the fixed NLP problem is infeasible, utilize the solution to create a cut.");
+
 	Settings::getInstance().createSetting("NLPTimeLimit", "PrimalBound", 10.0,
 										  "Maximal time allowed per fixed NLP problem", 0, OSDBL_MAX);
 	Settings::getInstance().createSetting("NLPIterLimit", "PrimalBound", 10000000,

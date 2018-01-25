@@ -2,7 +2,6 @@
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
-#include "../Tasks/TaskInitializeLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"

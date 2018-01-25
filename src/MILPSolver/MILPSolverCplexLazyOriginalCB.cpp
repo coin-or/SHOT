@@ -253,8 +253,6 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazyOrig
 	isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 	cbCalls = 0;
 
-	auto taskInitLinesearch = new TaskInitializeLinesearch();
-
 	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
 			"Algorithm")) == ES_HyperplanePointStrategy::ESH)
 	{

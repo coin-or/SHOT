@@ -396,8 +396,6 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
 	cbCalls = 0;
 
-	auto taskInitLinesearch = new TaskInitializeLinesearch();
-
 	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
 																					  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
 	{

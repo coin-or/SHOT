@@ -34,6 +34,26 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 	}
 
 	NLPSolver->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
+
+	if (Settings::getInstance().getBoolSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound"))
+	{
+		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+		{
+			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			{
+				taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			}
+			else
+			{
+				taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+			}
+		}
+		else
+		{
+			taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
+		}
+	}
 }
 
 PrimalSolutionStrategyFixedNLP::~PrimalSolutionStrategyFixedNLP()
@@ -241,6 +261,49 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 		}
 		else
 		{
+			if (Settings::getInstance().getBoolSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound"))
+			{
+				// Utilize the solution point for adding a cutting plane / supporting hyperplane
+				std::vector<SolutionPoint> solutionPoints(1);
+				double tmpObj = NLPSolver->getObjectiveValue();
+				auto variableSolution = NLPSolver->getSolution();
+
+				if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear())
+				{
+					variableSolution.push_back(tmpObj);
+				}
+
+				auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(variableSolution);
+
+				SolutionPoint tmpSolPt;
+
+				tmpSolPt.point = variableSolution;
+				tmpSolPt.objectiveValue = ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(
+					variableSolution);
+				tmpSolPt.iterFound = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
+				tmpSolPt.maxDeviation = mostDevConstr;
+
+				solutionPoints.at(0) = tmpSolPt;
+
+				if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting(
+						"HyperplanePointStrategy", "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+				{
+					if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+							"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+					{
+						static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
+					}
+					else
+					{
+						static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts)->run(solutionPoints);
+					}
+				}
+				else
+				{
+					static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
+				}
+			}
+
 			if (Settings::getInstance().getBoolSetting("NLPFixedUpdateItersAndTime", "PrimalBound"))
 			{
 				int iters = ceil(Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound") * 1.02);

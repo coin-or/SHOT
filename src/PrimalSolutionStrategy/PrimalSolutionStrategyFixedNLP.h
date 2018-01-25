@@ -12,6 +12,9 @@
 #include "../NLPSolver/NLPSolverIPOptRelaxed.h"
 #include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
 #include "../NLPSolver/NLPSolverGAMS.h"
+#include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 
 class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 {
@@ -36,5 +39,6 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 		std::vector<double> originalLBs;
 		std::vector<double> originalUBs;
 
+		TaskBase *taskSelectHPPts;
 };
 

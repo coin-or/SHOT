@@ -14,8 +14,6 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
 	ProcessInfo::getInstance().lastLazyAddedIter = 0;
 
-	auto taskInitLinesearch = new TaskInitializeLinesearch();
-
 	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
 																					  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
 	{
