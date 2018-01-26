@@ -258,10 +258,39 @@ void ProcessInfo::checkDualSolutionCandidates()
 	double currDualBound = this->getDualBound();
 	double currPrimalBound = this->getPrimalBound();
 
+	double gapRelTolerance = Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm");
+	double gapAbsTolerance = Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm");
+
 	for (auto C : this->dualSolutionCandidates)
 	{
+		bool updateDual = false;
 
-		if ((isMinimization && (C.objValue > currDualBound && (C.objValue <= currPrimalBound))) || (!isMinimization && (C.objValue < currDualBound && (C.objValue >= currPrimalBound))))
+		if (isMinimization)
+		{
+			if (C.objValue < currPrimalBound*(1+gapRelTolerance) && C.objValue > currPrimalBound)
+			{
+				C.objValue = currPrimalBound;
+				updateDual = true;
+			}
+			else if (C.objValue > currDualBound && (C.objValue <= currPrimalBound))
+			{
+				updateDual = true;
+			}
+		}
+		else
+		{
+			if (C.objValue > currPrimalBound*(1+gapRelTolerance) && C.objValue < currPrimalBound)
+			{
+				C.objValue = currPrimalBound;
+				updateDual = true;
+			}
+			else if (C.objValue < currDualBound && (C.objValue >= currPrimalBound))
+			{
+				updateDual = true;
+			}
+		}
+
+		if (updateDual)
 		{
 			// New dual solution
 			this->currentObjectiveBounds.first = C.objValue;
@@ -269,8 +298,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 			this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
 			this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
 
-			// If the solution is MILP feasible we only have a bound, no variable solutions
-			if (C.sourceType != E_DualSolutionSource::MILPSolutionFeasible)
+			if (C.sourceType == E_DualSolutionSource::MILPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution )
 			{
 				this->addDualSolution(C);
 			}
@@ -279,9 +307,6 @@ void ProcessInfo::checkDualSolutionCandidates()
 
 			switch (C.sourceType)
 			{
-			/*case E_DualSolutionSource::Linesearch:
-				 sourceDesc = "line search";
-				 break;*/
 			case E_DualSolutionSource::LPSolution:
 				sourceDesc = "LP solution";
 				break;
@@ -507,7 +532,6 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 			{
 				ptRounded.at(idx) = rounded;
 				isRounded = true;
-				//std::cout << "rounded: " << tmpPoint.at(idx) << " to " << ptRounded.at(idx) << " " << sourceDesc	<< std::endl;
 			}
 		}
 

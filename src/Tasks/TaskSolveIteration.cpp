@@ -135,28 +135,26 @@ void TaskSolveIteration::run()
 				UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
 			}
 
-			if (currIter->isMILP() && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal) // Do not have the point, only the objective bound
+			double tmpDualObjBound = MILPSolver->getDualObjectiveValue();
+			if (currIter->isMILP())
 			{
-				double tmpDualObjBound = MILPSolver->getDualObjectiveValue();
-
 				DualSolution sol =
 					{sols.at(0).point, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound,
 					 currIter->iterationNumber};
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
-			}
 
-			if (currIter->isMILP() && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal) // Have the point
-			{
-				DualSolution sol =
+				if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+				{
+					DualSolution sol =
 					{sols.at(0).point, E_DualSolutionSource::MILPSolutionOptimal, currIter->objectiveValue,
 					 currIter->iterationNumber};
-				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
+					ProcessInfo::getInstance().addDualSolutionCandidate(sol);
+				}
 			}
-
-			if (!currIter->isMILP()) // Have a dual solution
+			else
 			{
 				DualSolution sol =
-					{sols.at(0).point, E_DualSolutionSource::LPSolution, currIter->objectiveValue,
+					{sols.at(0).point, E_DualSolutionSource::LPSolution, tmpDualObjBound,
 					 currIter->iterationNumber};
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}

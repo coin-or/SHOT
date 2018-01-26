@@ -138,20 +138,7 @@ void InfoCallbackI::main() // Called at each node...
 	auto absObjGap = ProcessInfo::getInstance().getAbsoluteObjectiveGap();
 	auto relObjGap = ProcessInfo::getInstance().getRelativeObjectiveGap();
 
-	auto relMIPGap = this->getMIPRelativeGap();
-
-	if (abs(relMIPGap) < Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
-	{
-		ProcessInfo::getInstance().outputAlways(
-				"     Terminated by relative MIP gap tolerance in info callback: "
-						+ UtilityFunctions::toString(relMIPGap) + " < "
-						+ UtilityFunctions::toString(
-								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
-
-		this->abort();
-		return;
-	}
-	else if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
+	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 	{
 		ProcessInfo::getInstance().outputAlways(
 				"     Terminated by relative objective gap tolerance in info callback: "
@@ -182,66 +169,6 @@ void InfoCallbackI::main() // Called at each node...
 	}
 
 	return;
-}
-
-IncCallbackI::IncCallbackI(IloEnv env, IloNumVarArray xx2) :
-		IloCplex::IncumbentCallbackI(env), cplexVars(xx2)
-{
-}
-
-IloCplex::CallbackI* IncCallbackI::duplicateCallback() const
-{
-	return (new (getEnv()) IncCallbackI(*this));
-}
-
-IloCplex::Callback IncCallback(IloEnv env, IloNumVarArray cplexVars)
-{
-	return (IloCplex::Callback(new (env) IncCallbackI(env, cplexVars)));
-}
-
-// This callback is called whenever the lazy callback does not cut away the solution
-void IncCallbackI::main()
-{
-	std::lock_guard < std::mutex> lock((static_cast<MILPSolverCplexLazyOriginalCB*>(ProcessInfo::getInstance().MILPSolver))->callbackMutex2);
-
-	IloNumArray tmpVals(this->getEnv());
-
-	if (!this->hasIncumbent())
-	{
-		return;
-	}
-
-	this->getValues(tmpVals, cplexVars);
-
-	std::vector<double> solution(tmpVals.getSize());
-
-	for (int i = 0; i < tmpVals.getSize(); i++)
-	{
-		solution.at(i) = tmpVals[i];
-	}
-
-	tmpVals.end();
-
-	auto relMIPGap = this->getMIPRelativeGap();
-
-	if (abs(relMIPGap) < Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
-	{
-		return;
-	}
-
-	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() || ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
-	{
-		return;
-	}
-
-	auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
-
-	if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-	{
-		return;
-	}
-	
-	reject();
 }
 
 CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazyOriginalCB *solver) :
@@ -565,7 +492,7 @@ void MILPSolverCplexLazyOriginalCB::initializeSolverSettings()
 	try
 	{
 		MILPSolverCplex::initializeSolverSettings();
-		cplexInstance.use(IncCallback(cplexEnv, cplexVars));
+		//cplexInstance.use(IncCallback(cplexEnv, cplexVars));
 		cplexInstance.use(CtCallback(cplexEnv, cplexVars, this));
 		cplexInstance.use(HCallback(cplexEnv, cplexVars));
 		cplexInstance.use(InfoCallback(cplexEnv, cplexVars));

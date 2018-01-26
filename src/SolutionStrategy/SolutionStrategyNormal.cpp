@@ -138,7 +138,7 @@ SolutionStrategyNormal::SolutionStrategyNormal(OSInstance* osInstance)
 		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound")
+	if (Settings::getInstance().getBoolSetting("PrimalStrategyFixedNLP", "PrimalBound")
 			&& ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0
 			&& ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{

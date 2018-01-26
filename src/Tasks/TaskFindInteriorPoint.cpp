@@ -2,7 +2,6 @@
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
 {
-
 }
 
 TaskFindInteriorPoint::~TaskFindInteriorPoint()
@@ -17,7 +16,7 @@ void TaskFindInteriorPoint::run()
 
 	ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
 	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-			"InteriorPoint"));
+																				  "InteriorPoint"));
 
 	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
 	{
@@ -42,7 +41,6 @@ void TaskFindInteriorPoint::run()
 		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
 		ProcessInfo::getInstance().outputDebug("IPOpt relaxed selected as NLP solver.");
-
 	}
 	else if (solver == ES_NLPSolver::IPOptMiniMaxAndRelaxed)
 	{
@@ -83,18 +81,17 @@ void TaskFindInteriorPoint::run()
 	{
 		auto solutionStatus = NLPSolvers.at(i)->solveProblem();
 
-		std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
+		std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
 
 		tmpIP->NLPSolver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-				"InteriorPoint"));
+																						   "InteriorPoint"));
 
 		tmpIP->point = NLPSolvers.at(i)->getSolution();
 
-		if (solver == ES_NLPSolver::IPOptRelaxed
-				&& tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+		if (solver == ES_NLPSolver::IPOptRelaxed && tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
 		{
 			tmpIP->point.push_back(
-					ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
+				ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
 		}
 
 		while (tmpIP->point.size() > ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
@@ -110,10 +107,17 @@ void TaskFindInteriorPoint::run()
 		if (maxDev.value > 0)
 		{
 			ProcessInfo::getInstance().outputWarning(
-					"Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+				"Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
 		}
 
 		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
+
+		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+		{
+			auto tmpVars = ProcessInfo::getInstance().originalProblem->getVariableNames();
+			std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/interiorpoint_" + to_string(i) + ".txt";
+			UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
+		}
 	}
 
 	if (!foundNLPPoint)
@@ -134,5 +138,4 @@ std::string TaskFindInteriorPoint::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

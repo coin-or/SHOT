@@ -626,7 +626,7 @@ void SHOTSolver::initializeSettings()
 										  enumPrimalBoundNLPStartingPoint);
 	enumPrimalBoundNLPStartingPoint.clear();
 
-	Settings::getInstance().createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-7,
+	Settings::getInstance().createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-6,
 										  "The nonlinear constraint tolerance for accepting primal bounds ");
 
 	Settings::getInstance().createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-6,

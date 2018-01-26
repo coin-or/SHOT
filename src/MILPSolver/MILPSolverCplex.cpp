@@ -26,7 +26,7 @@ MILPSolverCplex::~MILPSolverCplex()
 	cplexEnv.end();
 }
 
-bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
+bool MILPSolverCplex::createLinearProblem(OptProblem *origProblem)
 {
 	originalProblem = origProblem;
 
@@ -37,9 +37,10 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 	auto tmpTypes = origProblem->getVariableTypes();
 
 	int numCon = origProblem->getNumberOfConstraints();
-	if (origProblem->isObjectiveFunctionNonlinear()) numCon--; // Only want the number of original constraints and not the objective function
+	if (origProblem->isObjectiveFunctionNonlinear())
+		numCon--; // Only want the number of original constraints and not the objective function
 
-// Now creating the variables
+	// Now creating the variables
 	for (int i = 0; i < numVar; i++)
 	{
 		if (tmpTypes.at(i) == 'C')
@@ -61,13 +62,13 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		else
 		{
 			ProcessInfo::getInstance().outputWarning(
-					"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+				"Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 		}
 	}
 
 	cplexModel.add(cplexVars);
 
-// Now creating the objective function
+	// Now creating the objective function
 
 	IloExpr objExpr(cplexEnv);
 
@@ -78,7 +79,7 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		objExpr += tmpObjPairs.at(i).second * cplexVars[tmpObjPairs.at(i).first];
 	}
 
-// Add quadratic terms in the objective if they exist (and the strategy is to solve QPs)
+	// Add quadratic terms in the objective if they exist (and the strategy is to solve QPs)
 	if (origProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
 	{
 		auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
@@ -90,7 +91,8 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 	}
 
 	double objConstant = origProblem->getObjectiveConstant();
-	if (objConstant != 0.0) objExpr += objConstant;
+	if (objConstant != 0.0)
+		objExpr += objConstant;
 
 	if (origProblem->isTypeOfObjectiveMinimize())
 	{
@@ -103,14 +105,14 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 
 	objExpr.end();
 
-// Now creating the constraints
+	// Now creating the constraints
 
 	int row_nonz = 0;
 	int obj_nonz = 0;
 	int varIdx = 0;
 
 	SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
-			origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
+		origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
 
 	auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
 	auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
@@ -124,21 +126,16 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 		{
 			IloExpr expr(cplexEnv);
 
-			if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
-					&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
-							> 0)
+			if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
 			{
-				row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
-						- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
+				row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
 
 				for (int j = 0; j < row_nonz; j++)
 				{
 					double val =
-							m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-									+ j];
+						m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 					varIdx =
-							m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-									+ j];
+						m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 
 					expr += val * cplexVars[varIdx];
 				}
@@ -158,19 +155,19 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 			if (constrTypes[rowIdx] == 'L')
 			{
 				IloRange tmpRange = IloRange(cplexEnv, -IloInfinity, expr, constrUBs[rowIdx],
-						constrNames[rowIdx].c_str());
+											 constrNames[rowIdx].c_str());
 				cplexConstrs.add(tmpRange);
 			}
 			else if (constrTypes[rowIdx] == 'G')
 			{
 				IloRange tmpRange = IloRange(cplexEnv, constrLBs[rowIdx], expr, IloInfinity,
-						constrNames[rowIdx].c_str());
+											 constrNames[rowIdx].c_str());
 				cplexConstrs.add(tmpRange);
 			}
 			else if (constrTypes[rowIdx] == 'E')
 			{
 				IloRange tmpRange = IloRange(cplexEnv, constrLBs[rowIdx], expr, constrUBs[rowIdx],
-						constrNames[rowIdx].c_str());
+											 constrNames[rowIdx].c_str());
 				cplexConstrs.add(tmpRange);
 			}
 			else
@@ -187,7 +184,7 @@ bool MILPSolverCplex::createLinearProblem(OptProblem * origProblem)
 	{
 		cplexInstance = IloCplex(cplexModel);
 	}
-	catch (IloException& e)
+	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError("CPLEX exception caught when creating model", e.getMessage());
 		return (false);
@@ -207,12 +204,12 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
 		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
-				Settings::getInstance().getIntSetting("SolnPoolIntensity", "CPLEX"));	// Don't use 3 with heuristics
+							   Settings::getInstance().getIntSetting("SolnPoolIntensity", "CPLEX")); // Don't use 3 with heuristics
 		cplexInstance.setParam(IloCplex::SolnPoolReplace,
-				Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
+							   Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
 
-		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")/2.0);
-		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")/2.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm") / 2.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm") / 2.0);
 
 		//cplexInstance.setParam(IloCplex::RepairTries, 5);
 		//cplexInstance.setParam(IloCplex::HeurFreq,2);
@@ -220,7 +217,7 @@ void MILPSolverCplex::initializeSolverSettings()
 
 		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("SolnPoolGap", "CPLEX"));
 		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
-				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
+							   Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
 
 		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("MIPEmphasis", "CPLEX"));
@@ -256,12 +253,11 @@ void MILPSolverCplex::initializeSolverSettings()
 		 */
 		cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
 		//cplexInstance.setParam(IloCplex::EpMrk, 0.9);
-
 	}
-	catch (IloException& e)
+	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError("CPLEX error when initializing parameters for linear solver",
-				e.getMessage());
+											   e.getMessage());
 	}
 }
 
@@ -293,7 +289,7 @@ int MILPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, d
 
 		expr.end();
 	}
-	catch (IloException& e)
+	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError("Error when adding linear constraint", e.getMessage());
 
@@ -354,10 +350,11 @@ void MILPSolverCplex::activateDiscreteVariables(bool activate)
 			discreteVariablesActivated = false;
 		}
 	}
-	catch (IloException& e)
+	catch (IloException &e)
 	{
-		if (activate) ProcessInfo::getInstance().outputError("Error when activating discrete variables",
-				e.getMessage());
+		if (activate)
+			ProcessInfo::getInstance().outputError("Error when activating discrete variables",
+												   e.getMessage());
 	}
 }
 
@@ -418,7 +415,6 @@ E_ProblemSolutionStatus MILPSolverCplex::getSolutionStatus()
 	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError("Error when obtaining solution status", e.getMessage());
-
 	}
 
 	return (MILPSolutionStatus);
@@ -532,7 +528,7 @@ std::vector<double> MILPSolverCplex::getVariableSolution(int solIdx)
 	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
-				e.getMessage());
+											   e.getMessage());
 	}
 
 	return (solution);
@@ -553,7 +549,6 @@ int MILPSolverCplex::getNumberOfSolutions()
 		{
 			numSols = 1;
 		}
-
 	}
 	catch (IloException &e)
 	{
@@ -572,7 +567,7 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 	if (!isMILP && solIdx > 0) // LP problems only have one solution!
 	{
 		ProcessInfo::getInstance().outputError(
-				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
+			"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 		return (objVal);
 	}
 
@@ -586,12 +581,11 @@ double MILPSolverCplex::getObjectiveValue(int solIdx)
 		{
 			objVal = cplexInstance.getObjValue();
 		}
-
 	}
 	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError(
-				"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
+			"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (objVal);
@@ -615,7 +609,7 @@ void MILPSolverCplex::populateSolutionPool()
 		{
 			// Note that the vector elements are rearranged each iteration
 			std::nth_element(iterDurations.begin(), iterDurations.begin() + iterDurations.size() / 2,
-					iterDurations.end());
+							 iterDurations.end());
 
 			double newTimeLimit = timeLimitIncreaseFactor * iterDurations[iterDurations.size() / 2];
 			setTimeLimit(newTimeLimit);
@@ -631,15 +625,13 @@ void MILPSolverCplex::populateSolutionPool()
 		if (poolSizeAfter > poolSizeBefore)
 		{
 			ProcessInfo::getInstance().outputInfo(
-					"     Solution pool populated from: " + to_string(poolSizeBefore) + " to "
-							+ to_string(poolSizeAfter));
+				"     Solution pool populated from: " + to_string(poolSizeBefore) + " to " + to_string(poolSizeAfter));
 		}
 	}
 	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError("Error when populating solution pool", e.getMessage());
 		ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
-
 	}
 
 	ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
@@ -673,13 +665,13 @@ void MILPSolverCplex::setCutOff(double cutOff)
 			cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
 			ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+				"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
 			cplexInstance.setParam(IloCplex::CutLo, cutOff);
 			ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+				"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (IloException &e)
@@ -702,7 +694,6 @@ void MILPSolverCplex::addMIPStart(std::vector<double> point)
 	try
 	{
 		cplexInstance.addMIPStart(cplexVars, startVal);
-
 	}
 	catch (IloException &e)
 	{
@@ -721,7 +712,6 @@ void MILPSolverCplex::deleteMIPStarts()
 		try
 		{
 			cplexInstance.deleteMIPStarts(0, numStarts);
-
 		}
 		catch (IloException &e)
 		{
@@ -766,7 +756,7 @@ void MILPSolverCplex::updateVariableBound(int varIndex, double lowerBound, doubl
 	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError(
-				"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
+			"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 }
 
@@ -782,7 +772,7 @@ pair<double, double> MILPSolverCplex::getCurrentVariableBounds(int varIndex)
 	catch (IloException &e)
 	{
 		ProcessInfo::getInstance().outputError(
-				"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
+			"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 	return (tmpBounds);
 }
@@ -805,7 +795,6 @@ double MILPSolverCplex::getDualObjectiveValue()
 	try
 	{
 		objVal = cplexInstance.getBestObjValue();
-
 	}
 	catch (IloException &e)
 	{
@@ -815,7 +804,7 @@ double MILPSolverCplex::getDualObjectiveValue()
 	return (objVal);
 }
 
-std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAndGetNewBounds()
+std::pair<std::vector<double>, std::vector<double>> MILPSolverCplex::presolveAndGetNewBounds()
 {
 	try
 	{
@@ -862,13 +851,12 @@ std::pair<std::vector<double>, std::vector<double> > MILPSolverCplex::presolveAn
 			{
 				cplexInstance.extract(cplexModel);
 				ProcessInfo::getInstance().outputInfo(
-						"     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
+					"     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
 				ProcessInfo::getInstance().numConstraintsRemovedInPresolve = numconstr;
 			}
 		}
 
 		return (std::make_pair(newLBs, newUBs));
-
 	}
 	catch (IloException &e)
 	{
@@ -882,7 +870,7 @@ void MILPSolverCplex::writePresolvedToFile(std::string filename)
 {
 	try
 	{
-//Not implemented
+		//Not implemented
 	}
 	catch (IloException &e)
 	{
@@ -892,11 +880,10 @@ void MILPSolverCplex::writePresolvedToFile(std::string filename)
 
 void MILPSolverCplex::checkParameters()
 {
-
 }
 
 void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
-		std::function<IloConstraint(IloRange)> addConstraintFunction)
+									   std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
@@ -922,7 +909,7 @@ void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
 		{
 
 			ProcessInfo::getInstance().outputWarning(
-					"     Warning: hyperplane not generated, NaN found in linear terms!");
+				"     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}
@@ -962,7 +949,7 @@ void MILPSolverCplex::createHyperplane(Hyperplane hyperplane,
 }
 
 void MILPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
-		std::function<IloConstraint(IloRange)> addConstraintFunction)
+									   std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
 	IloExpr expr(cplexEnv);
 

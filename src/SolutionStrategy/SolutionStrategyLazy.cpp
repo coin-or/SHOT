@@ -1,12 +1,12 @@
 #include "SolutionStrategyLazy.h"
 
-SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
+SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 {
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
 	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-			"InteriorPoint"));
+																				  "InteriorPoint"));
 	ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
 	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
@@ -35,11 +35,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm")
-			== (int) ES_HyperplanePointStrategy::ESH
-			&& (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
-					!= E_ObjectiveFunctionType::Quadratic
-					|| ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
+	if (Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm") == (int)ES_HyperplanePointStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
@@ -61,8 +57,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
-	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve"))
-			!= ES_PresolveStrategy::Never)
+	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve")) != ES_PresolveStrategy::Never)
 	{
 		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
 		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
@@ -88,10 +83,24 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 
 	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
 	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+
+	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
+	{
+		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
+		ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+		dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
+
+		TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP();
+		ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+		dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+
+		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+	}
 
 	TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
@@ -145,7 +154,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance* osInstance)
 
 SolutionStrategyLazy::~SolutionStrategyLazy()
 {
-// TODO Auto-generated destructor stub
+	// TODO Auto-generated destructor stub
 }
 
 bool SolutionStrategyLazy::solveProblem()
@@ -166,5 +175,4 @@ bool SolutionStrategyLazy::solveProblem()
 
 void SolutionStrategyLazy::initializeStrategy()
 {
-
 }

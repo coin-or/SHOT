@@ -150,7 +150,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 		}
 		else
 		{
-			
+
 		}
 
 		auto LPVarSol = LPSolver->getVariableSolution(0);
@@ -307,14 +307,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			statusCode = E_NLPSolutionStatus::IterationLimit;
 			break;
 		}
-	}
-
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
-	{
-		auto tmpVars = NLPProblem->getVariableNames();
-		std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver")
-				+ "/nlppoint_minimaxcp.txt";
-		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
 	}
 
 	currSol.pop_back();

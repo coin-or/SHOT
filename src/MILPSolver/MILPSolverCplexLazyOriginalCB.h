@@ -32,12 +32,6 @@ class MILPSolverCplexLazyOriginalCB: public MILPSolverCplex
 		virtual void setSolutionLimit(long limit);
 		virtual int getSolutionLimit();
 
-		/*int lastSummaryIter = 0;
-		int currIter = 0;
-		double lastSummaryTimeStamp = 0.0;
-		int lastHeaderIter = 0;
-		bool isBusy = false;*/
-
 		std::mutex callbackMutex2;
 
 	private:
@@ -59,7 +53,7 @@ class HCallbackI: public IloCplex::HeuristicCallbackI, public MILPSolverCallback
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
 		HCallbackI(IloEnv env, IloNumVarArray xx2);
-		void main();	// the call back function
+		void main();	
 };
 
 class InfoCallbackI: public IloCplex::MIPInfoCallbackI, public MILPSolverCallbackBase
@@ -71,18 +65,7 @@ class InfoCallbackI: public IloCplex::MIPInfoCallbackI, public MILPSolverCallbac
 	public:
 		IloCplex::CallbackI* duplicateCallback() const;
 		InfoCallbackI(IloEnv env, IloNumVarArray xx2);
-		void main();	// the call back function
-};
-
-class IncCallbackI: public IloCplex::IncumbentCallbackI, public MILPSolverCallbackBase
-{
-		IloNumVarArray cplexVars;
-
-	private:
-	public:
-		IloCplex::CallbackI* duplicateCallback() const;
-		IncCallbackI(IloEnv env, IloNumVarArray xx2);
-		void main();
+		void main();	
 };
 
 class CtCallbackI: public IloCplex::LazyConstraintCallbackI, public MILPSolverCallbackBase
@@ -99,5 +82,5 @@ class CtCallbackI: public IloCplex::LazyConstraintCallbackI, public MILPSolverCa
 		IloCplex::CallbackI* duplicateCallback() const;
 
 		CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazyOriginalCB *solver);
-		void main();	// the call back function
+		void main();	
 };
