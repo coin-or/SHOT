@@ -122,7 +122,9 @@ class MILPSolverOsiCbc: public IMILPSolver, MILPSolverBase
 		OsiClpSolverInterface *osiInterface;
 		CbcModel *cbcModel;
 
-		int solLimit;
+		long int solLimit;
 		double cutOff /*= OSDBL_MAX*/;
+
+		std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 
 };

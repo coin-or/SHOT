@@ -788,8 +788,6 @@ bool MILPSolverCplex::supportsQuadraticConstraints()
 
 double MILPSolverCplex::getDualObjectiveValue()
 {
-
-	bool isMILP = getDiscreteVariableStatus();
 	double objVal = NAN;
 
 	try

@@ -185,11 +185,18 @@ bool SHOTSolver::setProblem(std::string fileName)
 
 bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
+	if (static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP")) == ES_MILPSolver::Cbc)
+	{
+		solutionStrategy = new SolutionStrategyNormal(osInstance);
+		isProblemInitialized = true;
+
+		return (true);
+	}
+
 	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
 																								   "Algorithm"))) == ES_QPStrategy::QuadraticObjective;
 	bool useQuadraticConstraints = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
 																									 "Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained;
-
 	if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
 	//MIQP problem
 	{
