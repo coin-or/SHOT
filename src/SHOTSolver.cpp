@@ -308,8 +308,8 @@ void SHOTSolver::initializeSettings()
 										  "Solution strategy", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
 
-	Settings::getInstance().createSetting("AddHyperplanesForRelaxedLazySolutions", "Algorithm", false,
-										  "Also adds cuts for relaxed solutions in the lazy strategy");
+	Settings::getInstance().createSetting("MaxHyperplanesForRelaxedLazySolutions", "Algorithm", 100,
+										  "Maximum number of hyperplane cuts to add in relaxed solutions in the lazy strategy.", 0, OSINT_MAX);
 
 	// Hyperplane generation point strategy
 	std::vector<std::string> enumHyperplanePointStrategy;

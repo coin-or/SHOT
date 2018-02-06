@@ -108,43 +108,8 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-	//ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
-
-	/*
-	 // Needed because e.g. fac2 terminates with optimal linear solution but not optimal nonlinear solution
-	 // TODO: figure out why and fix...
-	 TaskBase *tForcedHyperplaneAddition = new TaskSequential();
-
-	 TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
-	 dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tSelectHPPts);
-	 dynamic_cast<TaskSequential*>(tForcedHyperplaneAddition)->addTask(tAddHPs);
-
-	 TaskBase *tForceSupportingHyperplaneAddition = new TaskConditional();
-
-	 dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setCondition(
-	 [this]()
-	 {
-	 auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
-
-	 if (prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal && prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
-	 {
-	 ProcessInfo::getInstance().outputError(
-	 "     Forced addition of cutting plane in solution point.");
-	 return (true);
-	 }
-
-	 return (false);
-	 });
-
-	 dynamic_cast<TaskConditional*>(tForceSupportingHyperplaneAddition)->setTaskIfTrue(tForcedHyperplaneAddition);
-
-	 ProcessInfo::getInstance().tasks->addTask(tForceSupportingHyperplaneAddition, "ForceSupportingHyperplaneAddition");
-	 */
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
-
-	//TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
-	//ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
 	ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 

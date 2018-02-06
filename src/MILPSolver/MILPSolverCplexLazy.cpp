@@ -102,8 +102,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
 		if (context.inRelaxation())
 		{
-			if (Settings::getInstance().getBoolSetting("AddHyperplanesForRelaxedLazySolutions", "Algorithm"))
+			if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("MaxHyperplanesForRelaxedLazySolutions", "Algorithm"))
 			{
+				int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();
+				
 				std::vector<SolutionPoint> solutionPoints(1);
 
 				IloNumArray tmpVals(context.getEnv());
@@ -147,6 +149,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 				{
 					static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
 				}
+				
+				maxIntegerRelaxedHyperplanes += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
 			}
 		}
 
@@ -236,7 +240,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			auto bestBound = UtilityFunctions::toStringFormat(context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound), "%.3f", true);
 			auto threadId = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
 			auto openNodes = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount));
-		
+
 			printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
 
 			if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())

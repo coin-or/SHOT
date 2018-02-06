@@ -151,8 +151,9 @@ void GurobiCallback::callback()
 
 		if (where == GRB_CB_MIPNODE && getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL)
 		{
-			if (Settings::getInstance().getBoolSetting("AddHyperplanesForRelaxedLazySolutions", "Algorithm"))
+			if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("MaxHyperplanesForRelaxedLazySolutions", "Algorithm"))
 			{
+				int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();
 				std::vector<SolutionPoint> solutionPoints(1);
 
 				std::vector<double> solution(numVar);
@@ -191,6 +192,8 @@ void GurobiCallback::callback()
 				{
 					static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
 				}
+
+				maxIntegerRelaxedHyperplanes += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
 			}
 		}
 
@@ -230,7 +233,7 @@ void GurobiCallback::callback()
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
 			currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
 			currIter->objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
-			
+
 			auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
 			currIter->currentObjectiveBounds = bounds;
 
