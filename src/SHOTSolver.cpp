@@ -409,7 +409,7 @@ void SHOTSolver::initializeSettings()
 										  "Constraint violation tolerance", -OSDBL_MAX, OSDBL_MAX);
 
 	//SHOT cutting plane Minimax NLP solver
-	Settings::getInstance().createSetting("IterLimit", "InteriorPointCuttingPlane", 200,
+	Settings::getInstance().createSetting("IterLimit", "InteriorPointCuttingPlane", 2000,
 										  "LP iteration limit for solver", 0, OSINT_MAX);
 	Settings::getInstance().createSetting("IterLimitSubsolver", "InteriorPointCuttingPlane", 1000,
 										  "Iteration limit for minimization subsolver", 0, OSINT_MAX);
