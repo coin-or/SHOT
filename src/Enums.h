@@ -145,3 +145,8 @@ enum class ES_LinesearchConstraintStrategy
 {
 	AllAsMaxFunct, IndividualConstraints
 };
+
+enum class ES_OutputDirectory
+{
+	Problem, Program
+};

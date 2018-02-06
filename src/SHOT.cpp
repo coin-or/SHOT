@@ -6,39 +6,40 @@ std::string startmessage;
 
 int main(int argc, char *argv[])
 {
-	// Visual Studio does not play nice with unicode:
+// Visual Studio does not play nice with unicode:
 #ifdef _WIN32
 	startmessage = ""
-	"ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿\n"
-	"³          SHOT - Supporting Hyperplane Optimization Toolkit          ³\n"
-	"ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
-	"³ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        ³\n"
-	"³ - Based on the Extended Supporting Hyperplane (ESH) algorithm       ³\n"
-	"³   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            ³\n"
-	"³   bo Akademi University, Turku, Finland                            ³\n"
-	"ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n";
+				   "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿\n"
+				   "³          SHOT - Supporting Hyperplane Optimization Toolkit          ³\n"
+				   "ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
+				   "³ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        ³\n"
+				   "³ - Based on the Extended Supporting Hyperplane (ESH) algorithm       ³\n"
+				   "³   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            ³\n"
+				   "³   bo Akademi University, Turku, Finland                            ³\n"
+				   "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n";
 #else
 	startmessage = ""
-			"┌─────────────────────────────────────────────────────────────────────┐\n"
-			"│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
-			"├─────────────────────────────────────────────────────────────────────┤\n"
-			"│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
-			"│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
-			"│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
-			"│   Åbo Akademi University, Turku, Finland                            │\n"
-			"└─────────────────────────────────────────────────────────────────────┘\n";
+				   "┌─────────────────────────────────────────────────────────────────────┐\n"
+				   "│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
+				   "├─────────────────────────────────────────────────────────────────────┤\n"
+				   "│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
+				   "│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
+				   "│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
+				   "│   Åbo Akademi University, Turku, Finland                            │\n"
+				   "└─────────────────────────────────────────────────────────────────────┘\n";
 
 #endif
 
 	if (argc == 1)
 	{
 		std::cout << startmessage << std::endl;
-		std::cout << "Usage: filename.[osil|gms] options.[opt|xml|osol] results.osrl trace.trc" << std::endl;
+		std::cout << "Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
 
 		return (0);
 	}
 
 	solver = new SHOTSolver();
+	bool defaultOptionsGenerated = false;
 
 	ProcessInfo::getInstance().startTimer("Total");
 
@@ -79,11 +80,9 @@ int main(int argc, char *argv[])
 			// Create GAMS option file
 			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
 			fileUtil->writeFileFromString(optionsFile.string(), solver->getGAMSOptFile());
-		}
 
-		// Define names for result files
-		resultFile = boost::filesystem::path(boost::filesystem::current_path() / "results.osrl");
-		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
+			defaultOptionsGenerated = true;
+		}
 	}
 	else if (argc == 3)
 	{
@@ -98,8 +97,6 @@ int main(int argc, char *argv[])
 		}
 
 		optionsFile = boost::filesystem::path(argv[2]);
-		resultFile = boost::filesystem::path(boost::filesystem::current_path() / "results.osrl");
-		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
 	}
 	else if (argc == 4)
 	{
@@ -115,7 +112,6 @@ int main(int argc, char *argv[])
 
 		optionsFile = boost::filesystem::path(argv[2]);
 		resultFile = boost::filesystem::path(argv[3]);
-		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
 	}
 	else
 	{
@@ -148,13 +144,23 @@ int main(int argc, char *argv[])
 
 		std::string fileName = argv[1];
 
-		if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
+		if (defaultOptionsGenerated)
 		{
-			delete solver;
+			osoutput->SetPrintLevel("stdout",
+									(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") + 1));
+			osoutput->SetPrintLevel("shotlogfile",
+									(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelFile", "SHOTSolver") + 1));
+		}
+		else
+		{
+			if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
+			{
+				delete solver;
 
-			std::cout << startmessage << std::endl;
-			std::cout << "Cannot set options!" << std::endl;
-			return (0);
+				std::cout << startmessage << std::endl;
+				std::cout << "Cannot set options!" << std::endl;
+				return (0);
+			}
 		}
 
 		// Prints out the welcome message to the logging facility
@@ -178,7 +184,7 @@ int main(int argc, char *argv[])
 			return (0);
 		}
 	}
-	catch (const ErrorClass& eclass)
+	catch (const ErrorClass &eclass)
 	{
 		ProcessInfo::getInstance().outputError(eclass.errormsg);
 
@@ -192,16 +198,34 @@ int main(int argc, char *argv[])
 	FileUtil *fileUtil;
 	fileUtil = new FileUtil();
 
-	if (!resultFile.empty())
-	{
-		std::string osrl = solver->getOSrL();
+	std::string osrl = solver->getOSrL();
 
+	if (resultFile.empty())
+	{
+		boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "SHOTSolver"));
+		resultPath /= Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver");
+		resultPath = resultPath.replace_extension(".osrl");
+		fileUtil->writeFileFromString(resultPath.string(), osrl);
+	}
+	else
+	{
 		fileUtil->writeFileFromString(resultFile.string(), osrl);
 	}
 
-	if (!traceFile.empty())
+	std::string trace = solver->getTraceResult();
+
+	if (traceFile.empty())
 	{
 		std::string trace = solver->getTraceResult();
+
+		boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "SHOTSolver"));
+		tracePath /= Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver");
+		tracePath = tracePath.replace_extension(".trc");
+
+		fileUtil->writeFileFromString(tracePath.string(), trace);
+	}
+	else
+	{
 		fileUtil->writeFileFromString(traceFile.string(), trace);
 	}
 
@@ -209,7 +233,7 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
 	ProcessInfo::getInstance().outputSummary("\n"
-			"ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+											 "ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
 	for (auto T : ProcessInfo::getInstance().timers)
 	{
@@ -226,7 +250,7 @@ int main(int argc, char *argv[])
 	ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 #else
 	ProcessInfo::getInstance().outputSummary("\n"
-			"┌─── Solution time ──────────────────────────────────────────────────────────────┐");
+											 "┌─── Solution time ──────────────────────────────────────────────────────────────┐");
 
 	for (auto T : ProcessInfo::getInstance().timers)
 	{
@@ -241,7 +265,7 @@ int main(int argc, char *argv[])
 	}
 
 	ProcessInfo::getInstance().outputSummary(
-			"└────────────────────────────────────────────────────────────────────────────────┘");
+		"└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
 	delete solver;
 	return (0);

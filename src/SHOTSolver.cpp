@@ -82,34 +82,33 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
 
 bool SHOTSolver::setProblem(std::string fileName)
 {
+	if (!boost::filesystem::exists(fileName))
+	{
+		ProcessInfo::getInstance().outputError("Problem file \"" + fileName + "\" does not exist.");
+
+		return (false);
+	}
+
+	boost::filesystem::path problemFile(fileName);
+
+	if (!problemFile.has_extension())
+	{
+		ProcessInfo::getInstance().outputError("Problem file \"" + fileName + "\" does not specify a file extension.");
+
+		return (false);
+	}
+
 	OSInstance *tmpInstance;
+
+	boost::filesystem::path problemExtension = problemFile.extension();
+	boost::filesystem::path problemPath = problemFile.parent_path();
 
 	try
 	{
-		auto tmpFilename = fileName;
-
-		std::string::size_type idx;
-		string file_extension;
-
-		idx = tmpFilename.rfind('.');
-
-		if (idx != std::string::npos)
-		{
-			file_extension = tmpFilename.substr(idx + 1);
-		}
-		else
-		{
-			ProcessInfo::getInstance().outputError("No filetype specified.");
-
-			delete tmpInstance;
-
-			return (false);
-		}
-
-		if (file_extension == "osil" || file_extension == "xml")
+		if (problemExtension == ".osil" || problemExtension == ".xml")
 		{
 			FileUtil *fileUtil = new FileUtil();
-			std::string fileContents = fileUtil->getFileAsString(tmpFilename.c_str());
+			std::string fileContents = fileUtil->getFileAsString(fileName.c_str());
 			delete fileUtil;
 
 			OSiLReader *osilreader = new OSiLReader();
@@ -118,27 +117,27 @@ bool SHOTSolver::setProblem(std::string fileName)
 			//delete osilreader;
 			//TODO: Why can't osilreader be deleted
 		}
-		else if (file_extension == "nl")
+		else if (problemExtension == ".nl")
 		{
 			OSnl2OS *nl2os = new OSnl2OS();
-			nl2os->readNl(tmpFilename);
+			nl2os->readNl(fileName);
 			nl2os->createOSObjects();
 			tmpInstance = nl2os->osinstance;
 		}
-		else if (file_extension == "gms")
+		else if (problemExtension == ".gms")
 		{
 			assert(gms2os == NULL);
 			gms2os = new GAMS2OS();
-			gms2os->readGms(tmpFilename);
+			gms2os->readGms(fileName);
 			gms2os->createOSObjects();
 
 			tmpInstance = gms2os->osinstance;
 		}
-		else if (file_extension == "dat")
+		else if (problemExtension == ".dat")
 		{
 			assert(gms2os == NULL);
 			gms2os = new GAMS2OS();
-			gms2os->readCntr(tmpFilename);
+			gms2os->readCntr(fileName);
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;
 		}
@@ -151,7 +150,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 			return (false);
 		}
 
-		tmpInstance->instanceHeader->source = tmpFilename;
+		tmpInstance->instanceHeader->source = fileName;
 	}
 	catch (const ErrorClass &eclass)
 	{
@@ -163,17 +162,27 @@ bool SHOTSolver::setProblem(std::string fileName)
 	}
 
 	//Removes path
-	std::string tmpFile = fileName.substr(fileName.find_last_of("/\\") + 1);
+	boost::filesystem::path problemName = problemFile.stem();
 
-	//Removes file extension (if any)
-	size_t lastdot = tmpFile.find_last_of(".");
-	if (lastdot != std::string::npos)
-		tmpFile = tmpFile.substr(0, lastdot);
+	tmpInstance->setInstanceName(problemName.string());
+	Settings::getInstance().updateSetting("ProblemFile", "SHOTSolver", problemName.string());
 
-	tmpInstance->setInstanceName(tmpFile);
+	if (static_cast<ES_OutputDirectory>(Settings::getInstance().getIntSetting("OutputDirectory", "SHOT")) == ES_OutputDirectory::Program)
+	{
+		boost::filesystem::path debugPath(boost::filesystem::current_path());
+		debugPath /= problemName;
+		
+		Settings::getInstance().updateSetting("DebugPath", "SHOTSolver", "problemdebug/" + problemName.string());
+		Settings::getInstance().updateSetting("ResultPath", "SHOTSolver", boost::filesystem::current_path().string());
+	}
+	else
+	{
+		boost::filesystem::path debugPath(problemPath);
+		debugPath /= problemName;
 
-	Settings::getInstance().updateSetting("ProblemFile", "SHOTSolver", fileName);
-	Settings::getInstance().updateSetting("DebugPath", "SHOTSolver", "problemdebug/" + tmpFile);
+		Settings::getInstance().updateSetting("DebugPath", "SHOTSolver", debugPath.string());
+		Settings::getInstance().updateSetting("ResultPath", "SHOTSolver", problemPath.string());
+	}
 
 	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 		initializeDebugMode();
@@ -296,6 +305,12 @@ void SHOTSolver::initializeSettings()
 										  "Log level for file output", enumLogLevel);
 
 	enumLogLevel.clear();
+
+	std::vector<std::string> enumOutputDirectory;
+	enumOutputDirectory.push_back("Problem directory");
+	enumOutputDirectory.push_back("Program directory");
+	Settings::getInstance().createSetting("OutputDirectory", "SHOT",
+										  static_cast<int>(ES_OutputDirectory::Program), "Where to save the output files", enumOutputDirectory);
 
 	Settings::getInstance().createSetting("SaveAllPrimalSolutions", "SHOTSolver", false,
 										  "Should all intermediate solutions (primal and dual) be saved.");
@@ -532,10 +547,6 @@ void SHOTSolver::initializeSettings()
 										  "The fraction of violated constraints to generate supporting hyperplanes for when using the ECP strategy.",
 										  0.0, 1.0);
 
-	Settings::getInstance().createSetting("LinesearchConstraintStrategy", "ESH", 0.0,
-										  "NOT USED! The fraction of violated constraints to generate supporting hyperplanes for when using the ECP strategy.",
-										  0.0, 1.0);
-
 	std::vector<std::string> enumLinesearchConstraintStrategy;
 	enumLinesearchConstraintStrategy.push_back("Max function");
 	enumLinesearchConstraintStrategy.push_back("Individual constraints");
@@ -556,6 +567,8 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ProblemFile", "SHOTSolver", empty, "The filename of the problem.", true);
 	Settings::getInstance().createSetting("DebugPath", "SHOTSolver", empty,
 										  "The path where to save the debug information", true);
+	Settings::getInstance().createSetting("ResultPath", "SHOTSolver", empty,
+										  "The path where to save the result information", true);
 	Settings::getInstance().createSetting("Debug", "SHOTSolver", false, "Use debug functionality");
 
 	// Primal bound
