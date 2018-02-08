@@ -32,16 +32,16 @@ void TaskSolveIteration::run()
 		if (isMinimization)
 		{
 			MILPSolver->setCutOff(
-				ProcessInfo::getInstance().getPrimalBound() + Settings::getInstance().getDoubleSetting("CutOffTolerance", "MILP"));
+				ProcessInfo::getInstance().getPrimalBound() + Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual"));
 		}
 		else
 		{
 			MILPSolver->setCutOff(
-				ProcessInfo::getInstance().getPrimalBound() - Settings::getInstance().getDoubleSetting("CutOffTolerance", "MILP"));
+				ProcessInfo::getInstance().getPrimalBound() - Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual"));
 		}
 	}
 
-	if (Settings::getInstance().getBoolSetting("UpdateNonlinearObjectiveVariableBounds", "MILP") && !currIter->MILPSolutionLimitUpdated)
+	if (Settings::getInstance().getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MILPSolutionLimitUpdated)
 	{
 		MILPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
 	}
@@ -66,7 +66,7 @@ void TaskSolveIteration::run()
 	ProcessInfo::getInstance().outputInfo("MIP problem solved.");
 
 	// Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm")) == ES_SolutionStrategy::Lazy)
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy ", "Dual")) == ES_SolutionStrategy::SingleTree)
 	{
 		currIter = ProcessInfo::getInstance().getCurrentIteration();
 	}

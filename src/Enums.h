@@ -40,7 +40,7 @@ enum class E_ProblemConstraintType
 
 enum class ES_SolutionStrategy
 {
-	Normal, Lazy
+	MultiTree, SingleTree
 };
 
 enum class ES_HyperplanePointStrategy
@@ -53,7 +53,7 @@ enum class ES_RelaxationStrategy
 	Standard, Adaptive, None
 };
 
-enum class ES_MILPSolver
+enum class ES_MIPSolver
 {
 	Cplex, Gurobi, Cbc
 };

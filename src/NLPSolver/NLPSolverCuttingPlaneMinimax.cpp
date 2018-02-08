@@ -10,51 +10,51 @@
 
 class MinimizationFunction
 {
-	private:
-		std::vector<double> firstPt;
-		std::vector<double> secondPt;
-		OptProblem *NLPProblem;
+  private:
+	std::vector<double> firstPt;
+	std::vector<double> secondPt;
+	OptProblem *NLPProblem;
 
-	public:
-		MinimizationFunction(std::vector<double> ptA, std::vector<double> ptB, OptProblem *prob)
+  public:
+	MinimizationFunction(std::vector<double> ptA, std::vector<double> ptB, OptProblem *prob)
+	{
+		firstPt = ptA;
+		secondPt = ptB;
+		NLPProblem = prob;
+	}
+
+	double operator()(const double x)
+	{
+		int length = secondPt.size();
+		std::vector<double> ptNew(length);
+
+		for (int i = 0; i < length; i++)
 		{
-			firstPt = ptA;
-			secondPt = ptB;
-			NLPProblem = prob;
+			ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
 		}
 
-		double operator()(const double x)
-		{
-			int length = secondPt.size();
-			std::vector<double> ptNew(length);
+		auto validNewPt = NLPProblem->getMostDeviatingConstraint(ptNew).value + ptNew.back();
 
-			for (int i = 0; i < length; i++)
-			{
-				ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
-			}
-
-			auto validNewPt = NLPProblem->getMostDeviatingConstraint(ptNew).value + ptNew.back();
-
-			return (validNewPt);
-		}
+		return (validNewPt);
+	}
 };
 
 NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 {
 
-	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
+	auto solver = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
-	if (solver == ES_MILPSolver::Cplex)
+	if (solver == ES_MIPSolver::Cplex)
 	{
 		LPSolver = new MILPSolverCplex();
 		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");
 	}
-	else if (solver == ES_MILPSolver::Gurobi)
+	else if (solver == ES_MIPSolver::Gurobi)
 	{
 		LPSolver = new MILPSolverGurobi();
 		ProcessInfo::getInstance().outputInfo("Gurobi selected as MILP solver for minimax solver.");
 	}
-	else if (solver == ES_MILPSolver::Cbc)
+	else if (solver == ES_MIPSolver::Cbc)
 	{
 		LPSolver = new MILPSolverOsiCbc();
 		ProcessInfo::getInstance().outputInfo("Cbc selected as MILP solver for minimax solver.");
@@ -83,20 +83,18 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 	int numVar = NLPProblem->getNumberOfVariables();
 
 	// Sets the maximal number of iterations
-	int maxIter = Settings::getInstance().getIntSetting("IterLimit", "InteriorPointCuttingPlane");
-	double termObjTolAbs = Settings::getInstance().getDoubleSetting("TermToleranceAbs", "InteriorPointCuttingPlane");
-	double termObjTolRel = Settings::getInstance().getDoubleSetting("TermToleranceRel", "InteriorPointCuttingPlane");
-	double constrSelTol = Settings::getInstance().getDoubleSetting("ConstraintSelectionTolerance",
-			"InteriorPointCuttingPlane");
-	boost::uintmax_t maxIterSubsolver = Settings::getInstance().getIntSetting("IterLimitSubsolver",
-			"InteriorPointCuttingPlane");
-	int bitPrecision = Settings::getInstance().getIntSetting("BitPrecision", "InteriorPointCuttingPlane");
+	int maxIter = Settings::getInstance().getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
+	double termObjTolAbs = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
+	double termObjTolRel = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
+	double constrSelTol = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionTolerance", "Dual");
+	boost::uintmax_t maxIterSubsolver = Settings::getInstance().getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
+	int bitPrecision = Settings::getInstance().getIntSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
 	// currSol is the current LP solution, and prevSol the previous one
 	vector<double> currSol, prevSol;
 
 	double lambda; // Variable in the linesearch minimization
-	double mu; // Objective value for the linesearch minimization value
+	double mu;	 // Objective value for the linesearch minimization value
 
 	// Corresponds to the difference between the LP solution objective value and
 	// the objective found in the linesearch minimization procedure
@@ -150,7 +148,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 		}
 		else
 		{
-
 		}
 
 		auto LPVarSol = LPSolver->getVariableSolution(0);
@@ -170,22 +167,19 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			tmpLine << "\nÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
 
 			tmpLine
-			<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
-			% "Obj. LS" % "Abs. diff" % "Rel. diff";
+				<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP" % "Obj. LS" % "Abs. diff" % "Rel. diff";
 
 			tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
 #else
 			tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
 
 			tmpLine
-					<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP"
-							% "Obj. LS" % "Abs. diff" % "Rel. diff";
+				<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP" % "Obj. LS" % "Abs. diff" % "Rel. diff";
 
 			tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 #endif
 
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
-
 		}
 		else
 		{
@@ -194,7 +188,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			// Solves the minization problem wrt lambda in [0, 1]
 
 			auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision,
-					maxIterSubsolverTmp);
+																			maxIterSubsolverTmp);
 
 			lambda = minimizationResult.first;
 			mu = minimizationResult.second;
@@ -224,15 +218,13 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 		if (i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
 		{
-			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT"
-					% hyperplanesExpr % tmpObjLP % "" % "" % "";
+			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % tmpObjLP % "" % "" % "";
 		}
 		else
 		{
 			std::string tmpAbsDiff = ((boost::format("%.5f") % maxObjDiffAbs).str());
 			std::string tmpRelDiff = ((boost::format("%.5f") % maxObjDiffRel).str());
-			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT"
-					% hyperplanesExpr % tmpObjLP % tmpObjLS % tmpAbsDiff % tmpRelDiff;
+			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % tmpObjLP % tmpObjLS % tmpAbsDiff % tmpRelDiff;
 		}
 
 		ProcessInfo::getInstance().outputSummary(tmpLine.str());
@@ -249,7 +241,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
 		for (int j = 0; j < numHyperAdded; j++)
 		{
-			std::vector < IndexValuePair > elements; // Contains the terms in the hyperplane
+			std::vector<IndexValuePair> elements; // Contains the terms in the hyperplane
 
 			double constant = NLPProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).idx, currSol);
 
@@ -281,8 +273,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 			// Adds the linear constraint
 			LPSolver->addLinearConstraint(elements, constant);
 
-			if (mu >= 0 && Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane")
-					&& tmpMostDevs.at(j).idx != NLPProblem->getNonlinearObjectiveConstraintIdx())
+			if (mu >= 0 && Settings::getInstance().getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual") && tmpMostDevs.at(j).idx != NLPProblem->getNonlinearObjectiveConstraintIdx())
 			{
 				auto tmpPoint = currSol;
 
@@ -339,10 +330,10 @@ double NLPSolverCuttingPlaneMinimax::getObjectiveValue()
 	return (objectiveValue);
 }
 
-bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance * origInstance)
+bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance *origInstance)
 {
 	ProcessInfo::getInstance().outputInfo("Creating NLP problem for minimax solver");
-	dynamic_cast<OptProblemNLPMinimax*>(NLPProblem)->reformulate(origInstance);
+	dynamic_cast<OptProblemNLPMinimax *>(NLPProblem)->reformulate(origInstance);
 	ProcessInfo::getInstance().outputInfo("NLP problem for minimax solver created");
 
 	ProcessInfo::getInstance().outputInfo("Creating LP problem for minimax solver");
@@ -365,7 +356,7 @@ void NLPSolverCuttingPlaneMinimax::unfixVariables()
 }
 
 void NLPSolverCuttingPlaneMinimax::setStartingPoint(std::vector<int> variableIndexes,
-		std::vector<double> variableValues)
+													std::vector<double> variableValues)
 {
 }
 

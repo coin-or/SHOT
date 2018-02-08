@@ -5,7 +5,7 @@ bool MILPSolverCallbackBase::checkIterationLimit()
     auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	if (currIter->iterationNumber
-			>= Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm")
+			>= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
 					+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm"))
 	{
 		return (true);

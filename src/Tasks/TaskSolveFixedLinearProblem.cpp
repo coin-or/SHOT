@@ -33,7 +33,7 @@ void TaskSolveFixedLinearProblem::run()
 		return;
 	}
 
-	if (currIter->maxDeviation <= Settings::getInstance().getDoubleSetting("SolveFixedLPConstrTol", "Algorithm"))
+	if (currIter->maxDeviation <= Settings::getInstance().getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
 	{
 		ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
 		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
@@ -100,9 +100,9 @@ void TaskSolveFixedLinearProblem::run()
 	double prevObjVal = COIN_DBL_MAX;
 
 	int iterLastObjUpdate = 0;
-	int maxIter = Settings::getInstance().getIntSetting("SolveFixedLPMaxIter", "Algorithm");
-	double objTol = Settings::getInstance().getDoubleSetting("SolveFixedLPObjTol", "Algorithm");
-	double constrTol = Settings::getInstance().getDoubleSetting("SolveFixedLPConstrTol", "Algorithm");
+	int maxIter = Settings::getInstance().getIntSetting("FixedInteger.MaxIterations", "Dual");
+	double objTol = Settings::getInstance().getDoubleSetting("FixedInteger.ObjectiveTolerance", "Dual");
+	double constrTol = Settings::getInstance().getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual");
 
 	for (int k = 0; k < maxIter; k++)
 	{

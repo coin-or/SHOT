@@ -151,7 +151,7 @@ void GurobiCallback::callback()
 
 		if (where == GRB_CB_MIPNODE && getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL)
 		{
-			if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("MaxHyperplanesForRelaxedLazySolutions", "Algorithm"))
+			if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
 			{
 				int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();
 				std::vector<SolutionPoint> solutionPoints(1);
@@ -176,10 +176,10 @@ void GurobiCallback::callback()
 				solutionPoints.at(0) = tmpSolPt;
 
 				if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting(
-						"HyperplanePointStrategy", "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+						"CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 				{
 					if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-							"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 					{
 						static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
 					}
@@ -253,7 +253,7 @@ void GurobiCallback::callback()
 				ProcessInfo::getInstance().checkPrimalSolutionCandidates();
 			}
 
-			if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
+			if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
 			{
 				bool addedIntegerCut = false;
 
@@ -399,11 +399,10 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
 	cbCalls = 0;
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-																					  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 	{
 		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		}
@@ -419,7 +418,7 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
 	tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
 
-	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
+	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
 	{
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
 	}
@@ -462,11 +461,10 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
 		lastNumAddedHyperplanes = 0;
 		this->cbCalls++;
 
-		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-																						  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 		{
 			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 			{
 				static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
 			}

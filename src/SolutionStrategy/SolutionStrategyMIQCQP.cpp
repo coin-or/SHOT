@@ -12,7 +12,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance* osInstance)
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solverMILP = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
+	auto solverMILP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 

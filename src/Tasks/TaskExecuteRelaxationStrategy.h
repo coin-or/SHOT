@@ -4,7 +4,6 @@
 
 #include "../MILPSolver/IRelaxationStrategy.h"
 #include "../MILPSolver/RelaxationStrategyStandard.h"
-#include "../MILPSolver/RelaxationStrategyAdaptive.h"
 #include "../MILPSolver/RelaxationStrategyNone.h"
 
 class TaskExecuteRelaxationStrategy: public TaskBase

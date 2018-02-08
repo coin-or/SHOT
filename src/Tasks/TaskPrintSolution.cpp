@@ -52,7 +52,7 @@ void TaskPrintSolution::run()
 		ProcessInfo::getInstance().outputSummary(
 				"³ Nonoptimal solution found due to iteration limit "
 				+ to_string(
-						Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm")
+						Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
 						+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::ObjectiveStagnation)
@@ -160,7 +160,7 @@ void TaskPrintSolution::run()
 		ProcessInfo::getInstance().outputSummary(
 				"│ Nonoptimal solution found due to iteration limit "
 						+ to_string(
-								Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm")
+								Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
 										+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::ObjectiveStagnation)

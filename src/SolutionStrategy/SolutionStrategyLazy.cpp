@@ -5,8 +5,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-																				  "InteriorPoint"));
+	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 	ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
 	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
@@ -20,7 +19,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 	ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
 	ProcessInfo::getInstance().createTimer("PrimalBoundFixedLP", "    - Fixed LP");
 
-	auto solverMILP = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
+	auto solverMILP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
@@ -35,7 +34,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm") == (int)ES_HyperplanePointStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
+	if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplanePointStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
@@ -57,7 +56,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
-	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve")) != ES_PresolveStrategy::Never)
+	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_PresolveStrategy::Never)
 	{
 		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
 		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");

@@ -7,28 +7,28 @@
 
 #include "TaskInitializeMILPSolver.h"
 
-TaskInitializeMILPSolver::TaskInitializeMILPSolver(ES_MILPSolver solver, bool useLazyStrategy)
+TaskInitializeMILPSolver::TaskInitializeMILPSolver(ES_MIPSolver solver, bool useLazyStrategy)
 {
 	ProcessInfo::getInstance().startTimer("MILP");
 
 	if (useLazyStrategy)
 	{
-		if (solver == ES_MILPSolver::Cplex && Settings::getInstance().getBoolSetting("UseNewCallbackType", "CPLEX"))
+		if (solver == ES_MIPSolver::Cplex && Settings::getInstance().getBoolSetting("UseNewCallbackType", "CPLEX"))
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazy();
 			ProcessInfo::getInstance().outputInfo("Cplex with lazy callbacks selected as MIP solver.");
 		}
-		else if (solver == ES_MILPSolver::Cplex)
+		else if (solver == ES_MIPSolver::Cplex)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazyOriginalCB();
 			ProcessInfo::getInstance().outputInfo("Cplex with original lazy callbacks selected as MIP solver.");
 		}
-		else if (solver == ES_MILPSolver::Gurobi)
+		else if (solver == ES_MIPSolver::Gurobi)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverGurobiLazy();
 			ProcessInfo::getInstance().outputInfo("Gurobi with lazy callbacks selected as MIP solver.");
 		}
-		else if (solver == ES_MILPSolver::Cbc)
+		else if (solver == ES_MIPSolver::Cbc)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverOsiCbc();
 			ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver.");
@@ -41,17 +41,17 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(ES_MILPSolver solver, bool us
 	}
 	else
 	{
-		if (solver == ES_MILPSolver::Cplex)
+		if (solver == ES_MIPSolver::Cplex)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplex();
 			ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver.");
 		}
-		else if (solver == ES_MILPSolver::Gurobi)
+		else if (solver == ES_MIPSolver::Gurobi)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverGurobi();
 			ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver.");
 		}
-		else if (solver == ES_MILPSolver::Cbc)
+		else if (solver == ES_MIPSolver::Cbc)
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverOsiCbc();
 			ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver.");

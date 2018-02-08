@@ -255,7 +255,7 @@ void MILPSolverGurobi::initializeSolverSettings()
 		//gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber,
-				Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP") + 1);
+				Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual") + 1);
 	}
 	catch (GRBException &e)
 	{

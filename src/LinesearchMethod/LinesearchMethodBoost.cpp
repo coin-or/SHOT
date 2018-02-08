@@ -129,20 +129,6 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 		test->valSecondPt = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(ptB).value;
 	}
 
-	/*
-	 if (test->valFirstPt == test->valSecondPt)
-	 {
-	 throw new ErrorClass(
-	 "Exterior point and interior point has the same value " + to_string(test->valFirstPt) + " exterior "
-	 + to_string(test->valSecondPt));
-	 }
-	 else if (test->valFirstPt > test->valSecondPt)
-	 {
-	 throw new ErrorClass(
-	 "Exterior point has greater value than interior: interior " + to_string(test->valFirstPt) + " exterior "
-	 + to_string(test->valSecondPt));
-	 }*/
-
 	if (test->getActiveConstraints().size() == 0) // All constraints are fulfilled.
 	{
 		if (test->valFirstPt > test->valSecondPt)

@@ -41,7 +41,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
 				if (addedHyperplanes
-						>= Settings::getInstance().getIntSetting("MaxHyperplanesPerIteration", "Algorithm")) return;
+						>= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual")) return;
 				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
 
 				std::vector<double> externalPoint;

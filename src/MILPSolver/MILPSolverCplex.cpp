@@ -217,13 +217,13 @@ void MILPSolverCplex::initializeSolverSettings()
 
 		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("SolnPoolGap", "CPLEX"));
 		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
-							   Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
+							   Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
 		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Probe", "CPLEX"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("MIPEmphasis", "CPLEX"));
 
 		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("ParallelMode", "CPLEX"));
-		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("Threads", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
 
@@ -829,7 +829,7 @@ std::pair<std::vector<double>, std::vector<double>> MILPSolverCplex::presolveAnd
 			newUBs.push_back(redubs[i]);
 		}
 
-		if (Settings::getInstance().getBoolSetting("RemoveRedundantConstraintsFromMIP", "Presolve"))
+		if (Settings::getInstance().getBoolSetting("MIP.Presolve.RemoveRedundantConstraints", "Dual"))
 		{
 			int numconstr = 0;
 

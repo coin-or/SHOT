@@ -190,13 +190,13 @@ void MILPSolverOsiCbc::initializeSolverSettings()
 {
 	if (cbcModel->haveMultiThreadSupport())
 	{
-		cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("Threads", "CPLEX"));
+		cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 	}
 
 	cbcModel->setAllowableGap(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm") / 2.0);
 	cbcModel->setAllowableFractionGap(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm") / 2.0);
 	cbcModel->setMaximumSolutions(solLimit);
-	cbcModel->setMaximumSavedSolutions(Settings::getInstance().getIntSetting("SolutionPoolSize", "MILP"));
+	cbcModel->setMaximumSavedSolutions(Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
 	// Cbc has problems with too large cutoff values
 	if (originalProblem->isTypeOfObjectiveMinimize() && abs(this->cutOff) < 10e20)
@@ -610,23 +610,21 @@ void MILPSolverOsiCbc::checkParameters()
 	// Checks if quadratic objective functions or constraints are allowed in the settings, and corrects
 	// it since we do not support this for Cbc.
 
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
-																								   "Algorithm"))) == ES_QPStrategy::QuadraticObjective;
+	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticObjective;
 
-	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
-																									"Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained;
+	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticallyConstrained;
 
 	if (useQuadraticObjective)
 	{
 		// MIP solver does not support quadratic objectives, reseting both settings
-		Settings::getInstance().updateSetting("QPStrategy", "Algorithm", (int)ES_QPStrategy::Nonlinear);
+		Settings::getInstance().updateSetting("QuadraticStrategy", "Dual", (int)ES_QPStrategy::Nonlinear);
 		ProcessInfo::getInstance().outputWarning(
 			"Quadratic objective setting activated, but MIP solver does not support it. Resetting setting!");
 	}
 	else if (useQuadraticConstraint)
 	{
 		// MIP solver supports quadratic objectives but not quadratic constraints, reseting setting
-		Settings::getInstance().updateSetting("QPStrategy", "Algorithm", (int)ES_QPStrategy::Nonlinear);
+		Settings::getInstance().updateSetting("QuadraticStrategy", "Dual", (int)ES_QPStrategy::Nonlinear);
 		ProcessInfo::getInstance().outputWarning(
 			"Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!");
 	}

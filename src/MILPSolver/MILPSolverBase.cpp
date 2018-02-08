@@ -48,9 +48,9 @@ std::vector<SolutionPoint> MILPSolverBase::getAllVariableSolutions()
 	int numVar = originalProblem->getNumberOfVariables();
 	std::vector < SolutionPoint > allSolutions(numSol);
 
-// Should be moved to separate task
+	// Should be moved to separate task
 	bool isMILP = getDiscreteVariableStatus();
-	if (isMILP && Settings::getInstance().getBoolSetting("PopulateSolutionPool", "MILP"))
+	if (isMILP && Settings::getInstance().getBoolSetting("MIP.SolutionPool.Populate", "Dual"))
 	{
 		populateSolutionPool();
 	}
@@ -298,7 +298,7 @@ void MILPSolverBase::presolveAndUpdateBounds()
 			}
 		}
 
-		if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForMIP", "Presolve") && (newLB || newUB))
+		if (Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
 		{
 			updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
 			ProcessInfo::getInstance().outputInfo("     Bounds updated also in MIP problem");

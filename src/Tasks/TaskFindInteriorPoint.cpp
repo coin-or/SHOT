@@ -15,8 +15,7 @@ void TaskFindInteriorPoint::run()
 	ProcessInfo::getInstance().startTimer("InteriorPointTotal");
 
 	ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
-	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-																				  "InteriorPoint"));
+	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 
 	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
 	{
@@ -83,8 +82,7 @@ void TaskFindInteriorPoint::run()
 
 		std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
 
-		tmpIP->NLPSolver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-																						   "InteriorPoint"));
+		tmpIP->NLPSolver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 
 		tmpIP->point = NLPSolvers.at(i)->getSolution();
 

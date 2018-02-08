@@ -49,7 +49,7 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	{
 		int tmpVal = originalInstance->getConstraintNumber();
 
-		setNonlinearObjectiveConstraintIdx(tmpVal);	// Sets a virtual constraint
+		setNonlinearObjectiveConstraintIdx(tmpVal); // Sets a virtual constraint
 
 		setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());
 		muindex = originalInstance->getVariableNumber() + 1;
@@ -58,7 +58,6 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	{
 		muindex = originalInstance->getVariableNumber();
 	}
-
 }
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)
@@ -74,7 +73,7 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 		destination->setVariableNumber(numVar + 1);
 	}
 
-	vector < std::string > varNames;
+	vector<std::string> varNames;
 	varNames.assign(source->getVariableNames(), source->getVariableNames() + numVar);
 
 	vector<char> varTypes;
@@ -124,21 +123,20 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 			char type = varTypes.at(i);
 
 			destination->addVariable(i, name, lb, ub, type);
-
 		}
 	}
 
-	double tmpObjBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound", "InteriorPoint");
-	double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("MinimaxUpperBound", "InteriorPoint");
+	double tmpObjLowerBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
+	double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		destination->addVariable(numVar, "mu", -tmpObjBound, tmpObjBound, 'C');
-		destination->addVariable(numVar + 1, "tempobjvar", -tmpObjBound, tmpObjUpperBound, 'C');
+		destination->addVariable(numVar, "mu", tmpObjLowerBound, (-tmpObjLowerBound), 'C');
+		destination->addVariable(numVar + 1, "tempobjvar", tmpObjLowerBound, tmpObjUpperBound, 'C');
 	}
 	else
 	{
-		destination->addVariable(numVar, "tempobjvar", -tmpObjBound, tmpObjUpperBound, 'C');
+		destination->addVariable(numVar, "tempobjvar", tmpObjLowerBound, tmpObjUpperBound, 'C');
 	}
 
 	destination->bVariablesModified = true;
@@ -150,7 +148,7 @@ void OptProblemNLPMinimax::copyObjectiveFunction(OSInstance *source, OSInstance 
 
 	destination->setObjectiveNumber(1);
 
-	SparseVector * newobjcoeff = new SparseVector(1);
+	SparseVector *newobjcoeff = new SparseVector(1);
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
@@ -195,7 +193,7 @@ void OptProblemNLPMinimax::copyConstraints(OSInstance *source, OSInstance *desti
 	if (this->isObjectiveFunctionNonlinear())
 	{
 		destination->addConstraint(numCon, "objconstr", -OSDBL_MAX, -source->instanceData->objectives->obj[0]->constant,
-				0.0);
+								   0.0);
 	}
 
 	destination->bConstraintsModified = true;
@@ -234,26 +232,21 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
 	{
 		if (m_linearConstraintCoefficientsInRowMajor != NULL && m_linearConstraintCoefficientsInRowMajor->valueSize > 0)
 		{
-			row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
-					- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
+			row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
 
 			for (int j = 0; j < row_nonz; j++)
 			{
 				varIdx =
-						m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-								+ j];
+					m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 
 				double tmpVal =
-						m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-								+ j];
+					m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 
 				rowIndices.push_back(rowIdx);
 				colIndices.push_back(
-						m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-								+ j]);
+					m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j]);
 				elements.push_back(
-						m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-								+ j]);
+					m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j]);
 			}
 		}
 		// Inserts the objective function variable into nonlinear constraints
@@ -303,7 +296,7 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
 	}
 
 	CoinPackedMatrix *matrix = new CoinPackedMatrix(false, &rowIndices.at(0), &colIndices.at(0), &elements.at(0),
-			numTotalElements);
+													numTotalElements);
 
 	int numnonz = matrix->getNumElements();
 	int valuesBegin = 0;
@@ -314,14 +307,13 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
 
 	int startsEnd = this->isObjectiveFunctionNonlinear() ? varNum + 1 : varNum;
 
-	auto tmp = const_cast<int*>(matrix->getVectorStarts());
+	auto tmp = const_cast<int *>(matrix->getVectorStarts());
 
 	destination->setLinearConstraintCoefficients(numnonz, matrix->isColOrdered(),
-			const_cast<double*>(matrix->getElements()), valuesBegin, valuesEnd, const_cast<int*>(matrix->getIndices()),
-			indexesBegin, indexesEnd, const_cast<int*>(matrix->getVectorStarts()), startsBegin, startsEnd);
+												 const_cast<double *>(matrix->getElements()), valuesBegin, valuesEnd, const_cast<int *>(matrix->getIndices()),
+												 indexesBegin, indexesEnd, const_cast<int *>(matrix->getVectorStarts()), startsBegin, startsEnd);
 
 	destination->bConstraintsModified = true;
-
 }
 
 void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *destination)
@@ -363,17 +355,16 @@ void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *de
 		{
 #ifdef linux
 			destination->setQuadraticCoefficients(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
-					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+												  &varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
 
 #elif _WIN32
 			destination->setQuadraticTerms(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
-					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+										   &varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
 
 #else
 			destination->setQuadraticCoefficients(varOneIndexes.size(), &rowIndexes.at(0), &varOneIndexes.at(0),
-					&varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
+												  &varTwoIndexes.at(0), &coefficients.at(0), 0, varOneIndexes.size() - 1);
 #endif
-
 		}
 	}
 
@@ -388,7 +379,7 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 
 	if (numNonlinearExpressions > 0)
 	{
-		destination->instanceData->nonlinearExpressions->nl = new Nl*[numNonlinearExpressions];
+		destination->instanceData->nonlinearExpressions->nl = new Nl *[numNonlinearExpressions];
 
 		for (int i = 0; i < numNonlinearExpressions; i++)
 		{
@@ -397,15 +388,15 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 			destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
 #ifdef linux
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
-					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+				*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 
 #elif _WIN32
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
-					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+				*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 
 #else
 			destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
-					*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+				*source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 #endif
 
 			if (rowIdx != -1)
@@ -420,5 +411,4 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 	}
 
 	destination->bConstraintsModified = true;
-
 }

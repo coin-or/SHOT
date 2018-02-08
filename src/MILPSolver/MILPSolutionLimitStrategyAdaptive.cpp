@@ -6,7 +6,7 @@ MILPSolutionLimitStrategyAdaptive::MILPSolutionLimitStrategyAdaptive(IMILPSolver
 
 	//lastIterSolLimIncreased = 1;
 	numSolLimIncremented = 1;
-	//currentLimit = Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
+	//currentLimit = Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 }
 
 MILPSolutionLimitStrategyAdaptive::~MILPSolutionLimitStrategyAdaptive()
@@ -43,7 +43,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 	// Solution limit has not been updated in the maximal number of iterations
 	if (prevIter->isMILP()
 			&& currIter->iterationNumber - lastIterSolLimIncreased
-					> Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP"))
+					> Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual"))
 	{
 		//std::cout << "Force sol lim update" << std::endl;
 		return true;
@@ -80,12 +80,12 @@ int MILPSolutionLimitStrategyAdaptive::getNewLimit()
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	int newLimit;
-	//int iterLargeIncrease = Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP");
+	//int iterLargeIncrease = Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual");
 
 	newLimit = MILPSolver->getSolutionLimit() + 1;
 	lastIterSolLimIncreased = currIter->iterationNumber;
 	// Update MILP solution limit
-	//if (numSolLimIncremented > Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update
+	//if (numSolLimIncremented > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")) // Force larger MILP solution limit update
 	//{
 	//	newLimit = MILPSolver->getSolutionLimit() + 1;
 	//	//numSolLimIncremented = 1;
@@ -104,5 +104,5 @@ int MILPSolutionLimitStrategyAdaptive::getNewLimit()
 
 int MILPSolutionLimitStrategyAdaptive::getInitialLimit()
 {
-	return Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
+	return Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 }

@@ -25,8 +25,8 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 
 	if (this->getNonlinearConstraintIndexes().size() == 0)
 	{
-		Settings::getInstance().updateSetting("IterLimitLP", "Algorithm", 0);
-		Settings::getInstance().updateSetting("MILPSolLimitInitial", "MILP", 1000);
+		Settings::getInstance().updateSetting("Relaxation.IterationLimit", "Dual", 0);
+		Settings::getInstance().updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
 	}
 
 	ProcessInfo::getInstance().setOriginalProblem(this);

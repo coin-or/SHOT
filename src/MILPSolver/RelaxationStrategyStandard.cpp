@@ -13,8 +13,8 @@ void RelaxationStrategyStandard::setInitial()
 {
 	LPFinished = false;
 
-	if (Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm") > 0
-			&& Settings::getInstance().getDoubleSetting("TimeLimitLP", "Algorithm") > 0)
+	if (Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") > 0
+			&& Settings::getInstance().getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
 	{
 		this->setActive();
 	}
@@ -26,7 +26,7 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
-	int iterInterval = Settings::getInstance().getIntSetting("IterSolveLPRelaxation", "Algorithm");
+	int iterInterval = Settings::getInstance().getIntSetting("Relaxation.Frequency", "Dual");
 	if (iterInterval != 0 && ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % iterInterval == 0)
 	{
 		return (this->setActive());
@@ -82,7 +82,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 {
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (prevIter->iterationNumber < Settings::getInstance().getIntSetting("IterLimitLP", "Algorithm"))
+	if (prevIter->iterationNumber < Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual"))
 	{
 		return (false);
 	}
@@ -93,7 +93,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
 	if (ProcessInfo::getInstance().getElapsedTime("LP")
-			< Settings::getInstance().getDoubleSetting("TimeLimitLP", "Algorithm"))
+			< Settings::getInstance().getDoubleSetting("Relaxation.TimeLimit", "Dual"))
 	{
 		return (false);
 	}

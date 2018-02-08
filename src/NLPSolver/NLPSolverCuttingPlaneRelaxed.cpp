@@ -11,19 +11,19 @@
 NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
 {
 
-	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
+	auto solver = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
-	if (solver == ES_MILPSolver::Cplex)
+	if (solver == ES_MIPSolver::Cplex)
 	{
 		LPSolver = new MILPSolverCplex();
 		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");
 	}
-	else if (solver == ES_MILPSolver::Gurobi)
+	else if (solver == ES_MIPSolver::Gurobi)
 	{
 		LPSolver = new MILPSolverGurobi();
 		ProcessInfo::getInstance().outputInfo("Gurobi selected as MILP solver for minimax solver.");
 	}
-	else if (solver == ES_MILPSolver::Cbc)
+	else if (solver == ES_MIPSolver::Cbc)
 	{
 		LPSolver = new MILPSolverOsiCbc();
 		ProcessInfo::getInstance().outputInfo("Cbc selected as MILP solver for minimax solver.");
@@ -52,13 +52,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 	int numVar = NLPProblem->getNumberOfVariables();
 
 	// Sets the maximal number of iterations
-	int maxIter = Settings::getInstance().getIntSetting("IterLimit", "InteriorPointCuttingPlane");
-	double constrSelTol = Settings::getInstance().getDoubleSetting("ConstraintSelectionTolerance",
-			"InteriorPointCuttingPlane");
-	double termTol = Settings::getInstance().getDoubleSetting("TermToleranceAbs", "InteriorPointCuttingPlane");
-	boost::uintmax_t maxIterSubsolver = Settings::getInstance().getIntSetting("IterLimitSubsolver",
-			"InteriorPointCuttingPlane");
-	int bitPrecision = Settings::getInstance().getIntSetting("BitPrecision", "InteriorPointCuttingPlane");
+	int maxIter = Settings::getInstance().getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
+	double constrSelTol = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionTolerance", "Dual");
+	double termTol = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
+	boost::uintmax_t maxIterSubsolver = Settings::getInstance().getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
 
 	// currSol is the current LP solution, and prevSol the previous one
 	vector<double> currSol, prevSol, LPVarSol;
@@ -73,7 +70,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 	// Adds the hyperplanes created elsewhere
 	for (int i = lastHyperplaneAdded; i < ProcessInfo::getInstance().addedHyperplanes.size(); i++)
 	{
-		if (ProcessInfo::getInstance().addedHyperplanes.at(i).source == E_HyperplaneSource::LPFixedIntegers) continue;
+		if (ProcessInfo::getInstance().addedHyperplanes.at(i).source == E_HyperplaneSource::LPFixedIntegers)
+			continue;
 
 		LPSolver->createHyperplane(ProcessInfo::getInstance().addedHyperplanes.at(i));
 	}
@@ -83,7 +81,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 		if (NLPProblem->hasVariableBoundsBeenTightened(i))
 		{
 			LPSolver->updateVariableBound(i, NLPProblem->getVariableLowerBound(i),
-					NLPProblem->getVariableUpperBound(i));
+										  NLPProblem->getVariableUpperBound(i));
 		}
 	}
 
@@ -143,19 +141,19 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 			try
 			{
 				auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
-						Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
-						Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-						Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+																				   Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
+																				   Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
+																				   Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
 
 				ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 				internalPoint = xNewc.first;
 				externalPoint = xNewc.second;
 
 				ProcessInfo::getInstance().addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::NLPRelaxed,
-						ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
+																	  ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
 
 				auto errorExternal = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraints(
-						externalPoint, constrSelTol);
+					externalPoint, constrSelTol);
 
 				numHyperAdded = errorExternal.size();
 				numHyperTot = numHyperTot + numHyperAdded;
@@ -169,7 +167,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 
 					LPSolver->createHyperplane(hyperplane);
 
-					if (Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane"))
+					if (Settings::getInstance().getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
 					{
 						ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 					}
@@ -182,10 +180,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 				std::string tmpObjLP = UtilityFunctions::toString(LPObjVar);
 
 				boost::format tmpLine;
-				std::string tmpAbsDiff = "";		//((boost::format("%.5f") % maxObjDiffAbs).str());
+				std::string tmpAbsDiff = ""; //((boost::format("%.5f") % maxObjDiffAbs).str());
 				std::string tmpRelDiff = ((boost::format("%.5f") % errorExternal.at(0).value).str());
-				tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT"
-						% hyperplanesExpr % "" % tmpObjLP % tmpAbsDiff % tmpRelDiff;
+				tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % "" % tmpObjLP % tmpAbsDiff % tmpRelDiff;
 
 				ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
@@ -208,10 +205,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 			{
 
 				ProcessInfo::getInstance().outputWarning(
-						"     Cannot find solution with linesearch for fixed LP, using solution point instead:");
+					"     Cannot find solution with linesearch for fixed LP, using solution point instead:");
 				ProcessInfo::getInstance().outputWarning(e.what());
 			}
-
 		}
 		else
 		{
@@ -228,10 +224,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 			std::string tmpObjLP = UtilityFunctions::toString(LPObjVar);
 
 			boost::format tmpLine;
-			std::string tmpAbsDiff = "";		//((boost::format("%.5f") % maxObjDiffAbs).str());
+			std::string tmpAbsDiff = ""; //((boost::format("%.5f") % maxObjDiffAbs).str());
 			std::string tmpRelDiff = ((boost::format("%.5f") % tmpMostDevs.at(0).value).str());
-			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT"
-					% hyperplanesExpr % "" % tmpObjLP % tmpAbsDiff % tmpRelDiff;
+			tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % "" % tmpObjLP % tmpAbsDiff % tmpRelDiff;
 
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
@@ -254,7 +249,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 
 				LPSolver->createHyperplane(hyperplane);
 
-				if (Settings::getInstance().getBoolSetting("CopyCuttingPlanes", "InteriorPointCuttingPlane"))
+				if (Settings::getInstance().getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
 				{
 					ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 				}
@@ -273,8 +268,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 	if (currSol.size() > 0 && Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
 	{
 		auto tmpVars = NLPProblem->getVariableNames();
-		std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint"
-				+ to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + ".txt";
+		std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint" + to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + ".txt";
 		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
 	}
 
@@ -293,9 +287,7 @@ std::vector<double> NLPSolverCuttingPlaneRelaxed::getSolution()
 {
 	auto tmpSol = solution;
 
-	if (tmpSol.size() > 0
-			&& (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::GeneralNonlinear
-					|| NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic))
+	if (tmpSol.size() > 0 && (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::GeneralNonlinear || NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic))
 	{
 		tmpSol.pop_back();
 	}
@@ -308,44 +300,42 @@ double NLPSolverCuttingPlaneRelaxed::getObjectiveValue()
 	return (objectiveValue);
 }
 
-bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance * origInstance)
+bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance *origInstance)
 {
 	ProcessInfo::getInstance().outputInfo("Creating NLP problem for relaxed cutting plane solver");
 
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
-			"Algorithm"))) == ES_QPStrategy::QuadraticObjective;
+	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticObjective;
 
-	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy",
-			"Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained;
+	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticallyConstrained;
 
 	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
 	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
 	bool isQuadraticUsed = (useQuadraticObjective || (useQuadraticConstraint));
 
-	auto solver = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
+	auto solver = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
-	if (solver == ES_MILPSolver::Cplex)
+	if (solver == ES_MIPSolver::Cplex)
 	{
 		if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
 		{
 			NLPProblem = new OptProblemOriginalNonlinearObjective();
-			dynamic_cast<OptProblemOriginalNonlinearObjective*>(NLPProblem)->setProblem(originalInstance);
+			dynamic_cast<OptProblemOriginalNonlinearObjective *>(NLPProblem)->setProblem(originalInstance);
 		}
 		else if (isObjQuadratic && isQuadraticUsed)
 		{
 			NLPProblem = new OptProblemOriginalQuadraticObjective();
-			dynamic_cast<OptProblemOriginalQuadraticObjective*>(NLPProblem)->setProblem(originalInstance);
+			dynamic_cast<OptProblemOriginalQuadraticObjective *>(NLPProblem)->setProblem(originalInstance);
 		}
 		else
 		{
 			NLPProblem = new OptProblemOriginalLinearObjective();
-			dynamic_cast<OptProblemOriginalLinearObjective*>(NLPProblem)->setProblem(originalInstance);
+			dynamic_cast<OptProblemOriginalLinearObjective *>(NLPProblem)->setProblem(originalInstance);
 		}
 	}
-	else if (solver == ES_MILPSolver::Gurobi)
+	else if (solver == ES_MIPSolver::Gurobi)
 	{
 	}
-	else if (solver == ES_MILPSolver::Cbc)
+	else if (solver == ES_MIPSolver::Cbc)
 	{
 	}
 	else
@@ -375,7 +365,7 @@ void NLPSolverCuttingPlaneRelaxed::unfixVariables()
 }
 
 void NLPSolverCuttingPlaneRelaxed::setStartingPoint(std::vector<int> variableIndexes,
-		std::vector<double> variableValues)
+													std::vector<double> variableValues)
 {
 }
 

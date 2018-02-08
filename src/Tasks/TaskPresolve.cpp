@@ -16,8 +16,7 @@ void TaskPresolve::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	auto strategy = static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy",
-			"Presolve"));
+	auto strategy = static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual"));
 
 	if (!currIter->isMILP())
 	{
@@ -34,8 +33,7 @@ void TaskPresolve::run()
 	}
 
 	// Sets the iteration time limit
-	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")
-			- ProcessInfo::getInstance().getElapsedTime("Total");
+	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm") - ProcessInfo::getInstance().getElapsedTime("Total");
 	MILPSolver->setTimeLimit(timeLim);
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
@@ -48,8 +46,7 @@ void TaskPresolve::run()
 		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
-	if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")
-			|| Settings::getInstance().getBoolSetting("UsePresolveBoundsForMIP", "Presolve"))
+	if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve") || Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
 	{
 		MILPSolver->presolveAndUpdateBounds();
 		isPresolved = true;
@@ -60,5 +57,4 @@ std::string TaskPresolve::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

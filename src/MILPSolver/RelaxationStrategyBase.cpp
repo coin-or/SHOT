@@ -39,7 +39,7 @@ bool RelaxationStrategyBase::isCurrentToleranceReached()
 {
 	auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
 
-	if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolLP", "Algorithm"))
+	if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("Relaxation.TerminationTolerance", "Dual"))
 	{
 		return true;
 	}

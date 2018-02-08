@@ -25,18 +25,16 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	if (this->getNonlinearConstraintIndexes().size() == 0)
 	{
-		Settings::getInstance().updateSetting("IterLimitLP", "Algorithm", 0);
-		Settings::getInstance().updateSetting("MILPSolLimitInitial", "MILP", 1000);
+		Settings::getInstance().updateSetting("Relaxation.IterationLimit", "Dual", 0);
+		Settings::getInstance().updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
 	}
 
 	this->addedConstraintName = "objconstr";
 	this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
 	this->addedObjectiveVariableName = "addobjvar";
-	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound",
-			"InteriorPoint");
-	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("MinimaxObjectiveBound",
-			"InteriorPoint");
+	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
+	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
@@ -51,7 +49,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 {
 	double tmpVal = 0.0;
 
-	if (idx != -1 && idx != this->getNonlinearObjectiveConstraintIdx())	// Not the objective function
+	if (idx != -1 && idx != this->getNonlinearObjectiveConstraintIdx()) // Not the objective function
 	{
 		tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
 		ProcessInfo::getInstance().numFunctionEvals++;
@@ -71,8 +69,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 		else
 		{
 			ProcessInfo::getInstance().outputWarning(
-					"Constraint with index " + to_string(idx) + " of type "
-							+ to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
+				"Constraint with index " + to_string(idx) + " of type " + to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
 		}
 	}
 	else // The nonlinear objective function constraint
@@ -86,11 +83,11 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 	return tmpVal;
 }
 
-SparseVector* OptProblemOriginalNonlinearObjective::calculateConstraintFunctionGradient(int idx,
-		std::vector<double> point)
+SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionGradient(int idx,
+																						std::vector<double> point)
 {
 	int number;
-	SparseVector* tmpVector;
+	SparseVector *tmpVector;
 
 	// If this is the nonlinear objective constraint, we need to add the gradient for the mu variable at the end.
 	if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
@@ -184,9 +181,9 @@ int OptProblemOriginalNonlinearObjective::getNumberOfConstraints()
 
 std::vector<std::string> OptProblemOriginalNonlinearObjective::getConstraintNames()
 {
-	std::string* tmpArray = getProblemInstance()->getConstraintNames();
+	std::string *tmpArray = getProblemInstance()->getConstraintNames();
 
-	std::vector < std::string > tmpVector;
+	std::vector<std::string> tmpVector;
 
 	for (int i = 0; i < getProblemInstance()->getConstraintNumber(); i++)
 	{
@@ -205,14 +202,13 @@ int OptProblemOriginalNonlinearObjective::getNumberOfVariables()
 
 int OptProblemOriginalNonlinearObjective::getNumberOfRealVariables()
 {
-	return getProblemInstance()->getVariableNumber() - getProblemInstance()->getNumberOfBinaryVariables()
-			- getProblemInstance()->getNumberOfIntegerVariables() + 1;
+	return getProblemInstance()->getVariableNumber() - getProblemInstance()->getNumberOfBinaryVariables() - getProblemInstance()->getNumberOfIntegerVariables() + 1;
 }
 
 std::vector<std::string> OptProblemOriginalNonlinearObjective::getVariableNames()
 {
-	std::string* tmpArray = getProblemInstance()->getVariableNames();
-	std::vector < std::string > tmpVector;
+	std::string *tmpArray = getProblemInstance()->getVariableNames();
+	std::vector<std::string> tmpVector;
 
 	for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)
 	{
@@ -226,7 +222,7 @@ std::vector<std::string> OptProblemOriginalNonlinearObjective::getVariableNames(
 
 std::vector<char> OptProblemOriginalNonlinearObjective::getVariableTypes()
 {
-	char* tmpArray = getProblemInstance()->getVariableTypes();
+	char *tmpArray = getProblemInstance()->getVariableTypes();
 
 	std::vector<char> tmpVector;
 
@@ -242,7 +238,7 @@ std::vector<char> OptProblemOriginalNonlinearObjective::getVariableTypes()
 
 std::vector<double> OptProblemOriginalNonlinearObjective::getVariableLowerBounds()
 {
-	double* tmpArray = getProblemInstance()->getVariableLowerBounds();
+	double *tmpArray = getProblemInstance()->getVariableLowerBounds();
 
 	std::vector<double> tmpVector;
 
@@ -258,7 +254,7 @@ std::vector<double> OptProblemOriginalNonlinearObjective::getVariableLowerBounds
 
 std::vector<double> OptProblemOriginalNonlinearObjective::getVariableUpperBounds()
 {
-	double* tmpArray = getProblemInstance()->getVariableUpperBounds();
+	double *tmpArray = getProblemInstance()->getVariableUpperBounds();
 
 	std::vector<double> tmpVector;
 

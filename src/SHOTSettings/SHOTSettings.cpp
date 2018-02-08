@@ -673,9 +673,13 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 		std::vector < string > nameCategoryPair;
 		std::vector < string > keyValuePair;
 		boost::split(keyValuePair, line, boost::is_any_of("="));
-		boost::split(nameCategoryPair, keyValuePair.front(), boost::is_any_of("."));
+		//boost::split(nameCategoryPair, keyValuePair.front(), std::bind1st(std::equal_to<char>(), '.'));
 
-		if (nameCategoryPair.size() != 2 || keyValuePair.size() != 2)
+		int dotindex = line.find('.');
+		std::string category = keyValuePair.at(0).substr(0, dotindex); 
+		std::string name = keyValuePair.at(0).substr(dotindex+1,line.size());
+
+		if (keyValuePair.size() != 2)
 		{
 			osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
 					"Error when reading line \"" + line + "\" in the options file; ignoring the option.");
@@ -683,8 +687,8 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 			continue;
 		}
 
-		std::string category = nameCategoryPair.at(0);
-		std::string name = nameCategoryPair.at(1);
+		//std::string category = nameCategoryPair.at(0);
+		//std::string name = nameCategoryPair.at(1);
 		std::string value = keyValuePair.at(1);
 
 		boost::trim(category);

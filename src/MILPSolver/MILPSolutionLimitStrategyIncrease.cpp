@@ -7,7 +7,7 @@ MILPSolutionLimitStrategyIncrease::MILPSolutionLimitStrategyIncrease(IMILPSolver
 	lastIterSolLimIncreased = 1;
 	numSolLimIncremented = 1;
 	lastIterOptimal = 1;
-	//currentLimit = Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
+	//currentLimit = Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 }
 
 MILPSolutionLimitStrategyIncrease::~MILPSolutionLimitStrategyIncrease()
@@ -42,15 +42,15 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	// Solution limit has not been updated in the maximal number of iterations
 	if (prevIter->isMILP()
 			&& (currIter->iterationNumber - lastIterSolLimIncreased
-					> Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP")
+					> Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")
 					&& currIter->iterationNumber - lastIterOptimal
-							> Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP")))
+							> Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
 	{
 		ProcessInfo::getInstance().outputInfo("     Force solution limit update.");
 		return (true);
 	}
 
-	bool useObjectiveLinesearchUpdate = Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound");
+	bool useObjectiveLinesearchUpdate = Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual");
 
 	if (prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
 	{
@@ -62,7 +62,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	//TODO use the strategy for updated constraint tolerance
 	/*if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
 	 && (prevIter->maxDeviation
-	 < Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+	 < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 	 * max(1.0, abs(prevIter->objectiveValue))
 	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
 	 {
@@ -71,7 +71,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 	{
-		if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP")) return (true);
+		if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")) return (true);
 
 		if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);
 
@@ -79,16 +79,16 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 		/*std::cout << "test: " << prevIter->maxDeviationConstraint << " == "
 		 << ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveConstraintIdx() << ": "
-		 << Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP") * max(1.0, abs(prevIter->objectiveValue))
+		 << Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual") * max(1.0, abs(prevIter->objectiveValue))
 		 << std::endl;*/
 
 		if (prevIter->maxDeviationConstraint == -1
 				&& prevIter->maxDeviation
-						< Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+						< Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 								* max(1.0, abs(prevIter->objectiveValue)))
 		{
 			/*std::cout << "updated nonlinear sol lim for "
-			 << Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+			 << Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 			 * max(1.0, abs(prevIter->objectiveValue)) << std::endl;*/
 
 			return (true);
@@ -96,7 +96,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	}
 
 	/*
-	 &&(prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+	 &&(prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 	 || prevIter->maxDeviation < prevIter->usedConstraintTolerance
 	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
 	 )
@@ -105,7 +105,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	 }
 
 	 if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
-	 && (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MILPSolLimitUpdateTol", "MILP")
+	 && (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 	 || prevIter->maxDeviation < prevIter->usedConstraintTolerance
 	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
 	 {
@@ -135,12 +135,12 @@ int MILPSolutionLimitStrategyIncrease::getNewLimit()
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
 	int newLimit;
-//int iterLargeIncrease = Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP");
+//int iterLargeIncrease = Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual");
 
 	newLimit = MILPSolver->getSolutionLimit() + 1;
 	lastIterSolLimIncreased = currIter->iterationNumber;
 // Update MILP solution limit
-//if (numSolLimIncremented > Settings::getInstance().getIntSetting("MILPSolIncreaseIter", "MILP")) // Force larger MILP solution limit update
+//if (numSolLimIncremented > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")) // Force larger MILP solution limit update
 //{
 //	newLimit = MILPSolver->getSolutionLimit() + 1;
 //	//numSolLimIncremented = 1;
@@ -159,5 +159,5 @@ int MILPSolutionLimitStrategyIncrease::getNewLimit()
 
 int MILPSolutionLimitStrategyIncrease::getInitialLimit()
 {
-	return (Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP"));
+	return (Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
 }

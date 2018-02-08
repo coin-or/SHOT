@@ -659,7 +659,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	{
 		char HPobjadded = ' ';
 
-		if (Settings::getInstance().getBoolSetting("UsePrimalObjectiveCut", "MILP") && this->originalProblem->isObjectiveFunctionNonlinear())
+		if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") && this->originalProblem->isObjectiveFunctionNonlinear())
 		{
 			auto objConstrVal = this->originalProblem->calculateConstraintFunctionValue(-1, tmpPoint) - tmpPoint.back();
 
@@ -719,7 +719,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 				this->interiorPts.back() = tmpIP;
 			}
-			else if (Settings::getInstance().getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && mostDevNonlinearConstraints.value < 0)
+			else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && mostDevNonlinearConstraints.value < 0)
 			{
 				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
 
@@ -737,7 +737,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 					this->interiorPts.back() = tmpIP;
 				}
 			}
-			else if (Settings::getInstance().getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && mostDevNonlinearConstraints.value < 0)
+			else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && mostDevNonlinearConstraints.value < 0)
 			{
 				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
 
@@ -749,7 +749,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 				this->interiorPts.back() = tmpIP;
 			}
-			else if (Settings::getInstance().getIntSetting("AddPrimalBoundAsInteriorPoint", "Algorithm") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && mostDevNonlinearConstraints.value < 0)
+			else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && mostDevNonlinearConstraints.value < 0)
 			{
 				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
 
@@ -1345,7 +1345,7 @@ void ProcessInfo::createIteration()
 	iter.boundaryDistance = OSDBL_MAX;
 	iter.MILPSolutionLimitUpdated = false;
 
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("SolutionStrategy", "Algorithm")) == ES_SolutionStrategy::Lazy)
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy ", "Dual")) == ES_SolutionStrategy::SingleTree)
 	{
 		iter.type = E_IterationProblemType::MIP;
 	}

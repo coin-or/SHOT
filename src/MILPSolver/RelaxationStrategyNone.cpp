@@ -3,7 +3,6 @@
 RelaxationStrategyNone::RelaxationStrategyNone(IMILPSolver *MILPSolver)
 {
 	this->MILPSolver = MILPSolver;
-
 }
 
 RelaxationStrategyNone::~RelaxationStrategyNone()

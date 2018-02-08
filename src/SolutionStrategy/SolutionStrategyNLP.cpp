@@ -7,13 +7,12 @@
 
 #include <SolutionStrategyNLP.h>
 
-SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
+SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 {
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-			"InteriorPoint"));
+	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 	ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
 	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
@@ -24,7 +23,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 	ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
 	ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
 
-	auto solverMILP = static_cast<ES_MILPSolver>(Settings::getInstance().getIntSetting("MILPSolver", "MILP"));
+	auto solverMILP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
@@ -39,11 +38,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm")
-			== (int) ES_HyperplanePointStrategy::ESH
-			&& (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
-					!= E_ObjectiveFunctionType::Quadratic
-					|| ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
+	if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplanePointStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
@@ -74,14 +69,12 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
 	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
 
-	dynamic_cast<TaskConditional*>(tPrintIterHeaderCheck)->setCondition([this]()
-	{	return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1);});
-	dynamic_cast<TaskConditional*>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
+	dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setCondition([this]() { return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1); });
+	dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
 
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
 
-	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("PresolveStrategy", "Presolve"))
-			!= ES_PresolveStrategy::Never)
+	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_PresolveStrategy::Never)
 	{
 		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
 		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
@@ -90,8 +83,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 	TaskBase *tSolveIteration = new TaskSolveIteration(MILPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
-	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear()
-			&& Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
+	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
 	{
 		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
@@ -114,13 +106,13 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 
 	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-	dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
 	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-		dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+		dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
 
 		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
@@ -140,11 +132,10 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-			"Algorithm")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 	{
 		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 		{
 			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 			ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
@@ -181,12 +172,11 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance* osInstance)
 
 	TaskBase *tPrintSol = new TaskPrintSolution();
 	ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
-
 }
 
 SolutionStrategyNLP::~SolutionStrategyNLP()
 {
-// TODO Auto-generated destructor stub
+	// TODO Auto-generated destructor stub
 }
 
 bool SolutionStrategyNLP::solveProblem()
@@ -207,5 +197,4 @@ bool SolutionStrategyNLP::solveProblem()
 
 void SolutionStrategyNLP::initializeStrategy()
 {
-
 }

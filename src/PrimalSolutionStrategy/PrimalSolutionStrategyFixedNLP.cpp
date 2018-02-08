@@ -37,10 +37,10 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 
 	if (Settings::getInstance().getBoolSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound"))
 	{
-		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy", "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 		{
 			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 			{
 				taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 			}
@@ -286,10 +286,10 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				solutionPoints.at(0) = tmpSolPt;
 
 				if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting(
-						"HyperplanePointStrategy", "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+						"CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 				{
 					if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-							"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 					{
 						static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
 					}
@@ -319,7 +319,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
-			if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm") && ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
+			if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
 			{
 				//Add integer cut.
 

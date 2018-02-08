@@ -22,7 +22,7 @@
 class TaskInitializeMILPSolver: public TaskBase
 {
 	public:
-		TaskInitializeMILPSolver(ES_MILPSolver solver, bool useLazyStrategy);
+		TaskInitializeMILPSolver(ES_MIPSolver solver, bool useLazyStrategy);
 		virtual ~TaskInitializeMILPSolver();
 
 		void run();

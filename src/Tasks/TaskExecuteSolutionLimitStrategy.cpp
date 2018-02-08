@@ -34,7 +34,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 	}
 
 	if (currIter->iterationNumber - ProcessInfo::getInstance().iterLastDualBoundUpdate
-			> Settings::getInstance().getIntSetting("ForceOptimalIter", "MILP")
+			> Settings::getInstance().getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
 			&& ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit;
@@ -45,7 +45,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 				"     Forced optimal iteration since too many iterations since last dual bound update");
 	}
 	else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().timeLastDualBoundUpdate
-			> Settings::getInstance().getDoubleSetting("ForceOptimalTime", "MILP")
+			> Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
 			&& ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
 	{
 		previousSolLimit = prevIter->usedMILPSolutionLimit;

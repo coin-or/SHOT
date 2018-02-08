@@ -17,7 +17,7 @@ void TaskAddIntegerCuts::run()
 
 	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0) return;
 
-	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP")
+	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
 			|| !currIter->MILPSolutionLimitUpdated)
 	{
 

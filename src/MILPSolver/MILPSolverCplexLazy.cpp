@@ -14,11 +14,10 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
 	ProcessInfo::getInstance().lastLazyAddedIter = 0;
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-																					  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 	{
 		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		}
@@ -34,7 +33,7 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
 	tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
 
-	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("UseObjectiveLinesearch", "PrimalBound"))
+	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
 	{
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
 	}
@@ -102,10 +101,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
 		if (context.inRelaxation())
 		{
-			if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("MaxHyperplanesForRelaxedLazySolutions", "Algorithm"))
+			if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
 			{
 				int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();
-				
+
 				std::vector<SolutionPoint> solutionPoints(1);
 
 				IloNumArray tmpVals(context.getEnv());
@@ -133,10 +132,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 				solutionPoints.at(0) = tmpSolPt;
 
 				if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting(
-						"HyperplanePointStrategy", "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+						"CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 				{
 					if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-							"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 					{
 						static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
 					}
@@ -149,7 +148,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 				{
 					static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
 				}
-				
+
 				maxIntegerRelaxedHyperplanes += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
 			}
 		}
@@ -218,7 +217,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 				ProcessInfo::getInstance().checkPrimalSolutionCandidates();
 			}
 
-			if (Settings::getInstance().getBoolSetting("AddIntegerCuts", "Algorithm"))
+			if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
 			{
 				bool addedIntegerCut = false;
 
@@ -381,11 +380,10 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 		lastNumAddedHyperplanes = 0;
 		ProcessInfo::getInstance().getCurrentIteration()->numHyperplanesAdded++;
 
-		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("HyperplanePointStrategy",
-																						  "Algorithm")) == ES_HyperplanePointStrategy::ESH)
+		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 		{
 			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"LinesearchConstraintStrategy", "ESH")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
 			{
 				static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
 			}
@@ -518,7 +516,7 @@ void MILPSolverCplexLazy::setSolutionLimit(long limit)
 {
 	if (MILPSolverBase::originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
 	{
-		limit = Settings::getInstance().getIntSetting("MILPSolLimitInitial", "MILP");
+		limit = Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 	}
 
 	try
