@@ -69,8 +69,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 					{
 						ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
 						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
-								Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
-								Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0);
+								Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+								Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
 
 						ProcessInfo::getInstance().stopTimer("PrimalBoundLinesearch");
 

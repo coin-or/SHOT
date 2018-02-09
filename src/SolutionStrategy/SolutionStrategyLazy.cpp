@@ -87,7 +87,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-	if (Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
+	if (Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{
 		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");

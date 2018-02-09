@@ -32,12 +32,12 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 	}
 
 	ProcessInfo::getInstance().originalProblem->setProblem(originalInstance);
-	auto debugPath = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+	auto debugPath = Settings::getInstance().getStringSetting("Debug.Path", "Output");
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 	{
 		ProcessInfo::getInstance().originalProblem->saveProblemModelToFile(
-				Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/originalproblem.txt");
+				Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/originalproblem.txt");
 	}
 
 	int numConstr = ProcessInfo::getInstance().originalProblem->getNumberOfConstraints();

@@ -24,7 +24,7 @@ void TaskCheckIterationLimit::run()
 
 	if (currIter->iterationNumber
 			>= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
-					+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm"))
+					+ Settings::getInstance().getIntSetting("IterationLimit", "Termination"))
 	{
 		ProcessInfo::getInstance().terminationReason = E_TerminationReason::IterationLimit;
 		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);

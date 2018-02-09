@@ -48,7 +48,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 			auto diffobj = abs(oldObjVal - allSolutions.at(i).objectiveValue);
 
 			// Change the status of the solution if it has been updated much
-			if (diffobj > Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+			if (diffobj > Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
 			{
 				if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 				{
@@ -91,8 +91,8 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 	try
 	{
 		auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(tmpPoint, dualSol.point,
-				Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
-				Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"), 0, constrIdxs);
+				Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+				Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0, constrIdxs);
 
 		internalPoint = xNewc.first;
 		externalPoint = xNewc.second;
@@ -110,7 +110,7 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 
 		if (changed)
 		{
-			if (diffobj > Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+			if (diffobj > Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
 			{
 				Hyperplane hyperplane;
 				hyperplane.sourceConstraintIndex = mostDevOuter.idx;

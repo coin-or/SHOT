@@ -137,7 +137,7 @@ void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource sou
 	sol.objValue = pt.objectiveValue;
 	sol.iterFound = pt.iterFound;
 
-	if (Settings::getInstance().getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
 	{
 		primalSolutions.push_back(sol);
 	}
@@ -258,8 +258,8 @@ void ProcessInfo::checkDualSolutionCandidates()
 	double currDualBound = this->getDualBound();
 	double currPrimalBound = this->getPrimalBound();
 
-	double gapRelTolerance = Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm");
-	double gapAbsTolerance = Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm");
+	double gapRelTolerance = Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination");
+	double gapAbsTolerance = Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination");
 
 	for (auto C : this->dualSolutionCandidates)
 	{
@@ -334,7 +334,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 
 bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
 {
-	if (this->getRelativeObjectiveGap() <= Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
+	if (this->getRelativeObjectiveGap() <= Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"))
 	{
 		return (true);
 	}
@@ -346,7 +346,7 @@ bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
 
 bool ProcessInfo::isAbsoluteObjectiveGapToleranceMet()
 {
-	if (this->getAbsoluteObjectiveGap() <= Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+	if (this->getAbsoluteObjectiveGap() <= Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
 	{
 		return (true);
 	}
@@ -509,7 +509,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	// Check that it fulfills integer constraints, round otherwise
 	if (originalProblem->getNumberOfBinaryVariables() > 0 || originalProblem->getNumberOfIntegerVariables() > 0)
 	{
-		auto integerTol = Settings::getInstance().getDoubleSetting("PrimalBoundIntegerTolerance", "PrimalBound");
+		auto integerTol = Settings::getInstance().getDoubleSetting("Tolerance.Integer", "Primal");
 
 		bool isRounded = false;
 
@@ -570,7 +570,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	 }
 	 else
 	 {*/
-	auto linTol = Settings::getInstance().getDoubleSetting("PrimalBoundLinearTolerance", "PrimalBound");
+	auto linTol = Settings::getInstance().getDoubleSetting("Tolerance.LinearConstraint", "Primal");
 
 	auto linearConstraintIndexes = originalProblem->getLinearConstraintIndexes();
 
@@ -607,7 +607,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 																						originalProblem->getNonlinearConstraintIndexes())
 										  .first;
 
-		auto nonlinTol = Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound");
+		auto nonlinTol = Settings::getInstance().getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
 		isNonLinConstrFulfilled = (mostDevNonlinearConstraints.value < nonlinTol);
 
 		if (!isNonLinConstrFulfilled)
@@ -687,7 +687,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		primalSol.objValue = tmpObjVal;
 		primalSol.point = tmpPoint;
 
-		if (Settings::getInstance().getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
 		{
 			this->primalSolutions.insert(this->primalSolutions.begin(), primalSol);
 		}
@@ -769,10 +769,10 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		}
 
 		// Write the new primal point to a file
-		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		{
 			stringstream fileName;
-			fileName << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+			fileName << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 			fileName << "/primalpoint";
 			fileName << this->primalSolutions.size();
 			fileName << ".txt";
@@ -1345,7 +1345,7 @@ void ProcessInfo::createIteration()
 	iter.boundaryDistance = OSDBL_MAX;
 	iter.MILPSolutionLimitUpdated = false;
 
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy ", "Dual")) == ES_SolutionStrategy::SingleTree)
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_SolutionStrategy::SingleTree)
 	{
 		iter.type = E_IterationProblemType::MIP;
 	}

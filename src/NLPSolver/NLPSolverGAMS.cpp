@@ -14,14 +14,14 @@ NLPSolverGAMS::NLPSolverGAMS() :
 	strcpy(nlpsolver, "conopt");
 	*nlpsolveropt = '\0';
 
-	strcpy(nlpsolver, Settings::getInstance().getStringSetting("NLPSolver", "GAMS").c_str());
-	strcpy(nlpsolveropt, Settings::getInstance().getStringSetting("NLPOptionsFile", "GAMS").c_str());
+	strcpy(nlpsolver, Settings::getInstance().getStringSetting("GAMS.NLP.Solver", "Subsolver").c_str());
+	strcpy(nlpsolveropt, Settings::getInstance().getStringSetting("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
 
-	timelimit = Settings::getInstance().getDoubleSetting("NLPTimeLimit", "PrimalBound");
-	iterlimit = Settings::getInstance().getIntSetting("NLPIterLimit", "PrimalBound");
+	timelimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
+	iterlimit = Settings::getInstance().getIntSetting("FixedInteger.IterationLimit", "Primal");
 
 	// TODO: showlog seems to have no effect...
-	showlog = Settings::getInstance().getBoolSetting("ShowOutput", "GAMS");
+	showlog = Settings::getInstance().getBoolSetting("Console.ShowGAMSOutput", "Output");
 
 }
 

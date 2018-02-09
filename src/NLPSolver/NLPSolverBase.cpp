@@ -31,7 +31,7 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
 	if (!isProblemInitialized) initializeProblem();
 
-	if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve")) // Does not seem to work with Ipopt...
+	if (Settings::getInstance().getBoolSetting("FixedInteger.UsePresolveBounds", "Primal")) // Does not seem to work with Ipopt...
 	{
 		auto numVar = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
 

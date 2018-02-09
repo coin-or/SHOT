@@ -91,10 +91,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 	{
 		boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 		// Saves the LP problem to file if in debug mode
-		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		{
 			stringstream ss;
-			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+			ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 			ss << "/nlpcuttingplanerelaxed";
 			ss << i;
 			ss << ".lp";
@@ -141,9 +141,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 			try
 			{
 				auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
-																				   Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
-																				   Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-																				   Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+																				   Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+																				   Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+																				   Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
 				ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 				internalPoint = xNewc.first;
@@ -265,10 +265,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 		}
 	}
 
-	if (currSol.size() > 0 && Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (currSol.size() > 0 && Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 	{
 		auto tmpVars = NLPProblem->getVariableNames();
-		std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/nlppoint" + to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + ".txt";
+		std::string filename = Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/nlppoint" + to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + ".txt";
 		UtilityFunctions::saveVariablePointVectorToFile(currSol, tmpVars, filename);
 	}
 

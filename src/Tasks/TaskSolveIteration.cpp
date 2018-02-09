@@ -24,7 +24,7 @@ void TaskSolveIteration::run()
 	bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
 	// Sets the iteration time limit
-	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm") - ProcessInfo::getInstance().getElapsedTime("Total");
+	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
 	MILPSolver->setTimeLimit(timeLim);
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
@@ -51,10 +51,10 @@ void TaskSolveIteration::run()
 		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 	{
 		stringstream ss;
-		ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+		ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 		ss << "/lp";
 		ss << currIter->iterationNumber - 1;
 		ss << ".lp";
@@ -66,7 +66,7 @@ void TaskSolveIteration::run()
 	ProcessInfo::getInstance().outputInfo("MIP problem solved.");
 
 	// Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy ", "Dual")) == ES_SolutionStrategy::SingleTree)
+	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_SolutionStrategy::SingleTree)
 	{
 		currIter = ProcessInfo::getInstance().getCurrentIteration();
 	}
@@ -84,10 +84,10 @@ void TaskSolveIteration::run()
 
 		if (sols.size() > 0)
 		{
-			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 			{
 				stringstream ss;
-				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 				ss << "/lpsolpt";
 				ss << currIter->iterationNumber - 1;
 				ss << ".txt";
@@ -97,7 +97,7 @@ void TaskSolveIteration::run()
 
 			currIter->objectiveValue = MILPSolver->getObjectiveValue();
 
-			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 			{
 				std::vector<double> tmpObjValue;
 				std::vector<std::string> tmpObjName;
@@ -106,7 +106,7 @@ void TaskSolveIteration::run()
 				tmpObjName.push_back("objective");
 
 				stringstream ss;
-				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 				ss << "/lpobjsol";
 				ss << currIter->iterationNumber - 1;
 				ss << ".txt";
@@ -119,7 +119,7 @@ void TaskSolveIteration::run()
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
 			currIter->maxDeviation = mostDevConstr.value;
 
-			if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+			if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 			{
 				std::vector<double> tmpMostDevValue;
 				std::vector<std::string> tmpConstrIndex;
@@ -128,7 +128,7 @@ void TaskSolveIteration::run()
 				tmpConstrIndex.push_back(std::to_string(mostDevConstr.idx));
 
 				stringstream ss;
-				ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+				ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 				ss << "/lpmostdevm";
 				ss << currIter->iterationNumber - 1;
 				ss << ".txt";

@@ -13,7 +13,7 @@ TaskInitializeMILPSolver::TaskInitializeMILPSolver(ES_MIPSolver solver, bool use
 
 	if (useLazyStrategy)
 	{
-		if (solver == ES_MIPSolver::Cplex && Settings::getInstance().getBoolSetting("UseNewCallbackType", "CPLEX"))
+		if (solver == ES_MIPSolver::Cplex && Settings::getInstance().getBoolSetting("CPLEX.UseNewCallbackType", "Subsolver"))
 		{
 			ProcessInfo::getInstance().MILPSolver = new MILPSolverCplexLazy();
 			ProcessInfo::getInstance().outputInfo("Cplex with lazy callbacks selected as MIP solver.");

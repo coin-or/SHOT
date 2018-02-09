@@ -111,7 +111,7 @@ SolutionStrategyNormal::SolutionStrategyNormal(OSInstance *osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
@@ -130,7 +130,7 @@ SolutionStrategyNormal::SolutionStrategyNormal(OSInstance *osInstance)
 		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyFixedNLP", "PrimalBound") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
+	if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{
 		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");

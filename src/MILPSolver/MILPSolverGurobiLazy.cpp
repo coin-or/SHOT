@@ -212,7 +212,7 @@ void GurobiCallback::callback()
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
 
 			//Remove??
-			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 			{
 				return;
 			}
@@ -237,7 +237,7 @@ void GurobiCallback::callback()
 			auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
 			currIter->currentObjectiveBounds = bounds;
 
-			if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 			{
 				taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
 			}
@@ -423,7 +423,7 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
 	}
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 	}

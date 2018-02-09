@@ -7,7 +7,7 @@ E_NLPSolutionStatus NLPSolverIPOptBase::solveProblemInstance()
 
 	ProcessInfo::getInstance().outputInfo("     Starting solution of Ipopt problem.");
 
-	auto timeLimit = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")
+	auto timeLimit = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination")
 			- ProcessInfo::getInstance().getElapsedTime("Total");
 
 	E_NLPSolutionStatus status;
@@ -248,23 +248,23 @@ void NLPSolverIPOptBase::setInitialSettings()
 
 	std::string IPOptSolver = "";
 
-	if (Settings::getInstance().getIntSetting("IpoptSolver", "Ipopt") == static_cast<int>(ES_IPOptSolver::ma27))
+	if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma27))
 	{
 		IPOptSolver = "ma27";
 	}
-	else if (Settings::getInstance().getIntSetting("IpoptSolver", "Ipopt") == static_cast<int>(ES_IPOptSolver::ma57))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma57))
 	{
 		IPOptSolver = "ma57";
 	}
-	else if (Settings::getInstance().getIntSetting("IpoptSolver", "Ipopt") == static_cast<int>(ES_IPOptSolver::ma86))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma86))
 	{
 		IPOptSolver = "ma86";
 	}
-	else if (Settings::getInstance().getIntSetting("IpoptSolver", "Ipopt") == static_cast<int>(ES_IPOptSolver::ma97))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma97))
 	{
 		IPOptSolver = "ma97";
 	}
-	else if (Settings::getInstance().getIntSetting("IpoptSolver", "Ipopt") == static_cast<int>(ES_IPOptSolver::mumps))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::mumps))
 	{
 		IPOptSolver = "mumps";
 	}
@@ -275,7 +275,7 @@ void NLPSolverIPOptBase::setInitialSettings()
 
 	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
 
-	switch (Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") + 1)
+	switch (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1)
 	{
 		case ENUM_OUTPUT_LEVEL_error:
 			osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
@@ -303,7 +303,7 @@ void NLPSolverIPOptBase::setInitialSettings()
 	}
 
 // Suppress copyright message
-	if (Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") < 3)
+	if (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") < 3)
 	{
 		osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
 	}

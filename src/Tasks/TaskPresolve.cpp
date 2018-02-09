@@ -33,7 +33,7 @@ void TaskPresolve::run()
 	}
 
 	// Sets the iteration time limit
-	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm") - ProcessInfo::getInstance().getElapsedTime("Total");
+	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
 	MILPSolver->setTimeLimit(timeLim);
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
@@ -46,7 +46,7 @@ void TaskPresolve::run()
 		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
-	if (Settings::getInstance().getBoolSetting("UsePresolveBoundsForPrimalNLP", "Presolve") || Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
+	if (Settings::getInstance().getBoolSetting("FixedInteger.UsePresolveBounds", "Primal") || Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
 	{
 		MILPSolver->presolveAndUpdateBounds();
 		isPresolved = true;

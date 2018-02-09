@@ -38,7 +38,7 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
 	}
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 	}
@@ -175,7 +175,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
 
 			//Remove??
-			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 			{
 				return;
 			}
@@ -201,7 +201,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 			auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
 			currIter->currentObjectiveBounds = bounds;
 
-			if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 			{
 				taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
 			}

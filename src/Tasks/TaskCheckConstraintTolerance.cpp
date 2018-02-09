@@ -22,7 +22,7 @@ void TaskCheckConstraintTolerance::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")
+	if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination")
 			&& currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& currIter->type == E_IterationProblemType::MIP)
 	{

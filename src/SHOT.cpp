@@ -147,9 +147,9 @@ int main(int argc, char *argv[])
 		if (defaultOptionsGenerated)
 		{
 			osoutput->SetPrintLevel("stdout",
-									(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") + 1));
+									(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1));
 			osoutput->SetPrintLevel("shotlogfile",
-									(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelFile", "SHOTSolver") + 1));
+									(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("File.LogLevel", "Output") + 1));
 		}
 		else
 		{
@@ -202,8 +202,8 @@ int main(int argc, char *argv[])
 
 	if (resultFile.empty())
 	{
-		boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "SHOTSolver"));
-		resultPath /= Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver");
+		boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
+		resultPath /= Settings::getInstance().getStringSetting("ProblemFile", "Output");
 		resultPath = resultPath.replace_extension(".osrl");
 		fileUtil->writeFileFromString(resultPath.string(), osrl);
 	}
@@ -218,8 +218,8 @@ int main(int argc, char *argv[])
 	{
 		std::string trace = solver->getTraceResult();
 
-		boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "SHOTSolver"));
-		tracePath /= Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver");
+		boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
+		tracePath /= Settings::getInstance().getStringSetting("ProblemFile", "Output");
 		tracePath = tracePath.replace_extension(".trc");
 
 		fileUtil->writeFileFromString(tracePath.string(), trace);

@@ -193,8 +193,8 @@ void MILPSolverOsiCbc::initializeSolverSettings()
 		cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 	}
 
-	cbcModel->setAllowableGap(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm") / 2.0);
-	cbcModel->setAllowableFractionGap(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm") / 2.0);
+	cbcModel->setAllowableGap(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
+	cbcModel->setAllowableFractionGap(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
 	cbcModel->setMaximumSolutions(solLimit);
 	cbcModel->setMaximumSavedSolutions(Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 

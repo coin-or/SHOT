@@ -204,25 +204,25 @@ void MILPSolverCplex::initializeSolverSettings()
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
 		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
-							   Settings::getInstance().getIntSetting("SolnPoolIntensity", "CPLEX")); // Don't use 3 with heuristics
+							   Settings::getInstance().getIntSetting("CPLEX.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
 		cplexInstance.setParam(IloCplex::SolnPoolReplace,
-							   Settings::getInstance().getIntSetting("SolnPoolReplace", "CPLEX"));
+							   Settings::getInstance().getIntSetting("CPLEX.SolnPoolReplace", "Subsolver"));
 
-		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm") / 2.0);
-		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm") / 2.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 2.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
 
 		//cplexInstance.setParam(IloCplex::RepairTries, 5);
 		//cplexInstance.setParam(IloCplex::HeurFreq,2);
 		//cplexInstance.setParam(IloCplex::AdvInd,2);
 
-		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("SolnPoolGap", "CPLEX"));
+		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("CPLEX.SolnPoolGap", "Subsolver"));
 		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
 							   Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
-		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Probe", "CPLEX"));
-		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("MIPEmphasis", "CPLEX"));
+		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("CPLEX.Probe", "Subsolver"));
+		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("CPLEX.MIPEmphasis", "Subsolver"));
 
-		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("ParallelMode", "CPLEX"));
+		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("CPLEX.ParallelMode", "Subsolver"));
 		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);

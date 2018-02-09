@@ -139,7 +139,7 @@ void InfoCallbackI::main() // Called at each node...
 	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
 	{
 		ProcessInfo::getInstance().outputAlways(
-			"     Terminated by relative objective gap tolerance in info callback: " + UtilityFunctions::toString(relObjGap) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")));
+			"     Terminated by relative objective gap tolerance in info callback: " + UtilityFunctions::toString(relObjGap) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination")));
 
 		this->abort();
 		return;
@@ -147,7 +147,7 @@ void InfoCallbackI::main() // Called at each node...
 	else if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
 	{
 		ProcessInfo::getInstance().outputAlways(
-			"     Terminated by absolute objective gap tolerance in info callback: " + UtilityFunctions::toString(absObjGap) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")));
+			"     Terminated by absolute objective gap tolerance in info callback: " + UtilityFunctions::toString(absObjGap) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination")));
 
 		this->abort();
 		return;
@@ -195,7 +195,7 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazyOrig
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
 	}
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 	}
@@ -293,7 +293,7 @@ void CtCallbackI::main()
 
 	candidatePoints.at(0) = tmpSolPt;
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
 	}

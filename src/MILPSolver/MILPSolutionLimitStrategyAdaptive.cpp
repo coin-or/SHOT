@@ -35,7 +35,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 	}
 	/*
 
-	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 	 {
 	 return true;
 	 }*/
@@ -52,7 +52,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 	// We have a feasible MILP solution to the original problem, but not proven optimal by MILP solver
 	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
 			&& prevIter->maxDeviation < prevIter->usedConstraintTolerance)
-	//	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	//	if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 	{
 		return true;
 	}
@@ -66,7 +66,7 @@ bool MILPSolutionLimitStrategyAdaptive::updateLimit()
 
 	// The solution fulfills the intermediate epsilon tolerance but not the final one
 	/*
-	 if (prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
+	 if (prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
 	 {
 	 return true;
 	 }*/

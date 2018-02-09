@@ -147,7 +147,7 @@ std::pair<std::vector<double>, std::vector<double> > LinesearchMethodBoost::find
 
 	Result r1;
 
-	if (static_cast<ES_LinesearchMethod>(Settings::getInstance().getIntSetting("LinesearchMethod", "Linesearch"))
+	if (static_cast<ES_LinesearchMethod>(Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver"))
 			== ES_LinesearchMethod::BoostTOMS748)
 	{
 		r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);

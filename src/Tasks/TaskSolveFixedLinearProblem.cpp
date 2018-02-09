@@ -130,9 +130,9 @@ void TaskSolveFixedLinearProblem::run()
 			try
 			{
 				auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
-						Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
-						Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-						Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+						Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+						Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+						Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
 				ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 				internalPoint = xNewc.first;

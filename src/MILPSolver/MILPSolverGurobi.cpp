@@ -244,8 +244,8 @@ void MILPSolverGurobi::initializeSolverSettings()
 {
 	try
 	{
-		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm")/2.0);
-		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm")/2.0);
+		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination")/2.0);
+		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination")/2.0);
 		//gurobiModel->getEnv().set(GRB_IntParam_NumericFocus,3);
 		gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);

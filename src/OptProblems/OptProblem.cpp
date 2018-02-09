@@ -464,7 +464,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 		}
 	}
 
-	if (false && Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (false && Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 	{
 		auto numGradient = calculateGradientNumerically(idx, point);
 

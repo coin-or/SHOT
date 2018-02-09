@@ -9,10 +9,10 @@
 
 PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 {
-	originalNLPTime = Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
-	originalNLPIter = Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound");
+	originalNLPTime = Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
+	originalNLPIter = Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal");
 
-	switch (static_cast<ES_PrimalNLPSolver>(Settings::getInstance().getIntSetting("PrimalNLPSolver", "PrimalBound")))
+	switch (static_cast<ES_PrimalNLPSolver>(Settings::getInstance().getIntSetting("FixedInteger.Solver", "Primal")))
 	{
 	case ES_PrimalNLPSolver::CuttingPlane:
 	{
@@ -35,7 +35,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 
 	NLPSolver->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-	if (Settings::getInstance().getBoolSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
 	{
 		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
 		{
@@ -138,14 +138,14 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			fixedVariableValues.at(k) = tmpSolPt;
 
 			// Sets the starting point to the fixed value
-			if (Settings::getInstance().getBoolSetting("NLPFixedWarmstart", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("FixedInteger.Warmstart", "Primal"))
 			{
 				startingPointIndexes.at(currVarIndex) = currVarIndex;
 				startingPointValues.at(currVarIndex) = tmpSolPt;
 			}
 		}
 
-		if (Settings::getInstance().getBoolSetting("NLPFixedWarmstart", "PrimalBound"))
+		if (Settings::getInstance().getBoolSetting("FixedInteger.Warmstart", "Primal"))
 		{
 			for (int k = 0; k < realVariableIndexes.size(); k++)
 			{
@@ -167,9 +167,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 		NLPSolver->fixVariables(discreteVariableIndexes, fixedVariableValues);
 
-		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		{
-			std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/primalnlp" + to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + "_" + to_string(j);
+			std::string filename = Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/primalnlp" + to_string(ProcessInfo::getInstance().getCurrentIteration()->iterationNumber) + "_" + to_string(j);
 			NLPSolver->saveProblemToFile(filename + ".txt");
 			NLPSolver->saveOptionsToFile(filename + ".osrl");
 		}
@@ -244,16 +244,16 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
-			if (Settings::getInstance().getBoolSetting("NLPFixedUpdateItersAndTime", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
 			{
-				int iters = max(ceil(Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound") * 0.98),
+				int iters = max(ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
 								originalNLPIter);
-				Settings::getInstance().updateSetting("NLPFixedMaxIters", "PrimalBound", iters);
+				Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
 				double interval = max(
-					0.9 * Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"),
+					0.9 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"),
 					originalNLPTime);
-				Settings::getInstance().updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
+				Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
 				ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution,
 																	  E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
@@ -261,7 +261,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 		}
 		else
 		{
-			if (Settings::getInstance().getBoolSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
 			{
 				// Utilize the solution point for adding a cutting plane / supporting hyperplane
 				std::vector<SolutionPoint> solutionPoints(1);
@@ -304,12 +304,12 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				}
 			}
 
-			if (Settings::getInstance().getBoolSetting("NLPFixedUpdateItersAndTime", "PrimalBound"))
+			if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
 			{
-				int iters = ceil(Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound") * 1.02);
-				Settings::getInstance().updateSetting("NLPFixedMaxIters", "PrimalBound", iters);
-				double interval = 1.1 * Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound");
-				Settings::getInstance().updateSetting("NLPFixedMaxElapsedTime", "PrimalBound", interval);
+				int iters = ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
+				Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
+				double interval = 1.1 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
+				Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
 				ProcessInfo::getInstance().outputInfo(
 					"     Duration:  " + to_string(timeEnd - timeStart) + " s. New interval: " + to_string(interval) + " s or " + to_string(iters) + " iters.");

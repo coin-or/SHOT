@@ -34,7 +34,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 	/*
 
-	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	 if (prevIter->isMILP()  && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation <  Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 	 {
 	 return true;
 	 }*/
@@ -64,7 +64,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	 && (prevIter->maxDeviation
 	 < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 	 * max(1.0, abs(prevIter->objectiveValue))
-	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination")))
 	 {
 	 return (true);
 	 }*/
@@ -75,7 +75,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 		if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);
 
-		if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")) return (true);
+		if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination")) return (true);
 
 		/*std::cout << "test: " << prevIter->maxDeviationConstraint << " == "
 		 << ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveConstraintIdx() << ": "
@@ -98,7 +98,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	/*
 	 &&(prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 	 || prevIter->maxDeviation < prevIter->usedConstraintTolerance
-	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"))
+	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 	 )
 	 {
 	 return (true);
@@ -107,7 +107,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 	 if (prevIter->isMILP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
 	 && (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
 	 || prevIter->maxDeviation < prevIter->usedConstraintTolerance
-	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm")))
+	 || prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination")))
 	 {
 	 return (true);
 	 }
@@ -121,7 +121,7 @@ bool MILPSolutionLimitStrategyIncrease::updateLimit()
 
 // The solution fulfills the intermediate epsilon tolerance but not the final one
 	/*
-	 if (prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
+	 if (prevIter->maxDeviation > Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
 	 {
 	 return true;
 	 }*/

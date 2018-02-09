@@ -19,9 +19,9 @@ TaskCreateMILPProblem::TaskCreateMILPProblem(IMILPSolver *MILPSolver)
 
 	MILPSolver->initializeSolverSettings();
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 	{
-		MILPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/lp0.lp");
+		MILPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/lp0.lp");
 	}
 
 	ProcessInfo::getInstance().outputDebug("MILP problem created");

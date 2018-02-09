@@ -25,27 +25,27 @@ void TaskPrintSolution::run()
 		ProcessInfo::getInstance().outputSummary(
 				"³ Optimal solution found to constraint tolerance "
 				+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getCurrentIteration()->maxDeviation, "%.5f") + " <= "
-				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"), "%.5f"));
+				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::AbsoluteGap)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"³ Optimal solution found to absolute gap tolerance "
 				+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%.5f") + " <= "
-				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"), "%.5f"));
+				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::RelativeGap)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"³ Optimal solution found to relative gap tolerance "
 				+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%.5f") + " <= "
-				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"), "%.5f"));
+				+ UtilityFunctions::toStringFormat(Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::TimeLimit)
 	{
 		ProcessInfo::getInstance().outputSummary(
 				"³ Nonoptimal solution found due to time limit " + UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getElapsedTime("Total"))
-				+ " > " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")));
+				+ " > " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Termination")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::IterationLimit)
 	{
@@ -53,7 +53,7 @@ void TaskPrintSolution::run()
 				"³ Nonoptimal solution found due to iteration limit "
 				+ to_string(
 						Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
-						+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm")));
+						+ Settings::getInstance().getIntSetting("IterationLimit", "Termination")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::ObjectiveStagnation)
 	{
@@ -127,7 +127,7 @@ void TaskPrintSolution::run()
 						+ UtilityFunctions::toStringFormat(
 								ProcessInfo::getInstance().getCurrentIteration()->maxDeviation, "%.5f") + " <= "
 						+ UtilityFunctions::toStringFormat(
-								Settings::getInstance().getDoubleSetting("ConstrTermTolMILP", "Algorithm"), "%.5f"));
+								Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::AbsoluteGap)
 	{
@@ -136,7 +136,7 @@ void TaskPrintSolution::run()
 						+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%.5f")
 						+ " <= "
 						+ UtilityFunctions::toStringFormat(
-								Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"), "%.5f"));
+								Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::RelativeGap)
 	{
@@ -145,7 +145,7 @@ void TaskPrintSolution::run()
 						+ UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%.5f")
 						+ " <= "
 						+ UtilityFunctions::toStringFormat(
-								Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"), "%.5f"));
+								Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"), "%.5f"));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::TimeLimit)
 	{
@@ -153,7 +153,7 @@ void TaskPrintSolution::run()
 				"│ Nonoptimal solution found due to time limit "
 						+ UtilityFunctions::toString(ProcessInfo::getInstance().getElapsedTime("Total")) + " > "
 						+ UtilityFunctions::toString(
-								Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm")));
+								Settings::getInstance().getDoubleSetting("TimeLimit", "Termination")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::IterationLimit)
 	{
@@ -161,7 +161,7 @@ void TaskPrintSolution::run()
 				"│ Nonoptimal solution found due to iteration limit "
 						+ to_string(
 								Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
-										+ Settings::getInstance().getIntSetting("IterLimitMILP", "Algorithm")));
+										+ Settings::getInstance().getIntSetting("IterationLimit", "Termination")));
 	}
 	else if (ProcessInfo::getInstance().terminationReason == E_TerminationReason::ObjectiveStagnation)
 	{

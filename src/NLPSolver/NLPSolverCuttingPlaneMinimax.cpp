@@ -110,10 +110,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 	{
 		boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 		// Saves the LP problem to file if in debug mode
-		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		{
 			stringstream ss;
-			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+			ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 			ss << "/lpminimax";
 			ss << i;
 			ss << ".lp";

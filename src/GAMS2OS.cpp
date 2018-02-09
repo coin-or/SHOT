@@ -118,31 +118,31 @@ void GAMS2OS::createOSObjects()
 	else // get default settings from GAMS
 	{
 		// Removed this functionality, since otherwise we cannot control the time limit from an options file when SHOT is called on a gms file
-		/*Settings::getInstance().updateSetting("TimeLimit", "Algorithm", gevGetDblOpt(gev, gevResLim));
-		 Settings::getInstance().updateSetting("GapTermTolAbsolute", "Algorithm", gevGetDblOpt(gev, gevOptCA));
-		 Settings::getInstance().updateSetting("GapTermTolRelative", "Algorithm", gevGetDblOpt(gev, gevOptCR));
+		/*Settings::getInstance().updateSetting("TimeLimit", "Termination", gevGetDblOpt(gev, gevResLim));
+		 Settings::getInstance().updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(gev, gevOptCA));
+		 Settings::getInstance().updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
 
 
 		 ProcessInfo::getInstance().outputInfo(
 		 "Time limit set to "
-		 + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm"))
+		 + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
 		 + " by GAMS");
 		 ProcessInfo::getInstance().outputInfo(
 		 "Absolute termination tolerance set to "
 		 + UtilityFunctions::toString(
-		 Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+		 Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
 		 + " by GAMS");
 		 ProcessInfo::getInstance().outputInfo(
 		 "Relative termination tolerance set to "
 		 + UtilityFunctions::toString(
-		 Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
+		 Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"))
 		 + " by GAMS");
 
 		 */
 	}
 
 	// want to solve the NLP problems with GAMS
-	Settings::getInstance().updateSetting("PrimalNLPSolver", "PrimalBound", (int) ES_PrimalNLPSolver::GAMS);
+	Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int) ES_PrimalNLPSolver::GAMS);
 
 	/* reformulate objective variable out of model, if possible */
 	gmoObjReformSet(gmo, 1);

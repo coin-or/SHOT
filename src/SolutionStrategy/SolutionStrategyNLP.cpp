@@ -108,7 +108,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
 	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (Settings::getInstance().getBoolSetting("PrimalStrategyLinesearch", "PrimalBound"))
+	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
 		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");

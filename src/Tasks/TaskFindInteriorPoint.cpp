@@ -58,12 +58,12 @@ void TaskFindInteriorPoint::run()
 		throw new TaskExceptionInteriorPoint("Error in NLP solver definition.");
 	}
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 	{
 		for (int i = 0; i < NLPSolvers.size(); i++)
 		{
 			stringstream ss;
-			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+			ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
 			ss << "/interiorpointnlp";
 			ss << i;
 			ss << ".txt";
@@ -110,10 +110,10 @@ void TaskFindInteriorPoint::run()
 
 		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
 
-		if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		{
 			auto tmpVars = ProcessInfo::getInstance().originalProblem->getVariableNames();
-			std::string filename = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver") + "/interiorpoint_" + to_string(i) + ".txt";
+			std::string filename = Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/interiorpoint_" + to_string(i) + ".txt";
 			UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
 		}
 	}

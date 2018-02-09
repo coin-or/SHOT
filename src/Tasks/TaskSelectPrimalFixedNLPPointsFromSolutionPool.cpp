@@ -37,8 +37,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
 
-	auto userSettingStrategy = Settings::getInstance().getIntSetting("NLPFixedStrategy", "PrimalBound");
-	auto userSetting = Settings::getInstance().getIntSetting("NLPFixedSource", "PrimalBound");
+	auto userSettingStrategy = Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal");
+	auto userSetting = Settings::getInstance().getIntSetting("FixedInteger.Source", "Primal");
 
 	if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
 			&& abs(allSolutions.at(0).objectiveValue - ProcessInfo::getInstance().getDualBound()) < 0.1)
@@ -54,14 +54,14 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 			|| userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
 	{
 		if (ProcessInfo::getInstance().itersMILPWithoutNLPCall
-				>= Settings::getInstance().getIntSetting("NLPFixedMaxIters", "PrimalBound"))
+				>= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
 		{
 			ProcessInfo::getInstance().outputInfo(
 					"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
 			callNLPSolver = true;
 		}
 		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall
-				> Settings::getInstance().getDoubleSetting("NLPFixedMaxElapsedTime", "PrimalBound"))
+				> Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
 		{
 			ProcessInfo::getInstance().outputInfo(
 					"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -117,7 +117,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 			auto tmpSol = allSolutions.at(i);
 
 			if (tmpSol.maxDeviation.value
-					<= Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
+					<= Settings::getInstance().getDoubleSetting("Tolerance.NonlinearConstraint", "Primal"))
 			{
 				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
 						tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
@@ -136,7 +136,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 			tmpSol = allSolutions.at(i);
 
 			if (tmpSol.maxDeviation.value
-					<= Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound"))
+					<= Settings::getInstance().getDoubleSetting("Tolerance.NonlinearConstraint", "Primal"))
 			{
 				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
 						tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);

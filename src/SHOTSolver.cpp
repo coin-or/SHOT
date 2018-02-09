@@ -49,9 +49,9 @@ bool SHOTSolver::setOptions(std::string fileName)
 
 	// Sets the correct log levels
 	osoutput->SetPrintLevel("stdout",
-							(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelConsole", "SHOTSolver") + 1));
+							(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1));
 	osoutput->SetPrintLevel("shotlogfile",
-							(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("LogLevelFile", "SHOTSolver") + 1));
+							(ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("File.LogLevel", "Output") + 1));
 
 	ProcessInfo::getInstance().outputAlways("Options read from file \"" + fileName + "\"");
 
@@ -165,26 +165,26 @@ bool SHOTSolver::setProblem(std::string fileName)
 	boost::filesystem::path problemName = problemFile.stem();
 
 	tmpInstance->setInstanceName(problemName.string());
-	Settings::getInstance().updateSetting("ProblemFile", "SHOTSolver", problemFile.string());
+	Settings::getInstance().updateSetting("ProblemFile", "Output", problemFile.string());
 
-	if (static_cast<ES_OutputDirectory>(Settings::getInstance().getIntSetting("OutputDirectory", "SHOT")) == ES_OutputDirectory::Program)
+	if (static_cast<ES_OutputDirectory>(Settings::getInstance().getIntSetting("OutputDirectory", "Output")) == ES_OutputDirectory::Program)
 	{
 		boost::filesystem::path debugPath(boost::filesystem::current_path());
 		debugPath /= problemName;
 
-		Settings::getInstance().updateSetting("DebugPath", "SHOTSolver", "problemdebug/" + problemName.string());
-		Settings::getInstance().updateSetting("ResultPath", "SHOTSolver", boost::filesystem::current_path().string());
+		Settings::getInstance().updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
+		Settings::getInstance().updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
 	}
 	else
 	{
 		boost::filesystem::path debugPath(problemPath);
 		debugPath /= problemName;
 
-		Settings::getInstance().updateSetting("DebugPath", "SHOTSolver", debugPath.string());
-		Settings::getInstance().updateSetting("ResultPath", "SHOTSolver", problemPath.string());
+		Settings::getInstance().updateSetting("Debug.Path", "Output", debugPath.string());
+		Settings::getInstance().updateSetting("ResultPath", "Output", problemPath.string());
 	}
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
+	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		initializeDebugMode();
 
 	bool status = this->setProblem(tmpInstance);
@@ -220,7 +220,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 	}
 	else
 	{
-		switch (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy ", "Dual")))
+		switch (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
 		{
 		case (ES_SolutionStrategy::SingleTree):
 			solutionStrategy = new SolutionStrategyLazy(osInstance);
@@ -280,12 +280,15 @@ void SHOTSolver::initializeSettings()
 {
 	if (Settings::getInstance().settingsInitialized)
 	{
-		ProcessInfo::getInstance().outputWarning(
-			"Warning! Settings have already been initialized. Ignoring new settings.");
+		ProcessInfo::getInstance().outputWarning("Warning! Settings have already been initialized. Ignoring new settings.");
 		return;
 	}
 
+	std::string empty = "empty"; // Used to create empty string options
+
 	ProcessInfo::getInstance().outputInfo("Starting initialization of settings:");
+
+	// Dual strategy settings: ECP and ESH
 
 	std::vector<std::string> enumHyperplanePointStrategy;
 	enumHyperplanePointStrategy.push_back("ESH");
@@ -326,6 +329,8 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
 										  "Upper bound for minimax objective variable", -OSDBL_MAX, OSDBL_MAX);
 
+	// Dual strategy settings: Interior point search strategy
+
 	std::vector<std::string> enumNLPSolver;
 	enumNLPSolver.push_back("Cutting plane minimax");
 	enumNLPSolver.push_back("Ipopt minimax");
@@ -361,6 +366,8 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ESH.Linesearch.ConstraintTolerance", "Dual", 1e-8,
 										  "Constraint tolerance for when not to add individual hyperplanes", 0, OSDBL_MAX);
 
+	// Dual strategy settings: Fixed integer (NLP) strategy
+
 	Settings::getInstance().createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.00001,
 										  "Constraint tolerance for fixed strategy", 0.0, OSDBL_MAX);
 
@@ -373,6 +380,8 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("FixedInteger.Use", "Dual", true,
 										  "Solve a fixed LP problem if integer-values have not changes in several MIP iterations");
 
+	// Dual strategy settings: Hyperplane generation
+
 	Settings::getInstance().createSetting("HyperplaneCuts.Delay", "Dual", true,
 										  "Add hyperplane cuts to model only after optimal MILP solution");
 
@@ -384,6 +393,8 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true,
 										  "Add an objective cut in the primal solution");
+
+	// Dual strategy settings: MIP solver
 
 	Settings::getInstance().createSetting("MIP.CutOffTolerance", "Dual", 0.0001,
 										  "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, OSDBL_MAX);
@@ -408,7 +419,7 @@ void SHOTSolver::initializeSettings()
 										  "Iterations without dual bound updates for forcing optimal MIP solution", 0, OSINT_MAX);
 
 	Settings::getInstance().createSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual", 1000.0,
-										  "Time without dual bound updates for forcing optimal MIP solution", 0, OSDBL_MAX);
+										  "Time (s) without dual bound updates for forcing optimal MIP solution", 0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("MIP.SolutionLimit.IncreaseIterations", "Dual", 50,
 										  "Max number of iterations between MIP solution limit increases", 0, OSINT_MAX);
@@ -432,7 +443,20 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("MIP.UpdateObjectiveBounds", "Dual", false, "Update nonlinear objective variable bounds to primal/dual bounds");
 
+	// Dual strategy settings: Objective linesearch
+
 	Settings::getInstance().createSetting("ObjectiveLinesearch.Use", "Dual", true, "Update the solution value for a nonlinear objective variable through a linesearch");
+
+	// Dual strategy settings: Quadratic function strategy
+
+	std::vector<std::string> enumQPStrategy;
+	enumQPStrategy.push_back("All nonlinear");
+	enumQPStrategy.push_back("Use quadratic objective");
+	enumQPStrategy.push_back("Use quadratic constraints");
+	Settings::getInstance().createSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QPStrategy::QuadraticObjective), "How to treat quadratic functions", enumQPStrategy);
+	enumQPStrategy.clear();
+
+	// Dual strategy settings: Relaxation strategies
 
 	Settings::getInstance().createSetting("Relaxation.Frequency", "Dual", 0,
 										  "The frequency to solve an LP problem: 0: Disable", 0, OSINT_MAX);
@@ -443,61 +467,159 @@ void SHOTSolver::initializeSettings()
 										  "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, OSINT_MAX);
 
 	Settings::getInstance().createSetting("Relaxation.TerminationTolerance", "Dual", 0.5,
-										  "Time limit when solving LP problems initially");
+										  "Time limit (s) when solving LP problems initially");
 
-	Settings::getInstance().createSetting("Relaxation.TimeLimit", "Dual", 30.0, "Time limit when solving LP problems initially", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("Relaxation.TimeLimit", "Dual", 30.0, "Time limit (s) when solving LP problems initially", 0, OSDBL_MAX);
+
+	// Dual strategy settings: Main tree strategy
 
 	std::vector<std::string> enumSolutionStrategy;
 	enumSolutionStrategy.push_back("Multi-tree");
 	enumSolutionStrategy.push_back("Single-tree");
-	Settings::getInstance().createSetting("TreeStrategy ", "Dual", static_cast<int>(ES_SolutionStrategy::SingleTree),
+	Settings::getInstance().createSetting("TreeStrategy", "Dual", static_cast<int>(ES_SolutionStrategy::SingleTree),
 										  "The main strategy to use", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
 
-	// Logging setting
+	// Logging and output settings
 	std::vector<std::string> enumLogLevel;
-	enumLogLevel.push_back("error");
-	enumLogLevel.push_back("summary");
-	enumLogLevel.push_back("warning");
-	enumLogLevel.push_back("info");
-	enumLogLevel.push_back("debug");
-	enumLogLevel.push_back("trace");
-	enumLogLevel.push_back("detailed_trace");
-	Settings::getInstance().createSetting("LogLevelConsole", "SHOTSolver",
+	enumLogLevel.push_back("Error");
+	enumLogLevel.push_back("Summary");
+	enumLogLevel.push_back("Warning");
+	enumLogLevel.push_back("Info");
+	enumLogLevel.push_back("Debug");
+	enumLogLevel.push_back("Trace");
+	enumLogLevel.push_back("Detailed trace");
+	Settings::getInstance().createSetting("Console.LogLevel", "Output",
 										  static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1, "Log level for console output", enumLogLevel);
 
-	Settings::getInstance().createSetting("LogLevelFile", "SHOTSolver", static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1,
-										  "Log level for file output", enumLogLevel);
+	Settings::getInstance().createSetting("Debug.Enable", "Output", false, "Use debug functionality");
 
+	Settings::getInstance().createSetting("Debug.Path", "Output", empty, "The path where to save the debug information", true);
+
+	Settings::getInstance().createSetting("File.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1,
+										  "Log level for file output", enumLogLevel);
 	enumLogLevel.clear();
+
+	Settings::getInstance().createSetting("Console.ShowGAMSOutput", "Output", false, "Show GAMS output on console");
 
 	std::vector<std::string> enumOutputDirectory;
 	enumOutputDirectory.push_back("Problem directory");
 	enumOutputDirectory.push_back("Program directory");
-	Settings::getInstance().createSetting("OutputDirectory", "SHOT",
+	Settings::getInstance().createSetting("OutputDirectory", "Output",
 										  static_cast<int>(ES_OutputDirectory::Program), "Where to save the output files", enumOutputDirectory);
+	enumOutputDirectory.clear();
 
-	Settings::getInstance().createSetting("SaveAllPrimalSolutions", "SHOTSolver", false,
-										  "Should all intermediate solutions (primal and dual) be saved.");
+	Settings::getInstance().createSetting("SaveAllSolutions", "Output", false, "Save all intermediate primal solutions to OSrL file");
 
-	// Relaxation
-	Settings::getInstance().createSetting("ObjectiveStagnationIterationLimit", "Algorithm", 100,
-										  "Max number of iterations without objective function improvement", 0, OSINT_MAX);
-	Settings::getInstance().createSetting("ObjectiveStagnationTolerance", "Algorithm", 0.000001,
-										  "Objective function improvement tolerance", 0.0, OSDBL_MAX);
+	// Primal settings: Fixed integer strategy
+	std::vector<std::string> enumPrimalNLPStrategy;
+	enumPrimalNLPStrategy.push_back("Use each iteration");
+	enumPrimalNLPStrategy.push_back("Based on iteration or time");
+	enumPrimalNLPStrategy.push_back("Based on iteration or time, and for all feasible MIP solutions");
 
-	Settings::getInstance().createSetting("ConstrTermTolMILP", "Algorithm", 1e-8,
-										  "Final termination tolerance for constraints", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("FixedInteger.CallStrategy", "Primal",
+										  static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
+										  "When should the fixed strategy be used", enumPrimalNLPStrategy);
+	enumPrimalNLPStrategy.clear();
 
-	Settings::getInstance().createSetting("GapTermTolAbsolute", "Algorithm", 0.001,
-										  "Absolute gap tolerance for objective function", 0, OSDBL_MAX);
-	Settings::getInstance().createSetting("GapTermTolRelative", "Algorithm", 0.001,
-										  "Relative gap tolerance for objective function", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true,
+										  "Create a cut from an infeasible solution point");
 
-	Settings::getInstance().createSetting("TimeLimit", "Algorithm", 900.0, "Time limit in seconds for solver", 0.0,
-										  OSDBL_MAX);
-	Settings::getInstance().createSetting("IterLimitMILP", "Algorithm", 2000, "MILP iteration limit for solver", 1,
-										  OSINT_MAX);
+	Settings::getInstance().createSetting("FixedInteger.Frequency.Dynamic", "Primal", true,
+										  "Dynamically update the call frequency based on success");
+
+	Settings::getInstance().createSetting("FixedInteger.Frequency.Iteration", "Primal", 10,
+										  "Max number of iterations between calls", 0, OSINT_MAX);
+
+	Settings::getInstance().createSetting("FixedInteger.Frequency.Time", "Primal", 5.0,
+										  "Max duration (s) between calls", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, OSINT_MAX);
+
+	std::vector<std::string> enumPrimalNLPSolver;
+	enumPrimalNLPSolver.push_back("CuttingPlane");
+	enumPrimalNLPSolver.push_back("Ipopt");
+	enumPrimalNLPSolver.push_back("GAMS");
+
+	Settings::getInstance().createSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::IPOpt),
+										  "NLP solver to use", enumPrimalNLPSolver);
+	enumPrimalNLPSolver.clear();
+
+	std::vector<std::string> enumPrimalBoundNLPStartingPoint;
+	enumPrimalBoundNLPStartingPoint.push_back("All");
+	enumPrimalBoundNLPStartingPoint.push_back("First");
+	enumPrimalBoundNLPStartingPoint.push_back("All feasible");
+	enumPrimalBoundNLPStartingPoint.push_back("First and all feasible");
+	enumPrimalBoundNLPStartingPoint.push_back("With smallest constraint deviation");
+	Settings::getInstance().createSetting("FixedInteger.Source", "Primal",
+										  static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
+										  enumPrimalBoundNLPStartingPoint);
+	enumPrimalBoundNLPStartingPoint.clear();
+
+	Settings::getInstance().createSetting("FixedInteger.TimeLimit", "Primal", 10.0,
+										  "Time limit (s) per NLP problem", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("FixedInteger.Use", "Primal", true,
+										  "Use the fixed integer primal strategy");
+
+	Settings::getInstance().createSetting("FixedInteger.UsePresolveBounds", "Primal", false,
+										  "Use variable bounds from MIP in NLP problems. Warning! Does not seem to work", true);
+
+	Settings::getInstance().createSetting("FixedInteger.Warmstart", "Primal", true,
+										  "Warm start the NLP solver");
+
+	// Primal settings: linesearch
+
+	Settings::getInstance().createSetting("Linesearch.Use", "Primal", true,
+										  "Use a linesearch to find primal solutions");
+
+	// Primal settings: tolerances for accepting primal solutions
+
+	Settings::getInstance().createSetting("Tolerance.Integer", "Primal", 1e-6,
+										  "Integer tolerance for accepting primal solutions");
+
+	Settings::getInstance().createSetting("Tolerance.LinearConstraint", "Primal", 1e-6,
+										  "Linear constraint tolerance for accepting primal solutions");
+
+	Settings::getInstance().createSetting("Tolerance.NonlinearConstraint", "Primal", 1e-6,
+										  "Nonlinear constraint tolerance for accepting primal solutions");
+
+	// Subsolver settings: CPLEX
+
+	Settings::getInstance().createSetting("CPLEX.MIPEmphasis", "Subsolver", 0,
+										  "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
+
+	Settings::getInstance().createSetting("CPLEX.ParallelMode", "Subsolver", 0,
+										  "Sets the parallel optimization mode: -1: Opportunistic. 0: Automatic. 1: Deterministic.", -1, 1);
+
+	Settings::getInstance().createSetting("CPLEX.Probe", "Subsolver", 0,
+										  "Sets the MIP probing level: -1: No probing. 0: Automatic. 1: Moderate. 2: Aggressive. 3: Very aggressive", -1, 3);
+
+	Settings::getInstance().createSetting("CPLEX.SolnPoolGap", "Subsolver", 1.0e+75,
+										  "Sets the relative gap filter on objective values in the solution pool", 0, 1.0e+75);
+
+	Settings::getInstance().createSetting("CPLEX.SolnPoolIntensity", "Subsolver", 0,
+										  "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. 2: Moderate. 3: Aggressive. 4: Very aggressive", 0, 4);
+
+	Settings::getInstance().createSetting("CPLEX.SolnPoolReplace", "Subsolver", 1,
+										  "How to replace solutions in the solution pool when full: 0: Replace oldest. 1: Replace worst. 2: Find diverse.", 0, 2);
+
+	Settings::getInstance().createSetting("CPLEX.UseNewCallbackType", "Subsolver", false,
+										  "Use the new callback type (vers. >12.8) with single-tree strategy (experimental)");
+
+	// Subsolver settings: GAMS NLP
+
+	std::string optfile = "";
+	Settings::getInstance().createSetting("GAMS.NLP.OptionsFilename", "Subsolver", optfile,
+										  "Options file for the NLP solver in GAMS");
+
+	std::string solver = "conopt";
+	Settings::getInstance().createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS");
+
+	// Subsolver settings: Ipopt
+
+	Settings::getInstance().createSetting("Ipopt.ConstraintViolationTolerance", "Subsolver", 1E-8,
+										  "Constraint violation tolerance in Ipopt", -OSDBL_MAX, OSDBL_MAX);
 
 	std::vector<std::string> enumIPOptSolver;
 	enumIPOptSolver.push_back("ma27");
@@ -505,153 +627,72 @@ void SHOTSolver::initializeSettings()
 	enumIPOptSolver.push_back("ma86");
 	enumIPOptSolver.push_back("ma97");
 	enumIPOptSolver.push_back("mumps");
-	Settings::getInstance().createSetting("IpoptSolver", "Ipopt", static_cast<int>(ES_IPOptSolver::mumps),
-										  "Linear subsolver in Ipopt", enumIPOptSolver);
+	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IPOptSolver::mumps),
+										  "Ipopt linear subsolver", enumIPOptSolver);
 	enumIPOptSolver.clear();
 
-	Settings::getInstance().createSetting("ToleranceInteriorPointStrategy", "Ipopt", 1E-8,
-										  "Relative convergence tolerance in interior point search strategy");
-	Settings::getInstance().createSetting("MaxIterInteriorPointStrategy", "Ipopt", 1000,
-										  "Maximum number of iterations in interior point search strategy");
-	Settings::getInstance().createSetting("ConstraintToleranceInteriorPointStrategy", "Ipopt", 1E-8,
-										  "Constraint violation tolerance", -OSDBL_MAX, OSDBL_MAX);
+	Settings::getInstance().createSetting("Ipopt.MaxIterations", "Subsolver", 1000,
+										  "Maximum number of iterations");
 
-	Settings::getInstance().createSetting("UsePresolveBoundsForPrimalNLP", "Presolve", false,
-										  "Warning! Does not seem to work. Use updated bounds from the MIP solver when solving primal NLP problems", true);
+	Settings::getInstance().createSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver", 1E-8,
+										  "Relative convergence tolerance");
 
-	//Settings::getInstance().createSetting("UseQuadraticProgramming", "Algorithm", true, "Solve QP problems if objective function is quadratic,");
+	// Subsolver settings: root searches
 
-	std::vector<std::string> enumQPStrategy;
-	enumQPStrategy.push_back("All nonlinear");
-	enumQPStrategy.push_back("Use quadratic objective");
-	enumQPStrategy.push_back("Use quadratic constraints");
-	Settings::getInstance().createSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QPStrategy::QuadraticObjective), "How to treat quadratic functions", enumQPStrategy);
+	Settings::getInstance().createSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver", 0.0,
+										  "Epsilon constraint tolerance for root search", 0.0, OSDBL_MAX);
 
-	// CPLEX
-	Settings::getInstance().createSetting("UseNewCallbackType", "CPLEX", false,
-										  "Use the new callback introduced in CPLEX 12.8 with the lazy strategy");
+	Settings::getInstance().createSetting("Rootsearch.MaxIterations", "Subsolver", 100, "Maximal root search iterations",
+										  0, OSINT_MAX);
 
-	Settings::getInstance().createSetting("SolnPoolIntensity", "CPLEX", 0,
-										  "0 = automatic, 1 = mild, 2 = moderate, 3 = aggressive, 4 = very aggressive", 0, 4);
-	Settings::getInstance().createSetting("SolnPoolReplace", "CPLEX", 1,
-										  "0 = replace oldest solution, 1 = replace worst solution, 2 = find diverse solutions", 0, 2);
-
-	Settings::getInstance().createSetting("SolnPoolGap", "CPLEX", 1.0e+75,
-										  "The relative tolerance on the objective values in the solution pool", 0, 1.0e+75);
-	Settings::getInstance().createSetting("MIPEmphasis", "CPLEX", 0,
-										  "0 = balanced, 1 = feasibility, 2 = optimality, 3 = best bound, 4 = hidden feasible", 0, 4);
-
-	Settings::getInstance().createSetting("Probe", "CPLEX", 0,
-										  "-1 = no probing, 0 = automatic, 1 = moderate, 2 = aggressive, 3 = very aggressive", -1, 3);
-
-	Settings::getInstance().createSetting("ParallelMode", "CPLEX", 0,
-										  "-1 = opportunistic, 0 = automatic, 1 = deterministic", -1, 1);
-
-	// Linesearch
 	std::vector<std::string> enumLinesearchMethod;
 	enumLinesearchMethod.push_back("BoostTOMS748");
 	enumLinesearchMethod.push_back("BoostBisection");
 	enumLinesearchMethod.push_back("Bisection");
-	Settings::getInstance().createSetting("LinesearchMethod", "Linesearch",
-										  static_cast<int>(ES_LinesearchMethod::BoostTOMS748), "Linesearch method", enumLinesearchMethod);
+	Settings::getInstance().createSetting("Rootsearch.Method", "Subsolver",
+										  static_cast<int>(ES_LinesearchMethod::BoostTOMS748), "Root search method to use", enumLinesearchMethod);
 	enumLinesearchMethod.clear();
 
-	Settings::getInstance().createSetting("LinesearchLambdaEps", "Linesearch", 1e-16,
-										  "Epsilon lambda tolerance for linesearch", 0.0, OSDBL_MAX);
-	Settings::getInstance().createSetting("LinesearchMaxIter", "Linesearch", 100, "Maximal iterations for linesearch",
-										  0, OSINT_MAX);
-	Settings::getInstance().createSetting("LinesearchConstrEps", "Linesearch", 0.0,
-										  "Epsilon constraint tolerance for linesearch", 0.0, OSDBL_MAX);
+	Settings::getInstance().createSetting("Rootsearch.TerminationTolerance", "Subsolver", 1e-16,
+										  "Epsilon lambda tolerance for root search", 0.0, OSDBL_MAX);
 
-	std::string empty = "empty";
+	// Subsolver settings: termination
 
-	Settings::getInstance().createSetting("ProblemFile", "SHOTSolver", empty, "The filename of the problem.", true);
-	Settings::getInstance().createSetting("DebugPath", "SHOTSolver", empty,
-										  "The path where to save the debug information", true);
-	Settings::getInstance().createSetting("ResultPath", "SHOTSolver", empty,
+	Settings::getInstance().createSetting("ConstraintTolerance", "Termination", 1e-8,
+										  "Termination tolerance for nonlinear constraints", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("IterationLimit", "Termination", 2000, "Iteration limit for main strategy", 1,
+										  OSINT_MAX);
+
+	Settings::getInstance().createSetting("ObjectiveGap.Absolute", "Termination", 0.001,
+										  "Absolute gap termination tolerance for objective function", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("ObjectiveGap.Relative", "Termination", 0.001,
+										  "Relative gap termination tolerance for objective function", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("ObjectiveStagnation.IterationLimit", "Termination", 100,
+										  "Max number of iterations without significant objective value improvement", 0, OSINT_MAX);
+
+	Settings::getInstance().createSetting("ObjectiveStagnation.Tolerance", "Termination", 0.000001,
+										  "Objective value improvement tolerance", 0.0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0,
+										  OSDBL_MAX);
+
+	// Subsolver settings: termination
+
+	Settings::getInstance().createSetting("ProblemFile", "Output", empty, "The filename of the problem.", true);
+	
+	Settings::getInstance().createSetting("ResultPath", "Output", empty,
 										  "The path where to save the result information", true);
-	Settings::getInstance().createSetting("Debug", "SHOTSolver", false, "Use debug functionality");
-
-	// Primal bound
-	Settings::getInstance().createSetting("PrimalStrategyLinesearch", "PrimalBound", true,
-										  "Use the dedicated linesearch method for finding primal solutions");
-
-	Settings::getInstance().createSetting("PrimalStrategyFixedNLP", "PrimalBound", true,
-										  "Solve integer-fixed NLP problems for finding primal solutions");
-
-	std::vector<std::string> enumPrimalNLPSolver;
-	enumPrimalNLPSolver.push_back("CuttingPlane");
-	enumPrimalNLPSolver.push_back("Ipopt");
-	enumPrimalNLPSolver.push_back("GAMS");
-
-	Settings::getInstance().createSetting("PrimalNLPSolver", "PrimalBound", static_cast<int>(ES_PrimalNLPSolver::IPOpt),
-										  "NLP solver from fixed NLP primal bound strategy.", enumPrimalNLPSolver);
-	enumPrimalNLPSolver.clear();
-
-	std::vector<std::string> enumPrimalNLPStrategy;
-	enumPrimalNLPStrategy.push_back("Use each iteration");
-	enumPrimalNLPStrategy.push_back("Based on iteration or time");
-	enumPrimalNLPStrategy.push_back("Based on iteration or time, and for all feasible MIP solutions");
-
-	Settings::getInstance().createSetting("NLPFixedStrategy", "PrimalBound",
-										  static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions),
-										  "How to use fixed NLP primal calls", enumPrimalNLPStrategy);
-	enumPrimalNLPStrategy.clear();
-
-	Settings::getInstance().createSetting("NLPFixedWarmstart", "PrimalBound", true,
-										  "Use a warm start for the NLP solver");
-
-	Settings::getInstance().createSetting("NLPFixedUpdateItersAndTime", "PrimalBound", true,
-										  "Automatically change call frequency based on success");
-	Settings::getInstance().createSetting("NLPFixedMaxIters", "PrimalBound", 10,
-										  "Maximal number of iterations between calls", 0, OSINT_MAX);
-	Settings::getInstance().createSetting("NLPFixedMaxElapsedTime", "PrimalBound", 5.0,
-										  "Maximal elapsed time between calls", 0, OSDBL_MAX);
-
-	Settings::getInstance().createSetting("NLPFixedCreateCutFromInfeasible", "PrimalBound", true,
-										  "If the fixed NLP problem is infeasible, utilize the solution to create a cut.");
-
-	Settings::getInstance().createSetting("NLPTimeLimit", "PrimalBound", 10.0,
-										  "Maximal time allowed per fixed NLP problem", 0, OSDBL_MAX);
-	Settings::getInstance().createSetting("NLPIterLimit", "PrimalBound", 10000000,
-										  "Maximum number of iterations allowed per fixed NLP problem", 0, OSINT_MAX);
-
-	std::string solver = "conopt";
-	std::string optfile = "";
-
-	Settings::getInstance().createSetting("NLPSolver", "GAMS", solver, "Name of the NLP solver to use in GAMS");
-	Settings::getInstance().createSetting("NLPOptionsFile", "GAMS", optfile,
-										  "Name of the options file for the NLP solver in GAMS");
-	Settings::getInstance().createSetting("ShowOutput", "GAMS", false, "Show GAMS output");
-
-	std::vector<std::string> enumPrimalBoundNLPStartingPoint;
-	enumPrimalBoundNLPStartingPoint.push_back("All solutions");
-	enumPrimalBoundNLPStartingPoint.push_back("First solution");
-	enumPrimalBoundNLPStartingPoint.push_back("All feasible solutions");
-	enumPrimalBoundNLPStartingPoint.push_back("First and all feasible solutions");
-	enumPrimalBoundNLPStartingPoint.push_back("Smallest constraint deviation solution");
-	Settings::getInstance().createSetting("NLPFixedSource", "PrimalBound",
-										  static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstAndFeasibleSolutions), "Fixed MIP point source",
-										  enumPrimalBoundNLPStartingPoint);
-	enumPrimalBoundNLPStartingPoint.clear();
-
-	Settings::getInstance().createSetting("PrimalBoundNonlinearTolerance", "PrimalBound", 1e-6,
-										  "The nonlinear constraint tolerance for accepting primal bounds ");
-
-	Settings::getInstance().createSetting("PrimalBoundLinearTolerance", "PrimalBound", 1e-6,
-										  "The linear constraint tolerance for accepting primal bounds ");
-
-	Settings::getInstance().createSetting("PrimalBoundIntegerTolerance", "PrimalBound", 1e-6,
-										  "The tolerance for accepting primal bounds ");
-
-	ProcessInfo::getInstance().outputInfo("Initialization of settings complete.");
 
 	Settings::getInstance().settingsInitialized = true;
+	ProcessInfo::getInstance().outputInfo("Initialization of settings complete.");
 }
 
 void SHOTSolver::initializeDebugMode()
 {
-	auto debugPath = Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
+	auto debugPath = Settings::getInstance().getStringSetting("Debug.Path", "Output");
 	boost::filesystem::path debugDir(debugPath);
 
 	if (boost::filesystem::exists(debugDir))
@@ -670,7 +711,7 @@ void SHOTSolver::initializeDebugMode()
 		}
 	}
 
-	boost::filesystem::path source(Settings::getInstance().getStringSetting("ProblemFile", "SHOTSolver"));
+	boost::filesystem::path source(Settings::getInstance().getStringSetting("ProblemFile", "Output"));
 	boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
 								 boost::filesystem::copy_option::overwrite_if_exists);
 

@@ -52,9 +52,9 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 
 					ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 					auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-							Settings::getInstance().getIntSetting("LinesearchMaxIter", "Linesearch"),
-							Settings::getInstance().getDoubleSetting("LinesearchLambdaEps", "Linesearch"),
-							Settings::getInstance().getDoubleSetting("LinesearchConstrEps", "Linesearch"));
+							Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+							Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+							Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
 					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 					internalPoint = xNewc.first;
