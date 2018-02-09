@@ -200,24 +200,25 @@ void MIPSolverCplex::initializeSolverSettings()
 	try
 	{
 		// Disable Cplex output
-		cplexInstance.setOut(cplexEnv.getNullStream());
-		cplexInstance.setWarning(cplexEnv.getNullStream());
+		if (!Settings::getInstance().getBoolSetting("Console.DualSolver.Show", "Output"))
+		{
+			cplexInstance.setOut(cplexEnv.getNullStream());
 
-		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
-							   Settings::getInstance().getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
-		cplexInstance.setParam(IloCplex::SolnPoolReplace,
-							   Settings::getInstance().getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
+			if (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") <= static_cast<int>(ENUM_OUTPUT_LEVEL_summary))
+			{
+				cplexInstance.setWarning(cplexEnv.getNullStream());
+			}
+		}
 
 		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 2.0);
 		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
 
-		//cplexInstance.setParam(IloCplex::RepairTries, 5);
-		//cplexInstance.setParam(IloCplex::HeurFreq,2);
-		//cplexInstance.setParam(IloCplex::AdvInd,2);
+		cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
 
+		cplexInstance.setParam(IloCplex::SolnPoolIntensity, Settings::getInstance().getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+		cplexInstance.setParam(IloCplex::SolnPoolReplace, Settings::getInstance().getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
 		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("Cplex.SolnPoolGap", "Subsolver"));
-		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
-							   Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
+		cplexInstance.setParam(IloCplex::SolnPoolCapacity, Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
 		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Cplex.Probe", "Subsolver"));
 		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("Cplex.MIPEmphasis", "Subsolver"));
@@ -225,33 +226,33 @@ void MIPSolverCplex::initializeSolverSettings()
 		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("Cplex.ParallelMode", "Subsolver"));
 		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 
-		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
+		cplexInstance.setParam(IloCplex::NumericalEmphasis, Settings::getInstance().getIntSetting("Cplex.NumericalEmphasis", "Subsolver"));
+		cplexInstance.setParam(IloCplex::MemoryEmphasis, Settings::getInstance().getIntSetting("Cplex.MemoryEmphasis", "Subsolver"));
 
-		//cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
-
-		//cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap, 0.1);
-		cplexInstance.setParam(IloCplex::WorkMem, 30000);
-
-		cplexInstance.setParam(IloCplex::NodeFileInd, 2);
+		// Options for using swap file
+		cplexInstance.setParam(IloCplex::WorkDir, Settings::getInstance().getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
+		cplexInstance.setParam(IloCplex::WorkMem, Settings::getInstance().getDoubleSetting("Cplex.WorkMem", "Subsolver"));
+		cplexInstance.setParam(IloCplex::NodeFileInd, Settings::getInstance().getIntSetting("Cplex.NodeFileInd", "Subsolver"));
 
 		//cplexInstance.setParam(IloCplex::Param::Tune::Measure, CPX_TUNE_AVERAGE);
 		//cplexInstance.setParam(IloCplex::Param::Tune::TimeLimit, 10);
 
-		//cplexInstance.setParam(IloCplex::NumericalEmphasis, 1);
-		//cplexInstance.setParam(IloCplex::MemoryEmphasis, 1);
 		//cplexInstance.setParam(IloCplex::EpRHS, 10 ^ (-5));
 		//cplexInstance.setParam(IloCplex::EpInt, 10 ^ (-6));
 		//cplexInstance.setParam(IloCplex::EpOpt, 1 ^ (-9));
 		//cplexInstance.setParam(IloCplex::EpAGap, 10 ^ (-14));
 
-		cplexInstance.setParam(IloCplex::WorkDir, "/data/stuff/tmp/");
+		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
+
+		//cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
+
+		//cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap, 0.1);
 
 		/*plexInstance.setParam(IloCplex::PreInd, 0);
 
 		 cplexInstance.setParam(IloCplex::RelaxPreInd, 0);
 		 cplexInstance.setParam(IloCplex::PreslvNd, -1);
 		 */
-		cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
 		//cplexInstance.setParam(IloCplex::EpMrk, 0.9);
 	}
 	catch (IloException &e)
@@ -881,7 +882,7 @@ void MIPSolverCplex::checkParameters()
 }
 
 void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
-									   std::function<IloConstraint(IloRange)> addConstraintFunction)
+									  std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
@@ -947,7 +948,7 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
 }
 
 void MIPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
-									   std::function<IloConstraint(IloRange)> addConstraintFunction)
+									  std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
 	IloExpr expr(cplexEnv);
 

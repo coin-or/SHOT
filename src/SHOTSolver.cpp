@@ -503,7 +503,9 @@ void SHOTSolver::initializeSettings()
 										  "Log level for file output", enumLogLevel);
 	enumLogLevel.clear();
 
-	Settings::getInstance().createSetting("Console.ShowGAMSOutput", "Output", false, "Show GAMS output on console");
+	Settings::getInstance().createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
+
+	Settings::getInstance().createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
 
 	std::vector<std::string> enumOutputDirectory;
 	enumOutputDirectory.push_back("Problem directory");
@@ -589,8 +591,15 @@ void SHOTSolver::initializeSettings()
 
 	// Subsolver settings: Cplex
 
+	Settings::getInstance().createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
+
 	Settings::getInstance().createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
 										  "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
+
+	Settings::getInstance().createSetting("Cplex.NodeFileInd", "Subsolver", 1,
+										  "Where to store the node file: 0: No file. 1: Compressed in memory. 2: On disk. 3: Compressed on disk.", 0, 3);
+
+	Settings::getInstance().createSetting("Cplex.NumericalEmphasis", "Subsolver", 0, "Emphasis on numerical stability", 0, 1);
 
 	Settings::getInstance().createSetting("Cplex.ParallelMode", "Subsolver", 0,
 										  "Sets the parallel optimization mode: -1: Opportunistic. 0: Automatic. 1: Deterministic.", -1, 1);
@@ -609,6 +618,12 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("Cplex.UseNewCallbackType", "Subsolver", false,
 										  "Use the new callback type (vers. >12.8) with single-tree strategy (experimental)");
+
+	std::string workdir = "/data/stuff/tmp/";
+	Settings::getInstance().createSetting("Cplex.WorkDir", "Subsolver", workdir, "Directory for swap file");
+
+	Settings::getInstance().createSetting("Cplex.WorkMem", "Subsolver", 30000.0,
+										  "Memory limit for when to start swapping to disk", 0, 1.0e+75);
 
 	// Subsolver settings: GAMS NLP
 
@@ -685,7 +700,7 @@ void SHOTSolver::initializeSettings()
 	// Subsolver settings: termination
 
 	Settings::getInstance().createSetting("ProblemFile", "Output", empty, "The filename of the problem.", true);
-	
+
 	Settings::getInstance().createSetting("ResultPath", "Output", empty,
 										  "The path where to save the result information", true);
 

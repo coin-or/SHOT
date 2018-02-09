@@ -178,8 +178,12 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 	osiInterface->loadFromCoinModel(*coinModel);
 	cbcModel = new CbcModel(*osiInterface);
 	CbcMain0(*cbcModel);
-	cbcModel->setLogLevel(0);
-	osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+
+	if (!Settings::getInstance().getBoolSetting("Console.DualSolver.Show", "Output"))
+	{
+		cbcModel->setLogLevel(0);
+		osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+	}
 
 	setSolutionLimit(1);
 

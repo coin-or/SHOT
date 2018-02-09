@@ -21,7 +21,7 @@ NLPSolverGAMS::NLPSolverGAMS() :
 	iterlimit = Settings::getInstance().getIntSetting("FixedInteger.IterationLimit", "Primal");
 
 	// TODO: showlog seems to have no effect...
-	showlog = Settings::getInstance().getBoolSetting("Console.ShowGAMSOutput", "Output");
+	showlog = Settings::getInstance().getBoolSetting("Console.GAMS.Show", "Output");
 
 }
 

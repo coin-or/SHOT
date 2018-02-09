@@ -244,10 +244,14 @@ void MIPSolverGurobi::initializeSolverSettings()
 {
 	try
 	{
+		if (!Settings::getInstance().getBoolSetting("Console.DualSolver.Show", "Output"))
+		{
+			gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
+		}
+
 		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination")/2.0);
 		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination")/2.0);
 		//gurobiModel->getEnv().set(GRB_IntParam_NumericFocus,3);
-		gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
