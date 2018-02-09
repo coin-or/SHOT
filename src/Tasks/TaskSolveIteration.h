@@ -9,18 +9,18 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
 class TaskSolveIteration: public TaskBase
 {
 	public:
-		TaskSolveIteration(IMILPSolver *MILPSolver);
+		TaskSolveIteration(IMIPSolver *MIPSolver);
 		virtual ~TaskSolveIteration();
 
 		virtual void run();
 		virtual std::string getType();
 	private:
 
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 };
 

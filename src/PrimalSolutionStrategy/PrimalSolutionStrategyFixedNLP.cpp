@@ -81,7 +81,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	if (ProcessInfo::getInstance().primalFixedNLPCandidates.size() == 0)
 	{
-		ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
+		ProcessInfo::getInstance().MIPIterationsWithoutNLPCall++;
 		return (false);
 	}
 
@@ -110,7 +110,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 	if (testPts.size() == 0)
 	{
-		ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
+		ProcessInfo::getInstance().MIPIterationsWithoutNLPCall++;
 		return (false);
 	}
 
@@ -341,7 +341,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			}
 		}
 
-		ProcessInfo::getInstance().itersMILPWithoutNLPCall = 0;
+		ProcessInfo::getInstance().MIPIterationsWithoutNLPCall = 0;
 		ProcessInfo::getInstance().solTimeLastNLPCall = ProcessInfo::getInstance().getElapsedTime("Total");
 	}
 

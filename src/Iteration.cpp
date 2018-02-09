@@ -8,7 +8,7 @@ Iteration::~Iteration()
 {
 }
 
-bool Iteration::isMILP()
+bool Iteration::isMIP()
 {
 	return (this->type == E_IterationProblemType::MIP);
 }

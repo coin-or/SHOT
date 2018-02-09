@@ -40,8 +40,8 @@ class Iteration
 
 		double usedConstraintTolerance;
 
-		int usedMILPSolutionLimit;
-		bool MILPSolutionLimitUpdated;
+		int usedMIPSolutionLimit;
+		bool MIPSolutionLimitUpdated;
 
 		int iterationNumber;
 
@@ -50,7 +50,7 @@ class Iteration
 
 		double boundaryDistance;
 
-		bool isMILP();
+		bool isMIP();
 
 		double solutionTime;
 

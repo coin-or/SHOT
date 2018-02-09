@@ -21,13 +21,13 @@
 #include "OSrLWriter.h"
 #include "OSErrorClass.h"
 
-#include "MILPSolver/IRelaxationStrategy.h"
+#include "MIPSolver/IRelaxationStrategy.h"
 
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/xml_parser.hpp"
 
 class OptProblemOriginal;
-class IMILPSolver;
+class IMIPSolver;
 class ILinesearchMethod;
 
 #include "LinesearchMethod/ILinesearchMethod.h"
@@ -38,7 +38,7 @@ class ProcessInfo
 		OSResult *osResult;
 		OptProblemOriginal *originalProblem;
 
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 		IRelaxationStrategy *relaxationStrategy;
 
 		TaskHandler *tasks;
@@ -104,9 +104,9 @@ class ProcessInfo
 		int numNLPProbsSolved;
 		int numPrimalFixedNLPProbsSolved;
 
-		int itersWithStagnationMILP; // TODO move to task
+		int itersWithStagnationMIP; // TODO move to task
 		int iterSignificantObjectiveUpdate; // TODO move to task
-		int itersMILPWithoutNLPCall; // TODO move to task
+		int MIPIterationsWithoutNLPCall; // TODO move to task
 		double solTimeLastNLPCall; // TODO move to task
 
 		int iterLastPrimalBoundUpdate;

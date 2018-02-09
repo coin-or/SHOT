@@ -111,11 +111,11 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 						hyperplane.sourceConstraintIndex = currConstrIdx;
 						hyperplane.generatedPoint = externalPoint;
 
-						if (i == 0 && currIter->isMILP())
+						if (i == 0 && currIter->isMIP())
 						{
 							hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
 						}
-						else if (currIter->isMILP())
+						else if (currIter->isMIP())
 						{
 							hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
 						}

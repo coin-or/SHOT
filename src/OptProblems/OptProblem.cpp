@@ -1184,16 +1184,16 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 
 		if (instance->getObjectiveMaxOrMins()[0] == "min")
 		{
-			if (instance->instanceData->variables->var[varIdx]->lb < -tmpObjBound)
+			if (instance->instanceData->variables->var[varIdx]->lb < tmpObjBound)
 			{
-				instance->instanceData->variables->var[varIdx]->lb = -tmpObjBound;
+				instance->instanceData->variables->var[varIdx]->lb = tmpObjBound;
 			}
 		}
 		else
 		{
-			if (instance->instanceData->variables->var[varIdx]->ub > tmpObjBound)
+			if (instance->instanceData->variables->var[varIdx]->ub > -tmpObjBound)
 			{
-				instance->instanceData->variables->var[varIdx]->ub = tmpObjBound;
+				instance->instanceData->variables->var[varIdx]->ub = -tmpObjBound;
 			}
 		}
 	}

@@ -22,7 +22,7 @@ void TaskCheckObjectiveStagnation::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (!currIter->isMILP())
+	if (!currIter->isMIP())
 	{
 		return;
 	}
@@ -33,10 +33,10 @@ void TaskCheckObjectiveStagnation::run()
 		return;
 	}
 
-	if (ProcessInfo::getInstance().iterSignificantObjectiveUpdate == 0) // First MILP solution
+	if (ProcessInfo::getInstance().iterSignificantObjectiveUpdate == 0) // First MIP solution
 	{
 		ProcessInfo::getInstance().iterSignificantObjectiveUpdate = currIter->iterationNumber;
-		ProcessInfo::getInstance().itersWithStagnationMILP = 0;
+		ProcessInfo::getInstance().itersWithStagnationMIP = 0;
 		return;
 	}
 
@@ -47,12 +47,12 @@ void TaskCheckObjectiveStagnation::run()
 			> Settings::getInstance().getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
 	{
 		ProcessInfo::getInstance().iterSignificantObjectiveUpdate = currIter->iterationNumber;
-		ProcessInfo::getInstance().itersWithStagnationMILP = 0;
+		ProcessInfo::getInstance().itersWithStagnationMIP = 0;
 
 		return;
 	}
 
-	if (ProcessInfo::getInstance().itersWithStagnationMILP
+	if (ProcessInfo::getInstance().itersWithStagnationMIP
 			>= Settings::getInstance().getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
 	{
 		ProcessInfo::getInstance().terminationReason = E_TerminationReason::ObjectiveStagnation;
@@ -60,7 +60,7 @@ void TaskCheckObjectiveStagnation::run()
 
 	}
 
-	ProcessInfo::getInstance().itersWithStagnationMILP++;
+	ProcessInfo::getInstance().itersWithStagnationMIP++;
 }
 
 std::string TaskCheckObjectiveStagnation::getType()

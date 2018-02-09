@@ -15,22 +15,22 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
 
 	if (solver == ES_MIPSolver::Cplex)
 	{
-		LPSolver = new MILPSolverCplex();
-		ProcessInfo::getInstance().outputInfo("Cplex selected as MILP solver for minimax solver.");
+		LPSolver = new MIPSolverCplex();
+		ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver for minimax solver.");
 	}
 	else if (solver == ES_MIPSolver::Gurobi)
 	{
-		LPSolver = new MILPSolverGurobi();
-		ProcessInfo::getInstance().outputInfo("Gurobi selected as MILP solver for minimax solver.");
+		LPSolver = new MIPSolverGurobi();
+		ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver for minimax solver.");
 	}
 	else if (solver == ES_MIPSolver::Cbc)
 	{
-		LPSolver = new MILPSolverOsiCbc();
-		ProcessInfo::getInstance().outputInfo("Cbc selected as MILP solver for minimax solver.");
+		LPSolver = new MIPSolverOsiCbc();
+		ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
 	}
 	else
 	{
-		throw new ErrorClass("Error in MILP solver definition for minimax solver.");
+		throw new ErrorClass("Error in MIP solver definition for minimax solver.");
 	}
 
 	//NLPProblem = new OptProblemNLPRelaxed();
@@ -347,7 +347,7 @@ bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance *origInstanc
 
 	ProcessInfo::getInstance().outputInfo("Creating LP problem for relaxed cutting plane solver");
 	LPSolver->createLinearProblem(NLPProblem);
-	ProcessInfo::getInstance().outputInfo("MILP problem for relaxed cutting plane solver created");
+	ProcessInfo::getInstance().outputInfo("LP problem for relaxed cutting plane solver created");
 	LPSolver->initializeSolverSettings();
 	LPSolver->activateDiscreteVariables(false);
 

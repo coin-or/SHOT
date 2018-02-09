@@ -1,10 +1,10 @@
 #include "TaskExecuteRelaxationStrategy.h"
 
-TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMILPSolver *MILPSolver)
+TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver)
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 
-	relaxationStrategy = new RelaxationStrategyStandard(this->MILPSolver);
+	relaxationStrategy = new RelaxationStrategyStandard(this->MIPSolver);
 
 	ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
 

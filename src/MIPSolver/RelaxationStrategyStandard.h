@@ -5,7 +5,7 @@
 class RelaxationStrategyStandard: public IRelaxationStrategy, RelaxationStrategyBase
 {
 	public:
-		RelaxationStrategyStandard(IMILPSolver *MILPSolver);
+		RelaxationStrategyStandard(IMIPSolver *MIPSolver);
 		~RelaxationStrategyStandard();
 
 		virtual void executeStrategy();
@@ -25,5 +25,5 @@ class RelaxationStrategyStandard: public IRelaxationStrategy, RelaxationStrategy
 		bool isObjectiveStagnant();
 
 		bool LPFinished;
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 };

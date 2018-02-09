@@ -2,12 +2,12 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
 class TaskPresolve: public TaskBase
 {
 	public:
-		TaskPresolve(IMILPSolver *MILPSolver);
+		TaskPresolve(IMIPSolver *MIPSolver);
 		virtual ~TaskPresolve();
 
 		virtual void run();
@@ -15,6 +15,6 @@ class TaskPresolve: public TaskBase
 	private:
 
 		bool isPresolved;
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 };
 

@@ -5,7 +5,7 @@
 class RelaxationStrategyNone: public IRelaxationStrategy, RelaxationStrategyBase
 {
 	public:
-		RelaxationStrategyNone(IMILPSolver *MILPSolver);
+		RelaxationStrategyNone(IMIPSolver *MIPSolver);
 		~RelaxationStrategyNone();
 
 		virtual void executeStrategy();
@@ -20,5 +20,5 @@ class RelaxationStrategyNone: public IRelaxationStrategy, RelaxationStrategyBase
 
 	private:
 
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 };

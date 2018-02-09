@@ -32,7 +32,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->isMILP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
+	if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
 	{
 		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 		ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
@@ -60,10 +60,10 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 				}
 
 				auto maxDevNLP2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(xNLP2);
-				auto maxDevMILP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(
+				auto maxDevMIP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(
 						solPoints.at(i).point);
 
-				if (maxDevNLP2.value <= 0 && maxDevMILP.value > 0)
+				if (maxDevNLP2.value <= 0 && maxDevMIP.value > 0)
 				{
 					try
 					{

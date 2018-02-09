@@ -29,7 +29,7 @@ void TaskCalculateSolutionChangeNorm::run()
 	}
 
 	if (ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.size() == 0
-			|| ProcessInfo::getInstance().getCurrentIteration()->isMILP())
+			|| ProcessInfo::getInstance().getCurrentIteration()->isMIP())
 	{
 		return;
 	}
@@ -38,7 +38,7 @@ void TaskCalculateSolutionChangeNorm::run()
 
 	for (int i = ProcessInfo::getInstance().iterations.size() - 2; i >= 1; i--)
 	{
-		if (ProcessInfo::getInstance().iterations.size() > 0 && !ProcessInfo::getInstance().iterations.at(i).isMILP())
+		if (ProcessInfo::getInstance().iterations.size() > 0 && !ProcessInfo::getInstance().iterations.at(i).isMIP())
 		{
 			auto prevIterSol = ProcessInfo::getInstance().iterations.at(i).hyperplanePoints.at(0);
 

@@ -1,8 +1,8 @@
 #include "TaskSolveFixedLinearProblem.h"
 
-TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem(IMILPSolver *MILPSolver)
+TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem(IMIPSolver *MIPSolver)
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 
 	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 	ProcessInfo::getInstance().startTimer("PrimalBoundFixedLP");
@@ -24,7 +24,7 @@ void TaskSolveFixedLinearProblem::run()
 	ProcessInfo::getInstance().startTimer("PrimalBoundFixedLP");
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); //The one not solved yet
 
-	if (currIter->MILPSolutionLimitUpdated) return;
+	if (currIter->MIPSolutionLimitUpdated) return;
 
 	if (currIter->iterationNumber < 5)
 	{
@@ -53,7 +53,7 @@ void TaskSolveFixedLinearProblem::run()
 	auto prevIter2 = &ProcessInfo::getInstance().iterations.at(prevIter->iterationNumber - 2);
 	auto prevIter3 = &ProcessInfo::getInstance().iterations.at(prevIter->iterationNumber - 3);
 
-	if (!prevIter->isMILP() && !prevIter2->isMILP() && !prevIter3->isMILP())
+	if (!prevIter->isMIP() && !prevIter2->isMIP() && !prevIter3->isMIP())
 	{
 		ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
 		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
@@ -91,7 +91,7 @@ void TaskSolveFixedLinearProblem::run()
 		fixValues.at(i) = currSolPt.at(discreteVariableIndexes.at(i));
 	}
 
-	MILPSolver->fixVariables(discreteVariableIndexes, fixValues);
+	MIPSolver->fixVariables(discreteVariableIndexes, fixValues);
 
 	int numVar = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
 
@@ -106,7 +106,7 @@ void TaskSolveFixedLinearProblem::run()
 
 	for (int k = 0; k < maxIter; k++)
 	{
-		auto solStatus = MILPSolver->solveProblem();
+		auto solStatus = MIPSolver->solveProblem();
 
 		if (solStatus != E_ProblemSolutionStatus::Optimal)
 		{
@@ -116,8 +116,8 @@ void TaskSolveFixedLinearProblem::run()
 		}
 		else
 		{
-			auto varSol = MILPSolver->getVariableSolution(0);
-			auto objVal = MILPSolver->getObjectiveValue(0);
+			auto varSol = MIPSolver->getVariableSolution(0);
+			auto objVal = MIPSolver->getObjectiveValue(0);
 
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(varSol);
 
@@ -146,7 +146,7 @@ void TaskSolveFixedLinearProblem::run()
 				hyperplane.generatedPoint = externalPoint;
 				hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
-				MILPSolver->createHyperplane(hyperplane);
+				MIPSolver->createHyperplane(hyperplane);
 
 			}
 			catch (std::exception &e)
@@ -283,9 +283,9 @@ void TaskSolveFixedLinearProblem::run()
 		}
 	}
 
-	MILPSolver->activateDiscreteVariables(true);
+	MIPSolver->activateDiscreteVariables(true);
 
-	MILPSolver->unfixVariables();
+	MIPSolver->unfixVariables();
 
 	ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
 	ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");

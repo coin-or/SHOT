@@ -196,7 +196,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
 	if (static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
 	{
-		solutionStrategy = new SolutionStrategyNormal(osInstance);
+		solutionStrategy = new SolutionStrategyMultiTree(osInstance);
 		isProblemInitialized = true;
 
 		return (true);
@@ -223,10 +223,10 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 		switch (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
 		{
 		case (ES_SolutionStrategy::SingleTree):
-			solutionStrategy = new SolutionStrategyLazy(osInstance);
+			solutionStrategy = new SolutionStrategySingleTree(osInstance);
 			break;
 		case (ES_SolutionStrategy::MultiTree):
-			solutionStrategy = new SolutionStrategyNormal(osInstance);
+			solutionStrategy = new SolutionStrategyMultiTree(osInstance);
 			break;
 		default:
 			break;
@@ -383,7 +383,7 @@ void SHOTSolver::initializeSettings()
 	// Dual strategy settings: Hyperplane generation
 
 	Settings::getInstance().createSetting("HyperplaneCuts.Delay", "Dual", true,
-										  "Add hyperplane cuts to model only after optimal MILP solution");
+										  "Add hyperplane cuts to model only after optimal MIP solution");
 
 	Settings::getInstance().createSetting("HyperplaneCuts.MaxPerIteration", "Dual", 200,
 										  "Maximal number of hyperplanes to add per iteration", 0, OSINT_MAX);
@@ -434,12 +434,12 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("MIP.SolutionPool.Populate", "Dual", false,
 										  "Try to populate the solution pool after MIP iteration termination", true);
 
-	std::vector<std::string> enumMILPSolver;
-	enumMILPSolver.push_back("Cplex");
-	enumMILPSolver.push_back("Gurobi");
-	enumMILPSolver.push_back("Cbc");
-	Settings::getInstance().createSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "What MIP solver to use", enumMILPSolver);
-	enumMILPSolver.clear();
+	std::vector<std::string> enumMIPSolver;
+	enumMIPSolver.push_back("Cplex");
+	enumMIPSolver.push_back("Gurobi");
+	enumMIPSolver.push_back("Cbc");
+	Settings::getInstance().createSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "What MIP solver to use", enumMIPSolver);
+	enumMIPSolver.clear();
 
 	Settings::getInstance().createSetting("MIP.UpdateObjectiveBounds", "Dual", false, "Update nonlinear objective variable bounds to primal/dual bounds");
 
@@ -479,6 +479,9 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("TreeStrategy", "Dual", static_cast<int>(ES_SolutionStrategy::SingleTree),
 										  "The main strategy to use", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
+
+	// Optimization model settings: Nonlinear objective function
+	Settings::getInstance().createSetting("NonlinearObjective.Bound", "Model", 100000000000.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
 	// Logging and output settings
 	std::vector<std::string> enumLogLevel;

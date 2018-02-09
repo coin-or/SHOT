@@ -21,13 +21,13 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->isMILP()/*
+	if (currIter->isMIP()/*
 	 && ProcessInfo::getInstance().getRelativeObjectiveGap() > Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination")*/)
 	{
 		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
 
-		ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MILPSolutionPool);
+		ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
 		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
 	}

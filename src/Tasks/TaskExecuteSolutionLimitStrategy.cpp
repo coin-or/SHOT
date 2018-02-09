@@ -1,15 +1,15 @@
 #include "TaskExecuteSolutionLimitStrategy.h"
 
-TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(IMILPSolver *MILPSolver)
+TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver)
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 
 	isInitialized = false;
 	temporaryOptLimitUsed = false;
 
-	solutionLimitStrategy = new MILPSolutionLimitStrategyIncrease(this->MILPSolver);
+	solutionLimitStrategy = new MIPSolutionLimitStrategyIncrease(this->MIPSolver);
 	auto initLim = solutionLimitStrategy->getInitialLimit();
-	MILPSolver->setSolutionLimit(initLim);
+	MIPSolver->setSolutionLimit(initLim);
 }
 
 TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy()
@@ -30,17 +30,17 @@ void TaskExecuteSolutionLimitStrategy::run()
 	if (temporaryOptLimitUsed)
 	{
 		temporaryOptLimitUsed = false;
-		MILPSolver->setSolutionLimit(previousSolLimit);
+		MIPSolver->setSolutionLimit(previousSolLimit);
 	}
 
 	if (currIter->iterationNumber - ProcessInfo::getInstance().iterLastDualBoundUpdate
 			> Settings::getInstance().getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
 			&& ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
 	{
-		previousSolLimit = prevIter->usedMILPSolutionLimit;
-		MILPSolver->setSolutionLimit(2100000000);
+		previousSolLimit = prevIter->usedMIPSolutionLimit;
+		MIPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
-		currIter->MILPSolutionLimitUpdated = true;
+		currIter->MIPSolutionLimitUpdated = true;
 		ProcessInfo::getInstance().outputInfo(
 				"     Forced optimal iteration since too many iterations since last dual bound update");
 	}
@@ -48,34 +48,34 @@ void TaskExecuteSolutionLimitStrategy::run()
 			> Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
 			&& ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
 	{
-		previousSolLimit = prevIter->usedMILPSolutionLimit;
-		MILPSolver->setSolutionLimit(2100000000);
+		previousSolLimit = prevIter->usedMIPSolutionLimit;
+		MIPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
-		currIter->MILPSolutionLimitUpdated = true;
+		currIter->MIPSolutionLimitUpdated = true;
 		ProcessInfo::getInstance().outputAlways(
 				"     Forced optimal iteration since too long time since last dual bound update");
 	}
 	else if (ProcessInfo::getInstance().getPrimalBound() < OSDBL_MAX
 			&& abs(prevIter->objectiveValue - ProcessInfo::getInstance().getPrimalBound()) < 0.001)
 	{
-		previousSolLimit = prevIter->usedMILPSolutionLimit + 1;
-		MILPSolver->setSolutionLimit(2100000000);
+		previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
+		MIPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
-		currIter->MILPSolutionLimitUpdated = true;
+		currIter->MIPSolutionLimitUpdated = true;
 		ProcessInfo::getInstance().outputInfo(
 				"     Forced optimal iteration since difference between MIP solution and primal is small");
 	}
 	else
 	{
-		currIter->MILPSolutionLimitUpdated = solutionLimitStrategy->updateLimit();
+		currIter->MIPSolutionLimitUpdated = solutionLimitStrategy->updateLimit();
 
-		if (currIter->MILPSolutionLimitUpdated)
+		if (currIter->MIPSolutionLimitUpdated)
 		{
 			int newLimit = solutionLimitStrategy->getNewLimit();
 
-			if (newLimit != ProcessInfo::getInstance().getPreviousIteration()->usedMILPSolutionLimit)
+			if (newLimit != ProcessInfo::getInstance().getPreviousIteration()->usedMIPSolutionLimit)
 			{
-				MILPSolver->setSolutionLimit(newLimit);
+				MIPSolver->setSolutionLimit(newLimit);
 			}
 		}
 	}

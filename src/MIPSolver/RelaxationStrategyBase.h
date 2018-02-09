@@ -2,7 +2,7 @@
 
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
-#include "IMILPSolver.h"
+#include "IMIPSolver.h"
 
 class RelaxationStrategyBase
 {
@@ -17,7 +17,7 @@ class RelaxationStrategyBase
 		bool isCurrentToleranceReached();
 		bool isGapReached();
 
-		//IMILPSolver *MILPSolver;
+		//IMIPSolver *MIPSolver;
 		//bool relaxationActive;
 
 };

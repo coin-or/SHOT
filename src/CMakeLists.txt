@@ -13,7 +13,6 @@ add_definitions(-DIL_STD)
 add_definitions(-LDFLAGS="-Wl,--no-as-needed")
 
 file(GLOB_RECURSE Foo_SOURCES
-  "GAMS2OS.cpp"
   "Iteration.cpp"
   "ProcessInfo.cpp"
   "SHOT.cpp"
@@ -24,20 +23,19 @@ file(GLOB_RECURSE Foo_SOURCES
   "UtilityFunctions.cpp"
   "./ConstraintSelectionStrategy/*.cpp"
   "./LinesearchMethod/*.cpp"
-  "./MILPSolver/*.cpp"
+  "./MIPSolver/*.cpp"
   "./NLPSolver/*.cpp"
   "./OptProblems/*.cpp"
   "./PointSelectionStrategy/*.cpp"
   "./PrimalSolutionStrategy/*.cpp"
   "./SolutionStrategy/*.cpp"
   "./Tasks/*.cpp"
+  "./GAMS/*.cpp"
   )
 
 #file(GLOB_RECURSE Foo_HEADERS "*.h")
-file(GLOB_RECURSE Foo_HEADERS
+file(GLOB_RECURSE Foo_HEgADERS
   "Enums.h"
-  "GAMS2OS.h"
-  "GamsNLinstr.h"
   "Iteration.h"
   "ProcessInfo.h"
   "SHOTSolver.h"
@@ -47,13 +45,14 @@ file(GLOB_RECURSE Foo_HEADERS
   "UtilityFunctions.h"
   "./ConstraintSelectionStrategy/*.h"
   "./LinesearchMethod/*.h"
-  "./MILPSolver/*.h"
+  "./MIPSolver/*.h"
   "./NLPSolver/*.h"
   "./OptProblems/*.h"
   "./PointSelectionStrategy/*.h"
   "./PrimalSolutionStrategy/*.h"
   "./SolutionStrategy/*.h"
   "./Tasks/*.h"
+  "./GAMS/*.h"
   )
 
 set (Foo_INCLUDE_DIRS "")

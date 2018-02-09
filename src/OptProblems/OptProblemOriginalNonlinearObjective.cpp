@@ -33,8 +33,8 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 	this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
 	this->addedObjectiveVariableName = "addobjvar";
-	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
-	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
+	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("NonlinearObjective.Bound", "Model");
+	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("NonlinearObjective.Bound", "Model");
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 

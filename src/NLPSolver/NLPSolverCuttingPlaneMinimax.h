@@ -9,9 +9,9 @@
 
 #include "NLPSolverBase.h"
 #include "../OptProblems/OptProblemNLPMinimax.h"
-#include "../MILPSolver/MILPSolverCplex.h"
-#include "../MILPSolver/MILPSolverGurobi.h"
-#include "../MILPSolver/MILPSolverOsiCbc.h"
+#include "../MIPSolver/MIPSolverCplex.h"
+#include "../MIPSolver/MIPSolverGurobi.h"
+#include "../MIPSolver/MIPSolverOsiCbc.h"
 
 #include "boost/math/tools/minima.hpp"
 
@@ -32,7 +32,7 @@ class NLPSolverCuttingPlaneMinimax: public NLPSolverBase
 
 	private:
 
-		IMILPSolver *LPSolver;
+		IMIPSolver *LPSolver;
 
 		virtual double getSolution(int i);
 		virtual std::vector<double> getSolution();

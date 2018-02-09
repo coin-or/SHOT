@@ -3,8 +3,8 @@
  */
 
 #include "NLPSolverGAMS.h"
-#include "GAMS2OS.h"
-#include "OptProblemNLPRelaxed.h"
+#include "../GAMS/GAMS2OS.h"
+#include "../OptProblems/OptProblemNLPRelaxed.h"
 
 NLPSolverGAMS::NLPSolverGAMS() :
 		gmo(NULL), gev(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)

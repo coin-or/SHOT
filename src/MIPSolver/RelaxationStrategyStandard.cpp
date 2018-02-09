@@ -1,8 +1,8 @@
 #include "RelaxationStrategyStandard.h"
 
-RelaxationStrategyStandard::RelaxationStrategyStandard(IMILPSolver *MILPSolver)
+RelaxationStrategyStandard::RelaxationStrategyStandard(IMIPSolver *MIPSolver)
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 }
 
 RelaxationStrategyStandard::~RelaxationStrategyStandard()
@@ -45,11 +45,11 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-	if (MILPSolver->getDiscreteVariableStatus())
+	if (MIPSolver->getDiscreteVariableStatus())
 	{
-		ProcessInfo::getInstance().stopTimer("MILP");
+		ProcessInfo::getInstance().stopTimer("MIP");
 		ProcessInfo::getInstance().startTimer("LP");
-		MILPSolver->activateDiscreteVariables(false);
+		MIPSolver->activateDiscreteVariables(false);
 
 		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::Relaxed;
 	}
@@ -57,11 +57,11 @@ void RelaxationStrategyStandard::setActive()
 
 void RelaxationStrategyStandard::setInactive()
 {
-	if (!MILPSolver->getDiscreteVariableStatus())
+	if (!MIPSolver->getDiscreteVariableStatus())
 	{
 		ProcessInfo::getInstance().stopTimer("LP");
-		ProcessInfo::getInstance().startTimer("MILP");
-		MILPSolver->activateDiscreteVariables(true);
+		ProcessInfo::getInstance().startTimer("MIP");
+		MIPSolver->activateDiscreteVariables(true);
 
 		ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
 
@@ -72,7 +72,7 @@ void RelaxationStrategyStandard::setInactive()
 
 E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 {
-	if (MILPSolver->getDiscreteVariableStatus())
+	if (MIPSolver->getDiscreteVariableStatus())
 
 	return (E_IterationProblemType::MIP);
 	else return (E_IterationProblemType::Relaxed);

@@ -1,9 +1,9 @@
 #include "TaskAddIntegerCuts.h"
 
-TaskAddIntegerCuts::TaskAddIntegerCuts(IMILPSolver *MILPSolver)
+TaskAddIntegerCuts::TaskAddIntegerCuts(IMIPSolver *MIPSolver)
 {
 
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 }
 
 TaskAddIntegerCuts::~TaskAddIntegerCuts()
@@ -17,8 +17,8 @@ void TaskAddIntegerCuts::run()
 
 	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0) return;
 
-	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
-			|| !currIter->MILPSolutionLimitUpdated)
+	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
+			|| !currIter->MIPSolutionLimitUpdated)
 	{
 
 		for (int j = 0; j < ProcessInfo::getInstance().integerCutWaitingList.size(); j++)
@@ -37,7 +37,7 @@ void TaskAddIntegerCuts::run()
 				elements.push_back(pair);
 			}
 
-			this->MILPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
+			this->MIPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
 			ProcessInfo::getInstance().numIntegerCutsAdded++;
 		}
 

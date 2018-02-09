@@ -1,7 +1,7 @@
 #pragma once
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 class TaskPrintSolution: public TaskBase
 {
 	public:

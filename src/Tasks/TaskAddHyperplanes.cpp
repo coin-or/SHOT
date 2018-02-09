@@ -7,12 +7,12 @@
 
 #include "TaskAddHyperplanes.h"
 
-TaskAddHyperplanes::TaskAddHyperplanes(IMILPSolver *MILPSolver)
+TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
 {
 
 	itersWithoutAddedHPs = 0;
 
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 }
 
 TaskAddHyperplanes::~TaskAddHyperplanes()
@@ -22,11 +22,11 @@ TaskAddHyperplanes::~TaskAddHyperplanes()
 
 void TaskAddHyperplanes::run()
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
-			|| !currIter->MILPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
+	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
+			|| !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
 		int addedHyperplanes = 0;
 
@@ -38,11 +38,11 @@ void TaskAddHyperplanes::run()
 
 			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
 			{
-				MILPSolver->createInteriorHyperplane(tmpItem);
+				MIPSolver->createInteriorHyperplane(tmpItem);
 			}
 			else
 			{
-				MILPSolver->createHyperplane(tmpItem);
+				MIPSolver->createHyperplane(tmpItem);
 
 				ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
 

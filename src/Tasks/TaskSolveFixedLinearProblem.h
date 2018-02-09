@@ -3,12 +3,12 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
 class TaskSolveFixedLinearProblem: public TaskBase
 {
 	public:
-		TaskSolveFixedLinearProblem(IMILPSolver *MILPSolver);
+		TaskSolveFixedLinearProblem(IMIPSolver *MIPSolver);
 		virtual ~TaskSolveFixedLinearProblem();
 		virtual void run();
 		virtual std::string getType();
@@ -19,6 +19,6 @@ class TaskSolveFixedLinearProblem: public TaskBase
 
 		std::vector<double> lastSolution;
 		double lastPrimalBound;
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 };
 

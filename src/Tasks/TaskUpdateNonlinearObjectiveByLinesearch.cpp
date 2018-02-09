@@ -25,7 +25,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (!currIter->isMILP()) return;
+	if (!currIter->isMIP()) return;
 
 	auto allSolutions = currIter->solutionPoints;
 

@@ -1,25 +1,25 @@
 
-#include <SolutionStrategyMIQCQP.h>
+#include "SolutionStrategyMIQCQP.h"
 
 SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance* osInstance)
 {
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 
 	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
-	ProcessInfo::getInstance().createTimer("MILP", " - MIP problems");
+	ProcessInfo::getInstance().createTimer("MIP", " - MIP problems");
 	ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
 
 	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
 	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solverMILP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+	auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
-	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(solverMILP, false);
-	ProcessInfo::getInstance().tasks->addTask(tInitMILPSolver, "InitMILPSolver");
+	TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
+	ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-	auto MILPSolver = ProcessInfo::getInstance().MILPSolver;
+	auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
 
 	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
 	ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
@@ -27,8 +27,8 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance* osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem(MILPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
+	TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
+	ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
 	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
@@ -37,7 +37,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance* osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
-	TaskBase *tSolveIteration = new TaskSolveIteration(MILPSolver);
+	TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
 	TaskBase *tPrintIterReport = new TaskPrintIterationReport();

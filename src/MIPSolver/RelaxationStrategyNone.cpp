@@ -1,8 +1,8 @@
 #include "RelaxationStrategyNone.h"
 
-RelaxationStrategyNone::RelaxationStrategyNone(IMILPSolver *MILPSolver)
+RelaxationStrategyNone::RelaxationStrategyNone(IMIPSolver *MIPSolver)
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 }
 
 RelaxationStrategyNone::~RelaxationStrategyNone()
@@ -31,6 +31,6 @@ void RelaxationStrategyNone::setInactive()
 
 E_IterationProblemType RelaxationStrategyNone::getProblemType()
 {
-	if (MILPSolver->getDiscreteVariableStatus()) return E_IterationProblemType::MIP;
+	if (MIPSolver->getDiscreteVariableStatus()) return E_IterationProblemType::MIP;
 	else return E_IterationProblemType::Relaxed;
 }

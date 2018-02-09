@@ -9,7 +9,7 @@
 
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
 class TaskSelectPrimalCandidatesFromSolutionPool: public TaskBase
 {

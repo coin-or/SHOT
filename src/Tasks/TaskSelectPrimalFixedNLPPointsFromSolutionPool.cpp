@@ -1,4 +1,4 @@
-#include <TaskSelectPrimalFixedNLPPointsFromSolutionPool.h>
+#include "TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
 TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool()
 {
@@ -18,7 +18,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	bool callNLPSolver = false;
 	bool useFeasibleSolutionExtra = false;
 
-	if (!currIter->isMILP())
+	if (!currIter->isMIP())
 	{
 		return;
 	}
@@ -28,9 +28,9 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 		return;
 	}
 
-	if (currIter->MILPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
+	if (currIter->MIPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
 	{
-		ProcessInfo::getInstance().itersMILPWithoutNLPCall++;
+		ProcessInfo::getInstance().MIPIterationsWithoutNLPCall++;
 		return;
 	}
 
@@ -53,7 +53,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime)
 			|| userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
 	{
-		if (ProcessInfo::getInstance().itersMILPWithoutNLPCall
+		if (ProcessInfo::getInstance().MIPIterationsWithoutNLPCall
 				>= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
 		{
 			ProcessInfo::getInstance().outputInfo(

@@ -5,7 +5,7 @@
  *      Author: alundell
  */
 
-#include <SolutionStrategyNLP.h>
+#include "SolutionStrategyNLP.h"
 
 SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 {
@@ -17,20 +17,20 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 
 	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
 	ProcessInfo::getInstance().createTimer("LP", " - Relaxed problems");
-	ProcessInfo::getInstance().createTimer("MILP", " - MIP problems");
+	ProcessInfo::getInstance().createTimer("MIP", " - MIP problems");
 	ProcessInfo::getInstance().createTimer("HyperplaneLinesearch", " - Linesearch");
 	ProcessInfo::getInstance().createTimer("ObjectiveLinesearch", " - Objective linesearch");
 	ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
 	ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
 
-	auto solverMILP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+	auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
 	TaskBase *tFinalizeSolution = new TaskSequential();
 
-	TaskBase *tInitMILPSolver = new TaskInitializeMILPSolver(solverMILP, false);
-	ProcessInfo::getInstance().tasks->addTask(tInitMILPSolver, "InitMILPSolver");
+	TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
+	ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-	auto MILPSolver = ProcessInfo::getInstance().MILPSolver;
+	auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
 
 	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
 	ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
@@ -44,8 +44,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
 	}
 
-	TaskBase *tCreateMILPProblem = new TaskCreateMILPProblem(MILPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tCreateMILPProblem, "CreateMILPProblem");
+	TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
+	ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
 	TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
 	ProcessInfo::getInstance().tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
@@ -53,16 +53,16 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 	TaskBase *tInitializeIteration = new TaskInitializeIteration();
 	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	TaskBase *tAddHPs = new TaskAddHyperplanes(MILPSolver);
+	TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
 	/*if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
 	 + ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
 	 {
-	 TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MILPSolver);
+	 TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
 	 ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 	 }*/
 
@@ -76,11 +76,11 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 
 	if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
 	{
-		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
+		TaskBase *tPresolve = new TaskPresolve(MIPSolver);
 		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
 	}
 
-	TaskBase *tSolveIteration = new TaskSolveIteration(MILPSolver);
+	TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))

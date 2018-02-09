@@ -50,11 +50,11 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 				hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
 				hyperplane.generatedPoint = solPoints.at(i).point;
 
-				if (i == 0 && currIter->isMILP())
+				if (i == 0 && currIter->isMIP())
 				{
 					hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
 				}
-				else if (currIter->isMILP())
+				else if (currIter->isMIP())
 				{
 					hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
 				}

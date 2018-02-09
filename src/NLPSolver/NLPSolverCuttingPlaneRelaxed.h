@@ -9,9 +9,9 @@
 
 #include "NLPSolverBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
-#include "../MILPSolver/MILPSolverCplex.h"
-#include "../MILPSolver/MILPSolverGurobi.h"
-#include "../MILPSolver/MILPSolverOsiCbc.h"
+#include "../MIPSolver/MIPSolverCplex.h"
+#include "../MIPSolver/MIPSolverGurobi.h"
+#include "../MIPSolver/MIPSolverOsiCbc.h"
 #include "INLPSolver.h"
 
 class NLPSolverCuttingPlaneRelaxed: virtual public NLPSolverBase
@@ -33,7 +33,7 @@ class NLPSolverCuttingPlaneRelaxed: virtual public NLPSolverBase
 
 	private:
 
-		IMILPSolver *LPSolver;
+		IMIPSolver *LPSolver;
 
 		virtual double getSolution(int i);
 		virtual std::vector<double> getSolution();

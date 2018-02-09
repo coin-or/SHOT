@@ -2,14 +2,14 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
-#include "../MILPSolver/IRelaxationStrategy.h"
-#include "../MILPSolver/RelaxationStrategyStandard.h"
-#include "../MILPSolver/RelaxationStrategyNone.h"
+#include "../MIPSolver/IRelaxationStrategy.h"
+#include "../MIPSolver/RelaxationStrategyStandard.h"
+#include "../MIPSolver/RelaxationStrategyNone.h"
 
 class TaskExecuteRelaxationStrategy: public TaskBase
 {
 	public:
-		TaskExecuteRelaxationStrategy(IMILPSolver *MILPSolver);
+		TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver);
 		~TaskExecuteRelaxationStrategy();
 
 		void run();
@@ -20,7 +20,7 @@ class TaskExecuteRelaxationStrategy: public TaskBase
 
 		bool isInitialized;
 
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 
 };
 

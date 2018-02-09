@@ -21,8 +21,8 @@
 #include "../Tasks/TaskInitializeIteration.h"
 #include "../Tasks/TaskTerminate.h"
 
-#include "../Tasks/TaskInitializeMILPSolver.h"
-#include "../Tasks/TaskCreateMILPProblem.h"
+#include "../Tasks/TaskInitializeDualSolver.h"
+#include "../Tasks/TaskCreateDualProblem.h"
 
 #include "../Tasks/TaskPrintIterationHeader.h"
 #include "../Tasks/TaskExecuteRelaxationStrategy.h"

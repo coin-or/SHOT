@@ -298,7 +298,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 			this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
 			this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
 
-			if (C.sourceType == E_DualSolutionSource::MILPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution )
+			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution )
 			{
 				this->addDualSolution(C);
 			}
@@ -310,11 +310,11 @@ void ProcessInfo::checkDualSolutionCandidates()
 			case E_DualSolutionSource::LPSolution:
 				sourceDesc = "LP solution";
 				break;
-			case E_DualSolutionSource::MILPSolutionOptimal:
-				sourceDesc = "MILP solution";
+			case E_DualSolutionSource::MIPSolutionOptimal:
+				sourceDesc = "MIP solution";
 				break;
-			case E_DualSolutionSource::MILPSolutionFeasible:
-				sourceDesc = "MILP solution bound";
+			case E_DualSolutionSource::MIPSolutionFeasible:
+				sourceDesc = "MIP solution bound";
 				break;
 			case E_DualSolutionSource::ObjectiveConstraint:
 				sourceDesc = "Obj. constr. linesearch";
@@ -384,7 +384,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 	case E_PrimalSolutionSource::NLPRelaxed:
 		sourceDesc = "NLP relaxed";
 		break;
-	case E_PrimalSolutionSource::MILPSolutionPool:
+	case E_PrimalSolutionSource::MIPSolutionPool:
 		sourceDesc = "MILP sol. pool";
 		break;
 	case E_PrimalSolutionSource::ObjectiveConstraint:
@@ -562,7 +562,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 	// Assume linear constraints are valid for MIP/LP solutions
 
-	/*if (primalSol.sourceType == E_PrimalSolutionSource::MILPSolutionPool
+	/*if (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
 	 || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
 	 || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback)
 	 {
@@ -828,9 +828,9 @@ ProcessInfo::ProcessInfo()
 	numNLPProbsSolved = 0;
 	numPrimalFixedNLPProbsSolved = 0;
 
-	itersWithStagnationMILP = 0;
+	itersWithStagnationMIP = 0;
 	iterSignificantObjectiveUpdate = 0;
-	itersMILPWithoutNLPCall = 0;
+	MIPIterationsWithoutNLPCall = 0;
 	solTimeLastNLPCall = 0;
 
 	numFunctionEvals = 0;
@@ -1343,7 +1343,7 @@ void ProcessInfo::createIteration()
 
 	iter.maxDeviation = OSDBL_MAX;
 	iter.boundaryDistance = OSDBL_MAX;
-	iter.MILPSolutionLimitUpdated = false;
+	iter.MIPSolutionLimitUpdated = false;
 
 	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_SolutionStrategy::SingleTree)
 	{

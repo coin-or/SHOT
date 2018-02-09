@@ -10,12 +10,12 @@
 #include "TaskBase.h"
 
 #include "../OptProblems/OptProblemOriginal.h"
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
 class TaskAddHyperplanes: public TaskBase
 {
 	public:
-		TaskAddHyperplanes(IMILPSolver *MILPSolver);
+		TaskAddHyperplanes(IMIPSolver *MIPSolver);
 		virtual ~TaskAddHyperplanes();
 
 		virtual void run();
@@ -26,6 +26,6 @@ class TaskAddHyperplanes: public TaskBase
 
 		int itersWithoutAddedHPs;
 
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 };
 

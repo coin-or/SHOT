@@ -116,7 +116,6 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 	{
 		for (int i = 0; i < numVar; i++)
 		{
-
 			std::string name = varNames.at(i);
 			double lb = varLBs.at(i);
 			double ub = varUBs.at(i);
@@ -129,9 +128,11 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 	double tmpObjLowerBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
 	double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
+	double tmpMuMaxAbsValue = Settings::getInstance().getDoubleSetting("NonlinearObjective.Bound", "Model");
+
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		destination->addVariable(numVar, "mu", tmpObjLowerBound, (-tmpObjLowerBound), 'C');
+		destination->addVariable(numVar, "mu", -tmpMuMaxAbsValue, tmpMuMaxAbsValue, 'C');
 		destination->addVariable(numVar + 1, "tempobjvar", tmpObjLowerBound, tmpObjUpperBound, 'C');
 	}
 	else

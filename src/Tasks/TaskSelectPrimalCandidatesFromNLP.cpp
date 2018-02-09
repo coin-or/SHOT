@@ -28,7 +28,7 @@ void TaskSelectPrimalCandidatesFromNLP::run()
 
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->isMILP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
+	if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
 	{
 		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
 		ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");

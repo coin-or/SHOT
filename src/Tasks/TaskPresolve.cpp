@@ -1,10 +1,10 @@
 #include "TaskPresolve.h"
 
-TaskPresolve::TaskPresolve(IMILPSolver *MILPSolver)
+TaskPresolve::TaskPresolve(IMIPSolver *MIPSolver)
 {
 
 	isPresolved = false;
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 }
 
 TaskPresolve::~TaskPresolve()
@@ -18,7 +18,7 @@ void TaskPresolve::run()
 
 	auto strategy = static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual"));
 
-	if (!currIter->isMILP())
+	if (!currIter->isMIP())
 	{
 		return;
 	}
@@ -34,21 +34,21 @@ void TaskPresolve::run()
 
 	// Sets the iteration time limit
 	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
-	MILPSolver->setTimeLimit(timeLim);
+	MIPSolver->setTimeLimit(timeLim);
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
+		MIPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
 	}
 
-	if (MILPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
+	if (MIPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
+		MIPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
 	if (Settings::getInstance().getBoolSetting("FixedInteger.UsePresolveBounds", "Primal") || Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
 	{
-		MILPSolver->presolveAndUpdateBounds();
+		MIPSolver->presolveAndUpdateBounds();
 		isPresolved = true;
 	}
 }

@@ -3,8 +3,8 @@
 enum class E_DualSolutionSource
 {
 	LPSolution, 
-	MILPSolutionOptimal, 
-	MILPSolutionFeasible, 
+	MIPSolutionOptimal, 
+	MIPSolutionFeasible, 
 	ObjectiveConstraint
 };
 
@@ -43,7 +43,7 @@ enum class E_PrimalSolutionSource
 	LinesearchFixedIntegers,
 	NLPFixedIntegers,
 	NLPRelaxed,
-	MILPSolutionPool,
+	MIPSolutionPool,
 	ObjectiveConstraint,
 	LPFixedIntegers,
 	LazyConstraintCallback,

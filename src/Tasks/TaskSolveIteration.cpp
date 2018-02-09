@@ -7,9 +7,9 @@
 
 #include "TaskSolveIteration.h"
 
-TaskSolveIteration::TaskSolveIteration(IMILPSolver *MILPSolver)
+TaskSolveIteration::TaskSolveIteration(IMIPSolver *MIPSolver)
 {
-	this->MILPSolver = MILPSolver;
+	this->MIPSolver = MIPSolver;
 }
 
 TaskSolveIteration::~TaskSolveIteration()
@@ -25,30 +25,30 @@ void TaskSolveIteration::run()
 
 	// Sets the iteration time limit
 	auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
-	MILPSolver->setTimeLimit(timeLim);
+	MIPSolver->setTimeLimit(timeLim);
 
 	if (ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
 		if (isMinimization)
 		{
-			MILPSolver->setCutOff(
+			MIPSolver->setCutOff(
 				ProcessInfo::getInstance().getPrimalBound() + Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual"));
 		}
 		else
 		{
-			MILPSolver->setCutOff(
+			MIPSolver->setCutOff(
 				ProcessInfo::getInstance().getPrimalBound() - Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual"));
 		}
 	}
 
-	if (Settings::getInstance().getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MILPSolutionLimitUpdated)
+	if (Settings::getInstance().getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
 	{
-		MILPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
+		MIPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
 	}
 
-	if (MILPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
+	if (MIPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
 	{
-		MILPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
+		MIPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
 	}
 
 	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
@@ -58,11 +58,11 @@ void TaskSolveIteration::run()
 		ss << "/lp";
 		ss << currIter->iterationNumber - 1;
 		ss << ".lp";
-		MILPSolver->writeProblemToFile(ss.str());
+		MIPSolver->writeProblemToFile(ss.str());
 	}
 
 	ProcessInfo::getInstance().outputInfo("Solving MIP problem.");
-	auto solStatus = MILPSolver->solveProblem();
+	auto solStatus = MIPSolver->solveProblem();
 	ProcessInfo::getInstance().outputInfo("MIP problem solved.");
 
 	// Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
@@ -79,7 +79,7 @@ void TaskSolveIteration::run()
 	{
 		currIter->solutionStatus = solStatus;
 
-		auto sols = MILPSolver->getAllVariableSolutions();
+		auto sols = MIPSolver->getAllVariableSolutions();
 		currIter->solutionPoints = sols;
 
 		if (sols.size() > 0)
@@ -95,14 +95,14 @@ void TaskSolveIteration::run()
 																ProcessInfo::getInstance().originalProblem->getVariableNames(), ss.str());
 			}
 
-			currIter->objectiveValue = MILPSolver->getObjectiveValue();
+			currIter->objectiveValue = MIPSolver->getObjectiveValue();
 
 			if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 			{
 				std::vector<double> tmpObjValue;
 				std::vector<std::string> tmpObjName;
 
-				tmpObjValue.push_back(MILPSolver->getObjectiveValue());
+				tmpObjValue.push_back(MIPSolver->getObjectiveValue());
 				tmpObjName.push_back("objective");
 
 				stringstream ss;
@@ -135,18 +135,18 @@ void TaskSolveIteration::run()
 				UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
 			}
 
-			double tmpDualObjBound = MILPSolver->getDualObjectiveValue();
-			if (currIter->isMILP())
+			double tmpDualObjBound = MIPSolver->getDualObjectiveValue();
+			if (currIter->isMIP())
 			{
 				DualSolution sol =
-					{sols.at(0).point, E_DualSolutionSource::MILPSolutionFeasible, tmpDualObjBound,
+					{sols.at(0).point, E_DualSolutionSource::MIPSolutionFeasible, tmpDualObjBound,
 					 currIter->iterationNumber};
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 
 				if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 				{
 					DualSolution sol =
-					{sols.at(0).point, E_DualSolutionSource::MILPSolutionOptimal, currIter->objectiveValue,
+					{sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal, currIter->objectiveValue,
 					 currIter->iterationNumber};
 					ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 				}
@@ -161,7 +161,7 @@ void TaskSolveIteration::run()
 		}
 	}
 
-	currIter->usedMILPSolutionLimit = MILPSolver->getSolutionLimit();
+	currIter->usedMIPSolutionLimit = MIPSolver->getSolutionLimit();
 
 	// Update solution stats
 	if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)

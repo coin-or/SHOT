@@ -2,15 +2,15 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
-#include "../MILPSolver/IMILPSolutionLimitStrategy.h"
-#include "../MILPSolver/MILPSolutionLimitStrategyUnlimited.h"
-#include "../MILPSolver/MILPSolutionLimitStrategyIncrease.h"
-#include "../MILPSolver/MILPSolutionLimitStrategyAdaptive.h"
+#include "../MIPSolver/IMIPSolutionLimitStrategy.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
 
 class TaskExecuteSolutionLimitStrategy: public TaskBase
 {
 	public:
-		TaskExecuteSolutionLimitStrategy(IMILPSolver *MILPSolver);
+		TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver);
 		~TaskExecuteSolutionLimitStrategy();
 
 		void run();
@@ -18,9 +18,9 @@ class TaskExecuteSolutionLimitStrategy: public TaskBase
 
 	private:
 
-		IMILPSolutionLimitStrategy *solutionLimitStrategy;
+		IMIPSolutionLimitStrategy *solutionLimitStrategy;
 
-		IMILPSolver *MILPSolver;
+		IMIPSolver *MIPSolver;
 
 		bool isInitialized;
 		bool temporaryOptLimitUsed;

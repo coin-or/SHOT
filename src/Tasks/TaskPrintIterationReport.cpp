@@ -39,7 +39,7 @@ void TaskPrintIterationReport::run()
 		else if (isMIQCP) tmpType << "QCP";
 		else if (isMIQP && isDiscrete) tmpType << "MIQP";
 		else if (isMIQP) tmpType << "QP";
-		else if (isDiscrete) tmpType << "MILP";
+		else if (isDiscrete) tmpType << "MIP";
 		else tmpType << "LP";
 
 		if (currIter->solutionPoints.size() == 0) hasSolution = false;
@@ -69,13 +69,13 @@ void TaskPrintIterationReport::run()
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 		{
 			tmpType << " SL";
-			if (currIter->usedMILPSolutionLimit > 1000)
+			if (currIter->usedMIPSolutionLimit > 1000)
 			{
 				tmpType << "∞";
 			}
 			else
 			{
-				tmpType << std::to_string(currIter->usedMILPSolutionLimit);
+				tmpType << std::to_string(currIter->usedMIPSolutionLimit);
 			}
 		}
 		else if (currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
@@ -112,7 +112,7 @@ void TaskPrintIterationReport::run()
 
 		if (primalBound != lastPrimalBound && ProcessInfo::getInstance().primalSolutions.size() > 0
 				&& ProcessInfo::getInstance().primalSolutions.at(0).sourceType
-						== E_PrimalSolutionSource::MILPSolutionPool)
+						== E_PrimalSolutionSource::MIPSolutionPool)
 		{
 			primalBoundExpr = UtilityFunctions::toString(primalBound);
 			lastPrimalBound = primalBound;
