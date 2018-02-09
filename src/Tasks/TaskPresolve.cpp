@@ -16,18 +16,18 @@ void TaskPresolve::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	auto strategy = static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual"));
+	auto strategy = static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual"));
 
 	if (!currIter->isMILP())
 	{
 		return;
 	}
 
-	if (strategy == ES_PresolveStrategy::Never)
+	if (strategy == ES_MIPPresolveStrategy::Never)
 	{
 		return;
 	}
-	else if (strategy == ES_PresolveStrategy::Once && isPresolved == true)
+	else if (strategy == ES_MIPPresolveStrategy::Once && isPresolved == true)
 	{
 		return;
 	}

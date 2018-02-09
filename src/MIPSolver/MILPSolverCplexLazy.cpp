@@ -14,10 +14,10 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
 	ProcessInfo::getInstance().lastLazyAddedIter = 0;
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
-		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		}
@@ -131,11 +131,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
 				solutionPoints.at(0) = tmpSolPt;
 
-				if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting(
-						"CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+				if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting(
+						"CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 				{
-					if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+					if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 					{
 						static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
 					}
@@ -291,7 +291,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("CPLEX error when invoking general callback", e.getMessage());
+		ProcessInfo::getInstance().outputError("Cplex error when invoking general callback", e.getMessage());
 	}
 }
 
@@ -380,10 +380,10 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 		lastNumAddedHyperplanes = 0;
 		ProcessInfo::getInstance().getCurrentIteration()->numHyperplanesAdded++;
 
-		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+		if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 		{
-			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 			{
 				static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
 			}
@@ -407,7 +407,7 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("CPLEX error when invoking general lazy callback", e.getMessage());
+		ProcessInfo::getInstance().outputError("Cplex error when invoking general lazy callback", e.getMessage());
 	}
 }
 
@@ -446,7 +446,7 @@ void MILPSolverCplexLazy::initializeSolverSettings()
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("CPLEX error when initializing parameters for linear solver",
+		ProcessInfo::getInstance().outputError("Cplex error when initializing parameters for linear solver",
 											   e.getMessage());
 	}
 }

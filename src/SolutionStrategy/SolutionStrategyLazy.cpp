@@ -34,7 +34,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
 	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplanePointStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
+	if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
 	{
 		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
 		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
@@ -56,7 +56,7 @@ SolutionStrategyLazy::SolutionStrategyLazy(OSInstance *osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
-	if (static_cast<ES_PresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_PresolveStrategy::Never)
+	if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
 	{
 		TaskBase *tPresolve = new TaskPresolve(MILPSolver);
 		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");

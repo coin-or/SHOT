@@ -1,6 +1,6 @@
-#include "NLPSolverIPOptMinimax.h"
+#include "NLPSolverIpoptMinimax.h"
 
-NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
+NLPSolverIpoptMinimax::NLPSolverIpoptMinimax()
 {
 
 	osolwriter = new OSoLWriter();
@@ -10,21 +10,21 @@ NLPSolverIPOptMinimax::NLPSolverIPOptMinimax()
 	setInitialSettings();
 }
 
-NLPSolverIPOptMinimax::~NLPSolverIPOptMinimax()
+NLPSolverIpoptMinimax::~NLPSolverIpoptMinimax()
 {
 	delete NLPSolver;
 	delete osolwriter;
 	delete NLPProblem;
 }
 
-std::vector<double> NLPSolverIPOptMinimax::getSolution()
+std::vector<double> NLPSolverIpoptMinimax::getSolution()
 {
 	int numVar = NLPProblem->getNumberOfVariables();
 	std::vector<double> tmpPoint(numVar);
 
 	for (int i = 0; i < numVar; i++)
 	{
-		tmpPoint.at(i) = NLPSolverIPOptBase::getSolution(i);
+		tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
 	}
 
 	if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
@@ -38,7 +38,7 @@ std::vector<double> NLPSolverIPOptMinimax::getSolution()
 	return (tmpPoint);
 }
 
-bool NLPSolverIPOptMinimax::createProblemInstance(OSInstance * origInstance)
+bool NLPSolverIpoptMinimax::createProblemInstance(OSInstance * origInstance)
 {
 
 	ProcessInfo::getInstance().outputInfo("     Creating Ipopt minimax problem.");
@@ -50,7 +50,7 @@ bool NLPSolverIPOptMinimax::createProblemInstance(OSInstance * origInstance)
 	return (true);
 }
 
-void NLPSolverIPOptMinimax::setSolverSpecificInitialSettings()
+void NLPSolverIpoptMinimax::setSolverSpecificInitialSettings()
 {
 	auto constrTol = Settings::getInstance().getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
 	osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",

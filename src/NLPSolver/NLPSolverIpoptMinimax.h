@@ -1,12 +1,12 @@
 #pragma once
-#include "NLPSolverIPOptBase.h"
+#include "NLPSolverIpoptBase.h"
 #include "../OptProblems/OptProblemNLPMinimax.h"
 
-class NLPSolverIPOptMinimax: public NLPSolverBase, public NLPSolverIPOptBase
+class NLPSolverIpoptMinimax: public NLPSolverBase, public NLPSolverIpoptBase
 {
 	public:
-		NLPSolverIPOptMinimax();
-		~NLPSolverIPOptMinimax();
+		NLPSolverIpoptMinimax();
+		~NLPSolverIpoptMinimax();
 
 		std::vector<double> getSolution();
 

@@ -19,9 +19,9 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 		NLPSolver = new NLPSolverCuttingPlaneRelaxed();
 		break;
 	}
-	case ES_PrimalNLPSolver::IPOpt:
+	case ES_PrimalNLPSolver::Ipopt:
 	{
-		NLPSolver = new NLPSolverIPOptRelaxed();
+		NLPSolver = new NLPSolverIpoptRelaxed();
 		break;
 	}
 	case ES_PrimalNLPSolver::GAMS:
@@ -37,10 +37,10 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 
 	if (Settings::getInstance().getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
 	{
-		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+		if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 		{
-			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 			{
 				taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 			}
@@ -190,7 +190,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 		case E_PrimalNLPSource::FeasibleSolution:
 			sourceDesc = "FEASPT";
 			break;
-		case E_PrimalNLPSource::UnFeasibleSolution:
+		case E_PrimalNLPSource::InfeasibleSolution:
 			sourceDesc = "UNFEAS";
 			break;
 		case E_PrimalNLPSource::SmallestDeviationSolution:
@@ -285,11 +285,11 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 				solutionPoints.at(0) = tmpSolPt;
 
-				if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting(
-						"CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+				if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting(
+						"CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 				{
-					if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+					if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+							"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 					{
 						static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
 					}

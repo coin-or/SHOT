@@ -1,7 +1,7 @@
-#include "NLPSolverIPOptBase.h"
+#include "NLPSolverIpoptBase.h"
 #include "../OptProblems/OptProblem.h"
 
-E_NLPSolutionStatus NLPSolverIPOptBase::solveProblemInstance()
+E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 {
 	//
 
@@ -102,19 +102,19 @@ E_NLPSolutionStatus NLPSolverIPOptBase::solveProblemInstance()
 	return (status);
 }
 
-double NLPSolverIPOptBase::getSolution(int i)
+double NLPSolverIpoptBase::getSolution(int i)
 {
 	double value = NLPSolver->osresult->getVarValue(0, i);
 	return (value);
 }
 
-double NLPSolverIPOptBase::getObjectiveValue()
+double NLPSolverIpoptBase::getObjectiveValue()
 {
 	double value = NLPSolver->osresult->getObjValue(0, 0);
 	return (value);
 }
 
-void NLPSolverIPOptBase::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
 {
 	startingPointVariableIndexes = variableIndexes;
 	startingPointVariableValues = variableValues;
@@ -189,7 +189,7 @@ void NLPSolverIPOptBase::setStartingPoint(std::vector<int> variableIndexes, std:
 	ProcessInfo::getInstance().outputInfo("     All starting points set.");
 }
 
-void NLPSolverIPOptBase::clearStartingPoint()
+void NLPSolverIpoptBase::clearStartingPoint()
 {
 	startingPointVariableIndexes.clear();
 	startingPointVariableValues.clear();
@@ -197,83 +197,83 @@ void NLPSolverIPOptBase::clearStartingPoint()
 	setSolverSpecificInitialSettings();
 }
 
-bool NLPSolverIPOptBase::isObjectiveFunctionNonlinear()
+bool NLPSolverIpoptBase::isObjectiveFunctionNonlinear()
 {
 	return (NLPProblem->isObjectiveFunctionNonlinear());
 }
 
-int NLPSolverIPOptBase::getObjectiveFunctionVariableIndex()
+int NLPSolverIpoptBase::getObjectiveFunctionVariableIndex()
 {
 	return (NLPProblem->getNonlinearObjectiveVariableIdx());
 }
 
-std::vector<double> NLPSolverIPOptBase::getCurrentVariableLowerBounds()
+std::vector<double> NLPSolverIpoptBase::getCurrentVariableLowerBounds()
 {
 	return (NLPProblem->getVariableLowerBounds());
 }
 
-std::vector<double> NLPSolverIPOptBase::getCurrentVariableUpperBounds()
+std::vector<double> NLPSolverIpoptBase::getCurrentVariableUpperBounds()
 {
 	return (NLPProblem->getVariableUpperBounds());
 }
 
-NLPSolverIPOptBase::NLPSolverIPOptBase()
+NLPSolverIpoptBase::NLPSolverIpoptBase()
 {
 	//
 
 }
 
-NLPSolverIPOptBase::~NLPSolverIPOptBase()
+NLPSolverIpoptBase::~NLPSolverIpoptBase()
 {
 }
 
-std::vector<double> NLPSolverIPOptBase::getSolution()
+std::vector<double> NLPSolverIpoptBase::getSolution()
 {
 	int numVar = NLPProblem->getNumberOfVariables();
 	std::vector<double> tmpPoint(numVar);
 
 	for (int i = 0; i < numVar; i++)
 	{
-		tmpPoint.at(i) = NLPSolverIPOptBase::getSolution(i);
+		tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
 	}
 
 	return (tmpPoint);
 }
 
-void NLPSolverIPOptBase::setInitialSettings()
+void NLPSolverIpoptBase::setInitialSettings()
 {
 // Sets the linear solver used
 
 	osOption = new OSOption();
 
-	std::string IPOptSolver = "";
+	std::string IpoptSolver = "";
 
-	if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma27))
+	if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma27))
 	{
-		IPOptSolver = "ma27";
+		IpoptSolver = "ma27";
 	}
-	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma57))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma57))
 	{
-		IPOptSolver = "ma57";
+		IpoptSolver = "ma57";
 	}
-	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma86))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma86))
 	{
-		IPOptSolver = "ma86";
+		IpoptSolver = "ma86";
 	}
-	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::ma97))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma97))
 	{
-		IPOptSolver = "ma97";
+		IpoptSolver = "ma97";
 	}
-	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IPOptSolver::mumps))
+	else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::mumps))
 	{
-		IPOptSolver = "mumps";
+		IpoptSolver = "mumps";
 	}
 	else
 	{
-		IPOptSolver = "ma57";
+		IpoptSolver = "ma57";
 	}
 
-	osOption->setAnotherSolverOption("linear_solver", IPOptSolver, "ipopt", "", "string", "");
+	osOption->setAnotherSolverOption("linear_solver", IpoptSolver, "ipopt", "", "string", "");
 
 	switch (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1)
 	{
@@ -340,7 +340,7 @@ void NLPSolverIPOptBase::setInitialSettings()
 	setSolverSpecificInitialSettings();
 }
 
-void NLPSolverIPOptBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
 {
 
 	fixedVariableIndexes = variableIndexes;
@@ -422,7 +422,7 @@ void NLPSolverIPOptBase::fixVariables(std::vector<int> variableIndexes, std::vec
 	ProcessInfo::getInstance().outputInfo("     All fixed variables defined.");
 }
 
-void NLPSolverIPOptBase::unfixVariables()
+void NLPSolverIpoptBase::unfixVariables()
 {
 	ProcessInfo::getInstance().outputInfo("     Starting reset of fixed variables in Ipopt.");
 
@@ -450,13 +450,13 @@ void NLPSolverIPOptBase::unfixVariables()
 	ProcessInfo::getInstance().outputInfo("     Reset of fixed variables in Ipopt completed.");
 }
 
-void NLPSolverIPOptBase::updateSettings()
+void NLPSolverIpoptBase::updateSettings()
 {
 	NLPSolver->osoption = osOption;
 	NLPSolver->osol = osolwriter->writeOSoL(osOption);
 }
 
-void NLPSolverIPOptBase::saveOptionsToFile(std::string fileName)
+void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
 {
 	fileUtil = new FileUtil();
 

@@ -9,7 +9,7 @@
 #include "vector"
 #include "PrimalSolutionStrategyBase.h"
 #include "../NLPSolver/INLPSolver.h"
-#include "../NLPSolver/NLPSolverIPOptRelaxed.h"
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 #include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
 #include "../NLPSolver/NLPSolverGAMS.h"
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"

@@ -1,13 +1,13 @@
 #pragma once
-#include "NLPSolverIPOptBase.h"
+#include "NLPSolverIpoptBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 //#include "../UtilityFunctions.h"
 
-class NLPSolverIPOptRelaxed: public NLPSolverBase, public NLPSolverIPOptBase
+class NLPSolverIpoptRelaxed: public NLPSolverBase, public NLPSolverIpoptBase
 {
 	public:
-		NLPSolverIPOptRelaxed();
-		~NLPSolverIPOptRelaxed();
+		NLPSolverIpoptRelaxed();
+		~NLPSolverIpoptRelaxed();
 
 		virtual std::vector<double> getSolution();
 

@@ -63,7 +63,7 @@ class CplexCallback: public IloCplex::Callback::Function, public MILPSolverCallb
 
 		void addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context &context);
 
-		// This is the function that we have to implement and that CPLEX will call
+		// This is the function that we have to implement and that Cplex will call
 		// during the solution process at the places that we asked for.
 		virtual void invoke(const IloCplex::Callback::Context &context);
 

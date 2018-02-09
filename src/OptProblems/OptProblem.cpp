@@ -558,7 +558,7 @@ int OptProblem::getNumberOfNonlinearConstraints()
 			isNonlinear.at(tmpIndex) = true;
 	}
 
-	if (!((static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticallyConstrained))
+	if (!((static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
 		{
@@ -825,7 +825,7 @@ void OptProblem::setNonlinearConstraintIndexes()
 	}
 
 	//	if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
-	if (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual")) == ES_QPStrategy::QuadraticallyConstrained)
+	if (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual")) == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
 	{
 		for (int i = 0; i < numQuadTerms; i++)
 		{
@@ -1056,9 +1056,9 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
 			return true;
 	}
 
-	auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+	auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
 
-	if (QPStrategy == ES_QPStrategy::Nonlinear || QPStrategy != ES_QPStrategy::QuadraticallyConstrained)
+	if (QPStrategy == ES_QuadraticProblemStrategy::Nonlinear || QPStrategy != ES_QuadraticProblemStrategy::QuadraticallyConstrained)
 	//	if (!Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
@@ -1075,9 +1075,9 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
 
 bool OptProblem::isConstraintQuadratic(int constrIdx)
 {
-	auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+	auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
 
-	if (QPStrategy == ES_QPStrategy::QuadraticallyConstrained || QPStrategy == ES_QPStrategy::QuadraticObjective)
+	if (QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained || QPStrategy == ES_QuadraticProblemStrategy::QuadraticObjective)
 	//	if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
 	{
 		for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
@@ -1202,10 +1202,10 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 std::vector<QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int constrIdx)
 {
 
-	auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+	auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
 	std::vector<QuadraticTerm *> quadTerms;
 
-	if (constrIdx != -1 && QPStrategy == ES_QPStrategy::QuadraticallyConstrained)
+	if (constrIdx != -1 && QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
 	{
 		int numQuadTerms = getProblemInstance()->getNumberOfQuadraticTerms();
 
@@ -1219,7 +1219,7 @@ std::vector<QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int const
 				quadTerms.push_back(tmpTerm);
 		}
 	}
-	else if (constrIdx == -1 && (QPStrategy == ES_QPStrategy::QuadraticallyConstrained || QPStrategy == ES_QPStrategy::QuadraticObjective))
+	else if (constrIdx == -1 && (QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained || QPStrategy == ES_QuadraticProblemStrategy::QuadraticObjective))
 
 	{
 		int numQuadTerms = getProblemInstance()->getNumberOfQuadraticTerms();

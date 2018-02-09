@@ -76,20 +76,20 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 				E_PrimalNLPSource::FirstSolutionNewDualBound, tmpSol.objectiveValue, tmpSol.iterFound,
 				tmpSol.maxDeviation);
 	}
-	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::SmallestDeviationSolution))
+	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))
 	{
 		auto tmpSol = currIter->getSolutionPointWithSmallestDeviation();
 		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point,
 				E_PrimalNLPSource::SmallestDeviationSolution, tmpSol.objectiveValue, tmpSol.iterFound,
 				tmpSol.maxDeviation);
 	}
-	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstSolution))
+	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::FirstSolution))
 	{
 		auto tmpSol = allSolutions.at(0);
 		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
 				tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
 	}
-	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstAndFeasibleSolutions))
+	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions))
 	{
 		auto tmpSol = allSolutions.at(0);
 		ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
@@ -124,7 +124,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 			}
 		}
 	}
-	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalBoundNLPFixedPoint::AllSolutions))
+	else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::AllSolutions))
 	{
 		auto tmpSol = allSolutions.at(0);
 
@@ -144,7 +144,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 			else
 			{
 				ProcessInfo::getInstance().addPrimalFixedNLPCandidate(tmpSol.point,
-						E_PrimalNLPSource::UnFeasibleSolution, tmpSol.objectiveValue, tmpSol.iterFound,
+						E_PrimalNLPSource::InfeasibleSolution, tmpSol.objectiveValue, tmpSol.iterFound,
 						tmpSol.maxDeviation);
 			}
 		}

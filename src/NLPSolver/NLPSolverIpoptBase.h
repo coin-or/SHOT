@@ -3,7 +3,7 @@
 #include "NLPSolverBase.h"
 #include "NLPIpoptSolver.h"
 
-class NLPSolverIPOptBase: virtual public INLPSolver
+class NLPSolverIpoptBase: virtual public INLPSolver
 {
 	private:
 
@@ -38,8 +38,8 @@ class NLPSolverIPOptBase: virtual public INLPSolver
 
 	public:
 
-		NLPSolverIPOptBase();
-		~NLPSolverIPOptBase();
+		NLPSolverIpoptBase();
+		~NLPSolverIpoptBase();
 
 		virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
 		virtual void clearStartingPoint();

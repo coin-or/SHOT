@@ -1,6 +1,6 @@
-#include "NLPSolverIPOptRelaxed.h"
+#include "NLPSolverIpoptRelaxed.h"
 
-NLPSolverIPOptRelaxed::NLPSolverIPOptRelaxed()
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed()
 {
 
 	osolwriter = new OSoLWriter();
@@ -10,14 +10,14 @@ NLPSolverIPOptRelaxed::NLPSolverIPOptRelaxed()
 	setInitialSettings();
 }
 
-NLPSolverIPOptRelaxed::~NLPSolverIPOptRelaxed()
+NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 {
 	delete NLPSolver;
 	delete osolwriter;
 	delete NLPProblem;
 }
 
-bool NLPSolverIPOptRelaxed::createProblemInstance(OSInstance * origInstance)
+bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance * origInstance)
 {
 	ProcessInfo::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
 
@@ -28,7 +28,7 @@ bool NLPSolverIPOptRelaxed::createProblemInstance(OSInstance * origInstance)
 	return (true);
 }
 
-void NLPSolverIPOptRelaxed::setSolverSpecificInitialSettings()
+void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
 	auto constrTol = Settings::getInstance().getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
 	osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
@@ -49,14 +49,14 @@ void NLPSolverIPOptRelaxed::setSolverSpecificInitialSettings()
 
 }
 
-std::vector<double> NLPSolverIPOptRelaxed::getSolution()
+std::vector<double> NLPSolverIpoptRelaxed::getSolution()
 {
 	int numVar = NLPProblem->getNumberOfVariables();
 	std::vector<double> tmpPoint(numVar);
 
 	for (int i = 0; i < numVar; i++)
 	{
-		tmpPoint.at(i) = NLPSolverIPOptBase::getSolution(i);
+		tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
 	}
 
 	return (tmpPoint);

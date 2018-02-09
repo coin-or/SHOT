@@ -287,7 +287,7 @@ std::vector<double> NLPSolverCuttingPlaneRelaxed::getSolution()
 {
 	auto tmpSol = solution;
 
-	if (tmpSol.size() > 0 && (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::GeneralNonlinear || NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic))
+	if (tmpSol.size() > 0 && (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Nonlinear || NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic))
 	{
 		tmpSol.pop_back();
 	}
@@ -304,9 +304,9 @@ bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance *origInstanc
 {
 	ProcessInfo::getInstance().outputInfo("Creating NLP problem for relaxed cutting plane solver");
 
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticObjective;
+	bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
 
-	bool useQuadraticConstraint = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticallyConstrained;
+	bool useQuadraticConstraint = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
 
 	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
 	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);

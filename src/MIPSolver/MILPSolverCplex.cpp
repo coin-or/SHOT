@@ -186,7 +186,7 @@ bool MILPSolverCplex::createLinearProblem(OptProblem *origProblem)
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("CPLEX exception caught when creating model", e.getMessage());
+		ProcessInfo::getInstance().outputError("Cplex exception caught when creating model", e.getMessage());
 		return (false);
 	}
 
@@ -199,14 +199,14 @@ void MILPSolverCplex::initializeSolverSettings()
 {
 	try
 	{
-		// Disable CPLEX output
+		// Disable Cplex output
 		cplexInstance.setOut(cplexEnv.getNullStream());
 		cplexInstance.setWarning(cplexEnv.getNullStream());
 
 		cplexInstance.setParam(IloCplex::SolnPoolIntensity,
-							   Settings::getInstance().getIntSetting("CPLEX.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+							   Settings::getInstance().getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
 		cplexInstance.setParam(IloCplex::SolnPoolReplace,
-							   Settings::getInstance().getIntSetting("CPLEX.SolnPoolReplace", "Subsolver"));
+							   Settings::getInstance().getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
 
 		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 2.0);
 		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
@@ -215,14 +215,14 @@ void MILPSolverCplex::initializeSolverSettings()
 		//cplexInstance.setParam(IloCplex::HeurFreq,2);
 		//cplexInstance.setParam(IloCplex::AdvInd,2);
 
-		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("CPLEX.SolnPoolGap", "Subsolver"));
+		cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("Cplex.SolnPoolGap", "Subsolver"));
 		cplexInstance.setParam(IloCplex::SolnPoolCapacity,
 							   Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
-		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("CPLEX.Probe", "Subsolver"));
-		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("CPLEX.MIPEmphasis", "Subsolver"));
+		cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Cplex.Probe", "Subsolver"));
+		cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("Cplex.MIPEmphasis", "Subsolver"));
 
-		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("CPLEX.ParallelMode", "Subsolver"));
+		cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("Cplex.ParallelMode", "Subsolver"));
 		cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 
 		//	cplexInstance.setParam(IloCplex::PopulateLim, 10);
@@ -256,7 +256,7 @@ void MILPSolverCplex::initializeSolverSettings()
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("CPLEX error when initializing parameters for linear solver",
+		ProcessInfo::getInstance().outputError("Cplex error when initializing parameters for linear solver",
 											   e.getMessage());
 	}
 }

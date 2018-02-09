@@ -7,10 +7,10 @@ HCallbackI::HCallbackI(IloEnv env, IloNumVarArray xx2) : IloCplex::HeuristicCall
 {
 	std::lock_guard<std::mutex> lock((static_cast<MILPSolverCplexLazyOriginalCB *>(ProcessInfo::getInstance().MILPSolver))->callbackMutex2);
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
-		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		}
@@ -90,10 +90,10 @@ void HCallbackI::main() // Called at each node...
 
 		solutionPoints.at(0) = tmpSolPt;
 
-		if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+		if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 		{
-			if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+			if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 			{
 				static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
 			}
@@ -171,10 +171,10 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MILPSolverCplexLazyOrig
 	isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 	cbCalls = 0;
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
-		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		}
@@ -315,10 +315,10 @@ void CtCallbackI::main()
 		}
 	}
 
-	if (static_cast<ES_HyperplanePointStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplanePointStrategy::ESH)
+	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
-		if (static_cast<ES_LinesearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_LinesearchConstraintStrategy::AllAsMaxFunct)
+		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
 		}
@@ -483,7 +483,7 @@ void MILPSolverCplexLazyOriginalCB::initializeSolverSettings()
 	}
 	catch (IloException &e)
 	{
-		ProcessInfo::getInstance().outputError("CPLEX error when initializing parameters for linear solver",
+		ProcessInfo::getInstance().outputError("Cplex error when initializing parameters for linear solver",
 											   e.getMessage());
 	}
 }

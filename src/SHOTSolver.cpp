@@ -202,8 +202,8 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 		return (true);
 	}
 
-	bool useQuadraticObjective = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticObjective;
-	bool useQuadraticConstraints = (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QPStrategy::QuadraticallyConstrained;
+	bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
+	bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
 	if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
 	//MIQP problem
 	{
@@ -294,7 +294,7 @@ void SHOTSolver::initializeSettings()
 	enumHyperplanePointStrategy.push_back("ESH");
 	enumHyperplanePointStrategy.push_back("ECP");
 	Settings::getInstance().createSetting("CutStrategy", "Dual",
-										  static_cast<int>(ES_HyperplanePointStrategy::ESH), "Dual cut strategy",
+										  static_cast<int>(ES_HyperplaneCutStrategy::ESH), "Dual cut strategy",
 										  enumHyperplanePointStrategy);
 	enumHyperplanePointStrategy.clear();
 
@@ -359,7 +359,7 @@ void SHOTSolver::initializeSettings()
 	enumLinesearchConstraintStrategy.push_back("Max function");
 	enumLinesearchConstraintStrategy.push_back("Individual constraints");
 	Settings::getInstance().createSetting("ESH.Linesearch.ConstraintStrategy", "Dual",
-										  static_cast<int>(ES_LinesearchConstraintStrategy::IndividualConstraints),
+										  static_cast<int>(ES_RootsearchConstraintStrategy::IndividualConstraints),
 										  "Perform root search on", enumLinesearchConstraintStrategy);
 	enumLinesearchConstraintStrategy.clear();
 
@@ -403,7 +403,7 @@ void SHOTSolver::initializeSettings()
 	enumPresolve.push_back("Never");
 	enumPresolve.push_back("Once");
 	enumPresolve.push_back("Always");
-	Settings::getInstance().createSetting("MIP.Presolve.Frequency", "Dual", static_cast<int>(ES_PresolveStrategy::Once),
+	Settings::getInstance().createSetting("MIP.Presolve.Frequency", "Dual", static_cast<int>(ES_MIPPresolveStrategy::Once),
 										  "When to call the MIP presolve", enumPresolve);
 	enumPresolve.clear();
 
@@ -453,7 +453,7 @@ void SHOTSolver::initializeSettings()
 	enumQPStrategy.push_back("All nonlinear");
 	enumQPStrategy.push_back("Use quadratic objective");
 	enumQPStrategy.push_back("Use quadratic constraints");
-	Settings::getInstance().createSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QPStrategy::QuadraticObjective), "How to treat quadratic functions", enumQPStrategy);
+	Settings::getInstance().createSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective), "How to treat quadratic functions", enumQPStrategy);
 	enumQPStrategy.clear();
 
 	// Dual strategy settings: Relaxation strategies
@@ -541,7 +541,7 @@ void SHOTSolver::initializeSettings()
 	enumPrimalNLPSolver.push_back("Ipopt");
 	enumPrimalNLPSolver.push_back("GAMS");
 
-	Settings::getInstance().createSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::IPOpt),
+	Settings::getInstance().createSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt),
 										  "NLP solver to use", enumPrimalNLPSolver);
 	enumPrimalNLPSolver.clear();
 
@@ -552,7 +552,7 @@ void SHOTSolver::initializeSettings()
 	enumPrimalBoundNLPStartingPoint.push_back("First and all feasible");
 	enumPrimalBoundNLPStartingPoint.push_back("With smallest constraint deviation");
 	Settings::getInstance().createSetting("FixedInteger.Source", "Primal",
-										  static_cast<int>(ES_PrimalBoundNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
+										  static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions), "Source of fixed MIP solution point",
 										  enumPrimalBoundNLPStartingPoint);
 	enumPrimalBoundNLPStartingPoint.clear();
 
@@ -584,27 +584,27 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("Tolerance.NonlinearConstraint", "Primal", 1e-6,
 										  "Nonlinear constraint tolerance for accepting primal solutions");
 
-	// Subsolver settings: CPLEX
+	// Subsolver settings: Cplex
 
-	Settings::getInstance().createSetting("CPLEX.MIPEmphasis", "Subsolver", 0,
+	Settings::getInstance().createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
 										  "Sets the MIP emphasis: 0: Balanced. 1: Feasibility. 2: Optimality. 3: Best bound. 4: Hidden feasible", 0, 4);
 
-	Settings::getInstance().createSetting("CPLEX.ParallelMode", "Subsolver", 0,
+	Settings::getInstance().createSetting("Cplex.ParallelMode", "Subsolver", 0,
 										  "Sets the parallel optimization mode: -1: Opportunistic. 0: Automatic. 1: Deterministic.", -1, 1);
 
-	Settings::getInstance().createSetting("CPLEX.Probe", "Subsolver", 0,
+	Settings::getInstance().createSetting("Cplex.Probe", "Subsolver", 0,
 										  "Sets the MIP probing level: -1: No probing. 0: Automatic. 1: Moderate. 2: Aggressive. 3: Very aggressive", -1, 3);
 
-	Settings::getInstance().createSetting("CPLEX.SolnPoolGap", "Subsolver", 1.0e+75,
+	Settings::getInstance().createSetting("Cplex.SolnPoolGap", "Subsolver", 1.0e+75,
 										  "Sets the relative gap filter on objective values in the solution pool", 0, 1.0e+75);
 
-	Settings::getInstance().createSetting("CPLEX.SolnPoolIntensity", "Subsolver", 0,
+	Settings::getInstance().createSetting("Cplex.SolnPoolIntensity", "Subsolver", 0,
 										  "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. 2: Moderate. 3: Aggressive. 4: Very aggressive", 0, 4);
 
-	Settings::getInstance().createSetting("CPLEX.SolnPoolReplace", "Subsolver", 1,
+	Settings::getInstance().createSetting("Cplex.SolnPoolReplace", "Subsolver", 1,
 										  "How to replace solutions in the solution pool when full: 0: Replace oldest. 1: Replace worst. 2: Find diverse.", 0, 2);
 
-	Settings::getInstance().createSetting("CPLEX.UseNewCallbackType", "Subsolver", false,
+	Settings::getInstance().createSetting("Cplex.UseNewCallbackType", "Subsolver", false,
 										  "Use the new callback type (vers. >12.8) with single-tree strategy (experimental)");
 
 	// Subsolver settings: GAMS NLP
@@ -627,7 +627,7 @@ void SHOTSolver::initializeSettings()
 	enumIPOptSolver.push_back("ma86");
 	enumIPOptSolver.push_back("ma97");
 	enumIPOptSolver.push_back("mumps");
-	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IPOptSolver::mumps),
+	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps),
 										  "Ipopt linear subsolver", enumIPOptSolver);
 	enumIPOptSolver.clear();
 
@@ -650,7 +650,7 @@ void SHOTSolver::initializeSettings()
 	enumLinesearchMethod.push_back("BoostBisection");
 	enumLinesearchMethod.push_back("Bisection");
 	Settings::getInstance().createSetting("Rootsearch.Method", "Subsolver",
-										  static_cast<int>(ES_LinesearchMethod::BoostTOMS748), "Root search method to use", enumLinesearchMethod);
+										  static_cast<int>(ES_RootsearchMethod::BoostTOMS748), "Root search method to use", enumLinesearchMethod);
 	enumLinesearchMethod.clear();
 
 	Settings::getInstance().createSetting("Rootsearch.TerminationTolerance", "Subsolver", 1e-16,

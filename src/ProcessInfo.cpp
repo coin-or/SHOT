@@ -1217,7 +1217,7 @@ std::string ProcessInfo::getTraceResult()
 	   << ",";
 	ss << "SHOT"
 	   << ",";
-	ss << "IPOpt"
+	ss << "Ipopt"
 	   << ",";
 	ss << "Cplex"
 	   << ",";

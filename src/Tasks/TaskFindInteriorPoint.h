@@ -4,8 +4,8 @@
 #include "../ProcessInfo.h"
 
 #include "../NLPSolver/INLPSolver.h"
-#include "../NLPSolver/NLPSolverIPOptMinimax.h"
-#include "../NLPSolver/NLPSolverIPOptRelaxed.h"
+#include "../NLPSolver/NLPSolverIpoptMinimax.h"
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 
 class TaskFindInteriorPoint: public TaskBase
 {

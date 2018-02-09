@@ -25,33 +25,33 @@ void TaskFindInteriorPoint::run()
 
 		ProcessInfo::getInstance().outputDebug("Cutting plane minimax selected as NLP solver.");
 	}
-	else if (solver == ES_NLPSolver::IPOptMiniMax)
+	else if (solver == ES_NLPSolver::IpoptMinimax)
 	{
-		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
+		NLPSolvers.emplace_back(new NLPSolverIpoptMinimax());
 
 		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		ProcessInfo::getInstance().outputDebug("IPOpt minimax selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("Ipopt minimax selected as NLP solver.");
 	}
-	else if (solver == ES_NLPSolver::IPOptRelaxed)
+	else if (solver == ES_NLPSolver::IpoptRelaxed)
 	{
-		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
+		NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed());
 
 		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		ProcessInfo::getInstance().outputDebug("IPOpt relaxed selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("Ipopt relaxed selected as NLP solver.");
 	}
-	else if (solver == ES_NLPSolver::IPOptMiniMaxAndRelaxed)
+	else if (solver == ES_NLPSolver::IpoptMinimaxAndRelaxed)
 	{
-		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
+		NLPSolvers.emplace_back(new NLPSolverIpoptMinimax());
 
 		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
+		NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed());
 
 		NLPSolvers[1]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		ProcessInfo::getInstance().outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
+		ProcessInfo::getInstance().outputDebug("Ipopt minimax and relaxed selected as NLP solver.");
 	}
 	else
 	{
@@ -86,7 +86,7 @@ void TaskFindInteriorPoint::run()
 
 		tmpIP->point = NLPSolvers.at(i)->getSolution();
 
-		if (solver == ES_NLPSolver::IPOptRelaxed && tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+		if (solver == ES_NLPSolver::IpoptRelaxed && tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
 		{
 			tmpIP->point.push_back(
 				ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));

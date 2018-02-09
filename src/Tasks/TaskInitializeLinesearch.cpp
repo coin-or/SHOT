@@ -6,7 +6,7 @@ TaskInitializeLinesearch::TaskInitializeLinesearch()
 	ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 
 	if (Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver")
-			== static_cast<int>(ES_LinesearchMethod::Bisection))
+			== static_cast<int>(ES_RootsearchMethod::Bisection))
 	{
 		ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBisection();
 		ProcessInfo::getInstance().outputInfo("Bisection linesearch implementation selected.");
