@@ -1150,16 +1150,47 @@ std::string ProcessInfo::getTraceResult()
 	this->originalProblem->getProblemInstance()->bObjectivesModified = true;
 
 	ss << this->originalProblem->getProblemInstance()->getInstanceName() << ",";
-	ss << "MINLP"
-	   << ",";
+
+	switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+	{
+	case (E_SolutionStrategy::MIQP):
+		ss << "MIQP";
+		break;
+	case (E_SolutionStrategy::MIQCQP):
+		ss << "MIQCQP";
+		break;
+	case (E_SolutionStrategy::NLP):
+		ss << "NLP";
+		break;
+	default:
+		ss << "MINLP";
+		break;
+	}
+
+	ss << ",";
 	ss << "SHOT"
 	   << ",";
-	ss << "Ipopt"
-	   << ",";
-	ss << "Cplex"
-	   << ",";
-	ss << "9999999"
-	   << ",";
+
+	switch (static_cast<ES_MIPSolver>(ProcessInfo::getInstance().usedMIPSolver))
+	{
+	case (ES_MIPSolver::Cplex):
+		ss << "Cplex";
+		break;
+	case (ES_MIPSolver::Gurobi):
+		ss << "Gurobi";
+		break;
+	case (ES_MIPSolver::Cbc):
+		ss << "Cbc";
+		break;
+	default:
+		ss << "";
+		break;
+	}
+
+	ss << ",";
+
+	ss << "";
+	ss << ",";
 	ss << (originalProblem->getProblemInstance()->getObjectiveMaxOrMins()[0] == "min" ? "0" : "1") << ",";
 	ss << this->originalProblem->getProblemInstance()->getConstraintNumber() + 1 << ","; // +1 to comply with GAMS objective style
 	ss << this->originalProblem->getProblemInstance()->getVariableNumber() + 1 << ",";   // +1 to comply with GAMS objective style
@@ -1285,6 +1316,9 @@ void ProcessInfo::createIteration()
 	switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
 	{
 	case (E_SolutionStrategy::MIQCQP):
+		iter.type = E_IterationProblemType::MIP;
+		break;
+	case (E_SolutionStrategy::MIQP):
 		iter.type = E_IterationProblemType::MIP;
 		break;
 	case (E_SolutionStrategy::NLP):

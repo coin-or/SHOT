@@ -87,6 +87,7 @@ enum class E_SolutionStrategy
 	SingleTree,
 	MultiTree,
 	NLP,
+	MIQP,
 	MIQCQP
 };
 

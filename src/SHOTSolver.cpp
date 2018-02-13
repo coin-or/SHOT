@@ -209,7 +209,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 	{
 		ProcessInfo::getInstance().outputSummary("Using MIQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
-		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQP;
 	}
 	//MIQCQP problem
 	else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))

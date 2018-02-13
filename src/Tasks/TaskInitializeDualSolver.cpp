@@ -16,21 +16,25 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
 		if (solver == ES_MIPSolver::Cplex && Settings::getInstance().getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
 		{
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverCplexLazy();
+			ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cplex;
 			ProcessInfo::getInstance().outputInfo("Cplex with lazy callbacks selected as MIP solver.");
 		}
 		else if (solver == ES_MIPSolver::Cplex)
 		{
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverCplexLazyOriginalCallback();
+			ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cplex;
 			ProcessInfo::getInstance().outputInfo("Cplex with original lazy callbacks selected as MIP solver.");
 		}
 		else if (solver == ES_MIPSolver::Gurobi)
 		{
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverGurobiLazy();
+			ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Gurobi;
 			ProcessInfo::getInstance().outputInfo("Gurobi with lazy callbacks selected as MIP solver.");
 		}
 		else if (solver == ES_MIPSolver::Cbc)
 		{
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverOsiCbc();
+			ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cbc;
 			ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver.");
 		}
 		else
