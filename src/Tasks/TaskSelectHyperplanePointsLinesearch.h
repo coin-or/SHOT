@@ -9,6 +9,7 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
+#include "TaskSelectHyperplanePointsSolution.h"
 
 class TaskSelectHyperplanePointsLinesearch: public TaskBase
 {
@@ -20,7 +21,12 @@ class TaskSelectHyperplanePointsLinesearch: public TaskBase
 		virtual void run(vector<SolutionPoint> solPoints);
 
 		virtual std::string getType();
+		
+		
 
 	private:
-
+	
+	TaskSelectHyperplanePointsSolution *tSelectHPPts;
+	bool hyperplaneSolutionPointStrategyInitialized = false;
+	
 };

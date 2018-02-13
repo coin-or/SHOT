@@ -11,7 +11,6 @@ TaskFindInteriorPoint::~TaskFindInteriorPoint()
 
 void TaskFindInteriorPoint::run()
 {
-
 	ProcessInfo::getInstance().startTimer("InteriorPointTotal");
 
 	ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
@@ -55,7 +54,7 @@ void TaskFindInteriorPoint::run()
 	}
 	else
 	{
-		throw new TaskExceptionInteriorPoint("Error in NLP solver definition.");
+		return;
 	}
 
 	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
@@ -100,12 +99,14 @@ void TaskFindInteriorPoint::run()
 		auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpIP->point);
 		tmpIP->maxDevatingConstraint = maxDev;
 
-		ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
-
 		if (maxDev.value > 0)
 		{
 			ProcessInfo::getInstance().outputWarning(
 				"Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+		}
+		else
+		{
+			ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 		}
 
 		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
@@ -120,12 +121,12 @@ void TaskFindInteriorPoint::run()
 
 	if (!foundNLPPoint)
 	{
-		ProcessInfo::getInstance().outputError("No interior point found!                            ");
+		ProcessInfo::getInstance().outputError("     No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
-		throw TaskExceptionInteriorPoint("No interior point found");
+		return;
 	}
 
-	ProcessInfo::getInstance().outputDebug("Finished solving NLP problem.");
+	ProcessInfo::getInstance().outputDebug("     Finished solving NLP problem.");
 
 	ProcessInfo::getInstance().numOriginalInteriorPoints = ProcessInfo::getInstance().interiorPts.size();
 

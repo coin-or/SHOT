@@ -17,6 +17,10 @@ TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndivi
 
 TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndividualLinesearch()
 {
+	if (hyperplaneSolutionPointStrategyInitialized)
+	{
+		delete tSelectHPPts;
+	}
 }
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run()
@@ -29,6 +33,21 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 	int addedHyperplanes = 0;
 
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+
+	if (ProcessInfo::getInstance().interiorPts.size() == 0)
+	{
+		if (!hyperplaneSolutionPointStrategyInitialized)
+		{
+			tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+			hyperplaneSolutionPointStrategyInitialized = true;
+		}
+
+		ProcessInfo::getInstance().outputError("     Adding cutting plane since no interior point is known.");
+		
+		tSelectHPPts->run(solPoints);
+
+		return;
+	}
 
 	// Contains boolean array that indicates if a constraint has been added or not
 	std::vector<bool> hyperplaneAddedToConstraint(

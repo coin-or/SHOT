@@ -106,7 +106,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 	E_NLPSolutionStatus statusCode;
 
 	int numHyperAdded, numHyperTot;
-	for (int i = 0; i < maxIter; i++)
+	for (int i = 0; i <= maxIter; i++)
 	{
 		boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 		// Saves the LP problem to file if in debug mode

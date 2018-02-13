@@ -207,26 +207,36 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 	if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
 	//MIQP problem
 	{
+		ProcessInfo::getInstance().outputSummary("Using MIQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
+		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
 	}
 	//MIQCQP problem
 	else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
 	{
+		ProcessInfo::getInstance().outputSummary("Using MIQCQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
+		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
 	}
 	else if (UtilityFunctions::areAllVariablesReal(osInstance))
 	{
+		ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
 		solutionStrategy = new SolutionStrategyNLP(osInstance);
+		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
 	}
 	else
 	{
-		switch (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
+		switch (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
 		{
-		case (ES_SolutionStrategy::SingleTree):
+		case (ES_TreeStrategy::SingleTree):
+			ProcessInfo::getInstance().outputSummary("Using single-tree solution strategy.");
 			solutionStrategy = new SolutionStrategySingleTree(osInstance);
+			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::SingleTree;
 			break;
-		case (ES_SolutionStrategy::MultiTree):
+		case (ES_TreeStrategy::MultiTree):
+			ProcessInfo::getInstance().outputSummary("Using multi-tree solution strategy.");
 			solutionStrategy = new SolutionStrategyMultiTree(osInstance);
+			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MultiTree;
 			break;
 		default:
 			break;
@@ -309,7 +319,7 @@ void SHOTSolver::initializeSettings()
 										  "Tolerance when selecting the most constraint with largest deviation", 0.0, 1.0);
 
 	Settings::getInstance().createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 2000,
-										  "Iteration limit for minimax cutting plane solver", 0, OSINT_MAX);
+										  "Iteration limit for minimax cutting plane solver", 1, OSINT_MAX);
 
 	Settings::getInstance().createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual", 1000,
 										  "Iteration limit for minimization subsolver", 0, OSINT_MAX);
@@ -476,7 +486,7 @@ void SHOTSolver::initializeSettings()
 	std::vector<std::string> enumSolutionStrategy;
 	enumSolutionStrategy.push_back("Multi-tree");
 	enumSolutionStrategy.push_back("Single-tree");
-	Settings::getInstance().createSetting("TreeStrategy", "Dual", static_cast<int>(ES_SolutionStrategy::SingleTree),
+	Settings::getInstance().createSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree),
 										  "The main strategy to use", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
 
@@ -624,6 +634,13 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("Cplex.WorkMem", "Subsolver", 30000.0,
 										  "Memory limit for when to start swapping to disk", 0, 1.0e+75);
+
+	// Subsolver settings: Gurobi
+	Settings::getInstance().createSetting("Gurobi.ScaleFlag", "Subsolver", 1, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
+
+	Settings::getInstance().createSetting("Gurobi.MIPFocus", "Subsolver", 0, "MIP focus: 0: Automatic. 1: Feasibility. 2: Optimality. 3: Best bound.", 0, 3);
+
+	Settings::getInstance().createSetting("Gurobi.NumericFocus", "Subsolver", 0, "Numeric focus (higher number more careful): 0: Automatic. 3: Most careful.", 0, 3);
 
 	// Subsolver settings: GAMS NLP
 

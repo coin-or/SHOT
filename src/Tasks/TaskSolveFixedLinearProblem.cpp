@@ -24,7 +24,8 @@ void TaskSolveFixedLinearProblem::run()
 	ProcessInfo::getInstance().startTimer("PrimalBoundFixedLP");
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); //The one not solved yet
 
-	if (currIter->MIPSolutionLimitUpdated) return;
+	if (currIter->MIPSolutionLimitUpdated)
+		return;
 
 	if (currIter->iterationNumber < 5)
 	{
@@ -72,10 +73,10 @@ void TaskSolveFixedLinearProblem::run()
 	auto currSolPt = prevIter->solutionPoints.at(0).point;
 
 	bool isDifferent1 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter2->solutionPoints.at(0).point,
-			discreteIdxs);
+																	  discreteIdxs);
 
 	bool isDifferent2 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter3->solutionPoints.at(0).point,
-			discreteIdxs);
+																	  discreteIdxs);
 
 	if (isDifferent1 || isDifferent2)
 	{
@@ -122,55 +123,60 @@ void TaskSolveFixedLinearProblem::run()
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(varSol);
 
 			std::vector<double> externalPoint = varSol;
-			std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0)->point;
+			IndexValuePair errorExternal;
 
-			auto tmpMostDevConstr2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
-					internalPoint);
-
-			try
+			if (ProcessInfo::getInstance().interiorPts.size() > 0)
 			{
-				auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
-						Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-						Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-						Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
+				std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0)->point;
 
-				ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
-				internalPoint = xNewc.first;
-				externalPoint = xNewc.second;
+				auto tmpMostDevConstr2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(internalPoint);
 
-				auto errorExternal = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
-						externalPoint);
+				try
+				{
+					auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
+																					   Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+																					   Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+																					   Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
-				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = errorExternal.idx;
-				hyperplane.generatedPoint = externalPoint;
-				hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
+					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+					internalPoint = xNewc.first;
+					externalPoint = xNewc.second;
+				}
+				catch (std::exception &e)
+				{
 
-				MIPSolver->createHyperplane(hyperplane);
-
-			}
-			catch (std::exception &e)
-			{
-
-				ProcessInfo::getInstance().outputWarning(
+					ProcessInfo::getInstance().outputWarning(
 						"     Cannot find solution with linesearch for fixed LP, using solution point instead:");
-				ProcessInfo::getInstance().outputWarning(e.what());
+					ProcessInfo::getInstance().outputWarning(e.what());
+				}
 			}
+
+			errorExternal = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(externalPoint);
+
+			Hyperplane hyperplane;
+			hyperplane.sourceConstraintIndex = errorExternal.idx;
+			hyperplane.generatedPoint = externalPoint;
+			hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
+
+			MIPSolver->createHyperplane(hyperplane);
 
 			std::stringstream tmpType;
 
 			bool hasSolution = true;
 
-			bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
-					== E_ObjectiveFunctionType::Quadratic);
+			bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
 			bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
 			bool isDiscrete = false;
 
-			if (isMIQCP) tmpType << "FIXQCP";
-			else if (isMIQP) tmpType << "FIXQP";
-			else tmpType << "FIXLP";
+			if (isMIQCP)
+				tmpType << "FIXQCP";
+			else if (isMIQP)
+				tmpType << "FIXQP";
+			else
+				tmpType << "FIXLP";
 
-			if (varSol.size() == 0) hasSolution = false;
+			if (varSol.size() == 0)
+				hasSolution = false;
 
 			if (solStatus == E_ProblemSolutionStatus::Error)
 			{
@@ -217,13 +223,11 @@ void TaskSolveFixedLinearProblem::run()
 
 			if (hasSolution && mostDevConstr.idx != -1)
 			{
-				tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames()[mostDevConstr.idx] + ": "
-						+ ((boost::format("%.5f") % mostDevConstr.value).str());
+				tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames()[mostDevConstr.idx] + ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
 			}
 			else if (hasSolution)
 			{
-				tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": "
-						+ ((boost::format("%.5f") % mostDevConstr.value).str());
+				tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
 			}
 			else
 			{
@@ -248,31 +252,27 @@ void TaskSolveFixedLinearProblem::run()
 
 			if (mostDevConstr.value <= constrTol)
 			{
-				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP CON"
-						% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
+				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP CON" % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 				ProcessInfo::getInstance().outputSummary(tmpLine.str());
 				break;
 			}
 
 			if (k - iterLastObjUpdate > 10)
 			{
-				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP ITR"
-						% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
+				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP ITR" % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 				ProcessInfo::getInstance().outputSummary(tmpLine.str());
 				break;
 			}
 
 			if (objVal > ProcessInfo::getInstance().getPrimalBound())
 			{
-				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP PB "
-						% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
+				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP PB " % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 				ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
 				break;
 			}
 
-			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % tmpType.str()
-					% hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
+			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % tmpType.str() % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
 			ProcessInfo::getInstance().outputSummary(tmpLine.str());
 
 			if (abs(prevObjVal - objVal) > prevObjVal * objTol)
@@ -297,4 +297,3 @@ std::string TaskSolveFixedLinearProblem::getType()
 	std::string type = typeid(this).name();
 	return (type);
 }
-

@@ -66,7 +66,7 @@ void TaskSolveIteration::run()
 	ProcessInfo::getInstance().outputInfo("MIP problem solved.");
 
 	// Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_SolutionStrategy::SingleTree)
+	if (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree)
 	{
 		currIter = ProcessInfo::getInstance().getCurrentIteration();
 	}

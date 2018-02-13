@@ -18,9 +18,9 @@ class TaskFindInteriorPoint: public TaskBase
 
 	private:
 		std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
-
 };
 
+/*
 class TaskExceptionInteriorPoint: public std::exception
 {
 	public:
@@ -40,3 +40,4 @@ class TaskExceptionInteriorPoint: public std::exception
 		std::string explanation;
 
 };
+*/

@@ -173,6 +173,8 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOrigi
 
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
+		tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
@@ -317,6 +319,8 @@ void CtCallbackI::main()
 
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
+		tUpdateInteriorPoint->run();
+
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{

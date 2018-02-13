@@ -9,19 +9,22 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
+#include "TaskSelectHyperplanePointsSolution.h"
 
-class TaskSelectHyperplanePointsIndividualLinesearch: public TaskBase
+class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
 {
-	public:
-		TaskSelectHyperplanePointsIndividualLinesearch();
-		virtual ~TaskSelectHyperplanePointsIndividualLinesearch();
+  public:
+	TaskSelectHyperplanePointsIndividualLinesearch();
+	virtual ~TaskSelectHyperplanePointsIndividualLinesearch();
 
-		virtual void run();
-		virtual void run(vector<SolutionPoint> solPoints);
+	virtual void run();
+	virtual void run(vector<SolutionPoint> solPoints);
 
-		virtual std::string getType();
-	private:
+	virtual std::string getType();
 
-		std::vector<int> nonlinearConstraintIdxs;
+  private:
+	std::vector<int> nonlinearConstraintIdxs;
+
+	TaskSelectHyperplanePointsSolution *tSelectHPPts;
+	bool hyperplaneSolutionPointStrategyInitialized = false;
 };
-

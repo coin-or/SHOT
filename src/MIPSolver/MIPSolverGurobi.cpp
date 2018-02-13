@@ -32,7 +32,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 		auto tmpTypes = origProblem->getVariableTypes();
 
 		int numCon = origProblem->getNumberOfConstraints();
-		if (origProblem->isObjectiveFunctionNonlinear()) numCon--;
+		if (origProblem->isObjectiveFunctionNonlinear())
+			numCon--;
 
 		for (int i = 0; i < numVar; i++)
 		{
@@ -55,7 +56,7 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			else
 			{
 				ProcessInfo::getInstance().outputWarning(
-						"Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+					"Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
 			}
 		}
 
@@ -75,7 +76,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			}
 
 			double objConstant = origProblem->getObjectiveConstant();
-			if (objConstant != 0.0) *expr += objConstant;
+			if (objConstant != 0.0)
+				*expr += objConstant;
 
 			gurobiModel->setObjective(*expr);
 		}
@@ -96,7 +98,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 			}
 
 			double objConstant = origProblem->getObjectiveConstant();
-			if (objConstant != 0.0) *expr += objConstant;
+			if (objConstant != 0.0)
+				*expr += objConstant;
 
 			gurobiModel->setObjective(*expr);
 		}
@@ -121,7 +124,7 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 		int varIdx = 0;
 
 		SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
-				origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
+			origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
 
 		auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
 		auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
@@ -140,21 +143,16 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 					GRBLinExpr *expr = new GRBLinExpr(0);
 					*expr += origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
 
-					if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
-							&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
-									> 0)
+					if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
 					{
-						row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
-								- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
+						row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
 
 						for (int j = 0; j < row_nonz; j++)
 						{
 							double val =
-									m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-											+ j];
+								m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 							varIdx =
-									m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-											+ j];
+								m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 							auto variable = gurobiModel->getVar(varIdx);
 
 							*expr += val * variable;
@@ -181,21 +179,16 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 					GRBQuadExpr *expr = new GRBQuadExpr(0);
 					*expr += origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
 
-					if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL
-							&& origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues
-									> 0)
+					if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
 					{
-						row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1]
-								- m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
+						row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
 
 						for (int j = 0; j < row_nonz; j++)
 						{
 							double val =
-									m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-											+ j];
+								m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 							varIdx =
-									m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx]
-											+ j];
+								m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 							auto variable = gurobiModel->getVar(varIdx);
 
 							*expr += val * variable;
@@ -249,23 +242,26 @@ void MIPSolverGurobi::initializeSolverSettings()
 			gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
 		}
 
-		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination")/2.0);
-		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination")/2.0);
-		//gurobiModel->getEnv().set(GRB_IntParam_NumericFocus,3);
+		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 2.0);
+		gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
+
+		// Default 0 to fix som problems with some problems
+		gurobiModel->getEnv().set(GRB_IntParam_ScaleFlag, Settings::getInstance().getIntSetting("Gurobi.ScaleFlag", "Subsolver"));
+		gurobiModel->getEnv().set(GRB_IntParam_NumericFocus, Settings::getInstance().getIntSetting("Gurobi.NumericFocus", "Subsolver"));
+		gurobiModel->getEnv().set(GRB_IntParam_MIPFocus, Settings::getInstance().getIntSetting("Gurobi.MIPFocus", "Subsolver"));
 		//gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
 		//gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
 		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
-		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber,
-				Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual") + 1);
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual") + 1);
 	}
 	catch (GRBException &e)
 	{
 		{
 			ProcessInfo::getInstance().outputError("Error when initializing parameters for linear solver",
-					e.getMessage());
+												   e.getMessage());
 		}
 	}
 }
@@ -298,7 +294,6 @@ int MIPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, d
 		ProcessInfo::getInstance().outputError("Error when adding linear constraint", e.getMessage());
 
 		return (-1);
-
 	}
 
 	return (gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
@@ -335,7 +330,7 @@ std::vector<double> MIPSolverGurobi::getVariableSolution(int solIdx)
 	catch (GRBException &e)
 	{
 		ProcessInfo::getInstance().outputError("Error when reading solution with index " + std::to_string(solIdx),
-				e.getMessage());
+											   e.getMessage());
 	}
 
 	return (solution);
@@ -402,10 +397,10 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
 
 	int status = gurobiModel->get(GRB_IntAttr_Status);
 
-//if (status == GRB_LOADED)
-//{
-//}
-//else
+	//if (status == GRB_LOADED)
+	//{
+	//}
+	//else
 	if (status == GRB_OPTIMAL)
 	{
 		MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
@@ -422,9 +417,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
 	{
 		MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
 	}
-//else if (status == GRB_CUTOFF)
-//{
-//}
+	//else if (status == GRB_CUTOFF)
+	//{
+	//}
 	else if (status == GRB_ITERATION_LIMIT)
 	{
 		MIPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
@@ -445,9 +440,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
 	{
 		MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
 	}
-//else if (status == GRB_NUMERIC)
-//{
-//}
+	//else if (status == GRB_NUMERIC)
+	//{
+	//}
 	else if (status == GRB_CUTOFF)
 	{
 		MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
@@ -456,9 +451,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
 	{
 		MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
 	}
-//else if (status == GRB_INPROGRESS)
-//{
-//}
+	//else if (status == GRB_INPROGRESS)
+	//{
+	//}
 	else
 	{
 		ProcessInfo::getInstance().outputError("MIP solver return status " + to_string(status));
@@ -491,15 +486,17 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 int MIPSolverGurobi::increaseSolutionLimit(int increment)
 {
 	gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit,
-			gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit) + increment);
+							  gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit) + increment);
 
 	return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit));
 }
 
 void MIPSolverGurobi::setSolutionLimit(long limit)
 {
-	if (limit > GRB_MAXINT) gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
-	else gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
+	if (limit > GRB_MAXINT)
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
+	else
+		gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
 }
 
 int MIPSolverGurobi::getSolutionLimit()
@@ -524,7 +521,6 @@ void MIPSolverGurobi::setTimeLimit(double seconds)
 	{
 		ProcessInfo::getInstance().outputError("Error when setting time limit", e.getMessage());
 	}
-
 }
 
 void MIPSolverGurobi::setCutOff(double cutOff)
@@ -538,13 +534,13 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + 0.0000001);
 
 			ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+				"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
 			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - 0.0000001);
 			ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+				"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}
 	}
 	catch (GRBException &e)
@@ -565,7 +561,6 @@ void MIPSolverGurobi::addMIPStart(std::vector<double> point)
 			GRBVar tmpVar = gurobiModel->getVar(i);
 			tmpVar.set(GRB_DoubleAttr_Start, point.at(i));
 		}
-
 	}
 	catch (GRBException &e)
 	{
@@ -596,7 +591,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 	if (!isMIP && solIdx > 0) // LP problems only have one solution!
 	{
 		ProcessInfo::getInstance().outputError(
-				"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
+			"Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
 		return (objVal);
 	}
@@ -618,8 +613,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 
 			for (int i = 0; i < objective.size(); i++)
 			{
-				objVal += objective.getCoeff(i) * objective.getVar1(i).get(GRB_DoubleAttr_Xn)
-						* objective.getVar2(i).get(GRB_DoubleAttr_Xn);
+				objVal += objective.getCoeff(i) * objective.getVar1(i).get(GRB_DoubleAttr_Xn) * objective.getVar2(i).get(GRB_DoubleAttr_Xn);
 			}
 
 			auto linexpr = objective.getLinExpr();
@@ -633,11 +627,10 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 	catch (GRBException &e)
 	{
 		ProcessInfo::getInstance().outputError(
-				"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
+			"Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
 	}
 
 	return (objVal);
-
 }
 
 void MIPSolverGurobi::deleteMIPStarts()
@@ -652,7 +645,6 @@ void MIPSolverGurobi::deleteMIPStarts()
 			GRBVar tmpVar = gurobiModel->getVar(i);
 			tmpVar.set(GRB_DoubleAttr_Start, GRB_UNDEFINED);
 		}
-
 	}
 	catch (GRBException &e)
 	{
@@ -685,7 +677,7 @@ void MIPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doubl
 	catch (GRBException &e)
 	{
 		ProcessInfo::getInstance().outputError(
-				"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
+			"Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 }
 
@@ -705,7 +697,7 @@ pair<double, double> MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
 	catch (GRBException &e)
 	{
 		ProcessInfo::getInstance().outputError(
-				"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
+			"Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
 	}
 
 	return (tmpBounds);
@@ -729,12 +721,10 @@ double MIPSolverGurobi::getDualObjectiveValue()
 	try
 	{
 		objVal = gurobiModel->get(GRB_DoubleAttr_ObjBound);
-
 	}
 	catch (GRBException &e)
 	{
 		ProcessInfo::getInstance().outputError("Error when obtaining dual objective value", e.getMessage());
-
 	}
 
 	return (objVal);
@@ -746,10 +736,9 @@ void MIPSolverGurobi::writePresolvedToFile(std::string filename)
 
 void MIPSolverGurobi::checkParameters()
 {
-
 }
 
-std::pair<std::vector<double>, std::vector<double> > MIPSolverGurobi::presolveAndGetNewBounds()
+std::pair<std::vector<double>, std::vector<double>> MIPSolverGurobi::presolveAndGetNewBounds()
 {
 	return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
 }

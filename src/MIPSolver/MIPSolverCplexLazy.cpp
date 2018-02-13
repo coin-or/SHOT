@@ -16,8 +16,9 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
-		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+		tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+
+		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
 		}
@@ -382,6 +383,8 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 
 		if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 		{
+			tUpdateInteriorPoint->run();
+
 			if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 			{

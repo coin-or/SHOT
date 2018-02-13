@@ -267,7 +267,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 
 		if (isMinimization)
 		{
-			if (C.objValue < currPrimalBound*(1+gapRelTolerance) && C.objValue > currPrimalBound)
+			if (C.objValue < currPrimalBound * (1 + gapRelTolerance) && C.objValue > currPrimalBound)
 			{
 				C.objValue = currPrimalBound;
 				updateDual = true;
@@ -279,7 +279,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 		}
 		else
 		{
-			if (C.objValue > currPrimalBound*(1+gapRelTolerance) && C.objValue < currPrimalBound)
+			if (C.objValue > currPrimalBound * (1 + gapRelTolerance) && C.objValue < currPrimalBound)
 			{
 				C.objValue = currPrimalBound;
 				updateDual = true;
@@ -298,7 +298,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 			this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
 			this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
 
-			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution )
+			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution)
 			{
 				this->addDualSolution(C);
 			}
@@ -704,69 +704,6 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		}
 
 		this->primalSolution = tmpPoint;
-
-		if (this->interiorPts.size() > 0)
-		{
-			// Add the new point if it is deeper within the feasible region
-			if (primalSol.maxDevatingConstraintNonlinear.value < this->interiorPts.at(0)->maxDevatingConstraint.value)
-			{
-				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
-				tmpIP->point = tmpPoint;
-				tmpIP->maxDevatingConstraint = mostDevNonlinearConstraints;
-
-				this->outputWarning(
-					"      Interior point replaced with primal solution point due to constraint deviation.");
-
-				this->interiorPts.back() = tmpIP;
-			}
-			else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && mostDevNonlinearConstraints.value < 0)
-			{
-				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
-
-				tmpIP->point = tmpPoint;
-				tmpIP->maxDevatingConstraint = mostDevNonlinearConstraints;
-
-				this->outputWarning("      Primal solution point used as additional interior point.");
-
-				if (this->interiorPts.size() == this->numOriginalInteriorPoints)
-				{
-					this->interiorPts.push_back(tmpIP);
-				}
-				else
-				{
-					this->interiorPts.back() = tmpIP;
-				}
-			}
-			else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && mostDevNonlinearConstraints.value < 0)
-			{
-				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
-
-				// Add the new point only
-				tmpIP->point = tmpPoint;
-				tmpIP->maxDevatingConstraint = mostDevNonlinearConstraints;
-
-				this->outputWarning("      Interior point replaced with primal solution point.");
-
-				this->interiorPts.back() = tmpIP;
-			}
-			else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && mostDevNonlinearConstraints.value < 0)
-			{
-				std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
-
-				// Find a new point in the midpoint between the original and new
-				for (int i = 0; i < tmpPoint.size(); i++)
-				{
-					tmpPoint.at(i) = (0.5 * tmpPoint.at(i) + 0.5 * this->interiorPts.at(0)->point.at(i));
-				}
-
-				tmpIP->point = tmpPoint;
-				tmpIP->maxDevatingConstraint = this->originalProblem->getMostDeviatingConstraint(tmpPoint);
-
-				this->outputWarning("      Interior point replaced with primal solution point.");
-
-				this->interiorPts.back() = tmpIP;
-			}
-		}
 
 		// Write the new primal point to a file
 		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
@@ -1345,13 +1282,20 @@ void ProcessInfo::createIteration()
 	iter.boundaryDistance = OSDBL_MAX;
 	iter.MIPSolutionLimitUpdated = false;
 
-	if (static_cast<ES_SolutionStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_SolutionStrategy::SingleTree)
+	switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
 	{
+	case (E_SolutionStrategy::MIQCQP):
 		iter.type = E_IterationProblemType::MIP;
-	}
-	else
-	{
+		break;
+	case (E_SolutionStrategy::NLP):
+		iter.type = E_IterationProblemType::Relaxed;
+		break;
+	case (E_SolutionStrategy::SingleTree):
+		iter.type = E_IterationProblemType::MIP;
+		break;
+	default:
 		iter.type = relaxationStrategy->getProblemType();
+		break;
 	}
 
 	iterations.push_back(iter);

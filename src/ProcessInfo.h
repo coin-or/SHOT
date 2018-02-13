@@ -143,6 +143,7 @@ class ProcessInfo
 		Iteration *getPreviousIteration();
 
 		E_TerminationReason terminationReason;
+		E_SolutionStrategy usedSolutionStrategy;
 
 		std::string getOSrl();
 		std::string getTraceResult();

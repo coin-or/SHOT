@@ -82,6 +82,14 @@ enum class E_ProblemSolutionStatus
 	CutOff
 };
 
+enum class E_SolutionStrategy
+{
+	SingleTree,
+	MultiTree,
+	NLP,
+	MIQCQP
+};
+
 enum class E_TerminationReason
 {
 	ConstraintTolerance,
@@ -189,8 +197,9 @@ enum class ES_QuadraticProblemStrategy
 	QuadraticallyConstrained
 };
 
-enum class ES_SolutionStrategy
+enum class ES_TreeStrategy
 {
 	MultiTree, 
 	SingleTree
 };
+

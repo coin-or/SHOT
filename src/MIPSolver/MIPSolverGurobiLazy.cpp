@@ -401,6 +401,8 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
+		tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
@@ -463,8 +465,9 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
 
 		if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 		{
-			if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-					"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+			tUpdateInteriorPoint->run();
+
+			if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 			{
 				static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
 			}

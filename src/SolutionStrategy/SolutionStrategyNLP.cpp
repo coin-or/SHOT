@@ -134,6 +134,9 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
+		TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+		ProcessInfo::getInstance().tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
+
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{

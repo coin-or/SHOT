@@ -9,11 +9,14 @@
 
 TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch()
 {
-
 }
 
 TaskSelectHyperplanePointsLinesearch::~TaskSelectHyperplanePointsLinesearch()
 {
+	if (hyperplaneSolutionPointStrategyInitialized)
+	{
+		delete tSelectHPPts;
+	}
 }
 
 void TaskSelectHyperplanePointsLinesearch::run()
@@ -31,6 +34,20 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 
 	int prevHPnum = ProcessInfo::getInstance().hyperplaneWaitingList.size();
 
+	if (ProcessInfo::getInstance().interiorPts.size() == 0)
+	{
+		if (!hyperplaneSolutionPointStrategyInitialized)
+		{
+			tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+			hyperplaneSolutionPointStrategyInitialized = true;
+		}
+
+		ProcessInfo::getInstance().outputError("     Adding cutting plane since no interior point is known.");
+		tSelectHPPts->run(solPoints);
+
+		return;
+	}
+
 	for (int i = 0; i < solPoints.size(); i++)
 	{
 		if (originalProblem->isConstraintsFulfilledInPoint(solPoints.at(i).point))
@@ -40,8 +57,8 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 		{
 			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
 			{
-				if (addedHyperplanes
-						>= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual")) return;
+				if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+					return;
 				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
 
 				std::vector<double> externalPoint;
@@ -52,9 +69,9 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 
 					ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 					auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-							Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-							Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-							Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
+																					   Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+																					   Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+																					   Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
 					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 					internalPoint = xNewc.first;
@@ -66,7 +83,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 					externalPoint = solPoints.at(i).point;
 
 					ProcessInfo::getInstance().outputWarning(
-							"     Cannot find solution with linesearch, using solution point instead.");
+						"     Cannot find solution with linesearch, using solution point instead.");
 				}
 
 				auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(externalPoint);
@@ -94,9 +111,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 					addedHyperplanes++;
 
 					ProcessInfo::getInstance().outputInfo(
-							"     Added hyperplane to waiting list with deviation: "
-									+ UtilityFunctions::toString(tmpMostDevConstr.value));
-
+						"     Added hyperplane to waiting list with deviation: " + UtilityFunctions::toString(tmpMostDevConstr.value));
 				}
 				else
 				{
@@ -111,5 +126,4 @@ std::string TaskSelectHyperplanePointsLinesearch::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

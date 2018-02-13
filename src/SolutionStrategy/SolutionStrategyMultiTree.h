@@ -57,6 +57,8 @@
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
 
+#include "../Tasks/TaskUpdateInteriorPoint.h"
+
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
 #include "../Tasks/TaskSolveFixedLinearProblem.h"
 

@@ -5,36 +5,35 @@
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
+#include "../Tasks/TaskUpdateInteriorPoint.h"
 
 class MIPSolverCallbackBase
 {
-	public:
+  public:
+  private:
+  protected:
+	int cbCalls = 0;
+	bool isMinimization = true;
+	int lastNumAddedHyperplanes = 0;
+	double lastUpdatedPrimal;
 
-	private:
-    
-	protected:
-		int cbCalls = 0;
-		bool isMinimization = true;
-		int lastNumAddedHyperplanes = 0;
-		double lastUpdatedPrimal;
+	int maxIntegerRelaxedHyperplanes = 0;
 
-		int maxIntegerRelaxedHyperplanes = 0;
+	int lastSummaryIter = 0;
+	double lastSummaryTimeStamp = 0.0;
+	int lastHeaderIter = 0;
 
-		int lastSummaryIter = 0;
-		double lastSummaryTimeStamp = 0.0;
-		int lastHeaderIter = 0;
+	TaskBase *tSelectPrimNLP;
+	TaskBase *taskSelectHPPts;
+	TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
+	TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
+	TaskUpdateInteriorPoint *tUpdateInteriorPoint;
 
-		TaskBase *tSelectPrimNLP;
-		TaskBase *taskSelectHPPts;
-		TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
-		TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
+	bool checkFixedNLPStrategy(SolutionPoint point);
 
-		bool checkFixedNLPStrategy(SolutionPoint point);
+	bool checkIterationLimit();
 
-		bool checkIterationLimit();
+	void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 
-		void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
-
-		void printIterationReport(SolutionPoint solution, std::string threadId, std::string bestBound, std::string openNodes);
-
+	void printIterationReport(SolutionPoint solution, std::string threadId, std::string bestBound, std::string openNodes);
 };
