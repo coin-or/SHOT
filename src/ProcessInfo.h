@@ -145,7 +145,8 @@ class ProcessInfo
 	E_TerminationReason terminationReason;
 	E_SolutionStrategy usedSolutionStrategy;
 	ES_MIPSolver usedMIPSolver;
-	
+	ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
+
 	std::string getOSrl();
 	std::string getTraceResult();
 

@@ -1171,6 +1171,27 @@ std::string ProcessInfo::getTraceResult()
 	ss << "SHOT"
 	   << ",";
 
+	switch (static_cast<ES_PrimalNLPSolver>(ProcessInfo::getInstance().usedPrimalNLPSolver))
+	{
+	case (ES_PrimalNLPSolver::None):
+		ss << "";
+		break;
+	case (ES_PrimalNLPSolver::CuttingPlane):
+		ss << "SHOT";
+		break;
+	case (ES_PrimalNLPSolver::GAMS):
+		ss << Settings::getInstance().getStringSetting("GAMS.NLP.Solver", "Subsolver");
+		break;
+	case (ES_PrimalNLPSolver::Ipopt):
+		ss << "Ipopt";
+		break;
+	default:
+		ss << "";
+		break;
+	}
+
+	ss << ",";
+
 	switch (static_cast<ES_MIPSolver>(ProcessInfo::getInstance().usedMIPSolver))
 	{
 	case (ES_MIPSolver::Cplex):

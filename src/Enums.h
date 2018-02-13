@@ -168,7 +168,8 @@ enum class ES_PrimalNLPSolver
 {
 	CuttingPlane, 
 	Ipopt, 
-	GAMS
+	GAMS,
+	None
 };
 
 enum class ES_MIPPresolveStrategy

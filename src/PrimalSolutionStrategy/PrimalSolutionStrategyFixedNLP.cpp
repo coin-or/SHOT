@@ -14,18 +14,21 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 
 	switch (static_cast<ES_PrimalNLPSolver>(Settings::getInstance().getIntSetting("FixedInteger.Solver", "Primal")))
 	{
-	case ES_PrimalNLPSolver::CuttingPlane:
+	case (ES_PrimalNLPSolver::CuttingPlane):
 	{
+		ProcessInfo::getInstance().usedPrimalNLPSolver = ES_PrimalNLPSolver::CuttingPlane;
 		NLPSolver = new NLPSolverCuttingPlaneRelaxed();
 		break;
 	}
-	case ES_PrimalNLPSolver::Ipopt:
+	case (ES_PrimalNLPSolver::Ipopt):
 	{
+		ProcessInfo::getInstance().usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
 		NLPSolver = new NLPSolverIpoptRelaxed();
 		break;
 	}
-	case ES_PrimalNLPSolver::GAMS:
+	case (ES_PrimalNLPSolver::GAMS):
 	{
+		ProcessInfo::getInstance().usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
 		NLPSolver = new NLPSolverGAMS();
 		break;
 	}
