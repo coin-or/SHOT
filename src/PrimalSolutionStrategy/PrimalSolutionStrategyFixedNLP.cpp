@@ -26,13 +26,18 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 		NLPSolver = new NLPSolverIpoptRelaxed();
 		break;
 	}
+#ifdef HAS_GAMS
 	case (ES_PrimalNLPSolver::GAMS):
 	{
 		ProcessInfo::getInstance().usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
 		NLPSolver = new NLPSolverGAMS();
 		break;
 	}
+#endif
 	default:
+		ProcessInfo::getInstance().outputError("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
+		throw new ErrorClass("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
+
 		throw std::logic_error("Unknown PrimalNLPSolver setting.");
 	}
 

@@ -53,6 +53,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
+#include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"

@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 	catch (const ErrorClass &eclass)
 	{
 		ProcessInfo::getInstance().outputError(eclass.errormsg);
-
+	
 		delete solver;
 
 		return (0);

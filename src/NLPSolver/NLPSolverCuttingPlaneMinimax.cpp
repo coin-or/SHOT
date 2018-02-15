@@ -41,27 +41,34 @@ class MinimizationFunction
 
 NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 {
-
 	auto solver = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
+	if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
+	{
+		ProcessInfo::getInstance().outputError("Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+		throw new ErrorClass("Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+	}
+
+#ifdef HAS_CPLEX
 	if (solver == ES_MIPSolver::Cplex)
 	{
 		LPSolver = new MIPSolverCplex();
 		ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver for minimax solver.");
 	}
-	else if (solver == ES_MIPSolver::Gurobi)
+#endif
+
+#ifdef HAS_GUROBI
+	if (solver == ES_MIPSolver::Gurobi)
 	{
 		LPSolver = new MIPSolverGurobi();
 		ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver for minimax solver.");
 	}
-	else if (solver == ES_MIPSolver::Cbc)
+#endif
+
+	if (solver == ES_MIPSolver::Cbc)
 	{
 		LPSolver = new MIPSolverOsiCbc();
 		ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
-	}
-	else
-	{
-		throw new ErrorClass("Error in MIP solver definition for minimax solver.");
 	}
 
 	NLPProblem = new OptProblemNLPMinimax();

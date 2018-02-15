@@ -9,8 +9,14 @@
 
 #include "NLPSolverBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
+
+#ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
+#endif
+#ifdef HAS_GUROBI
 #include "../MIPSolver/MIPSolverGurobi.h"
+#endif
+
 #include "../MIPSolver/MIPSolverOsiCbc.h"
 #include "INLPSolver.h"
 

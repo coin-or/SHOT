@@ -11,11 +11,18 @@
 #include "../ProcessInfo.h"
 #include "../UtilityFunctions.h"
 #include "../MIPSolver/IMIPSolver.h"
+
+#ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
 #include "../MIPSolver/MIPSolverCplexLazy.h"
 #include "../MIPSolver/MIPSolverCplexLazyOriginalCallback.h"
+#endif
+
+#ifdef HAS_GUROBI
 #include "../MIPSolver/MIPSolverGurobi.h"
 #include "../MIPSolver/MIPSolverGurobiLazy.h"
+#endif
+
 #include "../MIPSolver/MIPSolverOsiCbc.h"
 
 class TaskInitializeDualSolver: public TaskBase

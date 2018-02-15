@@ -1,6 +1,9 @@
 #include "SHOTSolver.h"
 
-SHOTSolver::SHOTSolver() : gms2os(NULL)
+SHOTSolver::SHOTSolver()
+#ifdef HAS_GAMS
+	: gms2os(NULL)
+#endif
 {
 	initializeSettings();
 	isProblemInitialized = false;
@@ -10,7 +13,10 @@ SHOTSolver::~SHOTSolver()
 {
 	if (isProblemInitialized)
 		delete solutionStrategy;
+
+#ifdef HAS_GAMS
 	delete gms2os;
+#endif
 }
 
 bool SHOTSolver::setOptions(std::string fileName)
@@ -124,6 +130,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 			nl2os->createOSObjects();
 			tmpInstance = nl2os->osinstance;
 		}
+#ifdef HAS_GAMS
 		else if (problemExtension == ".gms")
 		{
 			assert(gms2os == NULL);
@@ -141,6 +148,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 			gms2os->createOSObjects();
 			tmpInstance = gms2os->osinstance;
 		}
+#endif
 		else
 		{
 			ProcessInfo::getInstance().outputError("Wrong filetype specified.");
@@ -252,10 +260,12 @@ bool SHOTSolver::solveProblem()
 {
 	bool result = solutionStrategy->solveProblem();
 
+#ifdef HAS_GAMS
 	if (result && gms2os != NULL)
 	{
 		gms2os->writeResult(ProcessInfo::getInstance());
 	}
+#endif
 
 	return (result);
 }

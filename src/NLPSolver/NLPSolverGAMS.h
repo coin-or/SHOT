@@ -1,7 +1,3 @@
-/**
- * @file NLPSolverGAMS.h
- */
-
 #pragma once
 #include "NLPSolverBase.h"
 

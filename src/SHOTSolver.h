@@ -8,39 +8,43 @@
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 #include "ProcessInfo.h"
-#include "OSnl2OS.h"
 #include "boost/filesystem.hpp"
 #include "TaskHandler.h"
+#include "OSnl2OS.h"
+
+#ifdef HAS_GAMS
 #include "GAMS/GAMS2OS.h"
+#endif
 
 class SHOTSolver
 {
-	private:
-		ISolutionStrategy *solutionStrategy;
+  private:
+	ISolutionStrategy *solutionStrategy;
+	
+#ifdef HAS_GAMS
+	GAMS2OS *gms2os;
+#endif
 
-		GAMS2OS* gms2os;
+	void initializeSettings();
+	void initializeDebugMode();
 
-		void initializeSettings();
-		void initializeDebugMode();
+	bool isProblemInitialized;
 
-		bool isProblemInitialized;
+  public:
+	SHOTSolver();
+	~SHOTSolver();
 
-	public:
+	bool setOptions(std::string fileName);
+	bool setOptions(OSOption *osOptions);
 
-		SHOTSolver();
-		~SHOTSolver();
+	bool setProblem(std::string fileName);
+	bool setProblem(OSInstance *osInstance);
 
-		bool setOptions(std::string fileName);
-		bool setOptions(OSOption *osOptions);
+	bool solveProblem();
 
-		bool setProblem(std::string fileName);
-		bool setProblem(OSInstance *osInstance);
+	std::string getOSoL();
+	std::string getGAMSOptFile();
 
-		bool solveProblem();
-
-		std::string getOSoL();
-		std::string getGAMSOptFile();
-
-		std::string getOSrL();
-		std::string getTraceResult();
+	std::string getOSrL();
+	std::string getTraceResult();
 };

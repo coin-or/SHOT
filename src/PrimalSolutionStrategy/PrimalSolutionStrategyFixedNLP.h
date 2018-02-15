@@ -11,7 +11,11 @@
 #include "../NLPSolver/INLPSolver.h"
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 #include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
+
+#ifdef HAS_GAMS
 #include "../NLPSolver/NLPSolverGAMS.h"
+#endif
+
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
