@@ -204,15 +204,31 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
 	if (static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
 	{
-		solutionStrategy = new SolutionStrategyMultiTree(osInstance);
-		isProblemInitialized = true;
+		if (UtilityFunctions::areAllVariablesReal(osInstance))
+		{
+			ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
+			solutionStrategy = new SolutionStrategyNLP(osInstance);
+			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
+		}
+		else
+		{
+			solutionStrategy = new SolutionStrategyMultiTree(osInstance);
+			isProblemInitialized = true;
+		}
 
 		return (true);
 	}
 
 	bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
 	bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
-	if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
+
+	if (UtilityFunctions::areAllVariablesReal(osInstance))
+	{
+		ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
+		solutionStrategy = new SolutionStrategyNLP(osInstance);
+		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
+	}
+	else if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
 	//MIQP problem
 	{
 		ProcessInfo::getInstance().outputSummary("Using MIQP solution strategy.");
@@ -225,12 +241,6 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 		ProcessInfo::getInstance().outputSummary("Using MIQCQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
-	}
-	else if (UtilityFunctions::areAllVariablesReal(osInstance))
-	{
-		ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
-		solutionStrategy = new SolutionStrategyNLP(osInstance);
-		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
 	}
 	else
 	{

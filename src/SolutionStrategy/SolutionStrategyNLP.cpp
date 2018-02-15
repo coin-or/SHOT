@@ -56,8 +56,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 	TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+	//TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
+	//ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
 	/*if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
 	 + ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
@@ -130,7 +130,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 
 	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
+	//ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{

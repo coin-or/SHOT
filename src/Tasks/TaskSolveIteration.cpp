@@ -168,33 +168,33 @@ void TaskSolveIteration::run()
 	{
 		if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
 		{
-			ProcessInfo::getInstance().iterOptMIQP = ProcessInfo::getInstance().iterOptMIQP + 1;
+			ProcessInfo::getInstance().iterOptMIQP++;
 		}
 		else
 		{
-			ProcessInfo::getInstance().iterOptMILP = ProcessInfo::getInstance().iterOptMILP + 1;
+			ProcessInfo::getInstance().iterOptMILP++;
 		}
 	}
 	else if (currIter->type == E_IterationProblemType::Relaxed)
 	{
 		if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
 		{
-			ProcessInfo::getInstance().iterQP = ProcessInfo::getInstance().iterQP + 1;
+			ProcessInfo::getInstance().iterQP++;
 		}
 		else
 		{
-			ProcessInfo::getInstance().iterLP = ProcessInfo::getInstance().iterLP + 1;
+			ProcessInfo::getInstance().iterLP++;
 		}
 	}
 	else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit))
 	{
 		if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
 		{
-			ProcessInfo::getInstance().iterFeasMIQP = ProcessInfo::getInstance().iterFeasMIQP + 1;
+			ProcessInfo::getInstance().iterFeasMIQP++;
 		}
 		else
 		{
-			ProcessInfo::getInstance().iterFeasMILP = ProcessInfo::getInstance().iterFeasMILP + 1;
+			ProcessInfo::getInstance().iterFeasMILP++;
 		}
 	}
 }

@@ -10,20 +10,16 @@
 TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool useLazyStrategy)
 {
 	ProcessInfo::getInstance().startTimer("MIP");
-std::cout << "0" << std::endl;
+	
 	if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
 	{
-		std::cout << "1" << std::endl;
 		ProcessInfo::getInstance().outputError("Error in solver definition. Check option 'Dual.MIP.Solver'.");
 		throw new ErrorClass("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
 	}
 
 	if (useLazyStrategy)
 	{
-		std::cout << "2" << std::endl;
 #ifdef HAS_CPLEX
-std::cout << "cplex" << std::endl;
-		std::cout << "cplex" << std::endl;
 		if (solver == ES_MIPSolver::Cplex)
 		{
 			if (Settings::getInstance().getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
@@ -42,7 +38,6 @@ std::cout << "cplex" << std::endl;
 #endif
 
 #ifdef HAS_GUROBI
-std::cout << "gurobi" << std::endl;
 		if (solver == ES_MIPSolver::Gurobi)
 		{
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverGurobiLazy();
@@ -51,10 +46,8 @@ std::cout << "gurobi" << std::endl;
 		}
 #endif
 
-		std::cout << "4" << std::endl;
 		if (solver == ES_MIPSolver::Cbc)
 		{
-			std::cout << "6" << std::endl;
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverOsiCbc();
 			ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cbc;
 			ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver.");
@@ -62,11 +55,10 @@ std::cout << "gurobi" << std::endl;
 	}
 	else
 	{
-std::cout << "3" << std::endl;
+
 #ifdef HAS_CPLEX
 		if (solver == ES_MIPSolver::Cplex)
 		{
-			std::cout << "cplex2" << std::endl;
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverCplex();
 			ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver.");
 		}
@@ -75,12 +67,10 @@ std::cout << "3" << std::endl;
 #ifdef HAS_GUROBI
 		if (solver == ES_MIPSolver::Gurobi)
 		{
-			std::cout << "gurobi2" << std::endl;
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverGurobi();
 			ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver.");
 		}
 #endif
-		std::cout << "5" << std::endl;
 		if (solver == ES_MIPSolver::Cbc)
 		{
 			ProcessInfo::getInstance().MIPSolver = new MIPSolverOsiCbc();
