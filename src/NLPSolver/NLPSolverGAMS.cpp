@@ -1,7 +1,3 @@
-/**
- * @file NLPSolverGAMS.cpp
- */
-
 #include "NLPSolverGAMS.h"
 #include "../GAMS/GAMS2OS.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"

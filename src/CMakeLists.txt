@@ -11,7 +11,7 @@ set (Tutorial_VERSION_MINOR 9)
 # Activates subsolvers, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON) 
 option (HAS_GUROBI "Is Gurobi available" ON) 
-option (HAS_GAMS "Is GAMS available" OFF)
+option (HAS_GAMS "Is GAMS available" ON)
 
 # Sets the paths required. Edit these to suit your system:
 set(COINOS_DIR /opt/OS-2.10-stable)
@@ -147,14 +147,15 @@ if (HAS_GUROBI)
 endif (HAS_GUROBI)
 
 if (HAS_GAMS)  
+  include_directories("${GAMS_DIR}/apifiles/C/api")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
-  set(Foo_SOURCES ${Foo_SOURCES} "$./NLPSolver/NLPSolverGAMS.cpp")
-  set(Foo_HEADERS ${Foo_HEADERS} "$./NLPSolver/NLPSolverGAMS.h")
   set(Foo_SOURCES ${Foo_SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
+  set(Foo_SOURCES ${Foo_SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
+  set(Foo_SOURCES ${Foo_SOURCES} "./NLPSolver/NLPSolverGAMS.cpp")
+  set(Foo_HEADERS ${Foo_HEADERS} "./NLPSolver/NLPSolverGAMS.h")
   set(Foo_SOURCES ${Foo_SOURCES} "./GAMS/GAMS2OS.cpp")
   set(Foo_HEADERS ${Foo_HEADERS} "./GAMS/GAMS2OS.h")
   set(Foo_HEADERS ${Foo_HEADERS} "./GAMS/GamsNLinstr.h")
-  include_directories("${GAMS_DIR}/apifiles/C/api")
 endif (HAS_GAMS)
 
 # Finding out link directories
