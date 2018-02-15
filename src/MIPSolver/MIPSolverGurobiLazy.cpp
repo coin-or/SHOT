@@ -305,19 +305,22 @@ void GurobiCallback::callback()
 			}
 
 			// Adds cutoff
+
+			double cutOffTol = Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual");
+
 			if (isMinimization)
 			{
-				static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound /*+ 0.0000001*/);
+				static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound + cutOffTol);
 
 				ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + UtilityFunctions::toString(primalBound /*+ 0.0000001*/) + " for minimization.");
+					"     Setting cutoff value to " + UtilityFunctions::toString(primalBound + cutOffTol) + " for minimization.");
 			}
 			else
 			{
-				static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound /*- 0.0000001*/);
+				static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound - cutOffTol);
 
 				ProcessInfo::getInstance().outputInfo(
-					"     Setting cutoff value to " + UtilityFunctions::toString(-primalBound /*- 0.0000001*/) + " for minimization.");
+					"     Setting cutoff value to " + UtilityFunctions::toString(-primalBound - cutOffTol) + " for minimization.");
 			}
 		}
 	}

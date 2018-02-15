@@ -528,17 +528,19 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 	try
 	{
 		// Gurobi has problems if not an epsilon value is added to the cutoff...
+		
+		double cutOffTol = Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual");
 
 		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
-			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + 0.0000001);
+			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
 
 			ProcessInfo::getInstance().outputInfo(
 				"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
 		}
 		else
 		{
-			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - 0.0000001);
+			gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
 			ProcessInfo::getInstance().outputInfo(
 				"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
 		}

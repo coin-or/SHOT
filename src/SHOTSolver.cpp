@@ -416,7 +416,7 @@ void SHOTSolver::initializeSettings()
 
 	// Dual strategy settings: MIP solver
 
-	Settings::getInstance().createSetting("MIP.CutOffTolerance", "Dual", 0.0001,
+	Settings::getInstance().createSetting("MIP.CutOffTolerance", "Dual", 0.00001,
 										  "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, OSDBL_MAX);
 
 	std::vector<std::string> enumPresolve;

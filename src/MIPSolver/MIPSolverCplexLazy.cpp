@@ -275,19 +275,22 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 		}
 
 		// Adds cutoff
+
+		double cutOffTol = Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual");
+
 		if (isMinimization)
 		{
-			(static_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver))->cplexInstance.setParam(IloCplex::CutUp, primalBound);
+			(static_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver))->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
 
 			ProcessInfo::getInstance().outputInfo(
-				"     Setting cutoff value to " + to_string(primalBound) + " for minimization.");
+				"     Setting cutoff value to " + to_string(primalBound + cutOffTol) + " for minimization.");
 		}
 		else
 		{
-			(static_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver))->cplexInstance.setParam(IloCplex::CutLo, primalBound);
+			(static_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver))->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
 
 			ProcessInfo::getInstance().outputInfo(
-				"     Setting cutoff value to " + to_string(primalBound) + " for maximization.");
+				"     Setting cutoff value to " + to_string(primalBound - cutOffTol) + " for maximization.");
 		}
 	}
 	catch (IloException &e)

@@ -367,19 +367,24 @@ void MIPSolverOsiCbc::setTimeLimit(double seconds)
 
 void MIPSolverOsiCbc::setCutOff(double cutOff)
 {
+	double cutOffTol = Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual");
+
 	try
 	{
-		this->cutOff = cutOff;
 
 		if (originalProblem->isTypeOfObjectiveMinimize())
 		{
+			this->cutOff = cutOff + cutOffTol;
+
 			ProcessInfo::getInstance().outputInfo(
-				"     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
+				"     Setting cutoff value to " + to_string(this->cutOff) + " for minimization.");
 		}
 		else
 		{
+			this->cutOff = cutOff - cutOffTol;
+
 			ProcessInfo::getInstance().outputInfo(
-				"     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
+				"     Setting cutoff value to " + to_string(this->cutOff) + " for maximization.");
 		}
 	}
 	catch (exception &e)
