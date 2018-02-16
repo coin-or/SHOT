@@ -415,23 +415,8 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
 	}
 
-	// Check if primal bound is worse than current
-	if ((isMinimization && tmpObjVal < this->currentObjectiveBounds.second) || (!isMinimization && tmpObjVal > this->currentObjectiveBounds.second))
-	{
-		auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
-		this->outputWarning(tmpLine.str());
-	}
-	else
-	{
-		auto tmpLine = boost::format(
-						   "     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).") %
-					   tmpObjVal % sourceDesc % this->currentObjectiveBounds.second;
-		this->outputWarning(tmpLine.str());
-
-		return (false);
-	}
-
 	// Check that solution fulfills bounds, project back otherwise
+	bool reCalculateObjective = false;
 
 	auto realVarIndexes = originalProblem->getRealVariableIndices();
 
@@ -495,6 +480,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 	if (!isVariableBoundsFulfilled)
 	{
+		reCalculateObjective = true;
 		auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
 		this->outputWarning(tmpLine.str());
 	}
@@ -537,13 +523,8 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 		if (isRounded)
 		{
+			reCalculateObjective = true;
 			tmpPoint = ptRounded;
-			tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(ptRounded);
-
-			if (this->originalProblem->isObjectiveFunctionNonlinear())
-			{
-				tmpPoint.at(this->originalProblem->getNonlinearObjectiveVariableIdx()) = tmpObjVal;
-			}
 
 			auto tmpLine = boost::format(
 							   "       Discrete variables were not fulfilled to tolerance %1%. Rounding performed...") %
@@ -560,52 +541,76 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		primalSol.maxIntegerToleranceError = maxIntegerError;
 	}
 
-	// Assume linear constraints are valid for MIP/LP solutions
-
-	/*if (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
-	 || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-	 || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback)
-	 {
-
-	 }
-	 else
-	 {*/
-	auto linTol = Settings::getInstance().getDoubleSetting("Tolerance.LinearConstraint", "Primal");
-
-	auto linearConstraintIndexes = originalProblem->getLinearConstraintIndexes();
-
-	IndexValuePair mostDevLinearConstraints;
-
-	if (linearConstraintIndexes.size() > 0)
+	// Recalculate the objective if rounding or projection has been performed
+	if (reCalculateObjective)
 	{
-		mostDevLinearConstraints = originalProblem->getMostDeviatingConstraint(tmpPoint, linearConstraintIndexes).first;
+		tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(tmpPoint);
 
-		isLinConstrFulfilled = (mostDevLinearConstraints.value < linTol);
-
-		if (isLinConstrFulfilled)
+		if (this->originalProblem->isObjectiveFunctionNonlinear())
 		{
-			auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
-			this->outputInfo(tmpLine.str());
-		}
-		else
-		{
-			auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
-			this->outputInfo(tmpLine.str());
-
-			return (false);
+			tmpPoint.at(this->originalProblem->getNonlinearObjectiveVariableIdx()) = tmpObjVal;
 		}
 	}
 
-	primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
-	//}
+	// Check if primal bound is worse than current
+	if ((isMinimization && tmpObjVal < this->currentObjectiveBounds.second) || (!isMinimization && tmpObjVal > this->currentObjectiveBounds.second))
+	{
+		auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
+		this->outputWarning(tmpLine.str());
+	}
+	else
+	{
+		auto tmpLine = boost::format(
+						   "     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).") %
+					   tmpObjVal % sourceDesc % this->currentObjectiveBounds.second;
+		this->outputWarning(tmpLine.str());
+
+		return (false);
+	}
+
+	bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers || primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
+
+	if (acceptableType && Settings::getInstance().getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
+	{
+		auto tmpLine = boost::format("       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
+		this->outputInfo(tmpLine.str());
+	}
+	else
+	{
+		auto linTol = Settings::getInstance().getDoubleSetting("Tolerance.LinearConstraint", "Primal");
+
+		auto linearConstraintIndexes = originalProblem->getLinearConstraintIndexes();
+
+		IndexValuePair mostDevLinearConstraints;
+
+		if (linearConstraintIndexes.size() > 0)
+		{
+			mostDevLinearConstraints = originalProblem->getMostDeviatingConstraint(tmpPoint, linearConstraintIndexes).first;
+
+			isLinConstrFulfilled = (mostDevLinearConstraints.value < linTol);
+
+			if (isLinConstrFulfilled)
+			{
+				auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
+				this->outputInfo(tmpLine.str());
+			}
+			else
+			{
+				auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
+				this->outputInfo(tmpLine.str());
+
+				return (false);
+			}
+		}
+
+		primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
+	}
 
 	IndexValuePair mostDevNonlinearConstraints;
 
 	if (originalProblem->getNumberOfNonlinearConstraints() > 0)
 	{
-		mostDevNonlinearConstraints = this->originalProblem->getMostDeviatingConstraint(tmpPoint,
-																						originalProblem->getNonlinearConstraintIndexes())
-										  .first;
+		mostDevNonlinearConstraints = this->originalProblem->getMostDeviatingConstraint(tmpPoint, originalProblem->getNonlinearConstraintIndexes()).first;
 
 		auto nonlinTol = Settings::getInstance().getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
 		isNonLinConstrFulfilled = (mostDevNonlinearConstraints.value < nonlinTol);
@@ -652,72 +657,67 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 	primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
-	// Checking again since rounding may have affected the outcome
-	bool updatePrimal = ((isMinimization && tmpObjVal < this->currentObjectiveBounds.second) || (!isMinimization && tmpObjVal > this->currentObjectiveBounds.second));
+	char HPobjadded = ' ';
 
-	if (updatePrimal)
+	if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") && this->originalProblem->isObjectiveFunctionNonlinear())
 	{
-		char HPobjadded = ' ';
+		auto objConstrVal = this->originalProblem->calculateConstraintFunctionValue(-1, tmpPoint) - tmpPoint.back();
 
-		if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") && this->originalProblem->isObjectiveFunctionNonlinear())
+		if (objConstrVal < 0)
 		{
-			auto objConstrVal = this->originalProblem->calculateConstraintFunctionValue(-1, tmpPoint) - tmpPoint.back();
+			Hyperplane hyperplane;
+			hyperplane.sourceConstraintIndex = -1;
+			hyperplane.generatedPoint = tmpPoint;
+			hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
 
-			if (objConstrVal < 0)
-			{
-				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = -1;
-				hyperplane.generatedPoint = tmpPoint;
-				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
+			this->hyperplaneWaitingList.push_back(hyperplane);
 
-				this->hyperplaneWaitingList.push_back(hyperplane);
+			auto tmpLine = boost::format("     Primal objective cut added.");
 
-				auto tmpLine = boost::format("     Primal objective cut added.");
-
-				this->outputWarning(tmpLine.str());
-			}
+			this->outputWarning(tmpLine.str());
 		}
+	}
 
-		this->currentObjectiveBounds.second = tmpObjVal;
+	this->currentObjectiveBounds.second = tmpObjVal;
 
-		auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
+	auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
 
-		this->outputSummary(tmpLine.str());
+	this->outputSummary(tmpLine.str());
 
-		primalSol.objValue = tmpObjVal;
-		primalSol.point = tmpPoint;
+	primalSol.objValue = tmpObjVal;
+	primalSol.point = tmpPoint;
 
-		if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
+	if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
+	{
+		this->primalSolutions.insert(this->primalSolutions.begin(), primalSol);
+	}
+	else
+	{
+		if (this->primalSolutions.size() == 0)
 		{
-			this->primalSolutions.insert(this->primalSolutions.begin(), primalSol);
+			this->primalSolutions.push_back(primalSol);
 		}
 		else
 		{
-			if (this->primalSolutions.size() == 0)
-			{
-				this->primalSolutions.push_back(primalSol);
-			}
-			else
-			{
-				this->primalSolutions.at(0) = primalSol;
-			}
+			this->primalSolutions.at(0) = primalSol;
 		}
+	}
 
-		this->primalSolution = tmpPoint;
+	this->primalSolution = tmpPoint;
 
-		// Write the new primal point to a file
-		if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
-		{
-			stringstream fileName;
-			fileName << Settings::getInstance().getStringSetting("Debug.Path", "Output");
-			fileName << "/primalpoint";
-			fileName << this->primalSolutions.size();
-			fileName << ".txt";
+	// Write the new primal point to a file
+	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+	{
+		stringstream fileName;
+		fileName << Settings::getInstance().getStringSetting("Debug.Path", "Output");
+		fileName << "/primalpoint";
+		fileName << this->primalSolutions.size();
+		fileName << ".txt";
 
-			UtilityFunctions::savePrimalSolutionToFile(primalSol, originalProblem->getVariableNames(), fileName.str());
-		}
+		UtilityFunctions::savePrimalSolutionToFile(primalSol, originalProblem->getVariableNames(), fileName.str());
+	}
 
-		/*
+	/*
 		 * Extra check for integers...
 		 * bool isRounded = false;
 
@@ -745,10 +745,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 		 }
 		 }*/
 
-		return (true);
-	}
-
-	return (false);
+	return (true);
 }
 
 ProcessInfo::ProcessInfo()

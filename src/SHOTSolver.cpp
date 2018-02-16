@@ -610,6 +610,9 @@ void SHOTSolver::initializeSettings()
 
 	// Primal settings: tolerances for accepting primal solutions
 
+	Settings::getInstance().createSetting("Tolerance.TrustLinearConstraintValues", "Primal", true,
+										  "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
+
 	Settings::getInstance().createSetting("Tolerance.Integer", "Primal", 1e-6,
 										  "Integer tolerance for accepting primal solutions");
 
