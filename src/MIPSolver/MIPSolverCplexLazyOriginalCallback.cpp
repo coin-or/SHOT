@@ -60,6 +60,12 @@ void HCallbackI::main() // Called at each node...
 		tmpVals.end();
 	}
 
+	if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber > iterNumLastResetHyperplaneCounter)
+	{
+		iterNumLastResetHyperplaneCounter = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
+		maxIntegerRelaxedHyperplanes = 0;
+	}
+
 	if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
 	{
 		int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();

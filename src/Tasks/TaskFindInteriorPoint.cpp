@@ -71,7 +71,7 @@ void TaskFindInteriorPoint::run()
 		}
 	}
 
-	ProcessInfo::getInstance().outputDebug("Solving NLP problem.");
+	ProcessInfo::getInstance().outputDebug(" Solving NLP problem.");
 
 	bool foundNLPPoint = false;
 
@@ -101,11 +101,11 @@ void TaskFindInteriorPoint::run()
 
 		if (maxDev.value > 0)
 		{
-			ProcessInfo::getInstance().outputWarning(
-				"Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+			ProcessInfo::getInstance().outputWarning(" Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
 		}
 		else
 		{
+			ProcessInfo::getInstance().outputError(" Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
 			ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 		}
 
@@ -118,10 +118,10 @@ void TaskFindInteriorPoint::run()
 			UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
 		}
 	}
-
+	
 	if (!foundNLPPoint)
 	{
-		ProcessInfo::getInstance().outputError("     No interior point found!                            ");
+		ProcessInfo::getInstance().outputError(" No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
 		return;
 	}

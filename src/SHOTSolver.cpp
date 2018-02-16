@@ -206,7 +206,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 	{
 		if (UtilityFunctions::areAllVariablesReal(osInstance))
 		{
-			ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
+			ProcessInfo::getInstance().outputSummary(" Using NLP solution strategy.");
 			solutionStrategy = new SolutionStrategyNLP(osInstance);
 			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
 		}
@@ -224,21 +224,21 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
 	if (UtilityFunctions::areAllVariablesReal(osInstance))
 	{
-		ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
+		ProcessInfo::getInstance().outputSummary(" Using NLP solution strategy.");
 		solutionStrategy = new SolutionStrategyNLP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
 	}
 	else if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
 	//MIQP problem
 	{
-		ProcessInfo::getInstance().outputSummary("Using MIQP solution strategy.");
+		ProcessInfo::getInstance().outputSummary(" Using MIQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQP;
 	}
 	//MIQCQP problem
 	else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
 	{
-		ProcessInfo::getInstance().outputSummary("Using MIQCQP solution strategy.");
+		ProcessInfo::getInstance().outputSummary(" Using MIQCQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
 	}
@@ -247,12 +247,12 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 		switch (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
 		{
 		case (ES_TreeStrategy::SingleTree):
-			ProcessInfo::getInstance().outputSummary("Using single-tree solution strategy.");
+			ProcessInfo::getInstance().outputSummary(" Using single-tree solution strategy.");
 			solutionStrategy = new SolutionStrategySingleTree(osInstance);
 			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::SingleTree;
 			break;
 		case (ES_TreeStrategy::MultiTree):
-			ProcessInfo::getInstance().outputSummary("Using multi-tree solution strategy.");
+			ProcessInfo::getInstance().outputSummary(" Using multi-tree solution strategy.");
 			solutionStrategy = new SolutionStrategyMultiTree(osInstance);
 			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MultiTree;
 			break;
@@ -393,6 +393,8 @@ void SHOTSolver::initializeSettings()
 										  "Perform root search on", enumLinesearchConstraintStrategy);
 	enumLinesearchConstraintStrategy.clear();
 
+	Settings::getInstance().createSetting("ESH.Linesearch.IndividualConstraints.Unique", "Dual", true, "Allow only one hyperplane per constraint per iteration");
+
 	Settings::getInstance().createSetting("ESH.Linesearch.ConstraintTolerance", "Dual", 1e-8,
 										  "Constraint tolerance for when not to add individual hyperplanes", 0, OSDBL_MAX);
 
@@ -511,7 +513,7 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Optimization model settings: Nonlinear objective function
-	Settings::getInstance().createSetting("NonlinearObjective.Bound", "Model", 100000000000.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("NonlinearObjective.Bound", "Model", 10000000000.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
 	// Logging and output settings
 	std::vector<std::string> enumLogLevel;
@@ -685,7 +687,7 @@ void SHOTSolver::initializeSettings()
 	enumIPOptSolver.push_back("ma86");
 	enumIPOptSolver.push_back("ma97");
 	enumIPOptSolver.push_back("mumps");
-	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps),
+	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma86),
 										  "Ipopt linear subsolver", enumIPOptSolver);
 	enumIPOptSolver.clear();
 
@@ -719,7 +721,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ConstraintTolerance", "Termination", 1e-8,
 										  "Termination tolerance for nonlinear constraints", 0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("IterationLimit", "Termination", 2000, "Iteration limit for main strategy", 1,
+	Settings::getInstance().createSetting("IterationLimit", "Termination", 200000, "Iteration limit for main strategy", 1,
 										  OSINT_MAX);
 
 	Settings::getInstance().createSetting("ObjectiveGap.Absolute", "Termination", 0.001,

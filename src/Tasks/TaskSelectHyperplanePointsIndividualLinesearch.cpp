@@ -32,6 +32,8 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 {
 	int addedHyperplanes = 0;
 
+	bool useUniqueConstraints = Settings::getInstance().getBoolSetting("ESH.Linesearch.IndividualConstraints.Unique", "Dual");
+
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
 	if (ProcessInfo::getInstance().interiorPts.size() == 0)
@@ -43,7 +45,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 		}
 
 		ProcessInfo::getInstance().outputError("     Adding cutting plane since no interior point is known.");
-		
+
 		tSelectHPPts->run(solPoints);
 
 		return;
@@ -72,16 +74,22 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 				{
 					int currConstrIdx = nonlinearConstraintIdxs.at(k);
 
+					// Check if max hyperplanes per iteration counter has been reached
+					if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+						return;
+
 					// Do not add hyperplane if one has been added for this constraint already
-					if ((currConstrIdx != -1 && hyperplaneAddedToConstraint.at(k)) || ((currConstrIdx == -1) && hyperplaneAddedToConstraint.back()))
+					if (useUniqueConstraints && ((currConstrIdx != -1 && hyperplaneAddedToConstraint.at(k)) || ((currConstrIdx == -1) && hyperplaneAddedToConstraint.back())))
 						continue;
 
 					auto constrDevExterior =
 						ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(currConstrIdx,
 																									 solPoints.at(i).point);
 
-					if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
-						return;
+					if (isnan(constrDevExterior))
+					{
+						continue;
+					}
 
 					// Do not add hyperplane if less than this tolerance or negative
 					if (constrDevExterior < Settings::getInstance().getDoubleSetting("ESH.Linesearch.ConstraintTolerance", "Dual"))

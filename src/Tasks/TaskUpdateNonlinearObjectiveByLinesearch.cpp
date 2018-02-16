@@ -9,7 +9,6 @@
 
 TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesearch()
 {
-
 }
 
 TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesearch()
@@ -25,13 +24,15 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (!currIter->isMIP()) return;
+	if (!currIter->isMIP())
+		return;
 
 	auto allSolutions = currIter->solutionPoints;
 
 	for (int i = 0; i < allSolutions.size(); i++)
 	{
-		if (allSolutions.at(i).maxDeviation.value < 0) continue;
+		if (allSolutions.at(i).maxDeviation.value < 0)
+			continue;
 
 		auto oldObjVal = allSolutions.at(i).objectiveValue;
 		auto changed = updateObjectiveInPoint(allSolutions.at(i));
@@ -65,7 +66,6 @@ std::string TaskUpdateNonlinearObjectiveByLinesearch::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }
 
 bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPoint &solution)
@@ -81,7 +81,7 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 	double error = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
 	vector<double> tmpPoint(dualSol.point);
-	tmpPoint.back() = mu + 1.05 * error;
+	tmpPoint.back() = mu + (1 + min(0.01, 1 / abs(oldObjVal))) * error;
 
 	std::vector<double> internalPoint;
 	std::vector<double> externalPoint;
@@ -91,8 +91,8 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 	try
 	{
 		auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(tmpPoint, dualSol.point,
-				Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-				Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0, constrIdxs);
+																		   Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+																		   Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0, constrIdxs);
 
 		internalPoint = xNewc.first;
 		externalPoint = xNewc.second;
@@ -102,10 +102,11 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 
 		solution.maxDeviation = mostDevOuter;
 		solution.objectiveValue = ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(
-				externalPoint);
+			externalPoint);
 		solution.point.back() = externalPoint.back();
 
-		if (oldObjVal != solution.objectiveValue) changed = true;
+		if (oldObjVal != solution.objectiveValue)
+			changed = true;
 		auto diffobj = abs(oldObjVal - solution.objectiveValue);
 
 		if (changed)
@@ -119,27 +120,22 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 
 				ProcessInfo::getInstance().outputInfo(
-						"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> "
-								+ UtilityFunctions::toString(solution.objectiveValue) + " (diff:"
-								+ UtilityFunctions::toString(diffobj) + ")  #");
+					"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(solution.objectiveValue) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
 			}
 			else
 			{
 				ProcessInfo::getInstance().outputInfo(
-						"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> "
-								+ UtilityFunctions::toString(solution.objectiveValue) + " (diff:"
-								+ UtilityFunctions::toString(diffobj) + ")  ");
+					"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(solution.objectiveValue) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  ");
 			}
 		}
 
 		ProcessInfo::getInstance().addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
-				ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
-
+															  ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
 	}
 	catch (std::exception &e)
 	{
 		ProcessInfo::getInstance().outputWarning(
-				"     Cannot find solution with linesearch for updating nonlinear objective.");
+			"     Cannot find solution with linesearch for updating nonlinear objective.");
 	}
 
 	return (changed);

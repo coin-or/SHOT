@@ -61,49 +61,4 @@ void OptProblemNLPRelaxed::copyObjectiveFunction(OSInstance *source, OSInstance 
 
 	destination->addObjective(-1, "newobj", "min", 0.0, 1.0, newobjcoeff);
 	delete newobjcoeff;
-
-	//destination->bObjectivesModified = true;
 }
-
-/*
- IndexValuePair OptProblemNLPRelaxed::getMostDeviatingConstraint(std::vector<double> point)
- {
- IndexValuePair valpair;
-
- std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
-
- if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
- {
- valpair.idx = -1;
- valpair.value = 0.0;
- }
- else
- {
- std::vector<double> constrDevs(idxNLCs.size());
-
- for (int i = 0; i < idxNLCs.size(); i++)
- {
- constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
- }
-
- auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
- valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
- valpair.value = *biggest;
- }
-
- return valpair;
- }
-
- bool OptProblemNLPRelaxed::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
- {
- std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
-
- for (int i = 0; i < getNumberOfNonlinearConstraints(); i++)
- {
- double tmpVal = calculateConstraintFunctionValue(idxNLCs.at(i), point);
- if (tmpVal > eps) return false;
- }
-
- return true;
- }
- */
