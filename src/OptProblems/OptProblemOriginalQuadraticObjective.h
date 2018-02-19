@@ -8,9 +8,6 @@ class OptProblemOriginalQuadraticObjective: public OptProblemOriginal
 		~OptProblemOriginalQuadraticObjective();
 
 		virtual bool setProblem(OSInstance *instance);
-		//virtual IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
-		//virtual void setQuadraticConstraintIndexes();
-		//virtual void setNonlinearConstraintIndexes();
 
 	private:
 

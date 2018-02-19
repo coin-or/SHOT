@@ -42,8 +42,9 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 		setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());
 	}
 
-	newInstance->getJacobianSparsityPattern();
+	this->repairNonboundedVariables();
 
+	newInstance->getJacobianSparsityPattern();
 }
 
 void OptProblemNLPRelaxed::copyObjectiveFunction(OSInstance *source, OSInstance *destination)

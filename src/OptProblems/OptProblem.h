@@ -134,7 +134,7 @@ class OptProblem
 		virtual void copyLinearTerms(OSInstance *source, OSInstance *destination);
 		virtual void copyConstraints(OSInstance *source, OSInstance *destination);
 
-		virtual void repairNonboundedObjectiveVariable(OSInstance *instance);
+		void repairNonboundedVariables();
 
 		//void setConstraintBoundsAsConstants(OSInstance *instance);
 

@@ -353,7 +353,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual", 1.0,
 										  "Relative termination tolerance between LP and linesearch objective", 0.0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -10000000000.0,
+	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -10.0e12,
 										  "Lower bound for minimax objective variable", -OSDBL_MAX, 0);
 
 	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
@@ -512,8 +512,16 @@ void SHOTSolver::initializeSettings()
 										  "The main strategy to use", enumSolutionStrategy);
 	enumSolutionStrategy.clear();
 
-	// Optimization model settings: Nonlinear objective function
-	Settings::getInstance().createSetting("NonlinearObjective.Bound", "Model", 10000000000.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
+	// Optimization model settings
+	Settings::getInstance().createSetting("ContinuousVariable.EmptyLowerBound", "Model", -10.0e12, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
+	
+	Settings::getInstance().createSetting("ContinuousVariable.EmptyUpperBound", "Model", 10.0e12, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
+		
+	Settings::getInstance().createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0, "Lower bound for integer variables without bounds", 0, OSDBL_MAX);
+	
+	Settings::getInstance().createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, OSDBL_MAX);
+	
+	Settings::getInstance().createSetting("NonlinearObjectiveVariable.Bound", "Model", 10.0e12, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
 	// Logging and output settings
 	std::vector<std::string> enumLogLevel;

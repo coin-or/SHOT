@@ -39,11 +39,17 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 		{
 			if (tmpTypes.at(i) == 'C')
 			{
-				GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_CONTINUOUS, tmpNames.at(i));
+				auto tmpLB = tmpLBs.at(i);
+				auto tmpUB = tmpUBs.at(i);
+
+				GRBVar tmpVar = gurobiModel->addVar(tmpLB, tmpUB, 0.0, GRB_CONTINUOUS, tmpNames.at(i));
 			}
 			else if (tmpTypes.at(i) == 'I')
 			{
-				GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_INTEGER, tmpNames.at(i));
+				auto tmpLB = tmpLBs.at(i);
+				auto tmpUB = tmpUBs.at(i);
+
+				GRBVar tmpVar = gurobiModel->addVar(tmpLB, tmpUB, 0.0, GRB_INTEGER, tmpNames.at(i));
 			}
 			else if (tmpTypes.at(i) == 'B')
 			{
@@ -528,7 +534,7 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 	try
 	{
 		// Gurobi has problems if not an epsilon value is added to the cutoff...
-		
+
 		double cutOffTol = Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual");
 
 		if (originalProblem->isTypeOfObjectiveMinimize())

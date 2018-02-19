@@ -99,11 +99,13 @@ double OptProblem::getVariableUpperBound(int varIdx)
 void OptProblem::setVariableUpperBound(int varIdx, double value)
 {
 	getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
+	getProblemInstance()->bVariablesModified = true;
 }
 
 void OptProblem::setVariableLowerBound(int varIdx, double value)
 {
 	getProblemInstance()->instanceData->variables->var[varIdx]->lb = value;
+	getProblemInstance()->bVariablesModified = true;
 }
 
 std::vector<int> OptProblem::getRealVariableIndices()
@@ -637,6 +639,11 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 {
 	if (source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
 	{
+		double LBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
+		double UBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
+		double LBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
+		double UBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
+
 		int nvar = source->getVariableNumber();
 
 		std::string *varname = source->getVariableNames();
@@ -662,18 +669,53 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 
 		for (int i = 0; i < nvar; i++)
 		{
-			if (destination->instanceData->variables->var[i]->lb < -OSDBL_MAX)
+			if (vartype[i] == 'I')
 			{
-				ProcessInfo::getInstance().outputInfo(
-					"Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(-OSDBL_MAX));
-				destination->instanceData->variables->var[i]->lb = -OSDBL_MAX;
-			}
+				if (destination->instanceData->variables->var[i]->lb < LBInt)
+				{
+					ProcessInfo::getInstance().outputInfo(
+						"Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBInt));
+					destination->instanceData->variables->var[i]->lb = LBInt;
+				}
 
-			if (destination->instanceData->variables->var[i]->ub > OSDBL_MAX)
+				if (destination->instanceData->variables->var[i]->ub > UBInt)
+				{
+					ProcessInfo::getInstance().outputInfo(
+						"Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBInt));
+					destination->instanceData->variables->var[i]->ub = UBInt;
+				}
+			}
+			else if (vartype[i] == 'C')
 			{
-				ProcessInfo::getInstance().outputInfo(
-					"Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(OSDBL_MAX));
-				destination->instanceData->variables->var[i]->ub = OSDBL_MAX;
+				if (destination->instanceData->variables->var[i]->lb < LBCont)
+				{
+					ProcessInfo::getInstance().outputInfo(
+						"Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBCont));
+					destination->instanceData->variables->var[i]->lb = LBCont;
+				}
+
+				if (destination->instanceData->variables->var[i]->ub > UBCont)
+				{
+					ProcessInfo::getInstance().outputInfo(
+						"Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBCont));
+					destination->instanceData->variables->var[i]->ub = UBCont;
+				}
+			}
+			else if (vartype[i] == 'B')
+			{
+				if (destination->instanceData->variables->var[i]->lb < 0.0)
+				{
+					ProcessInfo::getInstance().outputInfo(
+						"Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to 0");
+					destination->instanceData->variables->var[i]->lb = 0.0;
+				}
+
+				if (destination->instanceData->variables->var[i]->ub > 1.0)
+				{
+					ProcessInfo::getInstance().outputInfo(
+						"Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to 1");
+					destination->instanceData->variables->var[i]->ub = 1.0;
+				}
 			}
 		}
 	}
@@ -1171,29 +1213,65 @@ E_ObjectiveFunctionType OptProblem::getObjectiveFunctionType()
 	return m_objectiveFunctionType;
 }
 
-void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
+void OptProblem::repairNonboundedVariables()
 {
-	if (isConstraintNonlinear(-1))
-		return; // Do nothing if we have an nonlinear objective function
+	double LBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
+	double UBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
+	double LBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
+	double UBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
 
-	if (instance->getObjectiveCoefficientNumbers()[0] == 1)
+	auto varTypes = getVariableTypes();
+
+	int numVar = getNumberOfVariables();
+
+	for (int i = 0; i < numVar; i++)
 	{
-		double tmpObjBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
-		int varIdx = instance->getObjectiveCoefficients()[0]->indexes[0];
-		;
-
-		if (instance->getObjectiveMaxOrMins()[0] == "min")
+		if (varTypes.at(i) == 'I')
 		{
-			if (instance->instanceData->variables->var[varIdx]->lb < tmpObjBound)
+			if (getVariableLowerBound(i) < LBInt)
 			{
-				instance->instanceData->variables->var[varIdx]->lb = tmpObjBound;
+				setVariableLowerBound(i, LBInt);
+			}
+
+			if (getVariableUpperBound(i) > UBInt)
+			{
+				setVariableUpperBound(i, UBInt);
 			}
 		}
-		else
+		else if (varTypes.at(i) == 'C')
 		{
-			if (instance->instanceData->variables->var[varIdx]->ub > -tmpObjBound)
+			if (getVariableLowerBound(i) < LBCont)
 			{
-				instance->instanceData->variables->var[varIdx]->ub = -tmpObjBound;
+				setVariableLowerBound(i, LBCont);
+			}
+
+			if (getVariableUpperBound(i) > UBCont)
+			{
+				setVariableUpperBound(i, UBCont);
+			}
+		}
+		else if (varTypes.at(i) == 'B')
+		{
+			if (getVariableLowerBound(i) < 0.0)
+			{
+				setVariableLowerBound(i, 0.0);
+			}
+
+			if (getVariableUpperBound(i) > 1.0)
+			{
+				setVariableUpperBound(i, 1.0);
+			}
+		}
+		else if (varTypes.at(i) == 'D')
+		{
+			if (getVariableLowerBound(i) < 0.0)
+			{
+				setVariableLowerBound(i, 0.0);
+			}
+
+			if (getVariableUpperBound(i) > UBCont)
+			{
+				setVariableUpperBound(i, UBCont);
 			}
 		}
 	}

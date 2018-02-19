@@ -20,7 +20,6 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 		this->setNonlinearObjectiveVariableIdx(-COIN_INT_MAX);
 	}
 
-	this->repairNonboundedObjectiveVariable(instance);
 	this->setNonlinearConstraintIndexes();
 
 	if (this->getNonlinearConstraintIndexes().size() == 0)
@@ -32,6 +31,8 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 	ProcessInfo::getInstance().setOriginalProblem(this);
 
 	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
+
+	this->repairNonboundedVariables();
 
 	instance->getJacobianSparsityPattern();
 

@@ -155,10 +155,17 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 		}
 		else
 		{
+			statusCode = E_NLPSolutionStatus::Optimal;
 		}
 
 		auto LPVarSol = LPSolver->getVariableSolution(0);
 		LPObjVar = LPSolver->getObjectiveValue();
+
+		if (isnan(LPObjVar))
+		{
+			statusCode = E_NLPSolutionStatus::Error;
+			break;
+		}
 
 		if (i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
 		{

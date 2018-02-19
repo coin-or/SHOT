@@ -17,8 +17,6 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
 	this->setObjectiveFunctionNonlinear(isConstraintNonlinear(-1));
 
-	this->repairNonboundedObjectiveVariable(instance);
-
 	ProcessInfo::getInstance().setOriginalProblem(this);
 
 	this->setNonlinearConstraintIndexes();
@@ -33,12 +31,14 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 	this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
 	this->addedObjectiveVariableName = "addobjvar";
-	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("NonlinearObjective.Bound", "Model");
-	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("NonlinearObjective.Bound", "Model");
+	this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+	this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
 
 	this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
 	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber() + 1, false));
+
+	this->repairNonboundedVariables();
 
 	instance->getJacobianSparsityPattern();
 

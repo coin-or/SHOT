@@ -2,7 +2,7 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../UtilityFunctions.h"
-#include "../OptProblems/OptProblemOriginal.h"
+#include "../OptProblems/OptProblem.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalLinearObjective.h"
@@ -19,7 +19,7 @@ class TaskInitializeOriginalProblem: public TaskBase
 		virtual std::string getType();
 
 	private:
-		OptProblemOriginal *problem;
+		OptProblem *problem;
 		OSInstance * instance;
 
 };

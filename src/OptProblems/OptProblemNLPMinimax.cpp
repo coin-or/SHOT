@@ -58,10 +58,17 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	{
 		muindex = originalInstance->getVariableNumber();
 	}
+
+	this->repairNonboundedVariables();
 }
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)
 {
+	double LBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
+	double UBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
+	double LBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
+	double UBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
+
 	int numVar = source->getVariableNumber();
 
 	if (this->isObjectiveFunctionNonlinear())
@@ -97,18 +104,9 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 			std::string name = varNames.at(i);
 			double lb = varLBs.at(i);
 			double ub = varUBs.at(i);
-			char type = 'C';
-			/*
-			 if (lb < -1000000000000)
-			 {
-			 lb = -10000000000;
-			 }
 
-			 if (ub > 10000000000000)
-			 {
-			 ub = 10000000000;
-			 }
-			 */
+			char type = 'C';
+
 			destination->addVariable(i, name, lb, ub, type);
 		}
 	}
@@ -119,6 +117,7 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 			std::string name = varNames.at(i);
 			double lb = varLBs.at(i);
 			double ub = varUBs.at(i);
+
 			char type = varTypes.at(i);
 
 			destination->addVariable(i, name, lb, ub, type);
@@ -128,7 +127,7 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
 	double tmpObjLowerBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
 	double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
-	double tmpMuMaxAbsValue = Settings::getInstance().getDoubleSetting("NonlinearObjective.Bound", "Model");
+	double tmpMuMaxAbsValue = Settings::getInstance().getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
