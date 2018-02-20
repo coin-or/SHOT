@@ -139,7 +139,7 @@ void TaskSolveIteration::run()
 			if (currIter->isMIP())
 			{
 				DualSolution sol =
-					{sols.at(0).point, E_DualSolutionSource::MIPSolutionFeasible, tmpDualObjBound,
+					{sols.at(0).point, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
 					 currIter->iterationNumber};
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 

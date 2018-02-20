@@ -497,7 +497,7 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("Relaxation.IterationLimit", "Dual", 200, "The max number of relaxed LP problems to solve initially", 0, OSINT_MAX);
 
-	Settings::getInstance().createSetting("Relaxation.MaxLazyConstraints", "Dual", 100,
+	Settings::getInstance().createSetting("Relaxation.MaxLazyConstraints", "Dual", 0,
 										  "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, OSINT_MAX);
 
 	Settings::getInstance().createSetting("Relaxation.TerminationTolerance", "Dual", 0.5,
@@ -790,4 +790,8 @@ void SHOTSolver::initializeDebugMode()
 	fileUtil->writeFileFromString(debugPath + "/options.xml", getOSoL());
 
 	delete fileUtil;
+}
+
+void SHOTSolver::verifySettings()
+{
 }

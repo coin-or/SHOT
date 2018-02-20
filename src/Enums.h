@@ -4,9 +4,8 @@ enum class E_DualSolutionSource
 {
 	LPSolution, 
 	MIPSolutionOptimal, 
-	MIPSolutionFeasible, 
 	ObjectiveConstraint,
-	LazyConstraintCallback
+	MIPSolverBound
 };
 
 enum class E_HyperplaneSource

@@ -103,7 +103,6 @@ bool RelaxationStrategyStandard::isTimeLimitReached()
 
 bool RelaxationStrategyStandard::isLPStepFinished()
 {
-
 	return (LPFinished);
 }
 

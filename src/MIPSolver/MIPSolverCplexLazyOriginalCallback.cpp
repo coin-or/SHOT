@@ -254,7 +254,7 @@ void CtCallbackI::main()
 	if ((isMinimization && tmpDualObjBound > ProcessInfo::getInstance().getDualBound()) || (!isMinimization && tmpDualObjBound < ProcessInfo::getInstance().getDualBound()))
 	{
 		DualSolution sol =
-			{solution, E_DualSolutionSource::LazyConstraintCallback, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
+			{solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
 		ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 	}
 
@@ -283,8 +283,7 @@ void CtCallbackI::main()
 			tmpPt.objectiveValue = this->getIncumbentObjValue();
 			tmpPt.point = primalSolution;
 
-			ProcessInfo::getInstance().addPrimalSolutionCandidate(tmpPt,
-																  E_PrimalSolutionSource::LazyConstraintCallback);
+			ProcessInfo::getInstance().addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
 		}
 	}
 

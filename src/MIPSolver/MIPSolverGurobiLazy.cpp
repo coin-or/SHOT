@@ -112,7 +112,7 @@ void GurobiCallback::callback()
 				std::vector<double> doubleSolution; // Empty since we have no point
 
 				DualSolution sol =
-					{doubleSolution, E_DualSolutionSource::LazyConstraintCallback, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
+					{doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}
 		}

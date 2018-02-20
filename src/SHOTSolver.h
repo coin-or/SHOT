@@ -26,6 +26,8 @@ class SHOTSolver
 #endif
 
 	void initializeSettings();
+	void verifySettings();
+
 	void initializeDebugMode();
 
 	bool isProblemInitialized;

@@ -294,7 +294,9 @@ void ProcessInfo::checkDualSolutionCandidates()
 			this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
 			this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
 
-			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution || C.sourceType == E_DualSolutionSource::LazyConstraintCallback)
+			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal ||
+				C.sourceType == E_DualSolutionSource::LPSolution ||
+				C.sourceType == E_DualSolutionSource::MIPSolverBound)
 			{
 				this->addDualSolution(C);
 			}
@@ -309,14 +311,11 @@ void ProcessInfo::checkDualSolutionCandidates()
 			case E_DualSolutionSource::MIPSolutionOptimal:
 				sourceDesc = "MIP solution";
 				break;
-			case E_DualSolutionSource::MIPSolutionFeasible:
-				sourceDesc = "MIP solution bound";
-				break;
 			case E_DualSolutionSource::ObjectiveConstraint:
 				sourceDesc = "Obj. constr. linesearch";
 				break;
-			case E_DualSolutionSource::LazyConstraintCallback:
-				sourceDesc = "Lazy constr. callback";
+			case E_DualSolutionSource::MIPSolverBound:
+				sourceDesc = "MIP solver bound";
 				break;
 			default:
 				break;
@@ -1330,23 +1329,30 @@ void ProcessInfo::createIteration()
 	iter.boundaryDistance = OSDBL_MAX;
 	iter.MIPSolutionLimitUpdated = false;
 
-	switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+	if (relaxationStrategy != NULL)
 	{
-	case (E_SolutionStrategy::MIQCQP):
-		iter.type = E_IterationProblemType::MIP;
-		break;
-	case (E_SolutionStrategy::MIQP):
-		iter.type = E_IterationProblemType::MIP;
-		break;
-	case (E_SolutionStrategy::NLP):
-		iter.type = E_IterationProblemType::Relaxed;
-		break;
-	case (E_SolutionStrategy::SingleTree):
-		iter.type = E_IterationProblemType::MIP;
-		break;
-	default:
 		iter.type = relaxationStrategy->getProblemType();
-		break;
+	}
+	else
+	{
+		switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+		{
+		case (E_SolutionStrategy::MIQCQP):
+			iter.type = E_IterationProblemType::MIP;
+			break;
+		case (E_SolutionStrategy::MIQP):
+			iter.type = E_IterationProblemType::MIP;
+			break;
+		case (E_SolutionStrategy::NLP):
+			iter.type = E_IterationProblemType::Relaxed;
+			break;
+		case (E_SolutionStrategy::SingleTree):
+			iter.type = E_IterationProblemType::MIP;
+			break;
+		default:
+			iter.type = E_IterationProblemType::MIP;
+			break;
+		}
 	}
 
 	iterations.push_back(iter);

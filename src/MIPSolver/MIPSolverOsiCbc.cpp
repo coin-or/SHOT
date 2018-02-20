@@ -186,11 +186,10 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 
 void MIPSolverOsiCbc::initializeSolverSettings()
 {
-	/*if (cbcModel->haveMultiThreadSupport())
+	if (cbcModel->haveMultiThreadSupport())
 	{
-		//cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 		cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
-	}*/
+	}
 
 	cbcModel->setAllowableGap(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
 	cbcModel->setAllowableFractionGap(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
@@ -238,14 +237,13 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 
 	if (activate)
 	{
-		ProcessInfo::getInstance().outputDebug("Activating MIP strategy");
+		ProcessInfo::getInstance().outputInfo("Activating MIP strategy");
 
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
 			{
 				osiInterface->setInteger(i);
-				std::cout << "act integer "<< std::endl;
 			}
 		}
 
@@ -253,13 +251,12 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 	}
 	else
 	{
-		ProcessInfo::getInstance().outputDebug("Activating LP strategy");
+		ProcessInfo::getInstance().outputInfo("Activating LP strategy");
 		for (int i = 0; i < numVar; i++)
 		{
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
 			{
 				osiInterface->setContinuous(i);
-				std::cout << "deact integer "<< std::endl;
 			}
 		}
 
@@ -617,25 +614,12 @@ void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)
 
 void MIPSolverOsiCbc::checkParameters()
 {
-	// Checks if quadratic objective functions or constraints are allowed in the settings, and corrects
-	// it since we do not support this for Cbc.
+	Settings::getInstance().updateSetting("MIP.NumberOfThreads", "Dual", 0);
 
-	bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
+	// Some features are not available in Cbc
+	Settings::getInstance().updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+	Settings::getInstance().updateSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
-	bool useQuadraticConstraint = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
-
-	if (useQuadraticObjective)
-	{
-		// MIP solver does not support quadratic objectives, reseting both settings
-		Settings::getInstance().updateSetting("QuadraticStrategy", "Dual", (int)ES_QuadraticProblemStrategy::Nonlinear);
-		ProcessInfo::getInstance().outputWarning(
-			"Quadratic objective setting activated, but MIP solver does not support it. Resetting setting!");
-	}
-	else if (useQuadraticConstraint)
-	{
-		// MIP solver supports quadratic objectives but not quadratic constraints, reseting setting
-		Settings::getInstance().updateSetting("QuadraticStrategy", "Dual", (int)ES_QuadraticProblemStrategy::Nonlinear);
-		ProcessInfo::getInstance().outputWarning(
-			"Quadratic constraint setting activated, but MIP solver does not support it. Resetting setting!");
-	}
+	// For stability
+	Settings::getInstance().updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
 }
