@@ -101,11 +101,11 @@ void TaskFindInteriorPoint::run()
 
 		if (maxDev.value > 0)
 		{
-			ProcessInfo::getInstance().outputWarning(" Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+			ProcessInfo::getInstance().outputWarning("\n Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
 		}
 		else
 		{
-			ProcessInfo::getInstance().outputError(" Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
+			ProcessInfo::getInstance().outputError("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
 			ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 		}
 
@@ -121,7 +121,7 @@ void TaskFindInteriorPoint::run()
 	
 	if (!foundNLPPoint)
 	{
-		ProcessInfo::getInstance().outputError(" No interior point found!                            ");
+		ProcessInfo::getInstance().outputError("\n No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
 		return;
 	}

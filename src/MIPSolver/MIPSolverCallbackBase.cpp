@@ -2,16 +2,14 @@
 
 bool MIPSolverCallbackBase::checkIterationLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->iterationNumber
-			>= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual")
-					+ Settings::getInstance().getIntSetting("IterationLimit", "Termination"))
+	if (currIter->iterationNumber >= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") + Settings::getInstance().getIntSetting("IterationLimit", "Termination"))
 	{
 		return (true);
 	}
 
-    return (false);
+	return (false);
 }
 
 bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
@@ -37,21 +35,18 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 	{
 		callNLPSolver = true;
 	}
-	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime)
-			|| userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
+	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
 	{
-		if (ProcessInfo::getInstance().MIPIterationsWithoutNLPCall
-				>= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+		if (ProcessInfo::getInstance().MIPIterationsWithoutNLPCall >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
 		{
 			ProcessInfo::getInstance().outputInfo(
-					"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
+				"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
 			callNLPSolver = true;
 		}
-		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall
-				> Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
 		{
 			ProcessInfo::getInstance().outputInfo(
-					"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
+				"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
 			callNLPSolver = true;
 		}
 	}
@@ -78,7 +73,14 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 	}
 
 	std::stringstream tmpType;
-	tmpType << "LazyCB (" << threadId << ")";
+	if (threadId != "")
+	{
+		tmpType << "CB (th: " << threadId << ")";
+	}
+	else
+	{
+		tmpType << "CB";
+	}
 
 	std::string hyperplanesExpr;
 
@@ -103,14 +105,34 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 	}
 
 	std::string primalBoundExpr;
+
+	if (ProcessInfo::getInstance().primalSolutions.size() > 0 && !ProcessInfo::getInstance().primalSolutions.at(0).displayed)
+	{
+		auto primalBound = ProcessInfo::getInstance().getPrimalBound();
+		primalBoundExpr = UtilityFunctions::toString(primalBound);
+		ProcessInfo::getInstance().primalSolutions.at(0).displayed = true;
+	}
+	else
+	{
+		primalBoundExpr = "";
+	}
+
 	std::string dualBoundExpr;
+
+	if (ProcessInfo::getInstance().dualSolutions.size() > 0 && !ProcessInfo::getInstance().dualSolutions.at(0).displayed)
+	{
+		auto dualBound = ProcessInfo::getInstance().getDualBound();
+		dualBoundExpr = UtilityFunctions::toString(dualBound);
+		ProcessInfo::getInstance().dualSolutions.at(0).displayed = true;
+	}
+	else
+	{
+		dualBoundExpr = "";
+	}
+
 	std::string objExpr;
 
-	primalBoundExpr = UtilityFunctions::toStringFormat(
-		ProcessInfo::getInstance().getPrimalBound(), "%.3f", true);
-
 	objExpr = UtilityFunctions::toStringFormat(solution.objectiveValue, "%.3f", true);
-	dualBoundExpr = bestBound;
 
 	auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % to_string(currIter->iterationNumber) % tmpType.str() % hyperplanesExpr % dualBoundExpr % objExpr % primalBoundExpr % tmpConstrExpr;
 
@@ -172,4 +194,3 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 		ProcessInfo::getInstance().outputSummary("");
 	}
 }
-

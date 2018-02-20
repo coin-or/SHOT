@@ -23,6 +23,7 @@ struct PrimalSolution
 		bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
 		bool integerRoundingPerformed = false; // Has the integers been rounded?
 		//bool assumeLinearConstraintsValid = false; // In some cases the linear constraints are assumed to be valid
+		bool displayed = false; // Has the primal solution been displayed on console?
 };
 
 struct PrimalFixedNLPCandidate
@@ -40,6 +41,7 @@ struct DualSolution
 		E_DualSolutionSource sourceType;
 		double objValue;
 		int iterFound;
+		bool displayed; // Has the dual solution been displayed on console?
 };
 
 struct Hyperplane

@@ -113,16 +113,15 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 	int obj_nonz = 0;
 	int varIdx = 0;
 
-	SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
-		origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
+	SparseMatrix *m_linearConstraintCoefficientsInRowMajor = origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
 
 	auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
 	auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
 	auto constrLBs = origProblem->getProblemInstance()->getConstraintLowerBounds();
 	auto constrUBs = origProblem->getProblemInstance()->getConstraintUpperBounds();
 
-	//try
-	//{
+	int corr = 0;
+
 	for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
 	{
 		// Only use constraints that don't contain a nonlinear part (may include a quadratic part)
@@ -139,39 +138,34 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 					varIdx =
 						m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
 
-					coinModel->setElement(rowIdx, varIdx, val);
+					coinModel->setElement(rowIdx - corr, varIdx, val);
 				}
 			}
 
-			// Add quadratic terms if they exist and have been defined as quadratic and not nonlinear
-			//auto quadTerms = origProblem->getQuadraticTermsInConstraint(rowIdx);
-
-			/* TODO: not implemented
-			 for (auto T : quadTerms)
-			 {
-			 expr += T->coef * cplexVars[T->idxOne] * cplexVars[T->idxTwo];
-			 }*/
-
 			double rowConstant = origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
 
-			coinModel->setRowName(rowIdx, constrNames[rowIdx].c_str());
+			coinModel->setRowName(rowIdx - corr, constrNames[rowIdx].c_str());
 
 			// Add the constraint
 			if (constrTypes[rowIdx] == 'L')
 			{
-				coinModel->setRowUpper(rowIdx, constrUBs[rowIdx] - rowConstant);
+				coinModel->setRowUpper(rowIdx - corr, constrUBs[rowIdx] - rowConstant);
 			}
 			else if (constrTypes[rowIdx] == 'G')
 			{
-				coinModel->setRowLower(rowIdx, constrLBs[rowIdx] - rowConstant);
+				coinModel->setRowLower(rowIdx - corr, constrLBs[rowIdx] - rowConstant);
 			}
 			else if (constrTypes[rowIdx] == 'E')
 			{
-				coinModel->setRowBounds(rowIdx, constrLBs[rowIdx] - rowConstant, constrUBs[rowIdx] - rowConstant);
+				coinModel->setRowBounds(rowIdx - corr, constrLBs[rowIdx] - rowConstant, constrUBs[rowIdx] - rowConstant);
 			}
 			else
 			{
 			}
+		}
+		else
+		{
+			corr++;
 		}
 	}
 
@@ -192,10 +186,11 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 
 void MIPSolverOsiCbc::initializeSolverSettings()
 {
-	if (cbcModel->haveMultiThreadSupport())
+	/*if (cbcModel->haveMultiThreadSupport())
 	{
+		//cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
 		cbcModel->setNumberThreads(Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
-	}
+	}*/
 
 	cbcModel->setAllowableGap(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
 	cbcModel->setAllowableFractionGap(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
@@ -250,6 +245,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
 			{
 				osiInterface->setInteger(i);
+				std::cout << "act integer "<< std::endl;
 			}
 		}
 
@@ -263,6 +259,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 			if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
 			{
 				osiInterface->setContinuous(i);
+				std::cout << "deact integer "<< std::endl;
 			}
 		}
 
@@ -305,8 +302,6 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
 
 	try
 	{
-		cbcModel->solver()->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-
 		cbcModel = new CbcModel(*osiInterface);
 
 		initializeSolverSettings();
@@ -320,7 +315,13 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
 		MIPStarts.clear();
 
 		CbcMain0(*cbcModel);
-		cbcModel->setLogLevel(0);
+
+		if (!Settings::getInstance().getBoolSetting("Console.DualSolver.Show", "Output"))
+		{
+			cbcModel->setLogLevel(0);
+			osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+		}
+
 		cbcModel->branchAndBound();
 
 		MIPSolutionStatus = getSolutionStatus();
@@ -423,7 +424,7 @@ void MIPSolverOsiCbc::writeProblemToFile(std::string filename)
 {
 	try
 	{
-		osiInterface->writeLp(filename.c_str(), "lp");
+		osiInterface->writeLp(filename.c_str(), "");
 	}
 	catch (exception &e)
 	{

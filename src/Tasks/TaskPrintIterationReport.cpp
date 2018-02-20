@@ -9,8 +9,6 @@
 
 TaskPrintIterationReport::TaskPrintIterationReport()
 {
-	lastDualBound = -COIN_DBL_MAX;
-	lastPrimalBound = COIN_DBL_MAX;
 	lastNumHyperplane = 0;
 }
 
@@ -29,20 +27,25 @@ void TaskPrintIterationReport::run()
 
 		bool hasSolution = true;
 
-		bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType()
-				== E_ObjectiveFunctionType::Quadratic);
+		bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
 		bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
-		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP)
-				&& ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
+		bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
 
-		if (isMIQCP && isDiscrete) tmpType << "MIQCP";
-		else if (isMIQCP) tmpType << "QCP";
-		else if (isMIQP && isDiscrete) tmpType << "MIQP";
-		else if (isMIQP) tmpType << "QP";
-		else if (isDiscrete) tmpType << "MIP";
-		else tmpType << "LP";
+		if (isMIQCP && isDiscrete)
+			tmpType << "MIQCP";
+		else if (isMIQCP)
+			tmpType << "QCP";
+		else if (isMIQP && isDiscrete)
+			tmpType << "MIQP";
+		else if (isMIQP)
+			tmpType << "QP";
+		else if (isDiscrete)
+			tmpType << "MIP";
+		else
+			tmpType << "LP";
 
-		if (currIter->solutionPoints.size() == 0) hasSolution = false;
+		if (currIter->solutionPoints.size() == 0)
+			hasSolution = false;
 
 		if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
 		{
@@ -105,27 +108,25 @@ void TaskPrintIterationReport::run()
 		}
 
 		std::string primalBoundExpr;
-		std::string dualBoundExpr;
 
-		auto primalBound = ProcessInfo::getInstance().getPrimalBound();
-		auto dualBound = ProcessInfo::getInstance().getDualBound();
-
-		if (primalBound != lastPrimalBound && ProcessInfo::getInstance().primalSolutions.size() > 0
-				&& ProcessInfo::getInstance().primalSolutions.at(0).sourceType
-						== E_PrimalSolutionSource::MIPSolutionPool)
+		if (ProcessInfo::getInstance().primalSolutions.size() > 0 && !ProcessInfo::getInstance().primalSolutions.at(0).displayed)
 		{
+			auto primalBound = ProcessInfo::getInstance().getPrimalBound();
 			primalBoundExpr = UtilityFunctions::toString(primalBound);
-			lastPrimalBound = primalBound;
+			ProcessInfo::getInstance().primalSolutions.at(0).displayed = true;
 		}
 		else
 		{
 			primalBoundExpr = "";
 		}
 
-		if (dualBound != lastDualBound)
+		std::string dualBoundExpr;
+				
+		if (ProcessInfo::getInstance().dualSolutions.size()> 0 && !ProcessInfo::getInstance().dualSolutions.at(0).displayed)
 		{
+			auto dualBound = ProcessInfo::getInstance().getDualBound();
 			dualBoundExpr = UtilityFunctions::toString(dualBound);
-			lastDualBound = dualBound;
+			ProcessInfo::getInstance().dualSolutions.at(0).displayed = true;
 		}
 		else
 		{
@@ -145,11 +146,10 @@ void TaskPrintIterationReport::run()
 		if (hasSolution && currIter->maxDeviationConstraint != -1)
 		{
 			tmpConstr =
-					ProcessInfo::getInstance().originalProblem->getConstraintNames()[currIter->maxDeviationConstraint]
-							+ ": " + tmpConstrExpr;
+				ProcessInfo::getInstance().originalProblem->getConstraintNames()[currIter->maxDeviationConstraint] + ": " + tmpConstrExpr;
 		}
 		else if (hasSolution && ProcessInfo::getInstance().originalProblem->getNumberOfConstraints() > 0)
-		{ 
+		{
 			tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
 		}
 		else
@@ -157,12 +157,9 @@ void TaskPrintIterationReport::run()
 			tmpConstr = "";
 		}
 
-		auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|")
-				% currIter->iterationNumber % tmpType.str() % hyperplanesExpr % dualBoundExpr % tmpObjVal
-				% primalBoundExpr % tmpConstr;
+		auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % currIter->iterationNumber % tmpType.str() % hyperplanesExpr % dualBoundExpr % tmpObjVal % primalBoundExpr % tmpConstr;
 
 		ProcessInfo::getInstance().outputSummary(tmpLine.str());
-
 	}
 	catch (...)
 	{
@@ -174,4 +171,3 @@ std::string TaskPrintIterationReport::getType()
 	std::string type = typeid(this).name();
 	return (type);
 }
-

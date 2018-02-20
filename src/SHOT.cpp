@@ -89,7 +89,6 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
 
 			delete solver;
 
@@ -103,7 +102,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
+			std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
 			delete solver;
 
@@ -118,7 +117,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[2]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
+			std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
 			delete solver;
 
@@ -135,7 +134,7 @@ int main(int argc, char *argv[])
 		if (!boost::filesystem::exists(argv[1]))
 		{
 			std::cout << startmessage << std::endl;
-			std::cout << "Problem file " << argv[1] << " not found!" << std::endl;
+			std::cout << " Problem file " << argv[1] << " not found!" << std::endl;
 
 			delete solver;
 
@@ -158,7 +157,7 @@ int main(int argc, char *argv[])
 				delete solver;
 
 				std::cout << startmessage << std::endl;
-				std::cout << "Cannot set options!" << std::endl;
+				std::cout << " Cannot set options!" << std::endl;
 				return (0);
 			}
 		}
@@ -168,7 +167,7 @@ int main(int argc, char *argv[])
 
 		if (!solver->setProblem(fileName))
 		{
-			ProcessInfo::getInstance().outputError("Error when reading problem file.");
+			ProcessInfo::getInstance().outputError(" Error when reading problem file.");
 
 			delete solver;
 
@@ -177,7 +176,7 @@ int main(int argc, char *argv[])
 
 		if (!solver->solveProblem()) // solve problem
 		{
-			ProcessInfo::getInstance().outputError("Error when solving problem.");
+			ProcessInfo::getInstance().outputError(" Error when solving problem.");
 
 			delete solver;
 

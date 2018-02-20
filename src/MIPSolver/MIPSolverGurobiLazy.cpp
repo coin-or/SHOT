@@ -112,7 +112,7 @@ void GurobiCallback::callback()
 				std::vector<double> doubleSolution; // Empty since we have no point
 
 				DualSolution sol =
-					{doubleSolution, E_DualSolutionSource::MIPSolutionFeasible, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
+					{doubleSolution, E_DualSolutionSource::LazyConstraintCallback, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
 				ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 			}
 		}
@@ -212,10 +212,11 @@ void GurobiCallback::callback()
 			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
 
 			//Remove??
+			/*
 			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
 			{
 				return;
-			}
+			}*/
 
 			SolutionPoint solutionCandidate;
 
@@ -273,7 +274,7 @@ void GurobiCallback::callback()
 			}
 
 			auto bestBound = UtilityFunctions::toStringFormat(getDoubleInfo(GRB_CB_MIPSOL_OBJBND), "%.3f", true);
-			auto threadId = "*";
+			auto threadId = "";
 			auto openNodes = "?";
 
 			printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);

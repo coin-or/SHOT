@@ -14,8 +14,5 @@ class TaskPrintIterationReport: public TaskBase
 		virtual std::string getType();
 	private:
 
-		double lastDualBound;
-		double lastPrimalBound;
-
 		int lastNumHyperplane;
 };

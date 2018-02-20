@@ -189,8 +189,7 @@ void OptProblem::printProblemStatistics()
 
 #else
 
-	ProcessInfo::getInstance().outputSummary(
-		"┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
+	ProcessInfo::getInstance().outputSummary("\n┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
 	ProcessInfo::getInstance().outputSummary(
 		"│ Number of constraints (total/linear/nonlinear):   " + to_string(getProblemInstance()->getConstraintNumber()) + "/" + to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
@@ -534,7 +533,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 		}
 		else
 		{
-			std::cout << "Should not happen: " << idx << " " << getProblemInstance()->getConstraintTypes()[idx]  << std::endl;
+			std::cout << "Should not happen: " << idx << " " << getProblemInstance()->getConstraintTypes()[idx] << std::endl;
 		}
 	}
 	else

@@ -28,16 +28,14 @@ void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource so
 
 void ProcessInfo::addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter)
 {
-	DualSolution sol =
-		{pt, source, objVal, iter};
+	DualSolution sol = {pt, source, objVal, iter, false};
 
 	addDualSolution(sol);
 }
 
 void ProcessInfo::addDualSolution(SolutionPoint pt, E_DualSolutionSource source)
 {
-	DualSolution sol =
-		{pt.point, source, pt.objectiveValue, pt.iterFound};
+	DualSolution sol = {pt.point, source, pt.objectiveValue, pt.iterFound, false};
 
 	addDualSolution(sol);
 }
@@ -81,16 +79,14 @@ void ProcessInfo::addDualSolutionCandidate(vector<double> pt, E_DualSolutionSour
 {
 	double tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(pt);
 
-	DualSolution sol =
-		{pt, source, tmpObjVal, iter};
+	DualSolution sol = {pt, source, tmpObjVal, iter, false};
 
 	addDualSolutionCandidate(sol);
 }
 
 void ProcessInfo::addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source)
 {
-	DualSolution sol =
-		{pt.point, source, pt.objectiveValue, pt.iterFound};
+	DualSolution sol = {pt.point, source, pt.objectiveValue, pt.iterFound, false};
 
 	addDualSolutionCandidate(sol);
 }
@@ -204,7 +200,7 @@ void ProcessInfo::outputError(std::string message)
 void ProcessInfo::outputError(std::string message, std::string errormessage)
 {
 	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
-	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, "Error message: " + errormessage);
+	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, " \"" + errormessage + "\"");
 }
 
 void ProcessInfo::outputSummary(std::string message)
@@ -298,7 +294,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 			this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
 			this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
 
-			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution)
+			if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal || C.sourceType == E_DualSolutionSource::LPSolution || C.sourceType == E_DualSolutionSource::LazyConstraintCallback)
 			{
 				this->addDualSolution(C);
 			}
@@ -318,6 +314,9 @@ void ProcessInfo::checkDualSolutionCandidates()
 				break;
 			case E_DualSolutionSource::ObjectiveConstraint:
 				sourceDesc = "Obj. constr. linesearch";
+				break;
+			case E_DualSolutionSource::LazyConstraintCallback:
+				sourceDesc = "Lazy constr. callback";
 				break;
 			default:
 				break;
@@ -682,7 +681,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 	auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
 
-	this->outputSummary(tmpLine.str());
+	this->outputInfo(tmpLine.str());
 
 	primalSol.objValue = tmpObjVal;
 	primalSol.point = tmpPoint;
@@ -1151,10 +1150,10 @@ std::string ProcessInfo::getTraceResult()
 	switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
 	{
 	case (E_SolutionStrategy::MIQP):
-		ss << "MIQP";
+		ss << "MINLP";
 		break;
 	case (E_SolutionStrategy::MIQCQP):
-		ss << "MIQCQP";
+		ss << "MINLP";
 		break;
 	case (E_SolutionStrategy::NLP):
 		ss << "NLP";
@@ -1192,13 +1191,13 @@ std::string ProcessInfo::getTraceResult()
 	switch (static_cast<ES_MIPSolver>(ProcessInfo::getInstance().usedMIPSolver))
 	{
 	case (ES_MIPSolver::Cplex):
-		ss << "Cplex";
+		ss << "CPLEX";
 		break;
 	case (ES_MIPSolver::Gurobi):
-		ss << "Gurobi";
+		ss << "GUROBI";
 		break;
 	case (ES_MIPSolver::Cbc):
-		ss << "Cbc";
+		ss << "CBC";
 		break;
 	default:
 		ss << "";

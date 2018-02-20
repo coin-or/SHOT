@@ -254,7 +254,7 @@ void CtCallbackI::main()
 	if ((isMinimization && tmpDualObjBound > ProcessInfo::getInstance().getDualBound()) || (!isMinimization && tmpDualObjBound < ProcessInfo::getInstance().getDualBound()))
 	{
 		DualSolution sol =
-			{solution, E_DualSolutionSource::MIPSolutionFeasible, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
+			{solution, E_DualSolutionSource::LazyConstraintCallback, tmpDualObjBound, ProcessInfo::getInstance().getCurrentIteration()->iterationNumber};
 		ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 	}
 
