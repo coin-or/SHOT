@@ -534,7 +534,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 		}
 		else
 		{
-			std::cout << "Should not happen" << std::endl;
+			std::cout << "Should not happen: " << idx << " " << getProblemInstance()->getConstraintTypes()[idx]  << std::endl;
 		}
 	}
 	else
