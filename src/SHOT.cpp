@@ -210,6 +210,7 @@ int main(int argc, char *argv[])
 	}
 	else
 	{
+		ProcessInfo::getInstance().outputSummary("\n Results written to: " + resultFile.string());
 		fileUtil->writeFileFromString(resultFile.string(), osrl);
 	}
 
@@ -217,8 +218,6 @@ int main(int argc, char *argv[])
 
 	if (traceFile.empty())
 	{
-		std::string trace = solver->getTraceResult();
-
 		boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
 		tracePath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
 		tracePath = tracePath.replace_extension(".trc");

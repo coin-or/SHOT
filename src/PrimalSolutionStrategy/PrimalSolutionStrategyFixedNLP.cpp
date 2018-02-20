@@ -256,7 +256,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			{
 				int iters = max(ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
 								originalNLPIter);
-				Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
+
+				if (iters < OSINT_MAX)
+					Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
 				double interval = max(
 					0.9 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"),
@@ -315,7 +317,10 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 			if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
 			{
 				int iters = ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
-				Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
+
+				if (iters < OSINT_MAX)
+					Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
+
 				double interval = 1.1 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
 				Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 

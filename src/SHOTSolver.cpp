@@ -195,6 +195,8 @@ bool SHOTSolver::setProblem(std::string fileName)
 	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		initializeDebugMode();
 
+
+	ProcessInfo::getInstance().outputAlways("Problem read from file \"" + fileName + "\"");
 	bool status = this->setProblem(tmpInstance);
 
 	return (status);
@@ -206,7 +208,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 	{
 		if (UtilityFunctions::areAllVariablesReal(osInstance))
 		{
-			ProcessInfo::getInstance().outputSummary(" Using NLP solution strategy.");
+			ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
 			solutionStrategy = new SolutionStrategyNLP(osInstance);
 			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
 		}
@@ -224,21 +226,21 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
 	if (UtilityFunctions::areAllVariablesReal(osInstance))
 	{
-		ProcessInfo::getInstance().outputSummary(" Using NLP solution strategy.");
+		ProcessInfo::getInstance().outputSummary("Using NLP solution strategy.");
 		solutionStrategy = new SolutionStrategyNLP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
 	}
 	else if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
 	//MIQP problem
 	{
-		ProcessInfo::getInstance().outputSummary(" Using MIQP solution strategy.");
+		ProcessInfo::getInstance().outputSummary("Using MIQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQP;
 	}
 	//MIQCQP problem
 	else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
 	{
-		ProcessInfo::getInstance().outputSummary(" Using MIQCQP solution strategy.");
+		ProcessInfo::getInstance().outputSummary("Using MIQCQP solution strategy.");
 		solutionStrategy = new SolutionStrategyMIQCQP(osInstance);
 		ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
 	}
@@ -247,12 +249,12 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 		switch (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
 		{
 		case (ES_TreeStrategy::SingleTree):
-			ProcessInfo::getInstance().outputSummary(" Using single-tree solution strategy.");
+			ProcessInfo::getInstance().outputSummary("Using single-tree solution strategy.");
 			solutionStrategy = new SolutionStrategySingleTree(osInstance);
 			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::SingleTree;
 			break;
 		case (ES_TreeStrategy::MultiTree):
-			ProcessInfo::getInstance().outputSummary(" Using multi-tree solution strategy.");
+			ProcessInfo::getInstance().outputSummary("Using multi-tree solution strategy.");
 			solutionStrategy = new SolutionStrategyMultiTree(osInstance);
 			ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MultiTree;
 			break;

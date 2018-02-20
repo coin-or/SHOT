@@ -793,9 +793,18 @@ double MIPSolverCplex::getDualObjectiveValue()
 {
 	double objVal = NAN;
 
+	bool isMIP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
+
 	try
 	{
-		objVal = cplexInstance.getBestObjValue();
+		if (isMIP)
+		{
+			objVal = cplexInstance.getBestObjValue();
+		}
+		else
+		{
+			objVal = cplexInstance.getObjValue();
+		}
 	}
 	catch (IloException &e)
 	{

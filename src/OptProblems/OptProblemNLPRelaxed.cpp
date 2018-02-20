@@ -3,7 +3,6 @@
 OptProblemNLPRelaxed::OptProblemNLPRelaxed()
 {
 	//problemInstance = NULL;
-
 }
 
 OptProblemNLPRelaxed::~OptProblemNLPRelaxed()
@@ -31,20 +30,24 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 
 	this->copyNonlinearExpressions(originalInstance, newInstance);
 
+	// The following four lines fixes some problems with OSInstance...
+	OSiLWriter *osilWriter = new OSiLWriter();
+	std::string osil = osilWriter->writeOSiL(newInstance);
+	OSiLReader *osilReader = new OSiLReader();
+	newInstance = osilReader->readOSiL(osil);
+
 	this->setProblemInstance(newInstance);
 
 	this->setNonlinearConstraintIndexes();
 
 	if (this->isObjectiveFunctionNonlinear())
 	{
-		setNonlinearObjectiveConstraintIdx(-1);	// Sets a virtual constraint
+		setNonlinearObjectiveConstraintIdx(-1); // Sets a virtual constraint
 
 		setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());
 	}
 
 	this->repairNonboundedVariables();
-
-	newInstance->getJacobianSparsityPattern();
 }
 
 void OptProblemNLPRelaxed::copyObjectiveFunction(OSInstance *source, OSInstance *destination)
@@ -55,7 +58,7 @@ void OptProblemNLPRelaxed::copyObjectiveFunction(OSInstance *source, OSInstance 
 
 	// Use a constant zero as the objective...
 
-	SparseVector * newobjcoeff = new SparseVector(1);
+	SparseVector *newobjcoeff = new SparseVector(1);
 
 	newobjcoeff->indexes[0] = 0;
 	newobjcoeff->values[0] = 1.0;

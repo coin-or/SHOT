@@ -1207,7 +1207,7 @@ std::string ProcessInfo::getTraceResult()
 
 	ss << ",";
 
-	ss << "";
+	ss << UtilityFunctions::toStringFormat(UtilityFunctions::getJulianFractionalDate(), "%.5f", false);
 	ss << ",";
 	ss << (originalProblem->getProblemInstance()->getObjectiveMaxOrMins()[0] == "min" ? "0" : "1") << ",";
 	ss << this->originalProblem->getProblemInstance()->getConstraintNumber() + 1 << ","; // +1 to comply with GAMS objective style

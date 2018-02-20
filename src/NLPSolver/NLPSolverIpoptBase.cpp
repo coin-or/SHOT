@@ -3,8 +3,6 @@
 
 E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 {
-	//
-
 	ProcessInfo::getInstance().outputInfo("     Starting solution of Ipopt problem.");
 
 	auto timeLimit = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination")

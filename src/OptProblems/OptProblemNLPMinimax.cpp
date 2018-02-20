@@ -58,8 +58,6 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	{
 		muindex = originalInstance->getVariableNumber();
 	}
-
-	this->repairNonboundedVariables();
 }
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)

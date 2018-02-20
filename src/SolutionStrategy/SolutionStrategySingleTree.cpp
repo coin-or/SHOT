@@ -64,6 +64,10 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
 
 	TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
 	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
+	
+	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
+	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
 	TaskBase *tPrintIterReport = new TaskPrintIterationReport();
 	ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
@@ -77,15 +81,11 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
 	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+	//TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
+	//ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
-
-	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+	//ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+	//ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
 	if (Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
 	{
@@ -101,11 +101,11 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
 		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 	}
 
-	TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
+	/*TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
 
 	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");*/
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");

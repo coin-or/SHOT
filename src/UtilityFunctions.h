@@ -9,6 +9,8 @@
 #include <cmath>
 #include <boost/math/special_functions/fpclassify.hpp> // isnan
 #include "Structs.h"
+#include <chrono>
+#include <ctime>
 
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32
@@ -65,4 +67,6 @@ namespace UtilityFunctions
 	std::string toStringFormat(double value, std::string format, bool useInfinitySymbol);
 	std::string toStringFormat(double value, std::string format);
 	std::string toString(double value);
+
+	double getJulianFractionalDate();
 }

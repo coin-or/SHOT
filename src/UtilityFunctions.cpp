@@ -480,3 +480,23 @@ void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<double
 
 	std::cout << str.str() << std::endl;
 }
+
+double UtilityFunctions::getJulianFractionalDate()
+{
+	auto now = std::chrono::system_clock::now();
+	std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+	struct tm *parts = std::localtime(&now_c);
+
+	auto Y = 1900 + parts->tm_year;
+	auto M = 1 + parts->tm_mon;
+	auto D = parts->tm_mday;
+	auto hours = parts->tm_hour;
+	auto mins = parts->tm_min;
+	auto secs = parts->tm_sec;
+
+	auto secstoday = (3600*hours + 60*mins + secs);
+	
+	auto julianDate = (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday/86400.0;
+
+	return julianDate;
+}
