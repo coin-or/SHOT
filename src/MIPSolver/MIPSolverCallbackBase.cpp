@@ -27,7 +27,9 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 	auto userSettingStrategy = Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal");
 	auto userSetting = Settings::getInstance().getIntSetting("FixedInteger.Source", "Primal");
 
-	if (abs(point.objectiveValue - ProcessInfo::getInstance().getDualBound()) < 0.1)
+	auto dualBound = ProcessInfo::getInstance().getDualBound();
+
+	if (abs(point.objectiveValue - dualBound)/((1e-10) + abs(dualBound)) < Settings::getInstance().getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
 	{
 		callNLPSolver = true;
 	}

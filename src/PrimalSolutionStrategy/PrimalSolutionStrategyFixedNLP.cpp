@@ -62,6 +62,9 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 			taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
 		}
 	}
+
+	this->originalIterFrequency = Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal");
+	this->originalTimeFrequency = Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
 }
 
 PrimalSolutionStrategyFixedNLP::~PrimalSolutionStrategyFixedNLP()
@@ -257,13 +260,15 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				int iters = max(ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
 								originalNLPIter);
 
-				if (iters < OSINT_MAX)
+				if (iters < 10 * this->originalIterFrequency)
 					Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
 				double interval = max(
 					0.9 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"),
 					originalNLPTime);
-				Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
+
+				if (interval < 10 * this->originalTimeFrequency)
+					Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
 				ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution,
 																	  E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
@@ -316,13 +321,16 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
 			if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
 			{
+
 				int iters = ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
 
-				if (iters < OSINT_MAX)
+				if (iters < 10 * this->originalIterFrequency)
 					Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
 				double interval = 1.1 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
-				Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
+
+				if (interval < 10 * this->originalTimeFrequency)
+					Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
 				ProcessInfo::getInstance().outputInfo(
 					"     Duration:  " + to_string(timeEnd - timeStart) + " s. New interval: " + to_string(interval) + " s or " + to_string(iters) + " iters.");

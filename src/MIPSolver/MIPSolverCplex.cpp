@@ -210,8 +210,8 @@ void MIPSolverCplex::initializeSolverSettings()
 			}
 		}
 
-		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 10.0);
-		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 10.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 2.0);
+		cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
 
 		cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
 

@@ -44,5 +44,8 @@ class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
 		std::vector<double> originalUBs;
 
 		TaskBase *taskSelectHPPts;
+
+		int originalIterFrequency;
+		double originalTimeFrequency;
 };
 

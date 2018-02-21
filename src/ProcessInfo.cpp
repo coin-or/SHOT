@@ -1181,7 +1181,7 @@ std::string ProcessInfo::getTraceResult()
 		ss << "Ipopt";
 		break;
 	default:
-		ss << "";
+		ss << "None";
 		break;
 	}
 
@@ -1213,8 +1213,19 @@ std::string ProcessInfo::getTraceResult()
 	ss << this->originalProblem->getNumberOfBinaryVariables() + this->originalProblem->getNumberOfIntegerVariables()
 	   << ",";
 
+		/*auto nonzeroes = this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize  +
+					 //this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() +
+					 this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] + 1;
+*/
+
+	/*std::cout << this->originalProblem->getProblemInstance()-> << std::endl;
+	std::cout << this->originalProblem->getProblemInstance()->getLinearConstraintCoefficientNumber() << std::endl;
+	std::cout << this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() << std::endl;
+	std::cout << this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] << std::endl;
+	std::cout << this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize << std::endl;
+	std::cout << this->originalProblem->getProblemInstance()->getNumberOfQuadraticTerms() << std::endl;
+*/
 	auto nonzeroes = this->originalProblem->getProblemInstance()->getLinearConstraintCoefficientNumber() + this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() + 1;
-	//this->originalProblem->getObjectiveCoefficientNumbers()[0] + 1;
 
 	ss << nonzeroes << ",";
 	ss << this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() << ",";

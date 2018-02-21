@@ -195,7 +195,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
 		initializeDebugMode();
 
-
 	ProcessInfo::getInstance().outputAlways(" Problem read from file \"" + fileName + "\"");
 	bool status = this->setProblem(tmpInstance);
 
@@ -516,13 +515,13 @@ void SHOTSolver::initializeSettings()
 
 	// Optimization model settings
 	Settings::getInstance().createSetting("ContinuousVariable.EmptyLowerBound", "Model", -10.0e12, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
-	
+
 	Settings::getInstance().createSetting("ContinuousVariable.EmptyUpperBound", "Model", 10.0e12, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
-		
+
 	Settings::getInstance().createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0, "Lower bound for integer variables without bounds", 0, OSDBL_MAX);
-	
+
 	Settings::getInstance().createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, OSDBL_MAX);
-	
+
 	Settings::getInstance().createSetting("NonlinearObjectiveVariable.Bound", "Model", 10.0e12, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
 	// Logging and output settings
@@ -580,6 +579,9 @@ void SHOTSolver::initializeSettings()
 
 	Settings::getInstance().createSetting("FixedInteger.Frequency.Time", "Primal", 5.0,
 										  "Max duration (s) between calls", 0, OSDBL_MAX);
+
+	Settings::getInstance().createSetting("FixedInteger.DualPointGap.Relative", "Primal", 0.001,
+										  "If the objective gap between the MIP point and dual solution is less than this the fixed strategy is activated", 0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, OSINT_MAX);
 
