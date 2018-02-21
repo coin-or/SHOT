@@ -1293,7 +1293,7 @@ std::string ProcessInfo::getTraceResult()
 	}
 	else if (this->terminationReason == E_TerminationReason::InfeasibleProblem)
 	{
-		solverStatus = "4";
+		solverStatus = "1";
 	}
 	else if (this->terminationReason == E_TerminationReason::ConstraintTolerance || this->terminationReason == E_TerminationReason::AbsoluteGap || this->terminationReason == E_TerminationReason::RelativeGap)
 	{

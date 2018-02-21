@@ -260,18 +260,17 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 				int iters = max(ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
 								originalNLPIter);
 
-				if (iters < 10 * this->originalIterFrequency)
+				if (iters > max(0.1 * this->originalIterFrequency, 1.0))
 					Settings::getInstance().updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
 				double interval = max(
 					0.9 * Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"),
 					originalNLPTime);
 
-				if (interval < 10 * this->originalTimeFrequency)
+				if (interval > 0.1 * this->originalTimeFrequency)
 					Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
-				ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution,
-																	  E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
+				ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 			}
 		}
 		else
