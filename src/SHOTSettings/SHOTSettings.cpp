@@ -508,7 +508,10 @@ std::string Settings::getSettingsAsString()
 	boost::property_tree::ptree pt;
 
 	stringstream ss;
-	ss << osolwriter->writeOSoL(getSettingsAsOSOption());
+
+	auto osOption = getSettingsAsOSOption();
+	ss << osolwriter->writeOSoL(osOption);
+	delete osOption;
 
 	read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
 
@@ -535,7 +538,6 @@ std::string Settings::getSettingsAsString()
 
 OSOption* Settings::getSettingsAsOSOption()
 {
-
 	osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
 			"Starting conversion of settings to OSOption object.");
 

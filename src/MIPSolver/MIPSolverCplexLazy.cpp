@@ -17,31 +17,38 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
 		tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+		bUpdateInteriorPoint = true;
 
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			bSelectHPPts = true;
 		}
 		else
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+			bSelectHPPts = true;
 		}
 	}
 	else
 	{
 		taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
+		bSelectHPPts = true;
 	}
 
 	tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+	bSelectPrimNLP = true;
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
 	{
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
+		bUpdateObjectiveByLinesearch = true;
 	}
 
 	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
+		bSelectPrimalSolutionFromLinesearch = true;
 	}
 
 	lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
@@ -355,6 +362,7 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
 		currIter->numHyperplanesAdded++;
 		currIter->totNumHyperplanes++;
+		tmpRange.end();
 		expr.end();
 	}
 }
@@ -373,6 +381,7 @@ void CplexCallback::createIntegerCut(std::vector<int> binaryIndexes, const IloCp
 	context.rejectCandidate(tmpRange);
 	ProcessInfo::getInstance().numIntegerCutsAdded++;
 
+	tmpRange.end();
 	expr.end();
 }
 
@@ -419,7 +428,6 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 
 MIPSolverCplexLazy::MIPSolverCplexLazy()
 {
-
 	discreteVariablesActivated = true;
 
 	cplexModel = IloModel(cplexEnv);
@@ -439,7 +447,11 @@ MIPSolverCplexLazy::MIPSolverCplexLazy()
 
 MIPSolverCplexLazy::~MIPSolverCplexLazy()
 {
+	cplexModel.end();
+	cplexVars.end();
+	cplexConstrs.end();
 	cplexEnv.end();
+	cplexInstance.end();
 }
 
 void MIPSolverCplexLazy::initializeSolverSettings()
@@ -485,6 +497,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
 		double timeStart = ProcessInfo::getInstance().getElapsedTime("Total");
 
 		cplexInstance.solve();
+
 		double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
 
 		iterDurations.push_back(timeEnd - timeStart);

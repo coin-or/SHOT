@@ -29,7 +29,7 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
 	auto dualBound = ProcessInfo::getInstance().getDualBound();
 
-	if (abs(point.objectiveValue - dualBound)/((1e-10) + abs(dualBound)) < Settings::getInstance().getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
+	if (abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound)) < Settings::getInstance().getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
 	{
 		callNLPSolver = true;
 	}
@@ -195,4 +195,38 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 
 		ProcessInfo::getInstance().outputSummary("");
 	}
+}
+
+MIPSolverCallbackBase::~MIPSolverCallbackBase()
+{
+	/*
+	if (bSelectPrimNLP)
+	{
+		bSelectPrimNLP = false;
+		delete tSelectPrimNLP;
+	}
+
+	if (bSelectHPPts)
+	{
+		bSelectPrimNLP = false;
+		delete taskSelectHPPts;
+	}
+
+	if (bUpdateObjectiveByLinesearch)
+	{
+		bSelectPrimNLP = false;
+		delete taskUpdateObjectiveByLinesearch;
+	}
+
+	if (bSelectPrimalSolutionFromLinesearch)
+	{
+		bSelectPrimNLP = false;
+		delete taskSelectPrimalSolutionFromLinesearch;
+	}
+
+	if (bUpdateInteriorPoint)
+	{
+		bSelectPrimNLP = false;
+		delete tUpdateInteriorPoint;
+	}*/
 }

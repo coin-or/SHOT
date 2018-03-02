@@ -266,6 +266,7 @@ int main(int argc, char *argv[])
 	ProcessInfo::getInstance().outputSummary(
 		"└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
+	
 	delete solver;
 	return (0);
 }

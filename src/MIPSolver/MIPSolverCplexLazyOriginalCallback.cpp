@@ -13,15 +13,18 @@ HCallbackI::HCallbackI(IloEnv env, IloNumVarArray xx2) : IloCplex::HeuristicCall
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			bSelectHPPts = true;
 		}
 		else
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+			bSelectHPPts = true;
 		}
 	}
 	else
 	{
 		taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
+		bSelectHPPts = true;
 	}
 }
 
@@ -69,7 +72,7 @@ void HCallbackI::main() // Called at each node...
 	if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
 	{
 		int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();
-				
+
 		std::vector<SolutionPoint> solutionPoints(1);
 
 		IloNumArray tmpVals(getEnv());
@@ -180,32 +183,39 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOrigi
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
 		tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+		bUpdateInteriorPoint = true;
 
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			bSelectHPPts = true;
 		}
 		else
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+			bSelectHPPts = true;
 		}
 	}
 	else
 	{
 		taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
+		bSelectHPPts = true;
 	}
 
 	tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+	bSelectPrimNLP = true;
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
 	{
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
+		bUpdateObjectiveByLinesearch = true;
 	}
 
 	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
+		bSelectPrimalSolutionFromLinesearch = true;
 	}
 }
 
@@ -265,7 +275,6 @@ void CtCallbackI::main()
 
 		if ((isMinimization && tmpPrimalObjBound < ProcessInfo::getInstance().getPrimalBound()) || (!isMinimization && tmpPrimalObjBound > ProcessInfo::getInstance().getPrimalBound()))
 		{
-
 			IloNumArray tmpPrimalVals(this->getEnv());
 
 			this->getIncumbentValues(tmpPrimalVals, cplexVars);
@@ -284,6 +293,8 @@ void CtCallbackI::main()
 			tmpPt.point = primalSolution;
 
 			ProcessInfo::getInstance().addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
+
+			tmpPrimalVals.end();
 		}
 	}
 
@@ -385,7 +396,6 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 	auto optional = ProcessInfo::getInstance().MIPSolver->createHyperplaneTerms(hyperplane);
-
 	if (!optional)
 	{
 		return;
@@ -393,14 +403,11 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
 	auto tmpPair = optional.get();
 
-	//auto tmpPair = createHyperplaneTerms(hyperplane);
 	bool hyperplaneIsOk = true;
-
 	for (auto E : tmpPair.first)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-
 			ProcessInfo::getInstance().outputWarning(
 				"     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
@@ -410,7 +417,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
 	if (hyperplaneIsOk)
 	{
-		GeneratedHyperplane genHyperplane;
+		//GeneratedHyperplane genHyperplane;
 
 		IloExpr expr(this->getEnv());
 
@@ -421,22 +428,23 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
 		IloRange tmpRange(this->getEnv(), -IloInfinity, expr, -tmpPair.second);
 
-		auto addedConstr = add(tmpRange);
+		tmpPair.first.clear();
+		expr.end();
+		add(tmpRange).end();
 
 		int constrIndex = 0;
-		genHyperplane.generatedConstraintIndex = constrIndex;
+		/*genHyperplane.generatedConstraintIndex = constrIndex;
 		genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
 		genHyperplane.generatedPoint = hyperplane.generatedPoint;
 		genHyperplane.source = hyperplane.source;
 		genHyperplane.generatedIter = currIter->iterationNumber;
 		genHyperplane.isLazy = false;
-		genHyperplane.isRemoved = false;
+		genHyperplane.isRemoved = false;*/
 
 		//ProcessInfo::getInstance().MIPSolver->generatedHyperplanes.push_back(genHyperplane);
 
 		currIter->numHyperplanesAdded++;
 		currIter->totNumHyperplanes++;
-		expr.end();
 	}
 }
 
@@ -454,12 +462,12 @@ void CtCallbackI::createIntegerCut(std::vector<int> binaryIndexes)
 	add(tmpRange);
 	ProcessInfo::getInstance().numIntegerCutsAdded++;
 
+	tmpRange.end();
 	expr.end();
 }
 
 MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback()
 {
-
 	discreteVariablesActivated = true;
 
 	cplexModel = IloModel(cplexEnv);
@@ -477,7 +485,12 @@ MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback()
 
 MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback()
 {
+	cplexModel.end();
+	cplexVars.end();
+	cplexConstrs.end();
+	cplexLazyConstrs.end();
 	cplexEnv.end();
+	cplexInstance.end();
 }
 
 void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
@@ -485,7 +498,12 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
 	try
 	{
 		MIPSolverCplex::initializeSolverSettings();
-		//cplexInstance.use(IncCallback(cplexEnv, cplexVars));
+
+		if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+		{
+			cplexInstance.setParam(IloCplex::Threads, 1);
+		}
+
 		cplexInstance.use(CtCallback(cplexEnv, cplexVars, this));
 		cplexInstance.use(HCallback(cplexEnv, cplexVars));
 		cplexInstance.use(InfoCallback(cplexEnv, cplexVars));

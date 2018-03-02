@@ -7,6 +7,7 @@ OptProblem::OptProblem()
 
 OptProblem::~OptProblem()
 {
+	std::cout << "problem deleted" << std::endl;
 	delete m_problemInstance;
 }
 

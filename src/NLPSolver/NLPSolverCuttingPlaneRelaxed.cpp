@@ -46,7 +46,8 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
 
 NLPSolverCuttingPlaneRelaxed::~NLPSolverCuttingPlaneRelaxed()
 {
-	delete NLPProblem, LPSolver;
+	delete NLPProblem;
+	delete LPSolver;
 }
 
 /*void NLPSolverCuttingPlaneRelaxed::saveProblemModelToFile(std::string fileName)

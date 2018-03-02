@@ -57,6 +57,7 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
 TaskInitializeOriginalProblem::~TaskInitializeOriginalProblem()
 {
+	delete problem;
 }
 
 void TaskInitializeOriginalProblem::run()
@@ -68,5 +69,4 @@ std::string TaskInitializeOriginalProblem::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

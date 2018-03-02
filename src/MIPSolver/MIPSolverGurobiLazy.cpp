@@ -406,32 +406,39 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
 	{
 		tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+		bUpdateInteriorPoint = true;
 
 		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
 				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+			bSelectHPPts = true;
 		}
 		else
 		{
 			taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+			bSelectHPPts = true;
 		}
 	}
 	else
 	{
 		taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
+		bSelectHPPts = true;
 	}
 
 	tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
+	bSelectPrimNLP = true;
 
 	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
 	{
 		taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
+		bUpdateObjectiveByLinesearch = true;
 	}
 
 	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
 	{
 		taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
+		bSelectPrimalSolutionFromLinesearch = true;
 	}
 
 	lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();

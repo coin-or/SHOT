@@ -9,7 +9,6 @@
 
 TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch()
 {
-
 	nonlinearConstraintIdxs = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
 
 	ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");

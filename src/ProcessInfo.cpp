@@ -787,6 +787,23 @@ ProcessInfo::ProcessInfo()
 
 ProcessInfo::~ProcessInfo()
 {
+	iterations.clear();
+
+	primalSolution.clear();
+	iterations.clear();
+	primalSolutions.clear();
+	dualSolutions.clear();
+
+	primalSolutionCandidates.clear();
+	primalFixedNLPCandidates.clear();
+	dualSolutionCandidates.clear();
+
+	delete osResult;
+
+	delete relaxationStrategy;
+	delete linesearchMethod;
+
+	delete tasks;
 }
 
 void ProcessInfo::setOriginalProblem(OptProblemOriginal *problem)
@@ -910,13 +927,13 @@ std::string ProcessInfo::getOSrl()
 		osResult->setAnOtherSolutionResult(0, "DualObjectiveBound", strstrdb.str(), "Final solution",
 										   "The dual bound for the objective", 0, NULL);
 
-		if (dualSolutions.size() > 0)
+		if (dualSolutions.size() > 0 && dualSolutions.back().point.size() > 0)
 		{
 			osResult->setObjValue(0, 0, -1, "", dualSolutions.back().objValue);
 
 			std::stringstream strstr;
 			strstr << std::fixed << std::setprecision(15)
-				   << this->originalProblem->getMostDeviatingConstraint(dualSolutions.back().point).value;
+				   << dualSolutions.back().objValue;
 
 			osResult->setAnOtherSolutionResult(0, "MaxErrorConstrs", strstr.str(), "Final solution",
 											   "Maximal error in constraint", 0, NULL);
@@ -1213,7 +1230,7 @@ std::string ProcessInfo::getTraceResult()
 	ss << this->originalProblem->getNumberOfBinaryVariables() + this->originalProblem->getNumberOfIntegerVariables()
 	   << ",";
 
-		/*auto nonzeroes = this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize  +
+	/*auto nonzeroes = this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize  +
 					 //this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() +
 					 this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] + 1;
 */
@@ -1263,7 +1280,7 @@ std::string ProcessInfo::getTraceResult()
 	}
 	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
 	{
-		modelStatus = "7";
+		modelStatus = "8";
 	}
 	else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
 	{
@@ -1302,7 +1319,7 @@ std::string ProcessInfo::getTraceResult()
 	else
 	{
 		solverStatus = "10";
-		outputError("Unknown return code obtainedfrom solver.");
+		outputError("Unknown return code obtained from solver.");
 	}
 
 	ss << modelStatus << ",";
@@ -1326,7 +1343,7 @@ std::string ProcessInfo::getTraceResult()
 
 void ProcessInfo::createIteration()
 {
-	Iteration iter = Iteration();
+	Iteration iter;
 	iter.iterationNumber = iterations.size() + 1;
 
 	iter.numHyperplanesAdded = 0;

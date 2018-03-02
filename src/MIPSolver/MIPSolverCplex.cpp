@@ -23,6 +23,13 @@ MIPSolverCplex::MIPSolverCplex()
 
 MIPSolverCplex::~MIPSolverCplex()
 {
+	iterDurations.clear();
+	cplexVarConvers.clear();
+
+	cplexModel.end();
+	cplexVars.end();
+	cplexConstrs.end();
+	cplexInstance.end();
 	cplexEnv.end();
 }
 
@@ -441,7 +448,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
 		cplexInstance.solve();
 		double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
-
+		
 		iterDurations.push_back(timeEnd - timeStart);
 		MIPSolutionStatus = getSolutionStatus();
 	}
@@ -532,6 +539,7 @@ std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
 											   e.getMessage());
 	}
 
+	tmpSolsCplex.end();
 	return (solution);
 }
 
@@ -703,6 +711,8 @@ void MIPSolverCplex::addMIPStart(std::vector<double> point)
 		ProcessInfo::getInstance().outputError("Error when adding MIP starting point", e.getMessage());
 	}
 
+	startVal.end();
+
 	ProcessInfo::getInstance().outputInfo("     Added MIP starting point.");
 }
 
@@ -816,15 +826,15 @@ double MIPSolverCplex::getDualObjectiveValue()
 
 std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndGetNewBounds()
 {
+	auto numVar = originalProblem->getNumberOfVariables();
+
+	IloNumArray redubs(cplexEnv, numVar);
+	IloNumArray redlbs(cplexEnv, numVar);
+
+	IloBoolArray redund(cplexEnv);
+
 	try
 	{
-		auto numVar = originalProblem->getNumberOfVariables();
-		IloIntVarArray ivararray(cplexEnv, numVar);
-		IloNumArray redubs(cplexEnv, numVar);
-		IloNumArray redlbs(cplexEnv, numVar);
-
-		IloBoolArray redund(cplexEnv);
-
 		bool isUpdated = false;
 
 		cplexInstance.basicPresolve(cplexVars, redlbs, redubs, cplexConstrs, redund);
@@ -866,10 +876,18 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
 			}
 		}
 
+		redlbs.end();
+		redubs.end();
+		redund.end();
+
 		return (std::make_pair(newLBs, newUBs));
 	}
 	catch (IloException &e)
 	{
+		redlbs.end();
+		redubs.end();
+		redund.end();
+	
 		ProcessInfo::getInstance().outputError("Error during presolve", e.getMessage());
 
 		return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
@@ -899,14 +917,10 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
 
 	auto optional = createHyperplaneTerms(hyperplane);
 
-	std::cout << "heja1" << std::endl;
 	if (!optional)
 	{
-		std::cout << "hej36" << std::endl;
 		return;
 	}
-
-	std::cout << "heja2" << std::endl;
 
 	auto tmpPair = optional.get();
 
@@ -918,8 +932,7 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
 		if (E.value != E.value) //Check for NaN
 		{
 
-			ProcessInfo::getInstance().outputWarning(
-				"     Warning: hyperplane not generated, NaN found in linear terms!");
+			ProcessInfo::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}

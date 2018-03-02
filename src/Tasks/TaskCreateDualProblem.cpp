@@ -26,12 +26,10 @@ TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
 
 	ProcessInfo::getInstance().outputDebug("Dual problem created");
 	ProcessInfo::getInstance().stopTimer("Reformulation");
-
 }
 
 TaskCreateDualProblem::~TaskCreateDualProblem()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskCreateDualProblem::run()

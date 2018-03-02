@@ -12,7 +12,9 @@ SHOTSolver::SHOTSolver()
 SHOTSolver::~SHOTSolver()
 {
 	if (isProblemInitialized)
+	{
 		delete solutionStrategy;
+	}
 
 #ifdef HAS_GAMS
 	delete gms2os;
@@ -514,15 +516,15 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Optimization model settings
-	Settings::getInstance().createSetting("ContinuousVariable.EmptyLowerBound", "Model", -10.0e12, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("ContinuousVariable.EmptyLowerBound", "Model", -10.0e11, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("ContinuousVariable.EmptyUpperBound", "Model", 10.0e12, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("ContinuousVariable.EmptyUpperBound", "Model", 10.0e11, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0, "Lower bound for integer variables without bounds", 0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("NonlinearObjectiveVariable.Bound", "Model", 10.0e12, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("NonlinearObjectiveVariable.Bound", "Model", 10.0e11, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
 	// Logging and output settings
 	std::vector<std::string> enumLogLevel;
@@ -624,7 +626,7 @@ void SHOTSolver::initializeSettings()
 
 	// Primal settings: tolerances for accepting primal solutions
 
-	Settings::getInstance().createSetting("Tolerance.TrustLinearConstraintValues", "Primal", true,
+	Settings::getInstance().createSetting("Tolerance.TrustLinearConstraintValues", "Primal", false,
 										  "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
 
 	Settings::getInstance().createSetting("Tolerance.Integer", "Primal", 1e-6,
@@ -699,7 +701,7 @@ void SHOTSolver::initializeSettings()
 	enumIPOptSolver.push_back("ma86");
 	enumIPOptSolver.push_back("ma97");
 	enumIPOptSolver.push_back("mumps");
-	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma86),
+	Settings::getInstance().createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma57),
 										  "Ipopt linear subsolver", enumIPOptSolver);
 	enumIPOptSolver.clear();
 
@@ -742,7 +744,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ObjectiveGap.Relative", "Termination", 0.001,
 										  "Relative gap termination tolerance for objective function", 0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("ObjectiveStagnation.IterationLimit", "Termination", 100,
+	Settings::getInstance().createSetting("ObjectiveStagnation.IterationLimit", "Termination", OSINT_MAX,
 										  "Max number of iterations without significant objective value improvement", 0, OSINT_MAX);
 
 	Settings::getInstance().createSetting("ObjectiveStagnation.Tolerance", "Termination", 0.000001,

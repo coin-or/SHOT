@@ -464,5 +464,6 @@ void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
 	ss << osolwriter->writeOSoL(osOption);
 
 	fileUtil->writeFileFromString(fileName, ss.str());
-	delete fileUtil, osolwriter;
+	delete fileUtil;
+	delete osolwriter;
 }

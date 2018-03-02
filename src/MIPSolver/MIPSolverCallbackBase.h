@@ -10,6 +10,9 @@
 class MIPSolverCallbackBase
 {
   public:
+
+	~MIPSolverCallbackBase();
+	
   private:
   protected:
 	int cbCalls = 0;
@@ -28,6 +31,12 @@ class MIPSolverCallbackBase
 	TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
 	TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
 	TaskUpdateInteriorPoint *tUpdateInteriorPoint;
+	
+	bool bSelectPrimNLP = false;
+	bool bSelectHPPts = false;
+	bool bUpdateObjectiveByLinesearch = false;
+	bool bSelectPrimalSolutionFromLinesearch = false;
+	bool bUpdateInteriorPoint = false;
 
 	bool checkFixedNLPStrategy(SolutionPoint point);
 

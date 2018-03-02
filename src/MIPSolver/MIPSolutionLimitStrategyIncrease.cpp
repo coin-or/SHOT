@@ -73,7 +73,7 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 	{
 		if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")) return (true);
 
-		if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);
+		//if (prevIter->maxDeviation < prevIter->usedConstraintTolerance) return (true);
 
 		if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination")) return (true);
 

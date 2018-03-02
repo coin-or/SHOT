@@ -728,7 +728,14 @@ double MIPSolverGurobi::getDualObjectiveValue()
 
 	try
 	{
-		objVal = gurobiModel->get(GRB_DoubleAttr_ObjBound);
+		if (isMIP)
+		{
+			objVal = gurobiModel->get(GRB_DoubleAttr_ObjBound);
+		}
+		else
+		{
+			objVal = gurobiModel->get(GRB_DoubleAttr_ObjVal);
+		}
 	}
 	catch (GRBException &e)
 	{

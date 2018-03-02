@@ -118,11 +118,12 @@ void TaskFindInteriorPoint::run()
 			UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
 		}
 	}
-	
+
 	if (!foundNLPPoint)
 	{
 		ProcessInfo::getInstance().outputError("\n No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
+		NLPSolvers.clear();
 		return;
 	}
 

@@ -46,7 +46,7 @@ class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallback
 	TaskBase *taskSelectHPPts;
 
   private:
-	int iterNumLastResetHyperplaneCounter;
+	int iterNumLastResetHyperplaneCounter = 0;
 
   public:
 	IloCplex::CallbackI *duplicateCallback() const;

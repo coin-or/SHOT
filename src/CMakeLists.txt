@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project (SHOTProject)
 
 # Sets the release types, e.g. Release, Debug
-set(CMAKE_BUILD_TYPE Debug)          
+#set(CMAKE_BUILD_TYPE Release)          
 
 # Sets version number.
 set (Tutorial_VERSION_MAJOR 0)

@@ -6,6 +6,9 @@ Iteration::Iteration()
 
 Iteration::~Iteration()
 {
+	solutionPoints.clear();
+	constraintDeviations.clear();
+	hyperplanePoints.clear();
 }
 
 bool Iteration::isMIP()
