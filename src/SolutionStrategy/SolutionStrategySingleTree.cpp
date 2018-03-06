@@ -103,9 +103,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
 
 	/*TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
 	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
-
+	*/
 	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");*/
+	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
 	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
 	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");

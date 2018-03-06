@@ -1,11 +1,7 @@
 #include "NLPSolverBase.h"
 
-void NLPSolverBase::setProblem(OSInstance* origInstance)
+void NLPSolverBase::setProblem(OSInstance *origInstance)
 {
-	//
-
-	ProcessInfo *processInfo = &ProcessInfo::getInstance();
-
 	originalInstance = origInstance;
 	isProblemInitialized = false;
 }
@@ -14,7 +10,7 @@ void NLPSolverBase::initializeProblem()
 {
 	if (!isProblemInitialized)
 	{
-		createProblemInstance (originalInstance);
+		createProblemInstance(originalInstance);
 
 		isProblemInitialized = true;
 	}
@@ -22,14 +18,16 @@ void NLPSolverBase::initializeProblem()
 
 void NLPSolverBase::saveProblemToFile(std::string fileName)
 {
-	if (!isProblemInitialized) initializeProblem();
+	if (!isProblemInitialized)
+		initializeProblem();
 
 	NLPProblem->saveProblemModelToFile(fileName);
 }
 
 E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
-	if (!isProblemInitialized) initializeProblem();
+	if (!isProblemInitialized)
+		initializeProblem();
 
 	if (Settings::getInstance().getBoolSetting("FixedInteger.UsePresolveBounds", "Primal")) // Does not seem to work with Ipopt...
 	{
@@ -37,14 +35,15 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 
 		for (int i = 0; i < numVar; i++)
 		{
-			if (i == ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveVariableIdx()) continue;
+			if (i == ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveVariableIdx())
+				continue;
 
 			if (ProcessInfo::getInstance().originalProblem->hasVariableBoundsBeenTightened(i))
 			{
 				NLPProblem->setVariableLowerBound(i,
-						ProcessInfo::getInstance().originalProblem->getVariableLowerBound(i));
+												  ProcessInfo::getInstance().originalProblem->getVariableLowerBound(i));
 				NLPProblem->setVariableUpperBound(i,
-						ProcessInfo::getInstance().originalProblem->getVariableUpperBound(i));
+												  ProcessInfo::getInstance().originalProblem->getVariableUpperBound(i));
 				NLPProblem->setVariableBoundsAsTightened(i);
 			}
 		}
@@ -59,14 +58,16 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 std::vector<double> NLPSolverBase::getVariableLowerBounds()
 {
 
-	if (!isProblemInitialized) initializeProblem();
+	if (!isProblemInitialized)
+		initializeProblem();
 
 	return (getCurrentVariableLowerBounds());
 }
 
 std::vector<double> NLPSolverBase::getVariableUpperBounds()
 {
-	if (!isProblemInitialized) initializeProblem();
+	if (!isProblemInitialized)
+		initializeProblem();
 
 	return (getCurrentVariableUpperBounds());
 }

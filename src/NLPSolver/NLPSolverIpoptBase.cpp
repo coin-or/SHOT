@@ -456,14 +456,10 @@ void NLPSolverIpoptBase::updateSettings()
 
 void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
 {
-	fileUtil = new FileUtil();
-
 	osolwriter->m_bWhiteSpace = false;
 
 	stringstream ss;
 	ss << osolwriter->writeOSoL(osOption);
 
-	fileUtil->writeFileFromString(fileName, ss.str());
-	delete fileUtil;
-	delete osolwriter;
+	UtilityFunctions::writeStringToFile(fileName, ss.str());
 }

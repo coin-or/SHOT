@@ -1,4 +1,14 @@
-﻿#include "SHOTSolver.h"
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
+#include "SHOTSolver.h"
 
 SHOTSolver *solver = NULL;
 
@@ -70,16 +80,21 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			FileUtil *fileUtil;
-			fileUtil = new FileUtil();
-
 			// Create OSoL-file
 			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
-			fileUtil->writeFileFromString(optionsFile.string(), solver->getOSoL());
+
+			if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
+			{
+				ProcessInfo::getInstance().outputError("Error when writing OsoL file: " + optionsFile.string());
+			}
 
 			// Create GAMS option file
 			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
-			fileUtil->writeFileFromString(optionsFile.string(), solver->getGAMSOptFile());
+
+			if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
+			{
+				ProcessInfo::getInstance().outputError("Error when writing options file: " + optionsFile.string());
+			}
 
 			defaultOptionsGenerated = true;
 		}
@@ -186,16 +201,13 @@ int main(int argc, char *argv[])
 	catch (const ErrorClass &eclass)
 	{
 		ProcessInfo::getInstance().outputError(eclass.errormsg);
-	
+
 		delete solver;
 
 		return (0);
 	}
 
 	ProcessInfo::getInstance().stopTimer("Total");
-
-	FileUtil *fileUtil;
-	fileUtil = new FileUtil();
 
 	std::string osrl = solver->getOSrL();
 
@@ -205,12 +217,20 @@ int main(int argc, char *argv[])
 		resultPath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
 		resultPath = resultPath.replace_extension(".osrl");
 		ProcessInfo::getInstance().outputSummary("\n Results written to: " + resultPath.string());
-		fileUtil->writeFileFromString(resultPath.string(), osrl);
+
+		if (!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
+		{
+			ProcessInfo::getInstance().outputError("Error when writing OSrL file: " + resultPath.string());
+		}
 	}
 	else
 	{
 		ProcessInfo::getInstance().outputSummary("\n Results written to: " + resultFile.string());
-		fileUtil->writeFileFromString(resultFile.string(), osrl);
+
+		if (!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
+		{
+			ProcessInfo::getInstance().outputError("Error when writing OSrL file: " + resultFile.string());
+		}
 	}
 
 	std::string trace = solver->getTraceResult();
@@ -221,14 +241,19 @@ int main(int argc, char *argv[])
 		tracePath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
 		tracePath = tracePath.replace_extension(".trc");
 		ProcessInfo::getInstance().outputSummary("                     " + tracePath.string());
-		fileUtil->writeFileFromString(tracePath.string(), trace);
+
+		if (!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
+		{
+			ProcessInfo::getInstance().outputError("Error when writing trace file: " + tracePath.string());
+		}
 	}
 	else
 	{
-		fileUtil->writeFileFromString(traceFile.string(), trace);
+		if (!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
+		{
+			ProcessInfo::getInstance().outputError("Error when writing trace file: " + traceFile.string());
+		}
 	}
-
-	delete fileUtil;
 
 #ifdef _WIN32
 	ProcessInfo::getInstance().outputSummary("\n"
@@ -266,7 +291,7 @@ int main(int argc, char *argv[])
 	ProcessInfo::getInstance().outputSummary(
 		"└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
-	
+
 	delete solver;
 	return (0);
 }

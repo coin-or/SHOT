@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include <ostream>
-#include "OSFileUtil.h"
 #include "OSInstance.h"
 #include "boost/format.hpp"
 #include <math.h>
@@ -11,6 +10,9 @@
 #include "Structs.h"
 #include <chrono>
 #include <ctime>
+#include <iostream>
+#include <fstream>
+#include <cerrno>
 
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32
@@ -69,4 +71,8 @@ namespace UtilityFunctions
 	std::string toString(double value);
 
 	double getJulianFractionalDate();
+
+	bool writeStringToFile(std::string fileName, std::string str);
+
+	std::string getFileAsString(std::string fileName);
 }

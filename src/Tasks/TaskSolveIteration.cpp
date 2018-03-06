@@ -113,8 +113,7 @@ void TaskSolveIteration::run()
 				UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
 			}
 
-			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
-				sols.at(0).point);
+			auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(sols.at(0).point);
 
 			currIter->maxDeviationConstraint = mostDevConstr.idx;
 			currIter->maxDeviation = mostDevConstr.value;

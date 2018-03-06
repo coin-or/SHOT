@@ -1,7 +1,6 @@
 #pragma once
 #include "OSiLReader.h"
 #include "OSiLWriter.h"
-#include "OSFileUtil.h"
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinFinite.hpp"
@@ -96,7 +95,6 @@ class OptProblem
 		void setQuadraticConstraints(std::vector<int> idxs);
 
 		std::vector<int> getNonlinearOrQuadraticConstraintIndexes();
-		//void setNonlinearOrQuadraticConstraints(std::vector<int> idxs);
 
 		virtual bool isTypeOfObjectiveMinimize();
 		virtual bool isObjectiveFunctionNonlinear();

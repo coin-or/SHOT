@@ -14,6 +14,9 @@ OptProblemNLPMinimax::~OptProblemNLPMinimax()
 
 void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 {
+	auto model = originalInstance->printModel();
+	UtilityFunctions::writeStringToFile("outc1.txt", model);
+
 	OSInstance *newInstance = NULL;
 	newInstance = new OSInstance();
 
@@ -35,12 +38,15 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
 	this->copyNonlinearExpressions(originalInstance, newInstance);
 
+	newInstance->getJacobianSparsityPattern(); //Needed exactly here!
+
 	// The following four lines fixes some problems with OSInstance...
-	OSiLWriter *osilWriter = new OSiLWriter();
+	/*OSiLWriter *osilWriter = new OSiLWriter();
 	std::string osil = osilWriter->writeOSiL(newInstance);
+
 	OSiLReader *osilReader = new OSiLReader();
 	newInstance = osilReader->readOSiL(osil);
-
+	*/
 	this->setProblemInstance(newInstance);
 
 	this->setNonlinearConstraintIndexes();
@@ -58,6 +64,8 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 	{
 		muindex = originalInstance->getVariableNumber();
 	}
+
+	this->repairNonboundedVariables();
 }
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)
@@ -365,8 +373,6 @@ void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *de
 #endif
 		}
 	}
-
-	destination->bConstraintsModified = true;
 }
 
 void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstance *destination)

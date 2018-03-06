@@ -88,7 +88,8 @@ enum class E_SolutionStrategy
 	MultiTree,
 	NLP,
 	MIQP,
-	MIQCQP
+	MIQCQP,
+	None
 };
 
 enum class E_TerminationReason
@@ -144,7 +145,8 @@ enum class ES_MIPSolver
 {
 	Cplex, 
 	Gurobi, 
-	Cbc
+	Cbc,
+	None
 };
 
 enum class ES_NLPSolver

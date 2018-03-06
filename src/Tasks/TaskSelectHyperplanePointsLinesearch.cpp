@@ -42,7 +42,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 			hyperplaneSolutionPointStrategyInitialized = true;
 		}
 
-		ProcessInfo::getInstance().outputError("     Adding cutting plane since no interior point is known.");
+		ProcessInfo::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
 		tSelectHPPts->run(solPoints);
 
 		return;

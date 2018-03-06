@@ -413,15 +413,36 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
 	}
 	else if (status == GRB_INFEASIBLE)
 	{
-		MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+		if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+		}
+		else
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+		}
 	}
 	else if (status == GRB_INF_OR_UNBD)
 	{
-		MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+		if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+		}
+		else
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+		}
 	}
 	else if (status == GRB_UNBOUNDED)
 	{
-		MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+		if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+		}
+		else
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+		}
 	}
 	//else if (status == GRB_CUTOFF)
 	//{

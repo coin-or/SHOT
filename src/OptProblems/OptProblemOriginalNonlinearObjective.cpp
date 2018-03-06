@@ -39,9 +39,6 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 	this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber() + 1, false));
 
 	this->repairNonboundedVariables();
-
-	instance->getJacobianSparsityPattern();
-
 	return true;
 }
 

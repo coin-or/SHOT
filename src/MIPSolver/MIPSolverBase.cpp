@@ -109,9 +109,16 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-			std::cout << E.value << std::endl;
-			ProcessInfo::getInstance().outputWarning(
+			ProcessInfo::getInstance().outputError(
 				"     Warning: hyperplane not generated, NaN found in linear terms!");
+			hyperplaneIsOk = false;
+			break;
+		}
+
+		if (isinf(E.value))
+		{
+			ProcessInfo::getInstance().outputError(
+				"     Warning: hyperplane not generated, inf found in linear terms!");
 			hyperplaneIsOk = false;
 			break;
 		}

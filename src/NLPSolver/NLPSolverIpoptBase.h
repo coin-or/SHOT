@@ -7,13 +7,10 @@ class NLPSolverIpoptBase: virtual public INLPSolver
 {
 	private:
 
-		//
-
 	protected:
 		OSOption* osOption;
 		IpoptSolver *NLPSolver;
 		OSoLWriter *osolwriter;
-		FileUtil *fileUtil;
 
 		std::vector<int> fixedVariableIndexes;
 		std::vector<double> fixedVariableValues;

@@ -2,8 +2,11 @@
 
 TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *originalInstance)
 {
-
 	ProcessInfo::getInstance().startTimer("Reformulation");
+
+	// This is needed to fix various problems later on.
+	// TODO: figure out why...
+	originalInstance->getJacobianSparsityPattern();
 
 	instance = originalInstance;
 
@@ -11,8 +14,8 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
 	bool useQuadraticConstraint = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
 
-	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(originalInstance);
-	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(originalInstance);
+	bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(instance);
+	bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(instance);
 	bool isQuadraticUsed = (useQuadraticObjective || (useQuadraticConstraint));
 
 	if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
@@ -22,7 +25,7 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 	}
 	else if (isObjQuadratic && isQuadraticUsed)
 	{
-		ProcessInfo::getInstance().outputInfo("Quadratic objective function detected.");
+		ProcessInfo::getInstance().outputAlways("Quadratic objective function detected.");
 		ProcessInfo::getInstance().originalProblem = new OptProblemOriginalQuadraticObjective();
 	}
 	else //Linear objective function
@@ -31,7 +34,7 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 		ProcessInfo::getInstance().originalProblem = new OptProblemOriginalLinearObjective();
 	}
 
-	ProcessInfo::getInstance().originalProblem->setProblem(originalInstance);
+	ProcessInfo::getInstance().originalProblem->setProblem(instance);
 	auto debugPath = Settings::getInstance().getStringSetting("Debug.Path", "Output");
 
 	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
@@ -58,6 +61,7 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 TaskInitializeOriginalProblem::~TaskInitializeOriginalProblem()
 {
 	delete problem;
+	delete instance;
 }
 
 void TaskInitializeOriginalProblem::run()

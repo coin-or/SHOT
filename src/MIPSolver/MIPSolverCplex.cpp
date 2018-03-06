@@ -380,19 +380,36 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
 		}
 		else if (status == IloAlgorithm::Status::Infeasible)
 		{
-			MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+			if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+			{
+				MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+			}
+			else
+			{
+				MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+			}
 		}
 		else if (status == IloAlgorithm::Status::InfeasibleOrUnbounded)
 		{
-			MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+			if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+			{
+				MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+			}
+			else
+			{
+				MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+			}
 		}
 		else if (status == IloAlgorithm::Status::Unbounded)
 		{
-			MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
-		}
-		else if (status == IloAlgorithm::Status::Infeasible)
-		{
-			MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+			if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+			{
+				MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+			}
+			else
+			{
+				MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+			}
 		}
 		else if (status == IloAlgorithm::Status::Feasible)
 		{
@@ -448,7 +465,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
 		cplexInstance.solve();
 		double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
-		
+
 		iterDurations.push_back(timeEnd - timeStart);
 		MIPSolutionStatus = getSolutionStatus();
 	}
@@ -887,7 +904,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
 		redlbs.end();
 		redubs.end();
 		redund.end();
-	
+
 		ProcessInfo::getInstance().outputError("Error during presolve", e.getMessage());
 
 		return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
@@ -931,7 +948,6 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
 	{
 		if (E.value != E.value) //Check for NaN
 		{
-
 			ProcessInfo::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
 			hyperplaneIsOk = false;
 			break;

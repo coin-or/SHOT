@@ -26,8 +26,6 @@ void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, 
 		return;
 	}
 
-	FileUtil *fileUtil = new FileUtil();
-
 	std::stringstream str;
 
 	for (int i = 0; i < point.size(); i++)
@@ -38,16 +36,12 @@ void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, 
 		str << std::endl;
 	}
 
-	fileUtil->writeFileFromString(fileName, str.str());
-
-	delete fileUtil;
+	writeStringToFile(fileName, str.str());
 }
 
 void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables,
 												std::string fileName)
 {
-	FileUtil *fileUtil = new FileUtil();
-
 	std::stringstream str;
 
 	str << "Source: " << solution.sourceDescription;
@@ -90,14 +84,15 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::ve
 		str << std::endl;
 	}
 
-	fileUtil->writeFileFromString(fileName, str.str());
-
-	delete fileUtil;
+	writeStringToFile(fileName, str.str());
 }
 
 void UtilityFunctions::displayVector(std::vector<double> point)
 {
 	std::stringstream str;
+
+	if (point.size() == 0)
+		str << "vector is empty";
 
 	for (int i = 0; i < point.size(); i++)
 	{
@@ -159,6 +154,9 @@ void UtilityFunctions::displayVector(std::vector<int> point)
 {
 	std::stringstream str;
 
+	if (point.size() == 0)
+		str << "vector is empty";
+
 	for (int i = 0; i < point.size(); i++)
 	{
 		str << i;
@@ -172,8 +170,10 @@ void UtilityFunctions::displayVector(std::vector<int> point)
 
 void UtilityFunctions::displayVector(std::vector<std::string> point)
 {
-
 	std::stringstream str;
+
+	if (point.size() == 0)
+		str << "vector is empty";
 
 	for (int i = 0; i < point.size(); i++)
 	{
@@ -312,9 +312,10 @@ bool UtilityFunctions::areAllConstraintsQuadratic(OSInstance *instance)
 bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
 {
 	int numDiscreteVars = instance->getNumberOfBinaryVariables() + instance->getNumberOfIntegerVariables();
-	
-	if (numDiscreteVars > 0) return (false);
-	
+
+	if (numDiscreteVars > 0)
+		return (false);
+
 	return (true);
 }
 
@@ -494,9 +495,43 @@ double UtilityFunctions::getJulianFractionalDate()
 	auto mins = parts->tm_min;
 	auto secs = parts->tm_sec;
 
-	auto secstoday = (3600*hours + 60*mins + secs);
-	
-	auto julianDate = (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday/86400.0;
+	auto secstoday = (3600 * hours + 60 * mins + secs);
+
+	auto julianDate = (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
 
 	return julianDate;
+}
+
+bool UtilityFunctions::writeStringToFile(std::string fileName, std::string str)
+{
+	std::ofstream f(fileName);
+
+	if (f)
+	{
+		f << str;
+	}
+	else
+	{
+		return false;
+	}
+
+	f.close();
+	return true;
+}
+
+std::string UtilityFunctions::getFileAsString(std::string fileName)
+{
+	std::ifstream in(fileName, std::ios::in | std::ios::binary);
+	if (in)
+	{
+		std::string contents;
+		in.seekg(0, std::ios::end);
+		contents.resize(in.tellg());
+		in.seekg(0, std::ios::beg);
+		in.read(&contents[0], contents.size());
+		in.close();
+		return (contents);
+	}
+
+	throw(errno);
 }

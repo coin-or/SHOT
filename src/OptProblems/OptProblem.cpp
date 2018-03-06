@@ -7,7 +7,6 @@ OptProblem::OptProblem()
 
 OptProblem::~OptProblem()
 {
-	std::cout << "problem deleted" << std::endl;
 	delete m_problemInstance;
 }
 
@@ -205,28 +204,22 @@ void OptProblem::printProblemStatistics()
 
 void OptProblem::exportProblemToOsil(std::string fileName)
 {
-	FileUtil *fileUtil = new FileUtil();
 	std::string osil = exportProblemToOsil();
 
-	if (!fileUtil->writeFileFromString(fileName, osil))
+	if (!UtilityFunctions::writeStringToFile(fileName, osil))
 	{
 		ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
 	}
-
-	delete fileUtil;
 }
 
 void OptProblem::saveProblemModelToFile(std::string fileName)
 {
 	std::string problem = getProblemInstance()->printModel();
-	FileUtil *fileUtil = new FileUtil();
 
-	if (!fileUtil->writeFileFromString(fileName, problem))
+	if (!UtilityFunctions::writeStringToFile(fileName, problem))
 	{
 		ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
 	}
-
-	delete fileUtil;
 }
 
 std::string OptProblem::exportProblemToOsil()
@@ -234,6 +227,8 @@ std::string OptProblem::exportProblemToOsil()
 	OSiLWriter *osilWriter = new OSiLWriter();
 
 	std::string osil = osilWriter->writeOSiL(getProblemInstance());
+
+	delete osilWriter;
 
 	return (osil);
 }
@@ -456,6 +451,7 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
 SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
 {
 	auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
+
 	ProcessInfo::getInstance().numGradientEvals++;
 
 	if (idx != -1 && getProblemInstance()->getConstraintTypes()[idx] == 'G')

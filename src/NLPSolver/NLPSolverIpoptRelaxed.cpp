@@ -2,7 +2,6 @@
 
 NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed()
 {
-
 	osolwriter = new OSoLWriter();
 
 	NLPProblem = new OptProblemNLPRelaxed();

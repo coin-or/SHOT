@@ -23,7 +23,6 @@ SHOTSolver::~SHOTSolver()
 
 bool SHOTSolver::setOptions(std::string fileName)
 {
-	FileUtil *fileUtil = new FileUtil();
 	OSoLReader *osolreader = new OSoLReader();
 
 	try
@@ -33,13 +32,31 @@ bool SHOTSolver::setOptions(std::string fileName)
 
 		if (fileExtension == ".xml" || fileExtension == ".osol")
 		{
-			fileContents = fileUtil->getFileAsString(fileName.c_str());
-			Settings::getInstance().readSettingsFromOSoL(fileContents);
+			try
+			{
+				fileContents = UtilityFunctions::getFileAsString(fileName);
+				Settings::getInstance().readSettingsFromOSoL(fileContents);
+			}
+			catch (exception &e)
+			{
+				ProcessInfo::getInstance().outputError("Error when reading OSoL options file" + fileName);
+				delete osolreader;
+				return (false);
+			}
 		}
 		else if (fileExtension == ".opt")
 		{
-			fileContents = fileUtil->getFileAsString(fileName.c_str());
-			Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+			try
+			{
+				fileContents = UtilityFunctions::getFileAsString(fileName);
+				Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+			}
+			catch (exception &e)
+			{
+				ProcessInfo::getInstance().outputError("Error when reading options file" + fileName);
+				delete osolreader;
+				return (false);
+			}
 		}
 		else
 		{
@@ -50,7 +67,6 @@ bool SHOTSolver::setOptions(std::string fileName)
 	catch (const ErrorClass &eclass)
 	{
 		ProcessInfo::getInstance().outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
-		delete fileUtil;
 		delete osolreader;
 		return (false);
 	}
@@ -63,9 +79,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 
 	ProcessInfo::getInstance().outputAlways("Options read from file \"" + fileName + "\"");
 
-	delete fileUtil;
 	delete osolreader;
-
 	return (true);
 }
 
@@ -115,9 +129,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 	{
 		if (problemExtension == ".osil" || problemExtension == ".xml")
 		{
-			FileUtil *fileUtil = new FileUtil();
-			std::string fileContents = fileUtil->getFileAsString(fileName.c_str());
-			delete fileUtil;
+			std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
 			OSiLReader *osilreader = new OSiLReader();
 			tmpInstance = osilreader->readOSiL(fileContents);
@@ -356,7 +368,7 @@ void SHOTSolver::initializeSettings()
 	Settings::getInstance().createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual", 1.0,
 										  "Relative termination tolerance between LP and linesearch objective", 0.0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -10.0e12,
+	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -999999999999.0,
 										  "Lower bound for minimax objective variable", -OSDBL_MAX, 0);
 
 	Settings::getInstance().createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
@@ -403,7 +415,7 @@ void SHOTSolver::initializeSettings()
 
 	// Dual strategy settings: Fixed integer (NLP) strategy
 
-	Settings::getInstance().createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.00001,
+	Settings::getInstance().createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.0001,
 										  "Constraint tolerance for fixed strategy", 0.0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("FixedInteger.MaxIterations", "Dual", 20,
@@ -516,15 +528,15 @@ void SHOTSolver::initializeSettings()
 	enumSolutionStrategy.clear();
 
 	// Optimization model settings
-	Settings::getInstance().createSetting("ContinuousVariable.EmptyLowerBound", "Model", -10.0e11, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("ContinuousVariable.EmptyLowerBound", "Model", -9999999999.0, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("ContinuousVariable.EmptyUpperBound", "Model", 10.0e11, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("ContinuousVariable.EmptyUpperBound", "Model", 9999999999.0, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0, "Lower bound for integer variables without bounds", 0, OSDBL_MAX);
 
 	Settings::getInstance().createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, OSDBL_MAX);
 
-	Settings::getInstance().createSetting("NonlinearObjectiveVariable.Bound", "Model", 10.0e11, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
+	Settings::getInstance().createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
 	// Logging and output settings
 	std::vector<std::string> enumLogLevel;
@@ -789,11 +801,12 @@ void SHOTSolver::initializeDebugMode()
 	boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
 								 boost::filesystem::copy_option::overwrite_if_exists);
 
-	FileUtil *fileUtil = new FileUtil();
-
-	fileUtil->writeFileFromString(debugPath + "/options.xml", getOSoL());
-
-	delete fileUtil;
+	std::string tmpFilename = debugPath + "/options.xml";
+	
+	if (!UtilityFunctions::writeStringToFile(tmpFilename, getOSoL()))
+	{
+		ProcessInfo::getInstance().outputError("Error when writing OsoL file: " + tmpFilename);
+	}
 }
 
 void SHOTSolver::verifySettings()

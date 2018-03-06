@@ -6,7 +6,7 @@ TaskFindInteriorPoint::TaskFindInteriorPoint()
 
 TaskFindInteriorPoint::~TaskFindInteriorPoint()
 {
-	// TODO Auto-generated destructor stub
+	NLPSolvers.clear();
 }
 
 void TaskFindInteriorPoint::run()
@@ -123,7 +123,7 @@ void TaskFindInteriorPoint::run()
 	{
 		ProcessInfo::getInstance().outputError("\n No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
-		NLPSolvers.clear();
+		
 		return;
 	}
 

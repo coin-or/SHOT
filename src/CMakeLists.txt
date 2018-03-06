@@ -1,12 +1,14 @@
 cmake_minimum_required (VERSION 2.8)
-project (SHOTProject)
+project (SHOT)
 
 # Sets the release types, e.g. Release, Debug
 #set(CMAKE_BUILD_TYPE Release)          
 
 # Sets version number.
-set (Tutorial_VERSION_MAJOR 0)
-set (Tutorial_VERSION_MINOR 9)
+set(VERSION_MAJOR   0   CACHE STRING "Project major version number.")
+set(VERSION_MINOR   99   CACHE STRING "Project minor version number.")
+set(VERSION_PATCH   1   CACHE STRING "Project patch version number.")
+mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
 
 # Activates subsolvers, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON) 
@@ -224,3 +226,26 @@ target_link_libraries (SHOT ${COINOS_DIR}/lib/libOS.so )
 target_link_libraries(SHOT ${Boost_LIBRARIES})
 
 install(TARGETS SHOT DESTINATION bin)
+
+# Add a target to generate API documentation with Doxygen
+find_package(Doxygen)
+option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
+
+if(BUILD_DOCUMENTATION)
+    if(NOT DOXYGEN_FOUND)
+        message(FATAL_ERROR "Doxygen is needed to build the documentation.")
+    endif()
+
+    set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/../doxydoc/doxygen.conf.in)
+    set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
+
+    configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+
+    add_custom_target(doc
+        COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating API documentation with Doxygen"
+        VERBATIM)
+
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+endif()

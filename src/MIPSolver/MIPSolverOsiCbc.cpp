@@ -274,7 +274,14 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
 	}
 	else if (cbcModel->isProvenInfeasible())
 	{
-		MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+		if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+		}
+		else
+		{
+			MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+		}
 	}
 	else if (cbcModel->isSolutionLimitReached())
 	{

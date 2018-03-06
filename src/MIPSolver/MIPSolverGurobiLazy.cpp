@@ -351,7 +351,6 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 		{
 			if (E.value != E.value) //Check for NaN
 			{
-
 				ProcessInfo::getInstance().outputWarning(
 					"     Warning: hyperplane not generated, NaN found in linear terms!");
 				hyperplaneIsOk = false;

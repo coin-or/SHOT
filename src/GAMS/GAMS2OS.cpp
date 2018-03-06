@@ -2,13 +2,12 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <sys/stat.h>   // for mkdir
+#include <sys/stat.h> // for mkdir
 #include "boost/filesystem.hpp"
 #include "CoinHelperFunctions.hpp" // for CoinCopyOfArrayOrZero, maybe should eliminate this
 #include "../ProcessInfo.h"
 
-GAMS2OS::GAMS2OS() :
-		gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
+GAMS2OS::GAMS2OS() : gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
 {
 }
 
@@ -20,12 +19,12 @@ GAMS2OS::~GAMS2OS()
 	gevLibraryUnload();
 }
 
-void GAMS2OS::readGms(const std::string& filename)
+void GAMS2OS::readGms(const std::string &filename)
 {
 	char gamscall[1024];
 	char buffer[GMS_SSSIZE];
 	int rc;
-	FILE* convertdopt;
+	FILE *convertdopt;
 
 	assert(gmo == NULL);
 	assert(gev == NULL);
@@ -62,39 +61,39 @@ void GAMS2OS::readGms(const std::string& filename)
 	gmoOptFileSet(gmo, 0);
 }
 
-void GAMS2OS::readCntr(const std::string& filename)
+void GAMS2OS::readCntr(const std::string &filename)
 {
 	char buffer[GMS_SSSIZE];
 
-	
 	/* initialize GMO and GEV libraries */
-	if (!gmoCreateDD(&gmo, GAMSDIR, buffer, sizeof(buffer)) || !gevCreateDD(&gev, GAMSDIR, buffer, sizeof(buffer))) throw std::logic_error(
+	if (!gmoCreateDD(&gmo, GAMSDIR, buffer, sizeof(buffer)) || !gevCreateDD(&gev, GAMSDIR, buffer, sizeof(buffer)))
+		throw std::logic_error(
 			buffer);
 
 	/* load control file */
 	if (gevInitEnvironmentLegacy(gev, filename.c_str()))
 	{
-		gmoFree (&gmo);
-		gevFree (&gev);
+		gmoFree(&gmo);
+		gevFree(&gev);
 		throw std::logic_error("Could not load control file loadgms.tmp/gamscntr.dat.");
 	}
 
 	if (gmoRegisterEnvironment(gmo, gev, buffer))
 	{
-		gmoFree (&gmo);
-		gevFree (&gev);
+		gmoFree(&gmo);
+		gevFree(&gev);
 		snprintf(buffer, sizeof(buffer), "Error registering GAMS Environment: %s", buffer);
 		throw std::logic_error(buffer);
 	}
 
 	if (gmoLoadDataLegacy(gmo, buffer))
 	{
-		gmoFree (&gmo);
-		gevFree (&gev);
+		gmoFree(&gmo);
+		gevFree(&gev);
 		throw std::logic_error("Could not load model data.");
 	}
 
-	gevTerminateUninstall (gev);
+	gevTerminateUninstall(gev);
 }
 
 void GAMS2OS::createOSObjects()
@@ -107,13 +106,21 @@ void GAMS2OS::createOSObjects()
 		gevLogPChar(gev, "Reading options from ");
 		gevLog(gev, buffer);
 
-		if (!boost::filesystem::exists(buffer)) throw std::logic_error("Options file not found.");
+		if (!boost::filesystem::exists(buffer))
+			throw std::logic_error("Options file not found.");
 
-		FileUtil *fileUtil = new FileUtil();
-		std::string fileContents = fileUtil->getFileAsString(buffer);
-		delete fileUtil;
+		try
+		{
+			std::string fileContents = UtilityFunctions::getFileAsString(buffer);
 
-		Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+			Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+		}
+		catch (exception &e)
+		{
+			ProcessInfo::getInstance().outputError("Error when reading GAMS options file" + std::string(buffer));
+			throw std::logic_error("Cannot read GAMS options file from.");
+		}
+
 	}
 	else // get default settings from GAMS
 	{
@@ -142,7 +149,7 @@ void GAMS2OS::createOSObjects()
 	}
 
 	// want to solve the NLP problems with GAMS
-	Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int) ES_PrimalNLPSolver::GAMS);
+	Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
 
 	/* reformulate objective variable out of model, if possible */
 	gmoObjReformSet(gmo, 1);
@@ -162,48 +169,51 @@ void GAMS2OS::createOSObjects()
 	// setup variables
 	osinstance->setVariableNumber(gmoN(gmo));
 
-	char* vartypes = new char[gmoN(gmo)];
-	std::string* varnames = new std::string[gmoN(gmo)];
+	char *vartypes = new char[gmoN(gmo)];
+	std::string *varnames = new std::string[gmoN(gmo)];
 	for (int i = 0; i < gmoN(gmo); ++i)
 	{
 		switch (gmoGetVarTypeOne(gmo, i))
 		{
-			case gmovar_X:
-				vartypes[i] = 'C';
-				break;
-			case gmovar_B:
-				vartypes[i] = 'B';
-				break;
-			case gmovar_I:
-				vartypes[i] = 'I';
-				break;
-			case gmovar_SC:
-				vartypes[i] = 'D';
-				break;
-			case gmovar_SI:
-				vartypes[i] = 'J';
-				break;
-			case gmovar_S1:
-			case gmovar_S2:
-				vartypes[i] = 'C';
-				// ignore SOS1, SOS2 for now; we should only get here if called by convert, in which case we do something special
-				break;
-			default:
-			{
-				throw std::logic_error("Unsupported variable type.");
-			}
+		case gmovar_X:
+			vartypes[i] = 'C';
+			break;
+		case gmovar_B:
+			vartypes[i] = 'B';
+			break;
+		case gmovar_I:
+			vartypes[i] = 'I';
+			break;
+		case gmovar_SC:
+			vartypes[i] = 'D';
+			break;
+		case gmovar_SI:
+			vartypes[i] = 'J';
+			break;
+		case gmovar_S1:
+		case gmovar_S2:
+			vartypes[i] = 'C';
+			// ignore SOS1, SOS2 for now; we should only get here if called by convert, in which case we do something special
+			break;
+		default:
+		{
+			throw std::logic_error("Unsupported variable type.");
 		}
-		if (gmoDict (gmo)) gmoGetVarNameOne(gmo, i, buffer);
-		else sprintf(buffer, "x%08d", i);
+		}
+		if (gmoDict(gmo))
+			gmoGetVarNameOne(gmo, i, buffer);
+		else
+			sprintf(buffer, "x%08d", i);
 		varnames[i] = buffer;
 	}
 
-	double* varlow = new double[gmoN(gmo)];
-	double* varup = new double[gmoN(gmo)];
+	double *varlow = new double[gmoN(gmo)];
+	double *varup = new double[gmoN(gmo)];
 	gmoGetVarLower(gmo, varlow);
 	gmoGetVarUpper(gmo, varup);
 
-	if (gmoN(gmo) > 0 && !osinstance->setVariables(gmoN(gmo), varnames, varlow, varup, vartypes)) throw std::logic_error(
+	if (gmoN(gmo) > 0 && !osinstance->setVariables(gmoN(gmo), varnames, varlow, varup, vartypes))
+		throw std::logic_error(
 			"OSInstance::setVariables did not succeed.");
 
 	delete[] vartypes;
@@ -221,13 +231,13 @@ void GAMS2OS::createOSObjects()
 	{
 		osinstance->setObjectiveNumber(1);
 
-		SparseVector* objectiveCoefficients = NULL;
+		SparseVector *objectiveCoefficients = NULL;
 
 		if (gmoN(gmo) > 0)
 		{
-			int* colidx = new int[gmoObjNZ(gmo)];
-			double* val = new double[gmoObjNZ(gmo)];
-			int* nlflag = new int[gmoObjNZ(gmo)];
+			int *colidx = new int[gmoObjNZ(gmo)];
+			double *val = new double[gmoObjNZ(gmo)];
+			int *nlflag = new int[gmoObjNZ(gmo)];
 			int nz;
 			int nlnz;
 
@@ -236,7 +246,8 @@ void GAMS2OS::createOSObjects()
 			objectiveCoefficients = new SparseVector(nz - nlnz);
 			for (int i = 0, j = 0; i < nz; ++i)
 			{
-				if (nlflag[i]) continue;
+				if (nlflag[i])
+					continue;
 				objectiveCoefficients->indexes[j] = colidx[i];
 				objectiveCoefficients->values[j] = val[i];
 				j++;
@@ -252,11 +263,13 @@ void GAMS2OS::createOSObjects()
 			objectiveCoefficients = new SparseVector(0);
 		}
 
-		if (gmoDict (gmo)) gmoGetObjName(gmo, buffer);
-		else strcpy(buffer, "objective");
+		if (gmoDict(gmo))
+			gmoGetObjName(gmo, buffer);
+		else
+			strcpy(buffer, "objective");
 
 		if (!osinstance->addObjective(-1, buffer, gmoSense(gmo) == gmoObj_Min ? "min" : "max", gmoObjConst(gmo), 1.0,
-				objectiveCoefficients))
+									  objectiveCoefficients))
 		{
 			delete objectiveCoefficients;
 			throw std::logic_error("OSInstance::addObjective did not succeed.");
@@ -273,31 +286,33 @@ void GAMS2OS::createOSObjects()
 	{
 		switch (gmoGetEquTypeOne(gmo, i))
 		{
-			case gmoequ_E:
-				lb = ub = gmoGetRhsOne(gmo, i);
-				break;
+		case gmoequ_E:
+			lb = ub = gmoGetRhsOne(gmo, i);
+			break;
 
-			case gmoequ_L:
-				lb = -OSDBL_MAX;
-				ub = gmoGetRhsOne(gmo, i);
-				break;
+		case gmoequ_L:
+			lb = -OSDBL_MAX;
+			ub = gmoGetRhsOne(gmo, i);
+			break;
 
-			case gmoequ_G:
-				lb = gmoGetRhsOne(gmo, i);
-				ub = OSDBL_MAX;
-				break;
+		case gmoequ_G:
+			lb = gmoGetRhsOne(gmo, i);
+			ub = OSDBL_MAX;
+			break;
 
-			case gmoequ_N:
-				lb = -OSDBL_MAX;
-				ub = OSDBL_MAX;
-				break;
+		case gmoequ_N:
+			lb = -OSDBL_MAX;
+			ub = OSDBL_MAX;
+			break;
 
-			default:
-				throw std::logic_error("Unknown row type.");
+		default:
+			throw std::logic_error("Unknown row type.");
 		}
 
-		if (gmoDict (gmo)) gmoGetEquNameOne(gmo, i, buffer);
-		else sprintf(buffer, "e%08d", i);
+		if (gmoDict(gmo))
+			gmoGetEquNameOne(gmo, i, buffer);
+		else
+			sprintf(buffer, "e%08d", i);
 
 		if (!osinstance->addConstraint(i, buffer, lb, ub, 0.0))
 		{
@@ -305,10 +320,10 @@ void GAMS2OS::createOSObjects()
 		}
 	}
 
-	double* values = new double[gmoNZ(gmo) + gmoN(gmo)];
-	int* colindexes = new int[gmoNZ(gmo) + gmoN(gmo)];
-	int* rowstarts = new int[gmoM(gmo) + 1];
-	int* nlflags = new int[gmoN(gmo)];
+	double *values = new double[gmoNZ(gmo) + gmoN(gmo)];
+	int *colindexes = new int[gmoNZ(gmo) + gmoN(gmo)];
+	int *rowstarts = new int[gmoM(gmo) + 1];
+	int *nlflags = new int[gmoN(gmo)];
 
 	int nz = 0;
 	for (int row = 0; row < gmoM(gmo); ++row)
@@ -344,38 +359,42 @@ void GAMS2OS::createOSObjects()
 	delete[] nlflags;
 
 	if (!osinstance->setLinearConstraintCoefficients(nz, false, values, 0, nz - 1, colindexes, 0, nz - 1, rowstarts, 0,
-			gmoM(gmo))) throw std::logic_error("OSInstance::setLinearConstraintCoefficients did not succeed.");
+													 gmoM(gmo)))
+		throw std::logic_error("OSInstance::setLinearConstraintCoefficients did not succeed.");
 
 	// if everything linear, then we're finished
-	if (gmoObjNLNZ(gmo) == 0 && gmoNLNZ(gmo) == 0) return;
+	if (gmoObjNLNZ(gmo) == 0 && gmoNLNZ(gmo) == 0)
+		return;
 
 	// setup quadratic terms and nonlinear expressions
 	int nqterms = 0;
-	if (gmoGetObjOrder(gmo) == gmoorder_Q) nqterms = gmoObjQNZ(gmo);
+	if (gmoGetObjOrder(gmo) == gmoorder_Q)
+		nqterms = gmoObjQNZ(gmo);
 	for (int i = 0; i < gmoM(gmo); ++i)
-		if (gmoGetEquOrderOne(gmo, i) == gmoorder_Q) nqterms += gmoGetRowQNZOne(gmo, i);
+		if (gmoGetEquOrderOne(gmo, i) == gmoorder_Q)
+			nqterms += gmoGetRowQNZOne(gmo, i);
 
 	int qtermpos = 0;
-	int* quadequs = new int[nqterms];
-	int* quadrows = new int[nqterms];
-	int* quadcols = new int[nqterms];
-	double* quadcoefs = new double[nqterms];
+	int *quadequs = new int[nqterms];
+	int *quadrows = new int[nqterms];
+	int *quadcols = new int[nqterms];
+	double *quadcoefs = new double[nqterms];
 
-	if (osinstance->instanceData->nonlinearExpressions == NULL) osinstance->instanceData->nonlinearExpressions =
+	if (osinstance->instanceData->nonlinearExpressions == NULL)
+		osinstance->instanceData->nonlinearExpressions =
 			new NonlinearExpressions();
 
-	osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions = gmoNLM(gmo)
-			+ (gmoGetObjOrder(gmo) == gmoorder_NL ? 1 : 0);
-	osinstance->instanceData->nonlinearExpressions->nl = CoinCopyOfArrayOrZero((Nl**) NULL,
-			osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions);
+	osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions = gmoNLM(gmo) + (gmoGetObjOrder(gmo) == gmoorder_NL ? 1 : 0);
+	osinstance->instanceData->nonlinearExpressions->nl = CoinCopyOfArrayOrZero((Nl **)NULL,
+																			   osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions);
 	int iNLidx = 0;
 
-	int* opcodes = new int[gmoNLCodeSizeMaxRow(gmo) + 1];
-	int* fields = new int[gmoNLCodeSizeMaxRow(gmo) + 1];
+	int *opcodes = new int[gmoNLCodeSizeMaxRow(gmo) + 1];
+	int *fields = new int[gmoNLCodeSizeMaxRow(gmo) + 1];
 	int constantlen = gmoNLConst(gmo);
-	double* constants = (double*) gmoPPool(gmo);
+	double *constants = (double *)gmoPPool(gmo);
 	int codelen;
-	OSnLNode* nl;
+	OSnLNode *nl;
 
 	if (gmoGetObjOrder(gmo) == gmoorder_Q)
 	{
@@ -386,7 +405,8 @@ void GAMS2OS::createOSObjects()
 		gmoGetObjQ(gmo, quadrows, quadcols, quadcoefs);
 		for (int j = 0; j < qnz; ++j)
 		{
-			if (quadrows[j] == quadcols[j]) quadcoefs[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
+			if (quadrows[j] == quadcols[j])
+				quadcoefs[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
 			quadequs[j] = -1;
 		}
 		qtermpos = qnz;
@@ -408,16 +428,16 @@ void GAMS2OS::createOSObjects()
 		if (objjacval == 1.0)
 		{
 			// scale by -1/objjacval = negate
-			OSnLNode* negnode = new OSnLNodeNegate;
+			OSnLNode *negnode = new OSnLNodeNegate;
 			negnode->m_mChildren[0] = nl;
 			nl = negnode;
 		}
 		else if (objjacval != -1.0)
 		{
 			// scale by -1/objjacval
-			OSnLNodeNumber* numbernode = new OSnLNodeNumber();
+			OSnLNodeNumber *numbernode = new OSnLNodeNumber();
 			numbernode->value = -1 / objjacval;
-			OSnLNodeTimes* timesnode = new OSnLNodeTimes();
+			OSnLNodeTimes *timesnode = new OSnLNodeTimes();
 			timesnode->m_mChildren[0] = nl;
 			timesnode->m_mChildren[1] = numbernode;
 			nl = timesnode;
@@ -441,7 +461,8 @@ void GAMS2OS::createOSObjects()
 			gmoGetRowQ(gmo, i, &quadrows[qtermpos], &quadcols[qtermpos], &quadcoefs[qtermpos]);
 			for (int j = qtermpos; j < qtermpos + qnz; ++j)
 			{
-				if (quadrows[j] == quadcols[j]) quadcoefs[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
+				if (quadrows[j] == quadcols[j])
+					quadcoefs[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
 				quadequs[j] = i;
 			}
 			qtermpos += qnz;
@@ -449,7 +470,8 @@ void GAMS2OS::createOSObjects()
 		else if (gmoGetEquOrderOne(gmo, i) == gmoorder_NL)
 		{
 			gmoDirtyGetRowFNLInstr(gmo, i, &codelen, opcodes, fields);
-			if (codelen == 0) continue;
+			if (codelen == 0)
+				continue;
 
 			nl = parseGamsInstructions(codelen, opcodes, fields, constantlen, constants);
 			if (nl == NULL)
@@ -481,11 +503,10 @@ void GAMS2OS::createOSObjects()
 	delete[] fields;
 }
 
-const char* multivarops[] =
-{ "sum", "product", "min", "max", "allDiff" };
+const char *multivarops[] =
+	{"sum", "product", "min", "max", "allDiff"};
 
-static
-void applyOperation(std::vector<OSnLNode*>& stack, OSnLNode* op, int nargs = -1)
+static void applyOperation(std::vector<OSnLNode *> &stack, OSnLNode *op, int nargs = -1)
 {
 	assert(op != NULL);
 
@@ -503,28 +524,31 @@ void applyOperation(std::vector<OSnLNode*>& stack, OSnLNode* op, int nargs = -1)
 		}
 	}
 
-	if (nargs < 0) nargs = op->inumberOfChildren;
+	if (nargs < 0)
+		nargs = op->inumberOfChildren;
 
 	/* if operator can take arbitrarily many operands, then merge children of children of same operator into new one
 	 * e.g., (a+b) + c = a + b + c */
 	for (int o = 0; o < 4; ++o)
 	{
-		if (op->getTokenName() != multivarops[o]) continue;
+		if (op->getTokenName() != multivarops[o])
+			continue;
 
 		assert(op->inumberOfChildren == 0);
 		assert(op->m_mChildren == NULL);
 		assert(nargs > 0);
-		assert((int) stack.size() >= nargs);
+		assert((int)stack.size() >= nargs);
 
 		op->inumberOfChildren = nargs;
 
 		/* check for number of additional arguments from arguments of same operator */
 		size_t a;
-		for (a = 0; (int) a < nargs; ++a)
-			if (stack[stack.size() - 1 - a]->getTokenName() == multivarops[o]) op->inumberOfChildren +=
+		for (a = 0; (int)a < nargs; ++a)
+			if (stack[stack.size() - 1 - a]->getTokenName() == multivarops[o])
+				op->inumberOfChildren +=
 					stack[stack.size() - 1 - a]->inumberOfChildren - 1;
 
-		op->m_mChildren = new OSnLNode*[op->inumberOfChildren];
+		op->m_mChildren = new OSnLNode *[op->inumberOfChildren];
 
 		a = 0;
 		while (nargs)
@@ -533,7 +557,7 @@ void applyOperation(std::vector<OSnLNode*>& stack, OSnLNode* op, int nargs = -1)
 			{
 				assert(a + stack.back()->inumberOfChildren <= op->inumberOfChildren);
 				memcpy(&op->m_mChildren[a], stack.back()->m_mChildren,
-						stack.back()->inumberOfChildren * sizeof(OSnLNode*));
+					   stack.back()->inumberOfChildren * sizeof(OSnLNode *));
 				a += stack.back()->inumberOfChildren;
 
 				delete[] stack.back()->m_mChildren;
@@ -561,12 +585,12 @@ void applyOperation(std::vector<OSnLNode*>& stack, OSnLNode* op, int nargs = -1)
 		assert(op->m_mChildren == NULL);
 
 		op->inumberOfChildren = nargs;
-		op->m_mChildren = new OSnLNode*[nargs];
+		op->m_mChildren = new OSnLNode *[nargs];
 	}
-	assert((int) op->inumberOfChildren == nargs);
+	assert((int)op->inumberOfChildren == nargs);
 	assert(op->m_mChildren != NULL || nargs == 0);
 
-	assert((int) stack.size() >= nargs);
+	assert((int)stack.size() >= nargs);
 
 	while (nargs)
 	{
@@ -577,348 +601,350 @@ void applyOperation(std::vector<OSnLNode*>& stack, OSnLNode* op, int nargs = -1)
 	stack.push_back(op);
 }
 
-OSnLNode* GAMS2OS::parseGamsInstructions(int codelen, /**< length of GAMS instructions */
-int* opcodes, /**< opcodes of GAMS instructions */
-int* fields, /**< fields of GAMS instructions */
-int constantlen, /**< length of GAMS constants pool */
-double* constants /**< GAMS constants pool */
+OSnLNode *GAMS2OS::parseGamsInstructions(int codelen,	  /**< length of GAMS instructions */
+										 int *opcodes,	 /**< opcodes of GAMS instructions */
+										 int *fields,	  /**< fields of GAMS instructions */
+										 int constantlen,  /**< length of GAMS constants pool */
+										 double *constants /**< GAMS constants pool */
 )
 {
 	bool debugoutput = gevGetIntOpt(gev, gevInteger1) & 0x4;
-#define debugout if( debugoutput ) std::clog
+#define debugout     \
+	if (debugoutput) \
+	std::clog
 
-	std::vector<OSnLNode*> stack;
+	std::vector<OSnLNode *> stack;
 	stack.reserve(20);
 
 	int nargs = -1;
 
 	for (int i = 0; i < codelen; ++i)
 	{
-		GamsOpCode opcode = (GamsOpCode) opcodes[i];
+		GamsOpCode opcode = (GamsOpCode)opcodes[i];
 		int address = fields[i] - 1;
 
 		debugout << '\t' << GamsOpCodeName[opcode] << ": ";
 		switch (opcode)
 		{
-			case nlNoOp:   // no operation
-			case nlStore:  // store row
-			case nlHeader: // header
+		case nlNoOp:   // no operation
+		case nlStore:  // store row
+		case nlHeader: // header
+		{
+			debugout << "ignored" << std::endl;
+			break;
+		}
+
+		case nlPushV: // push variable
+		{
+			address = gmoGetjSolver(gmo, address);
+			debugout << "push variable " << osinstance->getVariableNames()[address] << std::endl;
+			OSnLNodeVariable *nlNode = new OSnLNodeVariable();
+			nlNode->idx = address;
+			stack.push_back(nlNode);
+			break;
+		}
+
+		case nlPushI: // push constant
+		{
+			debugout << "push constant " << constants[address] << std::endl;
+			OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+			nlNode->value = constants[address];
+			stack.push_back(nlNode);
+			break;
+		}
+
+		case nlPushZero: // push zero
+		{
+			debugout << "push constant zero" << std::endl;
+			stack.push_back(new OSnLNodeNumber());
+			break;
+		}
+
+		case nlAdd: // add
+		{
+			debugout << "add" << std::endl;
+
+			applyOperation(stack, new OSnLNodeSum(), 2);
+
+			break;
+		}
+
+		case nlAddV: // add variable
+		{
+			address = gmoGetjSolver(gmo, address);
+			debugout << "add variable " << osinstance->getVariableNames()[address] << std::endl;
+			OSnLNodeVariable *nlNode = new OSnLNodeVariable();
+			nlNode->idx = address;
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeSum(), 2);
+			break;
+		}
+
+		case nlAddI: // add immediate
+		{
+			debugout << "add constant " << constants[address] << std::endl;
+			OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+			nlNode->value = constants[address];
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeSum(), 2);
+			break;
+		}
+
+		case nlSub: // minus
+		{
+			debugout << "minus" << std::endl;
+			applyOperation(stack, new OSnLNodeMinus());
+			break;
+		}
+
+		case nlSubV: // subtract variable
+		{
+			address = gmoGetjSolver(gmo, address);
+			debugout << "subtract variable " << osinstance->getVariableNames()[address] << std::endl;
+			OSnLNodeVariable *nlNode = new OSnLNodeVariable();
+			nlNode->idx = address;
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeMinus());
+			break;
+		}
+
+		case nlSubI: // subtract immediate
+		{
+			debugout << "subtract constant " << constants[address] << std::endl;
+			OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+			nlNode->value = constants[address];
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeMinus());
+			break;
+		}
+
+		case nlMul: // multiply
+		{
+			debugout << "multiply" << std::endl;
+			applyOperation(stack, new OSnLNodeProduct(), 2);
+			break;
+		}
+
+		case nlMulV: // multiply variable
+		{
+			address = gmoGetjSolver(gmo, address);
+			debugout << "multiply variable " << osinstance->getVariableNames()[address] << std::endl;
+			OSnLNodeVariable *nlNode = new OSnLNodeVariable();
+			nlNode->idx = address;
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeProduct(), 2);
+			break;
+		}
+
+		case nlMulI: // multiply immediate
+		{
+			debugout << "multiply constant " << constants[address] << std::endl;
+			OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+			nlNode->value = constants[address];
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeProduct(), 2);
+			break;
+		}
+
+		case nlMulIAdd: // multiply immediate and add
+		{
+			debugout << "multiply constant " << constants[address] << " and add " << std::endl;
+			OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+			nlNode->value = constants[address];
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeProduct(), 2);
+			applyOperation(stack, new OSnLNodeSum(), 2);
+			break;
+		}
+
+		case nlDiv: // divide
+		{
+			debugout << "divide" << std::endl;
+			applyOperation(stack, new OSnLNodeDivide());
+			break;
+		}
+
+		case nlDivV: // divide variable
+		{
+			address = gmoGetjSolver(gmo, address);
+			debugout << "divide variable " << osinstance->getVariableNames()[address] << std::endl;
+			OSnLNodeVariable *nlNode = new OSnLNodeVariable();
+			nlNode->idx = address;
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeDivide());
+			break;
+		}
+
+		case nlDivI: // divide immediate
+		{
+			debugout << "divide constant " << constants[address] << std::endl;
+			OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+			nlNode->value = constants[address];
+			stack.push_back(nlNode);
+			applyOperation(stack, new OSnLNodeDivide());
+			break;
+		}
+
+		case nlUMin: // unary minus
+		{
+			debugout << "negate" << std::endl;
+			applyOperation(stack, new OSnLNodeNegate());
+			break;
+		}
+
+		case nlUMinV: // unary minus variable
+		{
+			address = gmoGetjSolver(gmo, address);
+			debugout << "push negated variable " << osinstance->getVariableNames()[address] << std::endl;
+			OSnLNodeVariable *nlNode = new OSnLNodeVariable();
+			nlNode->idx = address;
+			nlNode->coef = -1.0;
+			stack.push_back(nlNode);
+			break;
+		}
+
+		case nlFuncArgN: // number of function arguments
+		{
+			nargs = address;
+			debugout << nargs << "arguments" << std::endl;
+			break;
+		}
+
+		case nlCallArg1:
+		case nlCallArg2:
+		case nlCallArgN:
+		{
+			debugout << "call function ";
+
+			switch (GamsFuncCode(address + 1))
+			// undo shift by 1
 			{
-				debugout << "ignored" << std::endl;
+			case fnmin:
+			{
+				debugout << "min" << std::endl;
+				applyOperation(stack, new OSnLNodeMin(), 2);
 				break;
 			}
 
-			case nlPushV: // push variable
+			case fnmax:
 			{
-				address = gmoGetjSolver(gmo, address);
-				debugout << "push variable " << osinstance->getVariableNames()[address] << std::endl;
-				OSnLNodeVariable* nlNode = new OSnLNodeVariable();
-				nlNode->idx = address;
+				debugout << "max" << std::endl;
+				applyOperation(stack, new OSnLNodeMax(), 2);
+				break;
+			}
+
+			case fnsqr:
+			{
+				debugout << "square" << std::endl;
+				applyOperation(stack, new OSnLNodeSquare());
+				break;
+			}
+
+			case fnexp:
+			case fnslexp:
+			case fnsqexp:
+			{
+				debugout << "exp" << std::endl;
+				applyOperation(stack, new OSnLNodeExp());
+				break;
+			}
+
+			case fnlog:
+			{
+				debugout << "ln" << std::endl;
+				applyOperation(stack, new OSnLNodeLn());
+				break;
+			}
+
+			case fnlog10:
+			case fnsllog10:
+			case fnsqlog10:
+			{
+				debugout << "log10 = ln * 1/ln(10)" << std::endl;
+				applyOperation(stack, new OSnLNodeLn());
+				OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+				nlNode->value = 1.0 / log(10.0);
 				stack.push_back(nlNode);
+				applyOperation(stack, new OSnLNodeTimes());
 				break;
 			}
 
-			case nlPushI: // push constant
+			case fnlog2:
 			{
-				debugout << "push constant " << constants[address] << std::endl;
-				OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-				nlNode->value = constants[address];
+				debugout << "log2 = ln * 1/ln(2)" << std::endl;
+				applyOperation(stack, new OSnLNodeLn());
+				OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+				nlNode->value = 1.0 / log(2.0);
 				stack.push_back(nlNode);
+				applyOperation(stack, new OSnLNodeTimes());
 				break;
 			}
 
-			case nlPushZero: // push zero
+			case fnsqrt:
 			{
-				debugout << "push constant zero" << std::endl;
-				stack.push_back(new OSnLNodeNumber());
+				debugout << "sqrt" << std::endl;
+				applyOperation(stack, new OSnLNodeSqrt());
 				break;
 			}
 
-			case nlAdd: // add
+			case fnabs:
 			{
-				debugout << "add" << std::endl;
-
-				applyOperation(stack, new OSnLNodeSum(), 2);
-
+				debugout << "abs" << std::endl;
+				applyOperation(stack, new OSnLNodeAbs());
 				break;
 			}
 
-			case nlAddV: // add variable
+			case fncos:
 			{
-				address = gmoGetjSolver(gmo, address);
-				debugout << "add variable " << osinstance->getVariableNames()[address] << std::endl;
-				OSnLNodeVariable* nlNode = new OSnLNodeVariable();
-				nlNode->idx = address;
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeSum(), 2);
+				debugout << "cos" << std::endl;
+				applyOperation(stack, new OSnLNodeCos());
 				break;
 			}
 
-			case nlAddI: // add immediate
+			case fnsin:
 			{
-				debugout << "add constant " << constants[address] << std::endl;
-				OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-				nlNode->value = constants[address];
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeSum(), 2);
+				debugout << "sin" << std::endl;
+				applyOperation(stack, new OSnLNodeSin());
 				break;
 			}
 
-			case nlSub: // minus
+			case fnpower:
+			case fnrpower:  // x ^ y
+			case fncvpower: // constant ^ x
+			case fnvcpower: // x ^ constant
 			{
-				debugout << "minus" << std::endl;
-				applyOperation(stack, new OSnLNodeMinus());
+				debugout << "power" << std::endl;
+				applyOperation(stack, new OSnLNodePower());
 				break;
 			}
 
-			case nlSubV: // subtract variable
+			case fnpi:
 			{
-				address = gmoGetjSolver(gmo, address);
-				debugout << "subtract variable " << osinstance->getVariableNames()[address] << std::endl;
-				OSnLNodeVariable* nlNode = new OSnLNodeVariable();
-				nlNode->idx = address;
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeMinus());
+				debugout << "pi" << std::endl;
+				stack.push_back(new OSnLNodePI());
 				break;
 			}
 
-			case nlSubI: // subtract immediate
-			{
-				debugout << "subtract constant " << constants[address] << std::endl;
-				OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-				nlNode->value = constants[address];
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeMinus());
-				break;
-			}
-
-			case nlMul: // multiply
-			{
-				debugout << "multiply" << std::endl;
-				applyOperation(stack, new OSnLNodeProduct(), 2);
-				break;
-			}
-
-			case nlMulV: // multiply variable
-			{
-				address = gmoGetjSolver(gmo, address);
-				debugout << "multiply variable " << osinstance->getVariableNames()[address] << std::endl;
-				OSnLNodeVariable* nlNode = new OSnLNodeVariable();
-				nlNode->idx = address;
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeProduct(), 2);
-				break;
-			}
-
-			case nlMulI: // multiply immediate
-			{
-				debugout << "multiply constant " << constants[address] << std::endl;
-				OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-				nlNode->value = constants[address];
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeProduct(), 2);
-				break;
-			}
-
-			case nlMulIAdd: // multiply immediate and add
-			{
-				debugout << "multiply constant " << constants[address] << " and add " << std::endl;
-				OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-				nlNode->value = constants[address];
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeProduct(), 2);
-				applyOperation(stack, new OSnLNodeSum(), 2);
-				break;
-			}
-
-			case nlDiv: // divide
+			case fndiv:
+			case fndiv0:
 			{
 				debugout << "divide" << std::endl;
 				applyOperation(stack, new OSnLNodeDivide());
 				break;
 			}
 
-			case nlDivV: // divide variable
+			case fnslrec: // 1/x
+			case fnsqrec: // 1/x
 			{
-				address = gmoGetjSolver(gmo, address);
-				debugout << "divide variable " << osinstance->getVariableNames()[address] << std::endl;
-				OSnLNodeVariable* nlNode = new OSnLNodeVariable();
-				nlNode->idx = address;
+				debugout << "reciprocal" << std::endl;
+				OSnLNodeNumber *nlNode = new OSnLNodeNumber();
+				nlNode->value = 1.0;
 				stack.push_back(nlNode);
 				applyOperation(stack, new OSnLNodeDivide());
 				break;
 			}
 
-			case nlDivI: // divide immediate
-			{
-				debugout << "divide constant " << constants[address] << std::endl;
-				OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-				nlNode->value = constants[address];
-				stack.push_back(nlNode);
-				applyOperation(stack, new OSnLNodeDivide());
-				break;
-			}
-
-			case nlUMin: // unary minus
-			{
-				debugout << "negate" << std::endl;
-				applyOperation(stack, new OSnLNodeNegate());
-				break;
-			}
-
-			case nlUMinV: // unary minus variable
-			{
-				address = gmoGetjSolver(gmo, address);
-				debugout << "push negated variable " << osinstance->getVariableNames()[address] << std::endl;
-				OSnLNodeVariable* nlNode = new OSnLNodeVariable();
-				nlNode->idx = address;
-				nlNode->coef = -1.0;
-				stack.push_back(nlNode);
-				break;
-			}
-
-			case nlFuncArgN: // number of function arguments
-			{
-				nargs = address;
-				debugout << nargs << "arguments" << std::endl;
-				break;
-			}
-
-			case nlCallArg1:
-			case nlCallArg2:
-			case nlCallArgN:
-			{
-				debugout << "call function ";
-
-				switch (GamsFuncCode(address + 1))
-				// undo shift by 1
-				{
-					case fnmin:
-					{
-						debugout << "min" << std::endl;
-						applyOperation(stack, new OSnLNodeMin(), 2);
-						break;
-					}
-
-					case fnmax:
-					{
-						debugout << "max" << std::endl;
-						applyOperation(stack, new OSnLNodeMax(), 2);
-						break;
-					}
-
-					case fnsqr:
-					{
-						debugout << "square" << std::endl;
-						applyOperation(stack, new OSnLNodeSquare());
-						break;
-					}
-
-					case fnexp:
-					case fnslexp:
-					case fnsqexp:
-					{
-						debugout << "exp" << std::endl;
-						applyOperation(stack, new OSnLNodeExp());
-						break;
-					}
-
-					case fnlog:
-					{
-						debugout << "ln" << std::endl;
-						applyOperation(stack, new OSnLNodeLn());
-						break;
-					}
-
-					case fnlog10:
-					case fnsllog10:
-					case fnsqlog10:
-					{
-						debugout << "log10 = ln * 1/ln(10)" << std::endl;
-						applyOperation(stack, new OSnLNodeLn());
-						OSnLNodeNumber* nlNode = new OSnLNodeNumber();
-						nlNode->value = 1.0 / log(10.0);
-						stack.push_back(nlNode);
-						applyOperation(stack, new OSnLNodeTimes());
-						break;
-					}
-
-					case fnlog2:
-					{
-						debugout << "log2 = ln * 1/ln(2)" << std::endl;
-						applyOperation(stack, new OSnLNodeLn());
-						OSnLNodeNumber *nlNode = new OSnLNodeNumber();
-						nlNode->value = 1.0 / log(2.0);
-						stack.push_back(nlNode);
-						applyOperation(stack, new OSnLNodeTimes());
-						break;
-					}
-
-					case fnsqrt:
-					{
-						debugout << "sqrt" << std::endl;
-						applyOperation(stack, new OSnLNodeSqrt());
-						break;
-					}
-
-					case fnabs:
-					{
-						debugout << "abs" << std::endl;
-						applyOperation(stack, new OSnLNodeAbs());
-						break;
-					}
-
-					case fncos:
-					{
-						debugout << "cos" << std::endl;
-						applyOperation(stack, new OSnLNodeCos());
-						break;
-					}
-
-					case fnsin:
-					{
-						debugout << "sin" << std::endl;
-						applyOperation(stack, new OSnLNodeSin());
-						break;
-					}
-
-					case fnpower:
-					case fnrpower: // x ^ y
-					case fncvpower: // constant ^ x
-					case fnvcpower: // x ^ constant
-					{
-						debugout << "power" << std::endl;
-						applyOperation(stack, new OSnLNodePower());
-						break;
-					}
-
-					case fnpi:
-					{
-						debugout << "pi" << std::endl;
-						stack.push_back(new OSnLNodePI());
-						break;
-					}
-
-					case fndiv:
-					case fndiv0:
-					{
-						debugout << "divide" << std::endl;
-						applyOperation(stack, new OSnLNodeDivide());
-						break;
-					}
-
-					case fnslrec: // 1/x
-					case fnsqrec: // 1/x
-					{
-						debugout << "reciprocal" << std::endl;
-						OSnLNodeNumber *nlNode = new OSnLNodeNumber();
-						nlNode->value = 1.0;
-						stack.push_back(nlNode);
-						applyOperation(stack, new OSnLNodeDivide());
-						break;
-					}
-
-						/* cannot handle nonlinear polynomials with this setup, as we would require copies of
+				/* cannot handle nonlinear polynomials with this setup, as we would require copies of
 						 * the variable argument when the variable occurs more than once
 						 */
 #if 0
@@ -995,105 +1021,88 @@ double* constants /**< GAMS constants pool */
 							break;
 						}
 #endif
-					case fnerrf:
-					{
-						debugout << "errorf = 0.5 * [1+erf(x/sqrt(2))]" << std::endl;
-						OSnLNodeNumber* nodenumber;
+			case fnerrf:
+			{
+				debugout << "errorf = 0.5 * [1+erf(x/sqrt(2))]" << std::endl;
+				OSnLNodeNumber *nodenumber;
 
-						nodenumber = new OSnLNodeNumber();
-						nodenumber->value = sqrt(2.0) / 2.0;
-						stack.push_back(nodenumber);
-						applyOperation(stack, new OSnLNodeProduct(), 2);
+				nodenumber = new OSnLNodeNumber();
+				nodenumber->value = sqrt(2.0) / 2.0;
+				stack.push_back(nodenumber);
+				applyOperation(stack, new OSnLNodeProduct(), 2);
 
-						applyOperation(stack, new OSnLNodeErf());
+				applyOperation(stack, new OSnLNodeErf());
 
-						nodenumber = new OSnLNodeNumber();
-						nodenumber->value = 1.0;
-						stack.push_back(nodenumber);
-						applyOperation(stack, new OSnLNodePlus());
+				nodenumber = new OSnLNodeNumber();
+				nodenumber->value = 1.0;
+				stack.push_back(nodenumber);
+				applyOperation(stack, new OSnLNodePlus());
 
-						nodenumber = new OSnLNodeNumber();
-						nodenumber->value = 0.5;
-						stack.push_back(nodenumber);
-						applyOperation(stack, new OSnLNodeTimes());
+				nodenumber = new OSnLNodeNumber();
+				nodenumber->value = 0.5;
+				stack.push_back(nodenumber);
+				applyOperation(stack, new OSnLNodeTimes());
 
-						break;
-					}
-
-						// TODO some more we could handle
-					case fnceil:
-					case fnfloor:
-					case fnround:
-					case fnmod:
-					case fntrunc:
-					case fnsign:
-					case fnarctan:
-					case fndunfm:
-					case fndnorm:
-					case fnerror:
-					case fnfrac:
-					case fnerrorl:
-					case fnfact /* factorial */:
-					case fnunfmi /* uniform random number */:
-					case fnncpf /* fischer: sqrt(x1^2+x2^2+2*x3) */:
-					case fnncpcm /* chen-mangasarian: x1-x3*ln(1+exp((x1-x2)/x3))*/:
-					case fnentropy /* x*ln(x) */:
-					case fnsigmoid /* 1/(1+exp(-x)) */:
-					case fnboolnot:
-					case fnbooland:
-					case fnboolor:
-					case fnboolxor:
-					case fnboolimp:
-					case fnbooleqv:
-					case fnrelopeq:
-					case fnrelopgt:
-					case fnrelopge:
-					case fnreloplt:
-					case fnrelople:
-					case fnrelopne:
-					case fnifthen:
-					case fnedist /* euclidian distance */:
-					case fncentropy /* x*ln((x+d)/(y+d))*/:
-					case fngamma:
-					case fnloggamma:
-					case fnbeta:
-					case fnlogbeta:
-					case fngammareg:
-					case fnbetareg:
-					case fnsinh:
-					case fncosh:
-					case fntanh:
-					case fnsignpower /* sign(x)*abs(x)^c */:
-					case fnncpvusin /* veelken-ulbrich */:
-					case fnncpvupow /* veelken-ulbrich */:
-					case fnbinomial:
-					case fntan:
-					case fnarccos:
-					case fnarcsin:
-					case fnarctan2 /* arctan(x2/x1) */:
-					case fnpoly:
-					default:
-					{
-						debugout << "nr. " << address + 1 << " - unsuppored. Error." << std::endl;
-						char buffer[256];
-						sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
-						gevLogStatPChar(gev, buffer);
-						while (!stack.empty())
-						{
-							delete stack.back();
-							stack.pop_back();
-						}
-						return NULL;
-					}
-				}
 				break;
 			}
 
+				// TODO some more we could handle
+			case fnceil:
+			case fnfloor:
+			case fnround:
+			case fnmod:
+			case fntrunc:
+			case fnsign:
+			case fnarctan:
+			case fndunfm:
+			case fndnorm:
+			case fnerror:
+			case fnfrac:
+			case fnerrorl:
+			case fnfact /* factorial */:
+			case fnunfmi /* uniform random number */:
+			case fnncpf /* fischer: sqrt(x1^2+x2^2+2*x3) */:
+			case fnncpcm /* chen-mangasarian: x1-x3*ln(1+exp((x1-x2)/x3))*/:
+			case fnentropy /* x*ln(x) */:
+			case fnsigmoid /* 1/(1+exp(-x)) */:
+			case fnboolnot:
+			case fnbooland:
+			case fnboolor:
+			case fnboolxor:
+			case fnboolimp:
+			case fnbooleqv:
+			case fnrelopeq:
+			case fnrelopgt:
+			case fnrelopge:
+			case fnreloplt:
+			case fnrelople:
+			case fnrelopne:
+			case fnifthen:
+			case fnedist /* euclidian distance */:
+			case fncentropy /* x*ln((x+d)/(y+d))*/:
+			case fngamma:
+			case fnloggamma:
+			case fnbeta:
+			case fnlogbeta:
+			case fngammareg:
+			case fnbetareg:
+			case fnsinh:
+			case fncosh:
+			case fntanh:
+			case fnsignpower /* sign(x)*abs(x)^c */:
+			case fnncpvusin /* veelken-ulbrich */:
+			case fnncpvupow /* veelken-ulbrich */:
+			case fnbinomial:
+			case fntan:
+			case fnarccos:
+			case fnarcsin:
+			case fnarctan2 /* arctan(x2/x1) */:
+			case fnpoly:
 			default:
 			{
-				debugout << "opcode " << opcode << " - unsuppored. Error." << std::endl;
+				debugout << "nr. " << address + 1 << " - unsuppored. Error." << std::endl;
 				char buffer[256];
-				sprintf(buffer, "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
+				sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
 				gevLogStatPChar(gev, buffer);
 				while (!stack.empty())
 				{
@@ -1102,6 +1111,23 @@ double* constants /**< GAMS constants pool */
 				}
 				return NULL;
 			}
+			}
+			break;
+		}
+
+		default:
+		{
+			debugout << "opcode " << opcode << " - unsuppored. Error." << std::endl;
+			char buffer[256];
+			sprintf(buffer, "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
+			gevLogStatPChar(gev, buffer);
+			while (!stack.empty())
+			{
+				delete stack.back();
+				stack.pop_back();
+			}
+			return NULL;
+		}
 		}
 	}
 
@@ -1111,7 +1137,7 @@ double* constants /**< GAMS constants pool */
 #undef debugout
 }
 
-void GAMS2OS::writeResult(OSResult& osresult)
+void GAMS2OS::writeResult(OSResult &osresult)
 {
 #if 0
 	if( osresult.general == NULL )
@@ -1140,23 +1166,35 @@ void GAMS2OS::writeResult(OSResult& osresult)
 
 	gmoSolveStatSet(gmo, gmoSolveStat_Normal);
 
-	if (osresult.getSolutionNumber() == 0) gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
-	else if (osresult.getSolutionStatusType(0) == "unbounded") gmoModelStatSet(gmo, gmoModelStat_Unbounded);
-	else if (osresult.getSolutionStatusType(0) == "globallyOptimal") gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
-	else if (osresult.getSolutionStatusType(0) == "locallyOptimal") gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
-	else if (osresult.getSolutionStatusType(0) == "optimal") gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
-	else if (osresult.getSolutionStatusType(0) == "bestSoFar") gmoModelStatSet(gmo, gmoModelStat_Feasible); // TODO report integer solution if integer var.?
-	else if (osresult.getSolutionStatusType(0) == "feasible") gmoModelStatSet(gmo, gmoModelStat_Feasible); // TODO report integer solution if integer var.?
-	else if (osresult.getSolutionStatusType(0) == "infeasible") gmoModelStatSet(gmo, gmoModelStat_InfeasibleGlobal);
+	if (osresult.getSolutionNumber() == 0)
+		gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
+	else if (osresult.getSolutionStatusType(0) == "unbounded")
+		gmoModelStatSet(gmo, gmoModelStat_Unbounded);
+	else if (osresult.getSolutionStatusType(0) == "globallyOptimal")
+		gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+	else if (osresult.getSolutionStatusType(0) == "locallyOptimal")
+		gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
+	else if (osresult.getSolutionStatusType(0) == "optimal")
+		gmoModelStatSet(gmo, gmoModelStat_OptimalGlobal);
+	else if (osresult.getSolutionStatusType(0) == "bestSoFar")
+		gmoModelStatSet(gmo, gmoModelStat_Feasible); // TODO report integer solution if integer var.?
+	else if (osresult.getSolutionStatusType(0) == "feasible")
+		gmoModelStatSet(gmo, gmoModelStat_Feasible); // TODO report integer solution if integer var.?
+	else if (osresult.getSolutionStatusType(0) == "infeasible")
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleGlobal);
 	else if (osresult.getSolutionStatusType(0) == "stoppedByLimit")
 	{
 		gmoSolveStatSet(gmo, gmoSolveStat_Resource); // just a guess
 		gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
 	}
-	else if (osresult.getSolutionStatusType(0) == "unsure") gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
-	else if (osresult.getSolutionStatusType(0) == "error") gmoModelStatSet(gmo, gmoModelStat_ErrorUnknown);
-	else if (osresult.getSolutionStatusType(0) == "other") gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
-	else gmoModelStatSet(gmo, gmoModelStat_ErrorUnknown);
+	else if (osresult.getSolutionStatusType(0) == "unsure")
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
+	else if (osresult.getSolutionStatusType(0) == "error")
+		gmoModelStatSet(gmo, gmoModelStat_ErrorUnknown);
+	else if (osresult.getSolutionStatusType(0) == "other")
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleIntermed);
+	else
+		gmoModelStatSet(gmo, gmoModelStat_ErrorUnknown);
 
 	if (osresult.getVariableNumber() != gmoN(gmo))
 	{
@@ -1176,52 +1214,57 @@ void GAMS2OS::writeResult(OSResult& osresult)
 	// TODO some more statistics we can get from OSrL?
 	gmoSetHeadnTail(gmo, gmoHresused, osresult.getTimeValue());
 
-	if (osresult.getSolutionNumber() == 0) return;
+	if (osresult.getSolutionNumber() == 0)
+		return;
 
-	OptimizationSolution* sol = osresult.optimization->solution[0];
+	OptimizationSolution *sol = osresult.optimization->solution[0];
 	assert(sol != NULL);
 
-	double* colMarg = CoinCopyOfArray((double*) NULL, gmoN(gmo), gmoValNA(gmo));
-	double* colLev = CoinCopyOfArray((double*) NULL, gmoN(gmo), gmoValNA(gmo));
-	double* rowLev = CoinCopyOfArray((double*) NULL, gmoM(gmo), gmoValNA(gmo));
-	double* rowMarg = CoinCopyOfArray((double*) NULL, gmoM(gmo), gmoValNA(gmo));
+	double *colMarg = CoinCopyOfArray((double *)NULL, gmoN(gmo), gmoValNA(gmo));
+	double *colLev = CoinCopyOfArray((double *)NULL, gmoN(gmo), gmoValNA(gmo));
+	double *rowLev = CoinCopyOfArray((double *)NULL, gmoM(gmo), gmoValNA(gmo));
+	double *rowMarg = CoinCopyOfArray((double *)NULL, gmoM(gmo), gmoValNA(gmo));
 
 	// TODO use get-functions
 
 	// TODO constraint values
-//	if (sol->constraints && sol->constraints->values) // set row levels, if available
-//		for (std::vector<ConValue*>::iterator it(sol->constraints->values->con.begin());
-//				it!=sol->constraints->values->con.end(); ++it)
-//			rowLev[(*it)->idx]=(*it)->value;
+	//	if (sol->constraints && sol->constraints->values) // set row levels, if available
+	//		for (std::vector<ConValue*>::iterator it(sol->constraints->values->con.begin());
+	//				it!=sol->constraints->values->con.end(); ++it)
+	//			rowLev[(*it)->idx]=(*it)->value;
 
 	// set row dual values, if available
-	if (sol->constraints != NULL && sol->constraints->dualValues != NULL) for (int i = 0;
-			i < sol->constraints->dualValues->numberOfCon; ++i)
-		rowMarg[sol->constraints->dualValues->con[i]->idx] = sol->constraints->dualValues->con[i]->value;
+	if (sol->constraints != NULL && sol->constraints->dualValues != NULL)
+		for (int i = 0;
+			 i < sol->constraints->dualValues->numberOfCon; ++i)
+			rowMarg[sol->constraints->dualValues->con[i]->idx] = sol->constraints->dualValues->con[i]->value;
 
 	// set var values, if available
-	if (sol->variables != NULL && sol->variables->values != NULL) for (int i = 0;
-			i < sol->variables->values->numberOfVar; ++i)
-		colLev[sol->variables->values->var[i]->idx] = sol->variables->values->var[i]->value;
+	if (sol->variables != NULL && sol->variables->values != NULL)
+		for (int i = 0;
+			 i < sol->variables->values->numberOfVar; ++i)
+			colLev[sol->variables->values->var[i]->idx] = sol->variables->values->var[i]->value;
 
-	if (sol->variables != NULL) for (int i = 0; i < sol->variables->numberOfOtherVariableResults; ++i)
-		if (sol->variables->other[i]->name == "reduced costs")
-		{
-			for (int j = 0; j < sol->variables->other[i]->numberOfVar; ++j)
-				colMarg[sol->variables->other[i]->var[j]->idx] = atof(sol->variables->other[i]->var[j]->value.c_str());
-			break;
-		}
+	if (sol->variables != NULL)
+		for (int i = 0; i < sol->variables->numberOfOtherVariableResults; ++i)
+			if (sol->variables->other[i]->name == "reduced costs")
+			{
+				for (int j = 0; j < sol->variables->other[i]->numberOfVar; ++j)
+					colMarg[sol->variables->other[i]->var[j]->idx] = atof(sol->variables->other[i]->var[j]->value.c_str());
+				break;
+			}
 
 	gmoSetSolution(gmo, colLev, colMarg, rowMarg, rowLev);
 
-	if (gmoModelType(gmo) == gmoProc_cns) switch( gmoModelStat(gmo) )
-	{
+	if (gmoModelType(gmo) == gmoProc_cns)
+		switch (gmoModelStat(gmo))
+		{
 		case gmoModelStat_OptimalGlobal:
 		case gmoModelStat_OptimalLocal:
 		case gmoModelStat_Feasible:
 		case gmoModelStat_Integer:
-		gmoModelStatSet(gmo, gmoModelStat_Solved);
-	}
+			gmoModelStatSet(gmo, gmoModelStat_Solved);
+		}
 
 	delete[] rowLev;
 	delete[] rowMarg;
@@ -1229,7 +1272,7 @@ void GAMS2OS::writeResult(OSResult& osresult)
 	delete[] colMarg;
 }
 
-void GAMS2OS::writeResult(ProcessInfo& info)
+void GAMS2OS::writeResult(ProcessInfo &info)
 {
 	int numPrimalSols = info.primalSolutions.size();
 
@@ -1247,91 +1290,83 @@ void GAMS2OS::writeResult(ProcessInfo& info)
 
 	switch (info.getCurrentIteration()->solutionStatus)
 	{
-		case E_ProblemSolutionStatus::Optimal:
-			assert(!info.primalSolutions.empty());
-			/* return only locally optimal, as we don't know whether the problem was convex (unless it's a MIP, ok) */
-			gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
-			break;
+	case E_ProblemSolutionStatus::Optimal:
+		assert(!info.primalSolutions.empty());
+		/* return only locally optimal, as we don't know whether the problem was convex (unless it's a MIP, ok) */
+		gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
+		break;
 
-		case E_ProblemSolutionStatus::Feasible:
-			assert(!info.primalSolutions.empty());
-			gmoModelStatSet(gmo, gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible);
-			break;
+	case E_ProblemSolutionStatus::Feasible:
+		assert(!info.primalSolutions.empty());
+		gmoModelStatSet(gmo, gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible);
+		break;
 
-		case E_ProblemSolutionStatus::Unbounded:
-			gmoModelStatSet(gmo,
-					info.primalSolutions.empty() ? gmoModelStat_UnboundedNoSolution : gmoModelStat_Unbounded);
-			break;
+	case E_ProblemSolutionStatus::Unbounded:
+		gmoModelStatSet(gmo,
+						info.primalSolutions.empty() ? gmoModelStat_UnboundedNoSolution : gmoModelStat_Unbounded);
+		break;
 
-		case E_ProblemSolutionStatus::Error:
-			gmoModelStatSet(gmo,
-					info.primalSolutions.empty() ?
-							gmoModelStat_ErrorNoSolution :
-							(gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
-			gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
-			break;
+	case E_ProblemSolutionStatus::Error:
+		gmoModelStatSet(gmo,
+						info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
+		break;
 
-		case E_ProblemSolutionStatus::Infeasible:
-			assert(info.primalSolutions.empty());
-			gmoModelStatSet(gmo, gmoModelStat_InfeasibleNoSolution);
-			break;
+	case E_ProblemSolutionStatus::Infeasible:
+		assert(info.primalSolutions.empty());
+		gmoModelStatSet(gmo, gmoModelStat_InfeasibleNoSolution);
+		break;
 
-		case E_ProblemSolutionStatus::IterationLimit:
-			gmoModelStatSet(gmo,
-					info.primalSolutions.empty() ?
-							gmoModelStat_NoSolutionReturned :
-							(gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
-			gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
-			break;
+	case E_ProblemSolutionStatus::IterationLimit:
+		gmoModelStatSet(gmo,
+						info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
+		break;
 
-		case E_ProblemSolutionStatus::SolutionLimit:
-			gmoModelStatSet(gmo,
-					info.primalSolutions.empty() ?
-							gmoModelStat_NoSolutionReturned :
-							(gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
-			gmoSolveStatSet(gmo, gmoSolveStat_Solver);
-			break;
+	case E_ProblemSolutionStatus::SolutionLimit:
+		gmoModelStatSet(gmo,
+						info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_Solver);
+		break;
 
-		case E_ProblemSolutionStatus::TimeLimit:
-			gmoModelStatSet(gmo,
-					info.primalSolutions.empty() ?
-							gmoModelStat_NoSolutionReturned :
-							(gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
-			gmoSolveStatSet(gmo, gmoSolveStat_Resource);
-			break;
+	case E_ProblemSolutionStatus::TimeLimit:
+		gmoModelStatSet(gmo,
+						info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_Resource);
+		break;
 
-		default:
-			gmoModelStatSet(gmo,
-					info.primalSolutions.empty() ?
-							gmoModelStat_ErrorNoSolution :
-							(gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
-			gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
-			gevLogStat(gev, "Unknown solution status returned from SHOT.");
-			std::cout << "Solstatus: " << (int) info.getCurrentIteration()->solutionStatus << std::endl;
-			break;
+	default:
+		gmoModelStatSet(gmo,
+						info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+		gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
+		gevLogStat(gev, "Unknown solution status returned from SHOT.");
+		std::cout << "Solstatus: " << (int)info.getCurrentIteration()->solutionStatus << std::endl;
+		break;
 	}
 
-	if (gmoModelType(gmo) == gmoProc_cns) switch( gmoModelStat(gmo) )
-	{
+	if (gmoModelType(gmo) == gmoProc_cns)
+		switch (gmoModelStat(gmo))
+		{
 		case gmoModelStat_OptimalGlobal:
 		case gmoModelStat_OptimalLocal:
 		case gmoModelStat_Feasible:
 		case gmoModelStat_Integer:
-		gmoModelStatSet(gmo, gmoModelStat_Solved);
-	}
+			gmoModelStatSet(gmo, gmoModelStat_Solved);
+		}
 }
 
 void GAMS2OS::clear()
 {
-	if (gmo == NULL) return;
+	if (gmo == NULL)
+		return;
 
-	gmoUnloadSolutionLegacy (gmo);
+	gmoUnloadSolutionLegacy(gmo);
 
 	gmoFree(&gmo);
 	gmo = NULL;
 
 	assert(gev != NULL);
-	gevFree (&gev);
+	gevFree(&gev);
 	gev = NULL;
 
 	/* remove temporary directory content (should have only files) and directory itself) */

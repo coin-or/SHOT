@@ -2,7 +2,6 @@
 
 NLPSolverIpoptMinimax::NLPSolverIpoptMinimax()
 {
-
 	osolwriter = new OSoLWriter();
 
 	NLPProblem = new OptProblemNLPMinimax();
@@ -40,11 +39,8 @@ std::vector<double> NLPSolverIpoptMinimax::getSolution()
 
 bool NLPSolverIpoptMinimax::createProblemInstance(OSInstance * origInstance)
 {
-
 	ProcessInfo::getInstance().outputInfo("     Creating Ipopt minimax problem.");
-
 	dynamic_cast<OptProblemNLPMinimax*>(NLPProblem)->reformulate(origInstance);
-
 	ProcessInfo::getInstance().outputInfo("     Ipopt minimax problem created.");
 
 	return (true);

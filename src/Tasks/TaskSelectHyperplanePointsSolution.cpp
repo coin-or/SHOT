@@ -9,12 +9,10 @@
 
 TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution()
 {
-
 }
 
 TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
 {
-
 }
 
 void TaskSelectHyperplanePointsSolution::run()
@@ -38,7 +36,8 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 
 		for (int j = 0; j < tmpMostDevConstrs.size(); j++)
 		{
-			if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual")) return;
+			if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+				return;
 
 			if (tmpMostDevConstrs.at(j).value < 0)
 			{
@@ -66,6 +65,7 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 
 				addedHyperplanes++;
+
 			}
 		}
 	}
@@ -75,5 +75,4 @@ std::string TaskSelectHyperplanePointsSolution::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }
