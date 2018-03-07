@@ -1,7 +1,14 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "MIPSolverCplexLazyOriginalCallback.h"
-#include "IMIPSolver.h"
-//#include "ilcplex/cplex.h"
-ILOSTLBEGIN
 
 HCallbackI::HCallbackI(IloEnv env, IloNumVarArray xx2) : IloCplex::HeuristicCallbackI(env), cplexVars(xx2)
 {

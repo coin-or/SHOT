@@ -1,14 +1,14 @@
-/*
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
 
- * SolutionStrategySHOT.h
- *
- *  Created on: Mar 30, 2015
- *      Author: alundell
- */
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #pragma once
-
-
 #include "ISolutionStrategy.h"
 #include "../Tasks/TaskAddIntegerCuts.h"
 #include "../Tasks/TaskFindInteriorPoint.h"
@@ -56,7 +56,6 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
-
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
@@ -67,18 +66,14 @@
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 
-class SolutionStrategyMultiTree: public ISolutionStrategy
+class SolutionStrategyMultiTree : public ISolutionStrategy
 {
-	public:
-		SolutionStrategyMultiTree(OSInstance *osInstance);
-		virtual ~SolutionStrategyMultiTree();
+  public:
+    SolutionStrategyMultiTree(OSInstance *osInstance);
+    virtual ~SolutionStrategyMultiTree();
 
-		virtual bool solveProblem();
-		virtual void initializeStrategy();
+    virtual bool solveProblem();
+    virtual void initializeStrategy();
 
-	protected:
-
-		//TaskSequential *mainTask;
-
+  protected:
 };
-

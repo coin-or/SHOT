@@ -1,20 +1,21 @@
-/*
- * TaskCalculateSolutionChangeNorm.cpp
- *
- *  Created on: Mar 28, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskCalculateSolutionChangeNorm.h"
 
 TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm()
 {
-
 }
 
 TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskCalculateSolutionChangeNorm::run()
@@ -28,8 +29,7 @@ void TaskCalculateSolutionChangeNorm::run()
 		return;
 	}
 
-	if (ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.size() == 0
-			|| ProcessInfo::getInstance().getCurrentIteration()->isMIP())
+	if (ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.size() == 0 || ProcessInfo::getInstance().getCurrentIteration()->isMIP())
 	{
 		return;
 	}
@@ -61,15 +61,12 @@ void TaskCalculateSolutionChangeNorm::run()
 			}
 
 			return;
-
 		}
 	}
-
 }
 
 std::string TaskCalculateSolutionChangeNorm::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

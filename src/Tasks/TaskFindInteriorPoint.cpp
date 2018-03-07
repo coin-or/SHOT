@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "TaskFindInteriorPoint.h"
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
@@ -88,7 +98,7 @@ void TaskFindInteriorPoint::run()
 		if (solver == ES_NLPSolver::IpoptRelaxed && tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
 		{
 			tmpIP->point.push_back(
-				ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
+				 ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
 		}
 
 		while (tmpIP->point.size() > ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
@@ -123,7 +133,7 @@ void TaskFindInteriorPoint::run()
 	{
 		ProcessInfo::getInstance().outputError("\n No interior point found!                            ");
 		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
-		
+
 		return;
 	}
 

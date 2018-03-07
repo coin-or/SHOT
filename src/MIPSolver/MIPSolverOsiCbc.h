@@ -1,130 +1,139 @@
-﻿#pragma once
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
+#pragma once
 #include "IMIPSolver.h"
 #include "MIPSolverBase.h"
 
-#include "OsiSolverInterface.hpp"
-//#include "OsiCbcSolverInterface.hpp"
-#include "CbcModel.hpp"
 #include "CoinBuild.hpp"
 #include "CoinModel.hpp"
+#include "CoinPragma.hpp"
+#include "CbcModel.hpp"
+#include "OsiClpSolverInterface.hpp"
 
-class MIPSolverOsiCbc: public IMIPSolver, MIPSolverBase
+class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
 {
-	public:
-		MIPSolverOsiCbc();
-		virtual ~MIPSolverOsiCbc();
+  public:
+    MIPSolverOsiCbc();
+    virtual ~MIPSolverOsiCbc();
 
-		virtual void checkParameters();
+    virtual void checkParameters();
 
-		virtual bool createLinearProblem(OptProblem *origProblem);
-		virtual void initializeSolverSettings();
+    virtual bool createLinearProblem(OptProblem *origProblem);
+    virtual void initializeSolverSettings();
 
-		virtual void writeProblemToFile(std::string filename);
-		virtual void writePresolvedToFile(std::string filename);
+    virtual void writeProblemToFile(std::string filename);
+    virtual void writePresolvedToFile(std::string filename);
 
-		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
-		{
-			return (addLinearConstraint(elements, constant, false));
-		}
-		virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
+    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
+    {
+        return (addLinearConstraint(elements, constant, false));
+    }
+    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
 
-		virtual void createHyperplane(Hyperplane hyperplane)
-		{
-			MIPSolverBase::createHyperplane(hyperplane);
-		}
+    virtual void createHyperplane(Hyperplane hyperplane)
+    {
+        MIPSolverBase::createHyperplane(hyperplane);
+    }
 
-		virtual void createIntegerCut(std::vector<int> binaryIndexes)
-		{
-			MIPSolverBase::createIntegerCut(binaryIndexes);
-		}
+    virtual void createIntegerCut(std::vector<int> binaryIndexes)
+    {
+        MIPSolverBase::createIntegerCut(binaryIndexes);
+    }
 
-		virtual void createInteriorHyperplane(Hyperplane hyperplane)
-		{
-			MIPSolverBase::createInteriorHyperplane(hyperplane);
-		}
+    virtual void createInteriorHyperplane(Hyperplane hyperplane)
+    {
+        MIPSolverBase::createInteriorHyperplane(hyperplane);
+    }
 
-		virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(
-				Hyperplane hyperplane)
-		{
-			return (MIPSolverBase::createHyperplaneTerms(hyperplane));
-		}
+    virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(
+        Hyperplane hyperplane)
+    {
+        return (MIPSolverBase::createHyperplaneTerms(hyperplane));
+    }
 
-		virtual void fixVariable(int varIndex, double value);
+    virtual void fixVariable(int varIndex, double value);
 
-		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
-		{
-			MIPSolverBase::fixVariables(variableIndexes, variableValues);
-		}
+    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+    {
+        MIPSolverBase::fixVariables(variableIndexes, variableValues);
+    }
 
-		virtual void unfixVariables()
-		{
-			MIPSolverBase::unfixVariables();
-		}
+    virtual void unfixVariables()
+    {
+        MIPSolverBase::unfixVariables();
+    }
 
-		virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-		virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+    virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
+    virtual pair<double, double> getCurrentVariableBounds(int varIndex);
 
-		virtual void presolveAndUpdateBounds()
-		{
-			return (MIPSolverBase::presolveAndUpdateBounds());
-		}
+    virtual void presolveAndUpdateBounds()
+    {
+        return (MIPSolverBase::presolveAndUpdateBounds());
+    }
 
-		virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds();
+    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds();
 
-		virtual void activateDiscreteVariables(bool activate);
-		virtual bool getDiscreteVariableStatus()
-		{
-			return (MIPSolverBase::getDiscreteVariableStatus());
-		}
+    virtual void activateDiscreteVariables(bool activate);
+    virtual bool getDiscreteVariableStatus()
+    {
+        return (MIPSolverBase::getDiscreteVariableStatus());
+    }
 
-		virtual E_ProblemSolutionStatus solveProblem();
-		virtual E_ProblemSolutionStatus getSolutionStatus();
-		virtual int getNumberOfSolutions();
-		virtual std::vector<double> getVariableSolution(int solIdx);
-		virtual std::vector<SolutionPoint> getAllVariableSolutions()
-		{
-			return (MIPSolverBase::getAllVariableSolutions());
-		}
-		virtual double getDualObjectiveValue();
-		virtual double getObjectiveValue(int solIdx);
-		virtual double getObjectiveValue()
-		{
-			return (MIPSolverBase::getObjectiveValue());
-		}
+    virtual E_ProblemSolutionStatus solveProblem();
+    virtual E_ProblemSolutionStatus getSolutionStatus();
+    virtual int getNumberOfSolutions();
+    virtual std::vector<double> getVariableSolution(int solIdx);
+    virtual std::vector<SolutionPoint> getAllVariableSolutions()
+    {
+        return (MIPSolverBase::getAllVariableSolutions());
+    }
+    virtual double getDualObjectiveValue();
+    virtual double getObjectiveValue(int solIdx);
+    virtual double getObjectiveValue()
+    {
+        return (MIPSolverBase::getObjectiveValue());
+    }
 
-		virtual int increaseSolutionLimit(int increment);
-		virtual void setSolutionLimit(long limit);
-		virtual int getSolutionLimit();
+    virtual int increaseSolutionLimit(int increment);
+    virtual void setSolutionLimit(long limit);
+    virtual int getSolutionLimit();
 
-		virtual void setTimeLimit(double seconds);
+    virtual void setTimeLimit(double seconds);
 
-		virtual void setCutOff(double cutOff);
+    virtual void setCutOff(double cutOff);
 
-		virtual void addMIPStart(std::vector<double> point);
-		virtual void deleteMIPStarts();
+    virtual void addMIPStart(std::vector<double> point);
+    virtual void deleteMIPStarts();
 
-		virtual void populateSolutionPool();
+    virtual void populateSolutionPool();
 
-		virtual bool supportsQuadraticObjective();
-		virtual bool supportsQuadraticConstraints();
+    virtual bool supportsQuadraticObjective();
+    virtual bool supportsQuadraticConstraints();
 
-		virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
-		{
-			return (MIPSolverBase::getGeneratedHyperplanes());
-		}
+    virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes()
+    {
+        return (MIPSolverBase::getGeneratedHyperplanes());
+    }
 
-		virtual void updateNonlinearObjectiveFromPrimalDualBounds()
-		{
-			return (MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
-		}
+    virtual void updateNonlinearObjectiveFromPrimalDualBounds()
+    {
+        return (MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
+    }
 
-	private:
-		OsiClpSolverInterface *osiInterface;
-		CbcModel *cbcModel;
+  private:
+    OsiClpSolverInterface *osiInterface;
+    CbcModel *cbcModel;
 
-		long int solLimit;
-		double cutOff /*= OSDBL_MAX*/;
+    long int solLimit;
+    double cutOff /*= OSDBL_MAX*/;
 
-		std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
-
+    std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 };

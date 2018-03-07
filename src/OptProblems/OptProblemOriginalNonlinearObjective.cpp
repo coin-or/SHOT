@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "OptProblemOriginalNonlinearObjective.h"
 
 OptProblemOriginalNonlinearObjective::OptProblemOriginalNonlinearObjective()
@@ -53,15 +63,15 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 
 		if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
 		{
-			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub; // -problemInstance->getConstraintConstants()[idx];
+			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->ub;
 		}
 		else if (getProblemInstance()->getConstraintTypes()[idx] == 'G')
 		{
-			tmpVal = -tmpVal + getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
+			tmpVal = -tmpVal + getProblemInstance()->instanceData->constraints->con[idx]->lb;
 		}
 		else if (getProblemInstance()->getConstraintTypes()[idx] == 'E')
 		{
-			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->lb; // +problemInstance->getConstraintConstants()[idx];
+			tmpVal = tmpVal - getProblemInstance()->instanceData->constraints->con[idx]->lb;
 		}
 		else
 		{

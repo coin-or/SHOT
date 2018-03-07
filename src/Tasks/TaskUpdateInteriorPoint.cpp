@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "TaskUpdateInteriorPoint.h"
 
 TaskUpdateInteriorPoint::TaskUpdateInteriorPoint()
@@ -6,7 +16,6 @@ TaskUpdateInteriorPoint::TaskUpdateInteriorPoint()
 
 TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint()
 {
-    // TODO Auto-generated destructor stub
 }
 
 void TaskUpdateInteriorPoint::run()
@@ -31,7 +40,7 @@ void TaskUpdateInteriorPoint::run()
 
         return;
     }
-    else if(ProcessInfo::getInstance().interiorPts.size() == 0)
+    else if (ProcessInfo::getInstance().interiorPts.size() == 0)
     {
         return;
     }

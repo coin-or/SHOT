@@ -1,20 +1,21 @@
-/*
- * TaskSelectPrimalCandidatesFromLinesearch.cpp
- *
- *  Created on: Apr 7, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskSelectPrimalCandidatesFromLinesearch.h"
 
 TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch()
 {
-
 }
 
 TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesearch()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskSelectPrimalCandidatesFromLinesearch::run()
@@ -51,7 +52,6 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 					if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
 					{
 						xNLP2.at(k) = solPoints.at(i).point.at(k);
-
 					}
 					else
 					{
@@ -61,7 +61,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 
 				auto maxDevNLP2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(xNLP2);
 				auto maxDevMIP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(
-						solPoints.at(i).point);
+					solPoints.at(i).point);
 
 				if (maxDevNLP2.value <= 0 && maxDevMIP.value > 0)
 				{
@@ -69,14 +69,14 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 					{
 						ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
 						auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
-								Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-								Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
+																						   Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+																						   Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
 
 						ProcessInfo::getInstance().stopTimer("PrimalBoundLinesearch");
 
 						ProcessInfo::getInstance().addPrimalSolutionCandidate(xNewc.first,
-								E_PrimalSolutionSource::Linesearch,
-								ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
+																			  E_PrimalSolutionSource::Linesearch,
+																			  ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
 					}
 					catch (std::exception &e)
 					{

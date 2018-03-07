@@ -1,12 +1,14 @@
-/*
- * NLPSolverCuttingPlaneRelaxed.h
- *
- *  Created on: Apr 16, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #pragma once
-
 #include "NLPSolverBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 
@@ -20,46 +22,42 @@
 #include "../MIPSolver/MIPSolverOsiCbc.h"
 #include "INLPSolver.h"
 
-class NLPSolverCuttingPlaneRelaxed: virtual public NLPSolverBase
+class NLPSolverCuttingPlaneRelaxed : virtual public NLPSolverBase
 {
-	public:
-		NLPSolverCuttingPlaneRelaxed();
-		virtual ~NLPSolverCuttingPlaneRelaxed();
+  public:
+    NLPSolverCuttingPlaneRelaxed();
+    virtual ~NLPSolverCuttingPlaneRelaxed();
 
-		//virtual void saveProblemModelToFile(std::string fileName);
+    virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void clearStartingPoint();
 
-		virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
-		virtual void clearStartingPoint();
+    virtual bool isObjectiveFunctionNonlinear();
+    virtual int getObjectiveFunctionVariableIndex();
 
-		virtual bool isObjectiveFunctionNonlinear();
-		virtual int getObjectiveFunctionVariableIndex();
+    virtual std::vector<double> getCurrentVariableLowerBounds();
+    virtual std::vector<double> getCurrentVariableUpperBounds();
 
-		virtual std::vector<double> getCurrentVariableLowerBounds();
-		virtual std::vector<double> getCurrentVariableUpperBounds();
+  private:
+    IMIPSolver *LPSolver;
 
-	private:
+    virtual double getSolution(int i);
+    virtual std::vector<double> getSolution();
+    virtual double getObjectiveValue();
 
-		IMIPSolver *LPSolver;
+    virtual bool createProblemInstance(OSInstance *origInstance);
 
-		virtual double getSolution(int i);
-		virtual std::vector<double> getSolution();
-		virtual double getObjectiveValue();
+    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
 
-		virtual bool createProblemInstance(OSInstance * origInstance);
+    virtual void unfixVariables();
 
-		virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual E_NLPSolutionStatus solveProblemInstance();
 
-		virtual void unfixVariables();
+    virtual void saveOptionsToFile(std::string fileName);
 
-		virtual E_NLPSolutionStatus solveProblemInstance();
+    bool isProblemCreated;
 
-		virtual void saveOptionsToFile(std::string fileName);
+    std::vector<double> solution;
+    double objectiveValue;
 
-		bool isProblemCreated;
-
-		std::vector<double> solution;
-		double objectiveValue;
-
-		int lastHyperplaneAdded;
+    int lastHyperplaneAdded;
 };
-

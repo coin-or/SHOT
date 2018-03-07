@@ -1,9 +1,12 @@
-/*
- * TaskSolveIteration.cpp
- *
- *  Created on: Mar 28, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskSolveIteration.h"
 
@@ -14,7 +17,6 @@ TaskSolveIteration::TaskSolveIteration(IMIPSolver *MIPSolver)
 
 TaskSolveIteration::~TaskSolveIteration()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskSolveIteration::run()
@@ -145,8 +147,8 @@ void TaskSolveIteration::run()
 				if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
 				{
 					DualSolution sol =
-					{sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal, currIter->objectiveValue,
-					 currIter->iterationNumber};
+						{sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal, currIter->objectiveValue,
+						 currIter->iterationNumber};
 					ProcessInfo::getInstance().addDualSolutionCandidate(sol);
 				}
 			}

@@ -1,20 +1,21 @@
-﻿/*
- * TaskPrintIterationHeader.cpp
- *
- *  Created on: Mar 27, 2015
- *      Author: alundell
- */
+﻿/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskPrintIterationHeader.h"
 
 TaskPrintIterationHeader::TaskPrintIterationHeader()
 {
-
 }
 
 TaskPrintIterationHeader::~TaskPrintIterationHeader()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskPrintIterationHeader::run()
@@ -27,8 +28,7 @@ void TaskPrintIterationHeader::run()
 	tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
 
 	tmpLine
-	<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB"
-	% "max constr.";
+		<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB" % "max constr.";
 
 	tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
 
@@ -36,8 +36,7 @@ void TaskPrintIterationHeader::run()
 	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 
 	tmpLine
-			<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB"
-					% "max constr.";
+		<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB" % "max constr.";
 
 	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 
@@ -50,5 +49,4 @@ std::string TaskPrintIterationHeader::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

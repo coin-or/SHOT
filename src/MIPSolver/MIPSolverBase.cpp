@@ -1,5 +1,14 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "MIPSolverBase.h"
-#include "../UtilityFunctions.h"
 
 MIPSolverBase::MIPSolverBase()
 {
@@ -81,14 +90,6 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
 	return (lastSolutions);
 }
-
-/*
- void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
- {
- auto fp = std::bind(&addLinearConstraint, _1, _2);
-
- createHyperplane(hyperplane, fp);
- }*/
 
 void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
@@ -235,7 +236,6 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 	if (hyperplaneIsOk)
 	{
 		int constrIndex = addLinearConstraint(elements, constant, false);
-		//addedHyperplanes++;
 		GeneratedHyperplane genHyperplane;
 
 		genHyperplane.generatedConstraintIndex = constrIndex;
@@ -279,13 +279,11 @@ void MIPSolverBase::presolveAndUpdateBounds()
 		if (newLB)
 		{
 			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-			//ProcessInfo::getInstance().originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
 			ProcessInfo::getInstance().outputInfo(
 				"     Lower bound for variable (" + to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.first) + " to " + UtilityFunctions::toString(newBounds.first.at(i)));
 
 			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				//ProcessInfo::getInstance().originalProblem->setVariableBoundsAsTightened(i);
 				originalProblem->setVariableBoundsAsTightened(i);
 				ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve++;
 			}
@@ -294,13 +292,11 @@ void MIPSolverBase::presolveAndUpdateBounds()
 		if (newUB)
 		{
 			originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-			//ProcessInfo::getInstance().originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
 			ProcessInfo::getInstance().outputInfo(
 				"     Upper bound for variable (" + to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.second) + " to " + UtilityFunctions::toString(newBounds.second.at(i)));
 
 			if (!originalProblem->hasVariableBoundsBeenTightened(i))
 			{
-				//ProcessInfo::getInstance().originalProblem->setVariableBoundsAsTightened(i);
 				originalProblem->setVariableBoundsAsTightened(i);
 				ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve++;
 			}

@@ -6,7 +6,7 @@ project (SHOT)
 
 # Sets version number.
 set(VERSION_MAJOR   0   CACHE STRING "Project major version number.")
-set(VERSION_MINOR   99   CACHE STRING "Project minor version number.")
+set(VERSION_MINOR   9   CACHE STRING "Project minor version number.")
 set(VERSION_PATCH   1   CACHE STRING "Project patch version number.")
 mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
 
@@ -55,7 +55,6 @@ file(GLOB_RECURSE Foo_SOURCES
   "./ProcessInfo.cpp"
   "./SHOT.cpp"
   "./SHOTSolver.cpp"
-  "./SolutionStrategy.cpp"
   "./TaskHandler.cpp"
   "./Timer.cpp"
   "./UtilityFunctions.cpp"
@@ -93,7 +92,6 @@ file(GLOB_RECURSE Foo_HEADERS
   "./Iteration.h"
   "./ProcessInfo.h"
   "./SHOTSolver.h"
-  "./SolutionStrategy.h"
   "./TaskHandler.h"
   "./Timer.h"
   "./UtilityFunctions.h"

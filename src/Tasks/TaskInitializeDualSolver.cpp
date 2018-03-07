@@ -1,16 +1,19 @@
-/*
- * TaskInitializeDualSolver.cpp
- *
- *  Created on: Apr 1, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskInitializeDualSolver.h"
 
 TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool useLazyStrategy)
 {
 	ProcessInfo::getInstance().startTimer("MIP");
-	
+
 	if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
 	{
 		ProcessInfo::getInstance().outputError("Error in solver definition. Check option 'Dual.MIP.Solver'.");
@@ -83,7 +86,6 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
 
 TaskInitializeDualSolver::~TaskInitializeDualSolver()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskInitializeDualSolver::run()

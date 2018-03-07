@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
@@ -6,21 +16,19 @@
 #include "../MIPSolver/RelaxationStrategyStandard.h"
 #include "../MIPSolver/RelaxationStrategyNone.h"
 
-class TaskExecuteRelaxationStrategy: public TaskBase
+class TaskExecuteRelaxationStrategy : public TaskBase
 {
-	public:
-		TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver);
-		~TaskExecuteRelaxationStrategy();
+  public:
+    TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver);
+    ~TaskExecuteRelaxationStrategy();
 
-		void run();
-		virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
-	private:
-		IRelaxationStrategy *relaxationStrategy;
+  private:
+    IRelaxationStrategy *relaxationStrategy;
 
-		bool isInitialized;
+    bool isInitialized;
 
-		IMIPSolver *MIPSolver;
-
+    IMIPSolver *MIPSolver;
 };
-

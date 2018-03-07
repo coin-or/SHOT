@@ -1,31 +1,30 @@
-/*
- * TaskAddHyperplanes.h
- *
- *  Created on: Mar 28, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #pragma once
-
 #include "TaskBase.h"
-
 #include "../OptProblems/OptProblemOriginal.h"
 #include "../MIPSolver/IMIPSolver.h"
 
-class TaskAddHyperplanes: public TaskBase
+class TaskAddHyperplanes : public TaskBase
 {
-	public:
-		TaskAddHyperplanes(IMIPSolver *MIPSolver);
-		virtual ~TaskAddHyperplanes();
+  public:
+    TaskAddHyperplanes(IMIPSolver *MIPSolver);
+    virtual ~TaskAddHyperplanes();
 
-		virtual void run();
+    virtual void run();
 
-		virtual std::string getType();
-	private:
-		//void createHyperplane(int constrIdx, std::vector<double> point);
+    virtual std::string getType();
 
-		int itersWithoutAddedHPs;
+  private:
+    int itersWithoutAddedHPs;
 
-		IMIPSolver *MIPSolver;
+    IMIPSolver *MIPSolver;
 };
-

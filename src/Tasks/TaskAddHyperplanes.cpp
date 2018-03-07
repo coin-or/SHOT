@@ -1,15 +1,17 @@
-/*
- * TaskAddHyperplanes.cpp
- *
- *  Created on: Mar 28, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskAddHyperplanes.h"
 
 TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
 {
-
 	itersWithoutAddedHPs = 0;
 
 	this->MIPSolver = MIPSolver;
@@ -17,7 +19,6 @@ TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
 
 TaskAddHyperplanes::~TaskAddHyperplanes()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskAddHyperplanes::run()
@@ -25,14 +26,14 @@ void TaskAddHyperplanes::run()
 	this->MIPSolver = MIPSolver;
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
-			|| !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
+	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
 	{
 		int addedHyperplanes = 0;
 
 		for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
 		{
-			if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual")) break;
+			if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+				break;
 
 			auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
 
@@ -48,7 +49,6 @@ void TaskAddHyperplanes::run()
 
 				addedHyperplanes++;
 			}
-
 		}
 
 		ProcessInfo::getInstance().hyperplaneWaitingList.clear();
@@ -64,6 +64,4 @@ std::string TaskAddHyperplanes::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }
-

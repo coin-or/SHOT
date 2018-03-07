@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "TaskAddIntegerCuts.h"
 
 TaskAddIntegerCuts::TaskAddIntegerCuts(IMIPSolver *MIPSolver)
@@ -8,17 +18,16 @@ TaskAddIntegerCuts::TaskAddIntegerCuts(IMIPSolver *MIPSolver)
 
 TaskAddIntegerCuts::~TaskAddIntegerCuts()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskAddIntegerCuts::run()
 {
 	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0) return;
+	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0)
+		return;
 
-	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual")
-			|| !currIter->MIPSolutionLimitUpdated)
+	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated)
 	{
 
 		for (int j = 0; j < ProcessInfo::getInstance().integerCutWaitingList.size(); j++)
@@ -42,8 +51,7 @@ void TaskAddIntegerCuts::run()
 		}
 
 		ProcessInfo::getInstance().outputInfo(
-				"     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size())
-						+ " integer cut(s).                                        ");
+			"     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
 
 		ProcessInfo::getInstance().integerCutWaitingList.clear();
 	}
@@ -53,5 +61,4 @@ std::string TaskAddIntegerCuts::getType()
 {
 	std::string type = typeid(this).name();
 	return (type);
-
 }

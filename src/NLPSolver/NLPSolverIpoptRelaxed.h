@@ -1,22 +1,29 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "NLPSolverIpoptBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
-//#include "../UtilityFunctions.h"
 
-class NLPSolverIpoptRelaxed: public NLPSolverBase, public NLPSolverIpoptBase
+class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
-	public:
-		NLPSolverIpoptRelaxed();
-		~NLPSolverIpoptRelaxed();
+  public:
+    NLPSolverIpoptRelaxed();
+    ~NLPSolverIpoptRelaxed();
 
-		virtual std::vector<double> getSolution();
+    virtual std::vector<double> getSolution();
 
-	protected:
+  protected:
+    bool createProblemInstance(OSInstance *origInstance);
 
-		bool createProblemInstance(OSInstance * origInstance);
+    virtual void setSolverSpecificInitialSettings();
 
-		virtual void setSolverSpecificInitialSettings();
-
-	private:
-
+  private:
 };

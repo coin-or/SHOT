@@ -1,220 +1,222 @@
-/*
- * SolutionStrategySHOT.cpp
- *
- *  Created on: Mar 30, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "SolutionStrategyMultiTree.h"
 
 SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
 {
-	ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
-	ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
+    ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
+    ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
 
-	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
-	ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
+    auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
+    ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
 
-	ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
-	ProcessInfo::getInstance().createTimer("LP", " - Relaxed problems");
-	ProcessInfo::getInstance().createTimer("MIP", " - MIP problems");
-	ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - Populate solution pool");
-	ProcessInfo::getInstance().createTimer("HyperplaneLinesearch", " - Linesearch");
-	ProcessInfo::getInstance().createTimer("ObjectiveLinesearch", " - Objective linesearch");
-	ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
-	ProcessInfo::getInstance().createTimer("PrimalBoundSearchNLP", "    - NLP");
-	ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
-	ProcessInfo::getInstance().createTimer("PrimalBoundFixedLP", "    - Fixed LP");
+    ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
+    ProcessInfo::getInstance().createTimer("LP", " - Relaxed problems");
+    ProcessInfo::getInstance().createTimer("MIP", " - MIP problems");
+    ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - Populate solution pool");
+    ProcessInfo::getInstance().createTimer("HyperplaneLinesearch", " - Linesearch");
+    ProcessInfo::getInstance().createTimer("ObjectiveLinesearch", " - Objective linesearch");
+    ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
+    ProcessInfo::getInstance().createTimer("PrimalBoundSearchNLP", "    - NLP");
+    ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
+    ProcessInfo::getInstance().createTimer("PrimalBoundFixedLP", "    - Fixed LP");
 
-	auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+    auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
-	TaskBase *tFinalizeSolution = new TaskSequential();
+    TaskBase *tFinalizeSolution = new TaskSequential();
 
-	TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
-	ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
+    ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-	auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
+    auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
 
-	TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
-	ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
+    ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
-	TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
-	ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
+    TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
+    ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
-	if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
-	{
-		TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
-		ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
-	}
+    if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
+    {
+        TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
+        ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
+    }
 
-	TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateMILPProblem");
+    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
+    ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateMILPProblem");
 
-	TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
-	ProcessInfo::getInstance().tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
+    TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
+    ProcessInfo::getInstance().tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
 
-	TaskBase *tInitializeIteration = new TaskInitializeIteration();
-	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+    TaskBase *tInitializeIteration = new TaskInitializeIteration();
+    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
+    TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
+    ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+    TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
+    ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
-	TaskBase *tPrintIterHeaderCheck = new TaskConditional();
-	TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
+    TaskBase *tPrintIterHeaderCheck = new TaskConditional();
+    TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
 
-	dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setCondition([this]() { return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1); });
-	dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
+    dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setCondition([this]() { return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1); });
+    dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
 
-	ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
+    ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
 
-	if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
-	{
-		TaskBase *tPresolve = new TaskPresolve(MIPSolver);
-		ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
-	}
+    if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
+    {
+        TaskBase *tPresolve = new TaskPresolve(MIPSolver);
+        ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
+    }
 
-	TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
+    TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
+    ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
 
-	if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
-	{
-		TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
-		ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
-	}
+    if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    {
+        TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
+        ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
+    }
 
-	TaskBase *tPrintIterReport = new TaskPrintIterationReport();
-	ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
+    TaskBase *tPrintIterReport = new TaskPrintIterationReport();
+    ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-	TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
+    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
 
-	TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-	TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-	TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-	TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-	ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-	dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
+    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-	if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
-	{
-		TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-		ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-		dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+    if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
+    {
+        TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
+        ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
+        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
 
-		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+        ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
-	}
+        ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    }
 
-	if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Dual"))
-	{
-		TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem(MIPSolver);
-		ProcessInfo::getInstance().tasks->addTask(tSolveFixedLP, "SolveFixedLP");
-		ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-		ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
-	}
+    if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Dual"))
+    {
+        TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem(MIPSolver);
+        ProcessInfo::getInstance().tasks->addTask(tSolveFixedLP, "SolveFixedLP");
+        ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+        ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    }
 
-	if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
-	{
-		TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
-		ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
-		dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
+    if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
+    {
+        TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
+        ProcessInfo::getInstance().tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
-		TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP();
-		ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-		dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
-	}
+        TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP();
+        ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+    }
 
-	TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
+    TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
 
-	TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
+    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-	TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-	ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-	ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
+    ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
-	TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MIPSolver);
-	ProcessInfo::getInstance().tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
+    TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(MIPSolver);
+    ProcessInfo::getInstance().tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
-	if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
-	{
-		TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
-		ProcessInfo::getInstance().tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
+    if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+    {
+        TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+        ProcessInfo::getInstance().tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
 
-		if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-				"ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
-		{
-			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-			ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
-		}
-		else
-		{
-			TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-			ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
-		}
-	}
-	else
-	{
-		TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
-		ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
-	}
+        if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+        {
+            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+            ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+        else
+        {
+            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+            ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+    }
+    else
+    {
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+        ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+    }
 
-	ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-	ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-	ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
+    ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-	if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
-	{
-		TaskBase *tAddICs = new TaskAddIntegerCuts(MIPSolver);
-		ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
-	}
+    if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
+    {
+        TaskBase *tAddICs = new TaskAddIntegerCuts(MIPSolver);
+        ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
+    }
 
-	TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
-	ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
+    TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
+    ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 
-	TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
-	ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
+    TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
+    ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
-	ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-	TaskBase *tPrintSol = new TaskPrintSolution();
-	ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
+    TaskBase *tPrintSol = new TaskPrintSolution();
+    ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
 }
 
 SolutionStrategyMultiTree::~SolutionStrategyMultiTree()
 {
-	// TODO Auto-generated destructor stub
 }
 
 bool SolutionStrategyMultiTree::solveProblem()
 {
-	TaskBase *nextTask = new TaskBase;
+    TaskBase *nextTask = new TaskBase;
 
-	while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
-	{
-		ProcessInfo::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
-		nextTask->run();
-		ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
-	}
+    while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
+    {
+        ProcessInfo::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
+        nextTask->run();
+        ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
+    }
 
-	ProcessInfo::getInstance().tasks->clearTasks();
+    ProcessInfo::getInstance().tasks->clearTasks();
 
-	return (true);
+    return (true);
 }
 
 void SolutionStrategyMultiTree::initializeStrategy()
