@@ -268,8 +268,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
             for (int i = 0; i < nablag->number; i++)
             {
-                //if (nablag->indexes[i] != numVar - 1)
-                //{
                 IndexValuePair pair;
                 pair.idx = nablag->indexes[i];
                 pair.value = nablag->values[i];
@@ -277,15 +275,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 elements.push_back(pair);
 
                 constant += -nablag->values[i] * currSol.at(nablag->indexes[i]);
-                //}
             }
 
-            // Creates the term -mu
-            //IndexValuePair pair;
-            //pair.idx = numVar - 1;
-            //pair.value = -1;
-
-            //elements.push_back(pair);
+            delete nablag;
 
             // Adds the linear constraint
             LPSolver->addLinearConstraint(elements, constant);

@@ -15,10 +15,7 @@
 class ISolutionStrategy
 {
   public:
-    ~ISolutionStrategy()
-    {
-        delete ProcessInfo::getInstance().MIPSolver;
-    }
+    ~ISolutionStrategy();
 
     virtual void initializeStrategy() = 0;
     virtual bool solveProblem() = 0;

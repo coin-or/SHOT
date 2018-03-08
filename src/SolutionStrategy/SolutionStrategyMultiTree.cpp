@@ -205,7 +205,7 @@ SolutionStrategyMultiTree::~SolutionStrategyMultiTree()
 
 bool SolutionStrategyMultiTree::solveProblem()
 {
-    TaskBase *nextTask = new TaskBase;
+    TaskBase *nextTask;
 
     while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
     {
@@ -213,8 +213,6 @@ bool SolutionStrategyMultiTree::solveProblem()
         nextTask->run();
         ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
     }
-
-    ProcessInfo::getInstance().tasks->clearTasks();
 
     return (true);
 }

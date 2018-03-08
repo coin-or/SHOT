@@ -39,7 +39,6 @@ class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
 {
   public:
     GRBVar *vars;
-
     GurobiCallback(GRBVar *xvars);
 
   protected:

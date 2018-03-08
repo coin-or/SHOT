@@ -12,34 +12,35 @@
 
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver)
 {
-	this->MIPSolver = MIPSolver;
+    this->MIPSolver = MIPSolver;
 
-	relaxationStrategy = new RelaxationStrategyStandard(this->MIPSolver);
+    relaxationStrategy = new RelaxationStrategyStandard(this->MIPSolver);
 
-	ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
+    ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
 
-	isInitialized = false;
+    isInitialized = false;
 }
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
 {
-	delete relaxationStrategy;
+    ProcessInfo::getInstance().relaxationStrategy = NULL;
+    delete relaxationStrategy;
 }
 
 void TaskExecuteRelaxationStrategy::run()
 {
-	if (!isInitialized)
-	{
-		relaxationStrategy->setInitial();
-		isInitialized = true;
-	}
-	else
-	{
-		relaxationStrategy->executeStrategy();
-	}
+    if (!isInitialized)
+    {
+        relaxationStrategy->setInitial();
+        isInitialized = true;
+    }
+    else
+    {
+        relaxationStrategy->executeStrategy();
+    }
 }
 std::string TaskExecuteRelaxationStrategy::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

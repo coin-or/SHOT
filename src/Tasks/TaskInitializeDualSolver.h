@@ -30,11 +30,11 @@
 class TaskInitializeDualSolver : public TaskBase
 {
   public:
-	TaskInitializeDualSolver(ES_MIPSolver solver, bool useLazyStrategy);
-	virtual ~TaskInitializeDualSolver();
+    TaskInitializeDualSolver(ES_MIPSolver solver, bool useLazyStrategy);
+    virtual ~TaskInitializeDualSolver();
 
-	void run();
-	virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
   private:
 };

@@ -33,4 +33,5 @@ class TaskHandler
     std::list<std::pair<std::string, TaskBase *>>::iterator nextTask;
     std::string nextTaskID;
     std::list<std::pair<std::string, TaskBase *>> taskIDMap;
+    std::list<TaskBase *> allTasks;
 };

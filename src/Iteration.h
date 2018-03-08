@@ -13,6 +13,7 @@
 #include "Structs.h"
 #include "vector"
 #include "SHOTSettings.h"
+#include "ProcessInfo.h"
 
 class Iteration
 {

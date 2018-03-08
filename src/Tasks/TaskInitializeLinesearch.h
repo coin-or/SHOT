@@ -17,13 +17,10 @@
 class TaskInitializeLinesearch : public TaskBase
 {
   public:
-	TaskInitializeLinesearch();
-	virtual ~TaskInitializeLinesearch();
+    TaskInitializeLinesearch();
+    virtual ~TaskInitializeLinesearch();
 
-	virtual void run();
+    virtual void run();
 
-	virtual std::string getType();
-
-  private:
-	ILinesearchMethod *linesearchMethod;
+    virtual std::string getType();
 };

@@ -22,13 +22,13 @@
 class TaskInitializeOriginalProblem : public TaskBase
 {
   public:
-	TaskInitializeOriginalProblem(OSInstance *originalInstance);
-	~TaskInitializeOriginalProblem();
+    TaskInitializeOriginalProblem(OSInstance *originalInstance);
+    virtual ~TaskInitializeOriginalProblem();
 
-	void run();
-	virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
   private:
-	OptProblem *problem;
-	OSInstance *instance;
+    OptProblem *problem;
+    OSInstance *instance;
 };

@@ -12,38 +12,38 @@
 
 TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
 {
-	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+    ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
+    ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
 
-	primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
+    primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
 
-	ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-	ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+    ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
+    ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
 }
 
 TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 {
+    delete primalStrategyFixedNLP;
 }
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
+    {
+        ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
 
-	if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
-	{
-		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-		ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+        primalStrategyFixedNLP->runStrategy();
 
-		primalStrategyFixedNLP->runStrategy();
-
-		ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
-	}
+        ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
+        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+    }
 }
 
 std::string TaskSelectPrimalCandidatesFromNLP::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

@@ -12,9 +12,9 @@
 
 TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
 {
-	itersWithoutAddedHPs = 0;
+    itersWithoutAddedHPs = 0;
 
-	this->MIPSolver = MIPSolver;
+    this->MIPSolver = MIPSolver;
 }
 
 TaskAddHyperplanes::~TaskAddHyperplanes()
@@ -23,45 +23,45 @@ TaskAddHyperplanes::~TaskAddHyperplanes()
 
 void TaskAddHyperplanes::run()
 {
-	this->MIPSolver = MIPSolver;
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    this->MIPSolver = MIPSolver;
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
-	{
-		int addedHyperplanes = 0;
+    if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
+    {
+        int addedHyperplanes = 0;
 
-		for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
-		{
-			if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
-				break;
+        for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
+        {
+            if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+                break;
 
-			auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
+            auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
 
-			if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
-			{
-				MIPSolver->createInteriorHyperplane(tmpItem);
-			}
-			else
-			{
-				MIPSolver->createHyperplane(tmpItem);
+            if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
+            {
+                MIPSolver->createInteriorHyperplane(tmpItem);
+            }
+            else
+            {
+                MIPSolver->createHyperplane(tmpItem);
 
-				ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
+                ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
 
-				addedHyperplanes++;
-			}
-		}
+                addedHyperplanes++;
+            }
+        }
 
-		ProcessInfo::getInstance().hyperplaneWaitingList.clear();
-		itersWithoutAddedHPs = 0;
-	}
-	else
-	{
-		itersWithoutAddedHPs++;
-	}
+        ProcessInfo::getInstance().hyperplaneWaitingList.clear();
+        itersWithoutAddedHPs = 0;
+    }
+    else
+    {
+        itersWithoutAddedHPs++;
+    }
 }
 
 std::string TaskAddHyperplanes::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

@@ -39,13 +39,15 @@
 class OptProblemOriginal;
 class IMIPSolver;
 class ILinesearchMethod;
+class Iteration;
 
 #include "LinesearchMethod/ILinesearchMethod.h"
 
 class ProcessInfo
 {
   public:
-    OSResult *osResult;
+    std::unique_ptr<OSResult> osResult;
+
     OptProblemOriginal *originalProblem;
 
     IMIPSolver *MIPSolver;
@@ -95,7 +97,6 @@ class ProcessInfo
     void addDualSolutionCandidate(vector<double> pt, E_DualSolutionSource source, int iter);
     void addDualSolutionCandidate(DualSolution solution);
 
-    std::pair<double, double> currentObjectiveBounds;
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();
     void setObjectiveUpdatedByLinesearch(bool updated);
@@ -137,7 +138,6 @@ class ProcessInfo
 
     std::vector<int> itersSolvedAsECP;
 
-    //double getLastMaxDeviation();
     void setOriginalProblem(OptProblemOriginal *problem);
 
     void createTimer(string name, string description);
@@ -147,7 +147,9 @@ class ProcessInfo
     double getElapsedTime(string name);
 
     double getPrimalBound();
+    void setPrimalBound(double value);
     double getDualBound();
+    void setDualBound(double value);
 
     Iteration *getCurrentIteration();
     Iteration *getPreviousIteration();
@@ -196,6 +198,8 @@ class ProcessInfo
     bool objectiveUpdatedByLinesearch;
 
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
+
+    std::pair<double, double> currentObjectiveBounds;
 
     ProcessInfo();
 };

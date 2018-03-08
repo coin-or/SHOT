@@ -16,11 +16,11 @@
 class TaskPrintSolution : public TaskBase
 {
   public:
-	TaskPrintSolution();
-	~TaskPrintSolution();
+    TaskPrintSolution();
+    virtual ~TaskPrintSolution();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
 };

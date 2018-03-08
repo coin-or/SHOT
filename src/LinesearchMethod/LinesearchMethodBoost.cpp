@@ -17,6 +17,12 @@ Test::Test()
 {
 }
 
+Test::~Test()
+{
+    firstPt.clear();
+    secondPt.clear();
+}
+
 void Test::determineActiveConstraints(double constrTol)
 {
     valFirstPt = -OSDBL_MAX;
@@ -98,6 +104,7 @@ LinesearchMethodBoost::LinesearchMethodBoost()
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
 {
+    activeConstraints.clear();
     delete test;
 }
 

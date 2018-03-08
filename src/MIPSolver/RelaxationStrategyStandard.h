@@ -15,25 +15,25 @@
 class RelaxationStrategyStandard : public IRelaxationStrategy, RelaxationStrategyBase
 {
   public:
-	RelaxationStrategyStandard(IMIPSolver *MIPSolver);
-	~RelaxationStrategyStandard();
+    RelaxationStrategyStandard(IMIPSolver *MIPSolver);
+    virtual ~RelaxationStrategyStandard();
 
-	virtual void executeStrategy();
+    virtual void executeStrategy();
 
-	virtual void setActive();
+    virtual void setActive();
 
-	virtual void setInactive();
+    virtual void setInactive();
 
-	virtual void setInitial();
+    virtual void setInitial();
 
-	virtual E_IterationProblemType getProblemType();
+    virtual E_IterationProblemType getProblemType();
 
   private:
-	bool isIterationLimitReached();
-	bool isTimeLimitReached();
-	bool isLPStepFinished();
-	bool isObjectiveStagnant();
+    bool isIterationLimitReached();
+    bool isTimeLimitReached();
+    bool isLPStepFinished();
+    bool isObjectiveStagnant();
 
-	bool LPFinished;
-	IMIPSolver *MIPSolver;
+    bool LPFinished;
+    IMIPSolver *MIPSolver;
 };

@@ -22,8 +22,6 @@
 class IMIPSolver
 {
   public:
-    virtual ~IMIPSolver(){};
-
     virtual void checkParameters() = 0;
 
     virtual bool createLinearProblem(OptProblem *origProblem) = 0;
@@ -77,8 +75,7 @@ class IMIPSolver
     virtual void createIntegerCut(std::vector<int> binaryIndexes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
-    virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(
-        Hyperplane hyperplane) = 0;
+    virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;
@@ -86,6 +83,8 @@ class IMIPSolver
     virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes() = 0;
 
     virtual void updateNonlinearObjectiveFromPrimalDualBounds() = 0;
+
+    virtual ~IMIPSolver(){};
 
   protected:
 };

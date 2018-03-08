@@ -29,7 +29,7 @@ class NLPSolverGAMS : public NLPSolverBase
   public:
     NLPSolverGAMS();
 
-    ~NLPSolverGAMS(){};
+    ~NLPSolverGAMS();
 
     void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
     void clearStartingPoint();

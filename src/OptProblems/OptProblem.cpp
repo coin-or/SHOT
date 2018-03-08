@@ -472,6 +472,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
         }
     }
 
+    /*
     if (false && Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
     {
         auto numGradient = calculateGradientNumerically(idx, point);
@@ -499,7 +500,10 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
                 ProcessInfo::getInstance().outputAlways(getProblemInstance()->printModel(idx));
             }
         }
-    }
+
+        numGradient.clear();
+        nonSparseGrad.clear();
+    }*/
 
     return (gradient);
 }
@@ -912,68 +916,24 @@ void OptProblem::setNonlinearConstraintIndexes()
             QCIndexes.push_back(i);
     }
 
-    //UtilityFunctions::displayVector(NLCIndexes);
-    //UtilityFunctions::displayVector(QCIndexes);
-
     setNonlinearConstraints(NLCIndexes);
     setQuadraticConstraints(QCIndexes);
 }
-
-/*
- void OptProblemBase::setQuadraticConstraintIndexes()
- {
- std::vector<int> quadraticIndexes;
-
- if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
- {
- std::vector<bool> isQuadratic(this->getProblemInstance()->getConstraintNumber(), false);
-
- int numNonlinExpr = this->getProblemInstance()->instanceData->nonlinearExpressions == NULL ? 0 : this->getProblemInstance()->getNumberOfNonlinearExpressions();
- int numQuadTerms = this->getProblemInstance()->instanceData->quadraticCoefficients == NULL ? 0 : this->getProblemInstance()->getNumberOfQuadraticTerms();
-
- for (int i = 0; i < numQuadTerms; i++)
- {
- int tmpIndex = this->getProblemInstance()->instanceData->quadraticCoefficients->qTerm[i]->idx;
-
- if (tmpIndex != -1)
- {
- isQuadratic.at(tmpIndex) = true;
- }
- }
-
- for (int i = 0; i < numNonlinExpr; i++)
- {
- int tmpIndex = this->getProblemInstance()->instanceData->nonlinearExpressions->nl[i]->idx;
-
- if (tmpIndex != -1)
- {
- isQuadratic.at(tmpIndex) = false;
- }
- }
-
- for (int i = 0; i < isQuadratic.size(); i++)
- {
- if (isQuadratic.at(i))	quadraticIndexes.push_back(i);
- }
-
- }
-
- setQuadraticConstraints(quadraticIndexes);
- }*/
 
 std::vector<int> OptProblem::getLinearConstraintIndexes()
 {
     std::vector<int> idxs;
     int numCon = this->getProblemInstance()->getConstraintNumber();
-    //std::cout << "Nonlinear constraint index : " << this->getNonlinearObjectiveConstraintIdx() << std::endl;
-    //int numCon = this->getNumberOfConstraints();
-    //idxs.reserve(numCon);
 
     for (int i = 0; i < numCon; i++)
     {
-        if (!isConstraintNonlinear(this->getProblemInstance(), i) && this->getNonlinearObjectiveConstraintIdx() != i)
+        if (this->isObjectiveFunctionNonlinear() && this->getNonlinearObjectiveConstraintIdx() == i)
         {
-            //std::cout << "Constr " << i << " is linear!" << std::endl;
+            continue;
+        }
+
+        if (!isConstraintNonlinear(this->getProblemInstance(), i))
+        {
             idxs.push_back(i);
         }
     }
@@ -1045,12 +1005,6 @@ std::vector<int> OptProblem::getNonlinearOrQuadraticConstraintIndexes()
 {
     return m_nonlinearOrQuadraticConstraints;
 }
-
-/*
- void OptProblemBase::setNonlinearOrQuadraticConstraints(std::vector<int> idxs)
- {
- m_nonlinearOrQuadraticConstraints = idxs;
- }*/
 
 bool OptProblem::isTypeOfObjectiveMinimize()
 {

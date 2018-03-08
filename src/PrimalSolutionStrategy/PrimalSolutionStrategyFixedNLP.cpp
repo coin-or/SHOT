@@ -72,6 +72,13 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
 
 PrimalSolutionStrategyFixedNLP::~PrimalSolutionStrategyFixedNLP()
 {
+    std::cout << "deleting primal strategy" << std::endl;
+    delete taskSelectHPPts;
+    delete NLPSolver;
+
+    discreteVariableIndexes.clear();
+    testedPoints.clear();
+    fixPoint.clear();
 }
 
 bool PrimalSolutionStrategyFixedNLP::runStrategy()

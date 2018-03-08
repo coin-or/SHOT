@@ -13,10 +13,10 @@
 class TaskRepairableBase : public TaskBase
 {
   public:
-	~TaskRepairableBase();
+    virtual ~TaskRepairableBase();
 
-	virtual void repair();
-	virtual std::string getType();
+    virtual void repair();
+    virtual std::string getType();
 
   private:
 };

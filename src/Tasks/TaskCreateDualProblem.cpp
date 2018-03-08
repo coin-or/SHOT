@@ -12,23 +12,23 @@
 
 TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
 {
-	this->MIPSolver = MIPSolver;
+    this->MIPSolver = MIPSolver;
 
-	ProcessInfo::getInstance().startTimer("Reformulation");
+    ProcessInfo::getInstance().startTimer("Reformulation");
 
-	ProcessInfo::getInstance().outputDebug("Creating dual problem");
+    ProcessInfo::getInstance().outputDebug("Creating dual problem");
 
-	MIPSolver->createLinearProblem(ProcessInfo::getInstance().originalProblem);
+    MIPSolver->createLinearProblem(ProcessInfo::getInstance().originalProblem);
 
-	MIPSolver->initializeSolverSettings();
+    MIPSolver->initializeSolverSettings();
 
-	if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
-	{
-		MIPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/lp0.lp");
-	}
+    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    {
+        MIPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+    }
 
-	ProcessInfo::getInstance().outputDebug("Dual problem created");
-	ProcessInfo::getInstance().stopTimer("Reformulation");
+    ProcessInfo::getInstance().outputDebug("Dual problem created");
+    ProcessInfo::getInstance().stopTimer("Reformulation");
 }
 
 TaskCreateDualProblem::~TaskCreateDualProblem()
@@ -41,6 +41,6 @@ void TaskCreateDualProblem::run()
 
 std::string TaskCreateDualProblem::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

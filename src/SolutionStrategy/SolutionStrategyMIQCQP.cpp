@@ -92,7 +92,7 @@ SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP()
 
 bool SolutionStrategyMIQCQP::solveProblem()
 {
-    TaskBase *nextTask = new TaskBase;
+    TaskBase *nextTask;
 
     while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
     {
@@ -100,8 +100,6 @@ bool SolutionStrategyMIQCQP::solveProblem()
         nextTask->run();
         ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
     }
-
-    ProcessInfo::getInstance().tasks->clearTasks();
 
     return (true);
 }

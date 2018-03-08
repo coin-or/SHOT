@@ -28,66 +28,70 @@
 class MIPSolverCplexLazyOriginalCallback : public MIPSolverCplex
 {
   public:
-	MIPSolverCplexLazyOriginalCallback();
-	virtual ~MIPSolverCplexLazyOriginalCallback();
+    MIPSolverCplexLazyOriginalCallback();
+    virtual ~MIPSolverCplexLazyOriginalCallback();
 
-	virtual void checkParameters();
+    virtual void checkParameters();
 
-	virtual void initializeSolverSettings();
+    virtual void initializeSolverSettings();
 
-	virtual E_ProblemSolutionStatus solveProblem();
+    virtual E_ProblemSolutionStatus solveProblem();
 
-	virtual int increaseSolutionLimit(int increment);
-	virtual void setSolutionLimit(long limit);
-	virtual int getSolutionLimit();
+    virtual int increaseSolutionLimit(int increment);
+    virtual void setSolutionLimit(long limit);
+    virtual int getSolutionLimit();
 
-	std::mutex callbackMutex2;
+    std::mutex callbackMutex2;
 
   private:
-	IloRangeArray cplexLazyConstrs;
+    IloRangeArray cplexLazyConstrs;
 
   protected:
 };
 
 class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallbackBase
 {
-	IloNumVarArray cplexVars;
-
-	TaskBase *taskSelectHPPts;
+    IloNumVarArray cplexVars;
 
   private:
-	int iterNumLastResetHyperplaneCounter = 0;
+    int iterNumLastResetHyperplaneCounter = 0;
 
   public:
-	IloCplex::CallbackI *duplicateCallback() const;
-	HCallbackI(IloEnv env, IloNumVarArray xx2);
-	void main();
+    IloCplex::CallbackI *duplicateCallback() const;
+    HCallbackI(IloEnv env, IloNumVarArray xx2);
+    void main();
+
+    virtual ~HCallbackI();
 };
 
 class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbackBase
 {
-	IloNumVarArray cplexVars;
+    IloNumVarArray cplexVars;
 
   private:
   public:
-	IloCplex::CallbackI *duplicateCallback() const;
-	InfoCallbackI(IloEnv env, IloNumVarArray xx2);
-	void main();
+    IloCplex::CallbackI *duplicateCallback() const;
+    InfoCallbackI(IloEnv env, IloNumVarArray xx2);
+    void main();
+
+    virtual ~InfoCallbackI();
 };
 
 class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCallbackBase
 {
-	IloNumVarArray cplexVars;
+    IloNumVarArray cplexVars;
 
-	MIPSolverCplexLazyOriginalCallback *cplexSolver;
+    MIPSolverCplexLazyOriginalCallback *cplexSolver;
 
-	void createHyperplane(Hyperplane hyperplane);
+    void createHyperplane(Hyperplane hyperplane);
 
-	void createIntegerCut(std::vector<int> binaryIndexes);
+    void createIntegerCut(std::vector<int> binaryIndexes);
 
   public:
-	IloCplex::CallbackI *duplicateCallback() const;
+    IloCplex::CallbackI *duplicateCallback() const;
 
-	CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOriginalCallback *solver);
-	void main();
+    CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOriginalCallback *solver);
+    void main();
+
+    virtual ~CtCallbackI();
 };

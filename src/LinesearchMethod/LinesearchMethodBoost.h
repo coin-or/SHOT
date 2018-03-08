@@ -28,6 +28,7 @@ class Test
     OptProblemOriginal *originalProblem;
 
     Test();
+    ~Test();
     void determineActiveConstraints(double constrTol);
     void setActiveConstraints(std::vector<int> constrIdxs);
     std::vector<int> getActiveConstraints();

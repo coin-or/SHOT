@@ -15,7 +15,6 @@
 class IRelaxationStrategy
 {
   public:
-    //IRelaxationStrategy();
     virtual ~IRelaxationStrategy(){};
 
     virtual void executeStrategy() = 0;

@@ -45,6 +45,5 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
     this->repairNonboundedVariables();
 
     instance->getJacobianSparsityPattern();
-
     return true;
 }

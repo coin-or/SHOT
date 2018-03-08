@@ -12,37 +12,33 @@
 
 TaskInitializeLinesearch::TaskInitializeLinesearch()
 {
+    ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
 
-	ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
+    if (Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver") == static_cast<int>(ES_RootsearchMethod::Bisection))
+    {
+        ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBisection();
+        ProcessInfo::getInstance().outputInfo("Bisection linesearch implementation selected.");
+    }
+    else
+    {
+        ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBoost();
+        ProcessInfo::getInstance().outputInfo("Boost linesearch implementation selected.");
+    }
 
-	if (Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver")
-			== static_cast<int>(ES_RootsearchMethod::Bisection))
-	{
-		ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBisection();
-		ProcessInfo::getInstance().outputInfo("Bisection linesearch implementation selected.");
-	}
-	else
-	{
-		ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBoost();
-		ProcessInfo::getInstance().outputInfo("Boost linesearch implementation selected.");
-	}
-
-	ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+    ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 }
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()
 {
+    delete ProcessInfo::getInstance().linesearchMethod;
 }
 
 void TaskInitializeLinesearch::run()
 {
-
 }
 
 std::string TaskInitializeLinesearch::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
-
+    std::string type = typeid(this).name();
+    return (type);
 }
-

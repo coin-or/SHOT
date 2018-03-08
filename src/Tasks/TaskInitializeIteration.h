@@ -17,7 +17,7 @@ class TaskInitializeIteration : public TaskBase
 {
   public:
 	TaskInitializeIteration();
-	~TaskInitializeIteration();
+	virtual ~TaskInitializeIteration();
 
 	void run();
 	virtual std::string getType();

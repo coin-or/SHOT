@@ -39,11 +39,11 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
     this->copyNonlinearExpressions(originalInstance, newInstance);
 
     // The following four lines fixes some problems with OSInstance...
-    OSiLWriter *osilWriter = new OSiLWriter();
+    /*OSiLWriter *osilWriter = new OSiLWriter();
     std::string osil = osilWriter->writeOSiL(newInstance);
     OSiLReader *osilReader = new OSiLReader();
     newInstance = osilReader->readOSiL(osil);
-
+*/
     this->setProblemInstance(newInstance);
 
     this->setNonlinearConstraintIndexes();

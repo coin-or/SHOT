@@ -89,7 +89,8 @@ enum class E_ProblemSolutionStatus
     TimeLimit,
     SolutionLimit,
     Error,
-    CutOff
+    CutOff,
+    None
 };
 
 enum class E_SolutionStrategy

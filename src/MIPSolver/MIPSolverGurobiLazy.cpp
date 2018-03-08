@@ -14,8 +14,19 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy()
 {
     discreteVariablesActivated = true;
 
-    gurobiEnv = new GRBEnv();
-    gurobiModel = new GRBModel(*gurobiEnv);
+    try
+    {
+        gurobiEnv = new GRBEnv();
+        gurobiModel = new GRBModel(*gurobiEnv);
+    }
+    catch (GRBException &e)
+    {
+        {
+            ProcessInfo::getInstance().outputError("Error when initializing Gurobi:", e.getMessage());
+        }
+
+        return;
+    }
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
@@ -25,8 +36,6 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy()
 
 MIPSolverGurobiLazy::~MIPSolverGurobiLazy()
 {
-    delete gurobiEnv;
-    delete gurobiModel;
 }
 
 void MIPSolverGurobiLazy::initializeSolverSettings()
@@ -191,16 +200,16 @@ void GurobiCallback::callback()
                     if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
                             "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
                     {
-                        static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
+                        static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts.get())->run(solutionPoints);
                     }
                     else
                     {
-                        static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts)->run(solutionPoints);
+                        static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts.get())->run(solutionPoints);
                     }
                 }
                 else
                 {
-                    static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
+                    static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(solutionPoints);
                 }
 
                 maxIntegerRelaxedHyperplanes += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
@@ -220,13 +229,6 @@ void GurobiCallback::callback()
             }
 
             auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solution);
-
-            //Remove??
-            /*
-			if (mostDevConstr.value <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
-			{
-				return;
-			}*/
 
             SolutionPoint solutionCandidate;
 
@@ -250,7 +252,7 @@ void GurobiCallback::callback()
 
             if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
             {
-                taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
+                taskSelectPrimalSolutionFromLinesearch.get()->run(candidatePoints);
             }
 
             if (checkFixedNLPStrategy(candidatePoints.at(0)))
@@ -259,7 +261,7 @@ void GurobiCallback::callback()
                                                                       E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ), ProcessInfo::getInstance().getCurrentIteration()->iterationNumber,
                                                                       candidatePoints.at(0).maxDeviation);
 
-                tSelectPrimNLP->run();
+                tSelectPrimNLP.get()->run();
 
                 ProcessInfo::getInstance().checkPrimalSolutionCandidates();
             }
@@ -414,40 +416,32 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
     if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
-        tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
-        bUpdateInteriorPoint = true;
+        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(new TaskUpdateInteriorPoint());
 
-        if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+        if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-            bSelectHPPts = true;
+            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsLinesearch>(new TaskSelectHyperplanePointsLinesearch());
         }
         else
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-            bSelectHPPts = true;
+            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsIndividualLinesearch>(new TaskSelectHyperplanePointsIndividualLinesearch());
         }
     }
     else
     {
-        taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
-        bSelectHPPts = true;
+        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsSolution>(new TaskSelectHyperplanePointsSolution());
     }
 
-    tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
-    bSelectPrimNLP = true;
+    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP());
 
     if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
-        taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
-        bUpdateObjectiveByLinesearch = true;
+        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch());
     }
 
     if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
     {
-        taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-        bSelectPrimalSolutionFromLinesearch = true;
+        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch());
     }
 
     lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
@@ -489,16 +483,16 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
 
             if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
             {
-                static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
+                static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts.get())->run(candidatePoints);
             }
             else
             {
-                static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts)->run(candidatePoints);
+                static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts.get())->run(candidatePoints);
             }
         }
         else
         {
-            static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(candidatePoints);
+            static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(candidatePoints);
         }
 
         for (auto hp : ProcessInfo::getInstance().hyperplaneWaitingList)

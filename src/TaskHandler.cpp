@@ -17,9 +17,9 @@ TaskHandler::TaskHandler()
 
 TaskHandler::~TaskHandler()
 {
-    for (auto task : taskIDMap)
+    for (auto task : allTasks)
     {
-        delete task.second;
+        delete task;
     }
 }
 
@@ -31,6 +31,12 @@ void TaskHandler::addTask(TaskBase *task, std::string taskID)
     {
         nextTask = taskIDMap.begin();
     }
+
+    // Checks if this task has been added previously, otherwise adds it to the list of all tasks
+    bool found = (std::find(allTasks.begin(), allTasks.end(), task) != allTasks.end());
+
+    if (!found)
+        allTasks.push_back(task);
 }
 
 bool TaskHandler::getNextTask(TaskBase *&task)

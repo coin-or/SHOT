@@ -22,9 +22,6 @@ OptProblemNLPMinimax::~OptProblemNLPMinimax()
 
 void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 {
-    auto model = originalInstance->printModel();
-    UtilityFunctions::writeStringToFile("outc1.txt", model);
-
     OSInstance *newInstance = NULL;
     newInstance = new OSInstance();
 
@@ -48,13 +45,6 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
     newInstance->getJacobianSparsityPattern(); //Needed exactly here!
 
-    // The following four lines fixes some problems with OSInstance...
-    /*OSiLWriter *osilWriter = new OSiLWriter();
-	std::string osil = osilWriter->writeOSiL(newInstance);
-
-	OSiLReader *osilReader = new OSiLReader();
-	newInstance = osilReader->readOSiL(osil);
-	*/
     this->setProblemInstance(newInstance);
 
     this->setNonlinearConstraintIndexes();
@@ -309,8 +299,7 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
         elements.push_back(-1.0);
     }
 
-    CoinPackedMatrix *matrix = new CoinPackedMatrix(false, &rowIndices.at(0), &colIndices.at(0), &elements.at(0),
-                                                    numTotalElements);
+    CoinPackedMatrix *matrix = new CoinPackedMatrix(false, &rowIndices.at(0), &colIndices.at(0), &elements.at(0), numTotalElements);
 
     int numnonz = matrix->getNumElements();
     int valuesBegin = 0;
@@ -328,6 +317,8 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
                                                  indexesBegin, indexesEnd, const_cast<int *>(matrix->getVectorStarts()), startsBegin, startsEnd);
 
     destination->bConstraintsModified = true;
+
+    //delete matrix; // Can not be deleted here...
 }
 
 void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *destination)

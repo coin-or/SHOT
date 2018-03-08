@@ -16,12 +16,12 @@
 class TaskUpdateNonlinearObjectiveByLinesearch : public TaskBase
 {
   public:
-	TaskUpdateNonlinearObjectiveByLinesearch();
-	virtual ~TaskUpdateNonlinearObjectiveByLinesearch();
-	virtual void run();
-	virtual std::string getType();
+    TaskUpdateNonlinearObjectiveByLinesearch();
+    virtual ~TaskUpdateNonlinearObjectiveByLinesearch();
+    virtual void run();
+    virtual std::string getType();
 
-	bool updateObjectiveInPoint(SolutionPoint &solution);
+    bool updateObjectiveInPoint(SolutionPoint &solution);
 
   private:
 };

@@ -12,6 +12,48 @@
 
 Iteration::Iteration()
 {
+    this->iterationNumber = ProcessInfo::getInstance().iterations.size() + 1;
+
+    this->numHyperplanesAdded = 0;
+
+    if (ProcessInfo::getInstance().iterations.size() == 0)
+        this->totNumHyperplanes = 0;
+    else
+        this->totNumHyperplanes = ProcessInfo::getInstance().iterations.at(ProcessInfo::getInstance().iterations.size() - 1).totNumHyperplanes;
+
+    this->maxDeviation = OSDBL_MAX;
+    this->boundaryDistance = OSDBL_MAX;
+    this->MIPSolutionLimitUpdated = false;
+    this->solutionStatus = E_ProblemSolutionStatus::None;
+
+    currentObjectiveBounds.first = ProcessInfo::getInstance().getDualBound();
+    currentObjectiveBounds.second = ProcessInfo::getInstance().getPrimalBound();
+
+    if (ProcessInfo::getInstance().relaxationStrategy != NULL)
+    {
+        this->type = ProcessInfo::getInstance().relaxationStrategy->getProblemType();
+    }
+    else
+    {
+        switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+        {
+        case (E_SolutionStrategy::MIQCQP):
+            this->type = E_IterationProblemType::MIP;
+            break;
+        case (E_SolutionStrategy::MIQP):
+            this->type = E_IterationProblemType::MIP;
+            break;
+        case (E_SolutionStrategy::NLP):
+            this->type = E_IterationProblemType::Relaxed;
+            break;
+        case (E_SolutionStrategy::SingleTree):
+            this->type = E_IterationProblemType::MIP;
+            break;
+        default:
+            this->type = E_IterationProblemType::MIP;
+            break;
+        }
+    }
 }
 
 Iteration::~Iteration()

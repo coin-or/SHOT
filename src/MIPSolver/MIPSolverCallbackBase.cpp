@@ -209,34 +209,4 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 
 MIPSolverCallbackBase::~MIPSolverCallbackBase()
 {
-    /*
-	if (bSelectPrimNLP)
-	{
-		bSelectPrimNLP = false;
-		delete tSelectPrimNLP;
-	}
-
-	if (bSelectHPPts)
-	{
-		bSelectPrimNLP = false;
-		delete taskSelectHPPts;
-	}
-
-	if (bUpdateObjectiveByLinesearch)
-	{
-		bSelectPrimNLP = false;
-		delete taskUpdateObjectiveByLinesearch;
-	}
-
-	if (bSelectPrimalSolutionFromLinesearch)
-	{
-		bSelectPrimNLP = false;
-		delete taskSelectPrimalSolutionFromLinesearch;
-	}
-
-	if (bUpdateInteriorPoint)
-	{
-		bSelectPrimNLP = false;
-		delete tUpdateInteriorPoint;
-	}*/
 }

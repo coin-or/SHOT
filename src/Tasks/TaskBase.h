@@ -27,6 +27,8 @@ class TaskBase
 
     virtual void run();
 
+    virtual ~TaskBase(){};
+
   protected:
   private:
     bool m_isActive;

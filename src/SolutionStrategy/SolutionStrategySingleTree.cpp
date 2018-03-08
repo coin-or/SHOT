@@ -132,7 +132,7 @@ SolutionStrategySingleTree::~SolutionStrategySingleTree()
 
 bool SolutionStrategySingleTree::solveProblem()
 {
-    TaskBase *nextTask = new TaskBase;
+    TaskBase *nextTask;
 
     while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
     {
@@ -140,8 +140,6 @@ bool SolutionStrategySingleTree::solveProblem()
         nextTask->run();
         ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
     }
-
-    ProcessInfo::getInstance().tasks->clearTasks();
 
     return (true);
 }

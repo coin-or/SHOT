@@ -29,6 +29,11 @@ NLPSolverGAMS::NLPSolverGAMS() : gmo(NULL), gev(NULL), timelimit(10.0), iterlimi
     showlog = Settings::getInstance().getBoolSetting("Console.GAMS.Show", "Output");
 }
 
+NLPSolverGAMS::~NLPSolverGAMS()
+{
+    delete NLPProblem;
+}
+
 void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
 {
     for (size_t i = 0; i < variableIndexes.size(); ++i)

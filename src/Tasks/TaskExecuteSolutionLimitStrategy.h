@@ -18,19 +18,19 @@
 
 class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
- public:
-	TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver);
-	~TaskExecuteSolutionLimitStrategy();
+  public:
+    TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver);
+    virtual ~TaskExecuteSolutionLimitStrategy();
 
-	void run();
-	virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
- private:
-	IMIPSolutionLimitStrategy *solutionLimitStrategy;
+  private:
+    IMIPSolutionLimitStrategy *solutionLimitStrategy;
 
-	IMIPSolver *MIPSolver;
+    IMIPSolver *MIPSolver;
 
-	bool isInitialized;
-	bool temporaryOptLimitUsed;
-	int previousSolLimit;
+    bool isInitialized;
+    bool temporaryOptLimitUsed;
+    int previousSolLimit;
 };

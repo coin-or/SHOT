@@ -15,13 +15,13 @@
 class TaskCheckIterationError : public TaskBase
 {
   public:
-	TaskCheckIterationError(std::string taskIDTrue);
-	virtual ~TaskCheckIterationError();
+    TaskCheckIterationError(std::string taskIDTrue);
+    virtual ~TaskCheckIterationError();
 
-	virtual void run();
+    virtual void run();
 
-	virtual std::string getType();
+    virtual std::string getType();
 
   private:
-	std::string taskIDIfTrue;
+    std::string taskIDIfTrue;
 };

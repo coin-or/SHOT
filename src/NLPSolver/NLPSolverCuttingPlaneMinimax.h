@@ -59,5 +59,5 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
     bool isProblemCreated;
 
     std::vector<double> solution;
-    double objectiveValue;
+    double objectiveValue = NAN;
 };

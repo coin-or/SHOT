@@ -23,39 +23,32 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
     if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
-        tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
-        bUpdateInteriorPoint = true;
+        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(new TaskUpdateInteriorPoint());
 
         if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-            bSelectHPPts = true;
+            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsLinesearch>(new TaskSelectHyperplanePointsLinesearch());
         }
         else
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-            bSelectHPPts = true;
+            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsIndividualLinesearch>(new TaskSelectHyperplanePointsIndividualLinesearch());
         }
     }
     else
     {
-        taskSelectHPPts = new TaskSelectHyperplanePointsSolution();
-        bSelectHPPts = true;
+        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsSolution>(new TaskSelectHyperplanePointsSolution());
     }
 
-    tSelectPrimNLP = new TaskSelectPrimalCandidatesFromNLP();
-    bSelectPrimNLP = true;
+    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP());
 
     if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
-        taskUpdateObjectiveByLinesearch = new TaskUpdateNonlinearObjectiveByLinesearch();
-        bUpdateObjectiveByLinesearch = true;
+        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch());
     }
 
     if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
     {
-        taskSelectPrimalSolutionFromLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-        bSelectPrimalSolutionFromLinesearch = true;
+        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch());
     }
 
     lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
@@ -152,16 +145,16 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
                     if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
                             "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
                     {
-                        static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
+                        static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts.get())->run(solutionPoints);
                     }
                     else
                     {
-                        static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts)->run(solutionPoints);
+                        static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts.get())->run(solutionPoints);
                     }
                 }
                 else
                 {
-                    static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
+                    static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(solutionPoints);
                 }
 
                 maxIntegerRelaxedHyperplanes += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
@@ -213,6 +206,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
 
             currIter->objectiveValue = context.getCandidateObjective();
+
             auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
@@ -227,7 +221,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
                                                                       E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(), ProcessInfo::getInstance().getCurrentIteration()->iterationNumber,
                                                                       candidatePoints.at(0).maxDeviation);
 
-                tSelectPrimNLP->run();
+                tSelectPrimNLP.get()->run();
 
                 ProcessInfo::getInstance().checkPrimalSolutionCandidates();
             }
@@ -407,16 +401,16 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
             if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
                     "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
             {
-                static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(candidatePoints);
+                static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts.get())->run(candidatePoints);
             }
             else
             {
-                static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts)->run(candidatePoints);
+                static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts.get())->run(candidatePoints);
             }
         }
         else
         {
-            static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(candidatePoints);
+            static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(candidatePoints);
         }
 
         for (auto hp : ProcessInfo::getInstance().hyperplaneWaitingList)
@@ -454,11 +448,6 @@ MIPSolverCplexLazy::MIPSolverCplexLazy()
 
 MIPSolverCplexLazy::~MIPSolverCplexLazy()
 {
-    cplexModel.end();
-    cplexVars.end();
-    cplexConstrs.end();
-    cplexEnv.end();
-    cplexInstance.end();
 }
 
 void MIPSolverCplexLazy::initializeSolverSettings()

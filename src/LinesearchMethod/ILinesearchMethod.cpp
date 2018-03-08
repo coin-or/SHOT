@@ -13,7 +13,3 @@
 ILinesearchMethod::ILinesearchMethod()
 {
 }
-
-ILinesearchMethod::~ILinesearchMethod()
-{
-}

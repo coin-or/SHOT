@@ -20,7 +20,7 @@
 class MIPSolverCallbackBase
 {
   public:
-    ~MIPSolverCallbackBase();
+    virtual ~MIPSolverCallbackBase();
 
   private:
   protected:
@@ -35,17 +35,11 @@ class MIPSolverCallbackBase
     double lastSummaryTimeStamp = 0.0;
     int lastHeaderIter = 0;
 
-    TaskBase *tSelectPrimNLP;
-    TaskBase *taskSelectHPPts;
-    TaskUpdateNonlinearObjectiveByLinesearch *taskUpdateObjectiveByLinesearch;
-    TaskSelectPrimalCandidatesFromLinesearch *taskSelectPrimalSolutionFromLinesearch;
-    TaskUpdateInteriorPoint *tUpdateInteriorPoint;
-
-    bool bSelectPrimNLP = false;
-    bool bSelectHPPts = false;
-    bool bUpdateObjectiveByLinesearch = false;
-    bool bSelectPrimalSolutionFromLinesearch = false;
-    bool bUpdateInteriorPoint = false;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> tSelectPrimNLP;
+    std::shared_ptr<TaskBase> taskSelectHPPts;
+    std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch> taskUpdateObjectiveByLinesearch;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch> taskSelectPrimalSolutionFromLinesearch;
+    std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
 
     bool checkFixedNLPStrategy(SolutionPoint point);
 

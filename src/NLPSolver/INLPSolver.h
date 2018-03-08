@@ -17,7 +17,7 @@ class INLPSolver
 {
   public:
     INLPSolver();
-    ~INLPSolver();
+    virtual ~INLPSolver();
 
     OptProblem *NLPProblem;
 

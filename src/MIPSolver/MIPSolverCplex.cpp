@@ -29,9 +29,9 @@ MIPSolverCplex::MIPSolverCplex()
 
 MIPSolverCplex::~MIPSolverCplex()
 {
+    std::cout << "deleted cplex solver" << std::endl;
     iterDurations.clear();
     cplexVarConvers.clear();
-
     cplexModel.end();
     cplexVars.end();
     cplexConstrs.end();

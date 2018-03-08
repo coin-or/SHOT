@@ -12,22 +12,22 @@
 #include "IRelaxationStrategy.h"
 #include "RelaxationStrategyBase.h"
 
-class RelaxationStrategyNone : public IRelaxationStrategy, RelaxationStrategyBase
+class RelaxationStrategyNone : public IRelaxationStrategy, public RelaxationStrategyBase
 {
   public:
-	RelaxationStrategyNone(IMIPSolver *MIPSolver);
-	~RelaxationStrategyNone();
+    RelaxationStrategyNone(IMIPSolver *MIPSolver);
+    virtual ~RelaxationStrategyNone();
 
-	virtual void executeStrategy();
+    virtual void executeStrategy();
 
-	virtual void setActive();
+    virtual void setActive();
 
-	virtual void setInactive();
+    virtual void setInactive();
 
-	virtual void setInitial();
+    virtual void setInitial();
 
-	virtual E_IterationProblemType getProblemType();
+    virtual E_IterationProblemType getProblemType();
 
   private:
-	IMIPSolver *MIPSolver;
+    IMIPSolver *MIPSolver;
 };

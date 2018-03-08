@@ -20,7 +20,7 @@ class TaskExecuteRelaxationStrategy : public TaskBase
 {
   public:
     TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver);
-    ~TaskExecuteRelaxationStrategy();
+    virtual ~TaskExecuteRelaxationStrategy();
 
     void run();
     virtual std::string getType();

@@ -18,7 +18,7 @@ class TaskSequential : public TaskBase
     TaskSequential();
     TaskSequential(int numberOfTasks);
 
-    ~TaskSequential();
+    virtual ~TaskSequential();
 
     void addTasks(std::vector<TaskBase *> tasks);
     void addTask(TaskBase *task);

@@ -11,8 +11,6 @@
 #include "ProcessInfo.h"
 #include "OptProblems/OptProblemOriginal.h"
 
-OSResult *osResult = NULL;
-
 extern const OSSmartPtr<OSOutput> osoutput;
 
 void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
@@ -299,7 +297,7 @@ void ProcessInfo::checkDualSolutionCandidates()
         if (updateDual)
         {
             // New dual solution
-            this->currentObjectiveBounds.first = C.objValue;
+            this->setDualBound(C.objValue);
             currDualBound = C.objValue;
             this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
             this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
@@ -561,7 +559,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
 
     // Check if primal bound is worse than current
-    if ((isMinimization && tmpObjVal < this->currentObjectiveBounds.second) || (!isMinimization && tmpObjVal > this->currentObjectiveBounds.second))
+    if ((isMinimization && tmpObjVal < this->getPrimalBound()) || (!isMinimization && tmpObjVal > this->getPrimalBound()))
     {
         auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
         this->outputWarning(tmpLine.str());
@@ -570,7 +568,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto tmpLine = boost::format(
                            "     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).") %
-                       tmpObjVal % sourceDesc % this->currentObjectiveBounds.second;
+                       tmpObjVal % sourceDesc % this->getPrimalBound();
         this->outputWarning(tmpLine.str());
 
         return (false);
@@ -686,7 +684,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
     }
 
-    this->currentObjectiveBounds.second = tmpObjVal;
+    this->setPrimalBound(tmpObjVal);
 
     auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
 
@@ -808,11 +806,6 @@ ProcessInfo::~ProcessInfo()
     primalFixedNLPCandidates.clear();
     dualSolutionCandidates.clear();
 
-    delete osResult;
-
-    delete relaxationStrategy;
-    delete linesearchMethod;
-
     delete tasks;
 }
 
@@ -903,7 +896,7 @@ double ProcessInfo::getElapsedTime(string name)
 
 void ProcessInfo::initializeResults(int numObj, int numVar, int numConstr)
 {
-    osResult = new OSResult();
+    osResult = std::unique_ptr<OSResult>(new OSResult());
     osResult->setObjectiveNumber(numObj);
     osResult->setVariableNumber(numVar);
     osResult->setConstraintNumber(numConstr);
@@ -968,7 +961,7 @@ std::string ProcessInfo::getOSrl()
 
         for (int i = 0; i < numPrimalSols; i++)
         {
-            osResult->setNumberOfVarValues(i, numVar);
+            //osResult->setNumberOfVarValues(i, numVar);
             osResult->setNumberOfObjValues(i, 1);
             osResult->setNumberOfPrimalVariableValues(i, numVar);
             osResult->setObjValue(i, 0, -1, "", primalSolutions.at(i).objValue);
@@ -1146,7 +1139,7 @@ std::string ProcessInfo::getOSrl()
     boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
 
     stringstream ss;
-    ss << writer.writeOSrL(osResult);
+    ss << writer.writeOSrL(osResult.get());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
 
@@ -1296,6 +1289,11 @@ std::string ProcessInfo::getTraceResult()
     {
         modelStatus = "7";
     }
+    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::None)
+    {
+        modelStatus = "NA";
+        outputError("Unknown return code from model solution.");
+    }
     else
     {
         modelStatus = "NA";
@@ -1354,44 +1352,6 @@ std::string ProcessInfo::getTraceResult()
 void ProcessInfo::createIteration()
 {
     Iteration iter;
-    iter.iterationNumber = iterations.size() + 1;
-
-    iter.numHyperplanesAdded = 0;
-
-    if (iterations.size() == 0)
-        iter.totNumHyperplanes = 0;
-    else
-        iter.totNumHyperplanes = iterations.at(iterations.size() - 1).totNumHyperplanes;
-
-    iter.maxDeviation = OSDBL_MAX;
-    iter.boundaryDistance = OSDBL_MAX;
-    iter.MIPSolutionLimitUpdated = false;
-
-    if (relaxationStrategy != NULL)
-    {
-        iter.type = relaxationStrategy->getProblemType();
-    }
-    else
-    {
-        switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
-        {
-        case (E_SolutionStrategy::MIQCQP):
-            iter.type = E_IterationProblemType::MIP;
-            break;
-        case (E_SolutionStrategy::MIQP):
-            iter.type = E_IterationProblemType::MIP;
-            break;
-        case (E_SolutionStrategy::NLP):
-            iter.type = E_IterationProblemType::Relaxed;
-            break;
-        case (E_SolutionStrategy::SingleTree):
-            iter.type = E_IterationProblemType::MIP;
-            break;
-        default:
-            iter.type = E_IterationProblemType::MIP;
-            break;
-        }
-    }
 
     iterations.push_back(iter);
 }
@@ -1416,11 +1376,21 @@ double ProcessInfo::getPrimalBound()
     return (primalBound);
 }
 
+void ProcessInfo::setPrimalBound(double value)
+{
+    this->currentObjectiveBounds.second = value;
+}
+
 double ProcessInfo::getDualBound()
 {
     auto dualBound = this->currentObjectiveBounds.first;
 
     return (dualBound);
+}
+
+void ProcessInfo::setDualBound(double value)
+{
+    this->currentObjectiveBounds.first = value;
 }
 
 double ProcessInfo::getAbsoluteObjectiveGap()
