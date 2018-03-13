@@ -16,7 +16,11 @@
 
 #ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
+
+#ifdef HAS_CPLEX_NEW_CALLBACK
 #include "../MIPSolver/MIPSolverCplexLazy.h"
+#endif
+
 #include "../MIPSolver/MIPSolverCplexLazyOriginalCallback.h"
 #endif
 

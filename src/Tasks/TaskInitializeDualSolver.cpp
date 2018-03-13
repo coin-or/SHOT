@@ -25,6 +25,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
 #ifdef HAS_CPLEX
         if (solver == ES_MIPSolver::Cplex)
         {
+#ifdef HAS_CPLEX_NEW_CALLBACK
             if (Settings::getInstance().getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
             {
                 ProcessInfo::getInstance().MIPSolver = new MIPSolverCplexLazy();
@@ -32,6 +33,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
                 ProcessInfo::getInstance().outputInfo("Cplex with lazy callbacks selected as MIP solver.");
             }
             else
+#endif
             {
                 ProcessInfo::getInstance().MIPSolver = new MIPSolverCplexLazyOriginalCallback();
                 ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cplex;
@@ -86,41 +88,6 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
 
 TaskInitializeDualSolver::~TaskInitializeDualSolver()
 {
-    //     std::cout << "END" << std::endl;
-    // #ifdef HAS_CPLEX
-    //     if (typeid(ProcessInfo::getInstance().MIPSolver) == typeid(MIPSolverCplex))
-    //     {
-    //         delete (dynamic_cast<MIPSolverCplex *>(ProcessInfo::getInstance().MIPSolver));
-    //     }
-    //     else if (typeid(ProcessInfo::getInstance().MIPSolver) == typeid(MIPSolverCplexLazy))
-    //     {
-    //         delete (dynamic_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver));
-    //     }
-    //     else if (typeid(ProcessInfo::getInstance().MIPSolver) == typeid(MIPSolverCplexLazyOriginalCallback))
-    //     {
-    //         delete (dynamic_cast<MIPSolverCplexLazyOriginalCallback *>(ProcessInfo::getInstance().MIPSolver));
-    //     }
-    //     else
-    // #endif
-    // #ifdef HAS_GUROBI
-    //         if (typeid(ProcessInfo::getInstance().MIPSolver) == typeid(MIPSolverGurobi))
-    //     {
-    //         delete (dynamic_cast<MIPSolverGurobi *>(ProcessInfo::getInstance().MIPSolver));
-    //     }
-    //     else if (typeid(ProcessInfo::getInstance().MIPSolver) == typeid(MIPSolverGurobiLazy))
-    //     {
-    //         delete (dynamic_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver));
-    //     }
-    // #endif
-    //     if (typeid(ProcessInfo::getInstance().MIPSolver) == typeid(MIPSolverOsiCbc))
-    //     {
-    //         delete (dynamic_cast<MIPSolverOsiCbc *>(ProcessInfo::getInstance().MIPSolver));
-    //     }
-    //     else
-    //     {
-    //         std::cout << "WTF" << std::endl;
-    //     }
-
     delete ProcessInfo::getInstance().MIPSolver;
 }
 

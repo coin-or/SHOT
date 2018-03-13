@@ -12,6 +12,7 @@ mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
 
 # Activates subsolvers, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON) 
+option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" OFF) 
 option (HAS_GUROBI "Is Gurobi available" ON) 
 option (HAS_GAMS "Is GAMS available" ON)
 
@@ -128,11 +129,15 @@ if (HAS_CPLEX)
   include_directories("${CPLEX_DIR}/concert/include")
   set(Foo_SOURCES ${Foo_SOURCES} "./MIPSolver/MIPSolverCallbackBase.cpp")
   set(Foo_SOURCES ${Foo_SOURCES} "./MIPSolver/MIPSolverCplex.cpp")
-  set(Foo_SOURCES ${Foo_SOURCES} "./MIPSolver/MIPSolverCplexLazy.cpp")
+
+  if (HAS_CPLEX_NEW_CALLBACK)
+    set(Foo_SOURCES ${Foo_SOURCES} "./MIPSolver/MIPSolverCplexLazy.cpp")
+    set(Foo_HEADERS ${Foo_SOURCES} "./MIPSolver/MIPSolverCplexLazy.h")
+  endif (HAS_CPLEX_NEW_CALLBACK)
+
   set(Foo_SOURCES ${Foo_SOURCES} "./MIPSolver/MIPSolverCplexLazyOriginalCallback.cpp")
   set(Foo_HEADERS ${Foo_SOURCES} "./MIPSolver/MIPSolverCallbackBase.h")
   set(Foo_HEADERS ${Foo_SOURCES} "./MIPSolver/MIPSolverCplex.h")
-  set(Foo_HEADERS ${Foo_SOURCES} "./MIPSolver/MIPSolverCplexLazy.h")
   set(Foo_HEADERS ${Foo_SOURCES} "./MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
 endif (HAS_CPLEX)
 
