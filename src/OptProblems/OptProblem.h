@@ -9,8 +9,6 @@
 */
 
 #pragma once
-#include "OSiLReader.h"
-#include "OSiLWriter.h"
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinFinite.hpp"

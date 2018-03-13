@@ -59,6 +59,4 @@ class SHOTSolver
 
     std::string getOSrL();
     std::string getTraceResult();
-
-    std::unique_ptr<OSiLReader> osilReader;
 };

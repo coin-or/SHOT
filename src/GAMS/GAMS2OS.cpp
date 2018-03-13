@@ -20,6 +20,8 @@ GAMS2OS::~GAMS2OS()
 
     gmoLibraryUnload();
     gevLibraryUnload();
+
+    delete osinstance;
 }
 
 void GAMS2OS::readGms(const std::string &filename)

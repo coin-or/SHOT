@@ -15,7 +15,7 @@ class OptProblemNLPRelaxed : public OptProblem
 {
   public:
     OptProblemNLPRelaxed();
-    ~OptProblemNLPRelaxed();
+    virtual ~OptProblemNLPRelaxed();
 
     void reformulate(OSInstance *originalProblem);
 

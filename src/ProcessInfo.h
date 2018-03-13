@@ -29,6 +29,8 @@
 
 #include "OSResult.h"
 #include "OSrLWriter.h"
+#include "OSiLWriter.h"
+#include "OSiLReader.h"
 #include "OSErrorClass.h"
 
 #include "MIPSolver/IRelaxationStrategy.h"
@@ -184,6 +186,9 @@ class ProcessInfo
     void outputTrace(std::string message);
     void outputDetailedTrace(std::string message);
 
+    OSInstance *getProblemInstanceFromOSiL(std::string osil);
+    std::string getOSiLFromProblemInstance(OSInstance *instance);
+
     ILinesearchMethod *linesearchMethod;
 
     ~ProcessInfo();
@@ -202,4 +207,7 @@ class ProcessInfo
     std::pair<double, double> currentObjectiveBounds;
 
     ProcessInfo();
+
+    OSiLReader *osilReader;
+    OSiLWriter *osilWriter;
 };

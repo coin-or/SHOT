@@ -36,8 +36,8 @@ MIPSolverGurobi::MIPSolverGurobi()
 
 MIPSolverGurobi::~MIPSolverGurobi()
 {
-    delete gurobiEnv;
     delete gurobiModel;
+    delete gurobiEnv;
 }
 
 bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
@@ -107,6 +107,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
                 *expr += objConstant;
 
             gurobiModel->setObjective(*expr);
+
+            delete expr;
         }
         else
         {
@@ -129,6 +131,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
                 *expr += objConstant;
 
             gurobiModel->setObjective(*expr);
+
+            delete expr;
         }
 
         gurobiModel->update();
@@ -200,6 +204,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
                     else
                     {
                     }
+
+                    delete expr;
                 }
                 else
                 {
@@ -242,6 +248,8 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
                     else
                     {
                     }
+
+                    delete expr;
                 }
             }
         }
@@ -313,6 +321,8 @@ int MIPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, d
         {
             gurobiModel->addConstr(*expr <= -constant, "");
         }
+
+        delete expr;
 
         gurobiModel->update();
     }

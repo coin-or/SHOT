@@ -45,6 +45,10 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
     newInstance->getJacobianSparsityPattern(); //Needed exactly here!
 
+    // The following two lines fixes problems with OSInstance: cannot delete the object otherwise etc.
+    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(getProblemInstance());
+    newInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
+
     this->setProblemInstance(newInstance);
 
     this->setNonlinearConstraintIndexes();

@@ -17,7 +17,16 @@ OptProblem::OptProblem()
 
 OptProblem::~OptProblem()
 {
-    delete m_problemInstance;
+    if (m_problemInstance != NULL)
+    {
+        delete m_problemInstance;
+        m_problemInstance = NULL;
+    }
+
+    m_nonlinearConstraints.clear();
+    m_quadraticConstraints.clear();
+    m_nonlinearOrQuadraticConstraints.clear();
+    m_variableBoundTightened.clear();
 }
 
 int OptProblem::getNumberOfLinearConstraints()
@@ -234,11 +243,7 @@ void OptProblem::saveProblemModelToFile(std::string fileName)
 
 std::string OptProblem::exportProblemToOsil()
 {
-    OSiLWriter *osilWriter = new OSiLWriter();
-
-    std::string osil = osilWriter->writeOSiL(getProblemInstance());
-
-    delete osilWriter;
+    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(getProblemInstance());
 
     return (osil);
 }
@@ -918,6 +923,11 @@ void OptProblem::setNonlinearConstraintIndexes()
 
     setNonlinearConstraints(NLCIndexes);
     setQuadraticConstraints(QCIndexes);
+
+    isNonlinear.clear();
+    isQuadratic.clear();
+    NLCIndexes.clear();
+    QCIndexes.clear();
 }
 
 std::vector<int> OptProblem::getLinearConstraintIndexes()
@@ -998,6 +1008,8 @@ void OptProblem::setQuadraticConstraints(std::vector<int> idxs)
                   m_quadraticConstraints.begin(), m_quadraticConstraints.end(), back_inserter(newVect));
 
         m_nonlinearOrQuadraticConstraints = newVect;
+
+        newVect.clear();
     }
 }
 

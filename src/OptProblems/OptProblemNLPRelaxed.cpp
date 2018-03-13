@@ -38,12 +38,12 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 
     this->copyNonlinearExpressions(originalInstance, newInstance);
 
-    // The following four lines fixes some problems with OSInstance...
-    /*OSiLWriter *osilWriter = new OSiLWriter();
-    std::string osil = osilWriter->writeOSiL(newInstance);
-    OSiLReader *osilReader = new OSiLReader();
-    newInstance = osilReader->readOSiL(osil);
-*/
+    newInstance->getJacobianSparsityPattern(); //Needed exactly here!
+
+    // The following two lines fixes problems with OSInstance: cannot delete the object otherwise etc.
+    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(newInstance);
+    newInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
+
     this->setProblemInstance(newInstance);
 
     this->setNonlinearConstraintIndexes();

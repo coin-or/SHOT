@@ -126,9 +126,7 @@ bool SHOTSolver::setProblem(std::string fileName)
         {
             std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
-            osilReader = std::unique_ptr<OSiLReader>(new OSiLReader()); // deleting the reader also deletes the OSInstance object
-
-            tmpInstance = osilReader->readOSiL(fileContents);
+            tmpInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(fileContents);
         }
         else if (problemExtension == ".nl")
         {

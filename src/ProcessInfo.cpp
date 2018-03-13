@@ -791,6 +791,9 @@ ProcessInfo::ProcessInfo()
     tasks = new TaskHandler();
 
     objectiveUpdatedByLinesearch = false;
+
+    osilReader = new OSiLReader();
+    osilWriter = new OSiLWriter();
 }
 
 ProcessInfo::~ProcessInfo()
@@ -805,6 +808,11 @@ ProcessInfo::~ProcessInfo()
     primalSolutionCandidates.clear();
     primalFixedNLPCandidates.clear();
     dualSolutionCandidates.clear();
+
+    delete osilWriter;
+
+    //TODO: cannot delete this without segfault since its internal OSInstance
+    //delete osilReader;
 
     delete tasks;
 }
@@ -1405,4 +1413,14 @@ double ProcessInfo::getRelativeObjectiveGap()
     double gap = abs(getDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
 
     return (gap);
+}
+
+OSInstance *ProcessInfo::getProblemInstanceFromOSiL(std::string osil)
+{
+    return (osilReader->readOSiL(osil));
+}
+
+std::string ProcessInfo::getOSiLFromProblemInstance(OSInstance *instance)
+{
+    return (osilWriter->writeOSiL(instance));
 }

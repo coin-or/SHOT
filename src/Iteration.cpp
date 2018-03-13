@@ -23,6 +23,8 @@ Iteration::Iteration()
 
     this->maxDeviation = OSDBL_MAX;
     this->boundaryDistance = OSDBL_MAX;
+
+    this->objectiveValue = NAN;
     this->MIPSolutionLimitUpdated = false;
     this->solutionStatus = E_ProblemSolutionStatus::None;
 

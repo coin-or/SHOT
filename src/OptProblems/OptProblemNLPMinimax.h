@@ -15,7 +15,7 @@ class OptProblemNLPMinimax : public OptProblem
 {
   public:
     OptProblemNLPMinimax();
-    ~OptProblemNLPMinimax();
+    virtual ~OptProblemNLPMinimax();
 
     void reformulate(OSInstance *originalProblem);
 
