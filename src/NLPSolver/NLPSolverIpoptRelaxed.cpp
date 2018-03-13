@@ -21,7 +21,6 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed()
 
 NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 {
-    delete NLPSolver;
     delete osolwriter;
     delete NLPProblem;
 }

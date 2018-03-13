@@ -43,7 +43,6 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
         ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
     }
 
-    //NLPProblem = new OptProblemNLPRelaxed();
     lastHyperplaneAdded = 0;
 }
 

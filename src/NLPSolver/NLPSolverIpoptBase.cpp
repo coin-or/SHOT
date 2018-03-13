@@ -18,21 +18,27 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     E_NLPSolutionStatus status;
 
-    NLPSolver = new IpoptSolver();
+    if (IpoptNLPSolver != NULL)
+    {
+        delete IpoptNLPSolver;
+        IpoptNLPSolver = NULL;
+    }
+
+    IpoptNLPSolver = new IpoptSolver();
 
     try
     {
-        NLPSolver->osinstance = NLPProblem->getProblemInstance();
+        IpoptNLPSolver->osinstance = NLPProblem->getProblemInstance();
         updateSettings();
 
         std::string solStatus;
 
         try
         {
-            NLPSolver->solve();
+            IpoptNLPSolver->solve();
             std::cout << "\e[A"; // Fix for removing unwanted output
             std::cout << "\e[A";
-            solStatus = NLPSolver->osresult->getSolutionStatusType(0);
+            solStatus = IpoptNLPSolver->osresult->getSolutionStatusType(0);
         }
         catch (ErrorClass e)
         {
@@ -94,11 +100,23 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     }
     catch (std::exception &e)
     {
+        if (IpoptNLPSolver != NULL)
+        {
+            delete IpoptNLPSolver;
+            IpoptNLPSolver = NULL;
+        }
+
         ProcessInfo::getInstance().outputError("     Error when solving relaxed problem with Ipopt!", e.what());
         status = E_NLPSolutionStatus::Error;
     }
     catch (...)
     {
+        if (IpoptNLPSolver != NULL)
+        {
+            delete IpoptNLPSolver;
+            IpoptNLPSolver = NULL;
+        }
+
         ProcessInfo::getInstance().outputError("     Unspecified error when solving relaxed problem with Ipopt!");
         status = E_NLPSolutionStatus::Error;
     }
@@ -110,13 +128,13 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
 double NLPSolverIpoptBase::getSolution(int i)
 {
-    double value = NLPSolver->osresult->getVarValue(0, i);
+    double value = IpoptNLPSolver->osresult->getVarValue(0, i);
     return (value);
 }
 
 double NLPSolverIpoptBase::getObjectiveValue()
 {
-    double value = NLPSolver->osresult->getObjValue(0, 0);
+    double value = IpoptNLPSolver->osresult->getObjValue(0, 0);
     return (value);
 }
 
@@ -219,11 +237,18 @@ std::vector<double> NLPSolverIpoptBase::getCurrentVariableUpperBounds()
 
 NLPSolverIpoptBase::NLPSolverIpoptBase()
 {
-    //
+    IpoptNLPSolver = NULL;
 }
 
 NLPSolverIpoptBase::~NLPSolverIpoptBase()
 {
+    if (IpoptNLPSolver != NULL)
+    {
+        delete IpoptNLPSolver;
+        IpoptNLPSolver = NULL;
+    }
+
+    delete osOption;
 }
 
 std::vector<double> NLPSolverIpoptBase::getSolution()
@@ -241,12 +266,11 @@ std::vector<double> NLPSolverIpoptBase::getSolution()
 
 void NLPSolverIpoptBase::setInitialSettings()
 {
-    // Sets the linear solver used
-
     osOption = new OSOption();
 
     std::string IpoptSolver = "";
 
+    // Sets the linear solver used
     if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma27))
     {
         IpoptSolver = "ma27";
@@ -445,8 +469,8 @@ void NLPSolverIpoptBase::unfixVariables()
 
 void NLPSolverIpoptBase::updateSettings()
 {
-    NLPSolver->osoption = osOption;
-    NLPSolver->osol = osolwriter->writeOSoL(osOption);
+    IpoptNLPSolver->osoption = osOption;
+    IpoptNLPSolver->osol = osolwriter->writeOSoL(osOption);
 }
 
 void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)

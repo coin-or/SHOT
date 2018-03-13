@@ -16,6 +16,8 @@ OptProblemNLPRelaxed::OptProblemNLPRelaxed()
 
 OptProblemNLPRelaxed::~OptProblemNLPRelaxed()
 {
+    delete osilReader;
+    osilReader = NULL;
 }
 
 void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
@@ -40,9 +42,10 @@ void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 
     newInstance->getJacobianSparsityPattern(); //Needed exactly here!
 
-    // The following two lines fixes problems with OSInstance: cannot delete the object otherwise etc.
+    // The following three lines fixes problems with OSInstance: cannot delete the object otherwise etc.
     std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(newInstance);
-    newInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
+    osilReader = new OSiLReader();
+    newInstance = osilReader->readOSiL(osil);
 
     this->setProblemInstance(newInstance);
 

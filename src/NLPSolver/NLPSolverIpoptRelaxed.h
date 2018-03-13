@@ -16,7 +16,7 @@ class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
   public:
     NLPSolverIpoptRelaxed();
-    ~NLPSolverIpoptRelaxed();
+    virtual ~NLPSolverIpoptRelaxed();
 
     virtual std::vector<double> getSolution();
 

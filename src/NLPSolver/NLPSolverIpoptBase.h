@@ -20,7 +20,7 @@ class NLPSolverIpoptBase : virtual public INLPSolver
   private:
   protected:
     OSOption *osOption;
-    IpoptSolver *NLPSolver;
+    IpoptSolver *IpoptNLPSolver;
     OSoLWriter *osolwriter;
 
     std::vector<int> fixedVariableIndexes;
@@ -46,7 +46,7 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 
   public:
     NLPSolverIpoptBase();
-    ~NLPSolverIpoptBase();
+    virtual ~NLPSolverIpoptBase();
 
     virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
     virtual void clearStartingPoint();

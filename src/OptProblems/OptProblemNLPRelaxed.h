@@ -20,4 +20,7 @@ class OptProblemNLPRelaxed : public OptProblem
     void reformulate(OSInstance *originalProblem);
 
     virtual void copyObjectiveFunction(OSInstance *source, OSInstance *destination);
+
+  private:
+    OSiLReader *osilReader = NULL;
 };

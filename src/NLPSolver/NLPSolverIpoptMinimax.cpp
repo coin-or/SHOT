@@ -21,7 +21,6 @@ NLPSolverIpoptMinimax::NLPSolverIpoptMinimax()
 
 NLPSolverIpoptMinimax::~NLPSolverIpoptMinimax()
 {
-    delete NLPSolver;
     delete osolwriter;
     delete NLPProblem;
 }

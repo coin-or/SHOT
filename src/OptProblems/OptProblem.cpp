@@ -19,7 +19,7 @@ OptProblem::~OptProblem()
 {
     if (m_problemInstance != NULL)
     {
-        delete m_problemInstance;
+        //delete m_problemInstance; // Deleted when calling the OSiLReader destructor
         m_problemInstance = NULL;
     }
 

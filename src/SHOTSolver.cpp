@@ -18,6 +18,11 @@ SHOTSolver::SHOTSolver()
 
 SHOTSolver::~SHOTSolver()
 {
+    if (osilReader != NULL)
+    {
+        delete osilReader;
+        osilReader = NULL;
+    }
 }
 
 bool SHOTSolver::setOptions(std::string fileName)
@@ -35,6 +40,7 @@ bool SHOTSolver::setOptions(std::string fileName)
             {
                 fileContents = UtilityFunctions::getFileAsString(fileName);
                 Settings::getInstance().readSettingsFromOSoL(fileContents);
+                verifySettings();
             }
             catch (exception &e)
             {
@@ -48,6 +54,7 @@ bool SHOTSolver::setOptions(std::string fileName)
             {
                 fileContents = UtilityFunctions::getFileAsString(fileName);
                 Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+                verifySettings();
             }
             catch (exception &e)
             {
@@ -126,7 +133,8 @@ bool SHOTSolver::setProblem(std::string fileName)
         {
             std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
-            tmpInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(fileContents);
+            osilReader = new OSiLReader();
+            tmpInstance = osilReader->readOSiL(fileContents);
         }
         else if (problemExtension == ".nl")
         {
@@ -799,4 +807,19 @@ void SHOTSolver::initializeDebugMode()
 
 void SHOTSolver::verifySettings()
 {
+    if (static_cast<ES_PrimalNLPSolver>(Settings::getInstance().getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
+    {
+#ifdef HAS_GAMS
+        if (gms2os == NULL)
+        {
+            ProcessInfo::getInstance().outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
+            Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
+        }
+#endif
+
+#ifndef HAS_GAMS
+        ProcessInfo::getInstance().outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
+        Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
+#endif
+    }
 }

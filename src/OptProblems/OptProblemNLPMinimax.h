@@ -28,4 +28,5 @@ class OptProblemNLPMinimax : public OptProblem
 
   private:
     int muindex;
+    OSiLReader *osilReader = NULL;
 };
