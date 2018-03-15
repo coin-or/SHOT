@@ -818,11 +818,16 @@ void OptProblem::copyNonlinearExpressions(OSInstance *source, OSInstance *destin
 
             destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
 
-#ifdef _WIN32
-            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
                 *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 #else
-            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new RealValuedExpressionTree(
+                *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#endif
+#else
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new RealValuedExpressionTree(
                 *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 #endif
 

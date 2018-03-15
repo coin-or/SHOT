@@ -399,16 +399,16 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
             int rowIdx = source->instanceData->nonlinearExpressions->nl[i]->idx;
 
             destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
-#ifdef linux
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
             destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
                 *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
-
-#elif _WIN32
-            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
-                *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
-
 #else
-            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new RealValuedExpressionTree(
+                *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#endif
+#else
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new RealValuedExpressionTree(
                 *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 #endif
 

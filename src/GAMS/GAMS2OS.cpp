@@ -450,7 +450,17 @@ void GAMS2OS::createOSObjects()
         assert(iNLidx < osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions);
         osinstance->instanceData->nonlinearExpressions->nl[iNLidx] = new Nl();
         osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->idx = -1;
+
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
         osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree = new ScalarExpressionTree();
+#else
+        osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree = new RealValuedExpressionTree();
+#endif
+#else
+        osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree = new RealValuedExpressionTree();
+#endif
+
         osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree->m_treeRoot = nl;
         ++iNLidx;
     }
@@ -488,7 +498,17 @@ void GAMS2OS::createOSObjects()
             assert(iNLidx < osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions);
             osinstance->instanceData->nonlinearExpressions->nl[iNLidx] = new Nl();
             osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->idx = i; // correct that this is the con. number?
+
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
             osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree = new ScalarExpressionTree();
+#else
+            osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree = new RealValuedExpressionTree();
+#endif
+#else
+            osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree = new RealValuedExpressionTree();
+#endif
+
             osinstance->instanceData->nonlinearExpressions->nl[iNLidx]->osExpressionTree->m_treeRoot = nl;
             ++iNLidx;
         }
@@ -552,7 +572,15 @@ static void applyOperation(std::vector<OSnLNode *> &stack, OSnLNode *op, int nar
                 op->inumberOfChildren +=
                     stack[stack.size() - 1 - a]->inumberOfChildren - 1;
 
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
         op->m_mChildren = new OSnLNode *[op->inumberOfChildren];
+#else
+        op->m_mChildren = new ExprNode *[op->inumberOfChildren];
+#endif
+#else
+        op->m_mChildren = new ExprNode *[op->inumberOfChildren];
+#endif
 
         a = 0;
         while (nargs)
@@ -589,7 +617,16 @@ static void applyOperation(std::vector<OSnLNode *> &stack, OSnLNode *op, int nar
         assert(op->m_mChildren == NULL);
 
         op->inumberOfChildren = nargs;
+
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
         op->m_mChildren = new OSnLNode *[nargs];
+#else
+        op->m_mChildren = new ExprNode *[nargs];
+#endif
+#else
+        op->m_mChildren = new ExprNode *[nargs];
+#endif
     }
     assert((int)op->inumberOfChildren == nargs);
     assert(op->m_mChildren != NULL || nargs == 0);

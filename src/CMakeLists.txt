@@ -17,7 +17,7 @@ option (HAS_GUROBI "Is Gurobi available" ON)
 option (HAS_GAMS "Is GAMS available" ON)
 
 # Sets the paths required. Edit these to suit your system:
-set(COINOS_DIR /opt/OS-2.10-stable)
+set(COINOS_DIR /opt/OS-2.10-trunk)
 set(GUROBI_DIR /opt/gurobi751)
 set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /home/aton3/alundell/Research/COIN-OR/gams24.8)
@@ -222,7 +222,7 @@ target_link_libraries (SHOT ${COINOS_DIR}/lib/libClp.so )
 target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsi.so )
 target_link_libraries (SHOT ${COINOS_DIR}/lib/libOsiClp.so )
 target_link_libraries (SHOT ${COINOS_DIR}/lib/libCgl.so )
-target_link_libraries (SHOT ${COINOS_DIR}/lib/libCbc.so.3 )
+target_link_libraries (SHOT ${COINOS_DIR}/lib/libCbc.so )
 target_link_libraries (SHOT ${COINOS_DIR}/lib/libCbcSolver.so )
 target_link_libraries (SHOT ${COINOS_DIR}/lib/libOS.so )
 

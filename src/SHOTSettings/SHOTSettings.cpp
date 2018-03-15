@@ -754,7 +754,7 @@ void Settings::readSettingsFromOSOption(OSOption *options)
 
     for (int i = 0; i < options->getNumberOfSolverOptions(); i++)
     {
-        SolverOption *so = options->getAllSolverOptions()[i];
+        auto *so = options->getAllSolverOptions()[i];
 
         if (so->solver == "SHOT")
         {
