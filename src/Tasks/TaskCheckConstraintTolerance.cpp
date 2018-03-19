@@ -11,33 +11,30 @@
 #include "TaskCheckConstraintTolerance.h"
 
 TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(
-	std::string taskIDTrue)
+    std::string taskIDTrue)
 {
-	taskIDIfTrue = taskIDTrue;
+    taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() {}
 
 void TaskCheckConstraintTolerance::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->maxDeviation <
-			Settings::getInstance().getDoubleSetting("ConstraintTolerance",
-													 "Termination") &&
-		currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
-		currIter->type == E_IterationProblemType::MIP)
-	{
-		ProcessInfo::getInstance().terminationReason =
-			E_TerminationReason::ConstraintTolerance;
-		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-	}
+    if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") &&
+        currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
+        currIter->type == E_IterationProblemType::MIP)
+    {
+        ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
+        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+    }
 
-	return;
+    return;
 }
 
 std::string TaskCheckConstraintTolerance::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

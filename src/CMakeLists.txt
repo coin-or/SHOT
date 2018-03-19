@@ -5,10 +5,10 @@ project (SHOT)
 #set(CMAKE_BUILD_TYPE Release)          
 
 # Sets version number.
-set(VERSION_MAJOR   0   CACHE STRING "Project major version number.")
-set(VERSION_MINOR   9   CACHE STRING "Project minor version number.")
-set(VERSION_PATCH   1   CACHE STRING "Project patch version number.")
-mark_as_advanced(VERSION_MAJOR VERSION_MINOR VERSION_PATCH)
+set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
+set(SHOT_VERSION_MINOR   9   CACHE STRING "Project minor version number.")
+set(SHOT_VERSION_PATCH   1   CACHE STRING "Project patch version number.")
+mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
 
 # Activates subsolvers, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON) 
@@ -17,7 +17,7 @@ option (HAS_GUROBI "Is Gurobi available" ON)
 option (HAS_GAMS "Is GAMS available" ON)
 
 # Sets the paths required. Edit these to suit your system:
-set(COINOS_DIR /opt/OS-2.10-trunk)
+set(COINOS_DIR /opt/OS-2.10-stable)
 set(GUROBI_DIR /opt/gurobi751)
 set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /home/aton3/alundell/Research/COIN-OR/gams24.8)
@@ -49,6 +49,10 @@ if (HAS_CPLEX)  # To make CPLEX build
   add_definitions(-DIL_STD)
   add_definitions(-LDFLAGS="-Wl,--no-as-needed")
 endif (HAS_CPLEX)
+
+# For configuring version numbering
+configure_file ("${PROJECT_SOURCE_DIR}/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
+include_directories("${PROJECT_BINARY_DIR}")
 
 # Adding source files
 file(GLOB_RECURSE Foo_SOURCES
@@ -174,8 +178,8 @@ list(REMOVE_DUPLICATES Foo_INCLUDE_DIRS)
 include_directories(${Foo_INCLUDE_DIRS})
 
 find_package(Boost 1.63.0 COMPONENTS system filesystem REQUIRED)
-INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
-LINK_DIRECTORIES(${Boost_LIBRARY_DIR})
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIR})
 
 include_directories("${COINOS_DIR}/include/coin")
 include_directories("${COINOS_DIR}/include/cppad")

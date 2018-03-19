@@ -377,64 +377,48 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
 
     try
     {
-        auto status = cplexInstance.getStatus();
+        auto status = cplexInstance.getCplexStatus();
 
-        if (status == IloAlgorithm::Status::Optimal)
+        if (status == IloCplex::CplexStatus::Optimal || IloCplex::CplexStatus::OptimalTol)
         {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
-        }
-        else if (status == IloAlgorithm::Status::Infeasible)
-        {
-            if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-            }
-            else
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
-            }
-        }
-        else if (status == IloAlgorithm::Status::InfeasibleOrUnbounded)
-        {
-            if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-            }
-            else
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
-            }
-        }
-        else if (status == IloAlgorithm::Status::Unbounded)
-        {
-            if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-            }
-            else
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
-            }
-        }
-        else if (status == IloAlgorithm::Status::Feasible)
-        {
-            if (this->getDiscreteVariableStatus())
-            {
-                MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
-            }
-            else
+            auto statusInstance = cplexInstance.getStatus();
+
+            if (statusInstance == IloAlgorithm::Status::Optimal)
             {
                 MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
             }
+            else
+            {
+                MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+            }
         }
-        else if (status == IloAlgorithm::Status::Error)
+        else if (status == IloCplex::CplexStatus::Infeasible)
         {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+            MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
         }
-        else if (status == IloAlgorithm::Status::Unknown)
+        else if (status == IloCplex::CplexStatus::InfOrUnbd)
         {
-            ProcessInfo::getInstance().outputError("MIP solver return status " + to_string(status) + " (unknown)");
-            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+            MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+        }
+        else if (status == IloCplex::CplexStatus::Unbounded)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+        }
+        else if (status == IloCplex::CplexStatus::NodeLimFeas)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
+        }
+        else if (status == IloCplex::CplexStatus::AbortTimeLim || status == IloCplex::CplexStatus::AbortDetTimeLim)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
+        }
+        else if (status == IloCplex::CplexStatus::SolLim)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
+        }
+        else if (status == IloCplex::CplexStatus::AbortUser)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
         }
         else
         {
@@ -445,6 +429,7 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
     catch (IloException &e)
     {
         ProcessInfo::getInstance().outputError("Error when obtaining solution status", e.getMessage());
+        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
     return (MIPSolutionStatus);

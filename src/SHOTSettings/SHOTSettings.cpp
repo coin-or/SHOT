@@ -530,9 +530,9 @@ std::string Settings::getSettingsAsString()
     {
         if (child.second.get<std::string>("<xmlattr>.name", "") == "")
             continue;
-        oss << (((int)oss.tellp()) == 0 ? "[" : ", [");
-        oss << child.second.get<std::string>("<xmlattr>.category", "") << ",";
-        oss << child.second.get<std::string>("<xmlattr>.name", "") << "] = ";
+        oss << (((int)oss.tellp()) == 0 ? "\r\n" : ",\r\n");
+        oss << child.second.get<std::string>("<xmlattr>.category", "") << ".";
+        oss << child.second.get<std::string>("<xmlattr>.name", "") << " = ";
         oss << child.second.get<std::string>("<xmlattr>.value", "");
     }
 
@@ -603,6 +603,11 @@ OSOption *Settings::getSettingsAsOSOption()
 
 std::string Settings::getSettingsInGAMSOptFormat()
 {
+    return (getSettingsInGAMSOptFormat(true));
+}
+
+std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
+{
     OSoLWriter *osolwriter = new OSoLWriter();
     osolwriter->m_bWhiteSpace = false;
 
@@ -630,20 +635,28 @@ std::string Settings::getSettingsInGAMSOptFormat()
 
         auto key = make_pair(name, category);
 
-        if (_settingsEnum[make_pair(name, category)] == true)
-        {
-            desc << _settingsDesc[key] << ": " << getEnumDescriptionList(name, category);
-        }
-        else
-        {
-            desc << _settingsDesc[key] << ". ";
-        }
-
         if (name == "")
             continue;
+
         oss << std::endl;
-        if ("desc" != "")
+
+        if (includeDescriptions)
+        {
+            if (_settingsEnum[make_pair(name, category)] == true)
+            {
+                desc << _settingsDesc[key] << ": " << getEnumDescriptionList(name, category);
+            }
+            else
+            {
+                desc << _settingsDesc[key] << ". ";
+            }
+        }
+
+        if (((int)desc.tellp()) != 0)
+        {
             oss << "* " << desc.str() << std::endl;
+        }
+
         oss << category << ".";
         oss << name << " = ";
         oss << value;

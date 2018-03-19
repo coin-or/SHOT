@@ -89,7 +89,10 @@ enum class E_ProblemSolutionStatus
     TimeLimit,
     SolutionLimit,
     Error,
+    Numeric,
     CutOff,
+    NodeLimit,
+    Abort,
     None
 };
 
@@ -110,10 +113,15 @@ enum class E_TerminationReason
     IterationLimit,
     TimeLimit,
     InfeasibleProblem,
+    UnboundedProblem,
     Error,
     AbsoluteGap,
     RelativeGap,
-    InteriorPointError
+    InteriorPointError,
+    NumericIssues,
+    UserAbort,
+    ObjectiveGapNotReached,
+    None
 };
 
 enum class ES_AddPrimalPointAsInteriorPoint

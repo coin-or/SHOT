@@ -434,57 +434,29 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
 
     int status = gurobiModel->get(GRB_IntAttr_Status);
 
-    //if (status == GRB_LOADED)
-    //{
-    //}
-    //else
     if (status == GRB_OPTIMAL)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
     }
     else if (status == GRB_INFEASIBLE)
     {
-        if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-        }
-        else
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
-        }
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
     }
     else if (status == GRB_INF_OR_UNBD)
     {
-        if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-        }
-        else
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
-        }
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
     }
     else if (status == GRB_UNBOUNDED)
     {
-        if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-        }
-        else
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
-        }
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
-    //else if (status == GRB_CUTOFF)
-    //{
-    //}
     else if (status == GRB_ITERATION_LIMIT)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
     else if (status == GRB_NODE_LIMIT)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::IterationLimit;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
     else if (status == GRB_TIME_LIMIT)
     {
@@ -496,11 +468,12 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if (status == GRB_INTERRUPTED)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
-    //else if (status == GRB_NUMERIC)
-    //{
-    //}
+    else if (status == GRB_NUMERIC)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
+    }
     else if (status == GRB_CUTOFF)
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
@@ -509,9 +482,6 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
     }
-    //else if (status == GRB_INPROGRESS)
-    //{
-    //}
     else
     {
         ProcessInfo::getInstance().outputError("MIP solver return status " + to_string(status));

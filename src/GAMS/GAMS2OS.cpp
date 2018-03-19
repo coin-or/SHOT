@@ -576,7 +576,7 @@ static void applyOperation(std::vector<OSnLNode *> &stack, OSnLNode *op, int nar
 #if OS_VERSION_MINOR < 11
         op->m_mChildren = new OSnLNode *[op->inumberOfChildren];
 #else
-        op->m_mChildren = new ExprNode *[op->inumberOfChildren];
+        op->m_mChildPren = new ExprNode *[op->inumberOfChildren];
 #endif
 #else
         op->m_mChildren = new ExprNode *[op->inumberOfChildren];

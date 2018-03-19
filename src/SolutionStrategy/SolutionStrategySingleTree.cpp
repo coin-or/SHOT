@@ -82,17 +82,20 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
     TaskBase *tPrintIterReport = new TaskPrintIterationReport();
     ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
-
     TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    //TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-    //ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
+
+    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+
+    TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
 
     //ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
     //ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");

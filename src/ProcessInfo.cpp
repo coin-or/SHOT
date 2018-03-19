@@ -920,16 +920,20 @@ std::string ProcessInfo::getOSrl()
 
     int numPrimalSols = primalSolutions.size();
 
+    stringstream ssSolver;
+    ssSolver << "Supporting Hyperplane Optimization Toolkit, version ";
+    ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH;
+    osResult->setSolverInvoked(ssSolver.str());
+
+    osResult->setInstanceName(Settings::getInstance().getStringSetting("ProblemName", "Output"));
     osResult->setNumberOfOtherGeneralResults(1);
     osResult->setOtherGeneralResultName(0, "UsedOptions");
 
-    //std::cout << Settings::getInstance().getSettingsAsString() << std::endl;
     osResult->setOtherGeneralResultValue(0, Settings::getInstance().getSettingsAsString());
 
     if (numPrimalSols == 0)
     {
         osResult->setSolutionNumber(1);
-
         osResult->setNumberOfObjValues(0, 1);
 
         std::stringstream strstrdb;
@@ -964,12 +968,120 @@ std::string ProcessInfo::getOSrl()
     }
     else
     {
+        int numSaveSolutions = 1;
 
-        osResult->setSolutionNumber(numPrimalSols);
-
-        for (int i = 0; i < numPrimalSols; i++)
+        if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
         {
-            //osResult->setNumberOfVarValues(i, numVar);
+            numSaveSolutions = this->primalSolutions.size();
+        }
+
+        osResult->setSolutionNumber(numSaveSolutions);
+
+        for (int i = 0; i < numSaveSolutions; i++)
+        {
+            if (i == 0)
+            {
+                std::string modelStatus;
+                std::string modelStatusDescription;
+                std::string modelSubStatus;
+                std::string modelSubStatusDescription;
+
+                osResult->setNumberOfSolutionSubstatuses(0, 1);
+
+                if (this->primalSolutions.size() > 0)
+                {
+                    modelStatusDescription = "Feasible solution found";
+                    modelStatus = "feasible";
+                }
+                else
+                {
+                    modelStatusDescription = "No feasible solutions found";
+                    modelStatus = "other";
+                }
+
+                if (this->terminationReason == E_TerminationReason::AbsoluteGap)
+                {
+                    modelStatus = "globallyOptimal";
+                    modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
+                    modelSubStatus = "stoppedByBounds";
+                    modelSubStatusDescription = "Objective gap fulfills absolute gap termination criterion";
+                }
+                else if (this->terminationReason == E_TerminationReason::RelativeGap)
+                {
+                    modelStatus = "globallyOptimal";
+                    modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
+                    modelSubStatus = "stoppedByBounds";
+                    modelSubStatusDescription = "Objective gap fulfills relative gap termination criterion";
+                }
+                else if (this->terminationReason == E_TerminationReason::ConstraintTolerance)
+                {
+                    modelStatus = "locallyOptimal";
+                    modelStatusDescription = "Solved to global optimality";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "All nonlinear constraints fulfilled to given tolerance by dual solution";
+                }
+                else if (this->terminationReason == E_TerminationReason::InfeasibleProblem)
+                {
+                    modelStatus = "infeasible";
+                    modelStatusDescription = "Problem may be infeasible or specified tolerances are too strict";
+                }
+                else if (this->terminationReason == E_TerminationReason::UnboundedProblem)
+                {
+                    modelStatus = "unbounded";
+                    modelStatusDescription = "Problem is unbounded";
+                }
+                else if (this->terminationReason == E_TerminationReason::ObjectiveGapNotReached)
+                {
+                    modelStatusDescription = "Feasible solution found, but could not verify optimality";
+                }
+                else if (this->terminationReason == E_TerminationReason::ObjectiveStagnation)
+                {
+                    modelStatusDescription = "Terminated due to objective stagnation";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "Terminated due to objective stagnation";
+                }
+                else if (this->terminationReason == E_TerminationReason::IterationLimit)
+                {
+                    modelStatusDescription = "Terminated due to iteration limit";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "Terminated due to iteration limit";
+                }
+                else if (this->terminationReason == E_TerminationReason::TimeLimit)
+                {
+                    modelStatusDescription = "Terminated due to time limit";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "Terminated due to time limit";
+                }
+                else if (this->terminationReason == E_TerminationReason::NumericIssues)
+                {
+                    modelStatusDescription = "Terminated due to numeric issues";
+                }
+                else if (this->terminationReason == E_TerminationReason::UserAbort)
+                {
+                    modelStatusDescription = "User aborted solution process";
+                }
+                else if (this->terminationReason == E_TerminationReason::Error)
+                {
+                    modelStatusDescription = "Error during solution process";
+                }
+                else
+                {
+                    modelStatus = "error";
+                    modelStatusDescription = "Unknown return code obtained from solver";
+                    outputError("Unknown return code obtained from solver.");
+                }
+
+                osResult->setSolutionStatusType(0, modelStatus);
+                osResult->setSolutionStatusDescription(0, modelStatusDescription);
+                osResult->setSolutionSubstatusType(0, 0, modelSubStatus);
+                osResult->setSolutionSubstatusDescription(0, 0, modelSubStatusDescription);
+            }
+            else
+            {
+                osResult->setSolutionStatusType(i, "feasible");
+                osResult->setSolutionStatusDescription(i, "Additional primal solution");
+            }
+
             osResult->setNumberOfObjValues(i, 1);
             osResult->setNumberOfPrimalVariableValues(i, numVar);
             osResult->setObjValue(i, 0, -1, "", primalSolutions.at(i).objValue);
@@ -989,12 +1101,9 @@ std::string ProcessInfo::getOSrl()
 
             for (int j = 0; j < numConstr; j++)
             {
-                //tmpConstrVals.push_back(originalProblem->calculateConstraintFunctionValue(j, primalPoint));
                 osResult->setDualValue(i, j, j, constrNames.at(j),
                                        originalProblem->calculateConstraintFunctionValue(j, primalPoint));
             }
-
-            //osResult->setConstraintValuesDense(i, &tmpConstrVals[0]);
         }
 
         std::stringstream strstrdb;
@@ -1057,18 +1166,13 @@ std::string ProcessInfo::getOSrl()
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Gradients", std::to_string(numGradientEvals), "Evaluations",
                                        "Total number of gradient evaluations in SHOT", 0, NULL);
 
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FileName",
-                                       this->originalProblem->getProblemInstance()->getInstanceName(), "Problem", "The original filename", 0,
-                                       NULL);
-
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberVariables",
                                        std::to_string(this->originalProblem->getProblemInstance()->getVariableNumber()), "Problem",
                                        "Total number of variables", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberContinousVariables",
                                        std::to_string(
                                            this->originalProblem->getProblemInstance()->getVariableNumber() - this->originalProblem->getNumberOfIntegerVariables() - this->originalProblem->getNumberOfBinaryVariables()),
-                                       "Problem",
-                                       "Number of continuous variables", 0, NULL);
+                                       "Problem", "Number of continuous variables", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberBinaryVariables",
                                        std::to_string(this->originalProblem->getProblemInstance()->getNumberOfBinaryVariables()), "Problem",
                                        "Number of binary variables", 0, NULL);
@@ -1088,73 +1192,22 @@ std::string ProcessInfo::getOSrl()
                                        "Problem",
                                        "Number of linear constraints", 0, NULL);
 
-    std::string modelStatus;
-    std::string modelDescription;
-
-    if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Optimal)
-    {
-        modelStatus = "optimal";
-        modelDescription = "Optimal solution found.";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Feasible)
-    {
-        modelStatus = "feasible";
-        modelDescription = "Feasible solution found.";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Unbounded)
-    {
-        modelStatus = "unbounded";
-        modelDescription = "Problem is unbounded.";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Error)
-    {
-        modelStatus = "error";
-        modelDescription = "Error occured.";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Infeasible)
-    {
-        modelStatus = "infeasible";
-        modelDescription = "Problem is infeasible.";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
-    {
-        modelStatus = "feasible";
-        modelDescription = "Termination due to iteration limit.";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
-    {
-        modelStatus = "feasible";
-        modelDescription = "";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
-    {
-        modelStatus = "feasible";
-        modelDescription = "Termination due to time limit.";
-    }
-    else
-    {
-        modelStatus = "NA";
-    }
-
-    osResult->setSolutionStatusType(numPrimalSols - 1, modelStatus);
-
     OSrLWriter writer;
-
     writer.m_bWhiteSpace = false;
 
     using boost::property_tree::ptree;
     ptree pt;
     boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
 
-    stringstream ss;
-    ss << writer.writeOSrL(osResult.get());
+    stringstream ssOSrL;
+    ssOSrL << writer.writeOSrL(osResult.get());
 
-    read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
+    read_xml(ssOSrL, pt, boost::property_tree::xml_parser::trim_whitespace);
 
-    std::ostringstream oss;
-    write_xml(oss, pt, settings);
+    std::ostringstream ossXML;
+    write_xml(ossXML, pt, settings);
 
-    return (oss.str());
+    return (ossXML.str());
 }
 
 std::string ProcessInfo::getTraceResult()
@@ -1263,74 +1316,41 @@ std::string ProcessInfo::getTraceResult()
     std::string solverStatus = "";
     std::string modelStatus = "";
 
-    auto t = this->getCurrentIteration()->solutionStatus;
+    bool isOptimal = false;
 
-    if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Optimal)
+    if (this->terminationReason == E_TerminationReason::AbsoluteGap ||
+        this->terminationReason == E_TerminationReason::RelativeGap)
     {
-        modelStatus = "8";
+        solverStatus = "1";
+        isOptimal = true;
     }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Feasible)
+    else if (this->terminationReason == E_TerminationReason::InfeasibleProblem ||
+             this->terminationReason == E_TerminationReason::ConstraintTolerance ||
+             this->terminationReason == E_TerminationReason::ObjectiveGapNotReached ||
+             this->terminationReason == E_TerminationReason::UnboundedProblem)
     {
-        modelStatus = "7";
+        solverStatus = "1";
     }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if (this->terminationReason == E_TerminationReason::ObjectiveStagnation ||
+             this->terminationReason == E_TerminationReason::IterationLimit)
     {
-        modelStatus = "18";
+        solverStatus = "2";
     }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Error)
-    {
-        modelStatus = "12";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Infeasible)
-    {
-        modelStatus = "4";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
-    {
-        modelStatus = "7";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
-    {
-        modelStatus = "8";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
-    {
-        modelStatus = "7";
-    }
-    else if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::None)
-    {
-        modelStatus = "NA";
-        outputError("Unknown return code from model solution.");
-    }
-    else
-    {
-        modelStatus = "NA";
-        outputError("Unknown return code from model solution.");
-    }
-
-    if (this->terminationReason == E_TerminationReason::TimeLimit)
+    else if (this->terminationReason == E_TerminationReason::TimeLimit)
     {
         solverStatus = "3";
     }
-    else if (this->terminationReason == E_TerminationReason::IterationLimit)
+    else if (this->terminationReason == E_TerminationReason::NumericIssues)
     {
-        solverStatus = "2";
+        solverStatus = "5";
     }
-    else if (this->terminationReason == E_TerminationReason::ObjectiveStagnation)
+    else if (this->terminationReason == E_TerminationReason::UserAbort)
     {
-        solverStatus = "2";
+        solverStatus = "8";
     }
     else if (this->terminationReason == E_TerminationReason::Error)
     {
         solverStatus = "10";
-    }
-    else if (this->terminationReason == E_TerminationReason::InfeasibleProblem)
-    {
-        solverStatus = "1";
-    }
-    else if (this->terminationReason == E_TerminationReason::ConstraintTolerance || this->terminationReason == E_TerminationReason::AbsoluteGap || this->terminationReason == E_TerminationReason::RelativeGap)
-    {
-        solverStatus = "1";
     }
     else
     {
@@ -1338,10 +1358,49 @@ std::string ProcessInfo::getTraceResult()
         outputError("Unknown return code obtained from solver.");
     }
 
+    auto solStatus = this->getCurrentIteration()->solutionStatus;
+
+    if (isOptimal)
+    {
+        modelStatus = "1";
+    }
+    else if (this->primalSolutions.size() > 0)
+    {
+        modelStatus = "8";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Unbounded)
+    {
+        modelStatus = "3";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Infeasible)
+    {
+        modelStatus = "4";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Feasible ||
+             solStatus == E_ProblemSolutionStatus::IterationLimit ||
+             solStatus == E_ProblemSolutionStatus::TimeLimit ||
+             solStatus == E_ProblemSolutionStatus::NodeLimit ||
+             solStatus == E_ProblemSolutionStatus::SolutionLimit)
+    {
+        modelStatus = "7";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Error ||
+             solStatus == E_ProblemSolutionStatus::Numeric ||
+             solStatus == E_ProblemSolutionStatus::CutOff ||
+             solStatus == E_ProblemSolutionStatus::Abort)
+    {
+        modelStatus = "12";
+    }
+    else
+    {
+        modelStatus = "NA";
+        outputError("Unknown return code from model solution.");
+    }
+
     ss << modelStatus << ",";
     ss << solverStatus << ",";
+
     ss << std::setprecision(std::numeric_limits<double>::digits10 + 1);
-    //ss << this->getCurrentIteration()->objectiveValue << ",";
     ss << this->getPrimalBound() << ",";
     ;
     ss << this->getDualBound() << ",";

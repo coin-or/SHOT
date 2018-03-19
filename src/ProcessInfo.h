@@ -9,6 +9,7 @@
 */
 
 #pragma once
+#include "SHOTConfig.h"
 #include "Enums.h"
 #include "Structs.h"
 #include "vector"
@@ -156,7 +157,7 @@ class ProcessInfo
     Iteration *getCurrentIteration();
     Iteration *getPreviousIteration();
 
-    E_TerminationReason terminationReason = E_TerminationReason::Error;
+    E_TerminationReason terminationReason = E_TerminationReason::None;
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;

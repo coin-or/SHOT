@@ -73,7 +73,12 @@ void TaskSolveIteration::run()
         currIter = ProcessInfo::getInstance().getCurrentIteration();
     }
 
-    if (solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error || solStatus == E_ProblemSolutionStatus::Unbounded)
+    if (solStatus == E_ProblemSolutionStatus::Infeasible ||
+        solStatus == E_ProblemSolutionStatus::Error ||
+        solStatus == E_ProblemSolutionStatus::Abort ||
+        solStatus == E_ProblemSolutionStatus::CutOff ||
+        solStatus == E_ProblemSolutionStatus::Numeric ||
+        solStatus == E_ProblemSolutionStatus::Unbounded)
     {
         currIter->solutionStatus = solStatus;
     }
@@ -187,7 +192,7 @@ void TaskSolveIteration::run()
             ProcessInfo::getInstance().iterLP++;
         }
     }
-    else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit))
+    else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
         if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
         {

@@ -177,11 +177,12 @@ bool SHOTSolver::setProblem(std::string fileName)
         return (false);
     }
 
+    Settings::getInstance().updateSetting("ProblemFile", "Output", problemFile.string());
+
     //Removes path
     boost::filesystem::path problemName = problemFile.stem();
-
+    Settings::getInstance().updateSetting("ProblemName", "Output", problemName.string());
     tmpInstance->setInstanceName(problemName.string());
-    Settings::getInstance().updateSetting("ProblemFile", "Output", problemFile.string());
 
     if (static_cast<ES_OutputDirectory>(Settings::getInstance().getIntSetting("OutputDirectory", "Output")) == ES_OutputDirectory::Program)
     {
@@ -761,12 +762,13 @@ void SHOTSolver::initializeSettings()
     Settings::getInstance().createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0,
                                           OSDBL_MAX);
 
-    // Subsolver settings: termination
+    // Hidden settings for problem information
 
-    Settings::getInstance().createSetting("ProblemFile", "Output", empty, "The filename of the problem.", true);
+    Settings::getInstance().createSetting("ProblemFile", "Output", empty, "The filename of the problem", true);
 
-    Settings::getInstance().createSetting("ResultPath", "Output", empty,
-                                          "The path where to save the result information", true);
+    Settings::getInstance().createSetting("ProblemName", "Output", empty, "The name of the problem instance", true);
+
+    Settings::getInstance().createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
     Settings::getInstance().settingsInitialized = true;
     ProcessInfo::getInstance().outputInfo("Initialization of settings complete.");

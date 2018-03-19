@@ -277,14 +277,7 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     }
     else if (cbcModel->isProvenInfeasible())
     {
-        if (ProcessInfo::getInstance().primalSolutions.size() > 0)
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Error;
-        }
-        else
-        {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
-        }
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
     }
     else if (cbcModel->isSolutionLimitReached())
     {
@@ -293,6 +286,10 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     else if (cbcModel->isSecondsLimitReached())
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
+    }
+    else if (cbcModel->isNodeLimitReached())
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
     }
     else
     {

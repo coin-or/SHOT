@@ -58,6 +58,7 @@ class Settings
     std::string getSettingsAsString();
     OSOption *getSettingsAsOSOption();
     std::string getSettingsInGAMSOptFormat();
+    std::string getSettingsInGAMSOptFormat(bool includeDescriptions);
 
     // String settings
     void createSetting(std::string name, std::string category, std::string value, std::string description,

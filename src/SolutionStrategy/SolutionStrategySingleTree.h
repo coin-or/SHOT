@@ -44,6 +44,7 @@
 #include "../Tasks/TaskCheckConstraintTolerance.h"
 #include "../Tasks/TaskCheckRelativeGap.h"
 #include "../Tasks/TaskCheckTimeLimit.h"
+#include "../Tasks/TaskCheckObjectiveGapNotMet.h"
 
 #include "../Tasks/TaskPrintSolution.h"
 
