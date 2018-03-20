@@ -169,12 +169,12 @@ bool NLPSolverGAMS::createProblemInstance(OSInstance *origInstance)
 {
     dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
 
-    GAMSOSInstance *gamsosinstance = static_cast<GAMSOSInstance *>(origInstance);
+    //GAMSOSInstance *gamsosinstance = static_cast<GAMSOSInstance *>(origInstance);
     // TODO cannot do dynamic_cast to check type
     //	if( gamsosinstance == NULL )
     //		return false;
 
-    gmo = gamsosinstance->gmo;
+    gmo = ProcessInfo::getInstance().GAMSModelingObject;
     gev = (gevHandle_t)gmoEnvironment(gmo);
 
     return true;

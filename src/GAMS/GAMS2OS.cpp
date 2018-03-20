@@ -165,7 +165,9 @@ void GAMS2OS::createOSObjects()
 
     // delete possible old instance and create a new one
     delete osinstance;
-    osinstance = new GAMSOSInstance(gmo);
+    osinstance = new OSInstance();
+
+    ProcessInfo::getInstance().GAMSModelingObject = gmo;
 
     gmoNameInput(gmo, buffer);
     osinstance->setInstanceName(buffer);
@@ -519,7 +521,6 @@ void GAMS2OS::createOSObjects()
 
     osinstance->setQuadraticCoefficients(nqterms, quadequs, quadrows, quadcols, quadcoefs, 0, nqterms - 1);
 
-    
     delete[] quadequs;
     delete[] quadrows;
     delete[] quadcols;

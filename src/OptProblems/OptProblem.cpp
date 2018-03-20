@@ -24,12 +24,6 @@ OptProblem::~OptProblem()
         m_problemInstance = NULL;
     }
 
-    /*if (osilReader != NULL)
-    {
-        delete osilReader;
-        osilReader = NULL;
-    }*/
-
     m_nonlinearConstraints.clear();
     m_quadraticConstraints.clear();
     m_nonlinearOrQuadraticConstraints.clear();
@@ -1164,14 +1158,10 @@ std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex
 
 void OptProblem::setProblemInstance(OSInstance *instance)
 {
-    if (Settings::getInstance().getIntSetting("SourceFormat", "Output") == static_cast<int>(ES_SourceFormat::OSiL))
-    {
-        std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(instance);
-        instance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
-    }
+    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(instance);
+    instance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
 
     m_problemInstance = instance;
-    3
 }
 
 void OptProblem::setNonlinearObjectiveConstraintIdx(int idx)

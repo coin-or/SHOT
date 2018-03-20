@@ -792,7 +792,6 @@ ProcessInfo::ProcessInfo()
 
     objectiveUpdatedByLinesearch = false;
 
-    //osilReader = new OSiLReader();
     osilWriter = new OSiLWriter();
 }
 
@@ -810,9 +809,7 @@ ProcessInfo::~ProcessInfo()
     dualSolutionCandidates.clear();
 
     delete osilWriter;
-
-    //TODO: cannot delete this without segfault since its internal OSInstance
-    //delete osilReader;
+    osilReaders.clear();
 
     delete tasks;
 }
@@ -1470,6 +1467,8 @@ OSInstance *ProcessInfo::getProblemInstanceFromOSiL(std::string osil)
 {
     OSiLReader *osilReader = new OSiLReader();
     OSInstance *newInstance = osilReader->readOSiL(osil);
+
+    osilReaders.push_back(osilReader); // To be able to properly deleting them without destroying the OSInstance object
     return (newInstance);
 }
 

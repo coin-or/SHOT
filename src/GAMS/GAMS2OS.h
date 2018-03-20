@@ -28,6 +28,7 @@
 
 class ProcessInfo;
 
+/*
 class GAMSOSInstance : public OSInstance
 {
   public:
@@ -36,7 +37,7 @@ class GAMSOSInstance : public OSInstance
     GAMSOSInstance(gmoHandle_t gmo_) : gmo(gmo_), OSInstance()
     {
     }
-};
+};*/
 
 class GAMS2OS
 {

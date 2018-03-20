@@ -18,7 +18,6 @@
 
 class OptProblem
 {
-    //friend class OptProblemOriginal;
   public:
     OptProblem();
     virtual ~OptProblem();
@@ -130,7 +129,6 @@ class OptProblem
 
   protected:
     void setNonlinearConstraintIndexes();
-    //void setQuadraticConstraintIndexes();
 
     virtual void copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed);
     virtual void copyObjectiveFunction(OSInstance *source, OSInstance *destination);
@@ -141,11 +139,7 @@ class OptProblem
 
     void repairNonboundedVariables();
 
-    //void setConstraintBoundsAsConstants(OSInstance *instance);
-
     void setProblemInstance(OSInstance *instance);
-
-    //OSiLReader *osilReader = NULL;
 
   private:
     std::vector<int> m_nonlinearConstraints;

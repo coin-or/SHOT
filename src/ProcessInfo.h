@@ -46,6 +46,10 @@ class Iteration;
 
 #include "LinesearchMethod/ILinesearchMethod.h"
 
+#ifdef HAS_GAMS
+#include "gmomcc.h"
+#endif
+
 class ProcessInfo
 {
   public:
@@ -190,6 +194,10 @@ class ProcessInfo
     OSInstance *getProblemInstanceFromOSiL(std::string osil);
     std::string getOSiLFromProblemInstance(OSInstance *instance);
 
+#ifdef HAS_GAMS
+    gmoHandle_t GAMSModelingObject;
+#endif
+
     ILinesearchMethod *linesearchMethod;
 
     ~ProcessInfo();
@@ -209,6 +217,6 @@ class ProcessInfo
 
     ProcessInfo();
 
-    //OSiLReader *osilReader;
+    std::vector<OSiLReader *> osilReaders;
     OSiLWriter *osilWriter;
 };
