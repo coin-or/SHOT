@@ -220,6 +220,14 @@ enum class ES_QuadraticProblemStrategy
     QuadraticallyConstrained
 };
 
+enum class ES_SourceFormat
+{
+    OSiL,
+    GAMS,
+    NL,
+    None
+};
+
 enum class ES_TreeStrategy
 {
     MultiTree,

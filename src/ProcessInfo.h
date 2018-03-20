@@ -209,6 +209,6 @@ class ProcessInfo
 
     ProcessInfo();
 
-    OSiLReader *osilReader;
+    //OSiLReader *osilReader;
     OSiLWriter *osilWriter;
 };

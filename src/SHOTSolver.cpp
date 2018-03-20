@@ -18,11 +18,11 @@ SHOTSolver::SHOTSolver()
 
 SHOTSolver::~SHOTSolver()
 {
-    if (osilReader != NULL)
+    /*if (osilReader != NULL)
     {
         delete osilReader;
         osilReader = NULL;
-    }
+    }*/
 }
 
 bool SHOTSolver::setOptions(std::string fileName)
@@ -133,8 +133,9 @@ bool SHOTSolver::setProblem(std::string fileName)
         {
             std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
-            osilReader = new OSiLReader();
-            tmpInstance = osilReader->readOSiL(fileContents);
+            tmpInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(fileContents);
+
+            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::OSiL));
         }
         else if (problemExtension == ".nl")
         {
@@ -143,6 +144,8 @@ bool SHOTSolver::setProblem(std::string fileName)
             nl2os->createOSObjects();
 
             tmpInstance = nl2os->osinstance;
+
+            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::NL));
         }
 #ifdef HAS_GAMS
         else if (problemExtension == ".gms")
@@ -150,8 +153,9 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS());
             gms2os->readGms(fileName);
             gms2os->createOSObjects();
-
             tmpInstance = gms2os->osinstance;
+
+            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::GAMS));
         }
         else if (problemExtension == ".dat")
         {
@@ -159,6 +163,8 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os->readCntr(fileName);
             gms2os->createOSObjects();
             tmpInstance = gms2os->osinstance;
+
+            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::GAMS));
         }
 #endif
         else
@@ -205,6 +211,7 @@ bool SHOTSolver::setProblem(std::string fileName)
         initializeDebugMode();
 
     ProcessInfo::getInstance().outputAlways(" Problem read from file \"" + fileName + "\"");
+
     bool status = this->setProblem(tmpInstance);
 
     return (status);
@@ -763,6 +770,15 @@ void SHOTSolver::initializeSettings()
                                           OSDBL_MAX);
 
     // Hidden settings for problem information
+
+    std::vector<std::string> enumFileFormat;
+    enumFileFormat.push_back("OSiL");
+    enumFileFormat.push_back("GAMS");
+    enumFileFormat.push_back("NL");
+    enumFileFormat.push_back("None");
+    Settings::getInstance().createSetting("SourceFormat", "Output",
+                                          static_cast<int>(ES_SourceFormat::None), "The format of the problem file", enumFileFormat);
+    enumFileFormat.clear();
 
     Settings::getInstance().createSetting("ProblemFile", "Output", empty, "The filename of the problem", true);
 

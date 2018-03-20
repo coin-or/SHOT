@@ -792,7 +792,7 @@ ProcessInfo::ProcessInfo()
 
     objectiveUpdatedByLinesearch = false;
 
-    osilReader = new OSiLReader();
+    //osilReader = new OSiLReader();
     osilWriter = new OSiLWriter();
 }
 
@@ -1086,14 +1086,7 @@ std::string ProcessInfo::getOSrl()
             osResult->setNumberOfPrimalVariableValues(i, numVar);
             osResult->setObjValue(i, 0, -1, "", primalSolutions.at(i).objValue);
 
-            auto primalPoint = primalSolutions.at(i).point;
-
-            osResult->setPrimalVariableValuesDense(i, &primalPoint[0]);
-
-            for (int j = 0; j < numVar; j++)
-            {
-                osResult->setVarValue(i, j, j, varNames.at(j), primalPoint.at(j));
-            }
+            osResult->setPrimalVariableValuesDense(i, &primalSolutions.at(i).point[0]);
 
             std::vector<double> tmpConstrVals;
 
@@ -1101,8 +1094,7 @@ std::string ProcessInfo::getOSrl()
 
             for (int j = 0; j < numConstr; j++)
             {
-                osResult->setDualValue(i, j, j, constrNames.at(j),
-                                       originalProblem->calculateConstraintFunctionValue(j, primalPoint));
+                osResult->setDualValue(i, j, j, constrNames.at(j), originalProblem->calculateConstraintFunctionValue(j, primalSolutions.at(i).point));
             }
         }
 
@@ -1476,7 +1468,9 @@ double ProcessInfo::getRelativeObjectiveGap()
 
 OSInstance *ProcessInfo::getProblemInstanceFromOSiL(std::string osil)
 {
-    return (osilReader->readOSiL(osil));
+    OSiLReader *osilReader = new OSiLReader();
+    OSInstance *newInstance = osilReader->readOSiL(osil);
+    return (newInstance);
 }
 
 std::string ProcessInfo::getOSiLFromProblemInstance(OSInstance *instance)

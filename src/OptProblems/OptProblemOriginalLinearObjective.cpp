@@ -21,9 +21,11 @@ OptProblemOriginalLinearObjective::~OptProblemOriginalLinearObjective()
 bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 {
     this->setObjectiveFunctionType(E_ObjectiveFunctionType::Linear);
+
     this->setProblemInstance(instance);
     this->setTypeOfObjectiveMinimize(instance->instanceData->objectives->obj[0]->maxOrMin == "min");
     this->setObjectiveFunctionNonlinear(false);
+
     if (!isObjectiveFunctionNonlinear())
     {
         this->setNonlinearObjectiveConstraintIdx(-COIN_INT_MAX);
@@ -43,7 +45,5 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
     this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 
     this->repairNonboundedVariables();
-
-    instance->getJacobianSparsityPattern();
     return true;
 }

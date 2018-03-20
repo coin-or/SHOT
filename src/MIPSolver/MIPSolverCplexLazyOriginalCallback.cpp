@@ -407,7 +407,6 @@ void CtCallbackI::main()
 
 void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
     auto optional = ProcessInfo::getInstance().MIPSolver->createHyperplaneTerms(hyperplane);
     if (!optional)
     {
@@ -428,6 +427,8 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         }
     }
 
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+
     if (hyperplaneIsOk)
     {
         //GeneratedHyperplane genHyperplane;
@@ -445,7 +446,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         expr.end();
         add(tmpRange).end();
 
-        int constrIndex = 0;
+        // int constrIndex = 0;
         /*genHyperplane.generatedConstraintIndex = constrIndex;
 		genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
 		genHyperplane.generatedPoint = hyperplane.generatedPoint;

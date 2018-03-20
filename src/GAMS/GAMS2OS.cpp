@@ -519,6 +519,7 @@ void GAMS2OS::createOSObjects()
 
     osinstance->setQuadraticCoefficients(nqterms, quadequs, quadrows, quadcols, quadcoefs, 0, nqterms - 1);
 
+    
     delete[] quadequs;
     delete[] quadrows;
     delete[] quadcols;

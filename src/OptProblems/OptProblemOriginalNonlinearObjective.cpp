@@ -217,6 +217,7 @@ int OptProblemOriginalNonlinearObjective::getNumberOfRealVariables()
 std::vector<std::string> OptProblemOriginalNonlinearObjective::getVariableNames()
 {
     std::string *tmpArray = getProblemInstance()->getVariableNames();
+
     std::vector<std::string> tmpVector;
 
     for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)

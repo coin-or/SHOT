@@ -42,7 +42,7 @@ class SHOTSolver
 
     bool isProblemInitialized;
 
-    OSiLReader *osilReader = NULL;
+    //OSiLReader *osilReader = NULL;
 
   public:
     SHOTSolver();

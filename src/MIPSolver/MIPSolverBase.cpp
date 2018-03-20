@@ -131,7 +131,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
         int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second);
 
-        genHyperplane.generatedConstraintIndex = constrIndex;
+        /*genHyperplane.generatedConstraintIndex = constrIndex;
         genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
         genHyperplane.generatedPoint = hyperplane.generatedPoint;
         genHyperplane.source = hyperplane.source;
@@ -139,29 +139,23 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         genHyperplane.isLazy = false;
         genHyperplane.isRemoved = false;
 
-        generatedHyperplanes.push_back(genHyperplane);
+        generatedHyperplanes.push_back(genHyperplane);*/
 
         currIter->numHyperplanesAdded++;
         currIter->totNumHyperplanes++;
     }
 }
 
-boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::createHyperplaneTerms(
-    Hyperplane hyperplane)
+boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-    std::vector<IndexValuePair> elements;
-
     auto varNames = originalProblem->getVariableNames();
 
-    double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
-                                                                        hyperplane.generatedPoint);
+    std::vector<IndexValuePair> elements;
 
-    auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex,
-                                                                       hyperplane.generatedPoint);
+    double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
+    auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
 
-    ProcessInfo::getInstance().outputInfo(
-        "     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex) + " with " + to_string(nablag->number) + " elements.");
+    ProcessInfo::getInstance().outputInfo("     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex) + " with " + to_string(nablag->number) + " elements.");
 
     for (int i = 0; i < nablag->number; i++)
     {
@@ -173,8 +167,7 @@ boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::c
 
         constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
 
-        ProcessInfo::getInstance().outputInfo(
-            "     Gradient for variable " + varNames.at(nablag->indexes[i]) + " in point " + to_string(hyperplane.generatedPoint.at(nablag->indexes[i])) + ": " + to_string(nablag->values[i]));
+        ProcessInfo::getInstance().outputInfo("     Gradient for variable " + varNames.at(nablag->indexes[i]) + " in point " + to_string(hyperplane.generatedPoint.at(nablag->indexes[i])) + ": " + to_string(nablag->values[i]));
     }
 
     boost::optional<std::pair<std::vector<IndexValuePair>, double>> optional;
@@ -182,6 +175,7 @@ boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::c
         optional = std::make_pair(elements, constant);
 
     delete nablag;
+
     elements.clear();
     varNames.clear();
 

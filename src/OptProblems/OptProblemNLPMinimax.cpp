@@ -18,11 +18,11 @@ OptProblemNLPMinimax::OptProblemNLPMinimax()
 
 OptProblemNLPMinimax::~OptProblemNLPMinimax()
 {
-    if (osilReader != NULL)
+    /*if (osilReader != NULL)
     {
         delete osilReader;
         osilReader = NULL;
-    }
+    }*/
 }
 
 void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
@@ -47,13 +47,6 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
     this->copyQuadraticTerms(originalInstance, newInstance);
 
     this->copyNonlinearExpressions(originalInstance, newInstance);
-
-    newInstance->getJacobianSparsityPattern(); //Needed exactly here!
-
-    // The following three lines fixes problems with OSInstance: cannot delete the object otherwise etc.
-    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(newInstance);
-    osilReader = new OSiLReader();
-    newInstance = osilReader->readOSiL(osil);
 
     this->setProblemInstance(newInstance);
 

@@ -145,6 +145,8 @@ class OptProblem
 
     void setProblemInstance(OSInstance *instance);
 
+    //OSiLReader *osilReader = NULL;
+
   private:
     std::vector<int> m_nonlinearConstraints;
     std::vector<int> m_quadraticConstraints;
