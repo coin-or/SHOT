@@ -13,7 +13,6 @@
 SHOTSolver::SHOTSolver()
 {
     initializeSettings();
-    isProblemInitialized = false;
 }
 
 SHOTSolver::~SHOTSolver()
@@ -295,6 +294,9 @@ bool SHOTSolver::solveProblem()
         gms2os->writeResult(ProcessInfo::getInstance());
     }
 #endif
+
+    if (result)
+        isProblemSolved = true;
 
     return (result);
 }
@@ -860,4 +862,51 @@ void SHOTSolver::updateSetting(std::string name, std::string category, bool valu
 void SHOTSolver::updateSetting(std::string name, std::string category, double value)
 {
     Settings::getInstance().updateSetting(name, category, value);
+}
+
+double SHOTSolver::getDualBound()
+{
+    return (ProcessInfo::getInstance().getDualBound());
+}
+
+double SHOTSolver::getPrimalBound()
+{
+    return (ProcessInfo::getInstance().getPrimalBound());
+}
+
+double SHOTSolver::getAbsoluteObjectiveGap()
+{
+    return (ProcessInfo::getInstance().getAbsoluteObjectiveGap());
+}
+
+double SHOTSolver::getRelativeObjectiveGap()
+{
+    return (ProcessInfo::getInstance().getRelativeObjectiveGap());
+}
+
+int SHOTSolver::getNumberOfPrimalSolutions()
+{
+    return (ProcessInfo::getInstance().primalSolutions.size() > 0);
+}
+
+PrimalSolution SHOTSolver::getPrimalSolution()
+{
+    if (isProblemSolved && ProcessInfo::getInstance().primalSolutions.size() > 0)
+    {
+        PrimalSolution primalSol = ProcessInfo::getInstance().primalSolutions.at(0);
+        return (primalSol);
+    }
+
+    PrimalSolution primalSol;
+    return (primalSol);
+}
+
+std::vector<PrimalSolution> SHOTSolver::getPrimalSolutions()
+{
+    return (ProcessInfo::getInstance().primalSolutions);
+}
+
+E_TerminationReason SHOTSolver::getTerminationReason()
+{
+    return (ProcessInfo::getInstance().terminationReason);
 }

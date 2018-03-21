@@ -37,13 +37,13 @@ class SHOTSolver
 
     unique_ptr<OSnl2OS> nl2os;
 
-    void
-    initializeSettings();
+    void initializeSettings();
     void verifySettings();
 
     void initializeDebugMode();
 
-    bool isProblemInitialized;
+    bool isProblemInitialized = false;
+    bool isProblemSolved = false;
 
   public:
     SHOTSolver();
@@ -67,4 +67,15 @@ class SHOTSolver
     void updateSetting(std::string name, std::string category, int value);
     void updateSetting(std::string name, std::string category, bool value);
     void updateSetting(std::string name, std::string category, double value);
+
+    double getDualBound();
+    double getPrimalBound();
+    double getAbsoluteObjectiveGap();
+    double getRelativeObjectiveGap();
+
+    int getNumberOfPrimalSolutions();
+    PrimalSolution getPrimalSolution();
+    std::vector<PrimalSolution> getPrimalSolutions();
+
+    E_TerminationReason getTerminationReason();
 };

@@ -196,10 +196,10 @@ bool SHOTSolverSolveProblem(std::string filename, int MIPSolver)
         passed = false;
     }
 
-    if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if (solver->getNumberOfPrimalSolutions() > 0)
     {
         std::cout << std::endl
-                  << "Objective value: " << ProcessInfo::getInstance().primalSolutions.at(0).objValue << std::endl;
+                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {
@@ -207,6 +207,5 @@ bool SHOTSolverSolveProblem(std::string filename, int MIPSolver)
     }
 
     delete solver;
-
     return passed;
 }
