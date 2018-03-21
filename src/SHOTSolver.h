@@ -35,7 +35,10 @@ class SHOTSolver
     unique_ptr<GAMS2OS> gms2os;
 #endif
 
-    void initializeSettings();
+    unique_ptr<OSnl2OS> nl2os;
+
+    void
+    initializeSettings();
     void verifySettings();
 
     void initializeDebugMode();
@@ -59,4 +62,9 @@ class SHOTSolver
 
     std::string getOSrL();
     std::string getTraceResult();
+
+    void updateSetting(std::string name, std::string category, std::string value);
+    void updateSetting(std::string name, std::string category, int value);
+    void updateSetting(std::string name, std::string category, bool value);
+    void updateSetting(std::string name, std::string category, double value);
 };

@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
             {
-                ProcessInfo::getInstance().outputError("Error when writing OsoL file: " + optionsFile.string());
+                ProcessInfo::getInstance().outputError("Error when writing OSoL file: " + optionsFile.string());
             }
 
             // Create GAMS option file

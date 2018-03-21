@@ -139,7 +139,7 @@ bool SHOTSolver::setProblem(std::string fileName)
         }
         else if (problemExtension == ".nl")
         {
-            auto nl2os = std::unique_ptr<OSnl2OS>(new OSnl2OS());
+            nl2os = std::unique_ptr<OSnl2OS>(new OSnl2OS());
             nl2os->readNl(fileName);
             nl2os->createOSObjects();
 
@@ -840,4 +840,24 @@ void SHOTSolver::verifySettings()
         Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
 #endif
     }
+}
+
+void SHOTSolver::updateSetting(std::string name, std::string category, std::string value)
+{
+    Settings::getInstance().updateSetting(name, category, value);
+}
+
+void SHOTSolver::updateSetting(std::string name, std::string category, int value)
+{
+    Settings::getInstance().updateSetting(name, category, value);
+}
+
+void SHOTSolver::updateSetting(std::string name, std::string category, bool value)
+{
+    Settings::getInstance().updateSetting(name, category, value);
+}
+
+void SHOTSolver::updateSetting(std::string name, std::string category, double value)
+{
+    Settings::getInstance().updateSetting(name, category, value);
 }

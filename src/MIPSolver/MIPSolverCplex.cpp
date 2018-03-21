@@ -379,7 +379,7 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
     {
         auto status = cplexInstance.getCplexStatus();
 
-        if (status == IloCplex::CplexStatus::Optimal || IloCplex::CplexStatus::OptimalTol)
+        if (status == IloCplex::CplexStatus::Optimal || status == IloCplex::CplexStatus::OptimalTol)
         {
             auto statusInstance = cplexInstance.getStatus();
 

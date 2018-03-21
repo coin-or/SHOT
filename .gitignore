@@ -29,3 +29,5 @@
 
 src/build/*
 src/.vscode/*
+.vscode/*
+build/*
