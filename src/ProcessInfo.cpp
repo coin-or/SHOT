@@ -141,7 +141,7 @@ void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource sou
     sol.objValue = pt.objectiveValue;
     sol.iterFound = pt.iterFound;
 
-    if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
+    if (Settings::getInstance().getIntSetting("SaveNumberOfSolutions", "Output") > 1)
     {
         primalSolutions.push_back(sol);
     }
@@ -693,7 +693,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     primalSol.objValue = tmpObjVal;
     primalSol.point = tmpPoint;
 
-    if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
+    if (Settings::getInstance().getIntSetting("SaveNumberOfSolutions", "Output") > 1)
     {
         this->primalSolutions.insert(this->primalSolutions.begin(), primalSol);
     }
@@ -965,12 +965,13 @@ std::string ProcessInfo::getOSrl()
     }
     else
     {
-        int numSaveSolutions = 1;
+        int numSaveSolutions = Settings::getInstance().getIntSetting("SaveNumberOfSolutions", "Output");
 
+        /*
         if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
         {
             numSaveSolutions = this->primalSolutions.size();
-        }
+        }*/
 
         osResult->setSolutionNumber(numSaveSolutions);
 

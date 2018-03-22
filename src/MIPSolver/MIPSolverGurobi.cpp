@@ -277,8 +277,8 @@ void MIPSolverGurobi::initializeSolverSettings()
             gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
         }
 
-        gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 2.0);
-        gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
+        gurobiModel->getEnv().set(GRB_DoubleParam_MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
+        gurobiModel->getEnv().set(GRB_DoubleParam_MIPGapAbs, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
 
         // Default 0 to fix som problems with some problems
         gurobiModel->getEnv().set(GRB_IntParam_ScaleFlag, Settings::getInstance().getIntSetting("Gurobi.ScaleFlag", "Subsolver"));

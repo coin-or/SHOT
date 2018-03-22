@@ -1158,10 +1158,11 @@ std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex
 
 void OptProblem::setProblemInstance(OSInstance *instance)
 {
+    // Do not change the following four lines they are here for a reason, i.e. to deal with "bugs" in OSInstance
     std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(instance);
     instance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
-
     m_problemInstance = instance;
+    m_problemInstance->getJacobianSparsityPattern();
 }
 
 void OptProblem::setNonlinearObjectiveConstraintIdx(int idx)

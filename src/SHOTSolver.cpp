@@ -575,7 +575,7 @@ void SHOTSolver::initializeSettings()
                                           static_cast<int>(ES_OutputDirectory::Program), "Where to save the output files", enumOutputDirectory);
     enumOutputDirectory.clear();
 
-    Settings::getInstance().createSetting("SaveAllSolutions", "Output", false, "Save all intermediate primal solutions to OSrL file");
+    Settings::getInstance().createSetting("SaveNumberOfSolutions", "Output", 1, "Save this number of primal solutions to OSrL file");
 
     // Primal settings: Fixed integer strategy
     std::vector<std::string> enumPrimalNLPStrategy;

@@ -4,6 +4,8 @@ project (SHOT)
 # Sets the release types, e.g. Release, Debug
 #set(CMAKE_BUILD_TYPE Release)          
 
+option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
+
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
 set(SHOT_VERSION_MINOR   9   CACHE STRING "Project minor version number.")
@@ -258,6 +260,8 @@ if(BUILD_DOCUMENTATION)
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
 endif()
 
-# For performing automated tests
-enable_testing()
-add_subdirectory ("${PROJECT_SOURCE_DIR}/test")
+if(COMPILE_TESTS) 
+    # For performing automated tests
+    enable_testing()
+    add_subdirectory ("${PROJECT_SOURCE_DIR}/test")
+endif()
