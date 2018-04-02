@@ -29,6 +29,7 @@ SettingsIter _settingsIter;
 std::map<std::pair<std::string, std::string>, std::string> _settingsDesc;
 std::map<std::pair<std::string, std::string>, ESettingsType> _settingsType;
 std::map<std::pair<std::string, std::string>, bool> _isPrivate;
+std::map<std::pair<std::string, std::string>, bool> _isDefault;
 std::map<std::pair<std::string, std::string>, std::pair<double, double>> _settingsBounds;
 std::map<std::pair<std::string, std::string>, bool> _settingsEnum;
 std::map<std::tuple<std::string, std::string, int>, std::string> _enumDescription;
@@ -49,6 +50,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
     else
     {
         _settings[key] = value;
+        _isDefault[key] = false;
 
         osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
                           "Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
@@ -69,6 +71,7 @@ void Settings::createSetting(std::string name, std::string category, std::string
     _settingsType[key] = ESettingsType::String;
     std::string test = name;
     _isPrivate[key] = isPrivate;
+    _isDefault[key] = true;
 
     osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
                       "Setting <" + name + "," + category + "> = " + value + " created.");
@@ -130,6 +133,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     _settingsType[key] = ESettingsType::Integer;
     _settingsBounds[key] = std::make_pair(minVal, maxVal);
     _isPrivate[key] = isPrivate;
+    _isDefault[key] = true;
 
     osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
                       "Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
@@ -222,6 +226,7 @@ void Settings::createSetting(std::string name, std::string category, bool value,
     _settingsDesc[key] = description;
     _settingsType[key] = ESettingsType::Boolean;
     _isPrivate[key] = isPrivate;
+    _isDefault[key] = true;
 
     osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
                       "Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
@@ -387,6 +392,7 @@ void Settings::createSetting(std::string name, std::string category, double valu
     _settingsType[key] = ESettingsType::Double;
     _settingsBounds[key] = std::make_pair(minVal, maxVal);
     _isPrivate[key] = isPrivate;
+    _isDefault[key] = true;
 
     osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
                       "Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
@@ -534,6 +540,50 @@ std::string Settings::getSettingsAsString()
         oss << child.second.get<std::string>("<xmlattr>.category", "") << ".";
         oss << child.second.get<std::string>("<xmlattr>.name", "") << " = ";
         oss << child.second.get<std::string>("<xmlattr>.value", "");
+    }
+
+    delete osolwriter;
+
+    return (oss.str());
+}
+
+std::string Settings::getUpdatedSettingsAsString()
+{
+    OSoLWriter *osolwriter = new OSoLWriter();
+    osolwriter->m_bWhiteSpace = false;
+
+    boost::property_tree::ptree pt;
+
+    stringstream ss;
+
+    auto osOption = getSettingsAsOSOption();
+    ss << osolwriter->writeOSoL(osOption);
+    delete osOption;
+
+    read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
+
+    // This sort the options according to category first and name after
+    pt.get_child("osol.optimization.solverOptions").sort(SortPred());
+
+    auto tmp = pt.get_child("osol.optimization.solverOptions");
+
+    std::ostringstream oss;
+
+    for (auto &child : pt.get_child("osol.optimization.solverOptions"))
+    {
+        std::string category = child.second.get<std::string>("<xmlattr>.category", "");
+        std::string name = child.second.get<std::string>("<xmlattr>.name", "");
+        std::string value = child.second.get<std::string>("<xmlattr>.value", "");
+
+        if (name == "")
+            continue;
+
+        auto key = make_pair(name, category);
+
+        if (_isDefault[key])
+            continue;
+
+        oss << category << "." << name << " = " << value << std::endl;
     }
 
     delete osolwriter;

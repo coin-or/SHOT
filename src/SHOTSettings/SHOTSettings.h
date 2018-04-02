@@ -56,6 +56,7 @@ class Settings
 
     std::string getSettingsInOSolFormat();
     std::string getSettingsAsString();
+    std::string getUpdatedSettingsAsString();
     OSOption *getSettingsAsOSOption();
     std::string getSettingsInGAMSOptFormat();
     std::string getSettingsInGAMSOptFormat(bool includeDescriptions);

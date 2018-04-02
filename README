@@ -26,10 +26,11 @@ SHOT utilizes the following COIN-OR subprojects
 
 It also utilizes functionality from the Boost libraries.
 
-SHOT can also utilize the following commercial packages:
+SHOT can also utilize functionality from the following commercial software
 
 - IBM ILOG CPLEX Optimization Studio
 - Gurobi 
+- GAMS
 
 In addition Ipopt may also utilize:
 - HSL. A collection of Fortran codes for large scale scientific computation. http://www.hsl.rl.ac.uk/

@@ -922,7 +922,7 @@ std::string ProcessInfo::getOSrl()
     ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH;
     osResult->setSolverInvoked(ssSolver.str());
 
-    osResult->setInstanceName(Settings::getInstance().getStringSetting("ProblemName", "Output"));
+    osResult->setInstanceName(Settings::getInstance().getStringSetting("ProblemName", "Input"));
     osResult->setNumberOfOtherGeneralResults(1);
     osResult->setOtherGeneralResultName(0, "UsedOptions");
 

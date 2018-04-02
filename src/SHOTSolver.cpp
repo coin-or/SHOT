@@ -134,7 +134,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 
             tmpInstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(fileContents);
 
-            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::OSiL));
+            Settings::getInstance().updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
         else if (problemExtension == ".nl")
         {
@@ -144,7 +144,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 
             tmpInstance = nl2os->osinstance;
 
-            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::NL));
+            Settings::getInstance().updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
 #ifdef HAS_GAMS
         else if (problemExtension == ".gms")
@@ -154,7 +154,7 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os->createOSObjects();
             tmpInstance = gms2os->osinstance;
 
-            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::GAMS));
+            Settings::getInstance().updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
         else if (problemExtension == ".dat")
         {
@@ -163,7 +163,7 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os->createOSObjects();
             tmpInstance = gms2os->osinstance;
 
-            Settings::getInstance().updateSetting("SourceFormat", "Output", static_cast<int>(ES_SourceFormat::GAMS));
+            Settings::getInstance().updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
 #endif
         else
@@ -182,11 +182,11 @@ bool SHOTSolver::setProblem(std::string fileName)
         return (false);
     }
 
-    Settings::getInstance().updateSetting("ProblemFile", "Output", problemFile.string());
+    Settings::getInstance().updateSetting("ProblemFile", "Input", problemFile.string());
 
     //Removes path
     boost::filesystem::path problemName = problemFile.stem();
-    Settings::getInstance().updateSetting("ProblemName", "Output", problemName.string());
+    Settings::getInstance().updateSetting("ProblemName", "Input", problemName.string());
     tmpInstance->setInstanceName(problemName.string());
 
     if (static_cast<ES_OutputDirectory>(Settings::getInstance().getIntSetting("OutputDirectory", "Output")) == ES_OutputDirectory::Program)
@@ -778,13 +778,13 @@ void SHOTSolver::initializeSettings()
     enumFileFormat.push_back("GAMS");
     enumFileFormat.push_back("NL");
     enumFileFormat.push_back("None");
-    Settings::getInstance().createSetting("SourceFormat", "Output",
-                                          static_cast<int>(ES_SourceFormat::None), "The format of the problem file", enumFileFormat);
+    Settings::getInstance().createSetting("SourceFormat", "Input",
+                                          static_cast<int>(ES_SourceFormat::None), "The format of the problem file", enumFileFormat, true);
     enumFileFormat.clear();
 
-    Settings::getInstance().createSetting("ProblemFile", "Output", empty, "The filename of the problem", true);
+    Settings::getInstance().createSetting("ProblemFile", "Input", empty, "The filename of the problem", true);
 
-    Settings::getInstance().createSetting("ProblemName", "Output", empty, "The name of the problem instance", true);
+    Settings::getInstance().createSetting("ProblemName", "Input", empty, "The name of the problem instance", true);
 
     Settings::getInstance().createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
@@ -813,7 +813,7 @@ void SHOTSolver::initializeDebugMode()
         }
     }
 
-    boost::filesystem::path source(Settings::getInstance().getStringSetting("ProblemFile", "Output"));
+    boost::filesystem::path source(Settings::getInstance().getStringSetting("ProblemFile", "Input"));
     boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
                                  boost::filesystem::copy_option::overwrite_if_exists);
 
