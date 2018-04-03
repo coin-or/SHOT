@@ -11,12 +11,14 @@
 #pragma once
 
 #include "Enums.h"
+#include "Output.h"
 #include "SHOTSettings.h"
 #include "SolutionStrategy/ISolutionStrategy.h"
 #include "SolutionStrategy/SolutionStrategySingleTree.h"
 #include "SolutionStrategy/SolutionStrategyMultiTree.h"
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
+
 #include "ProcessInfo.h"
 #include "boost/filesystem.hpp"
 #include "TaskHandler.h"

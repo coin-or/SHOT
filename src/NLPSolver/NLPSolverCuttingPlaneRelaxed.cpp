@@ -17,7 +17,7 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
 
     if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
-        ProcessInfo::getInstance().outputError("Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+        Output::getInstance().Output::getInstance().outputError("Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
         throw new ErrorClass("Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
     }
 
@@ -25,7 +25,7 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
     if (solver == ES_MIPSolver::Cplex)
     {
         LPSolver = new MIPSolverCplex();
-        ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver for minimax solver.");
+        Output::getInstance().outputInfo("Cplex selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -33,14 +33,14 @@ NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed()
     if (solver == ES_MIPSolver::Gurobi)
     {
         LPSolver = new MIPSolverGurobi();
-        ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver for minimax solver.");
+        Output::getInstance().outputInfo("Gurobi selected as MIP solver for minimax solver.");
     }
 #endif
 
     if (solver == ES_MIPSolver::Cbc)
     {
         LPSolver = new MIPSolverOsiCbc();
-        ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
+        Output::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
     }
 
     lastHyperplaneAdded = 0;
@@ -189,7 +189,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
                 std::string tmpRelDiff = ((boost::format("%.5f") % errorExternal.at(0).value).str());
                 tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % "" % tmpObjLP % tmpAbsDiff % tmpRelDiff;
 
-                ProcessInfo::getInstance().outputSummary(tmpLine.str());
+                Output::getInstance().outputSummary(tmpLine.str());
 
                 currSol = externalPoint;
                 prevSol = currSol;
@@ -209,9 +209,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
             catch (std::exception &e)
             {
 
-                ProcessInfo::getInstance().outputWarning(
+                Output::getInstance().outputWarning(
                     "     Cannot find solution with linesearch for fixed LP, using solution point instead:");
-                ProcessInfo::getInstance().outputWarning(e.what());
+                Output::getInstance().outputWarning(e.what());
             }
         }
         else
@@ -233,7 +233,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
             std::string tmpRelDiff = ((boost::format("%.5f") % tmpMostDevs.at(0).value).str());
             tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % "" % tmpObjLP % tmpAbsDiff % tmpRelDiff;
 
-            ProcessInfo::getInstance().outputSummary(tmpLine.str());
+            Output::getInstance().outputSummary(tmpLine.str());
 
             if (tmpMostDevs.at(0).value <= termTol)
             {
@@ -307,7 +307,7 @@ double NLPSolverCuttingPlaneRelaxed::getObjectiveValue()
 
 bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance *origInstance)
 {
-    ProcessInfo::getInstance().outputInfo("Creating NLP problem for relaxed cutting plane solver");
+    Output::getInstance().outputInfo("Creating NLP problem for relaxed cutting plane solver");
 
     bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
 
@@ -348,11 +348,11 @@ bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance *origInstanc
         throw new ErrorClass("Error in solver definition for relaxed NLP.");
     }
 
-    ProcessInfo::getInstance().outputInfo("NLP problem for relaxed cutting plane created");
+    Output::getInstance().outputInfo("NLP problem for relaxed cutting plane created");
 
-    ProcessInfo::getInstance().outputInfo("Creating LP problem for relaxed cutting plane solver");
+    Output::getInstance().outputInfo("Creating LP problem for relaxed cutting plane solver");
     LPSolver->createLinearProblem(NLPProblem);
-    ProcessInfo::getInstance().outputInfo("LP problem for relaxed cutting plane solver created");
+    Output::getInstance().outputInfo("LP problem for relaxed cutting plane solver created");
     LPSolver->initializeSolverSettings();
     LPSolver->activateDiscreteVariables(false);
 

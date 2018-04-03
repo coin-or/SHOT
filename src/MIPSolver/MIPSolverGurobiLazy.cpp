@@ -22,7 +22,7 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy()
     catch (GRBException &e)
     {
         {
-            ProcessInfo::getInstance().outputError("Error when initializing Gurobi:", e.getMessage());
+            Output::getInstance().Output::getInstance().outputError("Error when initializing Gurobi:", e.getMessage());
         }
 
         return;
@@ -48,7 +48,7 @@ void MIPSolverGurobiLazy::initializeSolverSettings()
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when initializing parameters for linear solver", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when initializing parameters for linear solver", e.getMessage());
     }
 }
 
@@ -92,7 +92,7 @@ E_ProblemSolutionStatus MIPSolverGurobiLazy::solveProblem()
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -278,7 +278,7 @@ void GurobiCallback::callback()
 
                 if (addedIntegerCut)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
                 }
 
@@ -325,21 +325,21 @@ void GurobiCallback::callback()
             {
                 static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound + cutOffTol);
 
-                ProcessInfo::getInstance().outputInfo(
+                Output::getInstance().outputInfo(
                     "     Setting cutoff value to " + UtilityFunctions::toString(primalBound + cutOffTol) + " for minimization.");
             }
             else
             {
                 static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver)->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound - cutOffTol);
 
-                ProcessInfo::getInstance().outputInfo(
+                Output::getInstance().outputInfo(
                     "     Setting cutoff value to " + UtilityFunctions::toString(-primalBound - cutOffTol) + " for minimization.");
             }
         }
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Gurobi error when running main callback method", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Gurobi error when running main callback method", e.getMessage());
     }
 }
 
@@ -363,7 +363,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
         {
             if (E.value != E.value) //Check for NaN
             {
-                ProcessInfo::getInstance().outputWarning(
+                Output::getInstance().outputWarning(
                     "     Warning: hyperplane not generated, NaN found in linear terms!");
                 hyperplaneIsOk = false;
                 break;
@@ -400,7 +400,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Gurobi error when creating lazy hyperplane", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Gurobi error when creating lazy hyperplane", e.getMessage());
     }
 }
 
@@ -466,7 +466,7 @@ void GurobiCallback::createIntegerCut(std::vector<int> binaryIndexes)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Gurobi error when adding lazy integer cut", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Gurobi error when adding lazy integer cut", e.getMessage());
     }
 }
 
@@ -505,6 +505,6 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Gurobi error when invoking adding lazy constraint", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Gurobi error when invoking adding lazy constraint", e.getMessage());
     }
 }

@@ -157,7 +157,7 @@ void InfoCallbackI::main() // Called at each node...
 
     if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
     {
-        ProcessInfo::getInstance().outputAlways(
+        Output::getInstance().outputAlways(
             "     Terminated by relative objective gap tolerance in info callback: " + UtilityFunctions::toString(relObjGap) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination")));
 
         this->abort();
@@ -165,7 +165,7 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
     {
-        ProcessInfo::getInstance().outputAlways(
+        Output::getInstance().outputAlways(
             "     Terminated by absolute objective gap tolerance in info callback: " + UtilityFunctions::toString(absObjGap) + " < " + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination")));
 
         this->abort();
@@ -173,7 +173,7 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if (checkIterationLimit())
     {
-        ProcessInfo::getInstance().outputAlways("     Terminated since iteration limit reached in info callback.");
+        Output::getInstance().outputAlways("     Terminated since iteration limit reached in info callback.");
 
         this->abort();
         return;
@@ -388,7 +388,7 @@ void CtCallbackI::main()
 
         if (addedIntegerCut)
         {
-            ProcessInfo::getInstance().outputAlways(
+            Output::getInstance().outputAlways(
                 "     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
         }
 
@@ -420,7 +420,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     {
         if (E.value != E.value) //Check for NaN
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
             break;
@@ -521,7 +521,7 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Cplex error when initializing parameters for linear solver",
+        Output::getInstance().Output::getInstance().outputError("Cplex error when initializing parameters for linear solver",
                                                e.getMessage());
     }
 }
@@ -551,7 +551,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -571,7 +571,7 @@ int MIPSolverCplexLazyOriginalCallback::increaseSolutionLimit(int increment)
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when increasing solution limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when increasing solution limit", e.getMessage());
     }
 
     return (sollim);
@@ -590,7 +590,7 @@ void MIPSolverCplexLazyOriginalCallback::setSolutionLimit(long limit)
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when setting solution limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when setting solution limit", e.getMessage());
     }
 }
 
@@ -605,7 +605,7 @@ int MIPSolverCplexLazyOriginalCallback::getSolutionLimit()
     catch (IloException &e)
     {
 
-        ProcessInfo::getInstance().outputError("Error when obtaining solution limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when obtaining solution limit", e.getMessage());
     }
 
     return (solLim);

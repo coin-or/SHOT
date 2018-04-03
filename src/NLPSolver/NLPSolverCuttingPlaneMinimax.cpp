@@ -48,7 +48,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
 
     if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
-        ProcessInfo::getInstance().outputError("Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+        Output::getInstance().Output::getInstance().outputError("Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
         throw new ErrorClass("Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
     }
 
@@ -56,7 +56,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
     if (solver == ES_MIPSolver::Cplex)
     {
         LPSolver = new MIPSolverCplex();
-        ProcessInfo::getInstance().outputInfo("Cplex selected as MIP solver for minimax solver.");
+        Output::getInstance().outputInfo("Cplex selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -64,14 +64,14 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax()
     if (solver == ES_MIPSolver::Gurobi)
     {
         LPSolver = new MIPSolverGurobi();
-        ProcessInfo::getInstance().outputInfo("Gurobi selected as MIP solver for minimax solver.");
+        Output::getInstance().outputInfo("Gurobi selected as MIP solver for minimax solver.");
     }
 #endif
 
     if (solver == ES_MIPSolver::Cbc)
     {
         LPSolver = new MIPSolverOsiCbc();
-        ProcessInfo::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
+        Output::getInstance().outputInfo("Cbc selected as MIP solver for minimax solver.");
     }
 
     NLPProblem = new OptProblemNLPMinimax();
@@ -196,7 +196,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
 #endif
 
-            ProcessInfo::getInstance().outputSummary(tmpLine.str());
+            Output::getInstance().outputSummary(tmpLine.str());
         }
         else
         {
@@ -244,7 +244,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % tmpObjLP % tmpObjLS % tmpAbsDiff % tmpRelDiff;
         }
 
-        ProcessInfo::getInstance().outputSummary(tmpLine.str());
+        Output::getInstance().outputSummary(tmpLine.str());
 
         if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
         {
@@ -341,15 +341,15 @@ double NLPSolverCuttingPlaneMinimax::getObjectiveValue()
 
 bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance *origInstance)
 {
-    ProcessInfo::getInstance().outputInfo("Creating NLP problem for minimax solver");
+    Output::getInstance().outputInfo("Creating NLP problem for minimax solver");
     dynamic_cast<OptProblemNLPMinimax *>(NLPProblem)->reformulate(origInstance);
-    ProcessInfo::getInstance().outputInfo("NLP problem for minimax solver created");
+    Output::getInstance().outputInfo("NLP problem for minimax solver created");
 
-    ProcessInfo::getInstance().outputInfo("Creating LP problem for minimax solver");
+    Output::getInstance().outputInfo("Creating LP problem for minimax solver");
     LPSolver->createLinearProblem(NLPProblem);
     LPSolver->initializeSolverSettings();
     LPSolver->activateDiscreteVariables(false);
-    ProcessInfo::getInstance().outputInfo("LP problem for minimax solver created");
+    Output::getInstance().outputInfo("LP problem for minimax solver created");
 
     return (true);
 }

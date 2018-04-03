@@ -161,11 +161,11 @@ void TaskPrintIterationReport::run()
 
 		auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % currIter->iterationNumber % tmpType.str() % hyperplanesExpr % dualBoundExpr % tmpObjVal % primalBoundExpr % tmpConstr;
 
-		ProcessInfo::getInstance().outputSummary(tmpLine.str());
+		Output::getInstance().outputSummary(tmpLine.str());
 	}
 	catch (...)
 	{
-		ProcessInfo::getInstance().outputError("ERROR, cannot write iteration solution report!");
+		Output::getInstance().Output::getInstance().outputError("ERROR, cannot write iteration solution report!");
 	}
 }
 std::string TaskPrintIterationReport::getType()

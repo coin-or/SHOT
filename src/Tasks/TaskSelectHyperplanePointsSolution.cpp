@@ -44,7 +44,7 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 
 			if (tmpMostDevConstrs.at(j).value < 0)
 			{
-				ProcessInfo::getInstance().outputWarning("LP point is in the interior!");
+				Output::getInstance().outputWarning("LP point is in the interior!");
 			}
 			else
 			{

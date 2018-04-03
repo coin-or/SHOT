@@ -42,7 +42,7 @@ void TaskPrintIterationHeader::run()
 
 #endif
 
-	ProcessInfo::getInstance().outputSummary(tmpLine.str());
+	Output::getInstance().outputSummary(tmpLine.str());
 }
 
 std::string TaskPrintIterationHeader::getType()

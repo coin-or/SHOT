@@ -49,7 +49,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 		MIPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MIPSolutionLimitUpdated = true;
-		ProcessInfo::getInstance().outputInfo(
+		Output::getInstance().outputInfo(
 			"     Forced optimal iteration since too many iterations since last dual bound update");
 	}
 	else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().timeLastDualBoundUpdate > Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual") && ProcessInfo::getInstance().getDualBound() > -OSDBL_MAX)
@@ -58,7 +58,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 		MIPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MIPSolutionLimitUpdated = true;
-		ProcessInfo::getInstance().outputAlways(
+		Output::getInstance().outputAlways(
 			"     Forced optimal iteration since too long time since last dual bound update");
 	}
 	else if (ProcessInfo::getInstance().getPrimalBound() < OSDBL_MAX && abs(prevIter->objectiveValue - ProcessInfo::getInstance().getPrimalBound()) < 0.001)
@@ -67,7 +67,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 		MIPSolver->setSolutionLimit(2100000000);
 		temporaryOptLimitUsed = true;
 		currIter->MIPSolutionLimitUpdated = true;
-		ProcessInfo::getInstance().outputInfo(
+		Output::getInstance().outputInfo(
 			"     Forced optimal iteration since difference between MIP solution and primal is small");
 	}
 	else

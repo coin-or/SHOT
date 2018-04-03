@@ -51,17 +51,12 @@ int main(int argc, char *argv[])
 
     ProcessInfo::getInstance().startTimer("Total");
 
-    // Adds a file output
-    osoutput->AddChannel("shotlogfile");
-
     boost::filesystem::path resultFile, optionsFile, traceFile;
 
     if (strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
     {
         // special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
         // TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
-
-        osoutput->SetPrintLevel("stdout", ENUM_OUTPUT_LEVEL_summary);
     }
     else if (argc == 2) // No options file specified, use or create defaults
     {
@@ -83,7 +78,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
             {
-                ProcessInfo::getInstance().outputError("Error when writing OSoL file: " + optionsFile.string());
+                Output::getInstance().Output::getInstance().outputError("Error when writing OSoL file: " + optionsFile.string());
             }
 
             // Create GAMS option file
@@ -91,7 +86,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
             {
-                ProcessInfo::getInstance().outputError("Error when writing options file: " + optionsFile.string());
+                Output::getInstance().Output::getInstance().outputError("Error when writing options file: " + optionsFile.string());
             }
 
             defaultOptionsGenerated = true;
@@ -148,14 +143,7 @@ int main(int argc, char *argv[])
 
         std::string fileName = argv[1];
 
-        if (defaultOptionsGenerated)
-        {
-            osoutput->SetPrintLevel("stdout",
-                                    (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1));
-            osoutput->SetPrintLevel("shotlogfile",
-                                    (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("File.LogLevel", "Output") + 1));
-        }
-        else
+        if (!defaultOptionsGenerated)
         {
             if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
             {
@@ -165,26 +153,28 @@ int main(int argc, char *argv[])
             }
         }
 
+        Output::getInstance().setLogLevels();
+
         // Prints out the welcome message to the logging facility
-        ProcessInfo::getInstance().outputSummary(startmessage);
+        Output::getInstance().outputSummary(startmessage);
 
         if (!solver->setProblem(fileName))
         {
-            ProcessInfo::getInstance().outputError(" Error when reading problem file.");
+            Output::getInstance().Output::getInstance().outputError(" Error when reading problem file.");
 
             return (0);
         }
 
         if (!solver->solveProblem()) // solve problem
         {
-            ProcessInfo::getInstance().outputError(" Error when solving problem.");
+            Output::getInstance().Output::getInstance().outputError(" Error when solving problem.");
 
             return (0);
         }
     }
     catch (const ErrorClass &eclass)
     {
-        ProcessInfo::getInstance().outputError(eclass.errormsg);
+        Output::getInstance().Output::getInstance().outputError(eclass.errormsg);
 
         return (0);
     }
@@ -198,20 +188,20 @@ int main(int argc, char *argv[])
         boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
         resultPath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
         resultPath = resultPath.replace_extension(".osrl");
-        ProcessInfo::getInstance().outputSummary("\n Results written to: " + resultPath.string());
+        Output::getInstance().outputSummary("\n Results written to: " + resultPath.string());
 
         if (!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
         {
-            ProcessInfo::getInstance().outputError("Error when writing OSrL file: " + resultPath.string());
+            Output::getInstance().Output::getInstance().outputError("Error when writing OSrL file: " + resultPath.string());
         }
     }
     else
     {
-        ProcessInfo::getInstance().outputSummary("\n Results written to: " + resultFile.string());
+        Output::getInstance().outputSummary("\n Results written to: " + resultFile.string());
 
         if (!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
         {
-            ProcessInfo::getInstance().outputError("Error when writing OSrL file: " + resultFile.string());
+            Output::getInstance().Output::getInstance().outputError("Error when writing OSrL file: " + resultFile.string());
         }
     }
 
@@ -222,24 +212,24 @@ int main(int argc, char *argv[])
         boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
         tracePath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
         tracePath = tracePath.replace_extension(".trc");
-        ProcessInfo::getInstance().outputSummary("                     " + tracePath.string());
+        Output::getInstance().outputSummary("                     " + tracePath.string());
 
         if (!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
         {
-            ProcessInfo::getInstance().outputError("Error when writing trace file: " + tracePath.string());
+            Output::getInstance().Output::getInstance().outputError("Error when writing trace file: " + tracePath.string());
         }
     }
     else
     {
         if (!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
         {
-            ProcessInfo::getInstance().outputError("Error when writing trace file: " + traceFile.string());
+            Output::getInstance().Output::getInstance().outputError("Error when writing trace file: " + traceFile.string());
         }
     }
 
 #ifdef _WIN32
-    ProcessInfo::getInstance().outputSummary("\n"
-                                             "ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+    Output::getInstance().outputSummary("\n"
+                                        "ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
     for (auto T : ProcessInfo::getInstance().timers)
     {
@@ -249,14 +239,14 @@ int main(int argc, char *argv[])
         {
             auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-            ProcessInfo::getInstance().outputSummary("³ " + tmpLine.str());
+            Output::getInstance().outputSummary("³ " + tmpLine.str());
         }
     }
 
-    ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+    Output::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 #else
-    ProcessInfo::getInstance().outputSummary("\n"
-                                             "┌─── Solution time ──────────────────────────────────────────────────────────────┐");
+    Output::getInstance().outputSummary("\n"
+                                        "┌─── Solution time ──────────────────────────────────────────────────────────────┐");
 
     for (auto T : ProcessInfo::getInstance().timers)
     {
@@ -266,11 +256,11 @@ int main(int argc, char *argv[])
         {
             auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
 
-            ProcessInfo::getInstance().outputSummary("│ " + tmpLine.str());
+            Output::getInstance().outputSummary("│ " + tmpLine.str());
         }
     }
 
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
 

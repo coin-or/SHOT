@@ -121,12 +121,12 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 				hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
 				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 
-				ProcessInfo::getInstance().outputInfo(
+				Output::getInstance().outputInfo(
 					"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(solution.objectiveValue) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
 			}
 			else
 			{
-				ProcessInfo::getInstance().outputInfo(
+				Output::getInstance().outputInfo(
 					"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(solution.objectiveValue) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  ");
 			}
 		}
@@ -136,7 +136,7 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 	}
 	catch (std::exception &e)
 	{
-		ProcessInfo::getInstance().outputWarning(
+		Output::getInstance().outputWarning(
 			"     Cannot find solution with linesearch for updating nonlinear objective.");
 	}
 

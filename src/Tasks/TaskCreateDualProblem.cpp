@@ -16,7 +16,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
 
     ProcessInfo::getInstance().startTimer("Reformulation");
 
-    ProcessInfo::getInstance().outputDebug("Creating dual problem");
+    Output::getInstance().outputDebug("Creating dual problem");
 
     MIPSolver->createLinearProblem(ProcessInfo::getInstance().originalProblem);
 
@@ -27,7 +27,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
         MIPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/lp0.lp");
     }
 
-    ProcessInfo::getInstance().outputDebug("Dual problem created");
+    Output::getInstance().outputDebug("Dual problem created");
     ProcessInfo::getInstance().stopTimer("Reformulation");
 }
 

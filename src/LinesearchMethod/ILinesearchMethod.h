@@ -9,7 +9,6 @@
 */
 
 #pragma once
-#include "vector"
 #include "../ProcessInfo.h"
 
 class ILinesearchMethod

@@ -17,11 +17,7 @@
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
 
-// Used for OSOutput
-#include <cstdio>
-#define HAVE_STDIO_H 1
-#include "OSOutput.h"
-
+#include "Output.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 

@@ -122,7 +122,7 @@ void GAMS2OS::createOSObjects()
         }
         catch (exception &e)
         {
-            ProcessInfo::getInstance().outputError("Error when reading GAMS options file" + std::string(buffer));
+            Output::getInstance().Output::getInstance().outputError("Error when reading GAMS options file" + std::string(buffer));
             throw std::logic_error("Cannot read GAMS options file from.");
         }
     }
@@ -134,16 +134,16 @@ void GAMS2OS::createOSObjects()
 		 Settings::getInstance().updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
 
 
-		 ProcessInfo::getInstance().outputInfo(
+		 Output::getInstance().outputInfo(
 		 "Time limit set to "
 		 + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
 		 + " by GAMS");
-		 ProcessInfo::getInstance().outputInfo(
+		 Output::getInstance().outputInfo(
 		 "Absolute termination tolerance set to "
 		 + UtilityFunctions::toString(
 		 Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
 		 + " by GAMS");
-		 ProcessInfo::getInstance().outputInfo(
+		 Output::getInstance().outputInfo(
 		 "Relative termination tolerance set to "
 		 + UtilityFunctions::toString(
 		 Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"))

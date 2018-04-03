@@ -43,7 +43,7 @@ bool SHOTSolver::setOptions(std::string fileName)
             }
             catch (exception &e)
             {
-                ProcessInfo::getInstance().outputError("Error when reading OSoL options file" + fileName);
+                Output::getInstance().Output::getInstance().outputError("Error when reading OSoL options file" + fileName);
                 return (false);
             }
         }
@@ -57,29 +57,23 @@ bool SHOTSolver::setOptions(std::string fileName)
             }
             catch (exception &e)
             {
-                ProcessInfo::getInstance().outputError("Error when reading options file" + fileName);
+                Output::getInstance().Output::getInstance().outputError("Error when reading options file" + fileName);
                 return (false);
             }
         }
         else
         {
-            ProcessInfo::getInstance().outputError(
+            Output::getInstance().Output::getInstance().outputError(
                 "Error when reading options from \"" + fileName + "\". File extension must be osol, xml or opt.");
         }
     }
     catch (const ErrorClass &eclass)
     {
-        ProcessInfo::getInstance().outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
+        Output::getInstance().Output::getInstance().outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
         return (false);
     }
 
-    // Sets the correct log levels
-    osoutput->SetPrintLevel("stdout",
-                            (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1));
-    osoutput->SetPrintLevel("shotlogfile",
-                            (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("File.LogLevel", "Output") + 1));
-
-    ProcessInfo::getInstance().outputAlways("Options read from file \"" + fileName + "\"");
+    Output::getInstance().outputSummary("Options read from file \"" + fileName + "\"");
 
     return (true);
 }
@@ -93,12 +87,12 @@ bool SHOTSolver::setOptions(OSOption *osOptions)
     catch (ErrorClass &eclass)
     {
 
-        ProcessInfo::getInstance().outputError("Error when reading options.", eclass.errormsg);
+        Output::getInstance().Output::getInstance().outputError("Error when reading options.", eclass.errormsg);
 
         return (false);
     }
 
-    ProcessInfo::getInstance().outputInfo("Options read.");
+    Output::getInstance().outputInfo("Options read.");
 
     return (true);
 }
@@ -107,7 +101,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 {
     if (!boost::filesystem::exists(fileName))
     {
-        ProcessInfo::getInstance().outputError("Problem file \"" + fileName + "\" does not exist.");
+        Output::getInstance().Output::getInstance().outputError("Problem file \"" + fileName + "\" does not exist.");
 
         return (false);
     }
@@ -116,7 +110,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 
     if (!problemFile.has_extension())
     {
-        ProcessInfo::getInstance().outputError("Problem file \"" + fileName + "\" does not specify a file extension.");
+        Output::getInstance().Output::getInstance().outputError("Problem file \"" + fileName + "\" does not specify a file extension.");
 
         return (false);
     }
@@ -168,7 +162,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 #endif
         else
         {
-            ProcessInfo::getInstance().outputError("Wrong filetype specified.");
+            Output::getInstance().Output::getInstance().outputError("Wrong filetype specified.");
 
             return (false);
         }
@@ -177,7 +171,7 @@ bool SHOTSolver::setProblem(std::string fileName)
     }
     catch (const ErrorClass &eclass)
     {
-        ProcessInfo::getInstance().outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
+        Output::getInstance().Output::getInstance().outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
 
         return (false);
     }
@@ -209,7 +203,7 @@ bool SHOTSolver::setProblem(std::string fileName)
     if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
         initializeDebugMode();
 
-    ProcessInfo::getInstance().outputAlways(" Problem read from file \"" + fileName + "\"");
+    Output::getInstance().outputSummary(" Problem read from file \"" + fileName + "\"");
 
     bool status = this->setProblem(tmpInstance);
 
@@ -222,7 +216,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
     {
         if (UtilityFunctions::areAllVariablesReal(osInstance))
         {
-            ProcessInfo::getInstance().outputSummary(" Using NLP solution strategy.");
+            Output::getInstance().outputSummary(" Using NLP solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(osInstance));
 
             ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
@@ -242,21 +236,21 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
     if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
     //MIQP problem
     {
-        ProcessInfo::getInstance().outputSummary(" Using MIQP solution strategy.");
+        Output::getInstance().outputSummary(" Using MIQP solution strategy.");
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(osInstance));
         ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     //MIQCQP problem
     else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
     {
-        ProcessInfo::getInstance().outputSummary(" Using MIQCQP solution strategy.");
+        Output::getInstance().outputSummary(" Using MIQCQP solution strategy.");
 
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(osInstance));
         ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
     else if (UtilityFunctions::areAllVariablesReal(osInstance))
     {
-        ProcessInfo::getInstance().outputSummary(" Using NLP solution strategy.");
+        Output::getInstance().outputSummary(" Using NLP solution strategy.");
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(osInstance));
         ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
     }
@@ -265,12 +259,12 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
         switch (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
         {
         case (ES_TreeStrategy::SingleTree):
-            ProcessInfo::getInstance().outputSummary(" Using single-tree solution strategy.");
+            Output::getInstance().outputSummary(" Using single-tree solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategySingleTree(osInstance));
             ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::SingleTree;
             break;
         case (ES_TreeStrategy::MultiTree):
-            ProcessInfo::getInstance().outputSummary(" Using multi-tree solution strategy.");
+            Output::getInstance().outputSummary(" Using multi-tree solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMultiTree(osInstance));
             ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MultiTree;
             break;
@@ -331,13 +325,13 @@ void SHOTSolver::initializeSettings()
 {
     if (Settings::getInstance().settingsInitialized)
     {
-        ProcessInfo::getInstance().outputWarning("Warning! Settings have already been initialized. Ignoring new settings.");
+        Output::getInstance().outputWarning("Warning! Settings have already been initialized. Ignoring new settings.");
         return;
     }
 
     std::string empty = "empty"; // Used to create empty string options
 
-    ProcessInfo::getInstance().outputInfo("Starting initialization of settings:");
+    Output::getInstance().outputInfo("Starting initialization of settings:");
 
     // Dual strategy settings: ECP and ESH
 
@@ -789,7 +783,7 @@ void SHOTSolver::initializeSettings()
     Settings::getInstance().createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
     Settings::getInstance().settingsInitialized = true;
-    ProcessInfo::getInstance().outputInfo("Initialization of settings complete.");
+    Output::getInstance().outputInfo("Initialization of settings complete.");
 }
 
 void SHOTSolver::initializeDebugMode()
@@ -799,17 +793,17 @@ void SHOTSolver::initializeDebugMode()
 
     if (boost::filesystem::exists(debugDir))
     {
-        ProcessInfo::getInstance().outputInfo("Debug directory " + debugPath + " already exists.");
+        Output::getInstance().outputInfo("Debug directory " + debugPath + " already exists.");
     }
     else
     {
         if (boost::filesystem::create_directories(debugDir))
         {
-            ProcessInfo::getInstance().outputInfo("Debug directory " + debugPath + " created.");
+            Output::getInstance().outputInfo("Debug directory " + debugPath + " created.");
         }
         else
         {
-            ProcessInfo::getInstance().outputWarning("Could not create debug directory.");
+            Output::getInstance().outputWarning("Could not create debug directory.");
         }
     }
 
@@ -821,7 +815,7 @@ void SHOTSolver::initializeDebugMode()
 
     if (!UtilityFunctions::writeStringToFile(tmpFilename, getOSoL()))
     {
-        ProcessInfo::getInstance().outputError("Error when writing OsoL file: " + tmpFilename);
+        Output::getInstance().Output::getInstance().outputError("Error when writing OsoL file: " + tmpFilename);
     }
 }
 
@@ -832,13 +826,13 @@ void SHOTSolver::verifySettings()
 #ifdef HAS_GAMS
         if (gms2os == NULL)
         {
-            ProcessInfo::getInstance().outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
+            Output::getInstance().Output::getInstance().outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
             Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
         }
 #endif
 
 #ifndef HAS_GAMS
-        ProcessInfo::getInstance().outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
+        Output::getInstance().Output::getInstance().outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
         Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
 #endif
     }

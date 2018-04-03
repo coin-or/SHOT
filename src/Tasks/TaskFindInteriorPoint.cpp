@@ -23,7 +23,7 @@ void TaskFindInteriorPoint::run()
 {
     ProcessInfo::getInstance().startTimer("InteriorPointTotal");
 
-    ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
+    Output::getInstance().outputDebug("Initializing NLP solver");
     auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 
     if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
@@ -32,7 +32,7 @@ void TaskFindInteriorPoint::run()
 
         NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-        ProcessInfo::getInstance().outputDebug("Cutting plane minimax selected as NLP solver.");
+        Output::getInstance().outputDebug("Cutting plane minimax selected as NLP solver.");
     }
     else if (solver == ES_NLPSolver::IpoptMinimax)
     {
@@ -40,7 +40,7 @@ void TaskFindInteriorPoint::run()
 
         NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-        ProcessInfo::getInstance().outputDebug("Ipopt minimax selected as NLP solver.");
+        Output::getInstance().outputDebug("Ipopt minimax selected as NLP solver.");
     }
     else if (solver == ES_NLPSolver::IpoptRelaxed)
     {
@@ -48,7 +48,7 @@ void TaskFindInteriorPoint::run()
 
         NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-        ProcessInfo::getInstance().outputDebug("Ipopt relaxed selected as NLP solver.");
+        Output::getInstance().outputDebug("Ipopt relaxed selected as NLP solver.");
     }
     else if (solver == ES_NLPSolver::IpoptMinimaxAndRelaxed)
     {
@@ -60,7 +60,7 @@ void TaskFindInteriorPoint::run()
 
         NLPSolvers[1]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-        ProcessInfo::getInstance().outputDebug("Ipopt minimax and relaxed selected as NLP solver.");
+        Output::getInstance().outputDebug("Ipopt minimax and relaxed selected as NLP solver.");
     }
     else
     {
@@ -81,7 +81,7 @@ void TaskFindInteriorPoint::run()
         }
     }
 
-    ProcessInfo::getInstance().outputDebug(" Solving NLP problem.");
+    Output::getInstance().outputDebug(" Solving NLP problem.");
 
     bool foundNLPPoint = false;
 
@@ -111,11 +111,11 @@ void TaskFindInteriorPoint::run()
 
         if (maxDev.value > 0)
         {
-            ProcessInfo::getInstance().outputWarning("\n Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+            Output::getInstance().outputWarning("\n Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
         }
         else
         {
-            ProcessInfo::getInstance().outputError("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
+            Output::getInstance().Output::getInstance().outputSummary("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
             ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
         }
 
@@ -131,13 +131,13 @@ void TaskFindInteriorPoint::run()
 
     if (!foundNLPPoint)
     {
-        ProcessInfo::getInstance().outputError("\n No interior point found!                            ");
+        Output::getInstance().Output::getInstance().outputError("\n No interior point found!                            ");
         ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
 
         return;
     }
 
-    ProcessInfo::getInstance().outputDebug("     Finished solving NLP problem.");
+    Output::getInstance().outputDebug("     Finished solving NLP problem.");
 
     ProcessInfo::getInstance().numOriginalInteriorPoints = ProcessInfo::getInstance().interiorPts.size();
 

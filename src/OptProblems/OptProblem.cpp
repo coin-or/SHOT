@@ -195,29 +195,29 @@ std::vector<int> OptProblem::getIntegerVariableIndices()
 void OptProblem::printProblemStatistics()
 {
 #if _WIN32
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "                                                                                     \n");
-    ProcessInfo::getInstance().outputSummary("ÚÄÄÄ Problem statistics ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
+    Output::getInstance().outputSummary("ÚÄÄÄ Problem statistics ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
 
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "³ Number of constraints (total/linear/nonlinear):   " + to_string(getProblemInstance()->getConstraintNumber()) + "/" + to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "³ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/" + to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/" + to_string(getNumberOfIntegerVariables()) + "/");
 
-    ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
+    Output::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
 
 #else
 
-    ProcessInfo::getInstance().outputSummary("\n┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
+    Output::getInstance().outputSummary("\n┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
 
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "│ Number of constraints (total/linear/nonlinear):   " + to_string(getProblemInstance()->getConstraintNumber()) + "/" + to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
 
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/" + to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/" + to_string(getNumberOfIntegerVariables()) + "/");
 
-    ProcessInfo::getInstance().outputSummary(
+    Output::getInstance().outputSummary(
         "└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
 }
@@ -228,7 +228,7 @@ void OptProblem::exportProblemToOsil(std::string fileName)
 
     if (!UtilityFunctions::writeStringToFile(fileName, osil))
     {
-        ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
+        Output::getInstance().Output::getInstance().outputError("Error when writing to file " + fileName);
     }
 }
 
@@ -238,7 +238,7 @@ void OptProblem::saveProblemModelToFile(std::string fileName)
 
     if (!UtilityFunctions::writeStringToFile(fileName, problem))
     {
-        ProcessInfo::getInstance().outputError("Error when writing to file " + fileName);
+        Output::getInstance().Output::getInstance().outputError("Error when writing to file " + fileName);
     }
 }
 
@@ -253,7 +253,7 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 {
     if (point.size() != this->getNumberOfVariables())
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "     Error: point size (" + to_string(point.size()) + ") does not match number of variables (" + to_string(this->getNumberOfVariables()) + ")!");
     }
 
@@ -494,16 +494,16 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
         {
             if (abs((numGradient.at(i) - nonSparseGrad.at(i)) / max(nonSparseGrad.at(i), numGradient.at(i))) >= 0.1)
             {
-                ProcessInfo::getInstance().outputAlways(
+                Output::getInstance().outputAlways(
                     "Gradient calculation error (constraint " + std::to_string(idx) + ", variable " + std::to_string(i) + "): numerical " + UtilityFunctions::toString(numGradient.at(i)) + " exact " + UtilityFunctions::toString(nonSparseGrad.at(i)));
 
                 for (int i = 0; i < gradient->number; i++)
                 {
-                    ProcessInfo::getInstance().outputAlways(
+                    Output::getInstance().outputAlways(
                         "Variable value (index: " + std::to_string(gradient->indexes[i]) + "): " + UtilityFunctions::toString(point.at(gradient->indexes[i])));
                 }
 
-                ProcessInfo::getInstance().outputAlways(getProblemInstance()->printModel(idx));
+                Output::getInstance().outputAlways(getProblemInstance()->printModel(idx));
             }
         }
 
@@ -526,7 +526,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 {
     if (point.size() != this->getNumberOfVariables())
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Point size (" + std::to_string(point.size()) + ") does not equal number of variables (" + std::to_string(this->getNumberOfVariables()) + ") when calculating function value!");
     }
 
@@ -689,14 +689,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < LBInt)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBInt));
                     destination->instanceData->variables->var[i]->lb = LBInt;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > UBInt)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBInt));
                     destination->instanceData->variables->var[i]->ub = UBInt;
                 }
@@ -705,14 +705,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < LBCont)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBCont));
                     destination->instanceData->variables->var[i]->lb = LBCont;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > UBCont)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBCont));
                     destination->instanceData->variables->var[i]->ub = UBCont;
                 }
@@ -721,14 +721,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < 0.0)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to 0");
                     destination->instanceData->variables->var[i]->lb = 0.0;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > 1.0)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to 1");
                     destination->instanceData->variables->var[i]->ub = 1.0;
                 }
@@ -1307,7 +1307,7 @@ void OptProblem::fixVariable(int varIdx, double value)
     }
     else
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "     Cannot fix variable value for variable with index " + to_string(varIdx) + ": not within bounds (" + UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->lb) + " < " + UtilityFunctions::toString(value) + " < " + UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->ub));
     }
 }

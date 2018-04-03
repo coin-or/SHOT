@@ -238,7 +238,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
                 if (addedIntegerCut)
                 {
-                    ProcessInfo::getInstance().outputInfo(
+                    Output::getInstance().outputInfo(
                         "     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
                 }
 
@@ -290,20 +290,20 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
         {
             (static_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver))->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
 
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Setting cutoff value to " + to_string(primalBound + cutOffTol) + " for minimization.");
         }
         else
         {
             (static_cast<MIPSolverCplexLazy *>(ProcessInfo::getInstance().MIPSolver))->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
 
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Setting cutoff value to " + to_string(primalBound - cutOffTol) + " for maximization.");
         }
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Cplex error when invoking general callback", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Cplex error when invoking general callback", e.getMessage());
     }
 }
 
@@ -330,7 +330,7 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
     {
         if (E.value != E.value) //Check for NaN
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
             break;
@@ -423,7 +423,7 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Cplex error when invoking general lazy callback", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Cplex error when invoking general lazy callback", e.getMessage());
     }
 }
 
@@ -460,7 +460,7 @@ void MIPSolverCplexLazy::initializeSolverSettings()
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Cplex error when initializing parameters for linear solver",
+        Output::getInstance().Output::getInstance().outputError("Cplex error when initializing parameters for linear solver",
                                                e.getMessage());
     }
 }
@@ -501,7 +501,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -521,7 +521,7 @@ int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when increasing solution limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when increasing solution limit", e.getMessage());
     }
 
     return (sollim);
@@ -540,7 +540,7 @@ void MIPSolverCplexLazy::setSolutionLimit(long limit)
     }
     catch (IloException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when setting solution limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when setting solution limit", e.getMessage());
     }
 }
 
@@ -555,7 +555,7 @@ int MIPSolverCplexLazy::getSolutionLimit()
     catch (IloException &e)
     {
 
-        ProcessInfo::getInstance().outputError("Error when obtaining solution limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when obtaining solution limit", e.getMessage());
     }
 
     return (solLim);

@@ -30,17 +30,17 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
     if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
     {
-        ProcessInfo::getInstance().outputInfo("Nonlinear objective function detected.");
+        Output::getInstance().outputInfo("Nonlinear objective function detected.");
         ProcessInfo::getInstance().originalProblem = new OptProblemOriginalNonlinearObjective();
     }
     else if (isObjQuadratic && isQuadraticUsed)
     {
-        ProcessInfo::getInstance().outputAlways("Quadratic objective function detected.");
+        Output::getInstance().outputAlways("Quadratic objective function detected.");
         ProcessInfo::getInstance().originalProblem = new OptProblemOriginalQuadraticObjective();
     }
     else //Linear objective function
     {
-        ProcessInfo::getInstance().outputInfo("Linear objective function detected.");
+        Output::getInstance().outputInfo("Linear objective function detected.");
         ProcessInfo::getInstance().originalProblem = new OptProblemOriginalLinearObjective();
     }
 

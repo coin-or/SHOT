@@ -45,7 +45,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 			hyperplaneSolutionPointStrategyInitialized = true;
 		}
 
-		ProcessInfo::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
+		Output::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
 		tSelectHPPts->run(solPoints);
 
 		return;
@@ -85,7 +85,7 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
 					externalPoint = solPoints.at(i).point;
 
-					ProcessInfo::getInstance().outputWarning(
+					Output::getInstance().outputWarning(
 						"     Cannot find solution with linesearch, using solution point instead.");
 				}
 
@@ -113,12 +113,12 @@ void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 					ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
 					addedHyperplanes++;
 
-					ProcessInfo::getInstance().outputInfo(
+					Output::getInstance().outputInfo(
 						"     Added hyperplane to waiting list with deviation: " + UtilityFunctions::toString(tmpMostDevConstr.value));
 				}
 				else
 				{
-					ProcessInfo::getInstance().outputAlways("     Could not add hyperplane to waiting list.");
+					Output::getInstance().outputAlways("     Could not add hyperplane to waiting list.");
 				}
 			}
 		}

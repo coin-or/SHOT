@@ -81,7 +81,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
                     }
                     catch (std::exception &e)
                     {
-                        ProcessInfo::getInstance().outputWarning("Cannot find solution with primal bound linesearch.");
+                        Output::getInstance().outputWarning("Cannot find solution with primal bound linesearch.");
                     }
                 }
             }

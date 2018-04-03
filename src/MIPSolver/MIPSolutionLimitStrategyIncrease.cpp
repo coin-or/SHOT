@@ -44,7 +44,7 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
     // Solution limit has not been updated in the maximal number of iterations
     if (prevIter->isMIP() && (currIter->iterationNumber - lastIterSolLimIncreased > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual") && currIter->iterationNumber - lastIterOptimal > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
     {
-        ProcessInfo::getInstance().outputInfo("     Force solution limit update.");
+        Output::getInstance().outputInfo("     Force solution limit update.");
         return (true);
     }
 

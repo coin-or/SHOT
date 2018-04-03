@@ -71,7 +71,7 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
         }
         else
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
         }
     }
@@ -204,13 +204,13 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     {
         cbcModel->setCutoff(this->cutOff);
 
-        ProcessInfo::getInstance().outputInfo(
+        Output::getInstance().outputInfo(
             "     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
     }
     else if (!originalProblem->isTypeOfObjectiveMinimize() && abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
-        ProcessInfo::getInstance().outputInfo(
+        Output::getInstance().outputInfo(
             "     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
     }
 }
@@ -240,7 +240,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 
     if (activate)
     {
-        ProcessInfo::getInstance().outputInfo("Activating MIP strategy");
+        Output::getInstance().outputInfo("Activating MIP strategy");
 
         for (int i = 0; i < numVar; i++)
         {
@@ -254,7 +254,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
     }
     else
     {
-        ProcessInfo::getInstance().outputInfo("Activating LP strategy");
+        Output::getInstance().outputInfo("Activating LP strategy");
         for (int i = 0; i < numVar; i++)
         {
             if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -293,7 +293,7 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     }
     else
     {
-        ProcessInfo::getInstance().outputError("MIP solver return status unknown.");
+        Output::getInstance().Output::getInstance().outputError("MIP solver return status unknown.");
     }
 
     return (MIPSolutionStatus);
@@ -332,7 +332,7 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when solving subproblem with Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when solving subproblem with Cbc", e.what());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -366,7 +366,7 @@ void MIPSolverOsiCbc::setTimeLimit(double seconds)
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when setting time limit in Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when setting time limit in Cbc", e.what());
     }
 }
 
@@ -381,20 +381,20 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
         {
             this->cutOff = cutOff + cutOffTol;
 
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Setting cutoff value to " + to_string(this->cutOff) + " for minimization.");
         }
         else
         {
             this->cutOff = cutOff - cutOffTol;
 
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Setting cutoff value to " + to_string(this->cutOff) + " for maximization.");
         }
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when setting cut off value", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when setting cut off value", e.what());
     }
 }
 
@@ -420,7 +420,7 @@ void MIPSolverOsiCbc::addMIPStart(std::vector<double> point)
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when adding MIP start to Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when adding MIP start to Cbc", e.what());
     }
 }
 
@@ -432,7 +432,7 @@ void MIPSolverOsiCbc::writeProblemToFile(std::string filename)
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when saving model to file in Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when saving model to file in Cbc", e.what());
     }
 }
 
@@ -444,7 +444,7 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
 
     if (!isMIP && solIdx > 0) // LP problems only have one solution!
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Cannot obtain solution with index " + to_string(solIdx) + " in Cbc since the problem is LP/QP!");
 
         return (objVal);
@@ -477,7 +477,7 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Error when obtaining objective value for solution index " + to_string(solIdx) + " in Cbc", e.what());
     }
 
@@ -517,7 +517,7 @@ std::vector<double> MIPSolverOsiCbc::getVariableSolution(int solIdx)
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when reading solution with index " + to_string(solIdx) + " in Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when reading solution with index " + to_string(solIdx) + " in Cbc", e.what());
     }
     return (solution);
 }
@@ -536,7 +536,7 @@ int MIPSolverOsiCbc::getNumberOfSolutions()
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when obtaining number of solutions in Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when obtaining number of solutions in Cbc", e.what());
     }
 
     return (numSols);
@@ -555,7 +555,7 @@ void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, doubl
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Error when updating variable bounds for variable index" + to_string(varIndex) + " in Cbc", e.what());
     }
 }
@@ -571,7 +571,7 @@ pair<double, double> MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Error when obtaining variable bounds for variable index" + to_string(varIndex) + " in Cbc", e.what());
     }
 
@@ -603,7 +603,7 @@ double MIPSolverOsiCbc::getDualObjectiveValue()
     }
     catch (exception &e)
     {
-        ProcessInfo::getInstance().outputError("Error when obtaining dual objective value in Cbc", e.what());
+        Output::getInstance().Output::getInstance().outputError("Error when obtaining dual objective value in Cbc", e.what());
     }
 
     return (objVal);

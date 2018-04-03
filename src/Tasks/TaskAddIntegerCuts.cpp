@@ -50,7 +50,7 @@ void TaskAddIntegerCuts::run()
 			ProcessInfo::getInstance().numIntegerCutsAdded++;
 		}
 
-		ProcessInfo::getInstance().outputInfo(
+		Output::getInstance().outputInfo(
 			"     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
 
 		ProcessInfo::getInstance().integerCutWaitingList.clear();

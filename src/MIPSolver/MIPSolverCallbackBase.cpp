@@ -51,13 +51,13 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     {
         if (ProcessInfo::getInstance().MIPIterationsWithoutNLPCall >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
         {
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
         {
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
             callNLPSolver = true;
         }
@@ -148,7 +148,7 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 
     auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % to_string(currIter->iterationNumber) % tmpType.str() % hyperplanesExpr % dualBoundExpr % objExpr % primalBoundExpr % tmpConstrExpr;
 
-    ProcessInfo::getInstance().outputSummary(tmpLine.str());
+    Output::getInstance().outputSummary(tmpLine.str());
 
     double timeStamp = ProcessInfo::getInstance().getElapsedTime("Total");
 
@@ -162,14 +162,14 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
         double objLB = objBounds.first;
         double objUB = objBounds.second;
 
-        ProcessInfo::getInstance().outputSummary(
+        Output::getInstance().outputSummary(
             "                                                                                     ");
 
 #ifdef _WIN32
-        ProcessInfo::getInstance().outputSummary(
+        Output::getInstance().outputSummary(
             "ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
 #else
-        ProcessInfo::getInstance().outputSummary(
+        Output::getInstance().outputSummary(
             "─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
@@ -177,7 +177,7 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
                                             "rel gap %4% / %5%") %
                               ProcessInfo::getInstance().getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
 
-        ProcessInfo::getInstance().outputSummary(tmpLineSummary.str());
+        Output::getInstance().outputSummary(tmpLineSummary.str());
 
         std::stringstream tmpLine;
 
@@ -193,17 +193,17 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
             tmpLine << " Number of integer cuts: " << ProcessInfo::getInstance().numIntegerCutsAdded << ".";
         }
 
-        ProcessInfo::getInstance().outputSummary(tmpLine.str());
+        Output::getInstance().outputSummary(tmpLine.str());
 
 #ifdef _WIN32
-        ProcessInfo::getInstance().outputSummary(
+        Output::getInstance().outputSummary(
             "ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
 #else
-        ProcessInfo::getInstance().outputSummary(
+        Output::getInstance().outputSummary(
             "─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
-        ProcessInfo::getInstance().outputSummary("");
+        Output::getInstance().outputSummary("");
     }
 }
 

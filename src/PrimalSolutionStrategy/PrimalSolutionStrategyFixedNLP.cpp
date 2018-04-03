@@ -38,7 +38,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP()
     }
 #endif
     default:
-        ProcessInfo::getInstance().outputError("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
+        Output::getInstance().Output::getInstance().outputError("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
         throw new ErrorClass("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
 
         throw std::logic_error("Unknown PrimalNLPSolver setting.");
@@ -261,7 +261,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
             auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % tmpObjVal % tmpPrimal % tmpConstr;
 
-            ProcessInfo::getInstance().outputSummary(tmpLine.str());
+            Output::getInstance().outputSummary(tmpLine.str());
 
             if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
             {
@@ -339,13 +339,13 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 if (interval < 10 * this->originalTimeFrequency)
                     Settings::getInstance().updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
-                ProcessInfo::getInstance().outputInfo(
+                Output::getInstance().outputInfo(
                     "     Duration:  " + to_string(timeEnd - timeStart) + " s. New interval: " + to_string(interval) + " s or " + to_string(iters) + " iters.");
             }
 
             auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % "infeasible" % "" % "";
 
-            ProcessInfo::getInstance().outputSummary(tmpLine.str());
+            Output::getInstance().outputSummary(tmpLine.str());
 
             if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
             {

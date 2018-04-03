@@ -64,13 +64,13 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	{
 		if (ProcessInfo::getInstance().MIPIterationsWithoutNLPCall >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
 		{
-			ProcessInfo::getInstance().outputInfo(
+			Output::getInstance().outputInfo(
 				"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
 			callNLPSolver = true;
 		}
 		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
 		{
-			ProcessInfo::getInstance().outputInfo(
+			Output::getInstance().outputInfo(
 				"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
 			callNLPSolver = true;
 		}

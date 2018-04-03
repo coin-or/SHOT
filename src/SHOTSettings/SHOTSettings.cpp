@@ -10,8 +10,6 @@
 
 #include "SHOTSettings.h"
 
-extern const OSSmartPtr<OSOutput> osoutput;
-
 enum ESettingsType
 {
     String,
@@ -43,8 +41,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
 
     if (oldvalue == value)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                          "Setting " + key.first + "." + key.second + " not updated. Same value " + oldvalue + " given.");
+        Output::getInstance().outputInfo("Setting " + key.first + "." + key.second + " not updated. Same value " + oldvalue + " given.");
         return;
     }
     else
@@ -52,8 +49,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
         _settings[key] = value;
         _isDefault[key] = false;
 
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                          "Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
+        Output::getInstance().outputInfo("Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
     }
 }
 
@@ -73,8 +69,7 @@ void Settings::createSetting(std::string name, std::string category, std::string
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Setting <" + name + "," + category + "> = " + value + " created.");
+    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + value + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, std::string value)
@@ -84,16 +79,15 @@ void Settings::updateSetting(std::string name, std::string category, std::string
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::String)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + "> since it is of the wrong type. (Expected string).");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type. (Expected string).");
+
         throw SettingSetWrongTypeException(name, category);
     }
 
@@ -107,15 +101,15 @@ std::string Settings::getStringSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::String)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
+
         throw SettingGetWrongTypeException(name, category);
     }
 
@@ -135,8 +129,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
 }
 
 void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal,
@@ -157,22 +150,21 @@ void Settings::updateSetting(std::string name, std::string category, int value)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Integer)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
+        Output::getInstance().Output::getInstance().outputError("Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
+
         throw SettingSetWrongTypeException(name, category);
     }
 
     if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + ">: Not in interval [" + to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second) + "].");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + ">: Not in interval [" + to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second) + "].");
 
         throw SettingOutsideBoundsException(name, category, (double)value, _settingsBounds[key].first,
                                             _settingsBounds[key].second);
@@ -190,15 +182,15 @@ int Settings::getIntSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Integer)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+
         throw SettingGetWrongTypeException(name, category);
     }
 
@@ -210,8 +202,8 @@ int Settings::getIntSetting(std::string name, std::string category)
     catch (boost::bad_lexical_cast &e)
     {
 
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+
         throw SettingGetWrongTypeException(name, category);
     }
 }
@@ -228,8 +220,7 @@ void Settings::createSetting(std::string name, std::string category, bool value,
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
 }
 
 void Settings::createSetting(std::string name, std::string category, bool value, std::string description)
@@ -244,15 +235,15 @@ void Settings::updateSetting(std::string name, std::string category, bool value)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Boolean)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
+        Output::getInstance().Output::getInstance().outputError("Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
+
         throw SettingSetWrongTypeException(name, category);
     }
 
@@ -268,15 +259,15 @@ bool Settings::getBoolSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Boolean)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+
         throw SettingGetWrongTypeException(name, category);
     }
 
@@ -287,8 +278,8 @@ bool Settings::getBoolSetting(std::string name, std::string category)
     }
     catch (boost::bad_lexical_cast &e)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+
         throw SettingGetWrongTypeException(name, category);
     }
 }
@@ -304,8 +295,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     {
         _enumDescription[make_tuple(name, category, i)] = enumDescriptions.at(i);
 
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                          " Enum value " + to_string(i) + ": " + enumDescriptions.at(i));
+        Output::getInstance().outputInfo(" Enum value " + to_string(i) + ": " + enumDescriptions.at(i));
     }
 
     _settingsEnum[make_pair(name, category)] = true;
@@ -341,15 +331,14 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Integer)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -358,13 +347,13 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
     {
         int intval = boost::lexical_cast<int>(_settings[key]);
         std::tuple<std::string, std::string, int> tpl = make_tuple(name, category, intval);
+
         return _enumDescription[tpl];
     }
     catch (boost::bad_lexical_cast &e)
     {
 
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -394,8 +383,7 @@ void Settings::createSetting(std::string name, std::string category, double valu
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, double value)
@@ -405,23 +393,21 @@ void Settings::updateSetting(std::string name, std::string category, double valu
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Double)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
+        Output::getInstance().Output::getInstance().outputError("Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
 
     if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot update setting <" + name + "," + category + ">: Not in interval [" + to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second) + "].");
+        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + ">: Not in interval [" + to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second) + "].");
 
         throw SettingOutsideBoundsException(name, category, value, _settingsBounds[key].first,
                                             _settingsBounds[key].second);
@@ -439,15 +425,15 @@ double Settings::getDoubleSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Double)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+
         throw SettingGetWrongTypeException(name, category);
     }
 
@@ -458,8 +444,7 @@ double Settings::getDoubleSetting(std::string name, std::string category)
     }
     catch (boost::bad_lexical_cast &e)
     {
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                          "Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -593,8 +578,7 @@ std::string Settings::getUpdatedSettingsAsString()
 
 OSOption *Settings::getSettingsAsOSOption()
 {
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Starting conversion of settings to OSOption object.");
+    Output::getInstance().outputInfo("Starting conversion of settings to OSOption object.");
 
     OSOption *options = new OSOption();
 
@@ -638,15 +622,13 @@ OSOption *Settings::getSettingsAsOSOption()
 
         options->setAnotherSolverOption(p.first, iterator->second, "SHOT", p.second, type.str(), desc.str());
 
-        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                          " Setting <" + p.first + "," + p.second + "> converted.");
+        Output::getInstance().outputInfo(" Setting <" + p.first + "," + p.second + "> converted.");
 
         type.clear();
         desc.clear();
     }
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Conversion of settings to OSOption object completed.");
+    Output::getInstance().outputInfo("Conversion of settings to OSOption object completed.");
 
     return options;
 }
@@ -721,7 +703,7 @@ std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
 void Settings::readSettingsFromOSoL(std::string osol)
 {
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Starting conversion of settings from OSoL.");
+    Output::getInstance().outputInfo("Starting conversion of settings from OSoL.");
 
     OSoLReader *osolreader = new OSoLReader();
 
@@ -732,8 +714,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
 
 void Settings::readSettingsFromGAMSOptFormat(std::string options)
 {
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info,
-                      "Starting conversion of settings from GAMS options format.");
+    Output::getInstance().outputInfo("Starting conversion of settings from GAMS options format.");
 
     std::istringstream f(options);
     std::string line;
@@ -755,8 +736,7 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 
         if (keyValuePair.size() != 2)
         {
-            osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                              "Error when reading line \"" + line + "\" in the options file; ignoring the option.");
+            Output::getInstance().Output::getInstance().outputError("Error when reading line \"" + line + "\" in the options file; ignoring the option.");
 
             continue;
         }
@@ -774,8 +754,7 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 
         if (_settingsIter == _settings.end())
         {
-            osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                              "Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+            Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
             throw SettingKeyNotFoundException(name, category);
         }
@@ -805,15 +784,14 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
         }
         catch (boost::bad_lexical_cast &)
         {
-            osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                              "Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
+            Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
         }
     }
 }
 
 void Settings::readSettingsFromOSOption(OSOption *options)
 {
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Conversion of settings from OSOptions.");
+    Output::getInstance().outputInfo("Conversion of settings from OSOptions.");
 
     for (int i = 0; i < options->getNumberOfSolverOptions(); i++)
     {
@@ -853,8 +831,7 @@ void Settings::readSettingsFromOSOption(OSOption *options)
                     catch (boost::bad_lexical_cast &e)
                     {
 
-                        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                                          "Value for setting <" + so->name + "," + so->category + "> in OSoL file is not an integer. Using default value.");
+                        Output::getInstance().Output::getInstance().outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is not an integer. Using default value.");
                     }
                 }
                 else if (so->type == "double")
@@ -866,15 +843,13 @@ void Settings::readSettingsFromOSOption(OSOption *options)
                     }
                     catch (boost::bad_lexical_cast &e)
                     {
-                        osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                                          "Value for setting <" + so->name + "," + so->category + "> in OSoL file is not a double. Using default value.");
+                        Output::getInstance().Output::getInstance().outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is not a double. Using default value.");
                     }
                 }
                 else
                 {
 
-                    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error,
-                                      "Value for setting <" + so->name + "," + so->category + "> in OSoL file is of unknown type. Skipping it.");
+                    Output::getInstance().Output::getInstance().outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is of unknown type. Skipping it.");
                 }
             }
             catch (SettingKeyNotFoundException &e)
@@ -889,5 +864,5 @@ void Settings::readSettingsFromOSOption(OSOption *options)
         }
     }
 
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, "Conversion of settings from OSoL completed.");
+    Output::getInstance().outputInfo("Conversion of settings from OSoL completed.");
 }

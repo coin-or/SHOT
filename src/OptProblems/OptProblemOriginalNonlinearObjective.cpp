@@ -77,7 +77,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
         }
         else
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "Constraint with index " + to_string(idx) + " of type " + to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
         }
     }

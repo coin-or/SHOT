@@ -120,7 +120,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
 {
     if (ptA.size() != ptB.size())
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "     Linesearch error: sizes of points vary: " + std::to_string(ptA.size()) + " != " + std::to_string(ptB.size()));
     }
 
@@ -175,12 +175,12 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     int resFVals = ProcessInfo::getInstance().numFunctionEvals - tempFEvals;
     if (max_iter == Nmax)
     {
-        ProcessInfo::getInstance().outputWarning(
+        Output::getInstance().outputWarning(
             "     Warning, number of line search iterations " + to_string(max_iter) + " reached!");
     }
     else
     {
-        ProcessInfo::getInstance().outputInfo(
+        Output::getInstance().outputInfo(
             "     Line search iterations: " + to_string(max_iter) + ". Function evaluations: " + to_string(resFVals));
     }
 

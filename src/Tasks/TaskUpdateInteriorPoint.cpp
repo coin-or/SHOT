@@ -34,7 +34,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = ProcessInfo::getInstance().primalSolutions.at(0).point;
         tmpIP->maxDevatingConstraint = ProcessInfo::getInstance().primalSolutions.at(0).maxDevatingConstraintNonlinear;
 
-        ProcessInfo::getInstance().outputAlways("     Interior point replaced with primal solution point since no interior point was previously available.");
+        Output::getInstance().outputAlways("     Interior point replaced with primal solution point since no interior point was previously available.");
 
         ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 
@@ -52,7 +52,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        ProcessInfo::getInstance().outputAlways("     Interior point replaced with primal solution point due to constraint deviation.");
+        Output::getInstance().outputAlways("     Interior point replaced with primal solution point due to constraint deviation.");
 
         ProcessInfo::getInstance().interiorPts.back() = tmpIP;
     }
@@ -63,7 +63,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        ProcessInfo::getInstance().outputAlways("     Primal solution point used as additional interior point.");
+        Output::getInstance().outputAlways("     Primal solution point used as additional interior point.");
 
         if (ProcessInfo::getInstance().interiorPts.size() == ProcessInfo::getInstance().numOriginalInteriorPoints)
         {
@@ -82,7 +82,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        ProcessInfo::getInstance().outputAlways("     Interior point replaced with primal solution point.");
+        Output::getInstance().outputAlways("     Interior point replaced with primal solution point.");
 
         ProcessInfo::getInstance().interiorPts.back() = tmpIP;
     }
@@ -99,7 +99,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpPrimalPoint);
 
-        ProcessInfo::getInstance().outputAlways("     Interior point replaced with primal solution point.");
+        Output::getInstance().outputAlways("     Interior point replaced with primal solution point.");
 
         ProcessInfo::getInstance().interiorPts.back() = tmpIP;
     }

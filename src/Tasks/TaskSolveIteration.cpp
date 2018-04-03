@@ -63,9 +63,9 @@ void TaskSolveIteration::run()
         MIPSolver->writeProblemToFile(ss.str());
     }
 
-    ProcessInfo::getInstance().outputInfo("Solving MIP problem.");
+    Output::getInstance().outputInfo("Solving MIP problem.");
     auto solStatus = MIPSolver->solveProblem();
-    ProcessInfo::getInstance().outputInfo("MIP problem solved.");
+    Output::getInstance().outputInfo("MIP problem solved.");
 
     // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
     if (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree)

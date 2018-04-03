@@ -22,7 +22,7 @@ MIPSolverGurobi::MIPSolverGurobi()
     catch (GRBException &e)
     {
         {
-            ProcessInfo::getInstance().outputError("Error when initializing Gurobi:", e.getMessage());
+            Output::getInstance().Output::getInstance().outputError("Error when initializing Gurobi:", e.getMessage());
         }
 
         return;
@@ -82,7 +82,7 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
             }
             else
             {
-                ProcessInfo::getInstance().outputWarning(
+                Output::getInstance().outputWarning(
                     "Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
             }
         }
@@ -259,7 +259,7 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
     catch (GRBException &e)
     {
         {
-            ProcessInfo::getInstance().outputError("Error when creating linear problem:", e.getMessage());
+            Output::getInstance().Output::getInstance().outputError("Error when creating linear problem:", e.getMessage());
         }
 
         return (false);
@@ -295,7 +295,7 @@ void MIPSolverGurobi::initializeSolverSettings()
     catch (GRBException &e)
     {
         {
-            ProcessInfo::getInstance().outputError("Error when initializing parameters for linear solver",
+            Output::getInstance().Output::getInstance().outputError("Error when initializing parameters for linear solver",
                                                    e.getMessage());
         }
     }
@@ -328,7 +328,7 @@ int MIPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, d
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when adding linear constraint", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when adding linear constraint", e.getMessage());
 
         return (-1);
     }
@@ -366,7 +366,7 @@ std::vector<double> MIPSolverGurobi::getVariableSolution(int solIdx)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when reading solution with index " + std::to_string(solIdx),
+        Output::getInstance().Output::getInstance().outputError("Error when reading solution with index " + std::to_string(solIdx),
                                                e.getMessage());
     }
 
@@ -389,7 +389,7 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
 
     if (activate)
     {
-        ProcessInfo::getInstance().outputInfo("Activating MIP strategy.");
+        Output::getInstance().outputInfo("Activating MIP strategy.");
 
         for (int i = 0; i < numVar; i++)
         {
@@ -411,7 +411,7 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
     }
     else
     {
-        ProcessInfo::getInstance().outputInfo("Activating LP strategy.");
+        Output::getInstance().outputInfo("Activating LP strategy.");
         for (int i = 0; i < numVar; i++)
         {
             if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
@@ -484,7 +484,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else
     {
-        ProcessInfo::getInstance().outputError("MIP solver return status " + to_string(status));
+        Output::getInstance().Output::getInstance().outputError("MIP solver return status " + to_string(status));
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -504,7 +504,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -547,7 +547,7 @@ void MIPSolverGurobi::setTimeLimit(double seconds)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when setting time limit", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when setting time limit", e.getMessage());
     }
 }
 
@@ -563,19 +563,19 @@ void MIPSolverGurobi::setCutOff(double cutOff)
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
 
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Setting cutoff value to " + to_string(cutOff) + " for minimization.");
         }
         else
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
-            ProcessInfo::getInstance().outputInfo(
+            Output::getInstance().outputInfo(
                 "     Setting cutoff value to " + to_string(cutOff) + " for maximization.");
         }
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when setting cut off value", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when setting cut off value", e.getMessage());
     }
 }
 
@@ -594,10 +594,10 @@ void MIPSolverGurobi::addMIPStart(std::vector<double> point)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when adding MIP starting point", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when adding MIP starting point", e.getMessage());
     }
 
-    ProcessInfo::getInstance().outputInfo("      Added MIP starting point.");
+    Output::getInstance().outputInfo("      Added MIP starting point.");
 }
 
 void MIPSolverGurobi::writeProblemToFile(std::string filename)
@@ -608,7 +608,7 @@ void MIPSolverGurobi::writeProblemToFile(std::string filename)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when saving model to file", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when saving model to file", e.getMessage());
     }
 }
 
@@ -620,7 +620,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 
     if (!isMIP && solIdx > 0) // LP problems only have one solution!
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
 
         return (objVal);
@@ -656,7 +656,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
     }
 
@@ -678,10 +678,10 @@ void MIPSolverGurobi::deleteMIPStarts()
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when deleting MIP starting points", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when deleting MIP starting points", e.getMessage());
     }
 
-    ProcessInfo::getInstance().outputDebug("    Deleted MIP starting points.");
+    Output::getInstance().outputDebug("    Deleted MIP starting points.");
 }
 
 void MIPSolverGurobi::populateSolutionPool()
@@ -706,7 +706,7 @@ void MIPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doubl
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
     }
 }
@@ -726,7 +726,7 @@ pair<double, double> MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError(
+        Output::getInstance().Output::getInstance().outputError(
             "Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
     }
 
@@ -761,7 +761,7 @@ double MIPSolverGurobi::getDualObjectiveValue()
     }
     catch (GRBException &e)
     {
-        ProcessInfo::getInstance().outputError("Error when obtaining dual objective value", e.getMessage());
+        Output::getInstance().Output::getInstance().outputError("Error when obtaining dual objective value", e.getMessage());
     }
 
     return (objVal);

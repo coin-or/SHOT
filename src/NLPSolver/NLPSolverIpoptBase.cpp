@@ -12,7 +12,7 @@
 
 E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 {
-    ProcessInfo::getInstance().outputInfo("     Starting solution of Ipopt problem.");
+    Output::getInstance().outputInfo("     Starting solution of Ipopt problem.");
 
     auto timeLimit = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
 
@@ -42,58 +42,58 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
         }
         catch (ErrorClass e)
         {
-            ProcessInfo::getInstance().outputError("     Error when solving NLP problem with Ipopt", e.errormsg);
+            Output::getInstance().Output::getInstance().outputError("     Error when solving NLP problem with Ipopt", e.errormsg);
             solStatus == "other";
         }
 
         if (solStatus == "globallyOptimal")
         {
-            ProcessInfo::getInstance().outputWarning("     Global solution found to relaxed problem with Ipopt.");
+            Output::getInstance().outputWarning("     Global solution found to relaxed problem with Ipopt.");
             status = E_NLPSolutionStatus::Optimal;
         }
 
         if (solStatus == "locallyOptimal")
         {
-            ProcessInfo::getInstance().outputWarning("     Local solution found to relaxed problem with Ipopt.");
+            Output::getInstance().outputWarning("     Local solution found to relaxed problem with Ipopt.");
             status = E_NLPSolutionStatus::Optimal;
         }
 
         if (solStatus == "optimal")
         {
-            ProcessInfo::getInstance().outputWarning("     Optimal solution found to relaxed problem with Ipopt.");
+            Output::getInstance().outputWarning("     Optimal solution found to relaxed problem with Ipopt.");
             status = E_NLPSolutionStatus::Optimal;
         }
 
         if (solStatus == "bestSoFar")
         {
-            ProcessInfo::getInstance().outputWarning("     Feasible solution found to relaxed problem with Ipopt.");
+            Output::getInstance().outputWarning("     Feasible solution found to relaxed problem with Ipopt.");
             status = E_NLPSolutionStatus::Feasible;
         }
 
         if (solStatus == "stoppedByLimit")
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "     No solution found to problem with Ipopt: Time or iteration limit exceeded.");
             status = E_NLPSolutionStatus::IterationLimit;
         }
 
         if (solStatus == "infeasible")
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "     No solution found to problem with Ipopt: Infeasible problem detected.");
             status = E_NLPSolutionStatus::Infeasible;
         }
 
         if (solStatus == "unsure")
         {
-            ProcessInfo::getInstance().outputError(
+            Output::getInstance().Output::getInstance().outputError(
                 "     No solution found to problem with Ipopt, solution code: unsure.");
             status = E_NLPSolutionStatus::Infeasible;
         }
 
         if (solStatus == "other")
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "     No solution found to problem with Ipopt, solution code: other.");
             status = E_NLPSolutionStatus::Infeasible;
         }
@@ -106,7 +106,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             IpoptNLPSolver = NULL;
         }
 
-        ProcessInfo::getInstance().outputError("     Error when solving relaxed problem with Ipopt!", e.what());
+        Output::getInstance().Output::getInstance().outputError("     Error when solving relaxed problem with Ipopt!", e.what());
         status = E_NLPSolutionStatus::Error;
     }
     catch (...)
@@ -117,11 +117,11 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             IpoptNLPSolver = NULL;
         }
 
-        ProcessInfo::getInstance().outputError("     Unspecified error when solving relaxed problem with Ipopt!");
+        Output::getInstance().Output::getInstance().outputError("     Unspecified error when solving relaxed problem with Ipopt!");
         status = E_NLPSolutionStatus::Error;
     }
 
-    ProcessInfo::getInstance().outputInfo("     Finished solution of Ipopt problem.");
+    Output::getInstance().outputInfo("     Finished solution of Ipopt problem.");
 
     return (status);
 }
@@ -151,7 +151,7 @@ void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std:
     auto lbs = NLPProblem->getVariableLowerBounds();
     auto ubs = NLPProblem->getVariableUpperBounds();
 
-    ProcessInfo::getInstance().outputInfo("     Adding starting points to Ipopt.");
+    Output::getInstance().outputInfo("     Adding starting points to Ipopt.");
 
     for (int k = 0; k < startingPointSize; k++)
     {
@@ -169,7 +169,7 @@ void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std:
 
         if (currPt > currUB)
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "       Starting point value for variable " + to_string(currVarIndex) + " is larger than ub: " + UtilityFunctions::toString(currPt) + " > " + UtilityFunctions::toString(currUB) + "; resetting to ub.");
             if (currUB == 1 && currPt > 1 && currPt < 1.00001)
             {
@@ -183,7 +183,7 @@ void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std:
 
         if (currPt < currLB)
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "       Starting point value for variable " + to_string(currVarIndex) + " is smaller than lb: " + UtilityFunctions::toString(currPt) + " < " + UtilityFunctions::toString(currLB) + "; resetting to lb.");
 
             if (currLB == 0 && currPt < 0 && currPt > -0.00001)
@@ -198,13 +198,13 @@ void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std:
 
         osOption->setAnotherInitVarValue(currVarIndex, currPt);
 
-        ProcessInfo::getInstance().outputInfo(
+        Output::getInstance().outputInfo(
             "       Starting point value for " + to_string(currVarIndex) + " set: " + UtilityFunctions::toString(currLB) + " < " + UtilityFunctions::toString(currPt) + " < " + UtilityFunctions::toString(currUB));
     }
 
     osOption->setAnotherSolverOption("warm_start_init_point", "yes", "ipopt", "", "string", "");
 
-    ProcessInfo::getInstance().outputInfo("     All starting points set.");
+    Output::getInstance().outputInfo("     All starting points set.");
 }
 
 void NLPSolverIpoptBase::clearStartingPoint()
@@ -379,12 +379,12 @@ void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vec
 
     if (lowerBoundsBeforeFix.size() > 0 || upperBoundsBeforeFix.size() > 0)
     {
-        ProcessInfo::getInstance().outputWarning("     Old variable fixes remain for Ipopt solver, resetting!");
+        Output::getInstance().outputWarning("     Old variable fixes remain for Ipopt solver, resetting!");
         lowerBoundsBeforeFix.clear();
         upperBoundsBeforeFix.clear();
     }
 
-    ProcessInfo::getInstance().outputInfo("     Defining fixed variables in Ipopt.");
+    Output::getInstance().outputInfo("     Defining fixed variables in Ipopt.");
 
     for (int k = 0; k < size; k++)
     {
@@ -407,7 +407,7 @@ void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vec
 
         if (currPt > currUB)
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "       Fixed value for variable " + to_string(currVarIndex) + " is larger than ub: " + UtilityFunctions::toString(currPt) + " > " + to_string(currUB));
             if (currUB == 1 && currPt > 1 && currPt < 1.00001)
             {
@@ -420,7 +420,7 @@ void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vec
         }
         else if (currPt < currLB)
         {
-            ProcessInfo::getInstance().outputWarning(
+            Output::getInstance().outputWarning(
                 "       Fixed value for variable " + to_string(currVarIndex) + " is smaller than lb: " + UtilityFunctions::toString(currPt) + " < " + to_string(currLB));
 
             if (currLB == 0 && currPt < 0 && currPt > -0.00001)
@@ -433,17 +433,17 @@ void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vec
             }
         }
 
-        ProcessInfo::getInstance().outputInfo(
+        Output::getInstance().outputInfo(
             "       Setting fixed value for variable " + to_string(currVarIndex) + ": " + UtilityFunctions::toString(currLB) + " <= " + UtilityFunctions::toString(currPt) + " <= " + UtilityFunctions::toString(currUB));
 
         NLPProblem->fixVariable(currVarIndex, currPt);
     }
-    ProcessInfo::getInstance().outputInfo("     All fixed variables defined.");
+    Output::getInstance().outputInfo("     All fixed variables defined.");
 }
 
 void NLPSolverIpoptBase::unfixVariables()
 {
-    ProcessInfo::getInstance().outputInfo("     Starting reset of fixed variables in Ipopt.");
+    Output::getInstance().outputInfo("     Starting reset of fixed variables in Ipopt.");
 
     for (int k = 0; k < fixedVariableIndexes.size(); k++)
     {
@@ -453,7 +453,7 @@ void NLPSolverIpoptBase::unfixVariables()
 
         NLPProblem->setVariableLowerBound(currVarIndex, newLB);
         NLPProblem->setVariableUpperBound(currVarIndex, newUB);
-        ProcessInfo::getInstance().outputInfo(
+        Output::getInstance().outputInfo(
             "       Resetting initial bounds for variable " + to_string(currVarIndex) + " lb = " + UtilityFunctions::toString(newLB) + " ub = " + UtilityFunctions::toString(newUB));
     }
 
@@ -464,7 +464,7 @@ void NLPSolverIpoptBase::unfixVariables()
 
     setInitialSettings(); // Must initialize it again since the class contains fixed variable bounds and starting points
 
-    ProcessInfo::getInstance().outputInfo("     Reset of fixed variables in Ipopt completed.");
+    Output::getInstance().outputInfo("     Reset of fixed variables in Ipopt completed.");
 }
 
 void NLPSolverIpoptBase::updateSettings()

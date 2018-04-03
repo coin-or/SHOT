@@ -27,11 +27,11 @@ NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 
 bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
 {
-    ProcessInfo::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
+    Output::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
 
     dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
 
-    ProcessInfo::getInstance().outputInfo("     Ipopt relaxed NLP problem created.");
+    Output::getInstance().outputInfo("     Ipopt relaxed NLP problem created.");
 
     return (true);
 }

@@ -12,17 +12,11 @@
 #include "SHOTConfig.h"
 #include "Enums.h"
 #include "Structs.h"
-#include "vector"
-#include "map"
+#include "Output.h"
 #include "Iteration.h"
 #include "Timer.h"
 
 #include "UtilityFunctions.h"
-
-// Used for OSOutput
-#include "cstdio"
-#define HAVE_STDIO_H 1
-#include "OSOutput.h"
 
 #include "SHOTSettings.h"
 
@@ -34,17 +28,17 @@
 #include "OSiLReader.h"
 #include "OSErrorClass.h"
 
-#include "MIPSolver/IRelaxationStrategy.h"
-
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/xml_parser.hpp"
 
 class OptProblemOriginal;
 class IMIPSolver;
 class ILinesearchMethod;
+class IRelaxationStrategy;
 class Iteration;
 
 #include "LinesearchMethod/ILinesearchMethod.h"
+#include "MIPSolver/IRelaxationStrategy.h"
 
 #ifdef HAS_GAMS
 #include "gmomcc.h"
@@ -64,31 +58,31 @@ class ProcessInfo
 
     void initializeResults(int numObj, int numVar, int numConstr);
 
-    vector<double> primalSolution; // TODO remove
+    std::vector<double> primalSolution; // TODO remove
     //double lastObjectiveValue; // TODO remove
-    vector<Iteration> iterations;
-    vector<PrimalSolution> primalSolutions;
-    vector<DualSolution> dualSolutions;
+    std::vector<Iteration> iterations;
+    std::vector<PrimalSolution> primalSolutions;
+    std::vector<DualSolution> dualSolutions;
 
-    vector<PrimalSolution> primalSolutionCandidates;
-    vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
-    vector<DualSolution> dualSolutionCandidates;
+    std::vector<PrimalSolution> primalSolutionCandidates;
+    std::vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
+    std::vector<DualSolution> dualSolutionCandidates;
 
-    pair<double, double> getCorrectedObjectiveBounds();
+    std::pair<double, double> getCorrectedObjectiveBounds();
 
-    void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
+    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
                            IndexValuePair maxConstrDev);
-    void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
+    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
     void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
 
-    void addPrimalFixedNLPCandidate(vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
+    void addPrimalFixedNLPCandidate(std::vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
                                     IndexValuePair maxConstrDev);
 
-    void addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
+    void addDualSolution(std::vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
     void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolution(DualSolution solution);
-    void addPrimalSolutionCandidate(vector<double> pt, E_PrimalSolutionSource source, int iter);
-    void addPrimalSolutionCandidates(vector<vector<double>> pts, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidates(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source, int iter);
 
     void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
     void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
@@ -101,7 +95,7 @@ class ProcessInfo
 
     void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
-    void addDualSolutionCandidate(vector<double> pt, E_DualSolutionSource source, int iter);
+    void addDualSolutionCandidate(std::vector<double> pt, E_DualSolutionSource source, int iter);
     void addDualSolutionCandidate(DualSolution solution);
 
     double getAbsoluteObjectiveGap();
@@ -147,11 +141,11 @@ class ProcessInfo
 
     void setOriginalProblem(OptProblemOriginal *problem);
 
-    void createTimer(string name, string description);
-    void startTimer(string name);
-    void stopTimer(string name);
-    void restartTimer(string name);
-    double getElapsedTime(string name);
+    void createTimer(std::string name, std::string description);
+    void startTimer(std::string name);
+    void stopTimer(std::string name);
+    void restartTimer(std::string name);
+    double getElapsedTime(std::string name);
 
     double getPrimalBound();
     void setPrimalBound(double value);
@@ -171,7 +165,7 @@ class ProcessInfo
 
     void createIteration();
 
-    std::vector<shared_ptr<InteriorPoint>> interiorPts;
+    std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
 
     std::vector<Hyperplane> hyperplaneWaitingList;
 
@@ -180,16 +174,6 @@ class ProcessInfo
     std::vector<std::vector<int>> integerCutWaitingList;
 
     std::vector<Timer> timers;
-
-    void outputAlways(std::string message);
-    void outputError(std::string message);
-    void outputError(std::string message, std::string errormessage);
-    void outputSummary(std::string message);
-    void outputWarning(std::string message);
-    void outputInfo(std::string message);
-    void outputDebug(std::string message);
-    void outputTrace(std::string message);
-    void outputDetailedTrace(std::string message);
 
     OSInstance *getProblemInstanceFromOSiL(std::string osil);
     std::string getOSiLFromProblemInstance(OSInstance *instance);

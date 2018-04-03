@@ -209,9 +209,9 @@ bool SolutionStrategyMultiTree::solveProblem()
 
     while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
     {
-        ProcessInfo::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
+        Output::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
-        ProcessInfo::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
+        Output::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
     }
 
     return (true);

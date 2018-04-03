@@ -11,10 +11,7 @@
 #include "ProcessInfo.h"
 #include "OptProblems/OptProblemOriginal.h"
 
-extern const OSSmartPtr<OSOutput> osoutput;
-
-void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
-                                    IndexValuePair maxConstrDev)
+void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter, IndexValuePair maxConstrDev)
 {
     PrimalSolution sol;
 
@@ -195,52 +192,6 @@ bool ProcessInfo::getObjectiveUpdatedByLinesearch()
     return (objectiveUpdatedByLinesearch);
 }
 
-void ProcessInfo::outputAlways(std::string message)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_always, message);
-}
-
-void ProcessInfo::outputError(std::string message)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
-}
-
-void ProcessInfo::outputError(std::string message, std::string errormessage)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, " \"" + errormessage + "\"");
-}
-
-void ProcessInfo::outputSummary(std::string message)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_summary, message);
-}
-
-void ProcessInfo::outputWarning(std::string message)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_warning, message);
-}
-
-void ProcessInfo::outputInfo(std::string message)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, message);
-}
-
-void ProcessInfo::outputDebug(std::string message)
-{
-    osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_debug, message);
-}
-
-void ProcessInfo::outputTrace(std::string message)
-{
-    //osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, message);
-}
-
-void ProcessInfo::outputDetailedTrace(std::string message)
-{
-    //osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, message);
-}
-
 void ProcessInfo::checkPrimalSolutionCandidates()
 {
     this->startTimer("PrimalBoundTotal");
@@ -331,7 +282,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 
             auto tmpLine = boost::format("     New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
 
-            this->outputInfo(tmpLine.str());
+            Output::getInstance().outputInfo(tmpLine.str());
         }
     }
 
@@ -488,12 +439,12 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         reCalculateObjective = true;
         auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
-        this->outputWarning(tmpLine.str());
+        Output::getInstance().outputWarning(tmpLine.str());
     }
     else
     {
         auto tmpLine = boost::format("       All variable bounds fulfilled.");
-        this->outputWarning(tmpLine.str());
+        Output::getInstance().outputWarning(tmpLine.str());
     }
 
     primalSol.boundProjectionPerformed = !isVariableBoundsFulfilled;
@@ -535,12 +486,12 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto tmpLine = boost::format(
                                "       Discrete variables were not fulfilled to tolerance %1%. Rounding performed...") %
                            integerTol;
-            this->outputWarning(tmpLine.str());
+            Output::getInstance().outputWarning(tmpLine.str());
         }
         else
         {
             auto tmpLine = boost::format("       All discrete variables are fulfilled to tolerance %1%.") % integerTol;
-            this->outputWarning(tmpLine.str());
+            Output::getInstance().outputWarning(tmpLine.str());
         }
 
         primalSol.integerRoundingPerformed = isRounded;
@@ -562,14 +513,14 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if ((isMinimization && tmpObjVal < this->getPrimalBound()) || (!isMinimization && tmpObjVal > this->getPrimalBound()))
     {
         auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
-        this->outputWarning(tmpLine.str());
+        Output::getInstance().outputWarning(tmpLine.str());
     }
     else
     {
         auto tmpLine = boost::format(
                            "     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).") %
                        tmpObjVal % sourceDesc % this->getPrimalBound();
-        this->outputWarning(tmpLine.str());
+        Output::getInstance().outputWarning(tmpLine.str());
 
         return (false);
     }
@@ -579,7 +530,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if (acceptableType && Settings::getInstance().getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
         auto tmpLine = boost::format("       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
-        this->outputInfo(tmpLine.str());
+        Output::getInstance().outputInfo(tmpLine.str());
     }
     else
     {
@@ -598,12 +549,12 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             if (isLinConstrFulfilled)
             {
                 auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
-                this->outputInfo(tmpLine.str());
+                Output::getInstance().outputInfo(tmpLine.str());
             }
             else
             {
                 auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
-                this->outputInfo(tmpLine.str());
+                Output::getInstance().outputInfo(tmpLine.str());
 
                 return (false);
             }
@@ -629,14 +580,14 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
                     boost::format(
                         "       Nonlinear constraints are not fulfilled. Most deviating is objective constraint: %2% >  %1%.") %
                     nonlinTol % mostDevNonlinearConstraints.value;
-                this->outputInfo(tmpLine.str());
+                Output::getInstance().outputInfo(tmpLine.str());
             }
             else
             {
                 auto tmpLine = boost::format(
                                    "       Nonlinear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
                                nonlinTol % mostDevNonlinearConstraints.value % originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.idx);
-                this->outputInfo(tmpLine.str());
+                Output::getInstance().outputInfo(tmpLine.str());
             }
 
             return (false);
@@ -649,14 +600,14 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
                     boost::format(
                         "       Nonlinear constraints are fulfilled. Most deviating is objective constraint: %2% <  %1%.") %
                     nonlinTol % mostDevNonlinearConstraints.value;
-                this->outputInfo(tmpLine.str());
+                Output::getInstance().outputInfo(tmpLine.str());
             }
             else
             {
                 auto tmpLine = boost::format(
                                    "       Nonlinear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
                                nonlinTol % mostDevNonlinearConstraints.value % originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.idx);
-                this->outputInfo(tmpLine.str());
+                Output::getInstance().outputInfo(tmpLine.str());
             }
         }
     }
@@ -680,7 +631,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
             auto tmpLine = boost::format("     Primal objective cut added.");
 
-            this->outputWarning(tmpLine.str());
+            Output::getInstance().outputWarning(tmpLine.str());
         }
     }
 
@@ -688,7 +639,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
 
-    this->outputInfo(tmpLine.str());
+    Output::getInstance().outputInfo(tmpLine.str());
 
     primalSol.objValue = tmpObjVal;
     primalSol.point = tmpPoint;
@@ -847,7 +798,7 @@ void ProcessInfo::startTimer(string name)
 
     if (timer == timers.end())
     {
-        outputError("Timer with name  \" " + name + "\" not found!");
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
         return;
     }
 
@@ -862,7 +813,7 @@ void ProcessInfo::restartTimer(string name)
 
     if (timer == timers.end())
     {
-        outputError("Timer with name  \" " + name + "\" not found!");
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
         return;
     }
 
@@ -877,7 +828,7 @@ void ProcessInfo::stopTimer(string name)
 
     if (timer == timers.end())
     {
-        outputError("Timer with name  \" " + name + "\" not found!");
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
         return;
     }
 
@@ -892,7 +843,7 @@ double ProcessInfo::getElapsedTime(string name)
 
     if (timer == timers.end())
     {
-        outputError("Timer with name  \" " + name + "\" not found!");
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
         return (0.0);
     }
 
@@ -1066,7 +1017,7 @@ std::string ProcessInfo::getOSrl()
                 {
                     modelStatus = "error";
                     modelStatusDescription = "Unknown return code obtained from solver";
-                    outputError("Unknown return code obtained from solver.");
+                    Output::getInstance().outputError("Unknown return code obtained from solver.");
                 }
 
                 osResult->setSolutionStatusType(0, modelStatus);
@@ -1345,7 +1296,7 @@ std::string ProcessInfo::getTraceResult()
     else
     {
         solverStatus = "10";
-        outputError("Unknown return code obtained from solver.");
+        Output::getInstance().outputError("Unknown return code obtained from solver.");
     }
 
     auto solStatus = this->getCurrentIteration()->solutionStatus;
@@ -1384,7 +1335,7 @@ std::string ProcessInfo::getTraceResult()
     else
     {
         modelStatus = "NA";
-        outputError("Unknown return code from model solution.");
+        Output::getInstance().outputError("Unknown return code from model solution.");
     }
 
     ss << modelStatus << ",";

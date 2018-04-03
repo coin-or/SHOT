@@ -121,7 +121,7 @@ void TaskSolveFixedLinearProblem::run()
 		if (solStatus != E_ProblemSolutionStatus::Optimal)
 		{
 			auto tmpLine = boost::format("%|4s| %|-10s| %|=10s| %|=44s|  %|-14s|") % k % "FIXLP INF" % "" % "" % "";
-			ProcessInfo::getInstance().outputSummary(tmpLine.str());
+			Output::getInstance().outputSummary(tmpLine.str());
 			break;
 		}
 		else
@@ -154,9 +154,9 @@ void TaskSolveFixedLinearProblem::run()
 				catch (std::exception &e)
 				{
 
-					ProcessInfo::getInstance().outputWarning(
+					Output::getInstance().outputWarning(
 						"     Cannot find solution with linesearch for fixed LP, using solution point instead:");
-					ProcessInfo::getInstance().outputWarning(e.what());
+					Output::getInstance().outputWarning(e.what());
 				}
 			}
 
@@ -262,27 +262,27 @@ void TaskSolveFixedLinearProblem::run()
 			if (mostDevConstr.value <= constrTol)
 			{
 				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP CON" % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
-				ProcessInfo::getInstance().outputSummary(tmpLine.str());
+				Output::getInstance().outputSummary(tmpLine.str());
 				break;
 			}
 
 			if (k - iterLastObjUpdate > 10)
 			{
 				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP ITR" % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
-				ProcessInfo::getInstance().outputSummary(tmpLine.str());
+				Output::getInstance().outputSummary(tmpLine.str());
 				break;
 			}
 
 			if (objVal > ProcessInfo::getInstance().getPrimalBound())
 			{
 				auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % "FIXLP PB " % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
-				ProcessInfo::getInstance().outputSummary(tmpLine.str());
+				Output::getInstance().outputSummary(tmpLine.str());
 
 				break;
 			}
 
 			auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % k % tmpType.str() % hyperplanesExpr % "" % tmpObjVal % primalBoundExpr % tmpConstr;
-			ProcessInfo::getInstance().outputSummary(tmpLine.str());
+			Output::getInstance().outputSummary(tmpLine.str());
 
 			if (abs(prevObjVal - objVal) > prevObjVal * objTol)
 			{

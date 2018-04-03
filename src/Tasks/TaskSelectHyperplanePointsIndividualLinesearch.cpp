@@ -48,7 +48,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
             hyperplaneSolutionPointStrategyInitialized = true;
         }
 
-        ProcessInfo::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
+        Output::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
 
         tSelectHPPts->run(solPoints);
 
@@ -128,7 +128,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                         ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
                         externalPoint = solPoints.at(i).point;
 
-                        ProcessInfo::getInstance().outputError(
+                        Output::getInstance().Output::getInstance().outputError(
                             "     Cannot find solution with linesearch. Interior value: " + to_string(ProcessInfo::getInstance().interiorPts.at(j)->maxDevatingConstraint.value) + " exterior value: " + to_string(constrDevExterior));
                     }
 
@@ -163,7 +163,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                         else
                             hyperplaneAddedToConstraint.at(hyperplaneAddedToConstraint.back()) = true;
 
-                        ProcessInfo::getInstance().outputInfo(
+                        Output::getInstance().outputInfo(
                             "     Added hyperplane to constraint " + to_string(currConstrIdx) + " original dev: " + to_string(constrDevExterior));
 
                         hyperplane.generatedPoint.clear();
