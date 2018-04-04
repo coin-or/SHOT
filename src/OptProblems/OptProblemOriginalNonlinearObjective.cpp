@@ -20,7 +20,15 @@ OptProblemOriginalNonlinearObjective::~OptProblemOriginalNonlinearObjective()
 
 bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 {
-    this->setObjectiveFunctionType(E_ObjectiveFunctionType::Nonlinear);
+    if (UtilityFunctions::isObjectiveQuadratic(instance))
+    {
+        this->setObjectiveFunctionType(E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
+    }
+    else
+    {
+        this->setObjectiveFunctionType(E_ObjectiveFunctionType::Nonlinear);
+    }
+
     this->setProblemInstance(instance);
 
     this->setTypeOfObjectiveMinimize(instance->instanceData->objectives->obj[0]->maxOrMin == "min");

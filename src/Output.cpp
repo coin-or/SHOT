@@ -17,6 +17,8 @@ Output::Output()
     // Adds a file output
     osOutput->AddChannel("shotlogfile");
     osOutput->AddChannel("stdout");
+
+    iterationDetailFormat = boost::format("%|6|: %|9s|%|=11f|%||%|14s|%|11e|%|27s|%|19|%|29|");
 }
 
 Output::~Output()
@@ -82,4 +84,74 @@ void Output::setLogLevels()
                             (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1));
     osOutput->SetPrintLevel("shotlogfile",
                             (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("File.LogLevel", "Output") + 1));
+}
+
+void Output::outputIterationDetail(int iterationNumber,
+                                   std::string iterationDesc,
+                                   double totalTime,
+                                   int dualCutsAdded,
+                                   int dualCutsTotal,
+                                   double dualObjectiveValue,
+                                   double primalObjectiveValue,
+                                   double absoluteObjectiveGap,
+                                   double relativeObjectiveGap,
+                                   double currentObjectiveValue,
+                                   int maxConstraintIndex,
+                                   double maxConstraintError)
+{
+    try
+    {
+        iterationDetailFormat = boost::format("%|6|: %|9s|%|=11f|%||%|14s|%|11e|%|27s|%|19|%|29|");
+
+        std::string combDualCuts = "";
+
+        if (dualCutsAdded > 0)
+        {
+            combDualCuts = (boost::format("%|4i| | %|-6i|") % dualCutsAdded % dualCutsTotal).str();
+        }
+
+        if (dualObjectiveValue != lastDualObjectiveValue)
+        {
+            lastDualObjectiveValue = dualObjectiveValue;
+        }
+
+        if (primalObjectiveValue != lastPrimalObjectiveValue)
+        {
+            lastPrimalObjectiveValue = primalObjectiveValue;
+        }
+
+        std::string combObjectiveValue = (boost::format("%|12s| | %|-12s|") % UtilityFunctions::toStringFormat(dualObjectiveValue, "%#g") % UtilityFunctions::toStringFormat(primalObjectiveValue, "%#g")).str();
+
+        if (absoluteObjectiveGap != lastAbsoluteObjectiveGap)
+        {
+            lastAbsoluteObjectiveGap = absoluteObjectiveGap;
+        }
+
+        if (relativeObjectiveGap != lastRelativeObjectiveGap)
+        {
+            lastRelativeObjectiveGap = relativeObjectiveGap;
+        }
+
+        std::string combObjectiveGap = (boost::format("%|8s| | %|-8s|") % UtilityFunctions::toStringFormat(absoluteObjectiveGap, "%#.1e") % UtilityFunctions::toStringFormat(relativeObjectiveGap, "%#.1e")).str();
+
+        std::string combCurrSol;
+
+        if (UtilityFunctions::isnan(currentObjectiveValue))
+        {
+            combCurrSol = "            inf.";
+        }
+        else
+        {
+            combCurrSol = (boost::format("%|#12g| | %|+.1e| (%|i|)") % currentObjectiveValue % maxConstraintError % maxConstraintIndex).str();
+        }
+
+        auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|%|-32s|") % iterationNumber % iterationDesc % totalTime % combDualCuts % combObjectiveValue % combObjectiveGap % combCurrSol;
+
+        Output::getInstance()
+            .outputSummary(tmpLine.str());
+    }
+    catch (...)
+    {
+        Output::getInstance().Output::getInstance().outputError("ERROR, cannot write iteration solution report!");
+    }
 }

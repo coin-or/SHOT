@@ -1,5 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project (SHOT)
+set(CMAKE_CXX_STANDARD 11)
 
 # Sets the release types, e.g. Release, Debug
 #set(CMAKE_BUILD_TYPE Release)          

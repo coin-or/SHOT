@@ -292,7 +292,7 @@ std::vector<double> NLPSolverCuttingPlaneRelaxed::getSolution()
 {
     auto tmpSol = solution;
 
-    if (tmpSol.size() > 0 && (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Nonlinear || NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic))
+    if (tmpSol.size() > 0 && (NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Nonlinear || NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic || NLPProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear))
     {
         tmpSol.pop_back();
     }

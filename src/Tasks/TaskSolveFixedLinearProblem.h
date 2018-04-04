@@ -30,4 +30,6 @@ class TaskSolveFixedLinearProblem : public TaskBase
     std::vector<double> lastSolution;
     double lastPrimalBound = NAN;
     IMIPSolver *MIPSolver;
+
+    int totalIters = 0;
 };

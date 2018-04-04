@@ -76,13 +76,12 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
 void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId, std::string bestBound, std::string openNodes)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-
-    if (currIter->iterationNumber - lastHeaderIter > 100)
+    if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1)
     {
-        lastHeaderIter = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
-        ProcessInfo::getInstance().tasks->getTask("PrintIterHeader")->run();
+        tPrintIterationHeader->run();
     }
+
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
     std::stringstream tmpType;
     if (threadId != "")
@@ -94,117 +93,18 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
         tmpType << "CB";
     }
 
-    std::string hyperplanesExpr;
-
-    if (this->lastNumAddedHyperplanes > 0)
-    {
-        hyperplanesExpr = "+" + to_string(this->lastNumAddedHyperplanes) + " = " + to_string(currIter->totNumHyperplanes);
-    }
-    else
-    {
-        hyperplanesExpr = " ";
-    }
-
-    auto tmpConstrExpr = UtilityFunctions::toStringFormat(solution.maxDeviation.value, "%.5f");
-
-    if (solution.maxDeviation.idx != -1)
-    {
-        tmpConstrExpr = ProcessInfo::getInstance().originalProblem->getConstraintNames()[solution.maxDeviation.idx] + ": " + tmpConstrExpr;
-    }
-    else
-    {
-        tmpConstrExpr = ProcessInfo::getInstance().originalProblem->getConstraintNames().back() + ": " + tmpConstrExpr;
-    }
-
-    std::string primalBoundExpr;
-
-    if (ProcessInfo::getInstance().primalSolutions.size() > 0 && !ProcessInfo::getInstance().primalSolutions.at(0).displayed)
-    {
-        auto primalBound = ProcessInfo::getInstance().getPrimalBound();
-        primalBoundExpr = UtilityFunctions::toString(primalBound);
-        ProcessInfo::getInstance().primalSolutions.at(0).displayed = true;
-    }
-    else
-    {
-        primalBoundExpr = "";
-    }
-
-    std::string dualBoundExpr;
-
-    if (ProcessInfo::getInstance().dualSolutions.size() > 0 && !ProcessInfo::getInstance().dualSolutions.at(0).displayed)
-    {
-        auto dualBound = ProcessInfo::getInstance().getDualBound();
-        dualBoundExpr = UtilityFunctions::toString(dualBound);
-        ProcessInfo::getInstance().dualSolutions.at(0).displayed = true;
-    }
-    else
-    {
-        dualBoundExpr = "";
-    }
-
-    std::string objExpr;
-
-    objExpr = UtilityFunctions::toStringFormat(solution.objectiveValue, "%.3f", true);
-
-    auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % to_string(currIter->iterationNumber) % tmpType.str() % hyperplanesExpr % dualBoundExpr % objExpr % primalBoundExpr % tmpConstrExpr;
-
-    Output::getInstance().outputSummary(tmpLine.str());
-
-    double timeStamp = ProcessInfo::getInstance().getElapsedTime("Total");
-
-    if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber - lastSummaryIter > 50 || timeStamp - lastSummaryTimeStamp > 5)
-    {
-        lastSummaryIter = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
-        lastSummaryTimeStamp = timeStamp;
-        double absGap = ProcessInfo::getInstance().getAbsoluteObjectiveGap();
-        double relGap = ProcessInfo::getInstance().getRelativeObjectiveGap();
-        auto objBounds = ProcessInfo::getInstance().getCorrectedObjectiveBounds();
-        double objLB = objBounds.first;
-        double objUB = objBounds.second;
-
-        Output::getInstance().outputSummary(
-            "                                                                                     ");
-
-#ifdef _WIN32
-        Output::getInstance().outputSummary(
-            "ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-#else
-        Output::getInstance().outputSummary(
-            "─────────────────────────────────────────────────────────────────────────────────────");
-#endif
-
-        auto tmpLineSummary = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/"
-                                            "rel gap %4% / %5%") %
-                              ProcessInfo::getInstance().getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
-
-        Output::getInstance().outputSummary(tmpLineSummary.str());
-
-        std::stringstream tmpLine;
-
-        tmpLine << " Number of open nodes: " << openNodes << ".";
-
-        if (ProcessInfo::getInstance().interiorPts.size() > 1)
-        {
-            tmpLine << " Number of interior points: " << ProcessInfo::getInstance().interiorPts.size() << ".";
-        }
-
-        if (ProcessInfo::getInstance().numIntegerCutsAdded > 1)
-        {
-            tmpLine << " Number of integer cuts: " << ProcessInfo::getInstance().numIntegerCutsAdded << ".";
-        }
-
-        Output::getInstance().outputSummary(tmpLine.str());
-
-#ifdef _WIN32
-        Output::getInstance().outputSummary(
-            "ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-#else
-        Output::getInstance().outputSummary(
-            "─────────────────────────────────────────────────────────────────────────────────────");
-#endif
-
-        Output::getInstance().outputSummary("");
-    }
+    Output::getInstance().outputIterationDetail(currIter->iterationNumber,
+                                                tmpType.str(),
+                                                ProcessInfo::getInstance().getElapsedTime("Total"),
+                                                this->lastNumAddedHyperplanes,
+                                                currIter->totNumHyperplanes,
+                                                ProcessInfo::getInstance().getDualBound(),
+                                                ProcessInfo::getInstance().getPrimalBound(),
+                                                ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
+                                                ProcessInfo::getInstance().getRelativeObjectiveGap(),
+                                                solution.objectiveValue,
+                                                solution.maxDeviation.idx,
+                                                solution.maxDeviation.value);
 }
 
 MIPSolverCallbackBase::~MIPSolverCallbackBase()

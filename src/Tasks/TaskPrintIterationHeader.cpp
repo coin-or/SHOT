@@ -21,32 +21,18 @@ TaskPrintIterationHeader::~TaskPrintIterationHeader()
 void TaskPrintIterationHeader::run()
 {
 
-	std::stringstream tmpLine;
-	tmpLine << "                                                                                     \n";
+    std::stringstream tmpLine;
+    tmpLine << "                                                                                     \n";
 
-#ifdef _WIN32
-	tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
+    tmpLine << "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current solution\r\n";
+    tmpLine << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | max.err.\r\n";
+    tmpLine << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴───────────────────────────╴\r\n";
 
-	tmpLine
-		<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB" % "max constr.";
-
-	tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
-
-#else
-	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
-
-	tmpLine
-		<< boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "DB" % "OBJ" % "PB" % "max constr.";
-
-	tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
-
-#endif
-
-	Output::getInstance().outputSummary(tmpLine.str());
+    Output::getInstance().outputSummary(tmpLine.str());
 }
 
 std::string TaskPrintIterationHeader::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

@@ -32,7 +32,6 @@
 #include "../Tasks/TaskExecuteRelaxationStrategy.h"
 
 #include "../Tasks/TaskPrintIterationReport.h"
-#include "../Tasks/TaskPrintSolutionBoundReport.h"
 
 #include "../Tasks/TaskSolveIteration.h"
 #include "../Tasks/TaskPresolve.h"

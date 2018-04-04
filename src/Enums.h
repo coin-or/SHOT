@@ -76,7 +76,8 @@ enum class E_ObjectiveFunctionType
 {
     Linear,
     Quadratic,
-    Nonlinear
+    Nonlinear,
+    QuadraticConsideredAsNonlinear
 };
 
 enum class E_ProblemSolutionStatus

@@ -261,7 +261,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
             auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % tmpObjVal % tmpPrimal % tmpConstr;
 
-            Output::getInstance().outputSummary(tmpLine.str());
+            //Output::getInstance().outputSummary(tmpLine.str());
 
             if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
             {
@@ -345,7 +345,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
             auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % "infeasible" % "" % "";
 
-            Output::getInstance().outputSummary(tmpLine.str());
+            //Output::getInstance().outputSummary(tmpLine.str());
 
             if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
             {

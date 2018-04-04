@@ -43,7 +43,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
     TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
-
     ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
     TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
@@ -76,9 +75,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
 
     TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
-
-    TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 

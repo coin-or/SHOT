@@ -431,11 +431,11 @@ std::string UtilityFunctions::toStringFormat(double value, std::string format, b
 
     if (useInfinitySymbol && value < -1.e20)
     {
-        str = "-∞";
+        str = "-inf.";
     }
     else if (useInfinitySymbol && value > 1.e20)
     {
-        str = "∞";
+        str = "inf.";
     }
     else
     {

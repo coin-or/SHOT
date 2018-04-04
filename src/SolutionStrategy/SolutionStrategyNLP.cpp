@@ -59,16 +59,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
     TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-    //TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
-    //ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
-
-    /*if (ProcessInfo::getInstance().originalProblem->getNumberOfBinaryVariables()
-	 + ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() > 0)
-	 {
-	 TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
-	 ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
-	 }*/
-
     TaskBase *tPrintIterHeaderCheck = new TaskConditional();
     TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
 
@@ -133,8 +123,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 
     ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-    //ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
-
     if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
         TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
@@ -158,21 +146,13 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
         ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
 
-    //ProcessInfo::getInstance().tasks->addTask(tCheckPrimCands, "CheckPrimCands");
     ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    //TaskBase *tAddHPs = new TaskAddHyperplanes();
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
-
-    TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 
     TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
     ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
-
-    //dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckPrimCands);
-    //dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tCheckDualCands);
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 

@@ -52,6 +52,8 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
     }
 
     lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
+
+    tPrintIterationHeader = std::shared_ptr<TaskPrintIterationHeader>(new TaskPrintIterationHeader());
 }
 
 void CplexCallback::invoke(const IloCplex::Callback::Context &context)
@@ -461,7 +463,7 @@ void MIPSolverCplexLazy::initializeSolverSettings()
     catch (IloException &e)
     {
         Output::getInstance().Output::getInstance().outputError("Cplex error when initializing parameters for linear solver",
-                                               e.getMessage());
+                                                                e.getMessage());
     }
 }
 

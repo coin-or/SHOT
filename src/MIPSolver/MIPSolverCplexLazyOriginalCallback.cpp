@@ -219,6 +219,8 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOrigi
     {
         taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch());
     }
+
+    tPrintIterationHeader = std::shared_ptr<TaskPrintIterationHeader>(new TaskPrintIterationHeader());
 }
 
 CtCallbackI::~CtCallbackI()
@@ -522,7 +524,7 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     catch (IloException &e)
     {
         Output::getInstance().Output::getInstance().outputError("Cplex error when initializing parameters for linear solver",
-                                               e.getMessage());
+                                                                e.getMessage());
     }
 }
 

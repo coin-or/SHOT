@@ -97,9 +97,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
     TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
 
-    //ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-    //ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
-
     if (Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
     {
         TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool();
@@ -114,14 +111,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
         ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
 
-    /*TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-	ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
-	*/
     TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
-
-    TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 

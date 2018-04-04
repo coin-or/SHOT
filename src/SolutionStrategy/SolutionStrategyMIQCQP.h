@@ -28,7 +28,6 @@
 #include "../Tasks/TaskPrintIterationHeader.h"
 
 #include "../Tasks/TaskPrintIterationReport.h"
-#include "../Tasks/TaskPrintSolutionBoundReport.h"
 
 #include "../Tasks/TaskSolveIteration.h"
 
@@ -50,11 +49,11 @@
 class SolutionStrategyMIQCQP : public ISolutionStrategy
 {
   public:
-	SolutionStrategyMIQCQP(OSInstance *osInstance);
-	virtual ~SolutionStrategyMIQCQP();
+    SolutionStrategyMIQCQP(OSInstance *osInstance);
+    virtual ~SolutionStrategyMIQCQP();
 
-	virtual bool solveProblem();
-	virtual void initializeStrategy();
+    virtual bool solveProblem();
+    virtual void initializeStrategy();
 
   protected:
 };

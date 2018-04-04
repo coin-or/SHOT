@@ -19,6 +19,8 @@
 #define HAVE_STDIO_H 1
 #include "OSOutput.h"
 
+#include <boost/format.hpp>
+
 class Output
 {
   public:
@@ -42,8 +44,36 @@ class Output
 
     void setLogLevels();
 
+    void outputIterationDetail(int iterationNumber,
+                               std::string iterationDesc,
+                               double totalTime,
+                               int dualCutsAdded,
+                               int dualCutsTotal,
+                               double dualObjectiveValue,
+                               double primalObjectiveValue,
+                               double absoluteObjectiveGap,
+                               double relativeObjectiveGap,
+                               double currentObjectiveValue,
+                               int maxConstraintIndex,
+                               double maxConstraintError);
+
+    void outputIterationDetailHeader();
+
+    void outputPrimalSolutionDetailedReport();
+
+    void outputSolverHeader();
+
+    void outputOptionsReport();
+
   private:
     OSOutput *osOutput;
+
+    boost::format iterationDetailFormat;
+
+    double lastDualObjectiveValue = -DBL_MAX;
+    double lastPrimalObjectiveValue = DBL_MAX;
+    double lastAbsoluteObjectiveGap = DBL_MAX;
+    double lastRelativeObjectiveGap = 1.0;
 
     Output();
 };

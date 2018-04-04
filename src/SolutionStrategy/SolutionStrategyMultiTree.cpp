@@ -187,9 +187,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
         ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
     }
 
-    TaskBase *tPrintBoundReport = new TaskPrintSolutionBoundReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintBoundReport, "PrintBoundReport");
-
     TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
     ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 

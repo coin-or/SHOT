@@ -447,6 +447,8 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
     lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
 
     numVar = (static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver))->gurobiModel->get(GRB_IntAttr_NumVars);
+
+    tPrintIterationHeader = std::shared_ptr<TaskPrintIterationHeader>(new TaskPrintIterationHeader());
 }
 
 void GurobiCallback::createIntegerCut(std::vector<int> binaryIndexes)
