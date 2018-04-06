@@ -12,7 +12,7 @@
 
 TaskInitializeLinesearch::TaskInitializeLinesearch()
 {
-    ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
+    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
 
     if (Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver") == static_cast<int>(ES_RootsearchMethod::Bisection))
     {
@@ -25,7 +25,7 @@ TaskInitializeLinesearch::TaskInitializeLinesearch()
         Output::getInstance().outputInfo("Boost linesearch implementation selected.");
     }
 
-    ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()

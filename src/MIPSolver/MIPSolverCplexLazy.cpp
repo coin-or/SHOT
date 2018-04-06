@@ -19,7 +19,7 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
 
     isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
-    ProcessInfo::getInstance().lastLazyAddedIter = 0;
+    ProcessInfo::getInstance().solutionStatistics.iterationLastLazyAdded = 0;
 
     if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
@@ -382,7 +382,7 @@ void CplexCallback::createIntegerCut(std::vector<int> binaryIndexes, const IloCp
     IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     context.rejectCandidate(tmpRange);
-    ProcessInfo::getInstance().numIntegerCutsAdded++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
 
     tmpRange.end();
     expr.end();
@@ -506,8 +506,6 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
         Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
-
-    MIPSolverBase::stopTimer();
 
     return (MIPSolutionStatus);
 }

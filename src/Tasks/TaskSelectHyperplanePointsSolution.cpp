@@ -20,61 +20,68 @@ TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
 
 void TaskSelectHyperplanePointsSolution::run()
 {
-	this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
+    this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
 }
 
 void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 {
-	int addedHyperplanes = 0;
+    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
 
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    int addedHyperplanes = 0;
 
-	auto originalProblem = ProcessInfo::getInstance().originalProblem;
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	auto constrSelFactor = Settings::getInstance().getDoubleSetting("ECP.ConstraintSelectionFactor", "Dual");
+    auto originalProblem = ProcessInfo::getInstance().originalProblem;
 
-	for (int i = 0; i < solPoints.size(); i++)
-	{
-		auto tmpMostDevConstrs = originalProblem->getMostDeviatingConstraints(solPoints.at(i).point, constrSelFactor);
+    auto constrSelFactor = Settings::getInstance().getDoubleSetting("ECP.ConstraintSelectionFactor", "Dual");
 
-		for (int j = 0; j < tmpMostDevConstrs.size(); j++)
-		{
-			if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
-				return;
+    for (int i = 0; i < solPoints.size(); i++)
+    {
+        auto tmpMostDevConstrs = originalProblem->getMostDeviatingConstraints(solPoints.at(i).point, constrSelFactor);
 
-			if (tmpMostDevConstrs.at(j).value < 0)
-			{
-				Output::getInstance().outputWarning("LP point is in the interior!");
-			}
-			else
-			{
-				Hyperplane hyperplane;
-				hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
-				hyperplane.generatedPoint = solPoints.at(i).point;
+        for (int j = 0; j < tmpMostDevConstrs.size(); j++)
+        {
+            if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+            {
+                ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                return;
+            }
 
-				if (i == 0 && currIter->isMIP())
-				{
-					hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
-				}
-				else if (currIter->isMIP())
-				{
-					hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
-				}
-				else
-				{
-					hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
-				}
+            if (tmpMostDevConstrs.at(j).value < 0)
+            {
+                Output::getInstance().outputWarning("LP point is in the interior!");
+            }
+            else
+            {
+                Hyperplane hyperplane;
+                hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
+                hyperplane.generatedPoint = solPoints.at(i).point;
 
-				ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
+                if (i == 0 && currIter->isMIP())
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+                }
+                else if (currIter->isMIP())
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+                }
+                else
+                {
+                    hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+                }
 
-				addedHyperplanes++;
-			}
-		}
-	}
+                ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
+
+                addedHyperplanes++;
+            }
+        }
+    }
+
+    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
 }
 
 std::string TaskSelectHyperplanePointsSolution::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

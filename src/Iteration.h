@@ -11,7 +11,6 @@
 #pragma once
 #include "Enums.h"
 #include "Structs.h"
-#include "vector"
 #include "SHOTSettings.h"
 #include "ProcessInfo.h"
 

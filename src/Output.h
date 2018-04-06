@@ -13,6 +13,8 @@
 #include "Enums.h"
 #include "SHOTSettings.h"
 #include "ProcessInfo.h"
+//#include "OptProblems/OptProblem.h"
+//#include "OptProblems/OptProblemOriginal.h"
 
 // Used for OSOutput
 #include "cstdio"
@@ -44,6 +46,16 @@ class Output
 
     void setLogLevels();
 
+    void outputSolverHeader();
+
+    void outputOptionsReport();
+
+    void outputProblemInstanceReport();
+
+    void outputInteriorPointPreReport();
+
+    void outputIterationDetailHeader();
+
     void outputIterationDetail(int iterationNumber,
                                std::string iterationDesc,
                                double totalTime,
@@ -57,18 +69,24 @@ class Output
                                int maxConstraintIndex,
                                double maxConstraintError);
 
-    void outputIterationDetailHeader();
+    void outputIterationDetailHeaderMinimax();
+
+    void outputIterationDetailMinimax(int iterationNumber,
+                                      std::string iterationDesc,
+                                      double totalTime,
+                                      int dualCutsAdded,
+                                      int dualCutsTotal,
+                                      double dualObjectiveValue,
+                                      double primalObjectiveValue,
+                                      double absoluteObjectiveGap,
+                                      double relativeObjectiveGap);
 
     void outputPrimalSolutionDetailedReport();
 
-    void outputSolverHeader();
-
-    void outputOptionsReport();
+    void outputSolutionReport();
 
   private:
     OSOutput *osOutput;
-
-    boost::format iterationDetailFormat;
 
     double lastDualObjectiveValue = -DBL_MAX;
     double lastPrimalObjectiveValue = DBL_MAX;

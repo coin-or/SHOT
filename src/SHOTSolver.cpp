@@ -73,6 +73,8 @@ bool SHOTSolver::setOptions(std::string fileName)
         return (false);
     }
 
+    Settings::getInstance().updateSetting("OptionsFile", "Input", fileName);
+
     Output::getInstance().outputSummary("Options read from file \"" + fileName + "\"");
 
     return (true);
@@ -203,8 +205,6 @@ bool SHOTSolver::setProblem(std::string fileName)
     if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
         initializeDebugMode();
 
-    Output::getInstance().outputSummary(" Problem read from file \"" + fileName + "\"");
-
     bool status = this->setProblem(tmpInstance);
 
     return (status);
@@ -216,7 +216,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
     {
         if (UtilityFunctions::areAllVariablesReal(osInstance))
         {
-            Output::getInstance().outputSummary(" Using NLP solution strategy.");
+            Output::getInstance().outputInfo(" Using NLP solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(osInstance));
 
             ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
@@ -227,6 +227,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
             isProblemInitialized = true;
         }
 
+        ProcessInfo::getInstance().setProblemStats();
         return (true);
     }
 
@@ -236,21 +237,21 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
     if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
     //MIQP problem
     {
-        Output::getInstance().outputSummary(" Using MIQP solution strategy.");
+        Output::getInstance().outputInfo(" Using MIQP solution strategy.");
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(osInstance));
         ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     //MIQCQP problem
     else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
     {
-        Output::getInstance().outputSummary(" Using MIQCQP solution strategy.");
+        Output::getInstance().outputInfo(" Using MIQCQP solution strategy.");
 
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(osInstance));
         ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
     else if (UtilityFunctions::areAllVariablesReal(osInstance))
     {
-        Output::getInstance().outputSummary(" Using NLP solution strategy.");
+        Output::getInstance().outputInfo(" Using NLP solution strategy.");
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(osInstance));
         ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::NLP;
     }
@@ -259,12 +260,12 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
         switch (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")))
         {
         case (ES_TreeStrategy::SingleTree):
-            Output::getInstance().outputSummary(" Using single-tree solution strategy.");
+            Output::getInstance().outputInfo(" Using single-tree solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategySingleTree(osInstance));
             ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::SingleTree;
             break;
         case (ES_TreeStrategy::MultiTree):
-            Output::getInstance().outputSummary(" Using multi-tree solution strategy.");
+            Output::getInstance().outputInfo(" Using multi-tree solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMultiTree(osInstance));
             ProcessInfo::getInstance().usedSolutionStrategy = E_SolutionStrategy::MultiTree;
             break;
@@ -275,6 +276,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
     isProblemInitialized = true;
 
+    ProcessInfo::getInstance().setProblemStats();
     return (true);
 }
 
@@ -383,7 +385,7 @@ void SHOTSolver::initializeSettings()
     enumNLPSolver.push_back("Ipopt minimax and relaxed");
 
     Settings::getInstance().createSetting("ESH.InteriorPoint.Solver", "Dual",
-                                          static_cast<int>(ES_NLPSolver::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver);
+                                          static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver);
     enumNLPSolver.clear();
 
     std::vector<std::string> enumAddPrimalPointAsInteriorPoint;
@@ -779,6 +781,8 @@ void SHOTSolver::initializeSettings()
     Settings::getInstance().createSetting("ProblemFile", "Input", empty, "The filename of the problem", true);
 
     Settings::getInstance().createSetting("ProblemName", "Input", empty, "The name of the problem instance", true);
+
+    Settings::getInstance().createSetting("OptionsFile", "Input", empty, "The name of the options file used", true);
 
     Settings::getInstance().createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 

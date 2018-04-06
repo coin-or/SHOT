@@ -12,7 +12,7 @@
 
 TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *originalInstance)
 {
-    ProcessInfo::getInstance().startTimer("Reformulation");
+    ProcessInfo::getInstance().startTimer("ProblemInitialization");
 
     // This is needed to fix various problems later on.
     // TODO: figure out why...
@@ -35,7 +35,7 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
     }
     else if (isObjQuadratic && isQuadraticUsed)
     {
-        Output::getInstance().outputAlways("Quadratic objective function detected.");
+        Output::getInstance().outputInfo("Quadratic objective function detected.");
         ProcessInfo::getInstance().originalProblem = new OptProblemOriginalQuadraticObjective();
     }
     else //Linear objective function
@@ -65,7 +65,7 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
     ProcessInfo::getInstance().initializeResults(1, numVar, numConstr);
 
-    ProcessInfo::getInstance().stopTimer("Reformulation");
+    ProcessInfo::getInstance().stopTimer("ProblemInitialization");
 }
 
 TaskInitializeOriginalProblem::~TaskInitializeOriginalProblem()

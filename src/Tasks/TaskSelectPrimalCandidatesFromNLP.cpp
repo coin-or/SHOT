@@ -12,13 +12,13 @@
 
 TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
 {
-    ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-    ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+    ProcessInfo::getInstance().startTimer("PrimalStrategy");
+    ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
 
     primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
 
-    ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-    ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+    ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
+    ProcessInfo::getInstance().stopTimer("PrimalStrategy");
 }
 
 TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
@@ -32,13 +32,13 @@ void TaskSelectPrimalCandidatesFromNLP::run()
 
     if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
     {
-        ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-        ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+        ProcessInfo::getInstance().startTimer("PrimalStrategy");
+        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
 
         primalStrategyFixedNLP->runStrategy();
 
-        ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
+        ProcessInfo::getInstance().stopTimer("PrimalStrategy");
     }
 }
 

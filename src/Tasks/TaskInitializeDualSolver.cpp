@@ -12,7 +12,7 @@
 
 TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool useLazyStrategy)
 {
-    ProcessInfo::getInstance().startTimer("MIP");
+    ProcessInfo::getInstance().startTimer("DualStrategy");
 
     if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
@@ -83,7 +83,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
         }
     }
 
-    ProcessInfo::getInstance().stopTimer("MIP");
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 TaskInitializeDualSolver::~TaskInitializeDualSolver()

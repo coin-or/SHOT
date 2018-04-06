@@ -32,7 +32,7 @@ OptProblem::~OptProblem()
 
 int OptProblem::getNumberOfLinearConstraints()
 {
-    return getProblemInstance()->getConstraintNumber() - this->getNumberOfNonlinearConstraints();
+    return getProblemInstance()->getConstraintNumber() - this->getNumberOfNonlinearConstraints() - this->getNumberOfQuadraticConstraints();
 }
 
 int OptProblem::getNumberOfConstraints()
@@ -190,36 +190,6 @@ std::vector<int> OptProblem::getIntegerVariableIndices()
     }
 
     return (indices);
-}
-
-void OptProblem::printProblemStatistics()
-{
-#if _WIN32
-    Output::getInstance().outputSummary(
-        "                                                                                     \n");
-    Output::getInstance().outputSummary("ÚÄÄÄ Problem statistics ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
-
-    Output::getInstance().outputSummary(
-        "³ Number of constraints (total/linear/nonlinear):   " + to_string(getProblemInstance()->getConstraintNumber()) + "/" + to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
-
-    Output::getInstance().outputSummary(
-        "³ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/" + to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/" + to_string(getNumberOfIntegerVariables()) + "/");
-
-    Output::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
-
-#else
-
-    Output::getInstance().outputSummary("\n┌─── Problem statistics ─────────────────────────────────────────────────────────┐");
-
-    Output::getInstance().outputSummary(
-        "│ Number of constraints (total/linear/nonlinear):   " + to_string(getProblemInstance()->getConstraintNumber()) + "/" + to_string(getNumberOfLinearConstraints()) + "/" + to_string(getNumberOfNonlinearConstraints()));
-
-    Output::getInstance().outputSummary(
-        "│ Number of variables (total/real/binary/integer):  " + to_string(getNumberOfVariables()) + "/" + to_string(getNumberOfRealVariables()) + "/" + to_string(getNumberOfBinaryVariables()) + "/" + to_string(getNumberOfIntegerVariables()) + "/");
-
-    Output::getInstance().outputSummary(
-        "└────────────────────────────────────────────────────────────────────────────────┘");
-#endif
 }
 
 void OptProblem::exportProblemToOsil(std::string fileName)
@@ -468,7 +438,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 {
     auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 
-    ProcessInfo::getInstance().numGradientEvals++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfGradientEvaluations++;
 
     if (idx != -1 && getProblemInstance()->getConstraintTypes()[idx] == 'G')
     {
@@ -517,7 +487,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 {
     auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
-    ProcessInfo::getInstance().numFunctionEvals++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
 
     return tmpVal;
 }
@@ -534,7 +504,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
     if (!isObjectiveFunctionNonlinear() || idx != getNonlinearObjectiveConstraintIdx() || idx != -1) // Not the objective function
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-        ProcessInfo::getInstance().numFunctionEvals++;
+        ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
 
         if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
         {
@@ -556,7 +526,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
     else
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
-        ProcessInfo::getInstance().numFunctionEvals++;
+        ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
     }
 
     return tmpVal;
@@ -590,6 +560,40 @@ int OptProblem::getNumberOfNonlinearConstraints()
     for (int i = 0; i < isNonlinear.size(); i++)
     {
         if (isNonlinear.at(i))
+            ctr++;
+    }
+
+    return ctr;
+}
+
+int OptProblem::getNumberOfQuadraticConstraints()
+{
+    int ctr = 0;
+
+    std::vector<bool> isQuadratic(getProblemInstance()->getConstraintNumber(), false);
+
+    for (int i = 0; i < getProblemInstance()->getNumberOfNonlinearExpressions(); i++)
+    {
+        int tmpIndex = getProblemInstance()->instanceData->nonlinearExpressions->nl[i]->idx;
+
+        if (tmpIndex != -1)
+            isQuadratic.at(tmpIndex) = false;
+    }
+
+    if (((static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained))
+    {
+        for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
+        {
+            int tmpIndex = getProblemInstance()->instanceData->quadraticCoefficients->qTerm[i]->idx;
+
+            if (tmpIndex != -1)
+                isQuadratic.at(tmpIndex) = true;
+        }
+    }
+
+    for (int i = 0; i < isQuadratic.size(); i++)
+    {
+        if (isQuadratic.at(i))
             ctr++;
     }
 
@@ -1261,7 +1265,6 @@ void OptProblem::repairNonboundedVariables()
 
 std::vector<QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int constrIdx)
 {
-
     auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
     std::vector<QuadraticTerm *> quadTerms;
 

@@ -270,7 +270,7 @@ void MIPSolverCplex::initializeSolverSettings()
     catch (IloException &e)
     {
         Output::getInstance().Output::getInstance().outputError("Cplex error when initializing parameters for linear solver",
-                                               e.getMessage());
+                                                                e.getMessage());
     }
 }
 
@@ -367,7 +367,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
     {
         if (activate)
             Output::getInstance().Output::getInstance().outputError("Error when activating discrete variables",
-                                                   e.getMessage());
+                                                                    e.getMessage());
     }
 }
 
@@ -437,8 +437,6 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
 
 E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 {
-    startTimer();
-
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
@@ -464,9 +462,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
-
-    stopTimer();
-
+    
     return (MIPSolutionStatus);
 }
 
@@ -543,7 +539,7 @@ std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
     catch (IloException &e)
     {
         Output::getInstance().Output::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
-                                               e.getMessage());
+                                                                e.getMessage());
     }
 
     tmpSolsCplex.end();
@@ -879,7 +875,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
                 cplexInstance.extract(cplexModel);
                 Output::getInstance().outputInfo(
                     "     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
-                ProcessInfo::getInstance().numConstraintsRemovedInPresolve = numconstr;
+                ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve= numconstr;
             }
         }
 
@@ -990,7 +986,7 @@ void MIPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
     IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     auto addedConstr = addConstraintFunction(tmpRange);
-    ProcessInfo::getInstance().numIntegerCutsAdded++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
 
     expr.end();
 }

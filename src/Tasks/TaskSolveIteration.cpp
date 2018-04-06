@@ -21,6 +21,7 @@ TaskSolveIteration::~TaskSolveIteration()
 
 void TaskSolveIteration::run()
 {
+    ProcessInfo::getInstance().startTimer("DualStrategy");
     auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
     bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
@@ -174,35 +175,37 @@ void TaskSolveIteration::run()
     {
         if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
         {
-            ProcessInfo::getInstance().iterOptMIQP++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP++;
         }
         else
         {
-            ProcessInfo::getInstance().iterOptMILP++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP++;
         }
     }
     else if (currIter->type == E_IterationProblemType::Relaxed)
     {
         if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
         {
-            ProcessInfo::getInstance().iterQP++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP++;
         }
         else
         {
-            ProcessInfo::getInstance().iterLP++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP++;
         }
     }
     else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
         if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
         {
-            ProcessInfo::getInstance().iterFeasMIQP++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP++;
         }
         else
         {
-            ProcessInfo::getInstance().iterFeasMILP++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP++;
         }
     }
+
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 std::string TaskSolveIteration::getType()

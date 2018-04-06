@@ -35,8 +35,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 
     if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
     {
-        ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-        ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
+        ProcessInfo::getInstance().startTimer("PrimalStrategy");
+        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyRootSearch");
 
         for (int i = 0; i < solPoints.size(); i++)
         {
@@ -68,12 +68,12 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 
                     try
                     {
-                        ProcessInfo::getInstance().startTimer("PrimalBoundLinesearch");
+                        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyRootSearch");
                         xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
                                                                                       Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                                                                                       Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
 
-                        ProcessInfo::getInstance().stopTimer("PrimalBoundLinesearch");
+                        ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyRootSearch");
 
                         ProcessInfo::getInstance().addPrimalSolutionCandidate(xNewc.first,
                                                                               E_PrimalSolutionSource::Linesearch,
@@ -86,8 +86,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
                 }
             }
 
-            ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
-            ProcessInfo::getInstance().stopTimer("PrimalBoundLinesearch");
+            ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+            ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyRootSearch");
         }
     }
 }

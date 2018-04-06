@@ -24,7 +24,7 @@ struct SolutionPoint
 struct InteriorPoint
 {
     std::vector<double> point;
-    ES_NLPSolver NLPSolver;
+    ES_InteriorPointStrategy NLPSolver;
     IndexValuePair maxDevatingConstraint;
 };
 
@@ -78,4 +78,85 @@ struct GeneratedHyperplane
     bool isRemoved;
     int generatedIter;
     int removedIter;
+};
+
+struct OptimizationProblemStatistics
+{
+    E_ProblemType problemType = E_ProblemType::None;
+    E_ObjectiveFunctionType objectiveFunctionType = E_ObjectiveFunctionType::None;
+
+    bool isMinimizationProblem = false;
+    bool isDiscreteProblem = false;
+
+    int numberOfConstraints = 0;
+    int numberOfLinearConstraints = 0;
+    int numberOfNonlinearConstraints = 0;
+    int numberOfQuadraticConstraints = 0;
+
+    bool quadraticTermsReformulatedAsNonlinear = false;
+    int numberOfQuadraticTerms = 0;
+
+    int numberOfVariables = 0;
+    int numberOfContinousVariables = 0;
+    int numberOfIntegerVariables = 0;
+    int numberOfBinaryVariables = 0;
+    int numberOfSemicontinuousVariables = 0;
+};
+
+struct SolutionStatistics
+{
+    int numberOfIterations = 0;
+    int numberOfProblemsLP = 0;
+    int numberOfProblemsQP = 0;
+    int numberOfProblemsQCQP = 0;
+    int numberOfProblemsFeasibleMILP = 0;
+    int numberOfProblemsOptimalMILP = 0;
+    int numberOfProblemsFeasibleMIQP = 0;
+    int numberOfProblemsOptimalMIQP = 0;
+    int numberOfProblemsFeasibleMIQCQP = 0;
+    int numberOfProblemsOptimalMIQCQP = 0;
+
+    int numberOfFunctionEvalutions = 0;
+    int numberOfGradientEvaluations = 0;
+
+    int numberOfProblemsMinimaxLP = 0;
+
+    int numberOfProblemsNLPInteriorPointSearch = 0;
+    int numberOfProblemsFixedNLP = 0;
+
+    int numberOfConstraintsRemovedInPresolve = 0;
+    int numberOfVariableBoundsTightenedInPresolve = 0;
+
+    int numberOfIntegerCuts = 0;
+
+    int numberOfIterationsWithStagnationMIP = 0;
+    int numberOfIterationsWithSignificantObjectiveUpdate = 0;
+    int numberOfIterationsWithoutNLPCallMIP = 0;
+
+    int iterationLastPrimalBoundUpdate = 0;
+    int iterationLastDualBoundUpdate = 0;
+    int iterationLastLazyAdded = 0;
+
+    double timeLastDualBoundUpdate = 0;
+    double timeLastFixedNLPCall = 0;
+
+    int numberOfOriginalInteriorPoints = 0;
+
+    int getNumberOfTotalDualProblems()
+    {
+        return (numberOfProblemsLP +
+                numberOfProblemsQP +
+                numberOfProblemsFeasibleMILP +
+                numberOfProblemsOptimalMILP +
+                numberOfProblemsFeasibleMIQP +
+                numberOfProblemsOptimalMIQP +
+                numberOfProblemsOptimalMIQCQP +
+                numberOfProblemsFeasibleMIQCQP);
+    };
+
+    int getNumberOfTotalNLPProblems()
+    {
+        return (numberOfProblemsNLPInteriorPointSearch +
+                numberOfProblemsFixedNLP);
+    };
 };

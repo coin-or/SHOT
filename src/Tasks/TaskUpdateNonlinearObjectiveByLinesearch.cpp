@@ -20,7 +20,7 @@ TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesea
 
 void TaskUpdateNonlinearObjectiveByLinesearch::run()
 {
-	ProcessInfo::getInstance().startTimer("ObjectiveLinesearch");
+	ProcessInfo::getInstance().startTimer("DualObjectiveLiftRootSearch");
 
 	ProcessInfo::getInstance().setObjectiveUpdatedByLinesearch(false);
 
@@ -61,7 +61,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
 		}
 	}
 
-	ProcessInfo::getInstance().stopTimer("ObjectiveLinesearch");
+	ProcessInfo::getInstance().stopTimer("DualObjectiveLiftRootSearch");
 }
 
 std::string TaskUpdateNonlinearObjectiveByLinesearch::getType()

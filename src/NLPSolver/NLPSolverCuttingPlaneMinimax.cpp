@@ -132,6 +132,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         // Solves the problem and obtains the solution
         auto solStatus = LPSolver->solveProblem();
+        ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP++;
 
         if (solStatus == E_ProblemSolutionStatus::Infeasible)
         {
@@ -177,26 +178,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             mu = LPObjVar;
             numHyperAdded = 0;
             numHyperTot = 0;
-
-            std::stringstream tmpLine;
-
-#ifdef _WIN32
-            tmpLine << "\nÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
-
-            tmpLine
-                << boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP" % "Obj. LS" % "Abs. diff" % "Rel. diff";
-
-            tmpLine << "ÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ\n";
-#else
-            tmpLine << "\n═════════════════════════════════════════════════════════════════════════════════════\n";
-
-            tmpLine
-                << boost::format("%|=14| %|=11| %|=14| %|=14| %|=14|  %s\n") % " Iteration" % "HPs" % "Obj. LP" % "Obj. LS" % "Abs. diff" % "Rel. diff";
-
-            tmpLine << "═════════════════════════════════════════════════════════════════════════════════════\n";
-#endif
-
-            Output::getInstance().outputSummary(tmpLine.str());
+            Output::getInstance().outputIterationDetailHeaderMinimax();
         }
         else
         {
@@ -221,30 +203,15 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
         }
 
-        // Gets the most deviated constraints with a tolerance
-        auto tmpMostDevs = NLPProblem->getMostDeviatingConstraints(currSol, constrSelTol);
-
-        std::string hyperplanesExpr;
-
-        hyperplanesExpr = "+" + to_string(numHyperAdded) + " = " + to_string(numHyperTot);
-
-        std::string tmpObjLP = UtilityFunctions::toString(LPObjVar);
-        std::string tmpObjLS = UtilityFunctions::toString(mu);
-
-        boost::format tmpLine;
-
-        if (i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
-        {
-            tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % tmpObjLP % "" % "" % "";
-        }
-        else
-        {
-            std::string tmpAbsDiff = ((boost::format("%.5f") % maxObjDiffAbs).str());
-            std::string tmpRelDiff = ((boost::format("%.5f") % maxObjDiffRel).str());
-            tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % (i + 1) % "LP OPT" % hyperplanesExpr % tmpObjLP % tmpObjLS % tmpAbsDiff % tmpRelDiff;
-        }
-
-        Output::getInstance().outputSummary(tmpLine.str());
+        Output::getInstance().outputIterationDetailMinimax((i + 1),
+                                                           "LP",
+                                                           ProcessInfo::getInstance().getElapsedTime("Total"),
+                                                           numHyperAdded,
+                                                           numHyperTot,
+                                                           LPObjVar,
+                                                           mu,
+                                                           maxObjDiffAbs,
+                                                           maxObjDiffRel);
 
         if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
         {
@@ -253,7 +220,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }
 
+        // Gets the most deviated constraints with a tolerance
+        auto tmpMostDevs = NLPProblem->getMostDeviatingConstraints(currSol, constrSelTol);
         numHyperAdded = tmpMostDevs.size();
+
         numHyperTot = numHyperTot + numHyperAdded;
 
         for (int j = 0; j < numHyperAdded; j++)
@@ -264,7 +234,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
             // Calculates the gradient
             auto nablag = NLPProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).idx, currSol);
-            ProcessInfo::getInstance().numGradientEvals++;
+            ProcessInfo::getInstance().solutionStatistics.numberOfGradientEvaluations++;
 
             for (int i = 0; i < nablag->number; i++)
             {

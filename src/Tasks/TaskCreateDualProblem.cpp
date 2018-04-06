@@ -14,7 +14,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
 {
     this->MIPSolver = MIPSolver;
 
-    ProcessInfo::getInstance().startTimer("Reformulation");
+    ProcessInfo::getInstance().startTimer("DualStrategy");
 
     Output::getInstance().outputDebug("Creating dual problem");
 
@@ -28,7 +28,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
     }
 
     Output::getInstance().outputDebug("Dual problem created");
-    ProcessInfo::getInstance().stopTimer("Reformulation");
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 TaskCreateDualProblem::~TaskCreateDualProblem()

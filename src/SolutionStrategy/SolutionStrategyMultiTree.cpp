@@ -12,23 +12,23 @@
 
 SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
 {
-    ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
-    ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
+    ProcessInfo::getInstance().createTimer("ProblemInitialization", " - problem initialization");
+    ProcessInfo::getInstance().createTimer("InteriorPointSearch", " - interior point search");
 
-    auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
-    ProcessInfo::getInstance().createTimer("InteriorPoint", " - Solving interior point NLP problem");
+    ProcessInfo::getInstance().createTimer("DualStrategy", " - dual strategy");
+    ProcessInfo::getInstance().createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
+    ProcessInfo::getInstance().createTimer("DualProblemsIntegerFixed", "   - solving integer-fixed problems");
+    ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    ProcessInfo::getInstance().createTimer("DualCutGenerationRootSearch", "   - performing root search for cuts");
+    ProcessInfo::getInstance().createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
 
-    ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
-    ProcessInfo::getInstance().createTimer("LP", " - Relaxed problems");
-    ProcessInfo::getInstance().createTimer("MIP", " - MIP problems");
-    ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - Populate solution pool");
-    ProcessInfo::getInstance().createTimer("HyperplaneLinesearch", " - Linesearch");
-    ProcessInfo::getInstance().createTimer("ObjectiveLinesearch", " - Objective linesearch");
-    ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
-    ProcessInfo::getInstance().createTimer("PrimalBoundSearchNLP", "    - NLP");
-    ProcessInfo::getInstance().createTimer("PrimalBoundLinesearch", "    - Linesearch");
-    ProcessInfo::getInstance().createTimer("PrimalBoundFixedLP", "    - Fixed LP");
+    ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - populating solution pool");
+    
+    ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
+    ProcessInfo::getInstance().createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
+    ProcessInfo::getInstance().createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
 
+    auto solver = static_cast<ES_InteriorPointStrategy>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
     auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
     TaskBase *tFinalizeSolution = new TaskSequential();
@@ -40,9 +40,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
 
     TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
     ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
-
-    TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
-    ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
 
     if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
     {
@@ -88,6 +85,10 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
         ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
     }
 
+    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
+    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+
     TaskBase *tPrintIterReport = new TaskPrintIterationReport();
     ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
@@ -103,10 +104,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
-
     if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
     {
         TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
@@ -120,7 +117,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
 
     if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Dual"))
     {
-        TaskBase *tSolveFixedLP = new TaskSolveFixedLinearProblem(MIPSolver);
+        TaskBase *tSolveFixedLP = new TaskSolveFixedDualProblem(MIPSolver);
         ProcessInfo::getInstance().tasks->addTask(tSolveFixedLP, "SolveFixedLP");
         ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
@@ -191,9 +188,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
-
-    TaskBase *tPrintSol = new TaskPrintSolution();
-    ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
 }
 
 SolutionStrategyMultiTree::~SolutionStrategyMultiTree()

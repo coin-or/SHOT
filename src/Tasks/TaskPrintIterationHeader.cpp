@@ -20,15 +20,7 @@ TaskPrintIterationHeader::~TaskPrintIterationHeader()
 
 void TaskPrintIterationHeader::run()
 {
-
-    std::stringstream tmpLine;
-    tmpLine << "                                                                                     \n";
-
-    tmpLine << "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current solution\r\n";
-    tmpLine << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | max.err.\r\n";
-    tmpLine << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴───────────────────────────╴\r\n";
-
-    Output::getInstance().outputSummary(tmpLine.str());
+    Output::getInstance().outputIterationDetailHeader();
 }
 
 std::string TaskPrintIterationHeader::getType()

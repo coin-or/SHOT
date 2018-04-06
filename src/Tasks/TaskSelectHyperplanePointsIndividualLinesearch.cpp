@@ -12,9 +12,11 @@
 
 TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch()
 {
+    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+
     nonlinearConstraintIdxs = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
 
-    ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndividualLinesearch()
@@ -34,6 +36,8 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run()
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> solPoints)
 {
+    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+
     int addedHyperplanes = 0;
 
     bool useUniqueConstraints = Settings::getInstance().getBoolSetting("ESH.Linesearch.IndividualConstraints.Unique", "Dual");
@@ -51,6 +55,8 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
         Output::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
 
         tSelectHPPts->run(solPoints);
+
+        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
 
         return;
     }
@@ -112,20 +118,20 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 
                     try
                     {
-                        ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
+                        ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
                         auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
                                                                                            Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                                                                                            Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
                                                                                            Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
                                                                                            currentIndexes);
 
-                        ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+                        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
                         internalPoint = xNewc.first;
                         externalPoint = xNewc.second;
                     }
                     catch (std::exception &e)
                     {
-                        ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+                        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
                         externalPoint = solPoints.at(i).point;
 
                         Output::getInstance().Output::getInstance().outputError(

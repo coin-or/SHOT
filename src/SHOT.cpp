@@ -10,38 +10,12 @@
 
 #include "SHOTSolver.h"
 
-std::string startmessage;
-
 int main(int argc, char *argv[])
 {
-// Visual Studio does not play nice with unicode:
-#ifdef _WIN32
-    startmessage = ""
-                   "ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿\n"
-                   "³          SHOT - Supporting Hyperplane Optimization Toolkit          ³\n"
-                   "ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
-                   "³ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        ³\n"
-                   "³ - Based on the Extended Supporting Hyperplane (ESH) algorithm       ³\n"
-                   "³   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            ³\n"
-                   "³   bo Akademi University, Turku, Finland                            ³\n"
-                   "ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n";
-#else
-    startmessage = ""
-                   "┌─────────────────────────────────────────────────────────────────────┐\n"
-                   "│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
-                   "├─────────────────────────────────────────────────────────────────────┤\n"
-                   "│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
-                   "│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
-                   "│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
-                   "│   Åbo Akademi University, Turku, Finland                            │\n"
-                   "└─────────────────────────────────────────────────────────────────────┘\n";
-
-#endif
-
     if (argc == 1)
     {
-        std::cout << startmessage << std::endl;
-        std::cout << "Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
+        Output::getInstance().outputSolverHeader();
+        std::cout << " Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
 
         return (0);
     }
@@ -78,7 +52,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
             {
-                Output::getInstance().Output::getInstance().outputError("Error when writing OSoL file: " + optionsFile.string());
+                Output::getInstance().outputError(" Error when writing OSoL file: " + optionsFile.string());
             }
 
             // Create GAMS option file
@@ -86,7 +60,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
             {
-                Output::getInstance().Output::getInstance().outputError("Error when writing options file: " + optionsFile.string());
+                Output::getInstance().outputError(" Error when writing options file: " + optionsFile.string());
             }
 
             defaultOptionsGenerated = true;
@@ -96,7 +70,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            std::cout << startmessage << std::endl;
+            Output::getInstance().outputSolverHeader();
 
             return (0);
         }
@@ -107,7 +81,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            std::cout << startmessage << std::endl;
+            Output::getInstance().outputSolverHeader();
             std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
             return (0);
@@ -120,7 +94,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            std::cout << startmessage << std::endl;
+            Output::getInstance().outputSolverHeader();
             std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
             return (0);
@@ -135,7 +109,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[1]))
         {
-            std::cout << startmessage << std::endl;
+            Output::getInstance().outputSolverHeader();
             std::cout << " Problem file " << argv[1] << " not found!" << std::endl;
 
             return (0);
@@ -147,7 +121,7 @@ int main(int argc, char *argv[])
         {
             if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
             {
-                std::cout << startmessage << std::endl;
+                Output::getInstance().outputSolverHeader();
                 std::cout << " Cannot set options!" << std::endl;
                 return (0);
             }
@@ -156,30 +130,35 @@ int main(int argc, char *argv[])
         Output::getInstance().setLogLevels();
 
         // Prints out the welcome message to the logging facility
-        Output::getInstance().outputSummary(startmessage);
 
         if (!solver->setProblem(fileName))
         {
-            Output::getInstance().Output::getInstance().outputError(" Error when reading problem file.");
+            Output::getInstance().outputError(" Error when reading problem file.");
 
             return (0);
         }
+
+        Output::getInstance().outputSolverHeader();
+        Output::getInstance().outputOptionsReport();
+        Output::getInstance().outputProblemInstanceReport();
 
         if (!solver->solveProblem()) // solve problem
         {
-            Output::getInstance().Output::getInstance().outputError(" Error when solving problem.");
+            Output::getInstance().outputError(" Error when solving problem.");
 
             return (0);
         }
+
+        Output::getInstance().outputSolutionReport();
+
+        Output::getInstance().outputSummary("╶─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n");
     }
     catch (const ErrorClass &eclass)
     {
-        Output::getInstance().Output::getInstance().outputError(eclass.errormsg);
+        Output::getInstance().outputError(eclass.errormsg);
 
         return (0);
     }
-
-    ProcessInfo::getInstance().stopTimer("Total");
 
     std::string osrl = solver->getOSrL();
 
@@ -188,20 +167,20 @@ int main(int argc, char *argv[])
         boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
         resultPath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
         resultPath = resultPath.replace_extension(".osrl");
-        Output::getInstance().outputSummary("\n Results written to: " + resultPath.string());
+        Output::getInstance().outputSummary(" Results written to: " + resultPath.string());
 
         if (!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
         {
-            Output::getInstance().Output::getInstance().outputError("Error when writing OSrL file: " + resultPath.string());
+            Output::getInstance().outputError(" Error when writing OSrL file: " + resultPath.string());
         }
     }
     else
     {
-        Output::getInstance().outputSummary("\n Results written to: " + resultFile.string());
+        Output::getInstance().outputSummary(" Results written to: " + resultFile.string());
 
         if (!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
         {
-            Output::getInstance().Output::getInstance().outputError("Error when writing OSrL file: " + resultFile.string());
+            Output::getInstance().outputError(" Error when writing OSrL file: " + resultFile.string());
         }
     }
 
@@ -216,53 +195,16 @@ int main(int argc, char *argv[])
 
         if (!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
         {
-            Output::getInstance().Output::getInstance().outputError("Error when writing trace file: " + tracePath.string());
+            Output::getInstance().outputError(" Error when writing trace file: " + tracePath.string());
         }
     }
     else
     {
         if (!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
         {
-            Output::getInstance().Output::getInstance().outputError("Error when writing trace file: " + traceFile.string());
+            Output::getInstance().outputError(" Error when writing trace file: " + traceFile.string());
         }
     }
-
-#ifdef _WIN32
-    Output::getInstance().outputSummary("\n"
-                                        "ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
-
-    for (auto T : ProcessInfo::getInstance().timers)
-    {
-        auto elapsed = T.elapsed();
-
-        if (elapsed > 0)
-        {
-            auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
-
-            Output::getInstance().outputSummary("³ " + tmpLine.str());
-        }
-    }
-
-    Output::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
-#else
-    Output::getInstance().outputSummary("\n"
-                                        "┌─── Solution time ──────────────────────────────────────────────────────────────┐");
-
-    for (auto T : ProcessInfo::getInstance().timers)
-    {
-        auto elapsed = T.elapsed();
-
-        if (elapsed > 0)
-        {
-            auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
-
-            Output::getInstance().outputSummary("│ " + tmpLine.str());
-        }
-    }
-
-    Output::getInstance().outputSummary(
-        "└────────────────────────────────────────────────────────────────────────────────┘");
-#endif
 
     return (0);
 }

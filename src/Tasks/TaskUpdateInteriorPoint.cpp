@@ -24,6 +24,8 @@ void TaskUpdateInteriorPoint::run()
     if (ProcessInfo::getInstance().primalSolutions.size() == 0)
         return;
 
+    ProcessInfo::getInstance().startTimer("InteriorPointSearch");
+
     auto maxDevPrimal = ProcessInfo::getInstance().primalSolutions.at(0).maxDevatingConstraintNonlinear;
     auto tmpPrimalPoint = ProcessInfo::getInstance().primalSolutions.at(0).point;
 
@@ -38,10 +40,12 @@ void TaskUpdateInteriorPoint::run()
 
         ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
 
+        ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
         return;
     }
     else if (ProcessInfo::getInstance().interiorPts.size() == 0)
     {
+        ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
         return;
     }
 
@@ -65,7 +69,7 @@ void TaskUpdateInteriorPoint::run()
 
         Output::getInstance().outputAlways("     Primal solution point used as additional interior point.");
 
-        if (ProcessInfo::getInstance().interiorPts.size() == ProcessInfo::getInstance().numOriginalInteriorPoints)
+        if (ProcessInfo::getInstance().interiorPts.size() == ProcessInfo::getInstance().solutionStatistics.numberOfOriginalInteriorPoints)
         {
             ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
         }
@@ -103,6 +107,8 @@ void TaskUpdateInteriorPoint::run()
 
         ProcessInfo::getInstance().interiorPts.back() = tmpIP;
     }
+
+    ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
 }
 
 std::string TaskUpdateInteriorPoint::getType()

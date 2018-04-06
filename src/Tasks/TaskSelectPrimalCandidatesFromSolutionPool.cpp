@@ -24,12 +24,12 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 
 	if (currIter->isMIP())
 	{
-		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
+		ProcessInfo::getInstance().startTimer("PrimalStrategy");
 		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
 
 		ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
-		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+		ProcessInfo::getInstance().stopTimer("PrimalStrategy");
 	}
 }
 

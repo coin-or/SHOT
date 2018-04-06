@@ -32,6 +32,7 @@ class OptProblem
     E_ObjectiveFunctionType getObjectiveFunctionType();
 
     virtual int getNumberOfNonlinearConstraints();
+    virtual int getNumberOfQuadraticConstraints();
     virtual int getNumberOfNonlinearConstraints(OSInstance *instance);
     virtual int getNumberOfLinearConstraints();
     virtual int getNumberOfConstraints();
@@ -62,8 +63,6 @@ class OptProblem
     virtual std::vector<QuadraticTerm *> getQuadraticTermsInConstraint(int constrIdx);
     virtual double getObjectiveConstant();
 
-    void printProblemStatistics();
-
     void exportProblemToOsil(std::string fileName);
 
     void saveProblemModelToFile(std::string fileName);
@@ -77,7 +76,7 @@ class OptProblem
 
     virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
 
-    virtual vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
+    virtual std::vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
 
     virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
     virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);

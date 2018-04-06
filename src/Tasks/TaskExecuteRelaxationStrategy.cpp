@@ -12,6 +12,7 @@
 
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver)
 {
+    ProcessInfo::getInstance().startTimer("DualStrategy");
     this->MIPSolver = MIPSolver;
 
     relaxationStrategy = new RelaxationStrategyStandard(this->MIPSolver);
@@ -19,6 +20,8 @@ TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolv
     ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
 
     isInitialized = false;
+
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
@@ -29,6 +32,7 @@ TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
 
 void TaskExecuteRelaxationStrategy::run()
 {
+    ProcessInfo::getInstance().startTimer("DualStrategy");
     if (!isInitialized)
     {
         relaxationStrategy->setInitial();
@@ -38,6 +42,8 @@ void TaskExecuteRelaxationStrategy::run()
     {
         relaxationStrategy->executeStrategy();
     }
+
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 std::string TaskExecuteRelaxationStrategy::getType()
 {

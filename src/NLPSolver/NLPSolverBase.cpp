@@ -61,7 +61,6 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 
     auto solStatus = solveProblemInstance();
 
-    ProcessInfo::getInstance().numNLPProbsSolved++;
     return (solStatus);
 }
 

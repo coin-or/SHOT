@@ -50,6 +50,8 @@ class ProcessInfo
     std::unique_ptr<OSResult> osResult;
 
     OptProblemOriginal *originalProblem;
+    OptimizationProblemStatistics problemStats;
+    SolutionStatistics solutionStatistics;
 
     IMIPSolver *MIPSolver;
     IRelaxationStrategy *relaxationStrategy;
@@ -103,40 +105,6 @@ class ProcessInfo
     void setObjectiveUpdatedByLinesearch(bool updated);
     bool getObjectiveUpdatedByLinesearch();
 
-    int iterationCount;
-    int iterLP;
-    int iterQP;
-    int iterFeasMILP;
-    int iterOptMILP;
-    int iterFeasMIQP;
-    int iterOptMIQP;
-    int iterFeasMIQCQP;
-    int iterOptMIQCQP;
-
-    int numNLPProbsSolved;
-    int numPrimalFixedNLPProbsSolved;
-
-    int itersWithStagnationMIP;         // TODO move to task
-    int iterSignificantObjectiveUpdate; // TODO move to task
-    int MIPIterationsWithoutNLPCall;    // TODO move to task
-    double solTimeLastNLPCall;          // TODO move to task
-
-    int iterLastPrimalBoundUpdate;
-    int iterLastDualBoundUpdate;
-
-    double timeLastDualBoundUpdate;
-
-    int lastLazyAddedIter;
-
-    int numOriginalInteriorPoints;
-
-    int numFunctionEvals;
-    int numGradientEvals;
-
-    int numConstraintsRemovedInPresolve;
-    int numVariableBoundsTightenedInPresolve;
-    int numIntegerCutsAdded;
-
     std::vector<int> itersSolvedAsECP;
 
     void setOriginalProblem(OptProblemOriginal *problem);
@@ -157,6 +125,7 @@ class ProcessInfo
 
     E_TerminationReason terminationReason = E_TerminationReason::None;
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
+
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
 
@@ -177,6 +146,8 @@ class ProcessInfo
 
     OSInstance *getProblemInstanceFromOSiL(std::string osil);
     std::string getOSiLFromProblemInstance(OSInstance *instance);
+
+    void setProblemStats();
 
 #ifdef HAS_GAMS
     gmoHandle_t GAMSModelingObject;

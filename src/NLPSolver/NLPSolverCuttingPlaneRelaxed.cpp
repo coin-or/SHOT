@@ -150,7 +150,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
                                                                                    Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
                                                                                    Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
-                ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+                ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
                 internalPoint = xNewc.first;
                 externalPoint = xNewc.second;
 

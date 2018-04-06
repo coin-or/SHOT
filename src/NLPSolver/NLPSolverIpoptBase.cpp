@@ -271,29 +271,29 @@ void NLPSolverIpoptBase::setInitialSettings()
     std::string IpoptSolver = "";
 
     // Sets the linear solver used
-    if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma27))
+    switch (static_cast<ES_IpoptSolver>(Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver")))
     {
+    case (ES_IpoptSolver::ma27):
         IpoptSolver = "ma27";
-    }
-    else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma57))
-    {
+        break;
+
+    case (ES_IpoptSolver::ma57):
         IpoptSolver = "ma57";
-    }
-    else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma86))
-    {
+        break;
+
+    case (ES_IpoptSolver::ma86):
         IpoptSolver = "ma86";
-    }
-    else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::ma97))
-    {
+        break;
+
+    case (ES_IpoptSolver::ma97):
         IpoptSolver = "ma97";
-    }
-    else if (Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver") == static_cast<int>(ES_IpoptSolver::mumps))
-    {
+        break;
+
+    case (ES_IpoptSolver::mumps):
         IpoptSolver = "mumps";
-    }
-    else
-    {
-        IpoptSolver = "ma57";
+        break;
+    default:
+        IpoptSolver = "mumps";
     }
 
     osOption->setAnotherSolverOption("linear_solver", IpoptSolver, "ipopt", "", "string", "");

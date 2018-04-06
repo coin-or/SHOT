@@ -29,34 +29,34 @@ void TaskCheckObjectiveStagnation::run()
         return;
     }
 
-    if (ProcessInfo::getInstance().iterFeasMILP + ProcessInfo::getInstance().iterOptMILP <= Settings::getInstance().getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
+    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP + ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP <= Settings::getInstance().getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
     {
         return;
     }
 
-    if (ProcessInfo::getInstance().iterSignificantObjectiveUpdate == 0) // First MIP solution
+    if (ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate == 0) // First MIP solution
     {
-        ProcessInfo::getInstance().iterSignificantObjectiveUpdate = currIter->iterationNumber;
-        ProcessInfo::getInstance().itersWithStagnationMIP = 0;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate = currIter->iterationNumber;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithStagnationMIP= 0;
         return;
     }
 
     if (std::abs(
-            (currIter->objectiveValue - ProcessInfo::getInstance().iterations[ProcessInfo::getInstance().iterSignificantObjectiveUpdate - 1].objectiveValue)) > Settings::getInstance().getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
+            (currIter->objectiveValue - ProcessInfo::getInstance().iterations[ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate - 1].objectiveValue)) > Settings::getInstance().getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
     {
-        ProcessInfo::getInstance().iterSignificantObjectiveUpdate = currIter->iterationNumber;
-        ProcessInfo::getInstance().itersWithStagnationMIP = 0;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate = currIter->iterationNumber;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithStagnationMIP= 0;
 
         return;
     }
 
-    if (ProcessInfo::getInstance().itersWithStagnationMIP >= Settings::getInstance().getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
+    if (ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithStagnationMIP>= Settings::getInstance().getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
     {
         ProcessInfo::getInstance().terminationReason = E_TerminationReason::ObjectiveStagnation;
         ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
     }
 
-    ProcessInfo::getInstance().itersWithStagnationMIP++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithStagnationMIP++;
 }
 
 std::string TaskCheckObjectiveStagnation::getType()

@@ -38,12 +38,12 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
 	if (currIter->MIPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
 	{
-		ProcessInfo::getInstance().MIPIterationsWithoutNLPCall++;
+		ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
 		return;
 	}
 
-	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+	ProcessInfo::getInstance().startTimer("PrimalStrategy");
+	ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
 
 	auto userSettingStrategy = Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal");
 	auto userSetting = Settings::getInstance().getIntSetting("FixedInteger.Source", "Primal");
@@ -62,13 +62,13 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	}
 	else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
 	{
-		if (ProcessInfo::getInstance().MIPIterationsWithoutNLPCall >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+		if (ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
 		{
 			Output::getInstance().outputInfo(
 				"     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
 			callNLPSolver = true;
 		}
-		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solTimeLastNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+		else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solutionStatistics.timeLastFixedNLPCall> Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
 		{
 			Output::getInstance().outputInfo(
 				"     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -155,8 +155,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 	}
 	else
 	{
-		ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+		ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
+		ProcessInfo::getInstance().stopTimer("PrimalStrategy");
 	}
 }
 

@@ -100,7 +100,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
     if (ProcessInfo::getInstance().primalFixedNLPCandidates.size() == 0)
     {
-        ProcessInfo::getInstance().MIPIterationsWithoutNLPCall++;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return (false);
     }
 
@@ -129,7 +129,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
     if (testPts.size() == 0)
     {
-        ProcessInfo::getInstance().MIPIterationsWithoutNLPCall++;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return (false);
     }
 
@@ -196,7 +196,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
         auto solvestatus = NLPSolver->solveProblem();
 
         NLPSolver->unfixVariables();
-        ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved++;
+        ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP++;
 
         double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
 
@@ -222,7 +222,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
             break;
         }
 
-        std::string solExpr = ((boost::format("(%.3f s)") % (timeEnd - timeStart)).str());
+        //std::string solExpr = ((boost::format("(%.3f s)") % (timeEnd - timeStart)).str());
 
         if (solvestatus == E_NLPSolutionStatus::Feasible || solvestatus == E_NLPSolutionStatus::Optimal)
         {
@@ -236,32 +236,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
             auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
                 variableSolution);
-
-            std::string tmpConstr;
-            if (NLPSolver->isObjectiveFunctionNonlinear() && (mostDevConstr.idx == NLPSolver->NLPProblem->getNonlinearObjectiveConstraintIdx() || mostDevConstr.idx == -1))
-            {
-                tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().at(
-                                ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveConstraintIdx()) +
-                            ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
-            }
-            else
-            {
-                tmpConstr = ProcessInfo::getInstance().originalProblem->getConstraintNames().at(mostDevConstr.idx) + ": " + ((boost::format("%.5f") % mostDevConstr.value).str());
-            }
-
-            std::string tmpObjVal = UtilityFunctions::toStringFormat(tmpObj, "%.3f");
-
-            std::string tmpPrimal = "";
-
-            if (oldPrimalBound > ProcessInfo::getInstance().getPrimalBound())
-            {
-                tmpPrimal = tmpObjVal;
-                oldPrimalBound = ProcessInfo::getInstance().getPrimalBound();
-            }
-
-            auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % tmpObjVal % tmpPrimal % tmpConstr;
-
-            //Output::getInstance().outputSummary(tmpLine.str());
 
             if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
             {
@@ -280,25 +254,39 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
                 ProcessInfo::getInstance().addPrimalSolutionCandidate(variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
             }
+
+            Output::getInstance().outputIterationDetail(ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP,
+                                                        ("NLP" + sourceDesc),
+                                                        ProcessInfo::getInstance().getElapsedTime("Total"),
+                                                        currIter->numHyperplanesAdded,
+                                                        currIter->totNumHyperplanes,
+                                                        ProcessInfo::getInstance().getDualBound(),
+                                                        ProcessInfo::getInstance().getPrimalBound(),
+                                                        ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
+                                                        ProcessInfo::getInstance().getRelativeObjectiveGap(),
+                                                        tmpObj,
+                                                        mostDevConstr.idx,
+                                                        mostDevConstr.value);
         }
         else
         {
+            double tmpObj = NLPSolver->getObjectiveValue();
+
+            // Utilize the solution point for adding a cutting plane / supporting hyperplane
+            std::vector<SolutionPoint> solutionPoints(1);
+
+            auto variableSolution = NLPSolver->getSolution();
+
+            if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear())
+            {
+                variableSolution.push_back(tmpObj);
+            }
+
+            auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(variableSolution);
+
             if (Settings::getInstance().getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
             {
-                // Utilize the solution point for adding a cutting plane / supporting hyperplane
-                std::vector<SolutionPoint> solutionPoints(1);
-                double tmpObj = NLPSolver->getObjectiveValue();
-                auto variableSolution = NLPSolver->getSolution();
-
-                if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear())
-                {
-                    variableSolution.push_back(tmpObj);
-                }
-
-                auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(variableSolution);
-
                 SolutionPoint tmpSolPt;
-
                 tmpSolPt.point = variableSolution;
                 tmpSolPt.objectiveValue = ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(
                     variableSolution);
@@ -328,7 +316,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
             if (Settings::getInstance().getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
             {
-
                 int iters = ceil(Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
 
                 if (iters < 10 * this->originalIterFrequency)
@@ -343,9 +330,18 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                     "     Duration:  " + to_string(timeEnd - timeStart) + " s. New interval: " + to_string(interval) + " s or " + to_string(iters) + " iters.");
             }
 
-            auto tmpLine = boost::format("%|4| %|-10s| %|=10s| %|=14s| %|=14s| %|=14s|  %|-14s|") % ProcessInfo::getInstance().numPrimalFixedNLPProbsSolved % ("NLP" + sourceDesc) % solExpr % "" % "infeasible" % "" % "";
-
-            //Output::getInstance().outputSummary(tmpLine.str());
+            Output::getInstance().outputIterationDetail(ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP,
+                                                        ("NLP" + sourceDesc),
+                                                        ProcessInfo::getInstance().getElapsedTime("Total"),
+                                                        currIter->numHyperplanesAdded,
+                                                        currIter->totNumHyperplanes,
+                                                        ProcessInfo::getInstance().getDualBound(),
+                                                        ProcessInfo::getInstance().getPrimalBound(),
+                                                        ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
+                                                        ProcessInfo::getInstance().getRelativeObjectiveGap(),
+                                                        NAN,
+                                                        mostDevConstr.idx,
+                                                        mostDevConstr.value);
 
             if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
             {
@@ -369,8 +365,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
             }
         }
 
-        ProcessInfo::getInstance().MIPIterationsWithoutNLPCall = 0;
-        ProcessInfo::getInstance().solTimeLastNLPCall = ProcessInfo::getInstance().getElapsedTime("Total");
+        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
+        ProcessInfo::getInstance().solutionStatistics.timeLastFixedNLPCall = ProcessInfo::getInstance().getElapsedTime("Total");
     }
 
     ProcessInfo::getInstance().primalFixedNLPCandidates.clear();

@@ -46,9 +46,9 @@ void TaskPrintSolutionBoundReport::run()
 		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % ProcessInfo::getInstance().getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
 		Output::getInstance().outputSummary(tmpLine.str());
 
-		if (ProcessInfo::getInstance().numConstraintsRemovedInPresolve > 0 || ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve > 0)
+		if (ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve> 0 || ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)
 		{
-			tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.") % ProcessInfo::getInstance().numConstraintsRemovedInPresolve % ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve;
+			tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.") % ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve% ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve;
 			Output::getInstance().outputSummary(tmpLine.str());
 		}
 
@@ -58,10 +58,10 @@ void TaskPrintSolutionBoundReport::run()
 				" Number of interior points: " + to_string(ProcessInfo::getInstance().interiorPts.size()));
 		}
 
-		if (ProcessInfo::getInstance().numIntegerCutsAdded > 0)
+		if (ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts > 0)
 		{
 			Output::getInstance().outputSummary(
-				" Number of integer cuts added: " + to_string(ProcessInfo::getInstance().numIntegerCutsAdded));
+				" Number of integer cuts added: " + to_string(ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts));
 		}
 
 #ifdef _WIN32

@@ -70,8 +70,5 @@ class MIPSolverBase
 
     std::vector<SolutionPoint> lastSolutions;
 
-    virtual void startTimer();
-    virtual void stopTimer();
-
     OptProblem *originalProblem;
 };

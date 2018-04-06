@@ -22,12 +22,24 @@ void TaskCheckConstraintTolerance::run()
 {
     auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-    if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") &&
-        currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
-        currIter->type == E_IterationProblemType::MIP)
+    if (ProcessInfo::getInstance().problemStats.isDiscreteProblem)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") &&
+            currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
+            currIter->type == E_IterationProblemType::MIP)
+        {
+            ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
+            ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        }
+    }
+    else
+    {
+        if (currIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") &&
+            currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+        {
+            ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
+            ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        }
     }
 
     return;

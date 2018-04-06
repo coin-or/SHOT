@@ -194,7 +194,7 @@ bool ProcessInfo::getObjectiveUpdatedByLinesearch()
 
 void ProcessInfo::checkPrimalSolutionCandidates()
 {
-    this->startTimer("PrimalBoundTotal");
+    this->startTimer("PrimalStrategy");
 
     for (auto cand : this->primalSolutionCandidates)
     {
@@ -203,7 +203,7 @@ void ProcessInfo::checkPrimalSolutionCandidates()
 
     this->primalSolutionCandidates.clear();
 
-    this->stopTimer("PrimalBoundTotal");
+    this->stopTimer("PrimalStrategy");
 }
 
 void ProcessInfo::checkDualSolutionCandidates()
@@ -250,8 +250,8 @@ void ProcessInfo::checkDualSolutionCandidates()
             // New dual solution
             this->setDualBound(C.objValue);
             currDualBound = C.objValue;
-            this->iterLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
-            this->timeLastDualBoundUpdate = this->getElapsedTime("Total");
+            this->solutionStatistics.iterationLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
+            this->solutionStatistics.iterationLastDualBoundUpdate = this->getElapsedTime("Total");
 
             if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal ||
                 C.sourceType == E_DualSolutionSource::LPSolution ||
@@ -709,33 +709,6 @@ ProcessInfo::ProcessInfo()
 {
     createTimer("Total", "Total solution time");
 
-    iterLP = 0;
-    iterQP = 0;
-    iterFeasMILP = 0;
-    iterOptMILP = 0;
-    iterFeasMIQP = 0;
-    iterOptMIQP = 0;
-
-    numNLPProbsSolved = 0;
-    numPrimalFixedNLPProbsSolved = 0;
-
-    itersWithStagnationMIP = 0;
-    iterSignificantObjectiveUpdate = 0;
-    MIPIterationsWithoutNLPCall = 0;
-    solTimeLastNLPCall = 0;
-
-    numFunctionEvals = 0;
-    numGradientEvals = 0;
-
-    iterLastPrimalBoundUpdate = 0;
-    iterLastDualBoundUpdate = 0;
-
-    numOriginalInteriorPoints = 0;
-
-    numConstraintsRemovedInPresolve = 0;
-
-    numIntegerCutsAdded = 0;
-
     currentObjectiveBounds.first = -OSDBL_MAX;
     currentObjectiveBounds.second = OSDBL_MAX;
 
@@ -1085,51 +1058,51 @@ std::string ProcessInfo::getOSrl()
 
     numPrimalSols = max(1, numPrimalSols); // To make sure we also print the following even if we have no primal solution
 
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "LP", std::to_string(iterLP), "ProblemsSolved",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "LP", std::to_string(this->solutionStatistics.numberOfProblemsLP), "ProblemsSolved",
                                        "Relaxed LP problems solved", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "QP", std::to_string(iterQP), "ProblemsSolved",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "QP", std::to_string(this->solutionStatistics.numberOfProblemsQP), "ProblemsSolved",
                                        "Relaxed QP problems solved", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMILP", std::to_string(iterFeasMILP),
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMILP", std::to_string(this->solutionStatistics.numberOfProblemsFeasibleMILP),
                                        "ProblemsSolved", "MILP problems solved to feasibility", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMILP", std::to_string(iterOptMILP), "ProblemsSolved",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMILP", std::to_string(this->solutionStatistics.numberOfProblemsOptimalMILP), "ProblemsSolved",
                                        "MILP problems solved to optimality", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMIQP", std::to_string(iterFeasMIQP),
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMIQP", std::to_string(this->solutionStatistics.numberOfProblemsFeasibleMIQP),
                                        "ProblemsSolved", "MIQP problems solved to feasibility", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMIQP", std::to_string(iterOptMIQP), "ProblemsSolved",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMIQP", std::to_string(this->solutionStatistics.numberOfProblemsOptimalMIQP), "ProblemsSolved",
                                        "MIQP problems solved to optimality", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Total",
-                                       std::to_string(iterLP + iterFeasMILP + iterOptMILP + iterQP + iterFeasMIQP + iterOptMIQP), "ProblemsSolved",
+                                       std::to_string(this->solutionStatistics.numberOfProblemsLP + this->solutionStatistics.numberOfProblemsFeasibleMILP + this->solutionStatistics.numberOfProblemsOptimalMILP + this->solutionStatistics.numberOfProblemsQP + this->solutionStatistics.numberOfProblemsFeasibleMIQP + this->solutionStatistics.numberOfProblemsOptimalMIQP), "ProblemsSolved",
                                        "Total number of (MI)QP/(MI)LP subproblems solved", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NLP", std::to_string(numNLPProbsSolved), "ProblemsSolved",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NLP", std::to_string(this->solutionStatistics.getNumberOfTotalNLPProblems()), "ProblemsSolved",
                                        "NLP problems solved", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Functions", std::to_string(numFunctionEvals), "Evaluations",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Functions", std::to_string(this->solutionStatistics.numberOfFunctionEvalutions), "Evaluations",
                                        "Total number of function evaluations in SHOT", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Gradients", std::to_string(numGradientEvals), "Evaluations",
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Gradients", std::to_string(this->solutionStatistics.numberOfGradientEvaluations), "Evaluations",
                                        "Total number of gradient evaluations in SHOT", 0, NULL);
 
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberVariables",
-                                       std::to_string(this->originalProblem->getProblemInstance()->getVariableNumber()), "Problem",
+                                       std::to_string(this->problemStats.numberOfVariables), "Problem",
                                        "Total number of variables", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberContinousVariables",
                                        std::to_string(
-                                           this->originalProblem->getProblemInstance()->getVariableNumber() - this->originalProblem->getNumberOfIntegerVariables() - this->originalProblem->getNumberOfBinaryVariables()),
+                                           this->problemStats.numberOfContinousVariables),
                                        "Problem", "Number of continuous variables", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberBinaryVariables",
-                                       std::to_string(this->originalProblem->getProblemInstance()->getNumberOfBinaryVariables()), "Problem",
+                                       std::to_string(this->problemStats.numberOfBinaryVariables), "Problem",
                                        "Number of binary variables", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberIntegerVariables",
-                                       std::to_string(this->originalProblem->getProblemInstance()->getNumberOfIntegerVariables()), "Problem",
+                                       std::to_string(this->problemStats.numberOfIntegerVariables), "Problem",
                                        "Number of integer variables", 0, NULL);
 
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberConstraints",
-                                       std::to_string(this->originalProblem->getProblemInstance()->getConstraintNumber()), "Problem",
+                                       std::to_string(this->problemStats.numberOfConstraints), "Problem",
                                        "Number of constraints", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberNonlinearConstraints",
-                                       std::to_string(this->originalProblem->getProblemInstance()->getNumberOfNonlinearConstraints()), "Problem",
+                                       std::to_string(this->problemStats.numberOfNonlinearConstraints), "Problem",
                                        "Number of nonlinear constraints", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberLinearConstraints",
                                        std::to_string(
-                                           this->originalProblem->getProblemInstance()->getConstraintNumber() - this->originalProblem->getNumberOfNonlinearConstraints()),
+                                           this->problemStats.numberOfLinearConstraints),
                                        "Problem",
                                        "Number of linear constraints", 0, NULL);
 
@@ -1347,7 +1320,7 @@ std::string ProcessInfo::getTraceResult()
     ss << this->getDualBound() << ",";
     ;
     ss << this->getElapsedTime("Total") << ",";
-    ss << iterFeasMILP + iterOptMILP << ",";
+    ss << this->solutionStatistics.numberOfIterations << ",";
     ss << "0"
        << ",";
     ss << "0"
@@ -1427,4 +1400,87 @@ OSInstance *ProcessInfo::getProblemInstanceFromOSiL(std::string osil)
 std::string ProcessInfo::getOSiLFromProblemInstance(OSInstance *instance)
 {
     return (osilWriter->writeOSiL(instance));
+}
+
+void ProcessInfo::setProblemStats()
+{
+    if (this->originalProblem == NULL)
+        return;
+
+    auto instance = this->originalProblem->getProblemInstance();
+
+    problemStats.isMinimizationProblem = this->originalProblem->isTypeOfObjectiveMinimize();
+
+    problemStats.objectiveFunctionType = this->originalProblem->getObjectiveFunctionType();
+
+    problemStats.numberOfConstraints = instance->getConstraintNumber();
+    problemStats.numberOfNonlinearConstraints = this->originalProblem->getNumberOfNonlinearConstraints();
+    problemStats.numberOfQuadraticConstraints = this->originalProblem->getNumberOfQuadraticConstraints();
+
+    problemStats.numberOfLinearConstraints = this->originalProblem->getNumberOfLinearConstraints();
+
+    problemStats.numberOfQuadraticTerms = instance->getNumberOfQuadraticTerms();
+
+    auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+
+    if (QPStrategy == ES_QuadraticProblemStrategy::Nonlinear && problemStats.numberOfQuadraticTerms > 0)
+    {
+        problemStats.quadraticTermsReformulatedAsNonlinear = true;
+    }
+    else if (QPStrategy == ES_QuadraticProblemStrategy::QuadraticObjective && !UtilityFunctions::areAllConstraintsQuadratic(instance))
+    {
+        problemStats.quadraticTermsReformulatedAsNonlinear = true;
+    }
+
+    problemStats.numberOfVariables = instance->getVariableNumber();
+    problemStats.numberOfIntegerVariables = instance->getNumberOfIntegerVariables();
+    problemStats.numberOfBinaryVariables = instance->getNumberOfBinaryVariables();
+    problemStats.numberOfSemicontinuousVariables = instance->getNumberOfSemiContinuousVariables();
+    problemStats.numberOfContinousVariables = problemStats.numberOfVariables - (problemStats.numberOfIntegerVariables + problemStats.numberOfBinaryVariables + problemStats.numberOfSemicontinuousVariables);
+
+    problemStats.isDiscreteProblem = (problemStats.numberOfVariables == problemStats.numberOfContinousVariables);
+
+    // Classify the problem
+    if (!problemStats.isDiscreteProblem)
+    {
+        if (problemStats.numberOfNonlinearConstraints > 0 ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear)
+        {
+            problemStats.problemType = E_ProblemType::NLP;
+        }
+        else if (problemStats.numberOfQuadraticConstraints > 0)
+        {
+            problemStats.problemType = E_ProblemType::QCQP;
+        }
+        else if (problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Quadratic)
+        {
+            problemStats.problemType = E_ProblemType::QP;
+        }
+        else
+        {
+            problemStats.problemType = E_ProblemType::LP;
+        }
+    }
+    else
+    {
+        if (problemStats.numberOfNonlinearConstraints > 0 ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear)
+        {
+            problemStats.problemType = E_ProblemType::MINLP;
+        }
+        else if (problemStats.numberOfQuadraticConstraints > 0)
+        {
+            problemStats.problemType = E_ProblemType::MIQCQP;
+        }
+        else if (problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Quadratic)
+        {
+            problemStats.problemType = E_ProblemType::MIQP;
+        }
+        else
+        {
+            problemStats.problemType = E_ProblemType::MILP;
+        }
+    }
 }

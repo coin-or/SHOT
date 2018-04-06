@@ -18,7 +18,6 @@
 #include "../Tasks/TaskConditional.h"
 
 #include "../Tasks/TaskInitializeOriginalProblem.h"
-#include "../Tasks/TaskPrintProblemStats.h"
 #include "../Tasks/TaskInitializeIteration.h"
 #include "../Tasks/TaskTerminate.h"
 
@@ -42,8 +41,6 @@
 #include "../Tasks/TaskCheckRelativeGap.h"
 #include "../Tasks/TaskCheckTimeLimit.h"
 
-#include "../Tasks/TaskPrintSolution.h"
-
 #include "../Tasks/TaskInitializeLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
@@ -58,7 +55,7 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
-#include "../Tasks/TaskSolveFixedLinearProblem.h"
+#include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
 

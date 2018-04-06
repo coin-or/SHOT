@@ -16,117 +16,125 @@ TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch()
 
 TaskSelectHyperplanePointsLinesearch::~TaskSelectHyperplanePointsLinesearch()
 {
-	if (hyperplaneSolutionPointStrategyInitialized)
-	{
-		delete tSelectHPPts;
-	}
+    if (hyperplaneSolutionPointStrategyInitialized)
+    {
+        delete tSelectHPPts;
+    }
 }
 
 void TaskSelectHyperplanePointsLinesearch::run()
 {
-	this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
+    this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
 }
 
 void TaskSelectHyperplanePointsLinesearch::run(vector<SolutionPoint> solPoints)
 {
-	int addedHyperplanes = 0;
+    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
 
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    int addedHyperplanes = 0;
 
-	auto originalProblem = ProcessInfo::getInstance().originalProblem;
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	int prevHPnum = ProcessInfo::getInstance().hyperplaneWaitingList.size();
+    auto originalProblem = ProcessInfo::getInstance().originalProblem;
 
-	if (ProcessInfo::getInstance().interiorPts.size() == 0)
-	{
-		if (!hyperplaneSolutionPointStrategyInitialized)
-		{
-			tSelectHPPts = new TaskSelectHyperplanePointsSolution();
-			hyperplaneSolutionPointStrategyInitialized = true;
-		}
+    int prevHPnum = ProcessInfo::getInstance().hyperplaneWaitingList.size();
 
-		Output::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
-		tSelectHPPts->run(solPoints);
+    if (ProcessInfo::getInstance().interiorPts.size() == 0)
+    {
+        if (!hyperplaneSolutionPointStrategyInitialized)
+        {
+            tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+            hyperplaneSolutionPointStrategyInitialized = true;
+        }
 
-		return;
-	}
+        Output::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
+        tSelectHPPts->run(solPoints);
 
-	for (int i = 0; i < solPoints.size(); i++)
-	{
-		if (originalProblem->isConstraintsFulfilledInPoint(solPoints.at(i).point))
-		{
-		}
-		else
-		{
-			for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
-			{
-				if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
-					return;
-				auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
+        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+        return;
+    }
 
-				std::vector<double> externalPoint;
-				std::vector<double> internalPoint;
+    for (int i = 0; i < solPoints.size(); i++)
+    {
+        if (originalProblem->isConstraintsFulfilledInPoint(solPoints.at(i).point))
+        {
+        }
+        else
+        {
+            for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
+            {
+                if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+                {
+                    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                    return;
+                }
+                auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
 
-				try
-				{
+                std::vector<double> externalPoint;
+                std::vector<double> internalPoint;
 
-					ProcessInfo::getInstance().startTimer("HyperplaneLinesearch");
-					auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-																					   Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-																					   Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-																					   Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
+                try
+                {
 
-					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
-					internalPoint = xNewc.first;
-					externalPoint = xNewc.second;
-				}
-				catch (std::exception &e)
-				{
-					ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
-					externalPoint = solPoints.at(i).point;
+                    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+                    auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
+                                                                                       Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                                       Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+                                                                                       Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
-					Output::getInstance().outputWarning(
-						"     Cannot find solution with linesearch, using solution point instead.");
-				}
+                    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                    internalPoint = xNewc.first;
+                    externalPoint = xNewc.second;
+                }
+                catch (std::exception &e)
+                {
+                    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                    externalPoint = solPoints.at(i).point;
 
-				auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(externalPoint);
+                    Output::getInstance().outputWarning(
+                        "     Cannot find solution with linesearch, using solution point instead.");
+                }
 
-				if (tmpMostDevConstr.value >= 0)
-				{
-					Hyperplane hyperplane;
-					hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
-					hyperplane.generatedPoint = externalPoint;
+                auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(externalPoint);
 
-					if (i == 0 && currIter->isMIP())
-					{
-						hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
-					}
-					else if (currIter->isMIP())
-					{
-						hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
-					}
-					else
-					{
-						hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
-					}
+                if (tmpMostDevConstr.value >= 0)
+                {
+                    Hyperplane hyperplane;
+                    hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
+                    hyperplane.generatedPoint = externalPoint;
 
-					ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
-					addedHyperplanes++;
+                    if (i == 0 && currIter->isMIP())
+                    {
+                        hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
+                    }
+                    else if (currIter->isMIP())
+                    {
+                        hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
+                    }
+                    else
+                    {
+                        hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
+                    }
 
-					Output::getInstance().outputInfo(
-						"     Added hyperplane to waiting list with deviation: " + UtilityFunctions::toString(tmpMostDevConstr.value));
-				}
-				else
-				{
-					Output::getInstance().outputAlways("     Could not add hyperplane to waiting list.");
-				}
-			}
-		}
-	}
+                    ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
+                    addedHyperplanes++;
+
+                    Output::getInstance().outputInfo(
+                        "     Added hyperplane to waiting list with deviation: " + UtilityFunctions::toString(tmpMostDevConstr.value));
+                }
+                else
+                {
+                    Output::getInstance().outputAlways("     Could not add hyperplane to waiting list.");
+                }
+            }
+        }
+    }
+
+    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
 }
 
 std::string TaskSelectHyperplanePointsLinesearch::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

@@ -12,9 +12,11 @@
 
 TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
 {
+    ProcessInfo::getInstance().startTimer("DualStrategy");
     itersWithoutAddedHPs = 0;
 
     this->MIPSolver = MIPSolver;
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 TaskAddHyperplanes::~TaskAddHyperplanes()
@@ -23,6 +25,7 @@ TaskAddHyperplanes::~TaskAddHyperplanes()
 
 void TaskAddHyperplanes::run()
 {
+    ProcessInfo::getInstance().startTimer("DualStrategy");
     this->MIPSolver = MIPSolver;
     auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
@@ -58,6 +61,8 @@ void TaskAddHyperplanes::run()
     {
         itersWithoutAddedHPs++;
     }
+
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 std::string TaskAddHyperplanes::getType()

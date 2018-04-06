@@ -77,7 +77,8 @@ enum class E_ObjectiveFunctionType
     Linear,
     Quadratic,
     Nonlinear,
-    QuadraticConsideredAsNonlinear
+    QuadraticConsideredAsNonlinear,
+    None
 };
 
 enum class E_ProblemSolutionStatus
@@ -94,6 +95,19 @@ enum class E_ProblemSolutionStatus
     CutOff,
     NodeLimit,
     Abort,
+    None
+};
+
+enum class E_ProblemType
+{
+    LP,
+    QP,
+    NLP,
+    QCQP,
+    MILP,
+    MIQP,
+    MIQCQP,
+    MINLP,
     None
 };
 
@@ -139,6 +153,14 @@ enum class ES_HyperplaneCutStrategy
     ECP
 };
 
+enum class ES_InteriorPointStrategy
+{
+    CuttingPlaneMiniMax,
+    IpoptMinimax,
+    IpoptRelaxed,
+    IpoptMinimaxAndRelaxed
+};
+
 enum class ES_IpoptSolver
 {
     ma27,
@@ -167,14 +189,6 @@ enum class ES_MIPSolver
     Gurobi,
     Cbc,
     None
-};
-
-enum class ES_NLPSolver
-{
-    CuttingPlaneMiniMax,
-    IpoptMinimax,
-    IpoptRelaxed,
-    IpoptMinimaxAndRelaxed
 };
 
 enum class ES_PrimalNLPFixedPoint

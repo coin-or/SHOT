@@ -55,8 +55,8 @@ void RelaxationStrategyStandard::setActive()
 {
     if (MIPSolver->getDiscreteVariableStatus())
     {
-        ProcessInfo::getInstance().stopTimer("MIP");
-        ProcessInfo::getInstance().startTimer("LP");
+        ProcessInfo::getInstance().stopTimer("DualProblemsDiscrete");
+        ProcessInfo::getInstance().startTimer("DualProblemsRelaxed");
         MIPSolver->activateDiscreteVariables(false);
 
         ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::Relaxed;
@@ -67,8 +67,8 @@ void RelaxationStrategyStandard::setInactive()
 {
     if (!MIPSolver->getDiscreteVariableStatus())
     {
-        ProcessInfo::getInstance().stopTimer("LP");
-        ProcessInfo::getInstance().startTimer("MIP");
+        ProcessInfo::getInstance().stopTimer("DualProblemsRelaxed");
+        ProcessInfo::getInstance().startTimer("DualProblemsDiscrete");
         MIPSolver->activateDiscreteVariables(true);
 
         ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
@@ -100,7 +100,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-    if (ProcessInfo::getInstance().getElapsedTime("LP") < Settings::getInstance().getDoubleSetting("Relaxation.TimeLimit", "Dual"))
+    if (ProcessInfo::getInstance().getElapsedTime("DualProblemsRelaxed") < Settings::getInstance().getDoubleSetting("Relaxation.TimeLimit", "Dual"))
     {
         return (false);
     }

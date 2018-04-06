@@ -186,7 +186,7 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOrigi
 {
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(ProcessInfo::getInstance().MIPSolver))->callbackMutex2);
 
-    ProcessInfo::getInstance().lastLazyAddedIter = 0;
+    ProcessInfo::getInstance().solutionStatistics.iterationLastLazyAdded = 0;
     isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
     cbCalls = 0;
 
@@ -478,7 +478,7 @@ void CtCallbackI::createIntegerCut(std::vector<int> binaryIndexes)
     IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     add(tmpRange);
-    ProcessInfo::getInstance().numIntegerCutsAdded++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
 
     tmpRange.end();
     expr.end();
@@ -530,8 +530,6 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
 
 E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
 {
-    MIPSolverCplex::startTimer();
-
     E_ProblemSolutionStatus MIPSolutionStatus;
     MIPSolverCplex::cachedSolutionHasChanged = true;
 
@@ -556,8 +554,6 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
         Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
-
-    MIPSolverBase::stopTimer();
 
     return (MIPSolutionStatus);
 }

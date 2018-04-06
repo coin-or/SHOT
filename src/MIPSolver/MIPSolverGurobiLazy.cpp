@@ -410,7 +410,7 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
     isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
-    ProcessInfo::getInstance().lastLazyAddedIter = 0;
+    ProcessInfo::getInstance().solutionStatistics.iterationLastLazyAdded = 0;
 
     cbCalls = 0;
 
@@ -464,7 +464,7 @@ void GurobiCallback::createIntegerCut(std::vector<int> binaryIndexes)
 
         addLazy(expr <= binaryIndexes.size() - 1.0);
 
-        ProcessInfo::getInstance().numIntegerCutsAdded++;
+        ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
     }
     catch (GRBException &e)
     {

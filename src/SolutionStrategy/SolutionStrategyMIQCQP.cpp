@@ -12,15 +12,14 @@
 
 SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
 {
-    ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
+    ProcessInfo::getInstance().createTimer("ProblemInitialization", " - problem initialization");
+    ProcessInfo::getInstance().createTimer("InteriorPointSearch", " - interior point search");
 
-    ProcessInfo::getInstance().createTimer("Subproblems", "Time spent solving subproblems");
-    ProcessInfo::getInstance().createTimer("MIP", " - MIP problems");
-    ProcessInfo::getInstance().createTimer("PrimalBoundTotal", " - Primal solution search");
+    ProcessInfo::getInstance().createTimer("DualStrategy", " - dual strategy");
+    ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
 
-    ProcessInfo::getInstance().createTimer("Reformulation", "Time spent reformulating problem");
-    ProcessInfo::getInstance().createTimer("InteriorPointTotal", "Time spent finding interior point");
-
+    ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
+    
     auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
     TaskBase *tFinalizeSolution = new TaskSequential();
@@ -33,9 +32,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
     ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
-    TaskBase *tPrintProblemStats = new TaskPrintProblemStats();
-    ProcessInfo::getInstance().tasks->addTask(tPrintProblemStats, "PrintProbStat");
-
     TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
@@ -47,6 +43,10 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
 
     TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
+
+    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
+    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
     TaskBase *tPrintIterReport = new TaskPrintIterationReport();
     ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
@@ -63,10 +63,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
-
     ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
@@ -77,9 +73,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
-
-    TaskBase *tPrintSol = new TaskPrintSolution();
-    ProcessInfo::getInstance().tasks->addTask(tPrintSol, "PrintSol");
 }
 
 SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP()

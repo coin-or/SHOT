@@ -568,7 +568,7 @@ std::string Settings::getUpdatedSettingsAsString()
         if (_isDefault[key])
             continue;
 
-        oss << category << "." << name << " = " << value << std::endl;
+        oss << "  " << category << "." << name << " = " << value << std::endl;
     }
 
     delete osolwriter;

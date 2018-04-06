@@ -9,18 +9,27 @@
 */
 
 #pragma once
+
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
+
 #include "../MIPSolver/IMIPSolver.h"
 
-class TaskPrintSolution : public TaskBase
+class TaskSolveFixedDualProblem : public TaskBase
 {
   public:
-    TaskPrintSolution();
-    virtual ~TaskPrintSolution();
-
+    TaskSolveFixedDualProblem(IMIPSolver *MIPSolver);
+    virtual ~TaskSolveFixedDualProblem();
     virtual void run();
     virtual std::string getType();
 
   private:
+    std::vector<int> discreteVariableIndexes;
+    std::vector<std::vector<double>> testedPoints;
+
+    std::vector<double> lastSolution;
+    double lastPrimalBound = NAN;
+    IMIPSolver *MIPSolver;
+
+    int totalIters = 0;
 };

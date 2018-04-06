@@ -19,22 +19,6 @@ MIPSolverBase::~MIPSolverBase()
     lastSolutions.clear();
 }
 
-void MIPSolverBase::startTimer()
-{
-    if (discreteVariablesActivated)
-        ProcessInfo::getInstance().startTimer("MIP");
-    else
-        ProcessInfo::getInstance().startTimer("LP");
-}
-
-void MIPSolverBase::stopTimer()
-{
-    if (discreteVariablesActivated)
-        ProcessInfo::getInstance().stopTimer("MIP");
-    else
-        ProcessInfo::getInstance().stopTimer("LP");
-}
-
 double MIPSolverBase::getObjectiveValue()
 {
     double objval = getObjectiveValue(0);
@@ -195,7 +179,7 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
     auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
         &hyperplane.generatedPoint.at(0), -1, true);
     int number = originalProblem->getNumberOfVariables();
-    ProcessInfo::getInstance().numGradientEvals++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfGradientEvaluations++;
 
     for (int i = 0; i < number - 1; i++)
     {
@@ -283,7 +267,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
             if (!originalProblem->hasVariableBoundsBeenTightened(i))
             {
                 originalProblem->setVariableBoundsAsTightened(i);
-                ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve++;
+                ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
@@ -296,7 +280,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
             if (!originalProblem->hasVariableBoundsBeenTightened(i))
             {
                 originalProblem->setVariableBoundsAsTightened(i);
-                ProcessInfo::getInstance().numVariableBoundsTightenedInPresolve++;
+                ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
@@ -383,5 +367,5 @@ void MIPSolverBase::createIntegerCut(std::vector<int> binaryIndexes)
     }
 
     this->addLinearConstraint(elements, -(binaryIndexes.size() - 1.0));
-    ProcessInfo::getInstance().numIntegerCutsAdded++;
+    ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
 }

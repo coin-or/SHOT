@@ -8,45 +8,43 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskSolveFixedLinearProblem.h"
+#include "TaskSolveFixedDualProblem.h"
 
-TaskSolveFixedLinearProblem::TaskSolveFixedLinearProblem(IMIPSolver *MIPSolver)
+TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(IMIPSolver *MIPSolver)
 {
-    this->MIPSolver = MIPSolver;
+    ProcessInfo::getInstance().startTimer("DualProblemsIntegerFixed");
 
-    ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-    ProcessInfo::getInstance().startTimer("PrimalBoundFixedLP");
+    this->MIPSolver = MIPSolver;
 
     discreteVariableIndexes = ProcessInfo::getInstance().originalProblem->getDiscreteVariableIndices();
 
-    ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-    ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+    ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
 }
 
-TaskSolveFixedLinearProblem::~TaskSolveFixedLinearProblem()
+TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem()
 {
 }
 
-void TaskSolveFixedLinearProblem::run()
+void TaskSolveFixedDualProblem::run()
 {
-    ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-    ProcessInfo::getInstance().startTimer("PrimalBoundFixedLP");
+    ProcessInfo::getInstance().startTimer("DualProblemsIntegerFixed");
     auto currIter = ProcessInfo::getInstance().getCurrentIteration(); //The one not solved yet
 
     if (currIter->MIPSolutionLimitUpdated)
+    {
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
+    }
 
     if (currIter->iterationNumber < 5)
     {
-        ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
     if (currIter->maxDeviation <= Settings::getInstance().getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
     {
-        ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
@@ -54,9 +52,7 @@ void TaskSolveFixedLinearProblem::run()
 
     if (prevIter->iterationNumber < 4)
     {
-
-        ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
@@ -65,15 +61,13 @@ void TaskSolveFixedLinearProblem::run()
 
     if (!prevIter->isMIP() && !prevIter2->isMIP() && !prevIter3->isMIP())
     {
-        ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
     if (currIter->numHyperplanesAdded == 0)
     {
-        ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
@@ -89,8 +83,7 @@ void TaskSolveFixedLinearProblem::run()
 
     if (isDifferent1 || isDifferent2)
     {
-        ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-        ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
@@ -123,11 +116,20 @@ void TaskSolveFixedLinearProblem::run()
         std::stringstream tmpType;
 
         if (isMIQCP)
+        {
             tmpType << "QCP-FIX";
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP++;
+        }
         else if (isMIQP)
+        {
             tmpType << "QP-FIX";
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP++;
+        }
         else
+        {
             tmpType << "LP-FIX";
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP++;
+        }
 
         totalIters++;
         auto solStatus = MIPSolver->solveProblem();
@@ -175,7 +177,7 @@ void TaskSolveFixedLinearProblem::run()
                                                                                        Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
                                                                                        Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
-                    ProcessInfo::getInstance().stopTimer("HyperplaneLinesearch");
+                    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;
                     externalPoint = xNewc.second;
                 }
@@ -265,12 +267,11 @@ void TaskSolveFixedLinearProblem::run()
 
     MIPSolver->unfixVariables();
 
-    ProcessInfo::getInstance().stopTimer("PrimalBoundFixedLP");
-    ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+    ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
     return;
 }
 
-std::string TaskSolveFixedLinearProblem::getType()
+std::string TaskSolveFixedDualProblem::getType()
 {
     std::string type = typeid(this).name();
     return (type);

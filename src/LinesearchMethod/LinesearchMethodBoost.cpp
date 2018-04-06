@@ -159,7 +159,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         return (tmpPair);
     }
 
-    int tempFEvals = ProcessInfo::getInstance().numFunctionEvals;
+    int tempFEvals = ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions;
 
     Result r1;
 
@@ -172,7 +172,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         r1 = boost::math::tools::bisect(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
     }
 
-    int resFVals = ProcessInfo::getInstance().numFunctionEvals - tempFEvals;
+    int resFVals = ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
     if (max_iter == Nmax)
     {
         Output::getInstance().outputWarning(
