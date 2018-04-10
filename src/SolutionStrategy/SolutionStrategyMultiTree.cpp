@@ -23,7 +23,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     ProcessInfo::getInstance().createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
 
     ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - populating solution pool");
-    
+
     ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");

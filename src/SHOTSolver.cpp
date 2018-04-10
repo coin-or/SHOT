@@ -331,7 +331,7 @@ void SHOTSolver::initializeSettings()
         return;
     }
 
-    std::string empty = "empty"; // Used to create empty string options
+    std::string empty; // Used to create empty string options
 
     Output::getInstance().outputInfo("Starting initialization of settings:");
 
@@ -748,6 +748,9 @@ void SHOTSolver::initializeSettings()
 
     Settings::getInstance().createSetting("ConstraintTolerance", "Termination", 1e-8,
                                           "Termination tolerance for nonlinear constraints", 0, OSDBL_MAX);
+
+    Settings::getInstance().createSetting("ObjectiveConstraintTolerance", "Termination", 1e-8,
+                                          "Termination tolerance for the nonlinear objective constraint", 0, OSDBL_MAX);
 
     Settings::getInstance().createSetting("IterationLimit", "Termination", 200000, "Iteration limit for main strategy", 1,
                                           OSINT_MAX);

@@ -11,17 +11,25 @@
 #pragma once
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
+#include "../OptProblems/OptProblemOriginal.h"
+#include <algorithm>
 
 class TaskCheckConstraintTolerance : public TaskBase
 {
-public:
-  TaskCheckConstraintTolerance(std::string taskIDTrue);
-  virtual ~TaskCheckConstraintTolerance();
+  public:
+    TaskCheckConstraintTolerance(std::string taskIDTrue);
+    virtual ~TaskCheckConstraintTolerance();
 
-  virtual void run();
+    virtual void run();
 
-  virtual std::string getType();
+    virtual std::string getType();
 
-private:
-  std::string taskIDIfTrue;
+  private:
+    std::string taskIDIfTrue;
+
+    bool isInitialized = false;
+    // Without the (possible) nonlinear objective constraint
+    std::vector<int> nonlinearConstraintIndexes;
+    bool isObjectiveNonlinear;
+    int nonlinearObjectiveConstraintIndex;
 };

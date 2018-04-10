@@ -216,7 +216,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
         {
             statusCode = E_NLPSolutionStatus::Optimal;
-
             break;
         }
 

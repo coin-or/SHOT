@@ -1438,7 +1438,14 @@ void ProcessInfo::setProblemStats()
     problemStats.numberOfSemicontinuousVariables = instance->getNumberOfSemiContinuousVariables();
     problemStats.numberOfContinousVariables = problemStats.numberOfVariables - (problemStats.numberOfIntegerVariables + problemStats.numberOfBinaryVariables + problemStats.numberOfSemicontinuousVariables);
 
-    problemStats.isDiscreteProblem = (problemStats.numberOfVariables == problemStats.numberOfContinousVariables);
+    if (problemStats.numberOfIntegerVariables > 0 || problemStats.numberOfBinaryVariables > 0 || problemStats.numberOfSemicontinuousVariables > 0)
+    {
+        problemStats.isDiscreteProblem = true;
+    }
+    else
+    {
+        problemStats.isDiscreteProblem = false;
+    }
 
     // Classify the problem
     if (!problemStats.isDiscreteProblem)

@@ -146,10 +146,9 @@ SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
     return (tmpVector);
 }
 
-// For all objectives except the additional nonlinear objective constraint
+// For all constraints except the additional nonlinear objective constraint
 IndexValuePair OptProblemOriginalNonlinearObjective::getMostDeviatingAllConstraint(std::vector<double> point)
 {
-
     IndexValuePair valpair;
 
     int numConstr = this->getNumberOfConstraints();

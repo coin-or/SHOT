@@ -14,13 +14,13 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 {
     ProcessInfo::getInstance().createTimer("ProblemInitialization", " - problem initialization");
     ProcessInfo::getInstance().createTimer("InteriorPointSearch", " - interior point search");
-    
+
     ProcessInfo::getInstance().createTimer("DualStrategy", " - dual strategy");
     ProcessInfo::getInstance().createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
     ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
     ProcessInfo::getInstance().createTimer("DualCutGenerationRootSearch", "   - performing root search for cuts");
     ProcessInfo::getInstance().createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
-    
+
     ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
 
@@ -82,15 +82,15 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
     ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    TaskBase *tPrintIterReport = new TaskPrintIterationReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
-
     if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
     {
         TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
         ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
         dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
     }
+
+    TaskBase *tPrintIterReport = new TaskPrintIterationReport();
+    ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
     TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
@@ -137,9 +137,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
         TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
         ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
-
-    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 

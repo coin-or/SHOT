@@ -284,11 +284,16 @@ void Output::outputOptionsReport()
 
     report << "\r\n";
 
-    report << " Nondefault options used:\r\n";
-    report << "\r\n";
-    report << Settings::getInstance().getUpdatedSettingsAsString();
+    std::string nonDefaultOptions = Settings::getInstance().getUpdatedSettingsAsString();
 
-    report << "\r\n";
+    if (nonDefaultOptions != "")
+    {
+        report << " Nondefault options used:\r\n";
+        report << "\r\n";
+        report << nonDefaultOptions;
+
+        report << "\r\n";
+    }
 
     std::string cutAlgorithm, dualSolver;
     bool useSingleTree = (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree);
@@ -525,7 +530,7 @@ void Output::outputSolutionReport()
     std::stringstream report;
     auto problemStats = ProcessInfo::getInstance().problemStats;
 
-    report << "\r\n";
+    report << "\r\n\r\n";
     report << "╶ Solution report ────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
 
@@ -588,12 +593,12 @@ void Output::outputSolutionReport()
 
     report << "\r\n";
 
-    report << " Objective bound [dual, primal]:                ";
+    report << " Objective bound [dual, primal]:                 ";
     report << "[" << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getDualBound(), "%g") << ", ";
     report << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getPrimalBound(), "%g") << "]\r\n";
-    report << " Objective gap absolute / relative:             ";
-    report << "[" << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%g") << ", ";
-    report << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%g") << "]\r\n";
+    report << " Objective gap absolute / relative:              ";
+    report << "" << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%g") << " / ";
+    report << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%g") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
@@ -601,39 +606,39 @@ void Output::outputSolutionReport()
 
     if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
     {
-        fulfilled << "  - absolute objective gap tolerance 		";
+        fulfilled << "  - absolute objective gap tolerance             ";
         fulfilled << ProcessInfo::getInstance().getAbsoluteObjectiveGap() << " <= ";
         fulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
     else
     {
-        unfulfilled << "  - absolute objective gap tolerance 		";
+        unfulfilled << "  - absolute objective gap tolerance             ";
         unfulfilled << ProcessInfo::getInstance().getAbsoluteObjectiveGap() << " > ";
         unfulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
 
     if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
     {
-        fulfilled << "  - relative objective gap tolerance 		";
+        fulfilled << "  - relative objective gap tolerance             ";
         fulfilled << ProcessInfo::getInstance().getRelativeObjectiveGap() << " <= ";
         fulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
     else
     {
-        unfulfilled << "  - relative objective gap tolerance 		";
+        unfulfilled << "  - relative objective gap tolerance             ";
         unfulfilled << ProcessInfo::getInstance().getRelativeObjectiveGap() << " > ";
         unfulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 
     if (ProcessInfo::getInstance().getCurrentIteration()->maxDeviation <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
     {
-        fulfilled << "  - maximal constraint tolerance 	        ";
+        fulfilled << "  - maximal constraint tolerance                 ";
         fulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " <= ";
         fulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
     }
     else
     {
-        unfulfilled << "  - maximal constraint tolerance 	        ";
+        unfulfilled << "  - maximal constraint tolerance                 ";
         unfulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " > ";
         unfulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
     }
@@ -642,26 +647,26 @@ void Output::outputSolutionReport()
 
     if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber > iterLim)
     {
-        fulfilled << "  - iteration limit                           ";
+        fulfilled << "  - iteration limit                              ";
         fulfilled << ProcessInfo::getInstance().getCurrentIteration()->iterationNumber << " > ";
         fulfilled << iterLim << "\r\n";
     }
     else
     {
-        unfulfilled << "  - iteration limit                             ";
+        unfulfilled << "  - iteration limit                              ";
         unfulfilled << ProcessInfo::getInstance().getCurrentIteration()->iterationNumber << " <= ";
         unfulfilled << iterLim << "\r\n";
     }
 
     if (ProcessInfo::getInstance().getElapsedTime("Total") > Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
     {
-        fulfilled << "  - solution time limit (s)                   ";
+        fulfilled << "  - solution time limit (s)                      ";
         fulfilled << ProcessInfo::getInstance().getElapsedTime("Total") << " > ";
         fulfilled << Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") << "\r\n";
     }
     else
     {
-        unfulfilled << "  - solution time limit (s)                     ";
+        unfulfilled << "  - solution time limit (s)                      ";
         unfulfilled << ProcessInfo::getInstance().getElapsedTime("Total") << " <= ";
         unfulfilled << Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") << "\r\n";
     }
@@ -674,32 +679,32 @@ void Output::outputSolutionReport()
     report << unfulfilled.str();
     report << "\r\n";
 
-    report << " Dual problems solved in main step:             ";
+    report << " Dual problems solved in main step:              ";
     report << ProcessInfo::getInstance().solutionStatistics.getNumberOfTotalDualProblems() << "\r\n";
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP > 0)
     {
-        report << "  - LP problems                                 " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP << "\r\n";
+        report << "  - LP problems                                  " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP << "\r\n";
     }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP > 0)
     {
-        report << "  - QP problems                                 " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP << "\r\n";
+        report << "  - QP problems                                  " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP << "\r\n";
     }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP > 0)
     {
-        report << "  - QCQP problems                               " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP << "\r\n";
+        report << "  - QCQP problems                                " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP << "\r\n";
     }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP > 0)
     {
-        report << "  - MILP problems, optimal                      " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP << "\r\n";
+        report << "  - MILP problems, optimal                       " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP << "\r\n";
     }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP > 0)
     {
-        report << "  - MILP problems, feasible                     " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP << "\r\n";
+        report << "  - MILP problems, feasible                      " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP << "\r\n";
     }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP > 0)
@@ -709,7 +714,7 @@ void Output::outputSolutionReport()
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP > 0)
     {
-        report << "  - MIQP problems, feasible                     " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP << "\r\n";
+        report << "  - MIQP problems, feasible                      " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP << "\r\n";
     }
 
     report << "\r\n";
@@ -721,13 +726,13 @@ void Output::outputSolutionReport()
 
         if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
         {
-            report << " - NLP problems:                                ";
+            report << " - NLP problems:                                 ";
             report << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch << "\r\n";
         }
 
         if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP > 0)
         {
-            report << " - LP problems:                                 ";
+            report << " - LP problems:                                  ";
             report << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP << "\r\n";
         }
     }
@@ -736,7 +741,7 @@ void Output::outputSolutionReport()
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP > 0)
     {
-        report << " Fixed primal NLP problems solved:              ";
+        report << " Fixed primal NLP problems solved:               ";
         report << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP << "\r\n";
     }
 
@@ -749,7 +754,7 @@ void Output::outputSolutionReport()
 
         if (elapsed > 0)
         {
-            report << boost::format(" %1%: %|48t|%2%") % T.description % elapsed << "\r\n";
+            report << boost::format(" %1%: %|49t|%2%") % T.description % elapsed << "\r\n";
         }
     }
 

@@ -101,6 +101,11 @@ struct OptimizationProblemStatistics
     int numberOfIntegerVariables = 0;
     int numberOfBinaryVariables = 0;
     int numberOfSemicontinuousVariables = 0;
+
+    bool isObjectiveNonlinear()
+    {
+        return (objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear || objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
+    };
 };
 
 struct SolutionStatistics
