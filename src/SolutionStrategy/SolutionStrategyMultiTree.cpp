@@ -89,6 +89,13 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
+    if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
+    {
+        TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
+        ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
+        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+    }
+
     TaskBase *tPrintIterReport = new TaskPrintIterationReport();
     ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
@@ -103,17 +110,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
 
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
-
-    if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
-    {
-        TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-        ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
-
-        ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-
-        ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
-    }
 
     if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Dual"))
     {
@@ -172,9 +168,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
         TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
         ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
-
-    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
