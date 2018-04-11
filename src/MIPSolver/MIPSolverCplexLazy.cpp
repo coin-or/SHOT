@@ -111,7 +111,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
         if (context.inRelaxation())
         {
-            if (maxIntegerRelaxedHyperplanes < Settings::getInstance().getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
+            if (ProcessInfo::getInstance().getCurrentIteration()->relaxedLazyHyperplanesAdded < Settings::getInstance().getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
             {
                 int waitingListSize = ProcessInfo::getInstance().hyperplaneWaitingList.size();
 
@@ -159,7 +159,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
                     static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(solutionPoints);
                 }
 
-                maxIntegerRelaxedHyperplanes += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
+                ProcessInfo::getInstance().getCurrentIteration()->relaxedLazyHyperplanesAdded += (ProcessInfo::getInstance().hyperplaneWaitingList.size() - waitingListSize);
             }
         }
 

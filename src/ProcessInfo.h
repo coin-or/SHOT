@@ -142,6 +142,8 @@ class ProcessInfo
 
     std::vector<std::vector<int>> integerCutWaitingList;
 
+    int iterationLastResetLazyHyperplaneCounter = 0;
+
     std::vector<Timer> timers;
 
     OSInstance *getProblemInstanceFromOSiL(std::string osil);

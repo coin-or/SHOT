@@ -54,8 +54,6 @@ class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallback
     IloNumVarArray cplexVars;
 
   private:
-    int iterNumLastResetHyperplaneCounter = 0;
-
   public:
     IloCplex::CallbackI *duplicateCallback() const;
     HCallbackI(IloEnv env, IloNumVarArray xx2);

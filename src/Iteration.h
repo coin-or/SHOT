@@ -39,8 +39,9 @@ class Iteration
 
     int iterationNumber;
 
-    int numHyperplanesAdded;
+    int numHyperplanesAdded = 0;
     int totNumHyperplanes;
+    int relaxedLazyHyperplanesAdded = 0;
 
     double boundaryDistance;
 

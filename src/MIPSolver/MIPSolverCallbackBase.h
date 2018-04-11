@@ -30,8 +30,6 @@ class MIPSolverCallbackBase
     int lastNumAddedHyperplanes = 0;
     double lastUpdatedPrimal;
 
-    int maxIntegerRelaxedHyperplanes = 0;
-
     int lastSummaryIter = 0;
     double lastSummaryTimeStamp = 0.0;
     int lastHeaderIter = 0;
