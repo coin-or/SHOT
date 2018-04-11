@@ -1127,18 +1127,6 @@ std::string ProcessInfo::getOSrl()
 std::string ProcessInfo::getTraceResult()
 {
     std::stringstream ss;
-
-    this->originalProblem->getProblemInstance()->initializeNonLinearStructures();
-
-    if (this->originalProblem->getProblemInstance()->getNumberOfQuadraticTerms() > 0)
-    {
-        this->originalProblem->getProblemInstance()->addQTermsToExpressionTree();
-    }
-
-    this->originalProblem->getProblemInstance()->bVariablesModified = true;
-    this->originalProblem->getProblemInstance()->bConstraintsModified = true;
-    this->originalProblem->getProblemInstance()->bObjectivesModified = true;
-
     ss << this->originalProblem->getProblemInstance()->getInstanceName() << ",";
 
     switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
@@ -1164,7 +1152,7 @@ std::string ProcessInfo::getTraceResult()
     switch (static_cast<ES_PrimalNLPSolver>(ProcessInfo::getInstance().usedPrimalNLPSolver))
     {
     case (ES_PrimalNLPSolver::None):
-        ss << "";
+        ss << "NONE";
         break;
     case (ES_PrimalNLPSolver::CuttingPlane):
         ss << "SHOT";
@@ -1176,7 +1164,7 @@ std::string ProcessInfo::getTraceResult()
         ss << "Ipopt";
         break;
     default:
-        ss << "None";
+        ss << "NONE";
         break;
     }
 
@@ -1194,7 +1182,7 @@ std::string ProcessInfo::getTraceResult()
         ss << "CBC";
         break;
     default:
-        ss << "";
+        ss << "NONE";
         break;
     }
 
@@ -1208,19 +1196,15 @@ std::string ProcessInfo::getTraceResult()
     ss << this->originalProblem->getNumberOfBinaryVariables() + this->originalProblem->getNumberOfIntegerVariables()
        << ",";
 
-    /*auto nonzeroes = this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize  +
-					 //this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() +
-					 this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] + 1;
-*/
+    if (this->originalProblem->getProblemInstance()->getNumberOfQuadraticTerms() > 0)
+    {
+        this->originalProblem->getProblemInstance()->addQTermsToExpressionTree();
+    }
 
-    /*std::cout << this->originalProblem->getProblemInstance()-> << std::endl;
-	std::cout << this->originalProblem->getProblemInstance()->getLinearConstraintCoefficientNumber() << std::endl;
-	std::cout << this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() << std::endl;
-	std::cout << this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] << std::endl;
-	std::cout << this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize << std::endl;
-	std::cout << this->originalProblem->getProblemInstance()->getNumberOfQuadraticTerms() << std::endl;
-*/
-    auto nonzeroes = this->originalProblem->getProblemInstance()->getLinearConstraintCoefficientNumber() + this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() + 1;
+    auto nonzeroes = this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize +
+                     this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] +
+                     this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() +
+                     1;
 
     ss << nonzeroes << ",";
     ss << this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() << ",";

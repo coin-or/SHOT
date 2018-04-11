@@ -507,7 +507,8 @@ double UtilityFunctions::getJulianFractionalDate()
 
     auto secstoday = (3600 * hours + 60 * mins + secs);
 
-    auto julianDate = (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
+    // To conform with GAMS Julian format
+    auto julianDate = -2415020 + (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
 
     return julianDate;
 }

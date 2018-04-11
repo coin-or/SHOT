@@ -65,6 +65,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
         if (solver == ES_MIPSolver::Cplex)
         {
             ProcessInfo::getInstance().MIPSolver = new MIPSolverCplex();
+            ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cplex;
             Output::getInstance().outputInfo("Cplex selected as MIP solver.");
         }
 #endif
@@ -73,12 +74,14 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
         if (solver == ES_MIPSolver::Gurobi)
         {
             ProcessInfo::getInstance().MIPSolver = new MIPSolverGurobi();
+            ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Gurobi;
             Output::getInstance().outputInfo("Gurobi selected as MIP solver.");
         }
 #endif
         if (solver == ES_MIPSolver::Cbc)
         {
             ProcessInfo::getInstance().MIPSolver = new MIPSolverOsiCbc();
+            ProcessInfo::getInstance().usedMIPSolver = ES_MIPSolver::Cbc;
             Output::getInstance().outputInfo("Cbc selected as MIP solver.");
         }
     }
