@@ -55,14 +55,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
     TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-    TaskBase *tPrintIterHeaderCheck = new TaskConditional();
-    TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
-
-    dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setCondition([this]() { return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1); });
-    dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
-
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
-
     if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
         TaskBase *tPresolve = new TaskPresolve(MIPSolver);
@@ -98,6 +90,12 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
+    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
+
+    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+
     TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
 
@@ -106,12 +104,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
 
     TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
-
-    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
-
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 

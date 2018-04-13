@@ -578,7 +578,7 @@ std::string Settings::getUpdatedSettingsAsString()
 
 OSOption *Settings::getSettingsAsOSOption()
 {
-    Output::getInstance().outputInfo("Starting conversion of settings to OSOption object.");
+    Output::getInstance().outputDebug("Starting conversion of settings to OSOption object.");
 
     OSOption *options = new OSOption();
 
@@ -622,13 +622,13 @@ OSOption *Settings::getSettingsAsOSOption()
 
         options->setAnotherSolverOption(p.first, iterator->second, "SHOT", p.second, type.str(), desc.str());
 
-        Output::getInstance().outputInfo(" Setting <" + p.first + "," + p.second + "> converted.");
+        Output::getInstance().outputDebug(" Setting <" + p.first + "," + p.second + "> converted.");
 
         type.clear();
         desc.clear();
     }
 
-    Output::getInstance().outputInfo("Conversion of settings to OSOption object completed.");
+    Output::getInstance().outputDebug("Conversion of settings to OSOption object completed.");
 
     return options;
 }

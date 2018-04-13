@@ -150,7 +150,8 @@ void TaskSolveFixedDualProblem::run()
                                                         ProcessInfo::getInstance().getRelativeObjectiveGap(),
                                                         NAN,
                                                         NAN,
-                                                        NAN);
+                                                        NAN,
+                                                        E_IterationLineType::DualIntegerFixed);
 
             break;
         }
@@ -248,7 +249,8 @@ void TaskSolveFixedDualProblem::run()
                                                         ProcessInfo::getInstance().getRelativeObjectiveGap(),
                                                         objVal,
                                                         mostDevConstr.idx,
-                                                        mostDevConstr.value);
+                                                        mostDevConstr.value,
+                                                        E_IterationLineType::DualIntegerFixed);
 
             if (mostDevConstr.value <= constrTol || k - iterLastObjUpdate > 10 || objVal > ProcessInfo::getInstance().getPrimalBound())
             {

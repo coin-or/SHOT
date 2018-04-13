@@ -29,7 +29,6 @@ MIPSolverCplex::MIPSolverCplex()
 
 MIPSolverCplex::~MIPSolverCplex()
 {
-    iterDurations.clear();
     cplexVarConvers.clear();
     cplexModel.end();
     cplexVars.end();
@@ -245,27 +244,6 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::WorkDir, Settings::getInstance().getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
         cplexInstance.setParam(IloCplex::WorkMem, Settings::getInstance().getDoubleSetting("Cplex.WorkMem", "Subsolver"));
         cplexInstance.setParam(IloCplex::NodeFileInd, Settings::getInstance().getIntSetting("Cplex.NodeFileInd", "Subsolver"));
-
-        //cplexInstance.setParam(IloCplex::Param::Tune::Measure, CPX_TUNE_AVERAGE);
-        //cplexInstance.setParam(IloCplex::Param::Tune::TimeLimit, 10);
-
-        //cplexInstance.setParam(IloCplex::EpRHS, 10 ^ (-5));
-        //cplexInstance.setParam(IloCplex::EpInt, 10 ^ (-6));
-        //cplexInstance.setParam(IloCplex::EpOpt, 1 ^ (-9));
-        //cplexInstance.setParam(IloCplex::EpAGap, 10 ^ (-14));
-
-        //	cplexInstance.setParam(IloCplex::PopulateLim, 10);
-
-        //cplexInstance.setParam(IloCplex::SolnPoolGap, 0);
-
-        //cplexInstance.setParam(IloCplex::Param::MIP::Pool::RelGap, 0.1);
-
-        /*plexInstance.setParam(IloCplex::PreInd, 0);
-
-		 cplexInstance.setParam(IloCplex::RelaxPreInd, 0);
-		 cplexInstance.setParam(IloCplex::PreslvNd, -1);
-		 */
-        //cplexInstance.setParam(IloCplex::EpMrk, 0.9);
     }
     catch (IloException &e)
     {
@@ -442,19 +420,15 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
     try
     {
-        if (modelUpdated) // EDIT: march 2016, should this be used??
+        if (modelUpdated)
         {
             cplexInstance.extract(cplexModel);
 
             modelUpdated = false;
         }
 
-        double timeStart = ProcessInfo::getInstance().getElapsedTime("Total");
-
         cplexInstance.solve();
-        double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
 
-        iterDurations.push_back(timeEnd - timeStart);
         MIPSolutionStatus = getSolutionStatus();
     }
     catch (IloException &e)
@@ -462,7 +436,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
-    
+
     return (MIPSolutionStatus);
 }
 
@@ -601,52 +575,6 @@ double MIPSolverCplex::getObjectiveValue(int solIdx)
     }
 
     return (objVal);
-}
-
-void MIPSolverCplex::populateSolutionPool()
-{
-    ProcessInfo::getInstance().startTimer("PopulateSolutionPool");
-    double initialPopulateTimeLimit = 0.5;
-    double timeLimitIncreaseFactor = 2.0;
-
-    try
-    {
-        int poolSizeBefore = cplexInstance.getSolnPoolNsolns();
-
-        if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber == 0)
-        {
-            setTimeLimit(initialPopulateTimeLimit);
-        }
-        else
-        {
-            // Note that the vector elements are rearranged each iteration
-            std::nth_element(iterDurations.begin(), iterDurations.begin() + iterDurations.size() / 2,
-                             iterDurations.end());
-
-            double newTimeLimit = timeLimitIncreaseFactor * iterDurations[iterDurations.size() / 2];
-            setTimeLimit(newTimeLimit);
-        }
-
-        double newSolnPoolGap = min(1.0e+75, ProcessInfo::getInstance().getAbsoluteObjectiveGap());
-        cplexInstance.setParam(IloCplex::SolnPoolGap, newSolnPoolGap);
-
-        cplexInstance.populate();
-
-        int poolSizeAfter = cplexInstance.getSolnPoolNsolns();
-
-        if (poolSizeAfter > poolSizeBefore)
-        {
-            Output::getInstance().outputInfo(
-                "     Solution pool populated from: " + to_string(poolSizeBefore) + " to " + to_string(poolSizeAfter));
-        }
-    }
-    catch (IloException &e)
-    {
-        Output::getInstance().Output::getInstance().outputError("Error when populating solution pool", e.getMessage());
-        ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
-    }
-
-    ProcessInfo::getInstance().stopTimer("PopulateSolutionPool");
 }
 
 void MIPSolverCplex::setTimeLimit(double seconds)
@@ -875,7 +803,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
                 cplexInstance.extract(cplexModel);
                 Output::getInstance().outputInfo(
                     "     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
-                ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve= numconstr;
+                ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
             }
         }
 
@@ -989,4 +917,34 @@ void MIPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
     ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
 
     expr.end();
+}
+
+int MIPSolverCplex::getNumberOfExploredNodes()
+{
+    try
+    {
+        return (cplexInstance.getNnodes());
+    }
+    catch (IloException &e)
+    {
+        Output::getInstance().Output::getInstance().outputError("Error when getting number of explored nodes", e.getMessage());
+        return 0;
+    }
+}
+
+int MIPSolverCplex::getNumberOfOpenNodes()
+{
+    try
+    {
+        int nodesLeft = cplexInstance.getNnodesLeft();
+
+        ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes = nodesLeft;
+
+        return (cplexInstance.getNnodesLeft());
+    }
+    catch (IloException &e)
+    {
+        Output::getInstance().Output::getInstance().outputError("Error when getting number of open nodes", e.getMessage());
+        return 0;
+    }
 }

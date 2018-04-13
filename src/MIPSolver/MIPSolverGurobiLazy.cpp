@@ -218,8 +218,13 @@ void GurobiCallback::callback()
 
         if (where == GRB_CB_MIPSOL)
         {
-            ProcessInfo::getInstance().createIteration();
             auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+
+            if (currIter->isSolved)
+            {
+                ProcessInfo::getInstance().createIteration();
+                currIter = ProcessInfo::getInstance().getCurrentIteration();
+            }
 
             std::vector<double> solution(numVar);
 
@@ -246,6 +251,10 @@ void GurobiCallback::callback()
             currIter->maxDeviationConstraint = mostDevConstr.idx;
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
             currIter->objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
+
+            currIter->numberOfExploredNodes = lastExploredNodes - ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes;
+            ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes = lastExploredNodes;
+            currIter->numberOfOpenNodes = lastOpenNodes;
 
             auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
@@ -285,17 +294,22 @@ void GurobiCallback::callback()
                 ProcessInfo::getInstance().integerCutWaitingList.clear();
             }
 
-            auto bestBound = UtilityFunctions::toStringFormat(getDoubleInfo(GRB_CB_MIPSOL_OBJBND), "%.3f", true);
-            auto threadId = "";
-            auto openNodes = "?";
+            currIter->isSolved = true;
 
-            printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
+            auto threadId = "";
+            printIterationReport(candidatePoints.at(0), threadId);
 
             if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
             {
                 abort();
                 return;
             }
+        }
+
+        if (where == GRB_CB_MIP)
+        {
+            lastExploredNodes = (int)getDoubleInfo(GRB_CB_MIP_NODCNT);
+            lastOpenNodes = (int)getDoubleInfo(GRB_CB_MIP_NODLFT);
         }
 
         if (where == GRB_CB_MIPSOL)
@@ -447,8 +461,6 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
     lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
 
     numVar = (static_cast<MIPSolverGurobiLazy *>(ProcessInfo::getInstance().MIPSolver))->gurobiModel->get(GRB_IntAttr_NumVars);
-
-    tPrintIterationHeader = std::shared_ptr<TaskPrintIterationHeader>(new TaskPrintIterationHeader());
 }
 
 void GurobiCallback::createIntegerCut(std::vector<int> binaryIndexes)
@@ -476,7 +488,6 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
 {
     try
     {
-        lastNumAddedHyperplanes = 0;
         this->cbCalls++;
 
         if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)

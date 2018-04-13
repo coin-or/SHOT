@@ -480,9 +480,6 @@ void SHOTSolver::initializeSettings()
 
     Settings::getInstance().createSetting("MIP.SolutionPool.Capacity", "Dual", 100, "The maximum number of solutions in the solution pool", 0, OSINT_MAX);
 
-    Settings::getInstance().createSetting("MIP.SolutionPool.Populate", "Dual", false,
-                                          "Try to populate the solution pool after MIP iteration termination", true);
-
     std::vector<std::string> enumMIPSolver;
     enumMIPSolver.push_back("Cplex");
     enumMIPSolver.push_back("Gurobi");
@@ -562,7 +559,18 @@ void SHOTSolver::initializeSettings()
 
     Settings::getInstance().createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
 
-    Settings::getInstance().createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
+    Settings::getInstance()
+        .createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
+
+    std::vector<std::string> enumIterationDetail;
+    enumIterationDetail.push_back("Full");
+    enumIterationDetail.push_back("On objective gap update");
+    enumIterationDetail.push_back("On objective gap update and all primal NLP calls");
+
+    Settings::getInstance().createSetting("Console.Iteration.Detail", "Output",
+                                          static_cast<int>(ES_IterationOutputDetail::ObjectiveGapUpdates),
+                                          "When should the fixed strategy be used", enumIterationDetail);
+    enumIterationDetail.clear();
 
     std::vector<std::string> enumOutputDirectory;
     enumOutputDirectory.push_back("Problem directory");
@@ -640,10 +648,10 @@ void SHOTSolver::initializeSettings()
 
     // Primal settings: tolerances for accepting primal solutions
 
-    Settings::getInstance().createSetting("Tolerance.TrustLinearConstraintValues", "Primal", false,
+    Settings::getInstance().createSetting("Tolerance.TrustLinearConstraintValues", "Primal", true,
                                           "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
 
-    Settings::getInstance().createSetting("Tolerance.Integer", "Primal", 1e-6,
+    Settings::getInstance().createSetting("Tolerance.Integer", "Primal", 1e-5,
                                           "Integer tolerance for accepting primal solutions");
 
     Settings::getInstance().createSetting("Tolerance.LinearConstraint", "Primal", 1e-6,

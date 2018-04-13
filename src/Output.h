@@ -67,7 +67,8 @@ class Output
                                double relativeObjectiveGap,
                                double currentObjectiveValue,
                                int maxConstraintIndex,
-                               double maxConstraintError);
+                               double maxConstraintError,
+                               E_IterationLineType lineType);
 
     void outputIterationDetailHeaderMinimax();
 
@@ -92,6 +93,10 @@ class Output
     double lastPrimalObjectiveValue = DBL_MAX;
     double lastAbsoluteObjectiveGap = DBL_MAX;
     double lastRelativeObjectiveGap = 1.0;
+    double lastIterationOutputTimeStamp = 0.0;
+    int iterationsWithoutPrintoutCounter = 0;
+    int iterationPrintoutsSinceLastHeader = 0;
+    bool firstIterationHeaderPrinted = false;
 
     Output();
 };

@@ -113,8 +113,6 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     virtual void addMIPStart(std::vector<double> point);
     virtual void deleteMIPStarts();
 
-    virtual void populateSolutionPool();
-
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
@@ -126,6 +124,13 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     virtual void updateNonlinearObjectiveFromPrimalDualBounds()
     {
         return (MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
+    }
+
+    virtual int getNumberOfExploredNodes();
+
+    virtual int getNumberOfOpenNodes()
+    {
+        return (MIPSolverBase::getNumberOfOpenNodes());
     }
 
   private:

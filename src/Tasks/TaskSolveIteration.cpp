@@ -64,15 +64,24 @@ void TaskSolveIteration::run()
         MIPSolver->writeProblemToFile(ss.str());
     }
 
-    Output::getInstance().outputInfo("Solving MIP problem.");
+    Output::getInstance().outputInfo("     Solving dual problem.");
     auto solStatus = MIPSolver->solveProblem();
-    Output::getInstance().outputInfo("MIP problem solved.");
+    Output::getInstance().outputInfo("     Dual problem solved.");
 
     // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
     if (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree)
     {
         currIter = ProcessInfo::getInstance().getCurrentIteration();
     }
+    else // Must update the node stats if multi-tree strategy (otherwise it is done in the callbacks)
+    {
+        currIter->numberOfExploredNodes = MIPSolver->getNumberOfExploredNodes();
+        ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
+        ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
+    }
+
+    currIter->solutionStatus = solStatus;
+    Output::getInstance().outputInfo("     Dual problem return code: " + to_string((int)solStatus));
 
     if (solStatus == E_ProblemSolutionStatus::Infeasible ||
         solStatus == E_ProblemSolutionStatus::Error ||
@@ -81,12 +90,9 @@ void TaskSolveIteration::run()
         solStatus == E_ProblemSolutionStatus::Numeric ||
         solStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        currIter->solutionStatus = solStatus;
     }
     else
     {
-        currIter->solutionStatus = solStatus;
-
         auto sols = MIPSolver->getAllVariableSolutions();
         currIter->solutionPoints = sols;
 

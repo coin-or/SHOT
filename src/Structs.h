@@ -147,6 +147,9 @@ struct SolutionStatistics
 
     int numberOfOriginalInteriorPoints = 0;
 
+    int numberOfExploredNodes = 0;
+    int numberOfOpenNodes = 0;
+
     int getNumberOfTotalDualProblems()
     {
         return (numberOfProblemsLP +

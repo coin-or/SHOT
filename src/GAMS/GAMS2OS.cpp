@@ -1378,6 +1378,12 @@ void GAMS2OS::writeResult(ProcessInfo &info)
         gmoSolveStatSet(gmo, gmoSolveStat_Resource);
         break;
 
+    case E_ProblemSolutionStatus::Abort:
+        gmoModelStatSet(gmo,
+                        info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
+        break;
+
     default:
         gmoModelStatSet(gmo,
                         info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));

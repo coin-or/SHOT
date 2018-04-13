@@ -47,13 +47,6 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
     int numVar = originalProblem->getNumberOfVariables();
     std::vector<SolutionPoint> lastSolutions(numSol);
 
-    // Should be moved to separate task
-    bool isMIP = getDiscreteVariableStatus();
-    if (isMIP && Settings::getInstance().getBoolSetting("MIP.SolutionPool.Populate", "Dual"))
-    {
-        populateSolutionPool();
-    }
-
     for (int i = 0; i < numSol; i++)
     {
         SolutionPoint tmpSolPt;
@@ -368,4 +361,9 @@ void MIPSolverBase::createIntegerCut(std::vector<int> binaryIndexes)
 
     this->addLinearConstraint(elements, -(binaryIndexes.size() - 1.0));
     ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
+}
+
+int MIPSolverBase::getNumberOfOpenNodes()
+{
+    return (ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes);
 }

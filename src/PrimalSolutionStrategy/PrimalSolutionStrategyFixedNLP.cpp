@@ -266,7 +266,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                                                         ProcessInfo::getInstance().getRelativeObjectiveGap(),
                                                         tmpObj,
                                                         mostDevConstr.idx,
-                                                        mostDevConstr.value);
+                                                        mostDevConstr.value,
+                                                        E_IterationLineType::PrimalNLP);
         }
         else
         {
@@ -341,7 +342,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                                                         ProcessInfo::getInstance().getRelativeObjectiveGap(),
                                                         NAN,
                                                         mostDevConstr.idx,
-                                                        mostDevConstr.value);
+                                                        mostDevConstr.value,
+                                                        E_IterationLineType::PrimalNLP);
 
             if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && ProcessInfo::getInstance().originalProblem->getNumberOfIntegerVariables() == 0)
             {

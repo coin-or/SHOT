@@ -16,7 +16,6 @@
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "../Tasks/TaskUpdateInteriorPoint.h"
-#include "../Tasks/TaskPrintIterationHeader.h"
 
 class MIPSolverCallbackBase
 {
@@ -39,7 +38,6 @@ class MIPSolverCallbackBase
     std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch> taskUpdateObjectiveByLinesearch;
     std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch> taskSelectPrimalSolutionFromLinesearch;
     std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
-    std::shared_ptr<TaskPrintIterationHeader> tPrintIterationHeader;
 
     bool checkFixedNLPStrategy(SolutionPoint point);
 
@@ -47,5 +45,5 @@ class MIPSolverCallbackBase
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 
-    void printIterationReport(SolutionPoint solution, std::string threadId, std::string bestBound, std::string openNodes);
+    void printIterationReport(SolutionPoint solution, std::string threadId);
 };

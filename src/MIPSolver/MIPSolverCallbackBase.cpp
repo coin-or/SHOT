@@ -55,7 +55,7 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
-        else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solutionStatistics.timeLastFixedNLPCall> Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+        else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solutionStatistics.timeLastFixedNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
         {
             Output::getInstance().outputInfo(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -74,13 +74,8 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     return (callNLPSolver);
 }
 
-void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId, std::string bestBound, std::string openNodes)
+void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId)
 {
-    if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1)
-    {
-        tPrintIterationHeader->run();
-    }
-
     auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
     std::stringstream tmpType;
@@ -104,7 +99,10 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
                                                 ProcessInfo::getInstance().getRelativeObjectiveGap(),
                                                 solution.objectiveValue,
                                                 solution.maxDeviation.idx,
-                                                solution.maxDeviation.value);
+                                                solution.maxDeviation.value,
+                                                E_IterationLineType::DualCallback);
+
+    this->lastNumAddedHyperplanes = 0;
 }
 
 MIPSolverCallbackBase::~MIPSolverCallbackBase()

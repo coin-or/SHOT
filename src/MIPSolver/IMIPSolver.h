@@ -58,8 +58,6 @@ class IMIPSolver
     virtual void addMIPStart(std::vector<double> point) = 0;
     virtual void deleteMIPStarts() = 0;
 
-    virtual void populateSolutionPool() = 0;
-
     virtual void fixVariable(int varIndex, double value) = 0;
     virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues) = 0;
     virtual void unfixVariables() = 0;
@@ -83,6 +81,9 @@ class IMIPSolver
     virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes() = 0;
 
     virtual void updateNonlinearObjectiveFromPrimalDualBounds() = 0;
+
+    virtual int getNumberOfExploredNodes() = 0;
+    virtual int getNumberOfOpenNodes() = 0;
 
     virtual ~IMIPSolver(){};
 

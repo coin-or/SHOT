@@ -108,8 +108,6 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     virtual void addMIPStart(std::vector<double> point);
     virtual void deleteMIPStarts();
 
-    virtual void populateSolutionPool();
-
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
@@ -123,8 +121,29 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
         return (MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
     }
 
+    virtual int getNumberOfExploredNodes();
+
+    virtual int getNumberOfOpenNodes()
+    {
+        return (MIPSolverBase::getNumberOfOpenNodes());
+    }
+
     GRBEnv *gurobiEnv;
     GRBModel *gurobiModel;
 
   private:
+};
+
+class GurobiInfoCallback : public GRBCallback
+{
+  public:
+    GurobiInfoCallback();
+
+  protected:
+    void callback();
+
+  private:
+    int numVar = 0;
+    int lastExploredNodes = 0;
+    int lastOpenNodes = 0;
 };

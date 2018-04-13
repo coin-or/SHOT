@@ -37,7 +37,6 @@ class MIPSolverBase
     boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(Hyperplane hyperplane);
 
     virtual bool getDiscreteVariableStatus();
-    virtual void populateSolutionPool() = 0;
     virtual std::vector<SolutionPoint> getAllVariableSolutions();
     virtual int getNumberOfSolutions() = 0;
     virtual std::vector<double> getVariableSolution(int i) = 0;
@@ -62,6 +61,9 @@ class MIPSolverBase
     virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan) = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
+
+    virtual int getNumberOfExploredNodes() = 0;
+    virtual int getNumberOfOpenNodes();
 
     bool discreteVariablesActivated;
     bool cachedSolutionHasChanged;

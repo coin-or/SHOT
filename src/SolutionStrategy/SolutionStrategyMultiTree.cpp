@@ -22,8 +22,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     ProcessInfo::getInstance().createTimer("DualCutGenerationRootSearch", "   - performing root search for cuts");
     ProcessInfo::getInstance().createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
 
-    ProcessInfo::getInstance().createTimer("PopulateSolutionPool", " - populating solution pool");
-
     ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
@@ -62,14 +60,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
-    TaskBase *tPrintIterHeaderCheck = new TaskConditional();
-    TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
-
-    dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setCondition([this]() { return (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % 50 == 1); });
-    dynamic_cast<TaskConditional *>(tPrintIterHeaderCheck)->setTaskIfTrue(tPrintIterHeader);
-
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterHeaderCheck, "PrintIterHeaderCheck");
-
     if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
         TaskBase *tPresolve = new TaskPresolve(MIPSolver);
@@ -99,17 +89,26 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
     TaskBase *tPrintIterReport = new TaskPrintIterationReport();
     ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
-
     TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
+    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
+
+    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+
+    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
+
+    TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
 
     if (Settings::getInstance().getBoolSetting("FixedInteger.Use", "Dual"))
     {
@@ -128,16 +127,10 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
         TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP();
         ProcessInfo::getInstance().tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
         dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+
+        ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+        ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
-
-    TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
-
-    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
-
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 

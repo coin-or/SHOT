@@ -43,9 +43,13 @@ class Iteration
     int totNumHyperplanes;
     int relaxedLazyHyperplanesAdded = 0;
 
+    int numberOfExploredNodes = 0;
+    int numberOfOpenNodes = 0;
+
     double boundaryDistance;
 
     bool isMIP();
+    bool isSolved = false;
 
     double solutionTime;
 

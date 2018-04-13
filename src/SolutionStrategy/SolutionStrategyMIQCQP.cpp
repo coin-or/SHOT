@@ -19,7 +19,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
 
     ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
-    
+
     auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
 
     TaskBase *tFinalizeSolution = new TaskSequential();
@@ -38,8 +38,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     TaskBase *tInitializeIteration = new TaskInitializeIteration();
     ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
 
     TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
@@ -60,17 +58,14 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
-
-    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }

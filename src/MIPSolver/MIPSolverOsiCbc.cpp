@@ -578,11 +578,6 @@ pair<double, double> MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-void MIPSolverOsiCbc::populateSolutionPool()
-{
-    return;
-}
-
 bool MIPSolverOsiCbc::supportsQuadraticObjective()
 {
     return (false);
@@ -629,4 +624,17 @@ void MIPSolverOsiCbc::checkParameters()
 
     // For stability
     Settings::getInstance().updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
+}
+
+int MIPSolverOsiCbc::getNumberOfExploredNodes()
+{
+    try
+    {
+        return (cbcModel->getNodeCount());
+    }
+    catch (exception &e)
+    {
+        Output::getInstance().Output::getInstance().outputError("Error when getting number of explored nodes", e.what());
+        return 0;
+    }
 }

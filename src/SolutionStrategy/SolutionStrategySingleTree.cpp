@@ -20,7 +20,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
     ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
     ProcessInfo::getInstance().createTimer("DualCutGenerationRootSearch", "   - performing root search for cuts");
     ProcessInfo::getInstance().createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
-    
+
     ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
     ProcessInfo::getInstance().createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
@@ -56,10 +56,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
     TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
-    TaskBase *tPrintIterHeader = new TaskPrintIterationHeader();
-
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterHeader, "PrintIterHeader");
-
     if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
         TaskBase *tPresolve = new TaskPresolve(MIPSolver);
@@ -81,6 +77,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
 
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+
+    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
+    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
@@ -104,9 +103,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
         ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
-
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }

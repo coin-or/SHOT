@@ -24,7 +24,6 @@
 #include "../Tasks/TaskInitializeDualSolver.h"
 #include "../Tasks/TaskCreateDualProblem.h"
 
-#include "../Tasks/TaskPrintIterationHeader.h"
 #include "../Tasks/TaskExecuteSolutionLimitStrategy.h"
 #include "../Tasks/TaskExecuteRelaxationStrategy.h"
 

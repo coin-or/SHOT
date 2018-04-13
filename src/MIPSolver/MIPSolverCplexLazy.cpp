@@ -10,12 +10,13 @@
 
 #include "MIPSolverCplexLazy.h"
 
-CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
+CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env, const IloCplex &inst)
 {
     std::lock_guard<std::mutex> lock(callbackMutex);
 
     cplexVars = vars;
     cplexEnv = env;
+    cplexInst = inst;
 
     isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
 
@@ -52,13 +53,12 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env)
     }
 
     lastUpdatedPrimal = ProcessInfo::getInstance().getPrimalBound();
-
-    tPrintIterationHeader = std::shared_ptr<TaskPrintIterationHeader>(new TaskPrintIterationHeader());
 }
 
 void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 {
     std::lock_guard<std::mutex> lock(callbackMutex);
+    this->cbCalls++;
 
     try
     {
@@ -165,9 +165,13 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
         if (context.inCandidate())
         {
-            ProcessInfo::getInstance().createIteration();
-
             auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+
+            if (currIter->isSolved)
+            {
+                ProcessInfo::getInstance().createIteration();
+                currIter = ProcessInfo::getInstance().getCurrentIteration();
+            }
 
             IloNumArray tmpVals(context.getEnv());
 
@@ -209,6 +213,9 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             currIter->objectiveValue = context.getCandidateObjective();
 
+            ProcessInfo::getInstance().getCurrentIteration()->numberOfOpenNodes = cplexInst.getNnodesLeft();
+            ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes = max(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount), ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes);
+
             auto bounds = std::make_pair(ProcessInfo::getInstance().getDualBound(), ProcessInfo::getInstance().getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
@@ -247,11 +254,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
                 ProcessInfo::getInstance().integerCutWaitingList.clear();
             }
 
-            auto bestBound = UtilityFunctions::toStringFormat(context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound), "%.3f", true);
-            auto threadId = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
-            auto openNodes = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount));
+            currIter->isSolved = true;
 
-            printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
+            auto threadId = to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
+            printIterationReport(candidatePoints.at(0), threadId);
 
             if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
             {
@@ -393,7 +399,6 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
 {
     try
     {
-        lastNumAddedHyperplanes = 0;
         ProcessInfo::getInstance().getCurrentIteration()->numHyperplanesAdded++;
 
         if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
@@ -437,6 +442,7 @@ MIPSolverCplexLazy::MIPSolverCplexLazy()
 
     cplexVars = IloNumVarArray(cplexEnv);
     cplexConstrs = IloRangeArray(cplexEnv);
+
     //cplexLazyConstrs = IloRangeArray(cplexEnv);
 
     //itersSinceNLPCall = 0;
@@ -469,8 +475,6 @@ void MIPSolverCplexLazy::initializeSolverSettings()
 
 E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
 {
-    MIPSolverCplex::startTimer();
-
     E_ProblemSolutionStatus MIPSolutionStatus;
     MIPSolverCplex::cachedSolutionHasChanged = true;
 
@@ -482,7 +486,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             cplexInstance.extract(cplexModel);
         }
 
-        CplexCallback cCallback(cplexVars, cplexEnv);
+        CplexCallback cCallback(cplexVars, cplexEnv, cplexInstance);
         CPXLONG contextMask = 0;
 
         contextMask |= IloCplex::Callback::Context::Id::Candidate;
@@ -492,13 +496,8 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
         if (contextMask != 0)
             cplexInstance.use(&cCallback, contextMask);
 
-        double timeStart = ProcessInfo::getInstance().getElapsedTime("Total");
-
         cplexInstance.solve();
 
-        double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
-
-        iterDurations.push_back(timeEnd - timeStart);
         MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
     }
     catch (IloException &e)

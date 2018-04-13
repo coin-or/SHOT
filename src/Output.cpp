@@ -95,10 +95,66 @@ void Output::outputIterationDetail(int iterationNumber,
                                    double relativeObjectiveGap,
                                    double currentObjectiveValue,
                                    int maxConstraintIndex,
-                                   double maxConstraintError)
+                                   double maxConstraintError,
+                                   E_IterationLineType lineType)
 {
     try
     {
+        bool printLine = false;
+
+        if (dualObjectiveValue != lastDualObjectiveValue)
+        {
+            lastDualObjectiveValue = dualObjectiveValue;
+            printLine = true;
+        }
+
+        if (primalObjectiveValue != lastPrimalObjectiveValue)
+        {
+            lastPrimalObjectiveValue = primalObjectiveValue;
+            printLine = true;
+        }
+
+        if (iterationsWithoutPrintoutCounter > 100 || ProcessInfo::getInstance().getElapsedTime("Total") - lastIterationOutputTimeStamp > 2)
+        {
+            printLine = true;
+        }
+
+        switch (static_cast<ES_IterationOutputDetail>(Settings::getInstance().getIntSetting("Console.Iteration.Detail", "Output")))
+        {
+        case ES_IterationOutputDetail::Full:
+            printLine = true;
+            break;
+
+        case ES_IterationOutputDetail::ObjectiveGapUpdatesAndNLPCalls:
+            if (lineType == E_IterationLineType::PrimalNLP)
+                printLine = true;
+            break;
+
+        default:
+            break;
+        }
+
+        if (!printLine)
+        {
+            iterationsWithoutPrintoutCounter++;
+            return;
+        }
+
+        if (!firstIterationHeaderPrinted)
+        {
+            this->outputIterationDetailHeader();
+            firstIterationHeaderPrinted = true;
+        }
+
+        if (iterationPrintoutsSinceLastHeader > 75)
+        {
+            this->outputIterationDetailHeader();
+        }
+
+        iterationsWithoutPrintoutCounter = 0;
+        iterationPrintoutsSinceLastHeader++;
+        lastIterationOutputTimeStamp = ProcessInfo::getInstance().getElapsedTime("Total");
+
         std::string combDualCuts = "";
 
         if (dualCutsAdded > 0)
@@ -106,27 +162,7 @@ void Output::outputIterationDetail(int iterationNumber,
             combDualCuts = (boost::format("%|4i| | %|-6i|") % dualCutsAdded % dualCutsTotal).str();
         }
 
-        if (dualObjectiveValue != lastDualObjectiveValue)
-        {
-            lastDualObjectiveValue = dualObjectiveValue;
-        }
-
-        if (primalObjectiveValue != lastPrimalObjectiveValue)
-        {
-            lastPrimalObjectiveValue = primalObjectiveValue;
-        }
-
         std::string combObjectiveValue = (boost::format("%|12s| | %|-12s|") % UtilityFunctions::toStringFormat(dualObjectiveValue, "%#g") % UtilityFunctions::toStringFormat(primalObjectiveValue, "%#g")).str();
-
-        if (absoluteObjectiveGap != lastAbsoluteObjectiveGap)
-        {
-            lastAbsoluteObjectiveGap = absoluteObjectiveGap;
-        }
-
-        if (relativeObjectiveGap != lastRelativeObjectiveGap)
-        {
-            lastRelativeObjectiveGap = relativeObjectiveGap;
-        }
 
         std::string combObjectiveGap = (boost::format("%|8s| | %|-8s|") % UtilityFunctions::toStringFormat(absoluteObjectiveGap, "%#.1e") % UtilityFunctions::toStringFormat(relativeObjectiveGap, "%#.1e")).str();
 
@@ -144,6 +180,28 @@ void Output::outputIterationDetail(int iterationNumber,
         auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|%|-32s|") % iterationNumber % iterationDesc % totalTime % combDualCuts % combObjectiveValue % combObjectiveGap % combCurrSol;
 
         outputSummary(tmpLine.str());
+
+        std::stringstream nodes;
+
+        nodes << "        Explored nodes: ";
+
+        if (ProcessInfo::getInstance().getCurrentIteration()->numberOfExploredNodes > 0)
+        {
+            nodes << " +" << ProcessInfo::getInstance().getCurrentIteration()->numberOfExploredNodes
+                  << " = ";
+        }
+
+        nodes
+            << ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes << ".";
+
+        if (ProcessInfo::getInstance().getCurrentIteration()->numberOfOpenNodes > 0)
+        {
+            nodes << " Open nodes: " << ProcessInfo::getInstance().getCurrentIteration()->numberOfOpenNodes << ".";
+        }
+
+        nodes << "\r\n";
+
+        outputInfo(nodes.str());
     }
     catch (...)
     {
@@ -217,6 +275,7 @@ void Output::outputIterationDetailHeader()
     header << "\r\n";
 
     outputSummary(header.str());
+    iterationPrintoutsSinceLastHeader = 0;
 }
 
 void Output::outputIterationDetailHeaderMinimax()
@@ -630,17 +689,20 @@ void Output::outputSolutionReport()
         unfulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().getCurrentIteration()->maxDeviation <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
+    if (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) != ES_TreeStrategy::SingleTree)
     {
-        fulfilled << "  - maximal constraint tolerance                 ";
-        fulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " <= ";
-        fulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
-    }
-    else
-    {
-        unfulfilled << "  - maximal constraint tolerance                 ";
-        unfulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " > ";
-        unfulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+        if (ProcessInfo::getInstance().getCurrentIteration()->maxDeviation <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
+        {
+            fulfilled << "  - maximal constraint tolerance                 ";
+            fulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " <= ";
+            fulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+        }
+        else
+        {
+            unfulfilled << "  - maximal constraint tolerance                 ";
+            unfulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " > ";
+            unfulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+        }
     }
 
     int iterLim = Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") + Settings::getInstance().getIntSetting("IterationLimit", "Termination");
@@ -709,7 +771,7 @@ void Output::outputSolutionReport()
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP > 0)
     {
-        report << "  - MIQP problems, optimal                      " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP << "\r\n";
+        report << "  - MIQP problems, optimal                       " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP << "\r\n";
     }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP > 0)
@@ -718,6 +780,14 @@ void Output::outputSolutionReport()
     }
 
     report << "\r\n";
+
+    if (ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes > 0)
+    {
+        report << " Number of explored nodes:                       ";
+        report << ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes << "\r\n";
+
+        report << "\r\n";
+    }
 
     if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0 ||
         ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP > 0)

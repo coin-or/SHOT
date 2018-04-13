@@ -213,8 +213,6 @@ CtCallbackI::CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOrigi
     {
         taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch());
     }
-
-    tPrintIterationHeader = std::shared_ptr<TaskPrintIterationHeader>(new TaskPrintIterationHeader());
 }
 
 CtCallbackI::~CtCallbackI()
@@ -233,9 +231,18 @@ IloCplex::Callback CtCallback(IloEnv env, IloNumVarArray cplexVars, MIPSolverCpl
 
 void CtCallbackI::main()
 {
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+
+    if (currIter->isSolved)
+    {
+        ProcessInfo::getInstance().createIteration();
+        currIter = ProcessInfo::getInstance().getCurrentIteration();
+    }
+
+    currIter->isSolved = true;
+
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(ProcessInfo::getInstance().MIPSolver))->callbackMutex2);
 
-    lastNumAddedHyperplanes = 0;
     this->cbCalls++;
 
     IloNumArray tmpVals(this->getEnv());
@@ -301,19 +308,24 @@ void CtCallbackI::main()
         }
     }
 
+    std::vector<SolutionPoint> candidatePoints(1);
+
+    candidatePoints.at(0) = tmpSolPt;
+
+    auto threadId = to_string(this->getMyThreadNum());
+
+    ProcessInfo::getInstance().getCurrentIteration()->numberOfOpenNodes = this->getNremainingNodes();
+
+    ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes = max((int)this->getNnodes(), ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes);
+
+    printIterationReport(candidatePoints.at(0), threadId);
+
     if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet() || ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() || checkIterationLimit())
     {
         solution.clear();
         abort();
         return;
     }
-
-    ProcessInfo::getInstance().createIteration();
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-
-    std::vector<SolutionPoint> candidatePoints(1);
-
-    candidatePoints.at(0) = tmpSolPt;
 
     if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
     {
@@ -391,12 +403,6 @@ void CtCallbackI::main()
         ProcessInfo::getInstance().integerCutWaitingList.clear();
     }
 
-    auto bestBound = UtilityFunctions::toStringFormat(this->getBestObjValue(), "%.3f", true);
-    auto threadId = to_string(this->getMyThreadNum());
-    auto openNodes = to_string(this->getNremainingNodes());
-
-    printIterationReport(candidatePoints.at(0), threadId, bestBound, openNodes);
-
     candidatePoints.clear();
     solution.clear();
 }
@@ -440,6 +446,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
         tmpPair.first.clear();
         expr.end();
+
         add(tmpRange).end();
 
         // int constrIndex = 0;
@@ -535,12 +542,8 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
             cplexInstance.extract(cplexModel);
         }
 
-        double timeStart = ProcessInfo::getInstance().getElapsedTime("Total");
-
         cplexInstance.solve();
-        double timeEnd = ProcessInfo::getInstance().getElapsedTime("Total");
 
-        iterDurations.push_back(timeEnd - timeStart);
         MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
     }
     catch (IloException &e)

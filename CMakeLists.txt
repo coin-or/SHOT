@@ -22,16 +22,24 @@ option (HAS_GAMS "Is GAMS available" ON)
 # Sets the paths required. Edit these to suit your system:
 set(COINOS_DIR /opt/OS-2.10-stable)
 set(GUROBI_DIR /opt/gurobi751)
-set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
+set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio1263)
 set(GAMS_DIR /home/aton3/alundell/Research/COIN-OR/gams24.8)
 
-# May be needed if Boost is not automatically detected
+# May be needed to specify the path to where Boost is installed, if not automatically detected
 #set(Boost_INCLUDE_DIR /usr/include)
 #set(Boost_LIBRARY_DIR /usr/lib)
 
 # Passes the parameters to the compiler
 if(HAS_CPLEX) 
   add_definitions(-DHAS_CPLEX)
+
+  # To make Cplex build
+  add_definitions(-DIL_STD)
+  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
+
+    if(HAS_CPLEX_NEW_CALLBACK) 
+        add_definitions(-DHAS_CPLEX_NEW_CALLBACK)
+    endif()
 endif()
 
 if(HAS_GUROBI)
@@ -47,11 +55,6 @@ INCLUDE(FindPkgConfig)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
-
-if (HAS_CPLEX)  # To make CPLEX build
-  add_definitions(-DIL_STD)
-  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-endif (HAS_CPLEX)
 
 # For configuring version numbering
 configure_file ("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")

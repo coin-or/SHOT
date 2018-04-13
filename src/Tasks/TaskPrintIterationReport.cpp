@@ -103,7 +103,8 @@ void TaskPrintIterationReport::run()
                                                 ProcessInfo::getInstance().getRelativeObjectiveGap(),
                                                 currIter->objectiveValue,
                                                 currIter->maxDeviationConstraint,
-                                                currIter->maxDeviation);
+                                                currIter->maxDeviation,
+                                                E_IterationLineType::DualSolution);
 }
 
 std::string TaskPrintIterationReport::getType()

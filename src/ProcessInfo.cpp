@@ -1222,13 +1222,6 @@ std::string ProcessInfo::getTraceResult()
         solverStatus = "1";
         isOptimal = true;
     }
-    else if (this->terminationReason == E_TerminationReason::InfeasibleProblem ||
-             this->terminationReason == E_TerminationReason::ConstraintTolerance ||
-             this->terminationReason == E_TerminationReason::ObjectiveGapNotReached ||
-             this->terminationReason == E_TerminationReason::UnboundedProblem)
-    {
-        solverStatus = "1";
-    }
     else if (this->terminationReason == E_TerminationReason::ObjectiveStagnation ||
              this->terminationReason == E_TerminationReason::IterationLimit)
     {
@@ -1250,10 +1243,17 @@ std::string ProcessInfo::getTraceResult()
     {
         solverStatus = "10";
     }
+    else if (this->terminationReason == E_TerminationReason::InfeasibleProblem ||
+             this->terminationReason == E_TerminationReason::ConstraintTolerance ||
+             this->terminationReason == E_TerminationReason::ObjectiveGapNotReached ||
+             this->terminationReason == E_TerminationReason::UnboundedProblem)
+    {
+        solverStatus = "1";
+    }
     else
     {
         solverStatus = "10";
-        Output::getInstance().outputError("Unknown return code obtained from solver.");
+        Output::getInstance().outputError("Unknown return code " + to_string((int)this->terminationReason) + " obtained from solver.");
     }
 
     auto solStatus = this->getCurrentIteration()->solutionStatus;
@@ -1292,7 +1292,7 @@ std::string ProcessInfo::getTraceResult()
     else
     {
         modelStatus = "NA";
-        Output::getInstance().outputError("Unknown return code from model solution.");
+        Output::getInstance().outputError("Unknown return code " + to_string((int)solStatus) + " from model solution.");
     }
 
     ss << modelStatus << ",";
@@ -1307,7 +1307,7 @@ std::string ProcessInfo::getTraceResult()
     ss << this->solutionStatistics.numberOfIterations << ",";
     ss << "0"
        << ",";
-    ss << "0"
+    ss << this->solutionStatistics.numberOfExploredNodes
        << ",";
     ss << "#";
 

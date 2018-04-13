@@ -122,8 +122,6 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     virtual void addMIPStart(std::vector<double> point);
     virtual void deleteMIPStarts();
 
-    virtual void populateSolutionPool();
-
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
@@ -137,12 +135,13 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
         return (MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
     }
 
+    virtual int getNumberOfExploredNodes();
+    virtual int getNumberOfOpenNodes();
+
     IloModel cplexModel;
     IloCplex cplexInstance;
 
   protected:
-    std::vector<double> iterDurations;
-
     IloEnv cplexEnv;
 
     IloNumVarArray cplexVars;

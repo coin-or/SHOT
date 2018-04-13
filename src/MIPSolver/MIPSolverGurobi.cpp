@@ -296,7 +296,7 @@ void MIPSolverGurobi::initializeSolverSettings()
     {
         {
             Output::getInstance().Output::getInstance().outputError("Error when initializing parameters for linear solver",
-                                                   e.getMessage());
+                                                                    e.getMessage());
         }
     }
 }
@@ -367,7 +367,7 @@ std::vector<double> MIPSolverGurobi::getVariableSolution(int solIdx)
     catch (GRBException &e)
     {
         Output::getInstance().Output::getInstance().outputError("Error when reading solution with index " + std::to_string(solIdx),
-                                               e.getMessage());
+                                                                e.getMessage());
     }
 
     return (solution);
@@ -468,7 +468,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if (status == GRB_INTERRUPTED)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
     else if (status == GRB_NUMERIC)
     {
@@ -498,6 +498,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     try
     {
+        GurobiInfoCallback gurobiCallback = GurobiInfoCallback();
+        gurobiModel->setCallback(&gurobiCallback);
         gurobiModel->optimize();
 
         MIPSolutionStatus = getSolutionStatus();
@@ -684,10 +686,6 @@ void MIPSolverGurobi::deleteMIPStarts()
     Output::getInstance().outputDebug("    Deleted MIP starting points.");
 }
 
-void MIPSolverGurobi::populateSolutionPool()
-{
-}
-
 void MIPSolverGurobi::fixVariable(int varIndex, double value)
 {
     updateVariableBound(varIndex, value, value);
@@ -778,4 +776,39 @@ void MIPSolverGurobi::checkParameters()
 std::pair<std::vector<double>, std::vector<double>> MIPSolverGurobi::presolveAndGetNewBounds()
 {
     return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
+}
+
+int MIPSolverGurobi::getNumberOfExploredNodes()
+{
+    try
+    {
+        return ((int)gurobiModel->get(GRB_DoubleAttr_NodeCount));
+    }
+    catch (GRBException &e)
+    {
+        Output::getInstance().Output::getInstance().outputError("Error when getting number of nodes", e.getMessage());
+        return 0;
+    }
+}
+
+GurobiInfoCallback::GurobiInfoCallback()
+{
+}
+
+// Used to get the number of open nodes
+void GurobiInfoCallback::callback()
+{
+    try
+    {
+        if (where == GRB_CB_MIP)
+        {
+            auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+            currIter->numberOfExploredNodes = (int)getDoubleInfo(GRB_CB_MIP_NODCNT);
+            currIter->numberOfOpenNodes = (int)getDoubleInfo(GRB_CB_MIP_NODLFT);
+        }
+    }
+    catch (GRBException &e)
+    {
+        Output::getInstance().Output::getInstance().outputError("Gurobi error when running main callback method", e.getMessage());
+    }
 }

@@ -32,6 +32,14 @@ enum class E_HyperplaneSource
     InteriorPointSearch
 };
 
+enum class E_IterationLineType
+{
+    DualSolution,
+    DualCallback,
+    DualIntegerFixed,
+    PrimalNLP
+};
+
 enum class E_IterationProblemType
 {
     MIP,
@@ -168,6 +176,13 @@ enum class ES_IpoptSolver
     ma86,
     ma97,
     mumps
+};
+
+enum class ES_IterationOutputDetail
+{
+    Full,
+    ObjectiveGapUpdates,
+    ObjectiveGapUpdatesAndNLPCalls
 };
 
 enum class ES_RootsearchConstraintStrategy
