@@ -170,7 +170,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(OSInstance *osInstance)
         ProcessInfo::getInstance().tasks->addTask(tAddICs, "AddICs");
     }
 
-    TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
+    TaskBase *tGoto = new TaskGoto("SolveIter");
     ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
     ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");

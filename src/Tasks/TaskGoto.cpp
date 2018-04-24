@@ -12,7 +12,6 @@
 
 TaskGoto::TaskGoto(std::string taskID)
 {
-
     gotoTaskID = taskID;
 }
 
@@ -22,7 +21,14 @@ TaskGoto::~TaskGoto()
 
 void TaskGoto::run()
 {
-    ProcessInfo::getInstance().tasks->setNextTask(gotoTaskID);
+    try
+    {
+        ProcessInfo::getInstance().tasks->setNextTask(gotoTaskID);
+    }
+    catch (TaskExceptionNotFound &e)
+    {
+        Output::getInstance().outputError("Could not find task: " + gotoTaskID);
+    }
 }
 
 std::string TaskGoto::getType()
