@@ -513,10 +513,13 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     {
         MIPSolverCplex::initializeSolverSettings();
 
+        /*
         if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
         {
             cplexInstance.setParam(IloCplex::Threads, 1);
-        }
+        }*/
+
+        //cplexInstance.setParam(IloCplex::RepeatPresolve, 3);
 
         cplexInstance.use(CtCallback(cplexEnv, cplexVars, this));
         cplexInstance.use(HCallback(cplexEnv, cplexVars));

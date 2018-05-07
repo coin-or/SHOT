@@ -78,6 +78,7 @@ void TaskSolveIteration::run()
         currIter->numberOfExploredNodes = MIPSolver->getNumberOfExploredNodes();
         ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
         ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
+        //std::cout << "Nodes: " << ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes << std::endl;
     }
 
     currIter->solutionStatus = solStatus;
