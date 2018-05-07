@@ -26,3 +26,8 @@
 *.exe
 *.out
 *.app
+
+src/build/*
+src/.vscode/*
+.vscode/*
+build/*

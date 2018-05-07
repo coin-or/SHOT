@@ -1,13 +1,28 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include <vector>
 #include <ostream>
-#include "OSFileUtil.h"
 #include "OSInstance.h"
 #include "boost/format.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <cmath>
 #include <boost/math/special_functions/fpclassify.hpp> // isnan
+#include "Structs.h"
+#include <chrono>
+#include <ctime>
+#include <iostream>
+#include <fstream>
+#include <cerrno>
 
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32
@@ -27,8 +42,14 @@ namespace UtilityFunctions
 
 	void saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
 			std::string fileName);
+
+	void savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables, std::string fileName);
+
 	bool isObjectiveGenerallyNonlinear(OSInstance *instance);
 	bool isObjectiveQuadratic(OSInstance *instance);
+	bool areAllConstraintsLinear(OSInstance *instance);
+	bool areAllConstraintsQuadratic(OSInstance *instance);
+	bool areAllVariablesReal(OSInstance *instance);
 
 	void displayVector(std::vector<double> point);
 	void displayVector(std::vector<double> point1, std::vector<double> point2);
@@ -58,4 +79,10 @@ namespace UtilityFunctions
 	std::string toStringFormat(double value, std::string format, bool useInfinitySymbol);
 	std::string toStringFormat(double value, std::string format);
 	std::string toString(double value);
+
+	double getJulianFractionalDate();
+
+	bool writeStringToFile(std::string fileName, std::string str);
+
+	std::string getFileAsString(std::string fileName);
 }

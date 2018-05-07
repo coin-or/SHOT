@@ -1,10 +1,12 @@
-/*
- * PrimalSolutionStrategyBase.h
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
 
- *
- *  Created on: Mar 4, 2015
- *      Author: alundell
- */
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #pragma once
 #include "../PrimalSolutionStrategy/IPrimalSolutionStrategy.h"
@@ -12,14 +14,12 @@
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
-class PrimalSolutionStrategyBase: public IPrimalSolutionStrategy
+class PrimalSolutionStrategyBase : public IPrimalSolutionStrategy
 {
-	public:
-		PrimalSolutionStrategyBase();
-		virtual ~PrimalSolutionStrategyBase();
+  public:
+    PrimalSolutionStrategyBase();
+    virtual ~PrimalSolutionStrategyBase();
 
-	protected:
-
-	private:
-
+  protected:
+  private:
 };

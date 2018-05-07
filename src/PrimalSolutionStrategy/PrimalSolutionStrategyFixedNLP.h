@@ -1,40 +1,52 @@
-/*
- * PrimalSolutionStrategyFixedNLP.h
- *
- *  Created on: Mar 6, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #pragma once
 #include "vector"
 #include "PrimalSolutionStrategyBase.h"
 #include "../NLPSolver/INLPSolver.h"
-#include "../NLPSolver/NLPSolverIPOptRelaxed.h"
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 #include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
+
+#ifdef HAS_GAMS
 #include "../NLPSolver/NLPSolverGAMS.h"
+#endif
 
-class PrimalSolutionStrategyFixedNLP: public PrimalSolutionStrategyBase
+#include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsSolution.h"
+
+class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
 {
-	public:
-		PrimalSolutionStrategyFixedNLP();
-		virtual ~PrimalSolutionStrategyFixedNLP();
+  public:
+    PrimalSolutionStrategyFixedNLP();
+    virtual ~PrimalSolutionStrategyFixedNLP();
 
-		virtual bool runStrategy();
+    virtual bool runStrategy();
 
-	protected:
+  protected:
+  private:
+    INLPSolver *NLPSolver;
 
-	private:
-		INLPSolver *NLPSolver;
+    std::vector<int> discreteVariableIndexes;
+    std::vector<std::vector<double>> testedPoints;
+    std::vector<double> fixPoint;
 
-		std::vector<int> discreteVariableIndexes;
-		std::vector<std::vector<double>> testedPoints;
-		std::vector<double> fixPoint;
+    double originalNLPTime;
+    double originalNLPIter;
 
-		double originalNLPTime;
-		double originalNLPIter;
+    std::vector<double> originalLBs;
+    std::vector<double> originalUBs;
 
-		std::vector<double> originalLBs;
-		std::vector<double> originalUBs;
+    TaskBase *taskSelectHPPts;
 
+    int originalIterFrequency;
+    double originalTimeFrequency;
 };
-

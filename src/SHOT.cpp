@@ -1,248 +1,210 @@
-﻿#include "SHOTSolver.h"
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
 
-SHOTSolver *solver = NULL;
+   @author Andreas Lundell, Åbo Akademi University
 
-std::string startmessage;
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
+#include "SHOTSolver.h"
 
 int main(int argc, char *argv[])
 {
-	// Visual Studio does not play nice with unicode:
-#ifdef _WIN32
-	startmessage = ""
-	"ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿\n"
-	"³          SHOT - Supporting Hyperplane Optimization Toolkit          ³\n"
-	"ÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ´\n"
-	"³ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        ³\n"
-	"³ - Based on the Extended Supporting Hyperplane (ESH) algorithm       ³\n"
-	"³   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            ³\n"
-	"³   bo Akademi University, Turku, Finland                            ³\n"
-	"ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ\n";
-#else
-	startmessage = ""
-			"┌─────────────────────────────────────────────────────────────────────┐\n"
-			"│          SHOT - Supporting Hyperplane Optimization Toolkit          │\n"
-			"├─────────────────────────────────────────────────────────────────────┤\n"
-			"│ - Implementation by Andreas Lundell (andreas.lundell@abo.fi)        │\n"
-			"│ - Based on the Extended Supporting Hyperplane (ESH) algorithm       │\n"
-			"│   by Jan Kronqvist, Andreas Lundell and Tapio Westerlund            │\n"
-			"│   Åbo Akademi University, Turku, Finland                            │\n"
-			"└─────────────────────────────────────────────────────────────────────┘\n";
+    if (argc == 1)
+    {
+        Output::getInstance().outputSolverHeader();
+        std::cout << " Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
 
-#endif
+        return (0);
+    }
 
-	if (argc == 1)
-	{
-		std::cout << startmessage << std::endl;
-		std::cout << "Usage: filename.[osil|gms] options.[opt|xml|osol] results.osrl trace.trc" << std::endl;
+    unique_ptr<SHOTSolver> solver(new SHOTSolver());
+    bool defaultOptionsGenerated = false;
 
-		return (0);
-	}
+    ProcessInfo::getInstance().startTimer("Total");
 
-	solver = new SHOTSolver();
+    boost::filesystem::path resultFile, optionsFile, traceFile;
 
-	ProcessInfo::getInstance().startTimer("Total");
+    if (strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
+    {
+        // special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
+        // TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
+    }
+    else if (argc == 2) // No options file specified, use or create defaults
+    {
+        bool GAMSOptFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.opt");
+        bool OSoLFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.xml");
 
-	// Adds a file output
-	osoutput->AddChannel("shotlogfile");
+        if (GAMSOptFileExists)
+        {
+            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
+        }
+        else if (OSoLFileExists)
+        {
+            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
+        }
+        else
+        {
+            // Create OSoL-file
+            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
 
-	boost::filesystem::path resultFile, optionsFile, traceFile;
+            if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
+            {
+                Output::getInstance().outputError(" Error when writing OSoL file: " + optionsFile.string());
+            }
 
-	if (strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
-	{
-		// special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
-		// TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
+            // Create GAMS option file
+            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
 
-		osoutput->SetPrintLevel("stdout", ENUM_OUTPUT_LEVEL_summary);
-	}
-	else if (argc == 2) // No options file specified, use or create defaults
-	{
-		bool GAMSOptFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.opt");
-		bool OSoLFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.xml");
+            if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
+            {
+                Output::getInstance().outputError(" Error when writing options file: " + optionsFile.string());
+            }
 
-		if (GAMSOptFileExists)
-		{
-			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
-		}
-		else if (OSoLFileExists)
-		{
-			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
-		}
-		else
-		{
-			FileUtil *fileUtil;
-			fileUtil = new FileUtil();
+            defaultOptionsGenerated = true;
+        }
+    }
+    else if (argc == 3)
+    {
+        if (!boost::filesystem::exists(argv[2]))
+        {
+            Output::getInstance().outputSolverHeader();
 
-			// Create OSoL-file
-			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
-			fileUtil->writeFileFromString(optionsFile.string(), solver->getOSoL());
+            return (0);
+        }
 
-			// Create GAMS option file
-			optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
-			fileUtil->writeFileFromString(optionsFile.string(), solver->getGAMSOptFile());
-		}
+        optionsFile = boost::filesystem::path(argv[2]);
+    }
+    else if (argc == 4)
+    {
+        if (!boost::filesystem::exists(argv[2]))
+        {
+            Output::getInstance().outputSolverHeader();
+            std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
-		// Define names for result files
-		resultFile = boost::filesystem::path(boost::filesystem::current_path() / "results.osrl");
-		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
-	}
-	else if (argc == 3)
-	{
-		if (!boost::filesystem::exists(argv[2]))
-		{
-			std::cout << startmessage << std::endl;
-			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
+            return (0);
+        }
 
-			delete solver;
+        optionsFile = boost::filesystem::path(argv[2]);
+        resultFile = boost::filesystem::path(argv[3]);
+    }
+    else
+    {
+        if (!boost::filesystem::exists(argv[2]))
+        {
+            Output::getInstance().outputSolverHeader();
+            std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
-			return (0);
-		}
+            return (0);
+        }
 
-		optionsFile = boost::filesystem::path(argv[2]);
-		resultFile = boost::filesystem::path(boost::filesystem::current_path() / "results.osrl");
-		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
-	}
-	else if (argc == 4)
-	{
-		if (!boost::filesystem::exists(argv[2]))
-		{
-			std::cout << startmessage << std::endl;
-			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
+        optionsFile = boost::filesystem::path(argv[2]);
+        resultFile = boost::filesystem::path(argv[3]);
+        traceFile = boost::filesystem::path(argv[4]);
+    }
 
-			delete solver;
+    try
+    {
+        if (!boost::filesystem::exists(argv[1]))
+        {
+            Output::getInstance().outputSolverHeader();
+            std::cout << " Problem file " << argv[1] << " not found!" << std::endl;
 
-			return (0);
-		}
+            return (0);
+        }
 
-		optionsFile = boost::filesystem::path(argv[2]);
-		resultFile = boost::filesystem::path(argv[3]);
-		traceFile = boost::filesystem::path(boost::filesystem::current_path() / "trace.trc");
-	}
-	else
-	{
-		if (!boost::filesystem::exists(argv[2]))
-		{
-			std::cout << startmessage << std::endl;
-			std::cout << "Options file " << argv[2] << " not found!" << std::endl;
+        std::string fileName = argv[1];
 
-			delete solver;
+        if (!defaultOptionsGenerated)
+        {
+            if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
+            {
+                Output::getInstance().outputSolverHeader();
+                std::cout << " Cannot set options!" << std::endl;
+                return (0);
+            }
+        }
 
-			return (0);
-		}
+        Output::getInstance().setLogLevels();
 
-		optionsFile = boost::filesystem::path(argv[2]);
-		resultFile = boost::filesystem::path(argv[3]);
-		traceFile = boost::filesystem::path(argv[4]);
-	}
+        // Prints out the welcome message to the logging facility
 
-	try
-	{
-		if (!boost::filesystem::exists(argv[1]))
-		{
-			std::cout << startmessage << std::endl;
-			std::cout << "Problem file " << argv[1] << " not found!" << std::endl;
+        if (!solver->setProblem(fileName))
+        {
+            Output::getInstance().outputError(" Error when reading problem file.");
 
-			delete solver;
+            return (0);
+        }
 
-			return (0);
-		}
+        Output::getInstance().outputSolverHeader();
+        Output::getInstance().outputOptionsReport();
+        Output::getInstance().outputProblemInstanceReport();
 
-		std::string fileName = argv[1];
+        if (!solver->solveProblem()) // solve problem
+        {
+            Output::getInstance().outputError(" Error when solving problem.");
 
-		if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
-		{
-			delete solver;
+            return (0);
+        }
 
-			std::cout << startmessage << std::endl;
-			std::cout << "Cannot set options!" << std::endl;
-			return (0);
-		}
+        Output::getInstance().outputSolutionReport();
 
-		// Prints out the welcome message to the logging facility
-		ProcessInfo::getInstance().outputSummary(startmessage);
+        Output::getInstance().outputSummary("╶─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n");
+    }
+    catch (const ErrorClass &eclass)
+    {
+        Output::getInstance().outputError(eclass.errormsg);
 
-		if (!solver->setProblem(fileName))
-		{
-			ProcessInfo::getInstance().outputError("Error when reading problem file.");
+        return (0);
+    }
 
-			delete solver;
+    std::string osrl = solver->getOSrL();
 
-			return (0);
-		}
+    if (resultFile.empty())
+    {
+        boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
+        resultPath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
+        resultPath = resultPath.replace_extension(".osrl");
+        Output::getInstance().outputSummary(" Results written to: " + resultPath.string());
 
-		if (!solver->solveProblem()) // solve problem
-		{
-			ProcessInfo::getInstance().outputError("Error when solving problem.");
+        if (!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
+        {
+            Output::getInstance().outputError(" Error when writing OSrL file: " + resultPath.string());
+        }
+    }
+    else
+    {
+        Output::getInstance().outputSummary(" Results written to: " + resultFile.string());
 
-			delete solver;
+        if (!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
+        {
+            Output::getInstance().outputError(" Error when writing OSrL file: " + resultFile.string());
+        }
+    }
 
-			return (0);
-		}
-	}
-	catch (const ErrorClass& eclass)
-	{
-		ProcessInfo::getInstance().outputError(eclass.errormsg);
+    std::string trace = solver->getTraceResult();
 
-		delete solver;
+    if (traceFile.empty())
+    {
+        boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
+        tracePath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
+        tracePath = tracePath.replace_extension(".trc");
+        Output::getInstance().outputSummary("                     " + tracePath.string());
 
-		return (0);
-	}
+        if (!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
+        {
+            Output::getInstance().outputError(" Error when writing trace file: " + tracePath.string());
+        }
+    }
+    else
+    {
+        if (!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
+        {
+            Output::getInstance().outputError(" Error when writing trace file: " + traceFile.string());
+        }
+    }
 
-	ProcessInfo::getInstance().stopTimer("Total");
-
-	FileUtil *fileUtil;
-	fileUtil = new FileUtil();
-
-	if (!resultFile.empty())
-	{
-		std::string osrl = solver->getOSrL();
-
-		fileUtil->writeFileFromString(resultFile.string(), osrl);
-	}
-
-	if (!traceFile.empty())
-	{
-		std::string trace = solver->getTraceResult();
-		fileUtil->writeFileFromString(traceFile.string(), trace);
-	}
-
-	delete fileUtil;
-
-#ifdef _WIN32
-	ProcessInfo::getInstance().outputSummary("\n"
-			"ÚÄÄÄ Solution time ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿");
-
-	for (auto T : ProcessInfo::getInstance().timers)
-	{
-		auto elapsed = T.elapsed();
-
-		if (elapsed > 0)
-		{
-			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
-
-			ProcessInfo::getInstance().outputSummary("³ " + tmpLine.str());
-		}
-	}
-
-	ProcessInfo::getInstance().outputSummary("ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ");
-#else
-	ProcessInfo::getInstance().outputSummary("\n"
-			"┌─── Solution time ──────────────────────────────────────────────────────────────┐");
-
-	for (auto T : ProcessInfo::getInstance().timers)
-	{
-		auto elapsed = T.elapsed();
-
-		if (elapsed > 0)
-		{
-			auto tmpLine = boost::format("%1%: %|54t|%2%") % T.description % elapsed;
-
-			ProcessInfo::getInstance().outputSummary("│ " + tmpLine.str());
-		}
-	}
-
-	ProcessInfo::getInstance().outputSummary(
-			"└────────────────────────────────────────────────────────────────────────────────┘");
-#endif
-	delete solver;
-	return (0);
+    return (0);
 }

@@ -1,16 +1,22 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
+#include "SHOTConfig.h"
 #include "Enums.h"
-#include "vector"
-#include "map"
+#include "Structs.h"
+#include "Output.h"
 #include "Iteration.h"
 #include "Timer.h"
 
 #include "UtilityFunctions.h"
-
-// Used for OSOutput
-#include "cstdio"
-#define HAVE_STDIO_H 1
-#include "OSOutput.h"
 
 #include "SHOTSettings.h"
 
@@ -18,212 +24,154 @@
 
 #include "OSResult.h"
 #include "OSrLWriter.h"
+#include "OSiLWriter.h"
+#include "OSiLReader.h"
 #include "OSErrorClass.h"
-
-#include "MILPSolver/IRelaxationStrategy.h"
 
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/xml_parser.hpp"
 
 class OptProblemOriginal;
-class IMILPSolver;
+class IMIPSolver;
 class ILinesearchMethod;
+class IRelaxationStrategy;
+class Iteration;
 
 #include "LinesearchMethod/ILinesearchMethod.h"
+#include "MIPSolver/IRelaxationStrategy.h"
 
-struct InteriorPoint
-{
-		vector<double> point;
-		ES_NLPSolver NLPSolver;
-		IndexValuePair maxDevatingConstraint;
-};
-
-struct PrimalSolution
-{
-		vector<double> point;
-		E_PrimalSolutionSource sourceType;
-		double objValue;
-		int iterFound;
-		IndexValuePair maxDevatingConstraint;
-};
-
-struct PrimalFixedNLPCandidate
-{
-		vector<double> point;
-		E_PrimalNLPSource sourceType;
-		double objValue;
-		int iterFound;
-		IndexValuePair maxDevatingConstraint;
-};
-
-struct DualSolution
-{
-		vector<double> point;
-		E_DualSolutionSource sourceType;
-		double objValue;
-		int iterFound;
-};
-
-struct Hyperplane
-{
-		int sourceConstraintIndex;
-		std::vector<double> generatedPoint;
-		E_HyperplaneSource source;
-};
+#ifdef HAS_GAMS
+#include "gmomcc.h"
+#endif
 
 class ProcessInfo
 {
-	public:
-		OSResult *osResult;
-		OptProblemOriginal *originalProblem;
+  public:
+    std::unique_ptr<OSResult> osResult;
 
-		IMILPSolver *MILPSolver;
-		IRelaxationStrategy *relaxationStrategy;
+    OptProblemOriginal *originalProblem;
+    OptimizationProblemStatistics problemStats;
+    SolutionStatistics solutionStatistics;
 
-		TaskHandler *tasks;
+    IMIPSolver *MIPSolver;
+    IRelaxationStrategy *relaxationStrategy;
 
-		void initializeResults(int numObj, int numVar, int numConstr);
+    TaskHandler *tasks;
 
-		vector<double> primalSolution; // TODO remove
-		//double lastObjectiveValue; // TODO remove
-		vector<Iteration> iterations;
-		vector<PrimalSolution> primalSolutions;
-		vector<DualSolution> dualSolutions;
+    void initializeResults(int numObj, int numVar, int numConstr);
 
-		vector<PrimalSolution> primalSolutionCandidates;
-		vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
-		vector<DualSolution> dualSolutionCandidates;
+    std::vector<double> primalSolution; // TODO remove
+    //double lastObjectiveValue; // TODO remove
+    std::vector<Iteration> iterations;
+    std::vector<PrimalSolution> primalSolutions;
+    std::vector<DualSolution> dualSolutions;
 
-		pair<double, double> getCorrectedObjectiveBounds();
+    std::vector<PrimalSolution> primalSolutionCandidates;
+    std::vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
+    std::vector<DualSolution> dualSolutionCandidates;
 
-		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
-				IndexValuePair maxConstrDev);
-		void addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
-		void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
+    std::pair<double, double> getCorrectedObjectiveBounds();
 
-		void addPrimalFixedNLPCandidate(vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
-				IndexValuePair maxConstrDev);
+    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
+                           IndexValuePair maxConstrDev);
+    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
+    void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
 
-		void addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
-		void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
-		void addDualSolution(DualSolution solution);
-		void addPrimalSolutionCandidate(vector<double> pt, E_PrimalSolutionSource source, int iter);
-		void addPrimalSolutionCandidates(vector<vector<double>> pts, E_PrimalSolutionSource source, int iter);
+    void addPrimalFixedNLPCandidate(std::vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
+                                    IndexValuePair maxConstrDev);
 
-		void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
-		void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
+    void addDualSolution(std::vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
+    void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
+    void addDualSolution(DualSolution solution);
+    void addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidates(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source, int iter);
 
-		void checkPrimalSolutionCandidates();
-		void checkDualSolutionCandidates();
+    void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
+    void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
 
-		bool isRelativeObjectiveGapToleranceMet();
-		bool isAbsoluteObjectiveGapToleranceMet();
+    void checkPrimalSolutionCandidates();
+    void checkDualSolutionCandidates();
 
-		void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
-		void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
-		void addDualSolutionCandidate(vector<double> pt, E_DualSolutionSource source, int iter);
-		void addDualSolutionCandidate(DualSolution solution);
+    bool isRelativeObjectiveGapToleranceMet();
+    bool isAbsoluteObjectiveGapToleranceMet();
 
-		std::pair<double, double> currentObjectiveBounds;
-		double getAbsoluteObjectiveGap();
-		double getRelativeObjectiveGap();
-		void setObjectiveUpdatedByLinesearch(bool updated);
-		bool getObjectiveUpdatedByLinesearch();
+    void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
+    void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
+    void addDualSolutionCandidate(std::vector<double> pt, E_DualSolutionSource source, int iter);
+    void addDualSolutionCandidate(DualSolution solution);
 
-		int iterationCount;
-		int iterLP;
-		int iterQP;
-		int iterFeasMILP;
-		int iterOptMILP;
-		int iterFeasMIQP;
-		int iterOptMIQP;
-		int iterFeasMIQCQP;
-		int iterOptMIQCQP;
+    double getAbsoluteObjectiveGap();
+    double getRelativeObjectiveGap();
+    void setObjectiveUpdatedByLinesearch(bool updated);
+    bool getObjectiveUpdatedByLinesearch();
 
-		int numNLPProbsSolved;
-		int numPrimalFixedNLPProbsSolved;
+    std::vector<int> itersSolvedAsECP;
 
-		int itersWithStagnationMILP; // TODO move to task
-		int iterSignificantObjectiveUpdate; // TODO move to task
-		int itersMILPWithoutNLPCall; // TODO move to task
-		double solTimeLastNLPCall; // TODO move to task
+    void setOriginalProblem(OptProblemOriginal *problem);
 
-		int iterLastPrimalBoundUpdate;
-		int iterLastDualBoundUpdate;
+    void createTimer(std::string name, std::string description);
+    void startTimer(std::string name);
+    void stopTimer(std::string name);
+    void restartTimer(std::string name);
+    double getElapsedTime(std::string name);
 
-		double timeLastDualBoundUpdate;
+    double getPrimalBound();
+    void setPrimalBound(double value);
+    double getDualBound();
+    void setDualBound(double value);
 
-		int lastLazyAddedIter;
+    Iteration *getCurrentIteration();
+    Iteration *getPreviousIteration();
 
-		int numOriginalInteriorPoints;
+    E_TerminationReason terminationReason = E_TerminationReason::None;
+    E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 
-		int numFunctionEvals;
-		int numGradientEvals;
+    ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
+    ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
 
-		int numConstraintsRemovedInPresolve;
-		int numVariableBoundsTightenedInPresolve;
-		int numIntegerCutsAdded;
+    std::string getOSrl();
+    std::string getTraceResult();
 
-		std::vector<int> itersSolvedAsECP;
+    void createIteration();
 
-		//double getLastMaxDeviation();
-		void setOriginalProblem(OptProblemOriginal *problem);
+    std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
 
-		void createTimer(string name, string description);
-		void startTimer(string name);
-		void stopTimer(string name);
-		void restartTimer(string name);
-		double getElapsedTime(string name);
+    std::vector<Hyperplane> hyperplaneWaitingList;
 
-		double getPrimalBound();
-		double getDualBound();
+    std::vector<Hyperplane> addedHyperplanes;
 
-		Iteration *getCurrentIteration();
-		Iteration *getPreviousIteration();
+    std::vector<std::vector<int>> integerCutWaitingList;
 
-		E_TerminationReason terminationReason;
+    std::vector<Timer> timers;
 
-		std::string getOSrl();
-		std::string getTraceResult();
+    OSInstance *getProblemInstanceFromOSiL(std::string osil);
+    std::string getOSiLFromProblemInstance(OSInstance *instance);
 
-		void createIteration();
+    void setProblemStats();
 
-		std::vector<shared_ptr<InteriorPoint>> interiorPts;
+#ifdef HAS_GAMS
+    gmoHandle_t GAMSModelingObject;
+#endif
 
-		std::vector<Hyperplane> hyperplaneWaitingList;
+    ILinesearchMethod *linesearchMethod;
 
-		std::vector<Hyperplane> addedHyperplanes;
+    ~ProcessInfo();
 
-		std::vector<std::vector<int>> integerCutWaitingList;
+    static ProcessInfo &getInstance()
+    {
+        static ProcessInfo inst;
+        return (inst);
+    }
 
-		std::vector<Timer> timers;
+  private:
+    bool objectiveUpdatedByLinesearch;
 
-		void outputAlways(std::string message);
-		void outputError(std::string message);
-		void outputError(std::string message, std::string errormessage);
-		void outputSummary(std::string message);
-		void outputWarning(std::string message);
-		void outputInfo(std::string message);
-		void outputDebug(std::string message);
-		void outputTrace(std::string message);
-		void outputDetailedTrace(std::string message);
+    bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
-		ILinesearchMethod *linesearchMethod;
+    std::pair<double, double> currentObjectiveBounds;
 
-		~ProcessInfo();
+    ProcessInfo();
 
-		static ProcessInfo& getInstance()
-		{
-			static ProcessInfo inst;
-			return (inst);
-		}
-
-	private:
-
-		bool objectiveUpdatedByLinesearch;
-
-		bool checkPrimalSolutionPoint(PrimalSolution primalSol);
-
-		ProcessInfo();
-
+    std::vector<OSiLReader *> osilReaders;
+    OSiLWriter *osilWriter;
 };

@@ -1,25 +1,26 @@
-/*
- * TaskCalculateSolutionChangeNorm.h
- *
- *  Created on: Mar 28, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #pragma once
-
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
-class TaskCalculateSolutionChangeNorm: public TaskBase
+class TaskCalculateSolutionChangeNorm : public TaskBase
 {
-	public:
-		TaskCalculateSolutionChangeNorm();
-		virtual ~TaskCalculateSolutionChangeNorm();
+  public:
+	TaskCalculateSolutionChangeNorm();
+	virtual ~TaskCalculateSolutionChangeNorm();
 
-		virtual void run();
+	virtual void run();
 
-		virtual std::string getType();
-	private:
+	virtual std::string getType();
 
+  private:
 };
-
