@@ -1,109 +1,72 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "OptProblemNLPRelaxed.h"
 
 OptProblemNLPRelaxed::OptProblemNLPRelaxed()
 {
-	//problemInstance = NULL;
-
 }
 
 OptProblemNLPRelaxed::~OptProblemNLPRelaxed()
 {
-	//delete problemInstance;
+    /*delete osilReader;
+    osilReader = NULL;*/
 }
 
 void OptProblemNLPRelaxed::reformulate(OSInstance *originalInstance)
 {
-	OSInstance *newInstance = NULL;
-	newInstance = new OSInstance();
+    OSInstance *newInstance = NULL;
+    newInstance = new OSInstance();
 
-	this->setObjectiveFunctionNonlinear(isConstraintNonlinear(originalInstance, -1));
-	this->setTypeOfObjectiveMinimize(originalInstance->instanceData->objectives->obj[0]->maxOrMin == "min");
+    this->setObjectiveFunctionNonlinear(isConstraintNonlinear(originalInstance, -1));
+    this->setTypeOfObjectiveMinimize(originalInstance->instanceData->objectives->obj[0]->maxOrMin == "min");
 
-	this->copyVariables(originalInstance, newInstance, true);
+    this->copyVariables(originalInstance, newInstance, true);
 
-	this->copyObjectiveFunction(originalInstance, newInstance);
+    this->copyObjectiveFunction(originalInstance, newInstance);
 
-	this->copyConstraints(originalInstance, newInstance);
+    this->copyConstraints(originalInstance, newInstance);
 
-	this->copyLinearTerms(originalInstance, newInstance);
+    this->copyLinearTerms(originalInstance, newInstance);
 
-	this->copyQuadraticTerms(originalInstance, newInstance);
+    this->copyQuadraticTerms(originalInstance, newInstance);
 
-	this->copyNonlinearExpressions(originalInstance, newInstance);
+    this->copyNonlinearExpressions(originalInstance, newInstance);
 
-	this->setProblemInstance(newInstance);
+    this->setProblemInstance(newInstance);
 
-	this->setNonlinearConstraintIndexes();
+    this->setNonlinearConstraintIndexes();
 
-	if (this->isObjectiveFunctionNonlinear())
-	{
-		setNonlinearObjectiveConstraintIdx(-1);	// Sets a virtual constraint
+    if (this->isObjectiveFunctionNonlinear())
+    {
+        setNonlinearObjectiveConstraintIdx(-1); // Sets a virtual constraint
 
-		setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());
-	}
+        setNonlinearObjectiveVariableIdx(originalInstance->getVariableNumber());
+    }
 
-	newInstance->getJacobianSparsityPattern();
-
+    this->repairNonboundedVariables();
 }
 
 void OptProblemNLPRelaxed::copyObjectiveFunction(OSInstance *source, OSInstance *destination)
 {
-	int numVar = source->getVariableNumber();
+    int numVar = source->getVariableNumber();
 
-	destination->setObjectiveNumber(1);
+    destination->setObjectiveNumber(1);
 
-	// Use a constant zero as the objective...
+    // Use a constant zero as the objective...
 
-	SparseVector * newobjcoeff = new SparseVector(1);
+    SparseVector *newobjcoeff = new SparseVector(1);
 
-	newobjcoeff->indexes[0] = 0;
-	newobjcoeff->values[0] = 1.0;
+    newobjcoeff->indexes[0] = 0;
+    newobjcoeff->values[0] = 1.0;
 
-	destination->addObjective(-1, "newobj", "min", 0.0, 1.0, newobjcoeff);
-	delete newobjcoeff;
-
-	//destination->bObjectivesModified = true;
+    destination->addObjective(-1, "newobj", "min", 0.0, 1.0, newobjcoeff);
+    delete newobjcoeff;
 }
-
-/*
- IndexValuePair OptProblemNLPRelaxed::getMostDeviatingConstraint(std::vector<double> point)
- {
- IndexValuePair valpair;
-
- std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
-
- if (idxNLCs.size() == 0)	//Only a quadratic objective function and quadratic constraints
- {
- valpair.idx = -1;
- valpair.value = 0.0;
- }
- else
- {
- std::vector<double> constrDevs(idxNLCs.size());
-
- for (int i = 0; i < idxNLCs.size(); i++)
- {
- constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
- }
-
- auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
- valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
- valpair.value = *biggest;
- }
-
- return valpair;
- }
-
- bool OptProblemNLPRelaxed::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
- {
- std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
-
- for (int i = 0; i < getNumberOfNonlinearConstraints(); i++)
- {
- double tmpVal = calculateConstraintFunctionValue(idxNLCs.at(i), point);
- if (tmpVal > eps) return false;
- }
-
- return true;
- }
- */

@@ -1,132 +1,159 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "TaskFindInteriorPoint.h"
 
 TaskFindInteriorPoint::TaskFindInteriorPoint()
 {
-
 }
 
 TaskFindInteriorPoint::~TaskFindInteriorPoint()
 {
-	// TODO Auto-generated destructor stub
+    NLPSolvers.clear();
 }
 
 void TaskFindInteriorPoint::run()
 {
+    ProcessInfo::getInstance().startTimer("InteriorPointSearch");
 
-	ProcessInfo::getInstance().startTimer("InteriorPointTotal");
+    Output::getInstance().outputInteriorPointPreReport();
 
-	ProcessInfo::getInstance().outputDebug("Initializing NLP solver");
-	auto solver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-			"InteriorPoint"));
+    Output::getInstance()
+        .outputDebug("Initializing NLP solver");
+    auto solver = static_cast<ES_InteriorPointStrategy>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 
-	if (solver == ES_NLPSolver::CuttingPlaneMiniMax)
-	{
-		NLPSolvers.emplace_back(new NLPSolverCuttingPlaneMinimax());
+    if (solver == ES_InteriorPointStrategy::CuttingPlaneMiniMax)
+    {
+        NLPSolvers.emplace_back(new NLPSolverCuttingPlaneMinimax());
 
-		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		ProcessInfo::getInstance().outputDebug("Cutting plane minimax selected as NLP solver.");
-	}
-	else if (solver == ES_NLPSolver::IPOptMiniMax)
-	{
-		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
+        Output::getInstance().outputDebug("Cutting plane minimax selected as NLP solver.");
+    }
+    else if (solver == ES_InteriorPointStrategy::IpoptMinimax)
+    {
+        NLPSolvers.emplace_back(new NLPSolverIpoptMinimax());
 
-		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		ProcessInfo::getInstance().outputDebug("IPOpt minimax selected as NLP solver.");
-	}
-	else if (solver == ES_NLPSolver::IPOptRelaxed)
-	{
-		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
+        Output::getInstance().outputDebug("Ipopt minimax selected as NLP solver.");
+    }
+    else if (solver == ES_InteriorPointStrategy::IpoptRelaxed)
+    {
+        NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed());
 
-		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		ProcessInfo::getInstance().outputDebug("IPOpt relaxed selected as NLP solver.");
+        Output::getInstance().outputDebug("Ipopt relaxed selected as NLP solver.");
+    }
+    else if (solver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)
+    {
+        NLPSolvers.emplace_back(new NLPSolverIpoptMinimax());
 
-	}
-	else if (solver == ES_NLPSolver::IPOptMiniMaxAndRelaxed)
-	{
-		NLPSolvers.emplace_back(new NLPSolverIPOptMinimax());
+        NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		NLPSolvers[0]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
+        NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed());
 
-		NLPSolvers.emplace_back(new NLPSolverIPOptRelaxed());
+        NLPSolvers[1]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
 
-		NLPSolvers[1]->setProblem(ProcessInfo::getInstance().originalProblem->getProblemInstance());
+        Output::getInstance().outputDebug("Ipopt minimax and relaxed selected as NLP solver.");
+    }
+    else
+    {
+        return;
+    }
 
-		ProcessInfo::getInstance().outputDebug("IPOpt minimax and relaxed selected as NLP solver.");
-	}
-	else
-	{
-		throw new TaskExceptionInteriorPoint("Error in NLP solver definition.");
-	}
+    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    {
+        for (int i = 0; i < NLPSolvers.size(); i++)
+        {
+            stringstream ss;
+            ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
+            ss << "/interiorpointnlp";
+            ss << i;
+            ss << ".txt";
 
-	if (Settings::getInstance().getBoolSetting("Debug", "SHOTSolver"))
-	{
-		for (int i = 0; i < NLPSolvers.size(); i++)
-		{
-			stringstream ss;
-			ss << Settings::getInstance().getStringSetting("DebugPath", "SHOTSolver");
-			ss << "/interiorpointnlp";
-			ss << i;
-			ss << ".txt";
+            NLPSolvers.at(i)->saveProblemToFile(ss.str());
+        }
+    }
 
-			NLPSolvers.at(i)->saveProblemToFile(ss.str());
-		}
-	}
+    Output::getInstance().outputDebug(" Solving NLP problem.");
 
-	ProcessInfo::getInstance().outputDebug("Solving NLP problem.");
+    bool foundNLPPoint = false;
 
-	bool foundNLPPoint = false;
+    for (int i = 0; i < NLPSolvers.size(); i++)
+    {
+        auto solutionStatus = NLPSolvers.at(i)->solveProblem();
 
-	for (int i = 0; i < NLPSolvers.size(); i++)
-	{
-		auto solutionStatus = NLPSolvers.at(i)->solveProblem();
+        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
 
-		std::shared_ptr < InteriorPoint > tmpIP(new InteriorPoint());
+        tmpIP->NLPSolver = static_cast<ES_InteriorPointStrategy>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 
-		tmpIP->NLPSolver = static_cast<ES_NLPSolver>(Settings::getInstance().getIntSetting("InteriorPointSolver",
-				"InteriorPoint"));
+        tmpIP->point = NLPSolvers.at(i)->getSolution();
 
-		tmpIP->point = NLPSolvers.at(i)->getSolution();
+        if (solver == ES_InteriorPointStrategy::IpoptRelaxed && tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+        {
+            tmpIP->point.push_back(
+                ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
+        }
 
-		if (solver == ES_NLPSolver::IPOptRelaxed
-				&& tmpIP->point.size() < ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
-		{
-			tmpIP->point.push_back(
-					ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
-		}
+        while (tmpIP->point.size() > ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
+        {
+            tmpIP->point.pop_back();
+        }
 
-		while (tmpIP->point.size() > ProcessInfo::getInstance().originalProblem->getNumberOfVariables())
-		{
-			tmpIP->point.pop_back();
-		}
+        auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpIP->point);
+        tmpIP->maxDevatingConstraint = maxDev;
 
-		auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpIP->point);
-		tmpIP->maxDevatingConstraint = maxDev;
+        if (maxDev.value > 0)
+        {
+            Output::getInstance().outputWarning("\n Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+        }
+        else
+        {
+            Output::getInstance().Output::getInstance().outputSummary("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
+            ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
+        }
 
-		ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
+        foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
 
-		foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
-	}
+        if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+        {
+            auto tmpVars = ProcessInfo::getInstance().originalProblem->getVariableNames();
+            std::string filename = Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/interiorpoint_" + to_string(i) + ".txt";
+            UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
+        }
 
-	if (!foundNLPPoint)
-	{
-		ProcessInfo::getInstance().outputError("No interior point found!                            ");
-		ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
-		throw TaskExceptionInteriorPoint("No interior point found");
-	}
+        if (tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimax || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptRelaxed || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)
+        {
+            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch++;
+        }
+    }
 
-	ProcessInfo::getInstance().outputDebug("Finished solving NLP problem.");
+    if (!foundNLPPoint)
+    {
+        Output::getInstance().Output::getInstance().outputError("\n No interior point found!                            ");
+        ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
 
-	ProcessInfo::getInstance().numOriginalInteriorPoints = ProcessInfo::getInstance().interiorPts.size();
+        return;
+    }
 
-	ProcessInfo::getInstance().stopTimer("InteriorPointTotal");
+    Output::getInstance().outputDebug("     Finished solving NLP problem.");
+
+    ProcessInfo::getInstance().solutionStatistics.numberOfOriginalInteriorPoints = ProcessInfo::getInstance().interiorPts.size();
+
+    ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
 }
 
 std::string TaskFindInteriorPoint::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
-
+    std::string type = typeid(this).name();
+    return (type);
 }

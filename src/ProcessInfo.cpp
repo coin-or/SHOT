@@ -1,39 +1,69 @@
-#include "ProcessInfo.h"
-#include "OptProblems/OptProblemOriginal.h"
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
 
-OSResult *osResult = NULL;
+   @author Andreas Lundell, Åbo Akademi University
 
-extern const OSSmartPtr<OSOutput> osoutput;
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
+<<<<<<< HEAD
 void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
                                     IndexValuePair maxConstrDev)
 {
     PrimalSolution sol =
         {pt, source, objVal, iter, maxConstrDev};
+=======
+#include "ProcessInfo.h"
+#include "OptProblems/OptProblemOriginal.h"
+
+void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter, IndexValuePair maxConstrDev)
+{
+    PrimalSolution sol;
+
+    sol.point = pt;
+    sol.sourceType = source;
+    sol.objValue = objVal;
+    sol.iterFound = iter;
+    sol.maxDevatingConstraintNonlinear = maxConstrDev;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     primalSolutions.push_back(sol);
 }
 
 void ProcessInfo::addPrimalSolution(vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter)
 {
-
     auto maxConstrDev = originalProblem->getMostDeviatingConstraint(pt);
 
+<<<<<<< HEAD
+    auto maxConstrDev = originalProblem->getMostDeviatingConstraint(pt);
+
+=======
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     ProcessInfo::addPrimalSolution(pt, source, objVal, iter, maxConstrDev);
 }
 
 void ProcessInfo::addDualSolution(vector<double> pt, E_DualSolutionSource source, double objVal, int iter)
 {
+<<<<<<< HEAD
     DualSolution sol =
         {pt, source, objVal, iter};
+=======
+    DualSolution sol = {pt, source, objVal, iter, false};
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     addDualSolution(sol);
 }
 
 void ProcessInfo::addDualSolution(SolutionPoint pt, E_DualSolutionSource source)
 {
+<<<<<<< HEAD
     DualSolution sol =
         {pt.point, source, pt.objectiveValue, pt.iterFound};
+=======
+    DualSolution sol = {pt.point, source, pt.objectiveValue, pt.iterFound, false};
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     addDualSolution(sol);
 }
@@ -52,12 +82,25 @@ void ProcessInfo::addDualSolution(DualSolution solution)
 
 void ProcessInfo::addPrimalSolutionCandidate(vector<double> pt, E_PrimalSolutionSource source, int iter)
 {
+<<<<<<< HEAD
     PrimalSolution sol =
         {pt, source, originalProblem->calculateOriginalObjectiveValue(pt), iter,
          originalProblem->getMostDeviatingConstraint(pt)};
 
     primalSolutionCandidates.push_back(sol);
 
+=======
+    PrimalSolution sol;
+
+    sol.point = pt;
+    sol.sourceType = source;
+    sol.objValue = originalProblem->calculateOriginalObjectiveValue(pt);
+    sol.iterFound = iter;
+    sol.maxDevatingConstraintNonlinear = originalProblem->getMostDeviatingConstraint(pt);
+
+    primalSolutionCandidates.push_back(sol);
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     this->checkPrimalSolutionCandidates();
 }
 
@@ -73,16 +116,24 @@ void ProcessInfo::addDualSolutionCandidate(vector<double> pt, E_DualSolutionSour
 {
     double tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(pt);
 
+<<<<<<< HEAD
     DualSolution sol =
         {pt, source, tmpObjVal, iter};
+=======
+    DualSolution sol = {pt, source, tmpObjVal, iter, false};
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     addDualSolutionCandidate(sol);
 }
 
 void ProcessInfo::addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source)
 {
+<<<<<<< HEAD
     DualSolution sol =
         {pt.point, source, pt.objectiveValue, pt.iterFound};
+=======
+    DualSolution sol = {pt.point, source, pt.objectiveValue, pt.iterFound, false};
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     addDualSolutionCandidate(sol);
 }
@@ -122,10 +173,21 @@ pair<double, double> ProcessInfo::getCorrectedObjectiveBounds()
 
 void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source)
 {
+<<<<<<< HEAD
     PrimalSolution sol =
         {pt.point, source, pt.objectiveValue, pt.iterFound};
 
     if (Settings::getInstance().getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
+=======
+    PrimalSolution sol;
+
+    sol.point = pt.point;
+    sol.sourceType = source;
+    sol.objValue = pt.objectiveValue;
+    sol.iterFound = pt.iterFound;
+
+    if (Settings::getInstance().getIntSetting("SaveNumberOfSolutions", "Output") > 1)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     {
         primalSolutions.push_back(sol);
     }
@@ -140,8 +202,17 @@ void ProcessInfo::addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource sou
 
 void ProcessInfo::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
 {
+<<<<<<< HEAD
     PrimalSolution sol =
         {pt.point, source, pt.objectiveValue, pt.iterFound};
+=======
+    PrimalSolution sol;
+
+    sol.point = pt.point;
+    sol.sourceType = source;
+    sol.objValue = pt.objectiveValue;
+    sol.iterFound = pt.iterFound;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     primalSolutionCandidates.push_back(sol);
 
@@ -173,6 +244,7 @@ void ProcessInfo::setObjectiveUpdatedByLinesearch(bool updated)
 bool ProcessInfo::getObjectiveUpdatedByLinesearch()
 {
     return (objectiveUpdatedByLinesearch);
+<<<<<<< HEAD
 }
 
 void ProcessInfo::outputAlways(std::string message)
@@ -219,11 +291,17 @@ void ProcessInfo::outputTrace(std::string message)
 void ProcessInfo::outputDetailedTrace(std::string message)
 {
     //osoutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, message);
+=======
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 void ProcessInfo::checkPrimalSolutionCandidates()
 {
+<<<<<<< HEAD
     this->startTimer("PrimalBoundTotal");
+=======
+    this->startTimer("PrimalStrategy");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     for (auto cand : this->primalSolutionCandidates)
     {
@@ -232,7 +310,11 @@ void ProcessInfo::checkPrimalSolutionCandidates()
 
     this->primalSolutionCandidates.clear();
 
+<<<<<<< HEAD
     this->stopTimer("PrimalBoundTotal");
+=======
+    this->stopTimer("PrimalStrategy");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 void ProcessInfo::checkDualSolutionCandidates()
@@ -242,6 +324,7 @@ void ProcessInfo::checkDualSolutionCandidates()
     double currDualBound = this->getDualBound();
     double currPrimalBound = this->getPrimalBound();
 
+<<<<<<< HEAD
     for (auto C : this->dualSolutionCandidates)
     {
 
@@ -255,6 +338,51 @@ void ProcessInfo::checkDualSolutionCandidates()
 
             // If the solution is MILP feasible we only have a bound, no variable solutions
             if (C.sourceType != E_DualSolutionSource::MILPSolutionFeasible)
+=======
+    double gapRelTolerance = Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination");
+    double gapAbsTolerance = Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination");
+
+    for (auto C : this->dualSolutionCandidates)
+    {
+        bool updateDual = false;
+
+        if (isMinimization)
+        {
+            if (C.objValue < currPrimalBound * (1 + gapRelTolerance) && C.objValue > currPrimalBound)
+            {
+                C.objValue = currPrimalBound;
+                updateDual = true;
+            }
+            else if (C.objValue > currDualBound && (C.objValue <= currPrimalBound))
+            {
+                updateDual = true;
+            }
+        }
+        else
+        {
+            if (C.objValue > currPrimalBound * (1 + gapRelTolerance) && C.objValue < currPrimalBound)
+            {
+                C.objValue = currPrimalBound;
+                updateDual = true;
+            }
+            else if (C.objValue < currDualBound && (C.objValue >= currPrimalBound))
+            {
+                updateDual = true;
+            }
+        }
+
+        if (updateDual)
+        {
+            // New dual solution
+            this->setDualBound(C.objValue);
+            currDualBound = C.objValue;
+            this->solutionStatistics.iterationLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
+            this->solutionStatistics.iterationLastDualBoundUpdate = this->getElapsedTime("Total");
+
+            if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal ||
+                C.sourceType == E_DualSolutionSource::LPSolution ||
+                C.sourceType == E_DualSolutionSource::MIPSolverBound)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             {
                 this->addDualSolution(C);
             }
@@ -263,6 +391,7 @@ void ProcessInfo::checkDualSolutionCandidates()
 
             switch (C.sourceType)
             {
+<<<<<<< HEAD
             /*case E_DualSolutionSource::Linesearch:
 				 sourceDesc = "line search";
 				 break;*/
@@ -274,17 +403,34 @@ void ProcessInfo::checkDualSolutionCandidates()
                 break;
             case E_DualSolutionSource::MILPSolutionFeasible:
                 sourceDesc = "MILP solution bound";
+=======
+            case E_DualSolutionSource::LPSolution:
+                sourceDesc = "LP solution";
+                break;
+            case E_DualSolutionSource::MIPSolutionOptimal:
+                sourceDesc = "MIP solution";
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
                 break;
             case E_DualSolutionSource::ObjectiveConstraint:
                 sourceDesc = "Obj. constr. linesearch";
                 break;
+<<<<<<< HEAD
+=======
+            case E_DualSolutionSource::MIPSolverBound:
+                sourceDesc = "MIP solver bound";
+                break;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             default:
                 break;
             }
 
             auto tmpLine = boost::format("     New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
 
+<<<<<<< HEAD
             this->outputInfo(tmpLine.str());
+=======
+            Output::getInstance().outputInfo(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         }
     }
 
@@ -293,7 +439,11 @@ void ProcessInfo::checkDualSolutionCandidates()
 
 bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
 {
+<<<<<<< HEAD
     if (this->getRelativeObjectiveGap() <= Settings::getInstance().getDoubleSetting("GapTermTolRelative", "Algorithm"))
+=======
+    if (this->getRelativeObjectiveGap() <= Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     {
         return (true);
     }
@@ -305,7 +455,11 @@ bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
 
 bool ProcessInfo::isAbsoluteObjectiveGapToleranceMet()
 {
+<<<<<<< HEAD
     if (this->getAbsoluteObjectiveGap() <= Settings::getInstance().getDoubleSetting("GapTermTolAbsolute", "Algorithm"))
+=======
+    if (this->getAbsoluteObjectiveGap() <= Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     {
         return (true);
     }
@@ -343,7 +497,11 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     case E_PrimalSolutionSource::NLPRelaxed:
         sourceDesc = "NLP relaxed";
         break;
+<<<<<<< HEAD
     case E_PrimalSolutionSource::MILPSolutionPool:
+=======
+    case E_PrimalSolutionSource::MIPSolutionPool:
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         sourceDesc = "MILP sol. pool";
         break;
     case E_PrimalSolutionSource::ObjectiveConstraint:
@@ -366,12 +524,18 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         break;
     }
 
+<<<<<<< HEAD
+=======
+    primalSol.sourceDescription = sourceDesc;
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     // Recalculate if the objective is not provided
     if (UtilityFunctions::isnan(primalSol.objValue))
     {
         tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(primalSol.point);
     }
 
+<<<<<<< HEAD
     // Check if primal bound is worse than current
     if ((isMinimization && tmpObjVal < this->currentObjectiveBounds.second) || (!isMinimization && tmpObjVal > this->currentObjectiveBounds.second))
     {
@@ -389,6 +553,10 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
 
     // Check that solution fulfills bounds, project back otherwise
+=======
+    // Check that solution fulfills bounds, project back otherwise
+    bool reCalculateObjective = false;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     auto realVarIndexes = originalProblem->getRealVariableIndices();
 
@@ -450,14 +618,23 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
     }
 
+<<<<<<< HEAD
     if (isVariableBoundsFulfilled)
     {
         auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
         this->outputWarning(tmpLine.str());
+=======
+    if (!isVariableBoundsFulfilled)
+    {
+        reCalculateObjective = true;
+        auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
+        Output::getInstance().outputWarning(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     }
     else
     {
         auto tmpLine = boost::format("       All variable bounds fulfilled.");
+<<<<<<< HEAD
         this->outputWarning(tmpLine.str());
     }
 
@@ -465,6 +642,17 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if (originalProblem->getNumberOfBinaryVariables() > 0 || originalProblem->getNumberOfIntegerVariables() > 0)
     {
         auto integerTol = Settings::getInstance().getDoubleSetting("PrimalBoundIntegerTolerance", "PrimalBound");
+=======
+        Output::getInstance().outputWarning(tmpLine.str());
+    }
+
+    primalSol.boundProjectionPerformed = !isVariableBoundsFulfilled;
+
+    // Check that it fulfills integer constraints, round otherwise
+    if (originalProblem->getNumberOfBinaryVariables() > 0 || originalProblem->getNumberOfIntegerVariables() > 0)
+    {
+        auto integerTol = Settings::getInstance().getDoubleSetting("Tolerance.Integer", "Primal");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
         bool isRounded = false;
 
@@ -472,12 +660,25 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         std::vector<double> ptRounded(tmpPoint);
 
+<<<<<<< HEAD
+=======
+        double maxIntegerError = 0.0;
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         for (int i = 0; i < discreteVarIndexes.size(); i++)
         {
             int idx = discreteVarIndexes.at(i);
             double rounded = UtilityFunctions::round(tmpPoint.at(idx));
 
+<<<<<<< HEAD
             if (abs(rounded - tmpPoint.at(idx)) > integerTol)
+=======
+            double error = abs(rounded - tmpPoint.at(idx));
+
+            maxIntegerError = max(maxIntegerError, error);
+
+            if (error > integerTol)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             {
                 ptRounded.at(idx) = rounded;
                 isRounded = true;
@@ -486,6 +687,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         if (isRounded)
         {
+<<<<<<< HEAD
             tmpPoint = ptRounded;
             tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(ptRounded);
 
@@ -493,15 +695,24 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             {
                 tmpPoint.at(this->originalProblem->getNonlinearObjectiveVariableIdx()) = tmpObjVal;
             }
+=======
+            reCalculateObjective = true;
+            tmpPoint = ptRounded;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
             auto tmpLine = boost::format(
                                "       Discrete variables were not fulfilled to tolerance %1%. Rounding performed...") %
                            integerTol;
+<<<<<<< HEAD
             this->outputWarning(tmpLine.str());
+=======
+            Output::getInstance().outputWarning(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         }
         else
         {
             auto tmpLine = boost::format("       All discrete variables are fulfilled to tolerance %1%.") % integerTol;
+<<<<<<< HEAD
             this->outputWarning(tmpLine.str());
         }
     }
@@ -521,12 +732,67 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         {
             auto mostDevLinearConstraints =
                 originalProblem->getMostDeviatingConstraint(tmpPoint, nonLinearIndexes).first;
+=======
+            Output::getInstance().outputWarning(tmpLine.str());
+        }
+
+        primalSol.integerRoundingPerformed = isRounded;
+        primalSol.maxIntegerToleranceError = maxIntegerError;
+    }
+
+    // Recalculate the objective if rounding or projection has been performed
+    if (reCalculateObjective)
+    {
+        tmpObjVal = this->originalProblem->calculateOriginalObjectiveValue(tmpPoint);
+
+        if (this->originalProblem->isObjectiveFunctionNonlinear())
+        {
+            tmpPoint.at(this->originalProblem->getNonlinearObjectiveVariableIdx()) = tmpObjVal;
+        }
+    }
+
+    // Check if primal bound is worse than current
+    if ((isMinimization && tmpObjVal < this->getPrimalBound()) || (!isMinimization && tmpObjVal > this->getPrimalBound()))
+    {
+        auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
+        Output::getInstance().outputWarning(tmpLine.str());
+    }
+    else
+    {
+        auto tmpLine = boost::format(
+                           "     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).") %
+                       tmpObjVal % sourceDesc % this->getPrimalBound();
+        Output::getInstance().outputWarning(tmpLine.str());
+
+        return (false);
+    }
+
+    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers || primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
+
+    if (acceptableType && Settings::getInstance().getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
+    {
+        auto tmpLine = boost::format("       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
+        Output::getInstance().outputInfo(tmpLine.str());
+    }
+    else
+    {
+        auto linTol = Settings::getInstance().getDoubleSetting("Tolerance.LinearConstraint", "Primal");
+
+        auto linearConstraintIndexes = originalProblem->getLinearConstraintIndexes();
+
+        IndexValuePair mostDevLinearConstraints;
+
+        if (linearConstraintIndexes.size() > 0)
+        {
+            mostDevLinearConstraints = originalProblem->getMostDeviatingConstraint(tmpPoint, linearConstraintIndexes).first;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
             isLinConstrFulfilled = (mostDevLinearConstraints.value < linTol);
 
             if (isLinConstrFulfilled)
             {
                 auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
+<<<<<<< HEAD
                 this->outputWarning(tmpLine.str());
             }
             else
@@ -535,21 +801,40 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
                                    "       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
                                linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
                 this->outputWarning(tmpLine.str());
+=======
+                Output::getInstance().outputInfo(tmpLine.str());
+            }
+            else
+            {
+                auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % mostDevLinearConstraints.value % originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
+                Output::getInstance().outputInfo(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
                 return (false);
             }
         }
+<<<<<<< HEAD
+=======
+
+        primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     }
 
     IndexValuePair mostDevNonlinearConstraints;
 
     if (originalProblem->getNumberOfNonlinearConstraints() > 0)
     {
+<<<<<<< HEAD
         mostDevNonlinearConstraints = this->originalProblem->getMostDeviatingConstraint(tmpPoint,
                                                                                         originalProblem->getNonlinearConstraintIndexes())
                                           .first;
 
         auto nonlinTol = Settings::getInstance().getDoubleSetting("PrimalBoundNonlinearTolerance", "PrimalBound");
+=======
+        mostDevNonlinearConstraints = this->originalProblem->getMostDeviatingConstraint(tmpPoint, originalProblem->getNonlinearConstraintIndexes()).first;
+
+        auto nonlinTol = Settings::getInstance().getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         isNonLinConstrFulfilled = (mostDevNonlinearConstraints.value < nonlinTol);
 
         if (!isNonLinConstrFulfilled)
@@ -560,14 +845,22 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
                     boost::format(
                         "       Nonlinear constraints are not fulfilled. Most deviating is objective constraint: %2% >  %1%.") %
                     nonlinTol % mostDevNonlinearConstraints.value;
+<<<<<<< HEAD
                 this->outputWarning(tmpLine.str());
+=======
+                Output::getInstance().outputInfo(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             }
             else
             {
                 auto tmpLine = boost::format(
                                    "       Nonlinear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
                                nonlinTol % mostDevNonlinearConstraints.value % originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.idx);
+<<<<<<< HEAD
                 this->outputWarning(tmpLine.str());
+=======
+                Output::getInstance().outputInfo(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             }
 
             return (false);
@@ -580,18 +873,27 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
                     boost::format(
                         "       Nonlinear constraints are fulfilled. Most deviating is objective constraint: %2% <  %1%.") %
                     nonlinTol % mostDevNonlinearConstraints.value;
+<<<<<<< HEAD
                 this->outputWarning(tmpLine.str());
+=======
+                Output::getInstance().outputInfo(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             }
             else
             {
                 auto tmpLine = boost::format(
                                    "       Nonlinear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
                                nonlinTol % mostDevNonlinearConstraints.value % originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.idx);
+<<<<<<< HEAD
                 this->outputWarning(tmpLine.str());
+=======
+                Output::getInstance().outputInfo(tmpLine.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             }
         }
     }
 
+<<<<<<< HEAD
     // Checking again since rounding may have affected the outcome
     bool updatePrimal = ((isMinimization && tmpObjVal < this->currentObjectiveBounds.second) || (!isMinimization && tmpObjVal > this->currentObjectiveBounds.second));
 
@@ -643,11 +945,53 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
 
         if (Settings::getInstance().getBoolSetting("SaveAllPrimalSolutions", "SHOTSolver"))
+=======
+    primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
+
+    char HPobjadded = ' ';
+
+    if (Settings::getInstance().getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") && this->originalProblem->isObjectiveFunctionNonlinear())
+    {
+        auto objConstrVal = this->originalProblem->calculateConstraintFunctionValue(-1, tmpPoint) - tmpPoint.back();
+
+        if (objConstrVal < 0)
+        {
+            Hyperplane hyperplane;
+            hyperplane.sourceConstraintIndex = -1;
+            hyperplane.generatedPoint = tmpPoint;
+            hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
+
+            this->hyperplaneWaitingList.push_back(hyperplane);
+
+            auto tmpLine = boost::format("     Primal objective cut added.");
+
+            Output::getInstance().outputWarning(tmpLine.str());
+        }
+    }
+
+    this->setPrimalBound(tmpObjVal);
+
+    auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
+
+    Output::getInstance().outputInfo(tmpLine.str());
+
+    primalSol.objValue = tmpObjVal;
+    primalSol.point = tmpPoint;
+
+    if (Settings::getInstance().getIntSetting("SaveNumberOfSolutions", "Output") > 1)
+    {
+        this->primalSolutions.insert(this->primalSolutions.begin(), primalSol);
+    }
+    else
+    {
+        if (this->primalSolutions.size() == 0)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         {
             this->primalSolutions.push_back(primalSol);
         }
         else
         {
+<<<<<<< HEAD
             if (this->primalSolutions.size() == 0)
             {
                 this->primalSolutions.push_back(primalSol);
@@ -727,11 +1071,61 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
 
     return (false);
+=======
+            this->primalSolutions.at(0) = primalSol;
+        }
+    }
+
+    this->primalSolution = tmpPoint;
+
+    // Write the new primal point to a file
+    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    {
+        stringstream fileName;
+        fileName << Settings::getInstance().getStringSetting("Debug.Path", "Output");
+        fileName << "/primalpoint";
+        fileName << this->primalSolutions.size();
+        fileName << ".txt";
+
+        UtilityFunctions::savePrimalSolutionToFile(primalSol, originalProblem->getVariableNames(), fileName.str());
+    }
+
+    /*
+		 * Extra check for integers...
+		 * bool isRounded = false;
+
+		 auto discreteVarIndexes = this->originalProblem->getDiscreteVariableIndices();
+
+		 std::vector<double> ptRounded(tmpPoint);
+
+		 double maxIntegerError = 0.0;
+
+		 for (int i = 0; i < discreteVarIndexes.size(); i++)
+		 {
+		 int idx = discreteVarIndexes.at(i);
+		 double rounded = UtilityFunctions::round(this->primalSolution.at(idx));
+
+		 double error = abs(rounded - this->primalSolution.at(idx));
+
+		 maxIntegerError = max(maxIntegerError, error);
+
+		 if (error > 0)
+		 {
+		 ptRounded.at(idx) = rounded;
+		 isRounded = true;
+		 std::cout << "rounded: " << tmpPoint.at(idx) << " to " << ptRounded.at(idx) << " " << sourceDesc
+		 << std::endl;
+		 }
+		 }*/
+
+    return (true);
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 ProcessInfo::ProcessInfo()
 {
     createTimer("Total", "Total solution time");
+<<<<<<< HEAD
 
     iterLP = 0;
     iterQP = 0;
@@ -766,12 +1160,43 @@ ProcessInfo::ProcessInfo()
     tasks = new TaskHandler();
 
     objectiveUpdatedByLinesearch = false;
+=======
+
+    currentObjectiveBounds.first = -OSDBL_MAX;
+    currentObjectiveBounds.second = OSDBL_MAX;
+
+    tasks = new TaskHandler();
+
+    objectiveUpdatedByLinesearch = false;
+
+    osilWriter = new OSiLWriter();
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 ProcessInfo::~ProcessInfo()
 {
+<<<<<<< HEAD
 }
 
+=======
+    iterations.clear();
+
+    primalSolution.clear();
+    iterations.clear();
+    primalSolutions.clear();
+    dualSolutions.clear();
+
+    primalSolutionCandidates.clear();
+    primalFixedNLPCandidates.clear();
+    dualSolutionCandidates.clear();
+
+    delete osilWriter;
+    osilReaders.clear();
+
+    delete tasks;
+}
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 void ProcessInfo::setOriginalProblem(OptProblemOriginal *problem)
 {
     this->originalProblem = problem;
@@ -805,7 +1230,11 @@ void ProcessInfo::startTimer(string name)
 
     if (timer == timers.end())
     {
+<<<<<<< HEAD
         outputError("Timer with name  \" " + name + "\" not found!");
+=======
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         return;
     }
 
@@ -820,7 +1249,11 @@ void ProcessInfo::restartTimer(string name)
 
     if (timer == timers.end())
     {
+<<<<<<< HEAD
         outputError("Timer with name  \" " + name + "\" not found!");
+=======
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         return;
     }
 
@@ -835,7 +1268,11 @@ void ProcessInfo::stopTimer(string name)
 
     if (timer == timers.end())
     {
+<<<<<<< HEAD
         outputError("Timer with name  \" " + name + "\" not found!");
+=======
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         return;
     }
 
@@ -850,7 +1287,11 @@ double ProcessInfo::getElapsedTime(string name)
 
     if (timer == timers.end())
     {
+<<<<<<< HEAD
         outputError("Timer with name  \" " + name + "\" not found!");
+=======
+        Output::getInstance().outputError("Timer with name  \" " + name + "\" not found!");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         return (0.0);
     }
 
@@ -859,7 +1300,11 @@ double ProcessInfo::getElapsedTime(string name)
 
 void ProcessInfo::initializeResults(int numObj, int numVar, int numConstr)
 {
+<<<<<<< HEAD
     osResult = new OSResult();
+=======
+    osResult = std::unique_ptr<OSResult>(new OSResult());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     osResult->setObjectiveNumber(numObj);
     osResult->setVariableNumber(numVar);
     osResult->setConstraintNumber(numConstr);
@@ -875,16 +1320,31 @@ std::string ProcessInfo::getOSrl()
 
     int numPrimalSols = primalSolutions.size();
 
+<<<<<<< HEAD
     osResult->setNumberOfOtherGeneralResults(1);
     osResult->setOtherGeneralResultName(0, "UsedOptions");
 
     //std::cout << Settings::getInstance().getSettingsAsString() << std::endl;
+=======
+    stringstream ssSolver;
+    ssSolver << "Supporting Hyperplane Optimization Toolkit, version ";
+    ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH;
+    osResult->setSolverInvoked(ssSolver.str());
+
+    osResult->setInstanceName(Settings::getInstance().getStringSetting("ProblemName", "Input"));
+    osResult->setNumberOfOtherGeneralResults(1);
+    osResult->setOtherGeneralResultName(0, "UsedOptions");
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     osResult->setOtherGeneralResultValue(0, Settings::getInstance().getSettingsAsString());
 
     if (numPrimalSols == 0)
     {
         osResult->setSolutionNumber(1);
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         osResult->setNumberOfObjValues(0, 1);
 
         std::stringstream strstrdb;
@@ -893,13 +1353,21 @@ std::string ProcessInfo::getOSrl()
         osResult->setAnOtherSolutionResult(0, "DualObjectiveBound", strstrdb.str(), "Final solution",
                                            "The dual bound for the objective", 0, NULL);
 
+<<<<<<< HEAD
         if (dualSolutions.size() > 0)
+=======
+        if (dualSolutions.size() > 0 && dualSolutions.back().point.size() > 0)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         {
             osResult->setObjValue(0, 0, -1, "", dualSolutions.back().objValue);
 
             std::stringstream strstr;
             strstr << std::fixed << std::setprecision(15)
+<<<<<<< HEAD
                    << this->originalProblem->getMostDeviatingConstraint(dualSolutions.back().point).value;
+=======
+                   << dualSolutions.back().objValue;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
             osResult->setAnOtherSolutionResult(0, "MaxErrorConstrs", strstr.str(), "Final solution",
                                                "Maximal error in constraint", 0, NULL);
@@ -919,16 +1387,135 @@ std::string ProcessInfo::getOSrl()
     }
     else
     {
+<<<<<<< HEAD
 
         osResult->setSolutionNumber(numPrimalSols);
 
         for (int i = 0; i < numPrimalSols; i++)
         {
             osResult->setNumberOfVarValues(i, numVar);
+=======
+        int numSaveSolutions = Settings::getInstance().getIntSetting("SaveNumberOfSolutions", "Output");
+
+        /*
+        if (Settings::getInstance().getBoolSetting("SaveAllSolutions", "Output"))
+        {
+            numSaveSolutions = this->primalSolutions.size();
+        }*/
+
+        osResult->setSolutionNumber(numSaveSolutions);
+
+        for (int i = 0; i < numSaveSolutions; i++)
+        {
+            if (i == 0)
+            {
+                std::string modelStatus;
+                std::string modelStatusDescription;
+                std::string modelSubStatus;
+                std::string modelSubStatusDescription;
+
+                osResult->setNumberOfSolutionSubstatuses(0, 1);
+
+                if (this->primalSolutions.size() > 0)
+                {
+                    modelStatusDescription = "Feasible solution found";
+                    modelStatus = "feasible";
+                }
+                else
+                {
+                    modelStatusDescription = "No feasible solutions found";
+                    modelStatus = "other";
+                }
+
+                if (this->terminationReason == E_TerminationReason::AbsoluteGap)
+                {
+                    modelStatus = "globallyOptimal";
+                    modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
+                    modelSubStatus = "stoppedByBounds";
+                    modelSubStatusDescription = "Objective gap fulfills absolute gap termination criterion";
+                }
+                else if (this->terminationReason == E_TerminationReason::RelativeGap)
+                {
+                    modelStatus = "globallyOptimal";
+                    modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
+                    modelSubStatus = "stoppedByBounds";
+                    modelSubStatusDescription = "Objective gap fulfills relative gap termination criterion";
+                }
+                else if (this->terminationReason == E_TerminationReason::ConstraintTolerance)
+                {
+                    modelStatus = "locallyOptimal";
+                    modelStatusDescription = "Solved to global optimality";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "All nonlinear constraints fulfilled to given tolerance by dual solution";
+                }
+                else if (this->terminationReason == E_TerminationReason::InfeasibleProblem)
+                {
+                    modelStatus = "infeasible";
+                    modelStatusDescription = "Problem may be infeasible or specified tolerances are too strict";
+                }
+                else if (this->terminationReason == E_TerminationReason::UnboundedProblem)
+                {
+                    modelStatus = "unbounded";
+                    modelStatusDescription = "Problem is unbounded";
+                }
+                else if (this->terminationReason == E_TerminationReason::ObjectiveGapNotReached)
+                {
+                    modelStatusDescription = "Feasible solution found, but could not verify optimality";
+                }
+                else if (this->terminationReason == E_TerminationReason::ObjectiveStagnation)
+                {
+                    modelStatusDescription = "Terminated due to objective stagnation";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "Terminated due to objective stagnation";
+                }
+                else if (this->terminationReason == E_TerminationReason::IterationLimit)
+                {
+                    modelStatusDescription = "Terminated due to iteration limit";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "Terminated due to iteration limit";
+                }
+                else if (this->terminationReason == E_TerminationReason::TimeLimit)
+                {
+                    modelStatusDescription = "Terminated due to time limit";
+                    modelSubStatus = "stoppedByLimit";
+                    modelSubStatusDescription = "Terminated due to time limit";
+                }
+                else if (this->terminationReason == E_TerminationReason::NumericIssues)
+                {
+                    modelStatusDescription = "Terminated due to numeric issues";
+                }
+                else if (this->terminationReason == E_TerminationReason::UserAbort)
+                {
+                    modelStatusDescription = "User aborted solution process";
+                }
+                else if (this->terminationReason == E_TerminationReason::Error)
+                {
+                    modelStatusDescription = "Error during solution process";
+                }
+                else
+                {
+                    modelStatus = "error";
+                    modelStatusDescription = "Unknown return code obtained from solver";
+                    Output::getInstance().outputError("Unknown return code obtained from solver.");
+                }
+
+                osResult->setSolutionStatusType(0, modelStatus);
+                osResult->setSolutionStatusDescription(0, modelStatusDescription);
+                osResult->setSolutionSubstatusType(0, 0, modelSubStatus);
+                osResult->setSolutionSubstatusDescription(0, 0, modelSubStatusDescription);
+            }
+            else
+            {
+                osResult->setSolutionStatusType(i, "feasible");
+                osResult->setSolutionStatusDescription(i, "Additional primal solution");
+            }
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             osResult->setNumberOfObjValues(i, 1);
             osResult->setNumberOfPrimalVariableValues(i, numVar);
             osResult->setObjValue(i, 0, -1, "", primalSolutions.at(i).objValue);
 
+<<<<<<< HEAD
             auto primalPoint = primalSolutions.at(i).point;
 
             osResult->setPrimalVariableValuesDense(i, &primalPoint[0]);
@@ -937,6 +1524,9 @@ std::string ProcessInfo::getOSrl()
             {
                 osResult->setVarValue(i, j, j, varNames.at(j), primalPoint.at(j));
             }
+=======
+            osResult->setPrimalVariableValuesDense(i, &primalSolutions.at(i).point[0]);
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
             std::vector<double> tmpConstrVals;
 
@@ -944,12 +1534,17 @@ std::string ProcessInfo::getOSrl()
 
             for (int j = 0; j < numConstr; j++)
             {
+<<<<<<< HEAD
                 //tmpConstrVals.push_back(originalProblem->calculateConstraintFunctionValue(j, primalPoint));
                 osResult->setDualValue(i, j, j, constrNames.at(j),
                                        originalProblem->calculateConstraintFunctionValue(j, primalPoint));
             }
 
             //osResult->setConstraintValuesDense(i, &tmpConstrVals[0]);
+=======
+                osResult->setDualValue(i, j, j, constrNames.at(j), originalProblem->calculateConstraintFunctionValue(j, primalSolutions.at(i).point));
+            }
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         }
 
         std::stringstream strstrdb;
@@ -990,6 +1585,7 @@ std::string ProcessInfo::getOSrl()
 
     numPrimalSols = max(1, numPrimalSols); // To make sure we also print the following even if we have no primal solution
 
+<<<<<<< HEAD
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "LP", std::to_string(iterLP), "ProblemsSolved",
                                        "Relaxed LP problems solved", 0, NULL);
     osResult->setAnOtherSolutionResult(numPrimalSols - 1, "QP", std::to_string(iterQP), "ProblemsSolved",
@@ -1095,12 +1691,64 @@ std::string ProcessInfo::getOSrl()
 
     OSrLWriter writer;
 
+=======
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "LP", std::to_string(this->solutionStatistics.numberOfProblemsLP), "ProblemsSolved",
+                                       "Relaxed LP problems solved", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "QP", std::to_string(this->solutionStatistics.numberOfProblemsQP), "ProblemsSolved",
+                                       "Relaxed QP problems solved", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMILP", std::to_string(this->solutionStatistics.numberOfProblemsFeasibleMILP),
+                                       "ProblemsSolved", "MILP problems solved to feasibility", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMILP", std::to_string(this->solutionStatistics.numberOfProblemsOptimalMILP), "ProblemsSolved",
+                                       "MILP problems solved to optimality", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMIQP", std::to_string(this->solutionStatistics.numberOfProblemsFeasibleMIQP),
+                                       "ProblemsSolved", "MIQP problems solved to feasibility", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMIQP", std::to_string(this->solutionStatistics.numberOfProblemsOptimalMIQP), "ProblemsSolved",
+                                       "MIQP problems solved to optimality", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Total",
+                                       std::to_string(this->solutionStatistics.numberOfProblemsLP + this->solutionStatistics.numberOfProblemsFeasibleMILP + this->solutionStatistics.numberOfProblemsOptimalMILP + this->solutionStatistics.numberOfProblemsQP + this->solutionStatistics.numberOfProblemsFeasibleMIQP + this->solutionStatistics.numberOfProblemsOptimalMIQP), "ProblemsSolved",
+                                       "Total number of (MI)QP/(MI)LP subproblems solved", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NLP", std::to_string(this->solutionStatistics.getNumberOfTotalNLPProblems()), "ProblemsSolved",
+                                       "NLP problems solved", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Functions", std::to_string(this->solutionStatistics.numberOfFunctionEvalutions), "Evaluations",
+                                       "Total number of function evaluations in SHOT", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Gradients", std::to_string(this->solutionStatistics.numberOfGradientEvaluations), "Evaluations",
+                                       "Total number of gradient evaluations in SHOT", 0, NULL);
+
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberVariables",
+                                       std::to_string(this->problemStats.numberOfVariables), "Problem",
+                                       "Total number of variables", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberContinousVariables",
+                                       std::to_string(
+                                           this->problemStats.numberOfContinousVariables),
+                                       "Problem", "Number of continuous variables", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberBinaryVariables",
+                                       std::to_string(this->problemStats.numberOfBinaryVariables), "Problem",
+                                       "Number of binary variables", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberIntegerVariables",
+                                       std::to_string(this->problemStats.numberOfIntegerVariables), "Problem",
+                                       "Number of integer variables", 0, NULL);
+
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberConstraints",
+                                       std::to_string(this->problemStats.numberOfConstraints), "Problem",
+                                       "Number of constraints", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberNonlinearConstraints",
+                                       std::to_string(this->problemStats.numberOfNonlinearConstraints), "Problem",
+                                       "Number of nonlinear constraints", 0, NULL);
+    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberLinearConstraints",
+                                       std::to_string(
+                                           this->problemStats.numberOfLinearConstraints),
+                                       "Problem",
+                                       "Number of linear constraints", 0, NULL);
+
+    OSrLWriter writer;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     writer.m_bWhiteSpace = false;
 
     using boost::property_tree::ptree;
     ptree pt;
     boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
 
+<<<<<<< HEAD
     stringstream ss;
     ss << writer.writeOSrL(osResult);
 
@@ -1110,11 +1758,23 @@ std::string ProcessInfo::getOSrl()
     write_xml(oss, pt, settings);
 
     return (oss.str());
+=======
+    stringstream ssOSrL;
+    ssOSrL << writer.writeOSrL(osResult.get());
+
+    read_xml(ssOSrL, pt, boost::property_tree::xml_parser::trim_whitespace);
+
+    std::ostringstream ossXML;
+    write_xml(ossXML, pt, settings);
+
+    return (ossXML.str());
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 std::string ProcessInfo::getTraceResult()
 {
     std::stringstream ss;
+<<<<<<< HEAD
 
     this->originalProblem->getProblemInstance()->initializeNonLinearStructures();
 
@@ -1138,14 +1798,91 @@ std::string ProcessInfo::getTraceResult()
        << ",";
     ss << "9999999"
        << ",";
+=======
+    ss << this->originalProblem->getProblemInstance()->getInstanceName() << ",";
+
+    switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+    {
+    case (E_SolutionStrategy::MIQP):
+        ss << "MINLP";
+        break;
+    case (E_SolutionStrategy::MIQCQP):
+        ss << "MINLP";
+        break;
+    case (E_SolutionStrategy::NLP):
+        ss << "NLP";
+        break;
+    default:
+        ss << "MINLP";
+        break;
+    }
+
+    ss << ",";
+    ss << "SHOT"
+       << ",";
+
+    switch (static_cast<ES_PrimalNLPSolver>(ProcessInfo::getInstance().usedPrimalNLPSolver))
+    {
+    case (ES_PrimalNLPSolver::None):
+        ss << "NONE";
+        break;
+    case (ES_PrimalNLPSolver::CuttingPlane):
+        ss << "SHOT";
+        break;
+    case (ES_PrimalNLPSolver::GAMS):
+        ss << Settings::getInstance().getStringSetting("GAMS.NLP.Solver", "Subsolver");
+        break;
+    case (ES_PrimalNLPSolver::Ipopt):
+        ss << "Ipopt";
+        break;
+    default:
+        ss << "NONE";
+        break;
+    }
+
+    ss << ",";
+
+    switch (static_cast<ES_MIPSolver>(ProcessInfo::getInstance().usedMIPSolver))
+    {
+    case (ES_MIPSolver::Cplex):
+        ss << "CPLEX";
+        break;
+    case (ES_MIPSolver::Gurobi):
+        ss << "GUROBI";
+        break;
+    case (ES_MIPSolver::Cbc):
+        ss << "CBC";
+        break;
+    default:
+        ss << "NONE";
+        break;
+    }
+
+    ss << ",";
+
+    ss << UtilityFunctions::toStringFormat(UtilityFunctions::getJulianFractionalDate(), "%.5f", false);
+    ss << ",";
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     ss << (originalProblem->getProblemInstance()->getObjectiveMaxOrMins()[0] == "min" ? "0" : "1") << ",";
     ss << this->originalProblem->getProblemInstance()->getConstraintNumber() + 1 << ","; // +1 to comply with GAMS objective style
     ss << this->originalProblem->getProblemInstance()->getVariableNumber() + 1 << ",";   // +1 to comply with GAMS objective style
     ss << this->originalProblem->getNumberOfBinaryVariables() + this->originalProblem->getNumberOfIntegerVariables()
        << ",";
 
+<<<<<<< HEAD
     auto nonzeroes = this->originalProblem->getProblemInstance()->getLinearConstraintCoefficientNumber() + this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() + 1;
     //this->originalProblem->getObjectiveCoefficientNumbers()[0] + 1;
+=======
+    if (this->originalProblem->getProblemInstance()->getNumberOfQuadraticTerms() > 0)
+    {
+        this->originalProblem->getProblemInstance()->addQTermsToExpressionTree();
+    }
+
+    auto nonzeroes = this->originalProblem->getProblemInstance()->getJacobianSparsityPattern()->valueSize +
+                     this->originalProblem->getProblemInstance()->getObjectiveCoefficientNumbers()[0] +
+                     this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() +
+                     1;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     ss << nonzeroes << ",";
     ss << this->originalProblem->getProblemInstance()->getAllNonlinearVariablesIndexMap().size() << ",";
@@ -1155,6 +1892,7 @@ std::string ProcessInfo::getTraceResult()
     std::string solverStatus = "";
     std::string modelStatus = "";
 
+<<<<<<< HEAD
     auto t = this->getCurrentIteration()->solutionStatus;
 
     if (this->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Optimal)
@@ -1223,21 +1961,114 @@ std::string ProcessInfo::getTraceResult()
     {
         solverStatus = "10";
         outputError("Unknown return code obtainedfrom solver.");
+=======
+    bool isOptimal = false;
+
+    if (this->terminationReason == E_TerminationReason::AbsoluteGap ||
+        this->terminationReason == E_TerminationReason::RelativeGap)
+    {
+        solverStatus = "1";
+        isOptimal = true;
+    }
+    else if (this->terminationReason == E_TerminationReason::ObjectiveStagnation ||
+             this->terminationReason == E_TerminationReason::IterationLimit)
+    {
+        solverStatus = "2";
+    }
+    else if (this->terminationReason == E_TerminationReason::TimeLimit)
+    {
+        solverStatus = "3";
+    }
+    else if (this->terminationReason == E_TerminationReason::NumericIssues)
+    {
+        solverStatus = "5";
+    }
+    else if (this->terminationReason == E_TerminationReason::UserAbort)
+    {
+        solverStatus = "8";
+    }
+    else if (this->terminationReason == E_TerminationReason::Error)
+    {
+        solverStatus = "10";
+    }
+    else if (this->terminationReason == E_TerminationReason::InfeasibleProblem ||
+             this->terminationReason == E_TerminationReason::ConstraintTolerance ||
+             this->terminationReason == E_TerminationReason::ObjectiveGapNotReached ||
+             this->terminationReason == E_TerminationReason::UnboundedProblem)
+    {
+        solverStatus = "1";
+    }
+    else
+    {
+        solverStatus = "10";
+        Output::getInstance().outputError("Unknown return code " + to_string((int)this->terminationReason) + " obtained from solver.");
+    }
+
+    auto solStatus = this->getCurrentIteration()->solutionStatus;
+
+    if (isOptimal)
+    {
+        modelStatus = "1";
+    }
+    else if (this->primalSolutions.size() > 0)
+    {
+        modelStatus = "8";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Unbounded)
+    {
+        modelStatus = "3";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Infeasible)
+    {
+        modelStatus = "4";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Feasible ||
+             solStatus == E_ProblemSolutionStatus::IterationLimit ||
+             solStatus == E_ProblemSolutionStatus::TimeLimit ||
+             solStatus == E_ProblemSolutionStatus::NodeLimit ||
+             solStatus == E_ProblemSolutionStatus::SolutionLimit)
+    {
+        modelStatus = "7";
+    }
+    else if (solStatus == E_ProblemSolutionStatus::Error ||
+             solStatus == E_ProblemSolutionStatus::Numeric ||
+             solStatus == E_ProblemSolutionStatus::CutOff ||
+             solStatus == E_ProblemSolutionStatus::Abort)
+    {
+        modelStatus = "12";
+    }
+    else
+    {
+        modelStatus = "NA";
+        Output::getInstance().outputError("Unknown return code " + to_string((int)solStatus) + " from model solution.");
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     }
 
     ss << modelStatus << ",";
     ss << solverStatus << ",";
+<<<<<<< HEAD
     ss << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     //ss << this->getCurrentIteration()->objectiveValue << ",";
+=======
+
+    ss << std::setprecision(std::numeric_limits<double>::digits10 + 1);
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     ss << this->getPrimalBound() << ",";
     ;
     ss << this->getDualBound() << ",";
     ;
     ss << this->getElapsedTime("Total") << ",";
+<<<<<<< HEAD
     ss << iterFeasMILP + iterOptMILP << ",";
     ss << "0"
        << ",";
     ss << "0"
+=======
+    ss << this->solutionStatistics.numberOfIterations << ",";
+    ss << "0"
+       << ",";
+    ss << this->solutionStatistics.numberOfExploredNodes
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
        << ",";
     ss << "#";
 
@@ -1246,6 +2077,7 @@ std::string ProcessInfo::getTraceResult()
 
 void ProcessInfo::createIteration()
 {
+<<<<<<< HEAD
     Iteration iter = Iteration();
     iter.iterationNumber = iterations.size() + 1;
 
@@ -1262,6 +2094,9 @@ void ProcessInfo::createIteration()
 
     iter.type = relaxationStrategy->getProblemType();
     //getCurrentIteration()->type = relaxationStrategy->getProblemType();
+=======
+    Iteration iter;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     iterations.push_back(iter);
 }
@@ -1284,6 +2119,14 @@ double ProcessInfo::getPrimalBound()
     auto primalBound = this->currentObjectiveBounds.second;
 
     return (primalBound);
+<<<<<<< HEAD
+=======
+}
+
+void ProcessInfo::setPrimalBound(double value)
+{
+    this->currentObjectiveBounds.second = value;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 double ProcessInfo::getDualBound()
@@ -1291,6 +2134,14 @@ double ProcessInfo::getDualBound()
     auto dualBound = this->currentObjectiveBounds.first;
 
     return (dualBound);
+<<<<<<< HEAD
+=======
+}
+
+void ProcessInfo::setDualBound(double value)
+{
+    this->currentObjectiveBounds.first = value;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 double ProcessInfo::getAbsoluteObjectiveGap()
@@ -1303,6 +2154,115 @@ double ProcessInfo::getAbsoluteObjectiveGap()
 double ProcessInfo::getRelativeObjectiveGap()
 {
     double gap = abs(getDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+<<<<<<< HEAD
 
     return (gap);
+=======
+
+    return (gap);
+}
+
+OSInstance *ProcessInfo::getProblemInstanceFromOSiL(std::string osil)
+{
+    OSiLReader *osilReader = new OSiLReader();
+    OSInstance *newInstance = osilReader->readOSiL(osil);
+
+    osilReaders.push_back(osilReader); // To be able to properly deleting them without destroying the OSInstance object
+    return (newInstance);
+}
+
+std::string ProcessInfo::getOSiLFromProblemInstance(OSInstance *instance)
+{
+    return (osilWriter->writeOSiL(instance));
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
+}
+
+void ProcessInfo::setProblemStats()
+{
+    if (this->originalProblem == NULL)
+        return;
+
+    auto instance = this->originalProblem->getProblemInstance();
+
+    problemStats.isMinimizationProblem = this->originalProblem->isTypeOfObjectiveMinimize();
+
+    problemStats.objectiveFunctionType = this->originalProblem->getObjectiveFunctionType();
+
+    problemStats.numberOfConstraints = instance->getConstraintNumber();
+    problemStats.numberOfNonlinearConstraints = this->originalProblem->getNumberOfNonlinearConstraints();
+    problemStats.numberOfQuadraticConstraints = this->originalProblem->getNumberOfQuadraticConstraints();
+
+    problemStats.numberOfLinearConstraints = this->originalProblem->getNumberOfLinearConstraints();
+
+    problemStats.numberOfQuadraticTerms = instance->getNumberOfQuadraticTerms();
+
+    auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+
+    if (QPStrategy == ES_QuadraticProblemStrategy::Nonlinear && problemStats.numberOfQuadraticTerms > 0)
+    {
+        problemStats.quadraticTermsReformulatedAsNonlinear = true;
+    }
+    else if (QPStrategy == ES_QuadraticProblemStrategy::QuadraticObjective && !UtilityFunctions::areAllConstraintsQuadratic(instance))
+    {
+        problemStats.quadraticTermsReformulatedAsNonlinear = true;
+    }
+
+    problemStats.numberOfVariables = instance->getVariableNumber();
+    problemStats.numberOfIntegerVariables = instance->getNumberOfIntegerVariables();
+    problemStats.numberOfBinaryVariables = instance->getNumberOfBinaryVariables();
+    problemStats.numberOfSemicontinuousVariables = instance->getNumberOfSemiContinuousVariables();
+    problemStats.numberOfContinousVariables = problemStats.numberOfVariables - (problemStats.numberOfIntegerVariables + problemStats.numberOfBinaryVariables + problemStats.numberOfSemicontinuousVariables);
+
+    if (problemStats.numberOfIntegerVariables > 0 || problemStats.numberOfBinaryVariables > 0 || problemStats.numberOfSemicontinuousVariables > 0)
+    {
+        problemStats.isDiscreteProblem = true;
+    }
+    else
+    {
+        problemStats.isDiscreteProblem = false;
+    }
+
+    // Classify the problem
+    if (!problemStats.isDiscreteProblem)
+    {
+        if (problemStats.numberOfNonlinearConstraints > 0 ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear)
+        {
+            problemStats.problemType = E_ProblemType::NLP;
+        }
+        else if (problemStats.numberOfQuadraticConstraints > 0)
+        {
+            problemStats.problemType = E_ProblemType::QCQP;
+        }
+        else if (problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Quadratic)
+        {
+            problemStats.problemType = E_ProblemType::QP;
+        }
+        else
+        {
+            problemStats.problemType = E_ProblemType::LP;
+        }
+    }
+    else
+    {
+        if (problemStats.numberOfNonlinearConstraints > 0 ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear ||
+            problemStats.objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear)
+        {
+            problemStats.problemType = E_ProblemType::MINLP;
+        }
+        else if (problemStats.numberOfQuadraticConstraints > 0)
+        {
+            problemStats.problemType = E_ProblemType::MIQCQP;
+        }
+        else if (problemStats.objectiveFunctionType == E_ObjectiveFunctionType::Quadratic)
+        {
+            problemStats.problemType = E_ProblemType::MIQP;
+        }
+        else
+        {
+            problemStats.problemType = E_ProblemType::MILP;
+        }
+    }
 }

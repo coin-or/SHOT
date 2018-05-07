@@ -1,21 +1,22 @@
-/*
- * TaskCheckConstraintTolerance.cpp
- *
- *  Created on: Mar 27, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskCheckAbsoluteGap.h"
 
 TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(std::string taskIDTrue)
 {
-
 	taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
 {
-// TODO Auto-generated destructor stub
 }
 
 void TaskCheckAbsoluteGap::run()

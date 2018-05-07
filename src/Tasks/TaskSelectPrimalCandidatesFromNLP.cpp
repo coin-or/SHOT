@@ -1,48 +1,49 @@
-/*
- * TaskSelectPrimalCandidatesFromNLP.cpp
- *
- *  Created on: Apr 7, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskSelectPrimalCandidatesFromNLP.h"
 
 TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
 {
+    ProcessInfo::getInstance().startTimer("PrimalStrategy");
+    ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
 
-	ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-	ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+    primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
 
-	primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
-
-	ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-	ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
+    ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
+    ProcessInfo::getInstance().stopTimer("PrimalStrategy");
 }
 
 TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 {
-	// TODO Auto-generated destructor stub
+    delete primalStrategyFixedNLP;
 }
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
+    {
+        ProcessInfo::getInstance().startTimer("PrimalStrategy");
+        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
 
-	if (currIter->isMILP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
-	{
-		ProcessInfo::getInstance().startTimer("PrimalBoundTotal");
-		ProcessInfo::getInstance().startTimer("PrimalBoundSearchNLP");
+        primalStrategyFixedNLP->runStrategy();
 
-		primalStrategyFixedNLP->runStrategy();
-
-		ProcessInfo::getInstance().stopTimer("PrimalBoundSearchNLP");
-		ProcessInfo::getInstance().stopTimer("PrimalBoundTotal");
-	}
+        ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
+        ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+    }
 }
 
 std::string TaskSelectPrimalCandidatesFromNLP::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

@@ -1,38 +1,37 @@
-/*
- * TaskCheckTimeLimit.cpp
- *
- *  Created on: Mar 27, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskCheckTimeLimit.h"
 
 TaskCheckTimeLimit::TaskCheckTimeLimit(std::string taskIDTrue)
 {
-
-	taskIDIfTrue = taskIDTrue;
+    taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckTimeLimit::~TaskCheckTimeLimit()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskCheckTimeLimit::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (ProcessInfo::getInstance().getElapsedTime("Total")
-			>= Settings::getInstance().getDoubleSetting("TimeLimit", "Algorithm"))
-	{
-		ProcessInfo::getInstance().terminationReason = E_TerminationReason::TimeLimit;
-		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-	}
+    if (ProcessInfo::getInstance().getElapsedTime("Total") >= Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
+    {
+        ProcessInfo::getInstance().terminationReason = E_TerminationReason::TimeLimit;
+        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+    }
 }
 
 std::string TaskCheckTimeLimit::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
-
+    std::string type = typeid(this).name();
+    return (type);
 }

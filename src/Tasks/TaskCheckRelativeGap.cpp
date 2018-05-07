@@ -1,20 +1,22 @@
-/*
- * TaskCheckRelativeGap.cpp
- *
- *  Created on: Mar 27, 2015
- *      Author: alundell
- */
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
 
 #include "TaskCheckRelativeGap.h"
 
 TaskCheckRelativeGap::TaskCheckRelativeGap(std::string taskIDTrue)
 {
-
 	taskIDIfTrue = taskIDTrue;
 }
+
 TaskCheckRelativeGap::~TaskCheckRelativeGap()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskCheckRelativeGap::run()

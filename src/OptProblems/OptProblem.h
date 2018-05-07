@@ -1,7 +1,14 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
-#include "OSiLReader.h"
-#include "OSiLWriter.h"
-#include "OSFileUtil.h"
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinFinite.hpp"
@@ -11,149 +18,142 @@
 
 class OptProblem
 {
-		//friend class OptProblemOriginal;
-	public:
-		OptProblem();
-		virtual ~OptProblem();
+  public:
+    OptProblem();
+    virtual ~OptProblem();
 
-		void setNonlinearObjectiveConstraintIdx(int idx);
-		int getNonlinearObjectiveConstraintIdx();
+    void setNonlinearObjectiveConstraintIdx(int idx);
+    int getNonlinearObjectiveConstraintIdx();
 
-		void setNonlinearObjectiveVariableIdx(int idx);
-		int getNonlinearObjectiveVariableIdx();
+    void setNonlinearObjectiveVariableIdx(int idx);
+    int getNonlinearObjectiveVariableIdx();
 
-		void setObjectiveFunctionType(E_ObjectiveFunctionType type);
-		E_ObjectiveFunctionType getObjectiveFunctionType();
+    void setObjectiveFunctionType(E_ObjectiveFunctionType type);
+    E_ObjectiveFunctionType getObjectiveFunctionType();
 
-		virtual int getNumberOfNonlinearConstraints();
-		virtual int getNumberOfNonlinearConstraints(OSInstance *instance);
-		virtual int getNumberOfLinearConstraints();
-		virtual int getNumberOfConstraints();
-		virtual std::vector<std::string> getConstraintNames();
+    virtual int getNumberOfNonlinearConstraints();
+    virtual int getNumberOfQuadraticConstraints();
+    virtual int getNumberOfNonlinearConstraints(OSInstance *instance);
+    virtual int getNumberOfLinearConstraints();
+    virtual int getNumberOfConstraints();
+    virtual std::vector<std::string> getConstraintNames();
 
-		virtual int getNumberOfVariables();
-		virtual int getNumberOfBinaryVariables();
-		virtual int getNumberOfDiscreteVariables();
-		virtual int getNumberOfIntegerVariables();
-		virtual int getNumberOfRealVariables();
-		virtual std::vector<std::string> getVariableNames();
-		virtual std::vector<char> getVariableTypes();
-		virtual std::vector<double> getVariableLowerBounds();
-		virtual std::vector<double> getVariableUpperBounds();
+    virtual int getNumberOfVariables();
+    virtual int getNumberOfBinaryVariables();
+    virtual int getNumberOfDiscreteVariables();
+    virtual int getNumberOfIntegerVariables();
+    virtual int getNumberOfRealVariables();
+    virtual std::vector<std::string> getVariableNames();
+    virtual std::vector<char> getVariableTypes();
+    virtual std::vector<double> getVariableLowerBounds();
+    virtual std::vector<double> getVariableUpperBounds();
 
-		virtual double getVariableLowerBound(int varIdx);
-		virtual double getVariableUpperBound(int varIdx);
+    virtual double getVariableLowerBound(int varIdx);
+    virtual double getVariableUpperBound(int varIdx);
 
-		virtual void setVariableUpperBound(int varIdx, double value);
-		virtual void setVariableLowerBound(int varIdx, double value);
+    virtual void setVariableUpperBound(int varIdx, double value);
+    virtual void setVariableLowerBound(int varIdx, double value);
 
-		virtual std::vector<int> getRealVariableIndices();
-		virtual std::vector<int> getDiscreteVariableIndices();
-		virtual std::vector<int> getBinaryVariableIndices();
-		virtual std::vector<int> getIntegerVariableIndices();
+    virtual std::vector<int> getRealVariableIndices();
+    virtual std::vector<int> getDiscreteVariableIndices();
+    virtual std::vector<int> getBinaryVariableIndices();
+    virtual std::vector<int> getIntegerVariableIndices();
 
-		virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
-		virtual std::vector<QuadraticTerm*> getQuadraticTermsInConstraint(int constrIdx);
-		virtual double getObjectiveConstant();
+    virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
+    virtual std::vector<QuadraticTerm *> getQuadraticTermsInConstraint(int constrIdx);
+    virtual double getObjectiveConstant();
 
-		void printProblemStatistics();
+    void exportProblemToOsil(std::string fileName);
 
-		void exportProblemToOsil(std::string fileName);
+    void saveProblemModelToFile(std::string fileName);
 
-		void saveProblemModelToFile(std::string fileName);
+    std::string exportProblemToOsil();
 
-		std::string exportProblemToOsil();
+    virtual IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
 
-		virtual IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
+    virtual std::pair<IndexValuePair, std::vector<int>> getMostDeviatingConstraint(std::vector<double> point,
+                                                                                   std::vector<int> constrIdxs);
 
-		virtual std::pair<IndexValuePair, std::vector<int>> getMostDeviatingConstraint(std::vector<double> point,
-				std::vector<int> constrIdxs);
+    virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
 
-		virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
+    virtual std::vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
 
-		virtual vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
+    virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
+    virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
-		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
-		virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps);
 
-		virtual bool isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps);
-		virtual bool isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point);
+    virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps);
 
-		virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point);
-		virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual SparseVector *calculateConstraintFunctionGradient(int idx, std::vector<double> point);
 
-		virtual SparseVector* calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+    virtual double calculateConstraintFunctionValue(int idx, std::vector<double> point);
+    virtual double calculateOriginalObjectiveValue(std::vector<double> point);
 
-		virtual double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-		virtual double calculateOriginalObjectiveValue(std::vector<double> point);
+    std::vector<int> getNonlinearConstraintIndexes();
+    void setNonlinearConstraints(std::vector<int> idxs);
 
-		std::vector<int> getNonlinearConstraintIndexes();
-		void setNonlinearConstraints(std::vector<int> idxs);
+    std::vector<int> getLinearConstraintIndexes();
 
-		std::vector<int> getLinearConstraintIndexes();
+    std::vector<int> getQuadraticConstraintIndexes();
+    void setQuadraticConstraints(std::vector<int> idxs);
 
-		std::vector<int> getQuadraticConstraintIndexes();
-		void setQuadraticConstraints(std::vector<int> idxs);
+    std::vector<int> getNonlinearOrQuadraticConstraintIndexes();
 
-		std::vector<int> getNonlinearOrQuadraticConstraintIndexes();
-		//void setNonlinearOrQuadraticConstraints(std::vector<int> idxs);
+    virtual bool isTypeOfObjectiveMinimize();
+    virtual bool isObjectiveFunctionNonlinear();
 
-		virtual bool isTypeOfObjectiveMinimize();
-		virtual bool isObjectiveFunctionNonlinear();
+    void setTypeOfObjectiveMinimize(bool value);
+    void setObjectiveFunctionNonlinear(bool value);
 
-		void setTypeOfObjectiveMinimize(bool value);
-		void setObjectiveFunctionNonlinear(bool value);
+    bool isConstraintNonlinear(int constrIdx);
+    bool isConstraintQuadratic(int constrIdx);
 
-		bool isConstraintNonlinear(int constrIdx);
-		bool isConstraintQuadratic(int constrIdx);
+    bool isConstraintNonlinear(OSInstance *instance, int idx);
+    bool isProblemNonlinear(OSInstance *instance);
 
-		bool isConstraintNonlinear(OSInstance *instance, int idx);
-		bool isProblemNonlinear(OSInstance *instance);
+    bool isProblemDiscrete();
 
-		bool isProblemDiscrete();
+    bool hasVariableBoundsBeenTightened(int varIndex);
+    void setVariableBoundsAsTightened(int varIndex);
+    void setVariableBoundsTightened(std::vector<bool> status);
 
-		bool hasVariableBoundsBeenTightened(int varIndex);
-		void setVariableBoundsAsTightened(int varIndex);
-		void setVariableBoundsTightened(std::vector<bool> status);
+    OSInstance *getProblemInstance();
 
-		OSInstance * getProblemInstance();
+    std::vector<double> calculateGradientNumerically(int constraintIndex, std::vector<double> point);
 
-		std::vector<double> calculateGradientNumerically(int constraintIndex, std::vector<double> point);
+    virtual void fixVariable(int varIdx, double value);
 
-		virtual void fixVariable(int varIdx, double value);
+  protected:
+    void setNonlinearConstraintIndexes();
 
-	protected:
+    virtual void copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed);
+    virtual void copyObjectiveFunction(OSInstance *source, OSInstance *destination);
+    virtual void copyQuadraticTerms(OSInstance *source, OSInstance *destination);
+    virtual void copyNonlinearExpressions(OSInstance *source, OSInstance *destination);
+    virtual void copyLinearTerms(OSInstance *source, OSInstance *destination);
+    virtual void copyConstraints(OSInstance *source, OSInstance *destination);
 
-		void setNonlinearConstraintIndexes();
-		//void setQuadraticConstraintIndexes();
+    void repairNonboundedVariables();
 
-		virtual void copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed);
-		virtual void copyObjectiveFunction(OSInstance *source, OSInstance *destination);
-		virtual void copyQuadraticTerms(OSInstance *source, OSInstance *destination);
-		virtual void copyNonlinearExpressions(OSInstance *source, OSInstance *destination);
-		virtual void copyLinearTerms(OSInstance *source, OSInstance *destination);
-		virtual void copyConstraints(OSInstance *source, OSInstance *destination);
+    void setProblemInstance(OSInstance *instance);
 
-		virtual void repairNonboundedObjectiveVariable(OSInstance *instance);
+  private:
+    std::vector<int> m_nonlinearConstraints;
+    std::vector<int> m_quadraticConstraints;
+    std::vector<int> m_nonlinearOrQuadraticConstraints;
+    std::vector<bool> m_variableBoundTightened;
 
-		//void setConstraintBoundsAsConstants(OSInstance *instance);
+    bool m_isTypeOfObjectiveMinimize;
 
-		void setProblemInstance(OSInstance * instance);
+    bool m_isObjectiveFunctionNonlinear;
 
-	private:
-		std::vector<int> m_nonlinearConstraints;
-		std::vector<int> m_quadraticConstraints;
-		std::vector<int> m_nonlinearOrQuadraticConstraints;
-		std::vector<bool> m_variableBoundTightened;
+    OSInstance *m_problemInstance;
 
-		bool m_isTypeOfObjectiveMinimize;
+    int m_idxNonlinearObjectiveConstraint;
+    int m_idxNonlinearObjectiveVariable;
 
-		bool m_isObjectiveFunctionNonlinear;
-
-		OSInstance* m_problemInstance;
-
-		int m_idxNonlinearObjectiveConstraint;
-		int m_idxNonlinearObjectiveVariable;
-
-		E_ObjectiveFunctionType m_objectiveFunctionType;
+    E_ObjectiveFunctionType m_objectiveFunctionType;
 };

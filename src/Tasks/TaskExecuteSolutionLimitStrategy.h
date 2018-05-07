@@ -1,29 +1,36 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
+#include "../MIPSolver/IMIPSolutionLimitStrategy.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
 
-#include "../MILPSolver/IMILPSolutionLimitStrategy.h"
-#include "../MILPSolver/MILPSolutionLimitStrategyUnlimited.h"
-#include "../MILPSolver/MILPSolutionLimitStrategyIncrease.h"
-#include "../MILPSolver/MILPSolutionLimitStrategyAdaptive.h"
-
-class TaskExecuteSolutionLimitStrategy: public TaskBase
+class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
-	public:
-		TaskExecuteSolutionLimitStrategy(IMILPSolver *MILPSolver);
-		~TaskExecuteSolutionLimitStrategy();
+  public:
+    TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver);
+    virtual ~TaskExecuteSolutionLimitStrategy();
 
-		void run();
-		virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
-	private:
+  private:
+    IMIPSolutionLimitStrategy *solutionLimitStrategy;
 
-		IMILPSolutionLimitStrategy *solutionLimitStrategy;
+    IMIPSolver *MIPSolver;
 
-		IMILPSolver *MILPSolver;
-
-		bool isInitialized;
-		bool temporaryOptLimitUsed;
-		int previousSolLimit;
+    bool isInitialized;
+    bool temporaryOptLimitUsed;
+    int previousSolLimit;
 };
-

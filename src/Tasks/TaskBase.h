@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "../Enums.h"
 #include <iostream>
@@ -6,20 +16,20 @@
 
 class TaskBase
 {
-	public:
-		virtual bool isActive();
-		virtual void activate();
-		virtual void deactivate();
+  public:
+    virtual bool isActive();
+    virtual void activate();
+    virtual void deactivate();
 
-		virtual void initialize();
+    virtual void initialize();
 
-		virtual std::string getType();
+    virtual std::string getType();
 
-		virtual void run();
+    virtual void run();
 
-	protected:
+    virtual ~TaskBase(){};
 
-	private:
-
-		bool m_isActive;
+  protected:
+  private:
+    bool m_isActive;
 };

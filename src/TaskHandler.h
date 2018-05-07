@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "vector"
 #include "list"
@@ -8,19 +18,20 @@
 
 class TaskHandler
 {
-	public:
-		TaskHandler();
-		~TaskHandler();
+  public:
+    TaskHandler();
+    ~TaskHandler();
 
-		void addTask(TaskBase *task, std::string taskID);
-		bool getNextTask(TaskBase * &task);
-		void setNextTask(std::string taskID);
-		void clearTasks();
+    void addTask(TaskBase *task, std::string taskID);
+    bool getNextTask(TaskBase *&task);
+    void setNextTask(std::string taskID);
+    void clearTasks();
 
-	private:
-		//std::list<TaskBase*> allTasks;
-		std::list<std::pair<std::string, TaskBase*>>::iterator nextTask;
-		std::string nextTaskID;
-		//bool terminateNext;
-		std::list<std::pair<std::string, TaskBase*>> taskIDMap;
+    TaskBase *getTask(std::string taskID);
+
+  private:
+    std::list<std::pair<std::string, TaskBase *>>::iterator nextTask;
+    std::string nextTaskID;
+    std::list<std::pair<std::string, TaskBase *>> taskIDMap;
+    std::list<TaskBase *> allTasks;
 };

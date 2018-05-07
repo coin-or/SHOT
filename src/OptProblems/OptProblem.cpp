@@ -1,18 +1,49 @@
-﻿#include "OptProblem.h"
+﻿/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
+#include "OptProblem.h"
 
 OptProblem::OptProblem()
 {
     m_problemInstance = NULL;
+<<<<<<< HEAD
+=======
+    //osilReader = NULL;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 OptProblem::~OptProblem()
 {
+<<<<<<< HEAD
     delete m_problemInstance;
+=======
+    if (m_problemInstance != NULL)
+    {
+        //delete m_problemInstance; // Deleted when calling the OSiLReader destructor
+        m_problemInstance = NULL;
+    }
+
+    m_nonlinearConstraints.clear();
+    m_quadraticConstraints.clear();
+    m_nonlinearOrQuadraticConstraints.clear();
+    m_variableBoundTightened.clear();
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 int OptProblem::getNumberOfLinearConstraints()
 {
+<<<<<<< HEAD
     return getProblemInstance()->getConstraintNumber() - this->getNumberOfNonlinearConstraints();
+=======
+    return getProblemInstance()->getConstraintNumber() - this->getNumberOfNonlinearConstraints() - this->getNumberOfQuadraticConstraints();
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 int OptProblem::getNumberOfConstraints()
@@ -99,11 +130,19 @@ double OptProblem::getVariableUpperBound(int varIdx)
 void OptProblem::setVariableUpperBound(int varIdx, double value)
 {
     getProblemInstance()->instanceData->variables->var[varIdx]->ub = value;
+<<<<<<< HEAD
+=======
+    getProblemInstance()->bVariablesModified = true;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 void OptProblem::setVariableLowerBound(int varIdx, double value)
 {
     getProblemInstance()->instanceData->variables->var[varIdx]->lb = value;
+<<<<<<< HEAD
+=======
+    getProblemInstance()->bVariablesModified = true;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 std::vector<int> OptProblem::getRealVariableIndices()
@@ -168,6 +207,7 @@ std::vector<int> OptProblem::getIntegerVariableIndices()
     }
 
     return (indices);
+<<<<<<< HEAD
 }
 
 void OptProblem::printProblemStatistics()
@@ -199,10 +239,13 @@ void OptProblem::printProblemStatistics()
     ProcessInfo::getInstance().outputSummary(
         "└────────────────────────────────────────────────────────────────────────────────┘");
 #endif
+=======
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 void OptProblem::exportProblemToOsil(std::string fileName)
 {
+<<<<<<< HEAD
     OSiLWriter *osilWriter = new OSiLWriter();
     FileUtil *fileUtil = new FileUtil();
 
@@ -214,11 +257,20 @@ void OptProblem::exportProblemToOsil(std::string fileName)
 
     delete fileUtil;
     delete osilWriter;
+=======
+    std::string osil = exportProblemToOsil();
+
+    if (!UtilityFunctions::writeStringToFile(fileName, osil))
+    {
+        Output::getInstance().Output::getInstance().outputError("Error when writing to file " + fileName);
+    }
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 void OptProblem::saveProblemModelToFile(std::string fileName)
 {
     std::string problem = getProblemInstance()->printModel();
+<<<<<<< HEAD
     FileUtil *fileUtil = new FileUtil();
 
     if (!fileUtil->writeFileFromString(fileName, problem))
@@ -227,14 +279,26 @@ void OptProblem::saveProblemModelToFile(std::string fileName)
     }
 
     delete fileUtil;
+=======
+
+    if (!UtilityFunctions::writeStringToFile(fileName, problem))
+    {
+        Output::getInstance().Output::getInstance().outputError("Error when writing to file " + fileName);
+    }
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 std::string OptProblem::exportProblemToOsil()
 {
+<<<<<<< HEAD
     OSiLWriter *osilWriter = new OSiLWriter();
 
     std::string osil = osilWriter->writeOSiL(getProblemInstance());
 
+=======
+    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(getProblemInstance());
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     return (osil);
 }
 
@@ -242,7 +306,11 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
 {
     if (point.size() != this->getNumberOfVariables())
     {
+<<<<<<< HEAD
         ProcessInfo::getInstance().outputError(
+=======
+        Output::getInstance().Output::getInstance().outputError(
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             "     Error: point size (" + to_string(point.size()) + ") does not match number of variables (" + to_string(this->getNumberOfVariables()) + ")!");
     }
 
@@ -456,6 +524,7 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
 SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
 {
     auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
+<<<<<<< HEAD
     ProcessInfo::getInstance().numGradientEvals++;
 
     if (idx != -1 && getProblemInstance()->getConstraintTypes()[idx] == 'G')
@@ -494,6 +563,51 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
             }
         }
     }
+=======
+
+    ProcessInfo::getInstance().solutionStatistics.numberOfGradientEvaluations++;
+
+    if (idx != -1 && getProblemInstance()->getConstraintTypes()[idx] == 'G')
+    {
+        for (int i = 0; i < gradient->number; i++)
+        {
+            gradient->values[i] = -gradient->values[i];
+        }
+    }
+
+    /*
+    if (false && Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    {
+        auto numGradient = calculateGradientNumerically(idx, point);
+
+        std::vector<double> nonSparseGrad(point.size(), 0.0);
+
+        for (int i = 0; i < gradient->number; i++)
+        {
+            nonSparseGrad.at(gradient->indexes[i]) = gradient->values[i];
+        }
+
+        for (int i = 0; i < point.size(); i++)
+        {
+            if (abs((numGradient.at(i) - nonSparseGrad.at(i)) / max(nonSparseGrad.at(i), numGradient.at(i))) >= 0.1)
+            {
+                Output::getInstance().outputAlways(
+                    "Gradient calculation error (constraint " + std::to_string(idx) + ", variable " + std::to_string(i) + "): numerical " + UtilityFunctions::toString(numGradient.at(i)) + " exact " + UtilityFunctions::toString(nonSparseGrad.at(i)));
+
+                for (int i = 0; i < gradient->number; i++)
+                {
+                    Output::getInstance().outputAlways(
+                        "Variable value (index: " + std::to_string(gradient->indexes[i]) + "): " + UtilityFunctions::toString(point.at(gradient->indexes[i])));
+                }
+
+                Output::getInstance().outputAlways(getProblemInstance()->printModel(idx));
+            }
+        }
+
+        numGradient.clear();
+        nonSparseGrad.clear();
+    }*/
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     return (gradient);
 }
@@ -501,7 +615,11 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 {
     auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
+<<<<<<< HEAD
     ProcessInfo::getInstance().numFunctionEvals++;
+=======
+    ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     return tmpVal;
 }
@@ -510,7 +628,11 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 {
     if (point.size() != this->getNumberOfVariables())
     {
+<<<<<<< HEAD
         ProcessInfo::getInstance().outputError(
+=======
+        Output::getInstance().Output::getInstance().outputError(
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             "Point size (" + std::to_string(point.size()) + ") does not equal number of variables (" + std::to_string(this->getNumberOfVariables()) + ") when calculating function value!");
     }
 
@@ -518,7 +640,11 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
     if (!isObjectiveFunctionNonlinear() || idx != getNonlinearObjectiveConstraintIdx() || idx != -1) // Not the objective function
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
+<<<<<<< HEAD
         ProcessInfo::getInstance().numFunctionEvals++;
+=======
+        ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
         if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
         {
@@ -534,13 +660,21 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
         }
         else
         {
+<<<<<<< HEAD
             std::cout << "Should not happen" << std::endl;
+=======
+            std::cout << "Should not happen: " << idx << " " << getProblemInstance()->getConstraintTypes()[idx] << std::endl;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         }
     }
     else
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
+<<<<<<< HEAD
         ProcessInfo::getInstance().numFunctionEvals++;
+=======
+        ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     }
 
     return tmpVal;
@@ -549,6 +683,10 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
 int OptProblem::getNumberOfNonlinearConstraints()
 {
     int ctr = 0;
+<<<<<<< HEAD
+
+    std::vector<bool> isNonlinear(getProblemInstance()->getConstraintNumber(), false);
+=======
 
     std::vector<bool> isNonlinear(getProblemInstance()->getConstraintNumber(), false);
 
@@ -560,7 +698,7 @@ int OptProblem::getNumberOfNonlinearConstraints()
             isNonlinear.at(tmpIndex) = true;
     }
 
-    if (!((static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained))
+    if (!((static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained))
     {
         for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
         {
@@ -574,6 +712,58 @@ int OptProblem::getNumberOfNonlinearConstraints()
     for (int i = 0; i < isNonlinear.size(); i++)
     {
         if (isNonlinear.at(i))
+            ctr++;
+    }
+
+    return ctr;
+}
+
+int OptProblem::getNumberOfQuadraticConstraints()
+{
+    int ctr = 0;
+
+    std::vector<bool> isQuadratic(getProblemInstance()->getConstraintNumber(), false);
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
+
+    for (int i = 0; i < getProblemInstance()->getNumberOfNonlinearExpressions(); i++)
+    {
+        int tmpIndex = getProblemInstance()->instanceData->nonlinearExpressions->nl[i]->idx;
+
+        if (tmpIndex != -1)
+<<<<<<< HEAD
+            isNonlinear.at(tmpIndex) = true;
+    }
+
+    if (!((static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"))) == ES_QPStrategy::QuadraticallyConstrained))
+=======
+            isQuadratic.at(tmpIndex) = false;
+    }
+
+    if (((static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained))
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
+    {
+        for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
+        {
+            int tmpIndex = getProblemInstance()->instanceData->quadraticCoefficients->qTerm[i]->idx;
+
+            if (tmpIndex != -1)
+<<<<<<< HEAD
+                isNonlinear.at(tmpIndex) = true;
+        }
+    }
+
+    for (int i = 0; i < isNonlinear.size(); i++)
+    {
+        if (isNonlinear.at(i))
+=======
+                isQuadratic.at(tmpIndex) = true;
+        }
+    }
+
+    for (int i = 0; i < isQuadratic.size(); i++)
+    {
+        if (isQuadratic.at(i))
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             ctr++;
     }
 
@@ -639,6 +829,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 {
     if (source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
     {
+<<<<<<< HEAD
+=======
+        double LBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
+        double UBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
+        double LBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
+        double UBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
+
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
         int nvar = source->getVariableNumber();
 
         std::string *varname = source->getVariableNames();
@@ -664,6 +862,7 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
 
         for (int i = 0; i < nvar; i++)
         {
+<<<<<<< HEAD
             if (destination->instanceData->variables->var[i]->lb < -OSDBL_MAX)
             {
                 ProcessInfo::getInstance().outputInfo(
@@ -676,6 +875,55 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
                 ProcessInfo::getInstance().outputInfo(
                     "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(OSDBL_MAX));
                 destination->instanceData->variables->var[i]->ub = OSDBL_MAX;
+=======
+            if (vartype[i] == 'I')
+            {
+                if (destination->instanceData->variables->var[i]->lb < LBInt)
+                {
+                    Output::getInstance().outputInfo(
+                        "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBInt));
+                    destination->instanceData->variables->var[i]->lb = LBInt;
+                }
+
+                if (destination->instanceData->variables->var[i]->ub > UBInt)
+                {
+                    Output::getInstance().outputInfo(
+                        "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBInt));
+                    destination->instanceData->variables->var[i]->ub = UBInt;
+                }
+            }
+            else if (vartype[i] == 'C')
+            {
+                if (destination->instanceData->variables->var[i]->lb < LBCont)
+                {
+                    Output::getInstance().outputInfo(
+                        "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBCont));
+                    destination->instanceData->variables->var[i]->lb = LBCont;
+                }
+
+                if (destination->instanceData->variables->var[i]->ub > UBCont)
+                {
+                    Output::getInstance().outputInfo(
+                        "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBCont));
+                    destination->instanceData->variables->var[i]->ub = UBCont;
+                }
+            }
+            else if (vartype[i] == 'B')
+            {
+                if (destination->instanceData->variables->var[i]->lb < 0.0)
+                {
+                    Output::getInstance().outputInfo(
+                        "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to 0");
+                    destination->instanceData->variables->var[i]->lb = 0.0;
+                }
+
+                if (destination->instanceData->variables->var[i]->ub > 1.0)
+                {
+                    Output::getInstance().outputInfo(
+                        "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to 1");
+                    destination->instanceData->variables->var[i]->ub = 1.0;
+                }
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             }
         }
     }
@@ -763,11 +1011,24 @@ void OptProblem::copyNonlinearExpressions(OSInstance *source, OSInstance *destin
 
             destination->instanceData->nonlinearExpressions->nl[i] = new Nl();
 
+<<<<<<< HEAD
 #ifdef _WIN32
             destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new OSExpressionTree(
                 *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 #else
             destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+=======
+#if OS_VERSION_MAJOR < 3
+#if OS_VERSION_MINOR < 11
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new ScalarExpressionTree(
+                *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#else
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new RealValuedExpressionTree(
+                *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
+#endif
+#else
+            destination->instanceData->nonlinearExpressions->nl[i]->osExpressionTree = new RealValuedExpressionTree(
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
                 *source->instanceData->nonlinearExpressions->nl[i]->osExpressionTree);
 #endif
 
@@ -827,7 +1088,11 @@ void OptProblem::setNonlinearConstraintIndexes()
     }
 
     //	if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
+<<<<<<< HEAD
     if (static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm")) == ES_QPStrategy::QuadraticallyConstrained)
+=======
+    if (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual")) == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     {
         for (int i = 0; i < numQuadTerms; i++)
         {
@@ -866,6 +1131,7 @@ void OptProblem::setNonlinearConstraintIndexes()
             QCIndexes.push_back(i);
     }
 
+<<<<<<< HEAD
     //UtilityFunctions::displayVector(NLCIndexes);
     //UtilityFunctions::displayVector(QCIndexes);
 
@@ -914,11 +1180,22 @@ void OptProblem::setNonlinearConstraintIndexes()
 
  setQuadraticConstraints(quadraticIndexes);
  }*/
+=======
+    setNonlinearConstraints(NLCIndexes);
+    setQuadraticConstraints(QCIndexes);
+
+    isNonlinear.clear();
+    isQuadratic.clear();
+    NLCIndexes.clear();
+    QCIndexes.clear();
+}
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
 std::vector<int> OptProblem::getLinearConstraintIndexes()
 {
     std::vector<int> idxs;
     int numCon = this->getProblemInstance()->getConstraintNumber();
+<<<<<<< HEAD
     //std::cout << "Nonlinear constraint index : " << this->getNonlinearObjectiveConstraintIdx() << std::endl;
     //int numCon = this->getNumberOfConstraints();
     //idxs.reserve(numCon);
@@ -928,6 +1205,18 @@ std::vector<int> OptProblem::getLinearConstraintIndexes()
         if (!isConstraintNonlinear(this->getProblemInstance(), i) && this->getNonlinearObjectiveConstraintIdx() != i)
         {
             //std::cout << "Constr " << i << " is linear!" << std::endl;
+=======
+
+    for (int i = 0; i < numCon; i++)
+    {
+        if (this->isObjectiveFunctionNonlinear() && this->getNonlinearObjectiveConstraintIdx() == i)
+        {
+            continue;
+        }
+
+        if (!isConstraintNonlinear(this->getProblemInstance(), i))
+        {
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             idxs.push_back(i);
         }
     }
@@ -992,6 +1281,11 @@ void OptProblem::setQuadraticConstraints(std::vector<int> idxs)
                   m_quadraticConstraints.begin(), m_quadraticConstraints.end(), back_inserter(newVect));
 
         m_nonlinearOrQuadraticConstraints = newVect;
+<<<<<<< HEAD
+=======
+
+        newVect.clear();
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     }
 }
 
@@ -999,12 +1293,6 @@ std::vector<int> OptProblem::getNonlinearOrQuadraticConstraintIndexes()
 {
     return m_nonlinearOrQuadraticConstraints;
 }
-
-/*
- void OptProblemBase::setNonlinearOrQuadraticConstraints(std::vector<int> idxs)
- {
- m_nonlinearOrQuadraticConstraints = idxs;
- }*/
 
 bool OptProblem::isTypeOfObjectiveMinimize()
 {
@@ -1058,9 +1346,15 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
             return true;
     }
 
+<<<<<<< HEAD
     auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"));
 
     if (QPStrategy == ES_QPStrategy::Nonlinear || QPStrategy != ES_QPStrategy::QuadraticallyConstrained)
+=======
+    auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+
+    if (QPStrategy == ES_QuadraticProblemStrategy::Nonlinear || QPStrategy != ES_QuadraticProblemStrategy::QuadraticallyConstrained)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     //	if (!Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
     {
         for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
@@ -1077,9 +1371,15 @@ bool OptProblem::isConstraintNonlinear(int constrIdx)
 
 bool OptProblem::isConstraintQuadratic(int constrIdx)
 {
+<<<<<<< HEAD
     auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"));
 
     if (QPStrategy == ES_QPStrategy::QuadraticallyConstrained || QPStrategy == ES_QPStrategy::QuadraticObjective)
+=======
+    auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+
+    if (QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained || QPStrategy == ES_QuadraticProblemStrategy::QuadraticObjective)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     //	if (Settings::getInstance().getBoolSetting("UseQuadraticProgramming", "Algorithm"))
     {
         for (int i = 0; i < getProblemInstance()->getNumberOfQuadraticTerms(); i++)
@@ -1140,7 +1440,15 @@ std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex
 
 void OptProblem::setProblemInstance(OSInstance *instance)
 {
+<<<<<<< HEAD
     m_problemInstance = instance;
+=======
+    // Do not change the following four lines they are here for a reason, i.e. to deal with "bugs" in OSInstance
+    std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(instance);
+    instance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
+    m_problemInstance = instance;
+    m_problemInstance->getJacobianSparsityPattern();
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 }
 
 void OptProblem::setNonlinearObjectiveConstraintIdx(int idx)
@@ -1173,6 +1481,7 @@ E_ObjectiveFunctionType OptProblem::getObjectiveFunctionType()
     return m_objectiveFunctionType;
 }
 
+<<<<<<< HEAD
 void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 {
     if (isConstraintNonlinear(-1))
@@ -1196,6 +1505,67 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
             if (instance->instanceData->variables->var[varIdx]->ub > tmpObjBound)
             {
                 instance->instanceData->variables->var[varIdx]->ub = tmpObjBound;
+=======
+void OptProblem::repairNonboundedVariables()
+{
+    double LBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
+    double UBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
+    double LBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
+    double UBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
+
+    auto varTypes = getVariableTypes();
+
+    int numVar = getNumberOfVariables();
+
+    for (int i = 0; i < numVar; i++)
+    {
+        if (varTypes.at(i) == 'I')
+        {
+            if (getVariableLowerBound(i) < LBInt)
+            {
+                setVariableLowerBound(i, LBInt);
+            }
+
+            if (getVariableUpperBound(i) > UBInt)
+            {
+                setVariableUpperBound(i, UBInt);
+            }
+        }
+        else if (varTypes.at(i) == 'C')
+        {
+            if (getVariableLowerBound(i) < LBCont)
+            {
+                setVariableLowerBound(i, LBCont);
+            }
+
+            if (getVariableUpperBound(i) > UBCont)
+            {
+                setVariableUpperBound(i, UBCont);
+            }
+        }
+        else if (varTypes.at(i) == 'B')
+        {
+            if (getVariableLowerBound(i) < 0.0)
+            {
+                setVariableLowerBound(i, 0.0);
+            }
+
+            if (getVariableUpperBound(i) > 1.0)
+            {
+                setVariableUpperBound(i, 1.0);
+            }
+        }
+        else if (varTypes.at(i) == 'D')
+        {
+            if (getVariableLowerBound(i) < 0.0)
+            {
+                setVariableLowerBound(i, 0.0);
+            }
+
+            if (getVariableUpperBound(i) > UBCont)
+            {
+                setVariableUpperBound(i, UBCont);
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             }
         }
     }
@@ -1203,11 +1573,18 @@ void OptProblem::repairNonboundedObjectiveVariable(OSInstance *instance)
 
 std::vector<QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int constrIdx)
 {
+<<<<<<< HEAD
 
     auto QPStrategy = static_cast<ES_QPStrategy>(Settings::getInstance().getIntSetting("QPStrategy", "Algorithm"));
     std::vector<QuadraticTerm *> quadTerms;
 
     if (constrIdx != -1 && QPStrategy == ES_QPStrategy::QuadraticallyConstrained)
+=======
+    auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"));
+    std::vector<QuadraticTerm *> quadTerms;
+
+    if (constrIdx != -1 && QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
     {
         int numQuadTerms = getProblemInstance()->getNumberOfQuadraticTerms();
 
@@ -1221,7 +1598,11 @@ std::vector<QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int const
                 quadTerms.push_back(tmpTerm);
         }
     }
+<<<<<<< HEAD
     else if (constrIdx == -1 && (QPStrategy == ES_QPStrategy::QuadraticallyConstrained || QPStrategy == ES_QPStrategy::QuadraticObjective))
+=======
+    else if (constrIdx == -1 && (QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained || QPStrategy == ES_QuadraticProblemStrategy::QuadraticObjective))
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
 
     {
         int numQuadTerms = getProblemInstance()->getNumberOfQuadraticTerms();
@@ -1249,7 +1630,11 @@ void OptProblem::fixVariable(int varIdx, double value)
     }
     else
     {
+<<<<<<< HEAD
         ProcessInfo::getInstance().outputError(
+=======
+        Output::getInstance().Output::getInstance().outputError(
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
             "     Cannot fix variable value for variable with index " + to_string(varIdx) + ": not within bounds (" + UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->lb) + " < " + UtilityFunctions::toString(value) + " < " + UtilityFunctions::toString(getProblemInstance()->instanceData->variables->var[varIdx]->ub));
     }
 }
@@ -1260,4 +1645,8 @@ bool OptProblem::isProblemDiscrete()
         return (true);
 
     return (false);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d
