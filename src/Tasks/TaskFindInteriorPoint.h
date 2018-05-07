@@ -1,42 +1,30 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
-
 #include "../NLPSolver/INLPSolver.h"
-#include "../NLPSolver/NLPSolverIPOptMinimax.h"
-#include "../NLPSolver/NLPSolverIPOptRelaxed.h"
+#include "../NLPSolver/NLPSolverIpoptMinimax.h"
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 
-class TaskFindInteriorPoint: public TaskBase
+class TaskFindInteriorPoint : public TaskBase
 {
-	public:
-		TaskFindInteriorPoint();
-		virtual ~TaskFindInteriorPoint();
+  public:
+    TaskFindInteriorPoint();
+    virtual ~TaskFindInteriorPoint();
 
-		virtual void run();
-		virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
-	private:
-		std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
-
-};
-
-class TaskExceptionInteriorPoint: public std::exception
-{
-	public:
-
-		TaskExceptionInteriorPoint(std::string msg) :
-				explanation(msg)
-		{
-		}
-
-		const char * what() const throw ()
-		{
-			std::stringstream message;
-			message << explanation;
-			return message.str().c_str();
-		}
-	private:
-		std::string explanation;
-
+  private:
+    std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
 };

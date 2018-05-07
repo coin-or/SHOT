@@ -1,3 +1,13 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "ILinesearchMethod.h"
 #include "SHOTSettings.h"
@@ -7,60 +17,56 @@
 
 class Test
 {
-	private:
+  private:
+  public:
+    std::vector<double> firstPt;
+    std::vector<double> secondPt;
 
-		//std::vector<char> varTypes;
-		//std::vector<int> activeConstraints;
+    double valFirstPt;
+    double valSecondPt;
 
-	public:
-		std::vector<double> firstPt;
-		std::vector<double> secondPt;
+    OptProblemOriginal *originalProblem;
 
-		double valFirstPt;
-		double valSecondPt;
+    Test();
+    ~Test();
+    void determineActiveConstraints(double constrTol);
+    void setActiveConstraints(std::vector<int> constrIdxs);
+    std::vector<int> getActiveConstraints();
+    void clearActiveConstraints();
+    void addActiveConstraint(int constrIdx);
 
-		OptProblemOriginal *originalProblem;
-
-		Test();
-		void determineActiveConstraints(double constrTol);
-		void setActiveConstraints(std::vector<int> constrIdxs);
-		std::vector<int> getActiveConstraints();
-		void clearActiveConstraints();
-		void addActiveConstraint(int constrIdx);
-
-		double operator()(const double x);
-
+    double operator()(const double x);
 };
 
 class TerminationCondition
 {
-	private:
-		double tol;
+  private:
+    double tol;
 
-	public:
-		TerminationCondition(double tolerance)
-		{
-			tol = tolerance;
-		}
+  public:
+    TerminationCondition(double tolerance)
+    {
+        tol = tolerance;
+    }
 
-		bool operator()(double min, double max)
-		{
-			return (abs(min - max) <= tol);
-		}
+    bool operator()(double min, double max)
+    {
+        return (abs(min - max) <= tol);
+    }
 };
 
-class LinesearchMethodBoost: public ILinesearchMethod
+class LinesearchMethodBoost : public ILinesearchMethod
 {
-	public:
-		LinesearchMethodBoost();
-		virtual ~LinesearchMethodBoost();
+  public:
+    LinesearchMethodBoost();
+    virtual ~LinesearchMethodBoost();
 
-		virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-				std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol);
+    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
+                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol);
 
-		virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-				std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
-	private:
+    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
+                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
 
-		Test *test;
+  private:
+    Test *test;
 };

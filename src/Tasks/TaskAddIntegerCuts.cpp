@@ -1,57 +1,69 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #include "TaskAddIntegerCuts.h"
 
-TaskAddIntegerCuts::TaskAddIntegerCuts(IMILPSolver *MILPSolver)
+TaskAddIntegerCuts::TaskAddIntegerCuts(IMIPSolver *MIPSolver)
 {
-
-	this->MILPSolver = MILPSolver;
+    ProcessInfo::getInstance().startTimer("DualStrategy");
+    this->MIPSolver = MIPSolver;
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 TaskAddIntegerCuts::~TaskAddIntegerCuts()
 {
-	// TODO Auto-generated destructor stub
 }
 
 void TaskAddIntegerCuts::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    ProcessInfo::getInstance().startTimer("DualStrategy");
 
-	if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0) return;
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
 
-	if (!currIter->isMILP() || !Settings::getInstance().getBoolSetting("DelayedConstraints", "MILP")
-			|| !currIter->MILPSolutionLimitUpdated)
-	{
+    if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0)
+        return;
 
-		for (int j = 0; j < ProcessInfo::getInstance().integerCutWaitingList.size(); j++)
-		{
-			auto tmpBinaryCombination = ProcessInfo::getInstance().integerCutWaitingList.at(j);
-			int numOnes = tmpBinaryCombination.size();
+    if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated)
+    {
 
-			std::vector<IndexValuePair> elements;
+        for (int j = 0; j < ProcessInfo::getInstance().integerCutWaitingList.size(); j++)
+        {
+            auto tmpBinaryCombination = ProcessInfo::getInstance().integerCutWaitingList.at(j);
+            int numOnes = tmpBinaryCombination.size();
 
-			for (int i = 0; i < numOnes; i++)
-			{
-				IndexValuePair pair;
-				pair.idx = tmpBinaryCombination.at(i);
-				pair.value = 1.0;
+            std::vector<IndexValuePair> elements;
 
-				elements.push_back(pair);
-			}
+            for (int i = 0; i < numOnes; i++)
+            {
+                IndexValuePair pair;
+                pair.idx = tmpBinaryCombination.at(i);
+                pair.value = 1.0;
 
-			this->MILPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
-			ProcessInfo::getInstance().numIntegerCutsAdded++;
-		}
+                elements.push_back(pair);
+            }
 
-		ProcessInfo::getInstance().outputInfo(
-				"     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size())
-						+ " integer cut(s).                                        ");
+            this->MIPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
+            ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
+        }
 
-		ProcessInfo::getInstance().integerCutWaitingList.clear();
-	}
+        Output::getInstance().outputInfo(
+            "     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
+
+        ProcessInfo::getInstance().integerCutWaitingList.clear();
+    }
+
+    ProcessInfo::getInstance().stopTimer("DualStrategy");
 }
 
 std::string TaskAddIntegerCuts::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
-
+    std::string type = typeid(this).name();
+    return (type);
 }

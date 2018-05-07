@@ -1,26 +1,34 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
 #pragma once
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../UtilityFunctions.h"
-#include "../OptProblems/OptProblemOriginal.h"
+#include "../OptProblems/OptProblem.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalLinearObjective.h"
 #include <OSInstance.h>
-#include "../MILPSolver/IMILPSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
-class TaskInitializeOriginalProblem: public TaskBase
+class TaskInitializeOriginalProblem : public TaskBase
 {
-	public:
-		TaskInitializeOriginalProblem(OSInstance *originalInstance);
-		~TaskInitializeOriginalProblem();
+  public:
+    TaskInitializeOriginalProblem(OSInstance *originalInstance);
+    virtual ~TaskInitializeOriginalProblem();
 
-		void run();
-		virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
-	private:
-		OptProblemOriginal *problem;
-		OSInstance * instance;
-
+  private:
+    OptProblem *problem;
+    OSInstance *instance;
 };
-

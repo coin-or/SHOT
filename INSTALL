@@ -1,0 +1,80 @@
+Installation instructions for SHOT
+
+Updated March 22, 2018.
+
+Prerequisites:
+
+-   SHOT requires that a relatively new version of the Optimization Services libraries are 
+    available on the system. Note that the trunk version is under active development and 
+    may not be completely stable.
+
+-   A version of the Boost libraries needs to be available. 
+
+
+Main installation:
+
+1.  Download the source code from the repository. 
+
+2.  SHOT utilizes the CMake build system, and the main configuration for the build system
+    can be found in the CMakeLists.txt file in the SHOT directory. Update the settings in
+    the beginning of the file to suit your system.
+
+    2.1 If you wish to compile with support for CPLEX and/or Gurobi, please set the 
+        corresponding switches (HAS_CPLEX, HAS_GUROBI). You will also need to provide the 
+        location of their main installation folders. 
+
+        Depending on whether you have a version of CPLEX >12.8, you can also set the 
+        switch HAS_CPLEX_NEW_CALLBACK to activate the new type of callback functionality
+        in CPLEX.
+    
+    2.2 If you have GAMS installed, you can activate this as well using the switch HAS_GAMS.
+        
+        In this case you can use GAMS NLP solvers within SHOT instead of Ipopt, but it is also
+        possible to call SHOT directly from GAMS, but then you need to also call one of the 
+        scripts available in the misc-folder to install SHOT in GAMS. See the scripts for 
+        instructions on how to use them.
+
+3.  Go into the build folder (or wherever you want to build SHOT) and execute the command
+
+        cmake -G"Unix Makefiles" -DCMAKE_BUILD_TYPE=<TYPE> <PATH>
+    
+    where you substitute:
+    
+    <TYPE> with either 'Release' or 'Debug' depending on whether you will need debug 
+    functionality. Normally this will be 'Release'
+
+    <PATH> with the path to the main SHOT folder you downloaded in step 1.
+
+    The cmake command can vary depending on your needs, but the one mentioned above should
+    work on Unix-based systems.
+
+4.  If CMake finishes without errors you can build the program by executing the command 'make'.
+
+5.  If compilation finishes without problems, you will have a binary called SHOT in your 
+    current directory.
+
+6.  If you want to run the automated tests after compilation, make sure that you have enabled
+    the switch COMPILE_TESTS in the CMakeLists.txt file. After this you can execute the command
+    'make test' to check if SHOT is functioning as planned.    
+
+
+Usage instructions:
+
+To solve problems using SHOT, the following syntax can be used:
+
+    ./SHOT problem_file.osil
+
+to solve the problem specified in the file 'problem_file.osil'. The filesuffix should be either 
+.xml or .osil for OSiL-files, .nl for files in Ampl, or .gms for files in GAMS syntax. Note
+that to be able to read GAMS files, you need to have GAMS installed and SHOT compiled with
+support for it, c.f. 2.2 above.
+
+SHOT will then create default options files 'options.opt' and 'options.xml' in the runtime directory.
+
+After the problem has been solved, it will give the solution in the file 'problem_file.osrl'.
+
+If you want to change some options, you can edit either 'options.opt' and 'options.xml' save it and call
+
+    ./SHOT problem_file.osil options.opt
+
+For more information about how to call SHOT, run SHOT without arguments or see the documentation.
