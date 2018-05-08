@@ -17,9 +17,11 @@
 class PrimalSolutionStrategyBase : public IPrimalSolutionStrategy
 {
   public:
-    PrimalSolutionStrategyBase();
+    //PrimalSolutionStrategyBase(EnvironmentPtr envPtr);
     virtual ~PrimalSolutionStrategyBase();
 
   protected:
+    EnvironmentPtr env;
+
   private:
 };

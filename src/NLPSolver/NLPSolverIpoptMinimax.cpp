@@ -10,11 +10,11 @@
 
 #include "NLPSolverIpoptMinimax.h"
 
-NLPSolverIpoptMinimax::NLPSolverIpoptMinimax()
+NLPSolverIpoptMinimax::NLPSolverIpoptMinimax(EnvironmentPtr envPtr) : INLPSolver(envPtr)
 {
     osolwriter = new OSoLWriter();
 
-    NLPProblem = new OptProblemNLPMinimax();
+    NLPProblem = new OptProblemNLPMinimax(env);
 
     setInitialSettings();
 }
@@ -35,7 +35,7 @@ std::vector<double> NLPSolverIpoptMinimax::getSolution()
         tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
     }
 
-    if (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+    if (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
     {
         tmpPoint.pop_back();
     }
@@ -48,29 +48,29 @@ std::vector<double> NLPSolverIpoptMinimax::getSolution()
 
 bool NLPSolverIpoptMinimax::createProblemInstance(OSInstance *origInstance)
 {
-    Output::getInstance().outputInfo("     Creating Ipopt minimax problem.");
+    env->output->outputInfo("     Creating Ipopt minimax problem.");
     dynamic_cast<OptProblemNLPMinimax *>(NLPProblem)->reformulate(origInstance);
-    Output::getInstance().outputInfo("     Ipopt minimax problem created.");
+    env->output->outputInfo("     Ipopt minimax problem created.");
 
     return (true);
 }
 
 void NLPSolverIpoptMinimax::setSolverSpecificInitialSettings()
 {
-    auto constrTol = Settings::getInstance().getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
+    auto constrTol = env->settings->getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
     osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
                                      "", "double", "");
 
     osOption->setAnotherSolverOption("tol",
                                      UtilityFunctions::toStringFormat(
-                                         Settings::getInstance().getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
+                                         env->settings->getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
                                      "ipopt", "", "double", "");
 
     osOption->setAnotherSolverOption("max_iter",
-                                     to_string(Settings::getInstance().getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "",
+                                     std::to_string(env->settings->getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "",
                                      "integer", "");
 
-    auto timeLimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
+    auto timeLimit = env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal");
     osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
                                      "number", "");
 }

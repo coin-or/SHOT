@@ -10,13 +10,13 @@
 
 #include "TaskSelectHyperplanePointsIndividualLinesearch.h"
 
-TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch()
+TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndividualLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+    env->process->startTimer("DualCutGenerationRootSearch");
 
-    nonlinearConstraintIdxs = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
+    nonlinearConstraintIdxs = env->process->originalProblem->getNonlinearConstraintIndexes();
 
-    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+    env->process->stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndividualLinesearch()
@@ -31,43 +31,43 @@ TaskSelectHyperplanePointsIndividualLinesearch::~TaskSelectHyperplanePointsIndiv
 
 void TaskSelectHyperplanePointsIndividualLinesearch::run()
 {
-    this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
+    this->run(env->process->getPreviousIteration()->solutionPoints);
 }
 
-void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> solPoints)
+void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoint> solPoints)
 {
-    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+    env->process->startTimer("DualCutGenerationRootSearch");
 
     int addedHyperplanes = 0;
 
-    bool useUniqueConstraints = Settings::getInstance().getBoolSetting("ESH.Linesearch.IndividualConstraints.Unique", "Dual");
+    bool useUniqueConstraints = env->settings->getBoolSetting("ESH.Linesearch.IndividualConstraints.Unique", "Dual");
 
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
 
-    if (ProcessInfo::getInstance().interiorPts.size() == 0)
+    if (env->process->interiorPts.size() == 0)
     {
         if (!hyperplaneSolutionPointStrategyInitialized)
         {
-            tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+            tSelectHPPts = new TaskSelectHyperplanePointsSolution(env);
             hyperplaneSolutionPointStrategyInitialized = true;
         }
 
-        Output::getInstance().outputWarning("     Adding cutting plane since no interior point is known.");
+        env->output->outputWarning("     Adding cutting plane since no interior point is known.");
 
         tSelectHPPts->run(solPoints);
 
-        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+        env->process->stopTimer("DualCutGenerationRootSearch");
 
         return;
     }
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(
-        ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints(), false);
+        env->process->originalProblem->getNumberOfNonlinearConstraints(), false);
 
     for (int i = 0; i < solPoints.size(); i++)
     {
-        auto maxDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(
+        auto maxDevConstr = env->process->originalProblem->getMostDeviatingConstraint(
             solPoints.at(i).point);
 
         if (maxDevConstr.value <= 0)
@@ -76,16 +76,16 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
         }
         else
         {
-            for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
+            for (int j = 0; j < env->process->interiorPts.size(); j++)
             {
-                auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
+                auto xNLP = env->process->interiorPts.at(j)->point;
 
                 for (int k = 0; k < nonlinearConstraintIdxs.size(); k++)
                 {
                     int currConstrIdx = nonlinearConstraintIdxs.at(k);
 
                     // Check if max hyperplanes per iteration counter has been reached
-                    if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+                    if (addedHyperplanes >= env->settings->getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
                         return;
 
                     // Do not add hyperplane if one has been added for this constraint already
@@ -93,8 +93,8 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                         continue;
 
                     auto constrDevExterior =
-                        ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(currConstrIdx,
-                                                                                                     solPoints.at(i).point);
+                        env->process->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
+                                                                                        solPoints.at(i).point);
 
                     if (isnan(constrDevExterior))
                     {
@@ -102,11 +102,11 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                     }
 
                     // Do not add hyperplane if less than this tolerance or negative
-                    if (constrDevExterior < Settings::getInstance().getDoubleSetting("ESH.Linesearch.ConstraintTolerance", "Dual"))
+                    if (constrDevExterior < env->settings->getDoubleSetting("ESH.Linesearch.ConstraintTolerance", "Dual"))
                         continue;
 
                     // Do not add hyperplane if constraint value is much less than largest
-                    if (constrDevExterior < Settings::getInstance().getDoubleSetting("ESH.Linesearch.ConstraintFactor", "Dual") * maxDevConstr.value)
+                    if (constrDevExterior < env->settings->getDoubleSetting("ESH.Linesearch.ConstraintFactor", "Dual") * maxDevConstr.value)
                         continue;
 
                     std::vector<double> externalPoint;
@@ -118,29 +118,29 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
 
                     try
                     {
-                        ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
-                        auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-                                                                                           Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                                           Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                                                                                           Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
-                                                                                           currentIndexes);
+                        env->process->startTimer("DualCutGenerationRootSearch");
+                        auto xNewc = env->process->linesearchMethod->findZero(xNLP, solPoints.at(i).point,
+                                                                              env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                              env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+                                                                              env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
+                                                                              currentIndexes);
 
-                        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                        env->process->stopTimer("DualCutGenerationRootSearch");
                         internalPoint = xNewc.first;
                         externalPoint = xNewc.second;
                     }
                     catch (std::exception &e)
                     {
-                        ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                        env->process->stopTimer("DualCutGenerationRootSearch");
                         externalPoint = solPoints.at(i).point;
 
-                        Output::getInstance().Output::getInstance().outputError(
-                            "     Cannot find solution with linesearch. Interior value: " + to_string(ProcessInfo::getInstance().interiorPts.at(j)->maxDevatingConstraint.value) + " exterior value: " + to_string(constrDevExterior));
+                        env->output->outputError(
+                            "     Cannot find solution with linesearch. Interior value: " + std::to_string(env->process->interiorPts.at(j)->maxDevatingConstraint.value) + " exterior value: " + std::to_string(constrDevExterior));
                     }
 
                     auto constrDevBoundary =
-                        ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(currConstrIdx,
-                                                                                                     externalPoint);
+                        env->process->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
+                                                                                        externalPoint);
 
                     if (constrDevBoundary >= 0)
                     {
@@ -161,7 +161,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                             hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
                         }
 
-                        ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
+                        env->process->hyperplaneWaitingList.push_back(hyperplane);
                         addedHyperplanes++;
 
                         if (currConstrIdx != -1)
@@ -169,8 +169,8 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                         else
                             hyperplaneAddedToConstraint.at(hyperplaneAddedToConstraint.back()) = true;
 
-                        Output::getInstance().outputInfo(
-                            "     Added hyperplane to constraint " + to_string(currConstrIdx) + " original dev: " + to_string(constrDevExterior));
+                        env->output->outputInfo(
+                            "     Added hyperplane to constraint " + std::to_string(currConstrIdx) + " original dev: " + std::to_string(constrDevExterior));
 
                         hyperplane.generatedPoint.clear();
                     }

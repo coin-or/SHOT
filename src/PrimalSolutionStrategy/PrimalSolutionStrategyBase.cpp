@@ -10,9 +10,10 @@
 
 #include "PrimalSolutionStrategyBase.h"
 
-PrimalSolutionStrategyBase::PrimalSolutionStrategyBase()
+/*PrimalSolutionStrategyBase::PrimalSolutionStrategyBase(EnvironmentPtr envPtr)
 {
-}
+    env = envPtr;
+}*/
 
 PrimalSolutionStrategyBase::~PrimalSolutionStrategyBase()
 {

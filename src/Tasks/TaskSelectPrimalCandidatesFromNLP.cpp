@@ -10,15 +10,15 @@
 
 #include "TaskSelectPrimalCandidatesFromNLP.h"
 
-TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP()
+TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("PrimalStrategy");
-    ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
+    env->process->startTimer("PrimalStrategy");
+    env->process->startTimer("PrimalBoundStrategyNLP");
 
-    primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP();
+    primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP(env);
 
-    ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
-    ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+    env->process->stopTimer("PrimalBoundStrategyNLP");
+    env->process->stopTimer("PrimalStrategy");
 }
 
 TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
@@ -28,17 +28,17 @@ TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-    if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
+    if (currIter->isMIP() && env->process->getRelativeObjectiveGap() > 1e-10)
     {
-        ProcessInfo::getInstance().startTimer("PrimalStrategy");
-        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
+        env->process->startTimer("PrimalStrategy");
+        env->process->startTimer("PrimalBoundStrategyNLP");
 
         primalStrategyFixedNLP->runStrategy();
 
-        ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
-        ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+        env->process->stopTimer("PrimalBoundStrategyNLP");
+        env->process->stopTimer("PrimalStrategy");
     }
 }
 

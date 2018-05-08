@@ -10,9 +10,9 @@
 
 #include "MIPSolutionLimitStrategyUnlimited.h"
 
-MIPSolutionLimitStrategyUnlimited::MIPSolutionLimitStrategyUnlimited(IMIPSolver *MIPSolver)
+MIPSolutionLimitStrategyUnlimited::MIPSolutionLimitStrategyUnlimited(EnvironmentPtr envPtr)
 {
-    this->MIPSolver = MIPSolver;
+    env = envPtr;
 }
 
 MIPSolutionLimitStrategyUnlimited::~MIPSolutionLimitStrategyUnlimited()
@@ -26,11 +26,11 @@ bool MIPSolutionLimitStrategyUnlimited::updateLimit()
 
 int MIPSolutionLimitStrategyUnlimited::getNewLimit()
 {
-    return MIPSolver->getSolutionLimit();
+    return env->dualSolver->getSolutionLimit();
 }
 
 int MIPSolutionLimitStrategyUnlimited::getInitialLimit()
 {
-    auto tmpVal = MIPSolver->getSolutionLimit();
+    auto tmpVal = env->dualSolver->getSolutionLimit();
     return tmpVal;
 }

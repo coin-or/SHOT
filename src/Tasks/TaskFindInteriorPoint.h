@@ -19,7 +19,7 @@
 class TaskFindInteriorPoint : public TaskBase
 {
   public:
-    TaskFindInteriorPoint();
+    TaskFindInteriorPoint(EnvironmentPtr envPtr);
     virtual ~TaskFindInteriorPoint();
 
     virtual void run();

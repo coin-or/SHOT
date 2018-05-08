@@ -14,7 +14,7 @@
 class OptProblemOriginalQuadraticObjective : public OptProblemOriginal
 {
   public:
-    OptProblemOriginalQuadraticObjective();
+    OptProblemOriginalQuadraticObjective(EnvironmentPtr envPtr);
     ~OptProblemOriginalQuadraticObjective();
 
     virtual bool setProblem(OSInstance *instance);

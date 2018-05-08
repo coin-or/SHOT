@@ -10,7 +10,7 @@
 
 #include "OptProblemOriginalNonlinearObjective.h"
 
-OptProblemOriginalNonlinearObjective::OptProblemOriginalNonlinearObjective()
+OptProblemOriginalNonlinearObjective::OptProblemOriginalNonlinearObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
 }
 
@@ -35,22 +35,22 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
     this->setObjectiveFunctionNonlinear(isConstraintNonlinear(-1));
 
-    ProcessInfo::getInstance().setOriginalProblem(this);
+    env->process->setOriginalProblem(this);
 
     this->setNonlinearConstraintIndexes();
 
     if (this->getNonlinearConstraintIndexes().size() == 0)
     {
-        Settings::getInstance().updateSetting("Relaxation.IterationLimit", "Dual", 0);
-        Settings::getInstance().updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
+        env->settings->updateSetting("Relaxation.IterationLimit", "Dual", 0);
+        env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
     }
 
     this->addedConstraintName = "objconstr";
     this->setNonlinearObjectiveConstraintIdx(getProblemInstance()->getConstraintNumber());
 
     this->addedObjectiveVariableName = "addobjvar";
-    this->addedObjectiveVariableLowerBound = -Settings::getInstance().getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-    this->addedObjectiveVariableUpperBound = Settings::getInstance().getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+    this->addedObjectiveVariableLowerBound = -env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+    this->addedObjectiveVariableUpperBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
 
     this->setNonlinearObjectiveVariableIdx(getProblemInstance()->getVariableNumber());
 
@@ -69,7 +69,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
     if (idx != -1 && idx != this->getNonlinearObjectiveConstraintIdx()) // Not the objective function
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-        ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
+        env->process->solutionStatistics.numberOfFunctionEvalutions++;
 
         if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
         {
@@ -85,14 +85,14 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
         }
         else
         {
-            Output::getInstance().outputWarning(
-                "Constraint with index " + to_string(idx) + " of type " + to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
+            env->output->outputWarning(
+                "Constraint with index " + std::to_string(idx) + " of type " + std::to_string(getProblemInstance()->getConstraintTypes()[idx]) + " is not supported!");
         }
     }
     else // The nonlinear objective function constraint
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
-        ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions++;
+        env->process->solutionStatistics.numberOfFunctionEvalutions++;
 
         tmpVal = tmpVal - point.at(this->getNonlinearObjectiveVariableIdx());
     }
@@ -110,7 +110,7 @@ SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
     if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
     {
         auto tmpArray = getProblemInstance()->calculateObjectiveFunctionGradient(&point.at(0), -1, true);
-        ProcessInfo::getInstance().solutionStatistics.numberOfGradientEvaluations++;
+        env->process->solutionStatistics.numberOfGradientEvaluations++;
 
         number = getProblemInstance()->getVariableNumber();
         std::vector<int> tmpIndexes;

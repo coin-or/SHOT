@@ -27,7 +27,7 @@ class NLPSolverGAMS : public NLPSolverBase
     bool showlog;
 
   public:
-    NLPSolverGAMS();
+    NLPSolverGAMS(EnvironmentPtr envPtr);
 
     virtual ~NLPSolverGAMS();
 

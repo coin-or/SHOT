@@ -10,7 +10,7 @@
 
 #include "TaskTerminate.h"
 
-TaskTerminate::TaskTerminate()
+TaskTerminate::TaskTerminate(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
 }
 
@@ -24,6 +24,6 @@ void TaskTerminate::run()
 
 std::string TaskTerminate::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

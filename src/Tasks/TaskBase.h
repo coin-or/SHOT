@@ -13,6 +13,7 @@
 #include <iostream>
 #include <typeinfo>
 #include "TaskException.h"
+#include "../Environment.h"
 
 class TaskBase
 {
@@ -27,9 +28,12 @@ class TaskBase
 
     virtual void run();
 
+    TaskBase(EnvironmentPtr envPtr);
     virtual ~TaskBase(){};
 
   protected:
+    EnvironmentPtr env;
+
   private:
     bool m_isActive;
 };

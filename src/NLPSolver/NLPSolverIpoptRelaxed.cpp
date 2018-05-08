@@ -10,11 +10,11 @@
 
 #include "NLPSolverIpoptRelaxed.h"
 
-NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed()
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr) : INLPSolver(envPtr)
 {
     osolwriter = new OSoLWriter();
 
-    NLPProblem = new OptProblemNLPRelaxed();
+    NLPProblem = new OptProblemNLPRelaxed(env);
 
     setInitialSettings();
 }
@@ -27,31 +27,31 @@ NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 
 bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
 {
-    Output::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
+    env->output->outputInfo("     Creating relaxed Ipopt problem.");
 
     dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
 
-    Output::getInstance().outputInfo("     Ipopt relaxed NLP problem created.");
+    env->output->outputInfo("     Ipopt relaxed NLP problem created.");
 
     return (true);
 }
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
-    auto constrTol = Settings::getInstance().getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
+    auto constrTol = env->settings->getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
     osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
                                      "", "double", "");
 
     osOption->setAnotherSolverOption("tol",
                                      UtilityFunctions::toStringFormat(
-                                         Settings::getInstance().getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
+                                         env->settings->getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
                                      "ipopt", "", "double", "");
 
     osOption->setAnotherSolverOption("max_iter",
-                                     to_string(Settings::getInstance().getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "",
+                                     std::to_string(env->settings->getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "",
                                      "integer", "");
 
-    auto timeLimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
+    auto timeLimit = env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal");
     osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
                                      "number", "");
 }

@@ -15,7 +15,7 @@
 class TaskCheckTimeLimit : public TaskBase
 {
   public:
-	TaskCheckTimeLimit(std::string taskIDTrue);
+	TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskIDTrue);
 	virtual ~TaskCheckTimeLimit();
 
 	virtual void run();

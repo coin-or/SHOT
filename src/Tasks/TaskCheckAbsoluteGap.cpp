@@ -10,9 +10,8 @@
 
 #include "TaskCheckAbsoluteGap.h"
 
-TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(std::string taskIDTrue)
+TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-	taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
@@ -21,15 +20,15 @@ TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
 
 void TaskCheckAbsoluteGap::run()
 {
-	if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
-	{
-		ProcessInfo::getInstance().terminationReason = E_TerminationReason::AbsoluteGap;
-		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-	}
+    if (env->process->isAbsoluteObjectiveGapToleranceMet())
+    {
+        env->process->terminationReason = E_TerminationReason::AbsoluteGap;
+        env->process->tasks->setNextTask(taskIDIfTrue);
+    }
 }
 
 std::string TaskCheckAbsoluteGap::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

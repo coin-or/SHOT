@@ -19,7 +19,7 @@
 class OptProblem
 {
   public:
-    OptProblem();
+    OptProblem(EnvironmentPtr envPtr);
     virtual ~OptProblem();
 
     void setNonlinearObjectiveConstraintIdx(int idx);
@@ -139,6 +139,8 @@ class OptProblem
     void repairNonboundedVariables();
 
     void setProblemInstance(OSInstance *instance);
+
+    EnvironmentPtr env;
 
   private:
     std::vector<int> m_nonlinearConstraints;

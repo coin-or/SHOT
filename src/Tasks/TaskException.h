@@ -11,11 +11,12 @@
 #pragma once
 #include <sstream>
 #include <exception>
+#include "../Environment.h"
 
 class TaskException : public std::exception
 {
   public:
-    TaskException(std::string msg) : message(msg)
+    TaskException(EnvironmentPtr envPtr, std::string msg) : message(msg)
     {
     }
     TaskException();
@@ -41,7 +42,7 @@ class TaskException : public std::exception
 class TaskExceptionFunctionNotDefined : public std::exception
 {
   public:
-    TaskExceptionFunctionNotDefined(std::string task) : taskName(task)
+    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task) : taskName(task)
     {
     }
 
@@ -62,7 +63,7 @@ class TaskExceptionFunctionNotDefined : public std::exception
 class TaskExceptionNotFound : public std::exception
 {
   public:
-    TaskExceptionNotFound(std::string task) : taskID(task)
+    TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task) : taskID(task)
     {
     }
 

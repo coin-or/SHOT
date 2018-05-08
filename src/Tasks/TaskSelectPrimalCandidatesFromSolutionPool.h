@@ -16,7 +16,7 @@
 class TaskSelectPrimalCandidatesFromSolutionPool : public TaskBase
 {
   public:
-	TaskSelectPrimalCandidatesFromSolutionPool();
+	TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr);
 	virtual ~TaskSelectPrimalCandidatesFromSolutionPool();
 
 	virtual void run();

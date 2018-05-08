@@ -28,7 +28,7 @@
 class MIPSolverCplexLazyOriginalCallback : public MIPSolverCplex
 {
   public:
-    MIPSolverCplexLazyOriginalCallback();
+    MIPSolverCplexLazyOriginalCallback(EnvironmentPtr envPtr);
     virtual ~MIPSolverCplexLazyOriginalCallback();
 
     virtual void checkParameters();
@@ -56,7 +56,7 @@ class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallback
   private:
   public:
     IloCplex::CallbackI *duplicateCallback() const;
-    HCallbackI(IloEnv env, IloNumVarArray xx2);
+    HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main();
 
     virtual ~HCallbackI();
@@ -69,7 +69,7 @@ class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbac
   private:
   public:
     IloCplex::CallbackI *duplicateCallback() const;
-    InfoCallbackI(IloEnv env, IloNumVarArray xx2);
+    InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main();
 
     virtual ~InfoCallbackI();
@@ -88,7 +88,7 @@ class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCa
   public:
     IloCplex::CallbackI *duplicateCallback() const;
 
-    CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOriginalCallback *solver);
+    CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main();
 
     virtual ~CtCallbackI();

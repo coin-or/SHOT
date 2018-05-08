@@ -12,21 +12,21 @@
 #include "../GAMS/GAMS2OS.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 
-NLPSolverGAMS::NLPSolverGAMS() : gmo(NULL), gev(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)
+NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr) : INLPSolver(envPtr), gmo(NULL), gev(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)
 {
-    NLPProblem = new OptProblemNLPRelaxed();
+    NLPProblem = new OptProblemNLPRelaxed(env);
 
     strcpy(nlpsolver, "conopt");
     *nlpsolveropt = '\0';
 
-    strcpy(nlpsolver, Settings::getInstance().getStringSetting("GAMS.NLP.Solver", "Subsolver").c_str());
-    strcpy(nlpsolveropt, Settings::getInstance().getStringSetting("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
+    strcpy(nlpsolver, env->settings->getStringSetting("GAMS.NLP.Solver", "Subsolver").c_str());
+    strcpy(nlpsolveropt, env->settings->getStringSetting("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
 
-    timelimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
-    iterlimit = Settings::getInstance().getIntSetting("FixedInteger.IterationLimit", "Primal");
+    timelimit = env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal");
+    iterlimit = env->settings->getIntSetting("FixedInteger.IterationLimit", "Primal");
 
     // TODO: showlog seems to have no effect...
-    showlog = Settings::getInstance().getBoolSetting("Console.GAMS.Show", "Output");
+    showlog = env->settings->getBoolSetting("Console.GAMS.Show", "Output");
 }
 
 NLPSolverGAMS::~NLPSolverGAMS()
@@ -174,7 +174,7 @@ bool NLPSolverGAMS::createProblemInstance(OSInstance *origInstance)
     //	if( gamsosinstance == NULL )
     //		return false;
 
-    gmo = ProcessInfo::getInstance().GAMSModelingObject;
+    gmo = env->process->GAMSModelingObject;
     gev = (gevHandle_t)gmoEnvironment(gmo);
 
     return true;

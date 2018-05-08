@@ -22,7 +22,7 @@
 class TaskInitializeOriginalProblem : public TaskBase
 {
   public:
-    TaskInitializeOriginalProblem(OSInstance *originalInstance);
+    TaskInitializeOriginalProblem(EnvironmentPtr envPtr, OSInstance *originalInstance);
     virtual ~TaskInitializeOriginalProblem();
 
     void run();

@@ -15,7 +15,7 @@
 class TaskCheckIterationError : public TaskBase
 {
   public:
-    TaskCheckIterationError(std::string taskIDTrue);
+    TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue);
     virtual ~TaskCheckIterationError();
 
     virtual void run();

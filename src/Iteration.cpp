@@ -10,16 +10,17 @@
 
 #include "Iteration.h"
 
-Iteration::Iteration()
+Iteration::Iteration(EnvironmentPtr envPtr)
 {
-    this->iterationNumber = ProcessInfo::getInstance().iterations.size() + 1;
+    env = envPtr;
+    this->iterationNumber = env->process->iterations.size() + 1;
 
     this->numHyperplanesAdded = 0;
 
-    if (ProcessInfo::getInstance().iterations.size() == 0)
+    if (env->process->iterations.size() == 0)
         this->totNumHyperplanes = 0;
     else
-        this->totNumHyperplanes = ProcessInfo::getInstance().iterations.at(ProcessInfo::getInstance().iterations.size() - 1).totNumHyperplanes;
+        this->totNumHyperplanes = env->process->iterations.at(env->process->iterations.size() - 1).totNumHyperplanes;
 
     this->maxDeviation = OSDBL_MAX;
     this->boundaryDistance = OSDBL_MAX;
@@ -28,16 +29,16 @@ Iteration::Iteration()
     this->MIPSolutionLimitUpdated = false;
     this->solutionStatus = E_ProblemSolutionStatus::None;
 
-    currentObjectiveBounds.first = ProcessInfo::getInstance().getDualBound();
-    currentObjectiveBounds.second = ProcessInfo::getInstance().getPrimalBound();
+    currentObjectiveBounds.first = env->process->getDualBound();
+    currentObjectiveBounds.second = env->process->getPrimalBound();
 
-    if (ProcessInfo::getInstance().relaxationStrategy != NULL)
+    if (env->process->relaxationStrategy != NULL)
     {
-        this->type = ProcessInfo::getInstance().relaxationStrategy->getProblemType();
+        this->type = env->process->relaxationStrategy->getProblemType();
     }
     else
     {
-        switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+        switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
         {
         case (E_SolutionStrategy::MIQCQP):
             this->type = E_IterationProblemType::MIP;

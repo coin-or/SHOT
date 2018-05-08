@@ -19,7 +19,7 @@
 class MIPSolverGurobiLazy : public MIPSolverGurobi
 {
   public:
-    MIPSolverGurobiLazy();
+    MIPSolverGurobiLazy(EnvironmentPtr envPtr);
     virtual ~MIPSolverGurobiLazy();
 
     virtual void checkParameters();

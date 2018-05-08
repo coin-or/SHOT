@@ -19,7 +19,7 @@
 class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
   public:
-    TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver);
+    TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr);
     virtual ~TaskExecuteSolutionLimitStrategy();
 
     void run();
@@ -27,8 +27,6 @@ class TaskExecuteSolutionLimitStrategy : public TaskBase
 
   private:
     IMIPSolutionLimitStrategy *solutionLimitStrategy;
-
-    IMIPSolver *MIPSolver;
 
     bool isInitialized;
     bool temporaryOptLimitUsed;

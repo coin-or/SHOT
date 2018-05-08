@@ -10,25 +10,23 @@
 
 #include "TaskCreateDualProblem.h"
 
-TaskCreateDualProblem::TaskCreateDualProblem(IMIPSolver *MIPSolver)
+TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
-    this->MIPSolver = MIPSolver;
+    env->process->startTimer("DualStrategy");
 
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+    env->output->outputDebug("Creating dual problem");
 
-    Output::getInstance().outputDebug("Creating dual problem");
+    env->dualSolver->createLinearProblem(env->process->originalProblem);
 
-    MIPSolver->createLinearProblem(ProcessInfo::getInstance().originalProblem);
+    env->dualSolver->initializeSolverSettings();
 
-    MIPSolver->initializeSolverSettings();
-
-    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
-        MIPSolver->writeProblemToFile(Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+        env->dualSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
     }
 
-    Output::getInstance().outputDebug("Dual problem created");
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->output->outputDebug("Dual problem created");
+    env->process->stopTimer("DualStrategy");
 }
 
 TaskCreateDualProblem::~TaskCreateDualProblem()

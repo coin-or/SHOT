@@ -10,7 +10,7 @@
 
 #include "OptProblemOriginalLinearObjective.h"
 
-OptProblemOriginalLinearObjective::OptProblemOriginalLinearObjective()
+OptProblemOriginalLinearObjective::OptProblemOriginalLinearObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
 }
 
@@ -36,11 +36,11 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
 
     if (this->getNonlinearConstraintIndexes().size() == 0)
     {
-        Settings::getInstance().updateSetting("Relaxation.IterationLimit", "Dual", 0);
-        Settings::getInstance().updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
+        env->settings->updateSetting("Relaxation.IterationLimit", "Dual", 0);
+        env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
     }
 
-    ProcessInfo::getInstance().setOriginalProblem(this);
+    env->process->setOriginalProblem(this);
 
     this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

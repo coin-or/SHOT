@@ -16,7 +16,7 @@
 class TaskPresolve : public TaskBase
 {
   public:
-    TaskPresolve(IMIPSolver *MIPSolver);
+    TaskPresolve(EnvironmentPtr envPtr);
     virtual ~TaskPresolve();
 
     virtual void run();
@@ -24,5 +24,4 @@ class TaskPresolve : public TaskBase
 
   private:
     bool isPresolved;
-    IMIPSolver *MIPSolver;
 };

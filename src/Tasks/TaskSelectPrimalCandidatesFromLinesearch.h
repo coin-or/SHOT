@@ -16,10 +16,10 @@
 class TaskSelectPrimalCandidatesFromLinesearch : public TaskBase
 {
   public:
-	TaskSelectPrimalCandidatesFromLinesearch();
+	TaskSelectPrimalCandidatesFromLinesearch(EnvironmentPtr envPtr);
 	virtual ~TaskSelectPrimalCandidatesFromLinesearch();
 	virtual void run();
-	virtual void run(vector<SolutionPoint> solPoints);
+	virtual void run(std::vector<SolutionPoint> solPoints);
 
 	virtual std::string getType();
 

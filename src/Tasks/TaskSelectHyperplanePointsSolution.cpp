@@ -10,7 +10,7 @@
 
 #include "TaskSelectHyperplanePointsSolution.h"
 
-TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution()
+TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
 }
 
@@ -20,20 +20,20 @@ TaskSelectHyperplanePointsSolution::~TaskSelectHyperplanePointsSolution()
 
 void TaskSelectHyperplanePointsSolution::run()
 {
-    this->run(ProcessInfo::getInstance().getPreviousIteration()->solutionPoints);
+    this->run(env->process->getPreviousIteration()->solutionPoints);
 }
 
-void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
+void TaskSelectHyperplanePointsSolution::run(std::vector<SolutionPoint> solPoints)
 {
-    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+    env->process->startTimer("DualCutGenerationRootSearch");
 
     int addedHyperplanes = 0;
 
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
 
-    auto originalProblem = ProcessInfo::getInstance().originalProblem;
+    auto originalProblem = env->process->originalProblem;
 
-    auto constrSelFactor = Settings::getInstance().getDoubleSetting("ECP.ConstraintSelectionFactor", "Dual");
+    auto constrSelFactor = env->settings->getDoubleSetting("ECP.ConstraintSelectionFactor", "Dual");
 
     for (int i = 0; i < solPoints.size(); i++)
     {
@@ -41,15 +41,15 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
 
         for (int j = 0; j < tmpMostDevConstrs.size(); j++)
         {
-            if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+            if (addedHyperplanes >= env->settings->getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
             {
-                ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                env->process->stopTimer("DualCutGenerationRootSearch");
                 return;
             }
 
             if (tmpMostDevConstrs.at(j).value < 0)
             {
-                Output::getInstance().outputWarning("LP point is in the interior!");
+                env->output->outputWarning("LP point is in the interior!");
             }
             else
             {
@@ -70,14 +70,14 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
                     hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
                 }
 
-                ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
+                env->process->hyperplaneWaitingList.push_back(hyperplane);
 
                 addedHyperplanes++;
             }
         }
     }
 
-    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+    env->process->stopTimer("DualCutGenerationRootSearch");
 }
 
 std::string TaskSelectHyperplanePointsSolution::getType()

@@ -15,7 +15,7 @@
 class RelaxationStrategyNone : public IRelaxationStrategy, public RelaxationStrategyBase
 {
   public:
-    RelaxationStrategyNone(IMIPSolver *MIPSolver);
+    RelaxationStrategyNone(EnvironmentPtr envPtr);
     virtual ~RelaxationStrategyNone();
 
     virtual void executeStrategy();
@@ -29,5 +29,4 @@ class RelaxationStrategyNone : public IRelaxationStrategy, public RelaxationStra
     virtual E_IterationProblemType getProblemType();
 
   private:
-    IMIPSolver *MIPSolver;
 };

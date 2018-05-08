@@ -12,7 +12,7 @@
 #include "OSExpressionTree.h"
 #include "vector"
 
-OptProblemNLPMinimax::OptProblemNLPMinimax()
+OptProblemNLPMinimax::OptProblemNLPMinimax(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
 }
 
@@ -71,10 +71,10 @@ void OptProblemNLPMinimax::reformulate(OSInstance *originalInstance)
 
 void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destination, bool integerRelaxed)
 {
-    double LBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
-    double UBCont = Settings::getInstance().getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
-    double LBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
-    double UBInt = Settings::getInstance().getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
+    double LBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
+    double UBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
+    double LBInt = env->settings->getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
+    double UBInt = env->settings->getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
 
     int numVar = source->getVariableNumber();
 
@@ -87,16 +87,16 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
         destination->setVariableNumber(numVar + 1);
     }
 
-    vector<std::string> varNames;
+    std::vector<std::string> varNames;
     varNames.assign(source->getVariableNames(), source->getVariableNames() + numVar);
 
-    vector<char> varTypes;
+    std::vector<char> varTypes;
     varTypes.assign(source->getVariableTypes(), source->getVariableTypes() + numVar);
 
-    vector<double> varLBs;
+    std::vector<double> varLBs;
     varLBs.assign(source->getVariableLowerBounds(), source->getVariableLowerBounds() + numVar);
 
-    vector<double> varUBs;
+    std::vector<double> varUBs;
     varUBs.assign(source->getVariableUpperBounds(), source->getVariableUpperBounds() + numVar);
 
     if (destination->getVariableNumber() == 0)
@@ -131,10 +131,10 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
         }
     }
 
-    double tmpObjLowerBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
-    double tmpObjUpperBound = Settings::getInstance().getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
+    double tmpObjLowerBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
+    double tmpObjUpperBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
-    double tmpMuMaxAbsValue = Settings::getInstance().getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+    double tmpMuMaxAbsValue = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
 
     if (this->isObjectiveFunctionNonlinear())
     {

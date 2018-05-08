@@ -59,7 +59,7 @@
 class SolutionStrategyNLP : public ISolutionStrategy
 {
   public:
-    SolutionStrategyNLP(OSInstance *osInstance);
+    SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osInstance);
     virtual ~SolutionStrategyNLP();
 
     virtual bool solveProblem();

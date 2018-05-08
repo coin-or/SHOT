@@ -10,7 +10,7 @@
 
 #include "OptProblemOriginalQuadraticObjective.h"
 
-OptProblemOriginalQuadraticObjective::OptProblemOriginalQuadraticObjective()
+OptProblemOriginalQuadraticObjective::OptProblemOriginalQuadraticObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
 }
 
@@ -28,11 +28,11 @@ bool OptProblemOriginalQuadraticObjective::setProblem(OSInstance *instance)
 
     if (this->getNonlinearConstraintIndexes().size() == 0)
     {
-        Settings::getInstance().updateSetting("Relaxation.IterationLimit", "Dual", 0);
-        Settings::getInstance().updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
+        env->settings->updateSetting("Relaxation.IterationLimit", "Dual", 0);
+        env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
     }
 
-    ProcessInfo::getInstance().setOriginalProblem(this);
+    env->process->setOriginalProblem(this);
 
     this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

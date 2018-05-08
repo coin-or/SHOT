@@ -16,13 +16,13 @@
 class TaskSelectHyperplanePointsSolution : public TaskBase
 {
   public:
-	TaskSelectHyperplanePointsSolution();
-	virtual ~TaskSelectHyperplanePointsSolution();
+    TaskSelectHyperplanePointsSolution(EnvironmentPtr envPtr);
+    virtual ~TaskSelectHyperplanePointsSolution();
 
-	virtual void run();
-	virtual void run(vector<SolutionPoint> solPoints);
+    virtual void run();
+    virtual void run(std::vector<SolutionPoint> solPoints);
 
-	virtual std::string getType();
+    virtual std::string getType();
 
   private:
 };

@@ -62,6 +62,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 # Adding source files
 file(GLOB_RECURSE SOURCES
+  "${PROJECT_SOURCE_DIR}/src/Environment.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
   "${PROJECT_SOURCE_DIR}/src/ProcessInfo.cpp"
@@ -100,6 +101,7 @@ file(GLOB_RECURSE SOURCES
 
 # Adding header files
 file(GLOB_RECURSE HEADERS
+  "${PROJECT_SOURCE_DIR}/src/Environment.h"
   "${PROJECT_SOURCE_DIR}/src/Enums.h"
   "${PROJECT_SOURCE_DIR}/src/Iteration.h"
   "${PROJECT_SOURCE_DIR}/src/Output.h"

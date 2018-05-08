@@ -14,13 +14,13 @@
 class MIPSolutionLimitStrategyAdaptive : public IMIPSolutionLimitStrategy
 {
   public:
-	MIPSolutionLimitStrategyAdaptive(IMIPSolver *MIPSolver);
-	~MIPSolutionLimitStrategyAdaptive();
+    MIPSolutionLimitStrategyAdaptive(EnvironmentPtr envPtr);
+    ~MIPSolutionLimitStrategyAdaptive();
 
-	virtual bool updateLimit();
-	virtual int getNewLimit();
-	virtual int getInitialLimit();
+    virtual bool updateLimit();
+    virtual int getNewLimit();
+    virtual int getInitialLimit();
 
-	int lastIterSolLimIncreased;
-	int numSolLimIncremented;
+    int lastIterSolLimIncreased;
+    int numSolLimIncremented;
 };

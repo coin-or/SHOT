@@ -16,35 +16,29 @@
 #include "OSOption.h"
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
+#include "Environment.h"
 
 #include "Output.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-using namespace std;
-
 class Settings
 {
   private:
-    static Settings *single;
     void updateSettingBase(std::pair<std::string, std::string> key, std::string value);
+    EnvironmentPtr env;
 
-    Settings()
+  public:
+    Settings(EnvironmentPtr envPtr) : env(envPtr)
     {
         settingsInitialized = false;
     }
 
-  public:
-    static Settings &getInstance()
-    {
-        static Settings inst;
-        return (inst);
-    }
-
-    bool settingsInitialized;
     ~Settings()
     {
     }
+
+    bool settingsInitialized = false;
 
     void readSettingsFromOSoL(std::string osol);
     void readSettingsFromOSOption(OSOption *options);
@@ -102,7 +96,7 @@ class SettingKeyNotFoundException : public std::runtime_error
   public:
     SettingKeyNotFoundException(const std::string &key, const std::string &category) : std::runtime_error(
                                                                                            str(
-                                                                                               boost::format("Exception: Setting with <key,category> pair <%1%,%2%> not found!") % key % category))
+                                                                                               boost::format("Exception: Setting with <key,category> std::pair <%1%,%2%> not found!") % key % category))
     {
     }
 };
@@ -113,7 +107,7 @@ class SettingSetWrongTypeException : public std::runtime_error
     SettingSetWrongTypeException(const std::string &key, const std::string &category) : std::runtime_error(
                                                                                             str(
                                                                                                 boost::format(
-                                                                                                    "Exception: Cannot set setting with <key,category> pair <%1%,%2%>, wrong type!") %
+                                                                                                    "Exception: Cannot set setting with <key,category> std::pair <%1%,%2%>, wrong type!") %
                                                                                                 key % category))
     {
     }
@@ -125,7 +119,7 @@ class SettingGetWrongTypeException : public std::runtime_error
     SettingGetWrongTypeException(const std::string &key, const std::string &category) : std::runtime_error(
                                                                                             str(
                                                                                                 boost::format(
-                                                                                                    "Exception: Cannot get setting with <key,category> pair <%1%,%2%>, wrong type!") %
+                                                                                                    "Exception: Cannot get setting with <key,category> std::pair <%1%,%2%>, wrong type!") %
                                                                                                 key % category))
     {
     }
@@ -135,7 +129,7 @@ class SettingOutsideBoundsException : public std::runtime_error
 {
   public:
     SettingOutsideBoundsException(const std::string &key, const std::string &category, const double &value,
-                                  const double &minVal, const double &maxVal) : std::runtime_error(str(boost::format("Exception: The value %1% of setting with <key,category> pair <%2%,%3%> is not between %4% and %5%!") % value % key % category % minVal % maxVal))
+                                  const double &minVal, const double &maxVal) : std::runtime_error(str(boost::format("Exception: The value %1% of setting with <key,category> std::pair <%2%,%3%> is not between %4% and %5%!") % value % key % category % minVal % maxVal))
     {
     }
 };

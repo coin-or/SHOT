@@ -10,13 +10,11 @@
 
 #include "MIPSolutionLimitStrategyAdaptive.h"
 
-MIPSolutionLimitStrategyAdaptive::MIPSolutionLimitStrategyAdaptive(IMIPSolver *MIPSolver)
+MIPSolutionLimitStrategyAdaptive::MIPSolutionLimitStrategyAdaptive(EnvironmentPtr envPtr)
 {
-    this->MIPSolver = MIPSolver;
+    env = envPtr;
 
-    //lastIterSolLimIncreased = 1;
     numSolLimIncremented = 1;
-    //currentLimit = Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 }
 
 MIPSolutionLimitStrategyAdaptive::~MIPSolutionLimitStrategyAdaptive()
@@ -25,8 +23,8 @@ MIPSolutionLimitStrategyAdaptive::~MIPSolutionLimitStrategyAdaptive()
 
 bool MIPSolutionLimitStrategyAdaptive::updateLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto currIter = env->process->getCurrentIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
     if (!currIter->isMIP())
     {
@@ -39,7 +37,7 @@ bool MIPSolutionLimitStrategyAdaptive::updateLimit()
     }
 
     // Solution limit has not been updated in the maximal number of iterations
-    if (prevIter->isMIP() && currIter->iterationNumber - lastIterSolLimIncreased > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual"))
+    if (prevIter->isMIP() && currIter->iterationNumber - lastIterSolLimIncreased > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual"))
     {
         return true;
     }
@@ -55,10 +53,10 @@ bool MIPSolutionLimitStrategyAdaptive::updateLimit()
 
 int MIPSolutionLimitStrategyAdaptive::getNewLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
     int newLimit;
-    newLimit = MIPSolver->getSolutionLimit() + 1;
+    newLimit = env->dualSolver->getSolutionLimit() + 1;
     lastIterSolLimIncreased = currIter->iterationNumber;
 
     return newLimit;
@@ -66,5 +64,5 @@ int MIPSolutionLimitStrategyAdaptive::getNewLimit()
 
 int MIPSolutionLimitStrategyAdaptive::getInitialLimit()
 {
-    return Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual");
+    return env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 }

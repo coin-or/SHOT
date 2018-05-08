@@ -16,10 +16,11 @@
 class INLPSolver
 {
   public:
-    INLPSolver();
+    INLPSolver(EnvironmentPtr envPtr);
     virtual ~INLPSolver();
 
     OptProblem *NLPProblem;
+    EnvironmentPtr env;
 
     virtual void setProblem(OSInstance *origInstance) = 0;
     virtual void initializeProblem() = 0;

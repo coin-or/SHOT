@@ -16,12 +16,11 @@
 class TaskAddIntegerCuts : public TaskBase
 {
   public:
-	TaskAddIntegerCuts(IMIPSolver *MIPSolver);
-	virtual ~TaskAddIntegerCuts();
+    TaskAddIntegerCuts(EnvironmentPtr envPtr);
+    virtual ~TaskAddIntegerCuts();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
-	IMIPSolver *MIPSolver;
 };

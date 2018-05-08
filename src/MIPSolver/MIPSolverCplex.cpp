@@ -12,6 +12,13 @@
 
 MIPSolverCplex::MIPSolverCplex()
 {
+    // Should not be called
+}
+
+MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+
     discreteVariablesActivated = true;
 
     cplexModel = IloModel(cplexEnv);
@@ -72,8 +79,8 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
         }
         else
         {
-            Output::getInstance().outputWarning(
-                "Error variable type " + to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
+            env->output->outputWarning(
+                "Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
         }
     }
 
@@ -197,7 +204,7 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Cplex exception caught when creating model", e.getMessage());
+        env->output->outputError("Cplex exception caught when creating model", e.getMessage());
         return (false);
     }
 
@@ -211,43 +218,43 @@ void MIPSolverCplex::initializeSolverSettings()
     try
     {
         // Disable Cplex output
-        if (!Settings::getInstance().getBoolSetting("Console.DualSolver.Show", "Output"))
+        if (!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
         {
             cplexInstance.setOut(cplexEnv.getNullStream());
 
-            if (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") <= static_cast<int>(ENUM_OUTPUT_LEVEL_summary))
+            if (env->settings->getIntSetting("Console.LogLevel", "Output") <= static_cast<int>(ENUM_OUTPUT_LEVEL_summary))
             {
                 cplexInstance.setWarning(cplexEnv.getNullStream());
             }
         }
 
-        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
-        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
+        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
+        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
 
         cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
 
-        cplexInstance.setParam(IloCplex::SolnPoolIntensity, Settings::getInstance().getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
-        cplexInstance.setParam(IloCplex::SolnPoolReplace, Settings::getInstance().getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
-        cplexInstance.setParam(IloCplex::SolnPoolGap, Settings::getInstance().getDoubleSetting("Cplex.SolnPoolGap", "Subsolver"));
-        cplexInstance.setParam(IloCplex::SolnPoolCapacity, Settings::getInstance().getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
+        cplexInstance.setParam(IloCplex::SolnPoolIntensity, env->settings->getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+        cplexInstance.setParam(IloCplex::SolnPoolReplace, env->settings->getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
+        cplexInstance.setParam(IloCplex::SolnPoolGap, env->settings->getDoubleSetting("Cplex.SolnPoolGap", "Subsolver"));
+        cplexInstance.setParam(IloCplex::SolnPoolCapacity, env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
-        cplexInstance.setParam(IloCplex::Probe, Settings::getInstance().getIntSetting("Cplex.Probe", "Subsolver"));
-        cplexInstance.setParam(IloCplex::MIPEmphasis, Settings::getInstance().getIntSetting("Cplex.MIPEmphasis", "Subsolver"));
+        cplexInstance.setParam(IloCplex::Probe, env->settings->getIntSetting("Cplex.Probe", "Subsolver"));
+        cplexInstance.setParam(IloCplex::MIPEmphasis, env->settings->getIntSetting("Cplex.MIPEmphasis", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::ParallelMode, Settings::getInstance().getIntSetting("Cplex.ParallelMode", "Subsolver"));
-        cplexInstance.setParam(IloCplex::Threads, Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
+        cplexInstance.setParam(IloCplex::ParallelMode, env->settings->getIntSetting("Cplex.ParallelMode", "Subsolver"));
+        cplexInstance.setParam(IloCplex::Threads, env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"));
 
-        cplexInstance.setParam(IloCplex::NumericalEmphasis, Settings::getInstance().getIntSetting("Cplex.NumericalEmphasis", "Subsolver"));
-        cplexInstance.setParam(IloCplex::MemoryEmphasis, Settings::getInstance().getIntSetting("Cplex.MemoryEmphasis", "Subsolver"));
+        cplexInstance.setParam(IloCplex::NumericalEmphasis, env->settings->getIntSetting("Cplex.NumericalEmphasis", "Subsolver"));
+        cplexInstance.setParam(IloCplex::MemoryEmphasis, env->settings->getIntSetting("Cplex.MemoryEmphasis", "Subsolver"));
 
         // Options for using swap file
-        cplexInstance.setParam(IloCplex::WorkDir, Settings::getInstance().getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
-        cplexInstance.setParam(IloCplex::WorkMem, Settings::getInstance().getDoubleSetting("Cplex.WorkMem", "Subsolver"));
-        cplexInstance.setParam(IloCplex::NodeFileInd, Settings::getInstance().getIntSetting("Cplex.NodeFileInd", "Subsolver"));
+        cplexInstance.setParam(IloCplex::WorkDir, env->settings->getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
+        cplexInstance.setParam(IloCplex::WorkMem, env->settings->getDoubleSetting("Cplex.WorkMem", "Subsolver"));
+        cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getIntSetting("Cplex.NodeFileInd", "Subsolver"));
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Cplex error when initializing parameters for linear solver",
+        env->output->outputError("Cplex error when initializing parameters for linear solver",
                                                                 e.getMessage());
     }
 }
@@ -282,7 +289,7 @@ int MIPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, do
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when adding linear constraint", e.getMessage());
+        env->output->outputError("Error when adding linear constraint", e.getMessage());
 
         return (-1);
     }
@@ -344,7 +351,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
     catch (IloException &e)
     {
         if (activate)
-            Output::getInstance().Output::getInstance().outputError("Error when activating discrete variables",
+            env->output->outputError("Error when activating discrete variables",
                                                                     e.getMessage());
     }
 }
@@ -400,13 +407,13 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
         }
         else
         {
-            Output::getInstance().Output::getInstance().outputError("MIP solver return status " + to_string(status));
+            env->output->outputError("MIP solver return status " + std::to_string(status));
             MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         }
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when obtaining solution status", e.getMessage());
+        env->output->outputError("Error when obtaining solution status", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -433,7 +440,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when solving MIP/LP problem", e.getMessage());
+        env->output->outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
@@ -451,7 +458,7 @@ int MIPSolverCplex::increaseSolutionLimit(int increment)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when increasing solution limit", e.getMessage());
+        env->output->outputError("Error when increasing solution limit", e.getMessage());
     }
 
     return (sollim);
@@ -466,7 +473,7 @@ void MIPSolverCplex::setSolutionLimit(long limit)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when setting solution limit", e.getMessage());
+        env->output->outputError("Error when setting solution limit", e.getMessage());
     }
 }
 
@@ -480,7 +487,7 @@ int MIPSolverCplex::getSolutionLimit()
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when obtaining solution limit", e.getMessage());
+        env->output->outputError("Error when obtaining solution limit", e.getMessage());
     }
 
     return (solLim);
@@ -488,7 +495,7 @@ int MIPSolverCplex::getSolutionLimit()
 
 std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
 {
-    bool isMIP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && env->process->originalProblem->isProblemDiscrete();
     int numVar = cplexVars.getSize();
     std::vector<double> solution(numVar);
 
@@ -512,7 +519,7 @@ std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when reading solution with index " + to_string(solIdx),
+        env->output->outputError("Error when reading solution with index " + std::to_string(solIdx),
                                                                 e.getMessage());
     }
 
@@ -527,7 +534,7 @@ int MIPSolverCplex::getNumberOfSolutions()
 
     try
     {
-        if (ProcessInfo::getInstance().originalProblem->isProblemDiscrete() && isMIP)
+        if (env->process->originalProblem->isProblemDiscrete() && isMIP)
         {
             numSols = cplexInstance.getSolnPoolNsolns();
         }
@@ -538,7 +545,7 @@ int MIPSolverCplex::getNumberOfSolutions()
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when obtaining number of solutions", e.getMessage());
+        env->output->outputError("Error when obtaining number of solutions", e.getMessage());
     }
 
     return (numSols);
@@ -546,14 +553,14 @@ int MIPSolverCplex::getNumberOfSolutions()
 
 double MIPSolverCplex::getObjectiveValue(int solIdx)
 {
-    bool isMIP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && env->process->originalProblem->isProblemDiscrete();
 
     double objVal = NAN;
 
     if (!isMIP && solIdx > 0) // LP problems only have one solution!
     {
-        Output::getInstance().Output::getInstance().outputError(
-            "Cannot obtain solution with index " + to_string(solIdx) + " since the problem is LP/QP!");
+        env->output->outputError(
+            "Cannot obtain solution with index " + std::to_string(solIdx) + " since the problem is LP/QP!");
         return (objVal);
     }
 
@@ -570,8 +577,8 @@ double MIPSolverCplex::getObjectiveValue(int solIdx)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError(
-            "Error when obtaining objective value for solution index " + to_string(solIdx), e.getMessage());
+        env->output->outputError(
+            "Error when obtaining objective value for solution index " + std::to_string(solIdx), e.getMessage());
     }
 
     return (objVal);
@@ -592,13 +599,13 @@ void MIPSolverCplex::setTimeLimit(double seconds)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when setting time limit", e.getMessage());
+        env->output->outputError("Error when setting time limit", e.getMessage());
     }
 }
 
 void MIPSolverCplex::setCutOff(double cutOff)
 {
-    double cutOffTol = Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual");
+    double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
 
     try
     {
@@ -606,19 +613,19 @@ void MIPSolverCplex::setCutOff(double cutOff)
         {
             cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
 
-            Output::getInstance().outputInfo(
-                "     Setting cutoff value to " + to_string(cutOff + cutOffTol) + " for minimization.");
+            env->output->outputInfo(
+                "     Setting cutoff value to " + std::to_string(cutOff + cutOffTol) + " for minimization.");
         }
         else
         {
             cplexInstance.setParam(IloCplex::CutLo, cutOff - cutOffTol);
-            Output::getInstance().outputInfo(
-                "     Setting cutoff value to " + to_string(cutOff - cutOffTol) + " for maximization.");
+            env->output->outputInfo(
+                "     Setting cutoff value to " + std::to_string(cutOff - cutOffTol) + " for maximization.");
         }
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when setting cut off value", e.getMessage());
+        env->output->outputError("Error when setting cut off value", e.getMessage());
     }
 }
 
@@ -639,12 +646,12 @@ void MIPSolverCplex::addMIPStart(std::vector<double> point)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when adding MIP starting point", e.getMessage());
+        env->output->outputError("Error when adding MIP starting point", e.getMessage());
     }
 
     startVal.end();
 
-    Output::getInstance().outputInfo("     Added MIP starting point.");
+    env->output->outputInfo("     Added MIP starting point.");
 }
 
 void MIPSolverCplex::deleteMIPStarts()
@@ -659,10 +666,10 @@ void MIPSolverCplex::deleteMIPStarts()
         }
         catch (IloException &e)
         {
-            Output::getInstance().Output::getInstance().outputError("Error when deleting MIP starting points", e.getMessage());
+            env->output->outputError("Error when deleting MIP starting points", e.getMessage());
         }
 
-        Output::getInstance().outputDebug("    Deleted " + to_string(numStarts) + " MIP starting points.");
+        env->output->outputDebug("    Deleted " + std::to_string(numStarts) + " MIP starting points.");
     }
 }
 
@@ -681,7 +688,7 @@ void MIPSolverCplex::writeProblemToFile(std::string filename)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when saving model to file", e.getMessage());
+        env->output->outputError("Error when saving model to file", e.getMessage());
     }
 }
 
@@ -699,14 +706,14 @@ void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError(
-            "Error when updating variable bounds for variable index" + to_string(varIndex), e.getMessage());
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
     }
 }
 
-pair<double, double> MIPSolverCplex::getCurrentVariableBounds(int varIndex)
+std::pair<double, double> MIPSolverCplex::getCurrentVariableBounds(int varIndex)
 {
-    pair<double, double> tmpBounds;
+    std::pair<double, double> tmpBounds;
 
     try
     {
@@ -715,8 +722,8 @@ pair<double, double> MIPSolverCplex::getCurrentVariableBounds(int varIndex)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError(
-            "Error when obtaining variable bounds for variable index" + to_string(varIndex), e.getMessage());
+        env->output->outputError(
+            "Error when obtaining variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
     }
     return (tmpBounds);
 }
@@ -734,7 +741,7 @@ double MIPSolverCplex::getDualObjectiveValue()
 {
     double objVal = NAN;
 
-    bool isMIP = getDiscreteVariableStatus() && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && env->process->originalProblem->isProblemDiscrete();
 
     try
     {
@@ -749,7 +756,7 @@ double MIPSolverCplex::getDualObjectiveValue()
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when obtaining dual objective value", e.getMessage());
+        env->output->outputError("Error when obtaining dual objective value", e.getMessage());
     }
 
     return (objVal);
@@ -782,7 +789,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
             newUBs.push_back(redubs[i]);
         }
 
-        if (Settings::getInstance().getBoolSetting("MIP.Presolve.RemoveRedundantConstraints", "Dual"))
+        if (env->settings->getBoolSetting("MIP.Presolve.RemoveRedundantConstraints", "Dual"))
         {
             int numconstr = 0;
 
@@ -801,9 +808,9 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
             if (isUpdated)
             {
                 cplexInstance.extract(cplexModel);
-                Output::getInstance().outputInfo(
-                    "     Removed " + to_string(numconstr) + " redundant constraints from MIP model.");
-                ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
+                env->output->outputInfo(
+                    "     Removed " + std::to_string(numconstr) + " redundant constraints from MIP model.");
+                env->process->solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
             }
         }
 
@@ -819,7 +826,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
         redubs.end();
         redund.end();
 
-        Output::getInstance().Output::getInstance().outputError("Error during presolve", e.getMessage());
+        env->output->outputError("Error during presolve", e.getMessage());
 
         return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
     }
@@ -833,7 +840,7 @@ void MIPSolverCplex::writePresolvedToFile(std::string filename)
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when saving presolved model to file", e.getMessage());
+        env->output->outputError("Error when saving presolved model to file", e.getMessage());
     }
 }
 
@@ -844,7 +851,7 @@ void MIPSolverCplex::checkParameters()
 void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
                                       std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
 
     auto optional = createHyperplaneTerms(hyperplane);
 
@@ -862,7 +869,7 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
     {
         if (E.value != E.value) //Check for NaN
         {
-            Output::getInstance().outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
             break;
         }
@@ -914,7 +921,7 @@ void MIPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
     IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     auto addedConstr = addConstraintFunction(tmpRange);
-    ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
+    env->process->solutionStatistics.numberOfIntegerCuts++;
 
     expr.end();
 }
@@ -927,7 +934,7 @@ int MIPSolverCplex::getNumberOfExploredNodes()
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when getting number of explored nodes", e.getMessage());
+        env->output->outputError("Error when getting number of explored nodes", e.getMessage());
         return 0;
     }
 }
@@ -938,13 +945,13 @@ int MIPSolverCplex::getNumberOfOpenNodes()
     {
         int nodesLeft = cplexInstance.getNnodesLeft();
 
-        ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes = nodesLeft;
+        env->process->solutionStatistics.numberOfOpenNodes = nodesLeft;
 
         return (cplexInstance.getNnodesLeft());
     }
     catch (IloException &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Error when getting number of open nodes", e.getMessage());
+        env->output->outputError("Error when getting number of open nodes", e.getMessage());
         return 0;
     }
 }

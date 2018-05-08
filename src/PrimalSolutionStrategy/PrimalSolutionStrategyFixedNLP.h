@@ -26,7 +26,7 @@
 class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
 {
   public:
-    PrimalSolutionStrategyFixedNLP();
+    PrimalSolutionStrategyFixedNLP(EnvironmentPtr envPtr);
     virtual ~PrimalSolutionStrategyFixedNLP();
 
     virtual bool runStrategy();

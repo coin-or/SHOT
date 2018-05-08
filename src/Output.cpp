@@ -10,7 +10,7 @@
 
 #include "Output.h"
 
-Output::Output()
+Output::Output(EnvironmentPtr envPtr) : env(envPtr)
 {
     osOutput = new OSOutput();
 
@@ -79,9 +79,9 @@ void Output::setLogLevels()
 {
     // Sets the correct log levels
     osOutput->SetPrintLevel("stdout",
-                            (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1));
+                            (ENUM_OUTPUT_LEVEL)(env->settings->getIntSetting("Console.LogLevel", "Output") + 1));
     osOutput->SetPrintLevel("shotlogfile",
-                            (ENUM_OUTPUT_LEVEL)(Settings::getInstance().getIntSetting("File.LogLevel", "Output") + 1));
+                            (ENUM_OUTPUT_LEVEL)(env->settings->getIntSetting("File.LogLevel", "Output") + 1));
 }
 
 void Output::outputIterationDetail(int iterationNumber,
@@ -114,12 +114,12 @@ void Output::outputIterationDetail(int iterationNumber,
             printLine = true;
         }
 
-        if (iterationsWithoutPrintoutCounter > 100 || ProcessInfo::getInstance().getElapsedTime("Total") - lastIterationOutputTimeStamp > 2)
+        if (iterationsWithoutPrintoutCounter > 100 || env->process->getElapsedTime("Total") - lastIterationOutputTimeStamp > 2)
         {
             printLine = true;
         }
 
-        switch (static_cast<ES_IterationOutputDetail>(Settings::getInstance().getIntSetting("Console.Iteration.Detail", "Output")))
+        switch (static_cast<ES_IterationOutputDetail>(env->settings->getIntSetting("Console.Iteration.Detail", "Output")))
         {
         case ES_IterationOutputDetail::Full:
             printLine = true;
@@ -153,7 +153,7 @@ void Output::outputIterationDetail(int iterationNumber,
 
         iterationsWithoutPrintoutCounter = 0;
         iterationPrintoutsSinceLastHeader++;
-        lastIterationOutputTimeStamp = ProcessInfo::getInstance().getElapsedTime("Total");
+        lastIterationOutputTimeStamp = env->process->getElapsedTime("Total");
 
         std::string combDualCuts = "";
 
@@ -185,18 +185,18 @@ void Output::outputIterationDetail(int iterationNumber,
 
         nodes << "        Explored nodes: ";
 
-        if (ProcessInfo::getInstance().getCurrentIteration()->numberOfExploredNodes > 0)
+        if (env->process->getCurrentIteration()->numberOfExploredNodes > 0)
         {
-            nodes << " +" << ProcessInfo::getInstance().getCurrentIteration()->numberOfExploredNodes
+            nodes << " +" << env->process->getCurrentIteration()->numberOfExploredNodes
                   << " = ";
         }
 
         nodes
-            << ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes << ".";
+            << env->process->solutionStatistics.numberOfExploredNodes << ".";
 
-        if (ProcessInfo::getInstance().getCurrentIteration()->numberOfOpenNodes > 0)
+        if (env->process->getCurrentIteration()->numberOfOpenNodes > 0)
         {
-            nodes << " Open nodes: " << ProcessInfo::getInstance().getCurrentIteration()->numberOfOpenNodes << ".";
+            nodes << " Open nodes: " << env->process->getCurrentIteration()->numberOfOpenNodes << ".";
         }
 
         nodes << "\r\n";
@@ -328,7 +328,7 @@ void Output::outputOptionsReport()
     report << "╶ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
 
-    std::string optionsFile = Settings::getInstance().getStringSetting("OptionsFile", "Input");
+    std::string optionsFile = env->settings->getStringSetting("OptionsFile", "Input");
 
     if (optionsFile == "")
     {
@@ -343,7 +343,7 @@ void Output::outputOptionsReport()
 
     report << "\r\n";
 
-    std::string nonDefaultOptions = Settings::getInstance().getUpdatedSettingsAsString();
+    std::string nonDefaultOptions = env->settings->getUpdatedSettingsAsString();
 
     if (nonDefaultOptions != "")
     {
@@ -355,9 +355,9 @@ void Output::outputOptionsReport()
     }
 
     std::string cutAlgorithm, dualSolver;
-    bool useSingleTree = (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree);
+    bool useSingleTree = (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree);
 
-    if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+    if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
         cutAlgorithm = "ESH";
     }
@@ -366,7 +366,7 @@ void Output::outputOptionsReport()
         cutAlgorithm = "ECP";
     }
 
-    auto solver = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
 
     if (useSingleTree)
     {
@@ -374,7 +374,7 @@ void Output::outputOptionsReport()
         if (solver == ES_MIPSolver::Cplex)
         {
 #ifdef HAS_CPLEX_NEW_CALLBACK
-            if (Settings::getInstance().getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
+            if (env->settings->getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
             {
                 dualSolver = "CPLEX with new callback functionality";
             }
@@ -420,7 +420,7 @@ void Output::outputOptionsReport()
         }
     }
 
-    switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
+    switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
     {
     case (E_SolutionStrategy::SingleTree):
         report << " Dual strategy:              Single-tree\r\n";
@@ -450,7 +450,7 @@ void Output::outputOptionsReport()
 
     report << " Primal NLP solver:          ";
 
-    switch (static_cast<ES_PrimalNLPSolver>(ProcessInfo::getInstance().usedPrimalNLPSolver))
+    switch (static_cast<ES_PrimalNLPSolver>(env->process->usedPrimalNLPSolver))
     {
     case (ES_PrimalNLPSolver::None):
         report << "none";
@@ -460,13 +460,13 @@ void Output::outputOptionsReport()
         break;
     case (ES_PrimalNLPSolver::GAMS):
         report << "GAMS (";
-        report << Settings::getInstance().getStringSetting("GAMS.NLP.Solver", "Subsolver");
+        report << env->settings->getStringSetting("GAMS.NLP.Solver", "Subsolver");
         report << ")\r\n";
         break;
     case (ES_PrimalNLPSolver::Ipopt):
         report << "Ipopt (";
 
-        switch (static_cast<ES_IpoptSolver>(Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver")))
+        switch (static_cast<ES_IpoptSolver>(env->settings->getIntSetting("Ipopt.LinearSolver", "Subsolver")))
         {
         case (ES_IpoptSolver::ma27):
             report << "ma27";
@@ -500,10 +500,10 @@ void Output::outputOptionsReport()
 
     report << "\r\n";
 
-    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
         report << " Debug directory:            ";
-        report << Settings::getInstance().getStringSetting("Debug.Path", "Output");
+        report << env->settings->getStringSetting("Debug.Path", "Output");
         report << "\r\n";
     }
 
@@ -514,13 +514,13 @@ void Output::outputProblemInstanceReport()
 {
     std::stringstream report;
 
-    auto problemStats = ProcessInfo::getInstance().problemStats;
+    auto problemStats = env->process->problemStats;
 
     report << "\r\n";
     report << "╶ Problem instance ───────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
 
-    std::string problemFile = Settings::getInstance().getStringSetting("ProblemFile", "Input");
+    std::string problemFile = env->settings->getStringSetting("ProblemFile", "Input");
 
     report << " Problem read from file:     " << problemFile;
     report << "\r\n";
@@ -587,15 +587,15 @@ void Output::outputProblemInstanceReport()
 void Output::outputSolutionReport()
 {
     std::stringstream report;
-    auto problemStats = ProcessInfo::getInstance().problemStats;
+    auto problemStats = env->process->problemStats;
 
     report << "\r\n\r\n";
     report << "╶ Solution report ────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
 
-    auto terminationReason = ProcessInfo::getInstance().terminationReason;
+    auto terminationReason = env->process->terminationReason;
 
-    bool primalSolutionFound = (ProcessInfo::getInstance().primalSolutions.size() > 0);
+    bool primalSolutionFound = (env->process->primalSolutions.size() > 0);
 
     if (terminationReason == E_TerminationReason::AbsoluteGap ||
         terminationReason == E_TerminationReason::RelativeGap)
@@ -653,84 +653,84 @@ void Output::outputSolutionReport()
     report << "\r\n";
 
     report << " Objective bound [dual, primal]:                 ";
-    report << "[" << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getDualBound(), "%g") << ", ";
-    report << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getPrimalBound(), "%g") << "]\r\n";
+    report << "[" << UtilityFunctions::toStringFormat(env->process->getDualBound(), "%g") << ", ";
+    report << UtilityFunctions::toStringFormat(env->process->getPrimalBound(), "%g") << "]\r\n";
     report << " Objective gap absolute / relative:              ";
-    report << "" << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getAbsoluteObjectiveGap(), "%g") << " / ";
-    report << UtilityFunctions::toStringFormat(ProcessInfo::getInstance().getRelativeObjectiveGap(), "%g") << "\r\n";
+    report << "" << UtilityFunctions::toStringFormat(env->process->getAbsoluteObjectiveGap(), "%g") << " / ";
+    report << UtilityFunctions::toStringFormat(env->process->getRelativeObjectiveGap(), "%g") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
     std::stringstream unfulfilled;
 
-    if (ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
+    if (env->process->isAbsoluteObjectiveGapToleranceMet())
     {
         fulfilled << "  - absolute objective gap tolerance             ";
-        fulfilled << ProcessInfo::getInstance().getAbsoluteObjectiveGap() << " <= ";
-        fulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
+        fulfilled << env->process->getAbsoluteObjectiveGap() << " <= ";
+        fulfilled << env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - absolute objective gap tolerance             ";
-        unfulfilled << ProcessInfo::getInstance().getAbsoluteObjectiveGap() << " > ";
-        unfulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
+        unfulfilled << env->process->getAbsoluteObjectiveGap() << " > ";
+        unfulfilled << env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
+    if (env->process->isRelativeObjectiveGapToleranceMet())
     {
         fulfilled << "  - relative objective gap tolerance             ";
-        fulfilled << ProcessInfo::getInstance().getRelativeObjectiveGap() << " <= ";
-        fulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
+        fulfilled << env->process->getRelativeObjectiveGap() << " <= ";
+        fulfilled << env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - relative objective gap tolerance             ";
-        unfulfilled << ProcessInfo::getInstance().getRelativeObjectiveGap() << " > ";
-        unfulfilled << Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
+        unfulfilled << env->process->getRelativeObjectiveGap() << " > ";
+        unfulfilled << env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 
-    if (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) != ES_TreeStrategy::SingleTree)
+    if (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")) != ES_TreeStrategy::SingleTree)
     {
-        if (ProcessInfo::getInstance().getCurrentIteration()->maxDeviation <= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
+        if (env->process->getCurrentIteration()->maxDeviation <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
         {
             fulfilled << "  - maximal constraint tolerance                 ";
-            fulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " <= ";
-            fulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+            fulfilled << env->process->getCurrentIteration()->maxDeviation << " <= ";
+            fulfilled << env->settings->getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
         }
         else
         {
             unfulfilled << "  - maximal constraint tolerance                 ";
-            unfulfilled << ProcessInfo::getInstance().getCurrentIteration()->maxDeviation << " > ";
-            unfulfilled << Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+            unfulfilled << env->process->getCurrentIteration()->maxDeviation << " > ";
+            unfulfilled << env->settings->getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
         }
     }
 
-    int iterLim = Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") + Settings::getInstance().getIntSetting("IterationLimit", "Termination");
+    int iterLim = env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination");
 
-    if (ProcessInfo::getInstance().getCurrentIteration()->iterationNumber > iterLim)
+    if (env->process->getCurrentIteration()->iterationNumber > iterLim)
     {
         fulfilled << "  - iteration limit                              ";
-        fulfilled << ProcessInfo::getInstance().getCurrentIteration()->iterationNumber << " > ";
+        fulfilled << env->process->getCurrentIteration()->iterationNumber << " > ";
         fulfilled << iterLim << "\r\n";
     }
     else
     {
         unfulfilled << "  - iteration limit                              ";
-        unfulfilled << ProcessInfo::getInstance().getCurrentIteration()->iterationNumber << " <= ";
+        unfulfilled << env->process->getCurrentIteration()->iterationNumber << " <= ";
         unfulfilled << iterLim << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().getElapsedTime("Total") > Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
+    if (env->process->getElapsedTime("Total") > env->settings->getDoubleSetting("TimeLimit", "Termination"))
     {
         fulfilled << "  - solution time limit (s)                      ";
-        fulfilled << ProcessInfo::getInstance().getElapsedTime("Total") << " > ";
-        fulfilled << Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") << "\r\n";
+        fulfilled << env->process->getElapsedTime("Total") << " > ";
+        fulfilled << env->settings->getDoubleSetting("TimeLimit", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - solution time limit (s)                      ";
-        unfulfilled << ProcessInfo::getInstance().getElapsedTime("Total") << " <= ";
-        unfulfilled << Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") << "\r\n";
+        unfulfilled << env->process->getElapsedTime("Total") << " <= ";
+        unfulfilled << env->settings->getDoubleSetting("TimeLimit", "Termination") << "\r\n";
     }
 
     report << " Fulfilled termination criteria: \r\n";
@@ -742,82 +742,82 @@ void Output::outputSolutionReport()
     report << "\r\n";
 
     report << " Dual problems solved in main step:              ";
-    report << ProcessInfo::getInstance().solutionStatistics.getNumberOfTotalDualProblems() << "\r\n";
+    report << env->process->solutionStatistics.getNumberOfTotalDualProblems() << "\r\n";
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsLP > 0)
     {
-        report << "  - LP problems                                  " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP << "\r\n";
+        report << "  - LP problems                                  " << env->process->solutionStatistics.numberOfProblemsLP << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsQP > 0)
     {
-        report << "  - QP problems                                  " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP << "\r\n";
+        report << "  - QP problems                                  " << env->process->solutionStatistics.numberOfProblemsQP << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsQCQP > 0)
     {
-        report << "  - QCQP problems                                " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP << "\r\n";
+        report << "  - QCQP problems                                " << env->process->solutionStatistics.numberOfProblemsQCQP << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsOptimalMILP > 0)
     {
-        report << "  - MILP problems, optimal                       " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP << "\r\n";
+        report << "  - MILP problems, optimal                       " << env->process->solutionStatistics.numberOfProblemsOptimalMILP << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsFeasibleMILP > 0)
     {
-        report << "  - MILP problems, feasible                      " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP << "\r\n";
+        report << "  - MILP problems, feasible                      " << env->process->solutionStatistics.numberOfProblemsFeasibleMILP << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsOptimalMIQP > 0)
     {
-        report << "  - MIQP problems, optimal                       " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP << "\r\n";
+        report << "  - MIQP problems, optimal                       " << env->process->solutionStatistics.numberOfProblemsOptimalMIQP << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsFeasibleMIQP > 0)
     {
-        report << "  - MIQP problems, feasible                      " << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP << "\r\n";
+        report << "  - MIQP problems, feasible                      " << env->process->solutionStatistics.numberOfProblemsFeasibleMIQP << "\r\n";
     }
 
     report << "\r\n";
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes > 0)
+    if (env->process->solutionStatistics.numberOfExploredNodes > 0)
     {
         report << " Number of explored nodes:                       ";
-        report << ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes << "\r\n";
+        report << env->process->solutionStatistics.numberOfExploredNodes << "\r\n";
 
         report << "\r\n";
     }
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0 ||
-        ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0 ||
+        env->process->solutionStatistics.numberOfProblemsMinimaxLP > 0)
     {
         report << " Problems solved during interior point search: \r\n";
 
-        if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
+        if (env->process->solutionStatistics.numberOfProblemsNLPInteriorPointSearch > 0)
         {
             report << " - NLP problems:                                 ";
-            report << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsNLPInteriorPointSearch << "\r\n";
+            report << env->process->solutionStatistics.numberOfProblemsNLPInteriorPointSearch << "\r\n";
         }
 
-        if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP > 0)
+        if (env->process->solutionStatistics.numberOfProblemsMinimaxLP > 0)
         {
             report << " - LP problems:                                  ";
-            report << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsMinimaxLP << "\r\n";
+            report << env->process->solutionStatistics.numberOfProblemsMinimaxLP << "\r\n";
         }
     }
 
     report << "\r\n";
 
-    if (ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP > 0)
+    if (env->process->solutionStatistics.numberOfProblemsFixedNLP > 0)
     {
         report << " Fixed primal NLP problems solved:               ";
-        report << ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFixedNLP << "\r\n";
+        report << env->process->solutionStatistics.numberOfProblemsFixedNLP << "\r\n";
     }
 
     report << "\r\n";
 
-    for (auto T : ProcessInfo::getInstance().timers)
+    for (auto T : env->process->timers)
     {
         T.stop();
         auto elapsed = T.elapsed();
@@ -841,7 +841,7 @@ void Output::outputInteriorPointPreReport()
 
     report << " Strategy selected:          ";
 
-    switch (static_cast<ES_InteriorPointStrategy>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual")))
+    switch (static_cast<ES_InteriorPointStrategy>(env->settings->getIntSetting("ESH.InteriorPoint.Solver", "Dual")))
     {
     case (ES_InteriorPointStrategy::CuttingPlaneMiniMax):
         report << "cutting plane minimax";

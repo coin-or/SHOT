@@ -15,7 +15,7 @@
 class TaskTerminate : public TaskBase
 {
   public:
-    TaskTerminate();
+    TaskTerminate(EnvironmentPtr envPtr);
     virtual ~TaskTerminate();
 
     virtual void run();

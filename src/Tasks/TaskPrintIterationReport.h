@@ -16,12 +16,12 @@
 class TaskPrintIterationReport : public TaskBase
 {
   public:
-	TaskPrintIterationReport();
-	virtual ~TaskPrintIterationReport();
+    TaskPrintIterationReport(EnvironmentPtr envPtr);
+    virtual ~TaskPrintIterationReport();
 
-	void run();
-	virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
   private:
-	int lastNumHyperplane;
+    int lastNumHyperplane;
 };

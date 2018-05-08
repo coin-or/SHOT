@@ -10,7 +10,7 @@
 
 #include "TaskUpdateNonlinearObjectiveByLinesearch.h"
 
-TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesearch()
+TaskUpdateNonlinearObjectiveByLinesearch::TaskUpdateNonlinearObjectiveByLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -20,15 +20,15 @@ TaskUpdateNonlinearObjectiveByLinesearch::~TaskUpdateNonlinearObjectiveByLinesea
 
 void TaskUpdateNonlinearObjectiveByLinesearch::run()
 {
-    ProcessInfo::getInstance().startTimer("DualObjectiveLiftRootSearch");
+    env->process->startTimer("DualObjectiveLiftRootSearch");
 
-    ProcessInfo::getInstance().setObjectiveUpdatedByLinesearch(false);
+    env->process->setObjectiveUpdatedByLinesearch(false);
 
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
     if (!currIter->isMIP())
     {
-        ProcessInfo::getInstance().stopTimer("DualObjectiveLiftRootSearch");
+        env->process->stopTimer("DualObjectiveLiftRootSearch");
         return;
     }
 
@@ -49,12 +49,12 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
             currIter->maxDeviationConstraint = allSolutions.at(i).maxDeviation.idx;
             currIter->objectiveValue = allSolutions.at(0).objectiveValue;
 
-            ProcessInfo::getInstance().setObjectiveUpdatedByLinesearch(true);
+            env->process->setObjectiveUpdatedByLinesearch(true);
 
             auto diffobj = abs(oldObjVal - allSolutions.at(i).objectiveValue);
 
             // Change the status of the solution if it has been updated much
-            if (diffobj > Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+            if (diffobj > env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
             {
                 if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
@@ -64,7 +64,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
         }
     }
 
-    ProcessInfo::getInstance().stopTimer("DualObjectiveLiftRootSearch");
+    env->process->stopTimer("DualObjectiveLiftRootSearch");
 }
 
 std::string TaskUpdateNonlinearObjectiveByLinesearch::getType()
@@ -83,10 +83,10 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
     auto oldObjVal = solution.objectiveValue;
 
     double mu = dualSol.objectiveValue;
-    double error = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
+    double error = env->process->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
-    vector<double> tmpPoint(dualSol.point);
-    tmpPoint.back() = mu + (1 + min(0.01, 1 / abs(oldObjVal))) * error;
+    std::vector<double> tmpPoint(dualSol.point);
+    tmpPoint.back() = mu + (1 + std::min(0.01, 1 / abs(oldObjVal))) * error;
 
     std::vector<double> internalPoint;
     std::vector<double> externalPoint;
@@ -95,18 +95,18 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 
     try
     {
-        auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(tmpPoint, dualSol.point,
-                                                                           Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                           Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0, constrIdxs);
+        auto xNewc = env->process->linesearchMethod->findZero(tmpPoint, dualSol.point,
+                                                              env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                              env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0, constrIdxs);
 
         internalPoint = xNewc.first;
         externalPoint = xNewc.second;
 
-        auto mostDevInner = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(internalPoint);
-        auto mostDevOuter = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(externalPoint);
+        auto mostDevInner = env->process->originalProblem->getMostDeviatingConstraint(internalPoint);
+        auto mostDevOuter = env->process->originalProblem->getMostDeviatingConstraint(externalPoint);
 
         solution.maxDeviation = mostDevOuter;
-        solution.objectiveValue = ProcessInfo::getInstance().originalProblem->calculateOriginalObjectiveValue(
+        solution.objectiveValue = env->process->originalProblem->calculateOriginalObjectiveValue(
             externalPoint);
         solution.point.back() = externalPoint.back();
 
@@ -116,30 +116,30 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
 
         if (changed)
         {
-            if (diffobj > Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+            if (diffobj > env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
             {
                 Hyperplane hyperplane;
                 hyperplane.sourceConstraintIndex = mostDevOuter.idx;
                 hyperplane.generatedPoint = externalPoint;
                 hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
-                ProcessInfo::getInstance().hyperplaneWaitingList.push_back(hyperplane);
+                env->process->hyperplaneWaitingList.push_back(hyperplane);
 
-                Output::getInstance().outputInfo(
+                env->output->outputInfo(
                     "     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(solution.objectiveValue) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
             }
             else
             {
-                Output::getInstance().outputInfo(
+                env->output->outputInfo(
                     "     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(solution.objectiveValue) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  ");
             }
         }
 
-        ProcessInfo::getInstance().addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
-                                                              ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
+        env->process->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::Linesearch,
+                                                 env->process->getCurrentIteration()->iterationNumber);
     }
     catch (std::exception &e)
     {
-        Output::getInstance().outputWarning(
+        env->output->outputWarning(
             "     Cannot find solution with linesearch for updating nonlinear objective.");
     }
 

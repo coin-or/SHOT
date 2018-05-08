@@ -11,6 +11,7 @@
 #pragma once
 
 #include "Enums.h"
+#include "Environment.h"
 #include "Output.h"
 #include "SHOTSettings.h"
 #include "SolutionStrategy/ISolutionStrategy.h"
@@ -31,13 +32,13 @@
 class SHOTSolver
 {
   private:
-    unique_ptr<ISolutionStrategy> solutionStrategy;
+    std::unique_ptr<ISolutionStrategy> solutionStrategy;
 
 #ifdef HAS_GAMS
-    unique_ptr<GAMS2OS> gms2os;
+    std::unique_ptr<GAMS2OS> gms2os;
 #endif
 
-    unique_ptr<OSnl2OS> nl2os;
+    std::unique_ptr<OSnl2OS> nl2os;
 
     void initializeSettings();
     void verifySettings();
@@ -47,8 +48,10 @@ class SHOTSolver
     bool isProblemInitialized = false;
     bool isProblemSolved = false;
 
+    EnvironmentPtr env;
+
   public:
-    SHOTSolver();
+    SHOTSolver(EnvironmentPtr environment);
     ~SHOTSolver();
 
     bool setOptions(std::string fileName);

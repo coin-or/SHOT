@@ -25,6 +25,7 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 {
   public:
     MIPSolverCplex();
+    MIPSolverCplex(EnvironmentPtr envPtr);
     virtual ~MIPSolverCplex();
 
     virtual void checkParameters();
@@ -81,7 +82,7 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-    virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()
     {
@@ -146,7 +147,7 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 
     IloNumVarArray cplexVars;
     IloRangeArray cplexConstrs;
-    vector<IloConversion> cplexVarConvers;
+    std::vector<IloConversion> cplexVarConvers;
 
     bool modelUpdated /*= true*/;
 };

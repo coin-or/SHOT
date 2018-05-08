@@ -15,7 +15,7 @@
 class TaskCheckRelativeGap : public TaskBase
 {
   public:
-	TaskCheckRelativeGap(std::string taskIDTrue);
+	TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue);
 	virtual ~TaskCheckRelativeGap();
 
 	virtual void run();

@@ -10,7 +10,7 @@
 
 #include "TaskSelectPrimalCandidatesFromLinesearch.h"
 
-TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch()
+TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
 }
 
@@ -20,7 +20,7 @@ TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesea
 
 void TaskSelectPrimalCandidatesFromLinesearch::run()
 {
-    this->run(ProcessInfo::getInstance().getCurrentIteration()->solutionPoints);
+    this->run(env->process->getCurrentIteration()->solutionPoints);
 }
 
 std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
@@ -29,25 +29,25 @@ std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
     return (type);
 }
 
-void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoints)
+void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> solPoints)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-    if (currIter->isMIP() && ProcessInfo::getInstance().getRelativeObjectiveGap() > 1e-10)
+    if (currIter->isMIP() && env->process->getRelativeObjectiveGap() > 1e-10)
     {
-        ProcessInfo::getInstance().startTimer("PrimalStrategy");
-        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyRootSearch");
+        env->process->startTimer("PrimalStrategy");
+        env->process->startTimer("PrimalBoundStrategyRootSearch");
 
         for (int i = 0; i < solPoints.size(); i++)
         {
-            for (int j = 0; j < ProcessInfo::getInstance().interiorPts.size(); j++)
+            for (int j = 0; j < env->process->interiorPts.size(); j++)
             {
-                auto xNLP = ProcessInfo::getInstance().interiorPts.at(j)->point;
+                auto xNLP = env->process->interiorPts.at(j)->point;
 
-                auto varTypes = ProcessInfo::getInstance().originalProblem->getVariableTypes();
+                auto varTypes = env->process->originalProblem->getVariableTypes();
 
                 std::vector<double> xNLP2(xNLP.size());
-                for (int k = 0; k < ProcessInfo::getInstance().originalProblem->getNumberOfVariables(); k++)
+                for (int k = 0; k < env->process->originalProblem->getNumberOfVariables(); k++)
                 {
                     if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
                     {
@@ -59,8 +59,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
                     }
                 }
 
-                auto maxDevNLP2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(xNLP2);
-                auto maxDevMIP = ProcessInfo::getInstance().originalProblem->getMostDeviatingAllConstraint(solPoints.at(i).point);
+                auto maxDevNLP2 = env->process->originalProblem->getMostDeviatingAllConstraint(xNLP2);
+                auto maxDevMIP = env->process->originalProblem->getMostDeviatingAllConstraint(solPoints.at(i).point);
 
                 if (maxDevNLP2.value <= 0 && maxDevMIP.value > 0)
                 {
@@ -68,26 +68,26 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(vector<SolutionPoint> solPoin
 
                     try
                     {
-                        ProcessInfo::getInstance().startTimer("PrimalBoundStrategyRootSearch");
-                        xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
-                                                                                      Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                                      Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
+                        env->process->startTimer("PrimalBoundStrategyRootSearch");
+                        xNewc = env->process->linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
+                                                                                      env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                                      env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
 
-                        ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyRootSearch");
+                        env->process->stopTimer("PrimalBoundStrategyRootSearch");
 
-                        ProcessInfo::getInstance().addPrimalSolutionCandidate(xNewc.first,
+                        env->process->addPrimalSolutionCandidate(xNewc.first,
                                                                               E_PrimalSolutionSource::Linesearch,
-                                                                              ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
+                                                                              env->process->getCurrentIteration()->iterationNumber);
                     }
                     catch (std::exception &e)
                     {
-                        Output::getInstance().outputWarning("Cannot find solution with primal bound linesearch.");
+                        env->output->outputWarning("Cannot find solution with primal bound linesearch.");
                     }
                 }
             }
 
-            ProcessInfo::getInstance().stopTimer("PrimalStrategy");
-            ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyRootSearch");
+            env->process->stopTimer("PrimalStrategy");
+            env->process->stopTimer("PrimalBoundStrategyRootSearch");
         }
     }
 }

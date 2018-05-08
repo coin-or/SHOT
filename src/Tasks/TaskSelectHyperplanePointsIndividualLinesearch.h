@@ -17,17 +17,17 @@
 class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
 {
   public:
-	TaskSelectHyperplanePointsIndividualLinesearch();
-	virtual ~TaskSelectHyperplanePointsIndividualLinesearch();
+    TaskSelectHyperplanePointsIndividualLinesearch(EnvironmentPtr envPtr);
+    virtual ~TaskSelectHyperplanePointsIndividualLinesearch();
 
-	virtual void run();
-	virtual void run(vector<SolutionPoint> solPoints);
+    virtual void run();
+    virtual void run(std::vector<SolutionPoint> solPoints);
 
-	virtual std::string getType();
+    virtual std::string getType();
 
   private:
-	std::vector<int> nonlinearConstraintIdxs;
+    std::vector<int> nonlinearConstraintIdxs;
 
-	TaskSelectHyperplanePointsSolution *tSelectHPPts;
-	bool hyperplaneSolutionPointStrategyInitialized = false;
+    TaskSelectHyperplanePointsSolution *tSelectHPPts;
+    bool hyperplaneSolutionPointStrategyInitialized = false;
 };

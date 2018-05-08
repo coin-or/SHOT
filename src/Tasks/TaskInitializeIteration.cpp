@@ -10,7 +10,7 @@
 
 #include "TaskInitializeIteration.h"
 
-TaskInitializeIteration::TaskInitializeIteration()
+TaskInitializeIteration::TaskInitializeIteration(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
 }
 
@@ -20,7 +20,7 @@ TaskInitializeIteration::~TaskInitializeIteration()
 
 void TaskInitializeIteration::run()
 {
-    ProcessInfo::getInstance().createIteration();
+    env->process->createIteration();
 }
 
 std::string TaskInitializeIteration::getType()

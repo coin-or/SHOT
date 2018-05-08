@@ -25,7 +25,7 @@
 class NLPSolverCuttingPlaneRelaxed : virtual public NLPSolverBase
 {
   public:
-    NLPSolverCuttingPlaneRelaxed();
+    NLPSolverCuttingPlaneRelaxed(EnvironmentPtr envPtr);
     virtual ~NLPSolverCuttingPlaneRelaxed();
 
     virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);

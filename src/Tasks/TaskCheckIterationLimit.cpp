@@ -10,10 +10,8 @@
 
 #include "TaskCheckIterationLimit.h"
 
-TaskCheckIterationLimit::TaskCheckIterationLimit(std::string taskIDTrue)
+TaskCheckIterationLimit::TaskCheckIterationLimit(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-
-	taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckIterationLimit::~TaskCheckIterationLimit()
@@ -22,17 +20,17 @@ TaskCheckIterationLimit::~TaskCheckIterationLimit()
 
 void TaskCheckIterationLimit::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-	if (currIter->iterationNumber >= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") + Settings::getInstance().getIntSetting("IterationLimit", "Termination"))
-	{
-		ProcessInfo::getInstance().terminationReason = E_TerminationReason::IterationLimit;
-		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-	}
+    if (currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination"))
+    {
+        env->process->terminationReason = E_TerminationReason::IterationLimit;
+        env->process->tasks->setNextTask(taskIDIfTrue);
+    }
 }
 
 std::string TaskCheckIterationLimit::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

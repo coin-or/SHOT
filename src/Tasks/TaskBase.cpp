@@ -10,19 +10,23 @@
 
 #include "TaskBase.h"
 
+TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr)
+{
+}
+
 bool TaskBase::isActive()
 {
-	return (m_isActive);
+    return (m_isActive);
 }
 
 void TaskBase::activate()
 {
-	m_isActive = true;
+    m_isActive = true;
 }
 
 void TaskBase::deactivate()
 {
-	m_isActive = false;
+    m_isActive = false;
 }
 
 void TaskBase::initialize()
@@ -31,11 +35,11 @@ void TaskBase::initialize()
 
 void TaskBase::run()
 {
-	std::cout << "What?!" << std::endl;
+    std::cout << "What?!" << std::endl;
 }
 
 std::string TaskBase::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

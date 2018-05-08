@@ -10,27 +10,27 @@
 
 #include "TaskInitializeLinesearch.h"
 
-TaskInitializeLinesearch::TaskInitializeLinesearch()
+TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("DualCutGenerationRootSearch");
+    env->process->startTimer("DualCutGenerationRootSearch");
 
-    if (Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver") == static_cast<int>(ES_RootsearchMethod::Bisection))
+    if (env->settings->getIntSetting("Rootsearch.Method", "Subsolver") == static_cast<int>(ES_RootsearchMethod::Bisection))
     {
-        ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBisection();
-        Output::getInstance().outputInfo("Bisection linesearch implementation selected.");
+        env->process->linesearchMethod = new LinesearchMethodBisection(env);
+        env->output->outputInfo("Bisection linesearch implementation selected.");
     }
     else
     {
-        ProcessInfo::getInstance().linesearchMethod = new LinesearchMethodBoost();
-        Output::getInstance().outputInfo("Boost linesearch implementation selected.");
+        env->process->linesearchMethod = new LinesearchMethodBoost(env);
+        env->output->outputInfo("Boost linesearch implementation selected.");
     }
 
-    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+    env->process->stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()
 {
-    delete ProcessInfo::getInstance().linesearchMethod;
+    delete env->process->linesearchMethod;
 }
 
 void TaskInitializeLinesearch::run()

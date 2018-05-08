@@ -25,7 +25,7 @@ class IMIPSolutionLimitStrategy
 
     virtual int getInitialLimit() = 0;
 
-    IMIPSolver *MIPSolver;
+    EnvironmentPtr env;
 
   protected:
 };

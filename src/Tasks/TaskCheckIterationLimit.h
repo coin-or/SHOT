@@ -15,7 +15,7 @@
 class TaskCheckIterationLimit : public TaskBase
 {
   public:
-	TaskCheckIterationLimit(std::string taskIDTrue);
+	TaskCheckIterationLimit(EnvironmentPtr envPtr, std::string taskIDTrue);
 	virtual ~TaskCheckIterationLimit();
 
 	virtual void run();

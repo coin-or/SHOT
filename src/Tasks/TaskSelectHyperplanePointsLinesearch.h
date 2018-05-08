@@ -17,15 +17,15 @@
 class TaskSelectHyperplanePointsLinesearch : public TaskBase
 {
   public:
-	TaskSelectHyperplanePointsLinesearch();
-	virtual ~TaskSelectHyperplanePointsLinesearch();
+    TaskSelectHyperplanePointsLinesearch(EnvironmentPtr envPtr);
+    virtual ~TaskSelectHyperplanePointsLinesearch();
 
-	virtual void run();
-	virtual void run(vector<SolutionPoint> solPoints);
+    virtual void run();
+    virtual void run(std::vector<SolutionPoint> solPoints);
 
-	virtual std::string getType();
+    virtual std::string getType();
 
   private:
-	TaskSelectHyperplanePointsSolution *tSelectHPPts;
-	bool hyperplaneSolutionPointStrategyInitialized = false;
+    TaskSelectHyperplanePointsSolution *tSelectHPPts;
+    bool hyperplaneSolutionPointStrategyInitialized = false;
 };

@@ -10,9 +10,9 @@
 
 #include "RelaxationStrategyNone.h"
 
-RelaxationStrategyNone::RelaxationStrategyNone(IMIPSolver *MIPSolver)
+RelaxationStrategyNone::RelaxationStrategyNone(EnvironmentPtr envPtr)
 {
-    this->MIPSolver = MIPSolver;
+    env = envPtr;
 }
 
 RelaxationStrategyNone::~RelaxationStrategyNone()
@@ -26,7 +26,7 @@ void RelaxationStrategyNone::setInitial()
 
 void RelaxationStrategyNone::executeStrategy()
 {
-    ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
+    env->process->getCurrentIteration()->type = E_IterationProblemType::MIP;
 }
 
 void RelaxationStrategyNone::setActive()
@@ -39,7 +39,7 @@ void RelaxationStrategyNone::setInactive()
 
 E_IterationProblemType RelaxationStrategyNone::getProblemType()
 {
-    if (MIPSolver->getDiscreteVariableStatus())
+    if (env->dualSolver->getDiscreteVariableStatus())
         return E_IterationProblemType::MIP;
     else
         return E_IterationProblemType::Relaxed;

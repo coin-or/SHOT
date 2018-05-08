@@ -10,9 +10,8 @@
 
 #include "TaskCheckRelativeGap.h"
 
-TaskCheckRelativeGap::TaskCheckRelativeGap(std::string taskIDTrue)
+TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue): TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-	taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckRelativeGap::~TaskCheckRelativeGap()
@@ -21,10 +20,10 @@ TaskCheckRelativeGap::~TaskCheckRelativeGap()
 
 void TaskCheckRelativeGap::run()
 {
-	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
+	if (env->process->isRelativeObjectiveGapToleranceMet())
 	{
-		ProcessInfo::getInstance().terminationReason = E_TerminationReason::RelativeGap;
-		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+		env->process->terminationReason = E_TerminationReason::RelativeGap;
+		env->process->tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

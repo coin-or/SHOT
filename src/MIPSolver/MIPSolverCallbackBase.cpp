@@ -12,9 +12,9 @@
 
 bool MIPSolverCallbackBase::checkIterationLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-    if (currIter->iterationNumber >= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") + Settings::getInstance().getIntSetting("IterationLimit", "Termination"))
+    if (currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination"))
     {
         return (true);
     }
@@ -24,22 +24,22 @@ bool MIPSolverCallbackBase::checkIterationLimit()
 
 bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 {
-    if (!Settings::getInstance().getBoolSetting("FixedInteger.Use", "Primal"))
+    if (!env->settings->getBoolSetting("FixedInteger.Use", "Primal"))
     {
         return (false);
     }
 
-    ProcessInfo::getInstance().startTimer("PrimalStrategy");
-    ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
+    env->process->startTimer("PrimalStrategy");
+    env->process->startTimer("PrimalBoundStrategyNLP");
 
     bool callNLPSolver = false;
 
-    auto userSettingStrategy = Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal");
-    auto userSetting = Settings::getInstance().getIntSetting("FixedInteger.Source", "Primal");
+    auto userSettingStrategy = env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal");
+    auto userSetting = env->settings->getIntSetting("FixedInteger.Source", "Primal");
 
-    auto dualBound = ProcessInfo::getInstance().getDualBound();
+    auto dualBound = env->process->getDualBound();
 
-    if (abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound)) < Settings::getInstance().getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
+    if (abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound)) < env->settings->getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;
     }
@@ -49,15 +49,15 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     }
     else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
-        if (ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+        if (env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
         {
-            Output::getInstance().outputInfo(
+            env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
-        else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solutionStatistics.timeLastFixedNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+        else if (env->process->getElapsedTime("Total") - env->process->solutionStatistics.timeLastFixedNLPCall > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
         {
-            Output::getInstance().outputInfo(
+            env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
             callNLPSolver = true;
         }
@@ -65,18 +65,18 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
     if (!callNLPSolver)
     {
-        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
     }
 
-    ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
-    ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+    env->process->stopTimer("PrimalBoundStrategyNLP");
+    env->process->stopTimer("PrimalStrategy");
 
     return (callNLPSolver);
 }
 
 void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
     std::stringstream tmpType;
     if (threadId != "")
@@ -88,15 +88,15 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
         tmpType << "CB";
     }
 
-    Output::getInstance().outputIterationDetail(currIter->iterationNumber,
+    env->output->outputIterationDetail(currIter->iterationNumber,
                                                 tmpType.str(),
-                                                ProcessInfo::getInstance().getElapsedTime("Total"),
+                                                env->process->getElapsedTime("Total"),
                                                 this->lastNumAddedHyperplanes,
                                                 currIter->totNumHyperplanes,
-                                                ProcessInfo::getInstance().getDualBound(),
-                                                ProcessInfo::getInstance().getPrimalBound(),
-                                                ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
-                                                ProcessInfo::getInstance().getRelativeObjectiveGap(),
+                                                env->process->getDualBound(),
+                                                env->process->getPrimalBound(),
+                                                env->process->getAbsoluteObjectiveGap(),
+                                                env->process->getRelativeObjectiveGap(),
                                                 solution.objectiveValue,
                                                 solution.maxDeviation.idx,
                                                 solution.maxDeviation.value,

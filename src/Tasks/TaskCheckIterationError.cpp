@@ -10,9 +10,8 @@
 
 #include "TaskCheckIterationError.h"
 
-TaskCheckIterationError::TaskCheckIterationError(std::string taskIDTrue)
+TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-    taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckIterationError::~TaskCheckIterationError()
@@ -21,38 +20,38 @@ TaskCheckIterationError::~TaskCheckIterationError()
 
 void TaskCheckIterationError::run()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
     if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::Error;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::Error;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::InfeasibleProblem;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::InfeasibleProblem;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::InfeasibleProblem;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::InfeasibleProblem;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::UnboundedProblem;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::UnboundedProblem;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::NumericIssues;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::NumericIssues;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::None &&
-             ProcessInfo::getInstance().primalSolutions.size() > 0)
+             env->process->primalSolutions.size() > 0)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::ObjectiveGapNotReached;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

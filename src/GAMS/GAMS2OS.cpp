@@ -10,7 +10,7 @@
 
 #include "GAMS2OS.h"
 
-GAMS2OS::GAMS2OS() : gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
+GAMS2OS::GAMS2OS(EnvironmentPtr envPtr) : env(envPtr), gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
 {
 }
 
@@ -118,42 +118,42 @@ void GAMS2OS::createOSObjects()
         {
             std::string fileContents = UtilityFunctions::getFileAsString(buffer);
 
-            Settings::getInstance().readSettingsFromGAMSOptFormat(fileContents);
+            env->settings->readSettingsFromGAMSOptFormat(fileContents);
         }
-        catch (exception &e)
+        catch (std::exception &e)
         {
-            Output::getInstance().Output::getInstance().outputError("Error when reading GAMS options file" + std::string(buffer));
+            env->output->outputError("Error when reading GAMS options file" + std::string(buffer));
             throw std::logic_error("Cannot read GAMS options file from.");
         }
     }
     else // get default settings from GAMS
     {
         // Removed this functionality, since otherwise we cannot control the time limit from an options file when SHOT is called on a gms file
-        /*Settings::getInstance().updateSetting("TimeLimit", "Termination", gevGetDblOpt(gev, gevResLim));
-		 Settings::getInstance().updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(gev, gevOptCA));
-		 Settings::getInstance().updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
+        /*env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(gev, gevResLim));
+		 env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(gev, gevOptCA));
+		 env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
 
 
-		 Output::getInstance().outputInfo(
+		 env->output->outputInfo(
 		 "Time limit set to "
-		 + UtilityFunctions::toString(Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
+		 + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
 		 + " by GAMS");
-		 Output::getInstance().outputInfo(
+		 env->output->outputInfo(
 		 "Absolute termination tolerance set to "
 		 + UtilityFunctions::toString(
-		 Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+		 env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
 		 + " by GAMS");
-		 Output::getInstance().outputInfo(
+		 env->output->outputInfo(
 		 "Relative termination tolerance set to "
 		 + UtilityFunctions::toString(
-		 Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+		 env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
 		 + " by GAMS");
 
 		 */
     }
 
     // want to solve the NLP problems with GAMS
-    Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
+    env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
 
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(gmo, 1);
@@ -167,7 +167,7 @@ void GAMS2OS::createOSObjects()
     delete osinstance;
     osinstance = new OSInstance();
 
-    ProcessInfo::getInstance().GAMSModelingObject = gmo;
+    env->process->GAMSModelingObject = gmo;
 
     gmoNameInput(gmo, buffer);
     osinstance->setInstanceName(buffer);
@@ -987,7 +987,7 @@ OSnLNode *GAMS2OS::parseGamsInstructions(int codelen,      /**< length of GAMS i
                 break;
             }
 
-                /* cannot handle nonlinear polynomials with this setup, as we would require copies of
+            /* cannot handle nonlinear polynomials with this setup, as we would require copies of
 						 * the variable argument when the variable occurs more than once
 						 */
 #if 0
@@ -1315,81 +1315,74 @@ void GAMS2OS::writeResult(OSResult &osresult)
     delete[] colMarg;
 }
 
-void GAMS2OS::writeResult(ProcessInfo &info)
+void GAMS2OS::writeResult()
 {
-    int numPrimalSols = info.primalSolutions.size();
+    int numPrimalSols = env->process->primalSolutions.size();
 
-    gmoSetHeadnTail(gmo, gmoTmipbest, info.getDualBound());
-    gmoSetHeadnTail(gmo, gmoHresused, info.getElapsedTime("Total"));
+    gmoSetHeadnTail(gmo, gmoTmipbest, env->process->getDualBound());
+    gmoSetHeadnTail(gmo, gmoHresused, env->process->getElapsedTime("Total"));
 
-    if (!info.primalSolutions.empty())
+    if (!env->process->primalSolutions.empty())
     {
-        assert(info.primalSolutions[0].point.size() >= gmoN(gmo)); /* solution reported by SHOT can be larger than gmoN, e.g., if nonlin. obj. is moved into constraints, but we assume that the first gmoN variables are the one we are interested in */
-        gmoSetSolutionPrimal(gmo, &info.primalSolutions[0].point[0]);
+        assert(env->process->primalSolutions[0].point.size() >= gmoN(gmo)); /* solution reported by SHOT can be larger than gmoN, e.g., if nonlin. obj. is moved into constraints, but we assume that the first gmoN variables are the one we are interested in */
+        gmoSetSolutionPrimal(gmo, &env->process->primalSolutions[0].point[0]);
     }
 
     gmoSolveStatSet(gmo, gmoSolveStat_Normal);
     gmoModelStatSet(gmo, gmoModelStat_NoSolutionReturned);
 
-    switch (info.getCurrentIteration()->solutionStatus)
+    switch (env->process->getCurrentIteration()->solutionStatus)
     {
     case E_ProblemSolutionStatus::Optimal:
-        assert(!info.primalSolutions.empty());
+        assert(!env->process->primalSolutions.empty());
         /* return only locally optimal, as we don't know whether the problem was convex (unless it's a MIP, ok) */
         gmoModelStatSet(gmo, gmoModelStat_OptimalLocal);
         break;
 
     case E_ProblemSolutionStatus::Feasible:
-        assert(!info.primalSolutions.empty());
+        assert(!env->process->primalSolutions.empty());
         gmoModelStatSet(gmo, gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible);
         break;
 
     case E_ProblemSolutionStatus::Unbounded:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_UnboundedNoSolution : gmoModelStat_Unbounded);
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_UnboundedNoSolution : gmoModelStat_Unbounded);
         break;
 
     case E_ProblemSolutionStatus::Error:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
         gmoSolveStatSet(gmo, gmoSolveStat_SolverErr);
         break;
 
     case E_ProblemSolutionStatus::Infeasible:
-        assert(info.primalSolutions.empty());
+        assert(env->process->primalSolutions.empty());
         gmoModelStatSet(gmo, gmoModelStat_InfeasibleNoSolution);
         break;
 
     case E_ProblemSolutionStatus::IterationLimit:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
         gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
         break;
 
     case E_ProblemSolutionStatus::SolutionLimit:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
         gmoSolveStatSet(gmo, gmoSolveStat_Solver);
         break;
 
     case E_ProblemSolutionStatus::TimeLimit:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
         gmoSolveStatSet(gmo, gmoSolveStat_Resource);
         break;
 
     case E_ProblemSolutionStatus::Abort:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_NoSolutionReturned : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
         gmoSolveStatSet(gmo, gmoSolveStat_Iteration);
         break;
 
     default:
-        gmoModelStatSet(gmo,
-                        info.primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
+        gmoModelStatSet(gmo, env->process->primalSolutions.empty() ? gmoModelStat_ErrorNoSolution : (gmoNDisc(gmo) > 0 ? gmoModelStat_Integer : gmoModelStat_Feasible));
         gmoSolveStatSet(gmo, gmoSolveStat_SystemErr);
         gevLogStat(gev, "Unknown solution status returned from SHOT.");
-        std::cout << "Solstatus: " << (int)info.getCurrentIteration()->solutionStatus << std::endl;
+        std::cout << "Solstatus: " << (int)env->process->getCurrentIteration()->solutionStatus << std::endl;
         break;
     }
 

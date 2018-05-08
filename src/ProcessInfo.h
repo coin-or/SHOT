@@ -53,7 +53,6 @@ class ProcessInfo
     OptimizationProblemStatistics problemStats;
     SolutionStatistics solutionStatistics;
 
-    IMIPSolver *MIPSolver;
     IRelaxationStrategy *relaxationStrategy;
 
     TaskHandler *tasks;
@@ -157,11 +156,7 @@ class ProcessInfo
 
     ~ProcessInfo();
 
-    static ProcessInfo &getInstance()
-    {
-        static ProcessInfo inst;
-        return (inst);
-    }
+    ProcessInfo(EnvironmentPtr envPtr);
 
   private:
     bool objectiveUpdatedByLinesearch;
@@ -170,8 +165,8 @@ class ProcessInfo
 
     std::pair<double, double> currentObjectiveBounds;
 
-    ProcessInfo();
-
     std::vector<OSiLReader *> osilReaders;
     OSiLWriter *osilWriter;
+
+    EnvironmentPtr env;
 };

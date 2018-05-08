@@ -64,7 +64,7 @@
 class SolutionStrategyMultiTree : public ISolutionStrategy
 {
   public:
-    SolutionStrategyMultiTree(OSInstance *osInstance);
+    SolutionStrategyMultiTree(EnvironmentPtr envPtr, OSInstance *osInstance);
     virtual ~SolutionStrategyMultiTree();
 
     virtual bool solveProblem();

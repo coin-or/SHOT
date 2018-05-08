@@ -10,9 +10,8 @@
 
 #include "TaskCheckObjectiveGapNotMet.h"
 
-TaskCheckObjectiveGapNotMet::TaskCheckObjectiveGapNotMet(std::string taskIDTrue)
+TaskCheckObjectiveGapNotMet::TaskCheckObjectiveGapNotMet(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-    taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckObjectiveGapNotMet::~TaskCheckObjectiveGapNotMet()
@@ -21,14 +20,14 @@ TaskCheckObjectiveGapNotMet::~TaskCheckObjectiveGapNotMet()
 
 void TaskCheckObjectiveGapNotMet::run()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-    if (ProcessInfo::getInstance().primalSolutions.size() > 0 &&
-        !ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet() &&
-        !ProcessInfo::getInstance().isAbsoluteObjectiveGapToleranceMet())
+    if (env->process->primalSolutions.size() > 0 &&
+        !env->process->isRelativeObjectiveGapToleranceMet() &&
+        !env->process->isAbsoluteObjectiveGapToleranceMet())
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::ObjectiveGapNotReached;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

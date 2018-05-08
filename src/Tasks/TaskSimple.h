@@ -16,8 +16,8 @@
 class TaskSimple : public TaskBase
 {
   public:
-    TaskSimple(std::function<bool()> taskFunction);
-    TaskSimple();
+    TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction);
+    TaskSimple(EnvironmentPtr envPtr);
     virtual ~TaskSimple();
 
     void setFunction(std::function<bool()> taskFunction);

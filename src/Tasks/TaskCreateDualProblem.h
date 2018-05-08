@@ -16,12 +16,11 @@
 class TaskCreateDualProblem : public TaskBase
 {
   public:
-	TaskCreateDualProblem(IMIPSolver *MIPSolver);
-	virtual ~TaskCreateDualProblem();
+    TaskCreateDualProblem(EnvironmentPtr envPtr);
+    virtual ~TaskCreateDualProblem();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
-	IMIPSolver *MIPSolver;
 };

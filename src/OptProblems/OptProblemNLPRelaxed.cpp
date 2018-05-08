@@ -10,8 +10,9 @@
 
 #include "OptProblemNLPRelaxed.h"
 
-OptProblemNLPRelaxed::OptProblemNLPRelaxed()
+OptProblemNLPRelaxed::OptProblemNLPRelaxed(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
+    env = envPtr;
 }
 
 OptProblemNLPRelaxed::~OptProblemNLPRelaxed()

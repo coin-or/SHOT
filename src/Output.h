@@ -9,30 +9,24 @@
 */
 
 #pragma once
-
+#include <float.h>
 #include "Enums.h"
-#include "SHOTSettings.h"
-#include "ProcessInfo.h"
-//#include "OptProblems/OptProblem.h"
-//#include "OptProblems/OptProblemOriginal.h"
+#include "Environment.h"
 
 // Used for OSOutput
 #include "cstdio"
 #define HAVE_STDIO_H 1
 #include "OSOutput.h"
 
+#include "ProcessInfo.h"
+
 #include <boost/format.hpp>
 
 class Output
 {
   public:
+    Output(EnvironmentPtr envPtr);
     virtual ~Output();
-
-    static Output &getInstance()
-    {
-        static Output inst;
-        return (inst);
-    }
 
     void outputAlways(std::string message);
     void outputError(std::string message);
@@ -87,6 +81,7 @@ class Output
     void outputSolutionReport();
 
   private:
+    EnvironmentPtr env;
     OSOutput *osOutput;
 
     double lastDualObjectiveValue = -DBL_MAX;
@@ -97,6 +92,4 @@ class Output
     int iterationsWithoutPrintoutCounter = 0;
     int iterationPrintoutsSinceLastHeader = 0;
     bool firstIterationHeaderPrinted = false;
-
-    Output();
 };

@@ -27,13 +27,5 @@
 *.out
 *.app
 
-<<<<<<< HEAD
 .vscode/*
 build/*
-src/.vscode/*
-=======
-src/build/*
-src/.vscode/*
-.vscode/*
-build/*
->>>>>>> 1cc513f11c0bedf6015f50366a79ea4cd93a390d

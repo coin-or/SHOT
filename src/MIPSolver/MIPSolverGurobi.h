@@ -18,6 +18,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 {
   public:
     MIPSolverGurobi();
+    MIPSolverGurobi(EnvironmentPtr envPtr);
     virtual ~MIPSolverGurobi();
 
     virtual void checkParameters();
@@ -67,7 +68,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-    virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()
     {
@@ -137,7 +138,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 class GurobiInfoCallback : public GRBCallback
 {
   public:
-    GurobiInfoCallback();
+    GurobiInfoCallback(EnvironmentPtr envPtr);
 
   protected:
     void callback();
@@ -146,4 +147,5 @@ class GurobiInfoCallback : public GRBCallback
     int numVar = 0;
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
+    EnvironmentPtr env;
 };

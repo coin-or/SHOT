@@ -12,9 +12,9 @@
 
 bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
 {
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
-    if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
+    if (prevIter->maxDeviation < env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
     {
         return true;
     }
@@ -24,7 +24,7 @@ bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
 
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
     if (prevIter->maxDeviation < 0)
     {
@@ -36,9 +36,9 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 
 bool RelaxationStrategyBase::isCurrentToleranceReached()
 {
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
-    if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("Relaxation.TerminationTolerance", "Dual"))
+    if (prevIter->maxDeviation < env->settings->getDoubleSetting("Relaxation.TerminationTolerance", "Dual"))
     {
         return true;
     }
@@ -48,14 +48,14 @@ bool RelaxationStrategyBase::isCurrentToleranceReached()
 
 bool RelaxationStrategyBase::isGapReached()
 {
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
-    if (ProcessInfo::getInstance().getAbsoluteObjectiveGap() < 2 * Settings::getInstance().getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+    if (env->process->getAbsoluteObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
     {
         return true;
     }
 
-    if (ProcessInfo::getInstance().getRelativeObjectiveGap() < 2 * Settings::getInstance().getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+    if (env->process->getRelativeObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
     {
         return true;
     }

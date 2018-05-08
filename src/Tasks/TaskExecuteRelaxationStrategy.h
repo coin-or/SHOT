@@ -19,7 +19,7 @@
 class TaskExecuteRelaxationStrategy : public TaskBase
 {
   public:
-    TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver);
+    TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr);
     virtual ~TaskExecuteRelaxationStrategy();
 
     void run();
@@ -29,6 +29,4 @@ class TaskExecuteRelaxationStrategy : public TaskBase
     IRelaxationStrategy *relaxationStrategy;
 
     bool isInitialized;
-
-    IMIPSolver *MIPSolver;
 };

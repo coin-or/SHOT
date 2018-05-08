@@ -18,7 +18,7 @@
 class TaskSolveFixedDualProblem : public TaskBase
 {
   public:
-    TaskSolveFixedDualProblem(IMIPSolver *MIPSolver);
+    TaskSolveFixedDualProblem(EnvironmentPtr envPtr);
     virtual ~TaskSolveFixedDualProblem();
     virtual void run();
     virtual std::string getType();
@@ -29,7 +29,6 @@ class TaskSolveFixedDualProblem : public TaskBase
 
     std::vector<double> lastSolution;
     double lastPrimalBound = NAN;
-    IMIPSolver *MIPSolver;
 
     int totalIters = 0;
 };

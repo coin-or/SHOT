@@ -8,12 +8,12 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "INLPSolver.h"
+#include "Environment.h"
 
-INLPSolver::INLPSolver(EnvironmentPtr envPtr) : env(envPtr)
+Environment::Environment()
 {
 }
 
-INLPSolver::~INLPSolver()
+Environment::~Environment()
 {
 }

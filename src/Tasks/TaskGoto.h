@@ -15,7 +15,7 @@
 class TaskGoto : public TaskBase
 {
   public:
-    TaskGoto(std::string taskID);
+    TaskGoto(EnvironmentPtr envPtr, std::string taskID);
     virtual ~TaskGoto();
 
     virtual void run();

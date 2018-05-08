@@ -15,7 +15,7 @@
 class TaskPrintSolutionBoundReport : public TaskBase
 {
   public:
-	TaskPrintSolutionBoundReport();
+	TaskPrintSolutionBoundReport(EnvironmentPtr envPtr);
 	virtual ~TaskPrintSolutionBoundReport();
 
 	void run();

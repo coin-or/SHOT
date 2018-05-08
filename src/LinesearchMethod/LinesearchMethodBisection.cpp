@@ -10,8 +10,9 @@
 
 #include "LinesearchMethodBisection.h"
 
-LinesearchMethodBisection::LinesearchMethodBisection()
+LinesearchMethodBisection::LinesearchMethodBisection(EnvironmentPtr envPtr)
 {
+    env = envPtr;
 }
 
 LinesearchMethodBisection::~LinesearchMethodBisection()
@@ -25,7 +26,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
     try
     {
         int length = ptA.size();
-        bool validB = ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptB);
+        bool validB = env->process->originalProblem->isConstraintsFulfilledInPoint(ptB);
 
         std::vector<double> ptNew(length);
         std::vector<double> ptNew2(length);
@@ -44,7 +45,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
                 ptNew2.at(i) = c * ptB.at(i) + (1 - c) * ptA.at(i);
             }
 
-            validNewPt = ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptNew);
+            validNewPt = env->process->originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
             if ((b - a) / 2 < lambdaTol)
             {
@@ -64,7 +65,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
             }
         }
 
-        Output::getInstance().outputInfo("Linesearch completed in " + to_string(n) + "iterations.");
+        env->output->outputInfo("Linesearch completed in " + std::to_string(n) + "iterations.");
         if (!validNewPt)
         {
             std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
@@ -78,12 +79,12 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
     }
     catch (...)
     {
-        Output::getInstance().Output::getInstance().outputError("Error while doing linesearch.");
+        env->output->outputError("Error while doing linesearch.");
 
-        if (!ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptA))
+        if (!env->process->originalProblem->isConstraintsFulfilledInPoint(ptA))
             //Returns the NLP point if not on the interior
 
-            if (!ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptA))
+            if (!env->process->originalProblem->isConstraintsFulfilledInPoint(ptA))
             {
 
                 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);

@@ -10,10 +10,10 @@
 
 #include "TaskPrintSolutionBoundReport.h"
 
-TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport()
+TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
-	itersSinceLastPrintout = 0;
-	timeLastPrintout = 0;
+    itersSinceLastPrintout = 0;
+    timeLastPrintout = 0;
 }
 
 TaskPrintSolutionBoundReport::~TaskPrintSolutionBoundReport()
@@ -22,68 +22,68 @@ TaskPrintSolutionBoundReport::~TaskPrintSolutionBoundReport()
 
 void TaskPrintSolutionBoundReport::run()
 {
-	double currElapsedTime = ProcessInfo::getInstance().getElapsedTime("Total");
+    double currElapsedTime = env->process->getElapsedTime("Total");
 
-	if (itersSinceLastPrintout > 20 || currElapsedTime - timeLastPrintout > 10.0)
-	{
-		double absGap = ProcessInfo::getInstance().getAbsoluteObjectiveGap();
-		double relGap = ProcessInfo::getInstance().getRelativeObjectiveGap();
-		auto objBounds = ProcessInfo::getInstance().getCorrectedObjectiveBounds();
-		double objLB = objBounds.first;
-		double objUB = objBounds.second;
+    if (itersSinceLastPrintout > 20 || currElapsedTime - timeLastPrintout > 10.0)
+    {
+        double absGap = env->process->getAbsoluteObjectiveGap();
+        double relGap = env->process->getRelativeObjectiveGap();
+        auto objBounds = env->process->getCorrectedObjectiveBounds();
+        double objLB = objBounds.first;
+        double objUB = objBounds.second;
 
-		Output::getInstance().outputSummary(
-			"                                                                                     ");
-
-#ifdef _WIN32
-		Output::getInstance().outputSummary(
-			"ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
-#else
-		Output::getInstance().outputSummary(
-			"─────────────────────────────────────────────────────────────────────────────────────");
-#endif
-
-		auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % ProcessInfo::getInstance().getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
-		Output::getInstance().outputSummary(tmpLine.str());
-
-		if (ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve> 0 || ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)
-		{
-			tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.") % ProcessInfo::getInstance().solutionStatistics.numberOfConstraintsRemovedInPresolve% ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve;
-			Output::getInstance().outputSummary(tmpLine.str());
-		}
-
-		if (ProcessInfo::getInstance().interiorPts.size() > 1)
-		{
-			Output::getInstance().outputSummary(
-				" Number of interior points: " + to_string(ProcessInfo::getInstance().interiorPts.size()));
-		}
-
-		if (ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts > 0)
-		{
-			Output::getInstance().outputSummary(
-				" Number of integer cuts added: " + to_string(ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts));
-		}
+        env->output->outputSummary(
+            "                                                                                     ");
 
 #ifdef _WIN32
-		Output::getInstance().outputSummary("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+        env->output->outputSummary(
+            "ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
 #else
-		Output::getInstance().outputSummary(
-			"─────────────────────────────────────────────────────────────────────────────────────");
+        env->output->outputSummary(
+            "─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
-		Output::getInstance().outputSummary("");
+        auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % env->process->getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
+        env->output->outputSummary(tmpLine.str());
 
-		itersSinceLastPrintout = 0;
-		timeLastPrintout = currElapsedTime;
-	}
-	else
-	{
-		itersSinceLastPrintout++;
-	}
+        if (env->process->solutionStatistics.numberOfConstraintsRemovedInPresolve > 0 || env->process->solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)
+        {
+            tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.") % env->process->solutionStatistics.numberOfConstraintsRemovedInPresolve % env->process->solutionStatistics.numberOfVariableBoundsTightenedInPresolve;
+            env->output->outputSummary(tmpLine.str());
+        }
+
+        if (env->process->interiorPts.size() > 1)
+        {
+            env->output->outputSummary(
+                " Number of interior points: " + std::to_string(env->process->interiorPts.size()));
+        }
+
+        if (env->process->solutionStatistics.numberOfIntegerCuts > 0)
+        {
+            env->output->outputSummary(
+                " Number of integer cuts added: " + std::to_string(env->process->solutionStatistics.numberOfIntegerCuts));
+        }
+
+#ifdef _WIN32
+        env->output->outputSummary("ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ");
+#else
+        env->output->outputSummary(
+            "─────────────────────────────────────────────────────────────────────────────────────");
+#endif
+
+        env->output->outputSummary("");
+
+        itersSinceLastPrintout = 0;
+        timeLastPrintout = currElapsedTime;
+    }
+    else
+    {
+        itersSinceLastPrintout++;
+    }
 }
 
 std::string TaskPrintSolutionBoundReport::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

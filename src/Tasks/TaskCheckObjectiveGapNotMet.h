@@ -15,7 +15,7 @@
 class TaskCheckObjectiveGapNotMet : public TaskBase
 {
   public:
-    TaskCheckObjectiveGapNotMet(std::string taskIDTrue);
+    TaskCheckObjectiveGapNotMet(EnvironmentPtr envPtr, std::string taskIDTrue);
     virtual ~TaskCheckObjectiveGapNotMet();
 
     virtual void run();

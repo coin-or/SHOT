@@ -10,9 +10,8 @@
 
 #include "TaskCheckTimeLimit.h"
 
-TaskCheckTimeLimit::TaskCheckTimeLimit(std::string taskIDTrue)
+TaskCheckTimeLimit::TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-    taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckTimeLimit::~TaskCheckTimeLimit()
@@ -21,12 +20,12 @@ TaskCheckTimeLimit::~TaskCheckTimeLimit()
 
 void TaskCheckTimeLimit::run()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-    if (ProcessInfo::getInstance().getElapsedTime("Total") >= Settings::getInstance().getDoubleSetting("TimeLimit", "Termination"))
+    if (env->process->getElapsedTime("Total") >= env->settings->getDoubleSetting("TimeLimit", "Termination"))
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::TimeLimit;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->process->terminationReason = E_TerminationReason::TimeLimit;
+        env->process->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

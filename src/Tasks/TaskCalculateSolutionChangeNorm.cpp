@@ -10,7 +10,7 @@
 
 #include "TaskCalculateSolutionChangeNorm.h"
 
-TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm()
+TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
 }
 
@@ -20,53 +20,53 @@ TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm()
 
 void TaskCalculateSolutionChangeNorm::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-	currIter->boundaryDistance = OSDBL_MAX;
+    currIter->boundaryDistance = OSDBL_MAX;
 
-	if (ProcessInfo::getInstance().iterations.size() < 3)
-	{
-		return;
-	}
+    if (env->process->iterations.size() < 3)
+    {
+        return;
+    }
 
-	if (ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.size() == 0 || ProcessInfo::getInstance().getCurrentIteration()->isMIP())
-	{
-		return;
-	}
+    if (env->process->getCurrentIteration()->hyperplanePoints.size() == 0 || env->process->getCurrentIteration()->isMIP())
+    {
+        return;
+    }
 
-	auto currIterSol = ProcessInfo::getInstance().getCurrentIteration()->hyperplanePoints.at(0);
+    auto currIterSol = env->process->getCurrentIteration()->hyperplanePoints.at(0);
 
-	for (int i = ProcessInfo::getInstance().iterations.size() - 2; i >= 1; i--)
-	{
-		if (ProcessInfo::getInstance().iterations.size() > 0 && !ProcessInfo::getInstance().iterations.at(i).isMIP())
-		{
-			auto prevIterSol = ProcessInfo::getInstance().iterations.at(i).hyperplanePoints.at(0);
+    for (int i = env->process->iterations.size() - 2; i >= 1; i--)
+    {
+        if (env->process->iterations.size() > 0 && !env->process->iterations.at(i).isMIP())
+        {
+            auto prevIterSol = env->process->iterations.at(i).hyperplanePoints.at(0);
 
-			double distance = 0;
+            double distance = 0;
 
-			for (int j = 0; j < currIterSol.size(); j++)
-			{
-				distance = distance + (currIterSol.at(j) - prevIterSol.at(j)) * (currIterSol.at(j) - prevIterSol.at(j));
-			}
+            for (int j = 0; j < currIterSol.size(); j++)
+            {
+                distance = distance + (currIterSol.at(j) - prevIterSol.at(j)) * (currIterSol.at(j) - prevIterSol.at(j));
+            }
 
-			distance = sqrt(distance + 0.001);
+            distance = sqrt(distance + 0.001);
 
-			if (OSIsnan(distance)) // Checks for INF, do not remove!
-			{
-				currIter->boundaryDistance = OSDBL_MAX;
-			}
-			else
-			{
-				currIter->boundaryDistance = distance;
-			}
+            if (OSIsnan(distance)) // Checks for INF, do not remove!
+            {
+                currIter->boundaryDistance = OSDBL_MAX;
+            }
+            else
+            {
+                currIter->boundaryDistance = distance;
+            }
 
-			return;
-		}
-	}
+            return;
+        }
+    }
 }
 
 std::string TaskCalculateSolutionChangeNorm::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

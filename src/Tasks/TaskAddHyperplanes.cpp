@@ -10,13 +10,12 @@
 
 #include "TaskAddHyperplanes.h"
 
-TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
+TaskAddHyperplanes::TaskAddHyperplanes(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+    env->process->startTimer("DualStrategy");
     itersWithoutAddedHPs = 0;
 
-    this->MIPSolver = MIPSolver;
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->process->stopTimer("DualStrategy");
 }
 
 TaskAddHyperplanes::~TaskAddHyperplanes()
@@ -25,36 +24,36 @@ TaskAddHyperplanes::~TaskAddHyperplanes()
 
 void TaskAddHyperplanes::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    this->MIPSolver = MIPSolver;
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    env->process->startTimer("DualStrategy");
 
-    if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
+    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+
+    if (!currIter->isMIP() || !env->settings->getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
     {
         int addedHyperplanes = 0;
 
-        for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
+        for (int k = env->process->hyperplaneWaitingList.size(); k > 0; k--)
         {
-            if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+            if (addedHyperplanes >= env->settings->getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
                 break;
 
-            auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
+            auto tmpItem = env->process->hyperplaneWaitingList.at(k - 1);
 
             if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
             {
-                MIPSolver->createInteriorHyperplane(tmpItem);
+                env->dualSolver->createInteriorHyperplane(tmpItem);
             }
             else
             {
-                MIPSolver->createHyperplane(tmpItem);
+                env->dualSolver->createHyperplane(tmpItem);
 
-                ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
+                env->process->addedHyperplanes.push_back(tmpItem);
 
                 addedHyperplanes++;
             }
         }
 
-        ProcessInfo::getInstance().hyperplaneWaitingList.clear();
+        env->process->hyperplaneWaitingList.clear();
         itersWithoutAddedHPs = 0;
     }
     else
@@ -62,7 +61,7 @@ void TaskAddHyperplanes::run()
         itersWithoutAddedHPs++;
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->process->stopTimer("DualStrategy");
 }
 
 std::string TaskAddHyperplanes::getType()

@@ -10,10 +10,8 @@
 
 #include "TaskCheckConstraintTolerance.h"
 
-TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(
-    std::string taskIDTrue)
+TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(EnvironmentPtr envPtr, std::string taskIDTrue): TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
-    taskIDIfTrue = taskIDTrue;
 }
 
 TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() {}
@@ -22,12 +20,12 @@ void TaskCheckConstraintTolerance::run()
 {
     if (!isInitialized)
     {
-        this->isObjectiveNonlinear = ProcessInfo::getInstance().problemStats.isObjectiveNonlinear();
-        this->nonlinearConstraintIndexes = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
+        this->isObjectiveNonlinear = env->process->problemStats.isObjectiveNonlinear();
+        this->nonlinearConstraintIndexes = env->process->originalProblem->getNonlinearConstraintIndexes();
 
         if (this->isObjectiveNonlinear)
         {
-            this->nonlinearObjectiveConstraintIndex = ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveConstraintIdx();
+            this->nonlinearObjectiveConstraintIndex = env->process->originalProblem->getNonlinearObjectiveConstraintIdx();
 
             // Removes the nonlinear constraint index from the list
             std::vector<int>::iterator position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), -1);
@@ -40,42 +38,42 @@ void TaskCheckConstraintTolerance::run()
         }
     }
 
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
     auto solutionPoint = currIter->solutionPoints.at(0).point;
 
     // Checks if the nonlinear constraints are fulfilled to tolerance
     if (this->nonlinearConstraintIndexes.size() > 0)
     {
-        auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solutionPoint, this->nonlinearConstraintIndexes).first;
+        auto maxDev = env->process->originalProblem->getMostDeviatingConstraint(solutionPoint, this->nonlinearConstraintIndexes).first;
 
-        if (maxDev.value >= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
+        if (maxDev.value >= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
             return;
     }
 
     // Checks if objective constraint is fulfilled to tolerance
     if (this->isObjectiveNonlinear)
     {
-        double objDev = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(this->nonlinearObjectiveConstraintIndex, solutionPoint);
+        double objDev = env->process->originalProblem->calculateConstraintFunctionValue(this->nonlinearObjectiveConstraintIndex, solutionPoint);
 
-        if (objDev >= Settings::getInstance().getDoubleSetting("ObjectiveConstraintTolerance", "Termination"))
+        if (objDev >= env->settings->getDoubleSetting("ObjectiveConstraintTolerance", "Termination"))
             return;
     }
 
-    if (ProcessInfo::getInstance().problemStats.isDiscreteProblem)
+    if (env->process->problemStats.isDiscreteProblem)
     {
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
             currIter->type == E_IterationProblemType::MIP)
         {
-            ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
-            ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+            env->process->terminationReason = E_TerminationReason::ConstraintTolerance;
+            env->process->tasks->setNextTask(taskIDIfTrue);
         }
     }
     else
     {
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
         {
-            ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
-            ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+            env->process->terminationReason = E_TerminationReason::ConstraintTolerance;
+            env->process->tasks->setNextTask(taskIDIfTrue);
         }
     }
 

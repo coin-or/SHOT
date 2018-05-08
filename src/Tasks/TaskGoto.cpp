@@ -10,9 +10,8 @@
 
 #include "TaskGoto.h"
 
-TaskGoto::TaskGoto(std::string taskID)
+TaskGoto::TaskGoto(EnvironmentPtr envPtr, std::string taskID) : TaskBase(envPtr), gotoTaskID(taskID)
 {
-    gotoTaskID = taskID;
 }
 
 TaskGoto::~TaskGoto()
@@ -23,11 +22,11 @@ void TaskGoto::run()
 {
     try
     {
-        ProcessInfo::getInstance().tasks->setNextTask(gotoTaskID);
+        env->process->tasks->setNextTask(gotoTaskID);
     }
     catch (TaskExceptionNotFound &e)
     {
-        Output::getInstance().outputError("Could not find task: " + gotoTaskID);
+        env->output->outputError("Could not find task: " + gotoTaskID);
     }
 }
 

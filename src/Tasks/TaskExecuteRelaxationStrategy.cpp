@@ -10,29 +10,28 @@
 
 #include "TaskExecuteRelaxationStrategy.h"
 
-TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver)
+TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    this->MIPSolver = MIPSolver;
+    env->process->startTimer("DualStrategy");
 
-    relaxationStrategy = new RelaxationStrategyStandard(this->MIPSolver);
+    relaxationStrategy = new RelaxationStrategyStandard(env);
 
-    ProcessInfo::getInstance().relaxationStrategy = relaxationStrategy;
+    env->process->relaxationStrategy = relaxationStrategy;
 
     isInitialized = false;
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->process->stopTimer("DualStrategy");
 }
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
 {
-    ProcessInfo::getInstance().relaxationStrategy = NULL;
+    env->process->relaxationStrategy = NULL;
     delete relaxationStrategy;
 }
 
 void TaskExecuteRelaxationStrategy::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+    env->process->startTimer("DualStrategy");
     if (!isInitialized)
     {
         relaxationStrategy->setInitial();
@@ -43,7 +42,7 @@ void TaskExecuteRelaxationStrategy::run()
         relaxationStrategy->executeStrategy();
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->process->stopTimer("DualStrategy");
 }
 std::string TaskExecuteRelaxationStrategy::getType()
 {

@@ -10,14 +10,13 @@
 
 #include "TaskPresolve.h"
 
-TaskPresolve::TaskPresolve(IMIPSolver *MIPSolver)
+TaskPresolve::TaskPresolve(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+    env->process->startTimer("DualStrategy");
 
     isPresolved = false;
-    this->MIPSolver = MIPSolver;
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->process->stopTimer("DualStrategy");
 }
 
 TaskPresolve::~TaskPresolve()
@@ -26,49 +25,49 @@ TaskPresolve::~TaskPresolve()
 
 void TaskPresolve::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    env->process->startTimer("DualStrategy");
+    auto currIter = env->process->getCurrentIteration();
 
-    auto strategy = static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual"));
+    auto strategy = static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual"));
 
     if (!currIter->isMIP())
     {
-        ProcessInfo::getInstance().stopTimer("DualStrategy");
+        env->process->stopTimer("DualStrategy");
         return;
     }
 
     if (strategy == ES_MIPPresolveStrategy::Never)
     {
-        ProcessInfo::getInstance().stopTimer("DualStrategy");
+        env->process->stopTimer("DualStrategy");
         return;
     }
     else if (strategy == ES_MIPPresolveStrategy::Once && isPresolved == true)
     {
-        ProcessInfo::getInstance().stopTimer("DualStrategy");
+        env->process->stopTimer("DualStrategy");
         return;
     }
 
     // Sets the iteration time limit
-    auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
-    MIPSolver->setTimeLimit(timeLim);
+    auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->process->getElapsedTime("Total");
+    env->dualSolver->setTimeLimit(timeLim);
 
-    if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if (env->process->primalSolutions.size() > 0)
     {
-        MIPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
+        env->dualSolver->setCutOff(env->process->getPrimalBound());
     }
 
-    if (MIPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if (env->dualSolver->getDiscreteVariableStatus() && env->process->primalSolutions.size() > 0)
     {
-        MIPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
+        env->dualSolver->addMIPStart(env->process->primalSolution);
     }
 
-    if (Settings::getInstance().getBoolSetting("FixedInteger.UsePresolveBounds", "Primal") || Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
+    if (env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal") || env->settings->getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
     {
-        MIPSolver->presolveAndUpdateBounds();
+        env->dualSolver->presolveAndUpdateBounds();
         isPresolved = true;
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->process->stopTimer("DualStrategy");
 }
 
 std::string TaskPresolve::getType()

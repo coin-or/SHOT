@@ -10,15 +10,13 @@
 
 #include "TaskSolveFixedDualProblem.h"
 
-TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(IMIPSolver *MIPSolver)
+TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("DualProblemsIntegerFixed");
+    env->process->startTimer("DualProblemsIntegerFixed");
 
-    this->MIPSolver = MIPSolver;
+    discreteVariableIndexes = env->process->originalProblem->getDiscreteVariableIndices();
 
-    discreteVariableIndexes = ProcessInfo::getInstance().originalProblem->getDiscreteVariableIndices();
-
-    ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+    env->process->stopTimer("DualProblemsIntegerFixed");
 }
 
 TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem()
@@ -27,51 +25,51 @@ TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem()
 
 void TaskSolveFixedDualProblem::run()
 {
-    ProcessInfo::getInstance().startTimer("DualProblemsIntegerFixed");
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); //The one not solved yet
+    env->process->startTimer("DualProblemsIntegerFixed");
+    auto currIter = env->process->getCurrentIteration(); //The one not solved yet
 
     if (currIter->MIPSolutionLimitUpdated)
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
     if (currIter->iterationNumber < 5)
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    if (currIter->maxDeviation <= Settings::getInstance().getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
+    if (currIter->maxDeviation <= env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
     if (prevIter->iterationNumber < 4)
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    auto prevIter2 = &ProcessInfo::getInstance().iterations.at(prevIter->iterationNumber - 2);
-    auto prevIter3 = &ProcessInfo::getInstance().iterations.at(prevIter->iterationNumber - 3);
+    auto prevIter2 = &env->process->iterations.at(prevIter->iterationNumber - 2);
+    auto prevIter3 = &env->process->iterations.at(prevIter->iterationNumber - 3);
 
     if (!prevIter->isMIP() && !prevIter2->isMIP() && !prevIter3->isMIP())
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
     if (currIter->numHyperplanesAdded == 0)
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    auto discreteIdxs = ProcessInfo::getInstance().originalProblem->getDiscreteVariableIndices();
+    auto discreteIdxs = env->process->originalProblem->getDiscreteVariableIndices();
 
     auto currSolPt = prevIter->solutionPoints.at(0).point;
 
@@ -83,7 +81,7 @@ void TaskSolveFixedDualProblem::run()
 
     if (isDifferent1 || isDifferent2)
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+        env->process->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
@@ -94,21 +92,21 @@ void TaskSolveFixedDualProblem::run()
         fixValues.at(i) = currSolPt.at(discreteVariableIndexes.at(i));
     }
 
-    MIPSolver->fixVariables(discreteVariableIndexes, fixValues);
+    env->dualSolver->fixVariables(discreteVariableIndexes, fixValues);
 
-    int numVar = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
+    int numVar = env->process->originalProblem->getNumberOfVariables();
 
-    bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
 
     double prevObjVal = COIN_DBL_MAX;
 
     int iterLastObjUpdate = 0;
-    int maxIter = Settings::getInstance().getIntSetting("FixedInteger.MaxIterations", "Dual");
-    double objTol = Settings::getInstance().getDoubleSetting("FixedInteger.ObjectiveTolerance", "Dual");
-    double constrTol = Settings::getInstance().getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual");
+    int maxIter = env->settings->getIntSetting("FixedInteger.MaxIterations", "Dual");
+    double objTol = env->settings->getDoubleSetting("FixedInteger.ObjectiveTolerance", "Dual");
+    double constrTol = env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual");
 
-    bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-    bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
+    bool isMIQP = (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
+    bool isMIQCP = (env->process->originalProblem->getQuadraticConstraintIndexes().size() > 0);
     bool isDiscrete = false;
 
     for (int k = 0; k < maxIter; k++)
@@ -118,87 +116,87 @@ void TaskSolveFixedDualProblem::run()
         if (isMIQCP)
         {
             tmpType << "QCP-FIX";
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQCQP++;
+            env->process->solutionStatistics.numberOfProblemsQCQP++;
         }
         else if (isMIQP)
         {
             tmpType << "QP-FIX";
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP++;
+            env->process->solutionStatistics.numberOfProblemsQP++;
         }
         else
         {
             tmpType << "LP-FIX";
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP++;
+            env->process->solutionStatistics.numberOfProblemsLP++;
         }
 
         totalIters++;
-        auto solStatus = MIPSolver->solveProblem();
+        auto solStatus = env->dualSolver->solveProblem();
 
         if (solStatus != E_ProblemSolutionStatus::Optimal)
         {
 
             tmpType << "-I";
 
-            Output::getInstance().outputIterationDetail(totalIters,
-                                                        tmpType.str(),
-                                                        ProcessInfo::getInstance().getElapsedTime("Total"),
-                                                        1,
-                                                        currIter->totNumHyperplanes,
-                                                        ProcessInfo::getInstance().getDualBound(),
-                                                        ProcessInfo::getInstance().getPrimalBound(),
-                                                        ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
-                                                        ProcessInfo::getInstance().getRelativeObjectiveGap(),
-                                                        NAN,
-                                                        NAN,
-                                                        NAN,
-                                                        E_IterationLineType::DualIntegerFixed);
+            env->output->outputIterationDetail(totalIters,
+                                               tmpType.str(),
+                                               env->process->getElapsedTime("Total"),
+                                               1,
+                                               currIter->totNumHyperplanes,
+                                               env->process->getDualBound(),
+                                               env->process->getPrimalBound(),
+                                               env->process->getAbsoluteObjectiveGap(),
+                                               env->process->getRelativeObjectiveGap(),
+                                               NAN,
+                                               NAN,
+                                               NAN,
+                                               E_IterationLineType::DualIntegerFixed);
 
             break;
         }
         else
         {
-            auto varSol = MIPSolver->getVariableSolution(0);
-            auto objVal = MIPSolver->getObjectiveValue(0);
+            auto varSol = env->dualSolver->getVariableSolution(0);
+            auto objVal = env->dualSolver->getObjectiveValue(0);
 
-            auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(varSol);
+            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(varSol);
 
             std::vector<double> externalPoint = varSol;
             IndexValuePair errorExternal;
 
-            if (ProcessInfo::getInstance().interiorPts.size() > 0)
+            if (env->process->interiorPts.size() > 0)
             {
-                std::vector<double> internalPoint = ProcessInfo::getInstance().interiorPts.at(0)->point;
+                std::vector<double> internalPoint = env->process->interiorPts.at(0)->point;
 
-                auto tmpMostDevConstr2 = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(internalPoint);
+                auto tmpMostDevConstr2 = env->process->originalProblem->getMostDeviatingConstraint(internalPoint);
 
                 try
                 {
-                    auto xNewc = ProcessInfo::getInstance().linesearchMethod->findZero(internalPoint, externalPoint,
-                                                                                       Settings::getInstance().getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                                       Settings::getInstance().getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                                                                                       Settings::getInstance().getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
+                    auto xNewc = env->process->linesearchMethod->findZero(internalPoint, externalPoint,
+                                                                          env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                          env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+                                                                          env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
-                    ProcessInfo::getInstance().stopTimer("DualCutGenerationRootSearch");
+                    env->process->stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;
                     externalPoint = xNewc.second;
                 }
                 catch (std::exception &e)
                 {
 
-                    Output::getInstance().outputWarning(
+                    env->output->outputWarning(
                         "     Cannot find solution with linesearch for fixed LP, using solution point instead:");
-                    Output::getInstance().outputWarning(e.what());
+                    env->output->outputWarning(e.what());
                 }
             }
 
-            errorExternal = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(externalPoint);
+            errorExternal = env->process->originalProblem->getMostDeviatingConstraint(externalPoint);
 
             Hyperplane hyperplane;
             hyperplane.sourceConstraintIndex = errorExternal.idx;
             hyperplane.generatedPoint = externalPoint;
             hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
-            MIPSolver->createHyperplane(hyperplane);
+            env->dualSolver->createHyperplane(hyperplane);
 
             bool hasSolution = true;
 
@@ -238,21 +236,21 @@ void TaskSolveFixedDualProblem::run()
                 hasSolution = false;
             }
 
-            Output::getInstance().outputIterationDetail(totalIters,
-                                                        tmpType.str(),
-                                                        ProcessInfo::getInstance().getElapsedTime("Total"),
-                                                        1,
-                                                        currIter->totNumHyperplanes,
-                                                        ProcessInfo::getInstance().getDualBound(),
-                                                        ProcessInfo::getInstance().getPrimalBound(),
-                                                        ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
-                                                        ProcessInfo::getInstance().getRelativeObjectiveGap(),
-                                                        objVal,
-                                                        mostDevConstr.idx,
-                                                        mostDevConstr.value,
-                                                        E_IterationLineType::DualIntegerFixed);
+            env->output->outputIterationDetail(totalIters,
+                                               tmpType.str(),
+                                               env->process->getElapsedTime("Total"),
+                                               1,
+                                               currIter->totNumHyperplanes,
+                                               env->process->getDualBound(),
+                                               env->process->getPrimalBound(),
+                                               env->process->getAbsoluteObjectiveGap(),
+                                               env->process->getRelativeObjectiveGap(),
+                                               objVal,
+                                               mostDevConstr.idx,
+                                               mostDevConstr.value,
+                                               E_IterationLineType::DualIntegerFixed);
 
-            if (mostDevConstr.value <= constrTol || k - iterLastObjUpdate > 10 || objVal > ProcessInfo::getInstance().getPrimalBound())
+            if (mostDevConstr.value <= constrTol || k - iterLastObjUpdate > 10 || objVal > env->process->getPrimalBound())
             {
                 break;
             }
@@ -265,11 +263,11 @@ void TaskSolveFixedDualProblem::run()
         }
     }
 
-    MIPSolver->activateDiscreteVariables(true);
+    env->dualSolver->activateDiscreteVariables(true);
 
-    MIPSolver->unfixVariables();
+    env->dualSolver->unfixVariables();
 
-    ProcessInfo::getInstance().stopTimer("DualProblemsIntegerFixed");
+    env->process->stopTimer("DualProblemsIntegerFixed");
     return;
 }
 

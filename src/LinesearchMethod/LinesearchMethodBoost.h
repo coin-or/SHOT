@@ -58,7 +58,7 @@ class TerminationCondition
 class LinesearchMethodBoost : public ILinesearchMethod
 {
   public:
-    LinesearchMethodBoost();
+    LinesearchMethodBoost(EnvironmentPtr envPtr);
     virtual ~LinesearchMethodBoost();
 
     virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,

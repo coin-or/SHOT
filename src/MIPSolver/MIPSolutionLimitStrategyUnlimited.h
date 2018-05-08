@@ -14,10 +14,10 @@
 class MIPSolutionLimitStrategyUnlimited : public IMIPSolutionLimitStrategy
 {
   public:
-	MIPSolutionLimitStrategyUnlimited(IMIPSolver *MIPSolver);
-	~MIPSolutionLimitStrategyUnlimited();
+    MIPSolutionLimitStrategyUnlimited(EnvironmentPtr envPtr);
+    ~MIPSolutionLimitStrategyUnlimited();
 
-	virtual bool updateLimit();
-	virtual int getNewLimit();
-	virtual int getInitialLimit();
+    virtual bool updateLimit();
+    virtual int getNewLimit();
+    virtual int getInitialLimit();
 };

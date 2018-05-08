@@ -64,7 +64,7 @@ class IMIPSolver
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
-    virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void presolveAndUpdateBounds() = 0;
     virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;

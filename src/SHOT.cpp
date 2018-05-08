@@ -12,18 +12,23 @@
 
 int main(int argc, char *argv[])
 {
+    EnvironmentPtr env(new Environment);
+    env->output = OutputPtr(new Output(env));
+    env->process = ProcessPtr(new ProcessInfo(env));
+    env->settings = SettingsPtr(new Settings(env));
+    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+
     if (argc == 1)
     {
-        Output::getInstance().outputSolverHeader();
+        env->output->outputSolverHeader();
         std::cout << " Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
 
         return (0);
     }
 
-    unique_ptr<SHOTSolver> solver(new SHOTSolver());
     bool defaultOptionsGenerated = false;
 
-    ProcessInfo::getInstance().startTimer("Total");
+    env->process->startTimer("Total");
 
     boost::filesystem::path resultFile, optionsFile, traceFile;
 
@@ -52,7 +57,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
             {
-                Output::getInstance().outputError(" Error when writing OSoL file: " + optionsFile.string());
+                env->output->outputError(" Error when writing OSoL file: " + optionsFile.string());
             }
 
             // Create GAMS option file
@@ -60,7 +65,7 @@ int main(int argc, char *argv[])
 
             if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
             {
-                Output::getInstance().outputError(" Error when writing options file: " + optionsFile.string());
+                env->output->outputError(" Error when writing options file: " + optionsFile.string());
             }
 
             defaultOptionsGenerated = true;
@@ -70,7 +75,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            Output::getInstance().outputSolverHeader();
+            env->output->outputSolverHeader();
 
             return (0);
         }
@@ -81,7 +86,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            Output::getInstance().outputSolverHeader();
+            env->output->outputSolverHeader();
             std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
             return (0);
@@ -94,7 +99,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            Output::getInstance().outputSolverHeader();
+            env->output->outputSolverHeader();
             std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
             return (0);
@@ -109,7 +114,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[1]))
         {
-            Output::getInstance().outputSolverHeader();
+            env->output->outputSolverHeader();
             std::cout << " Problem file " << argv[1] << " not found!" << std::endl;
 
             return (0);
@@ -121,41 +126,39 @@ int main(int argc, char *argv[])
         {
             if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
             {
-                Output::getInstance().outputSolverHeader();
+                env->output->outputSolverHeader();
                 std::cout << " Cannot set options!" << std::endl;
                 return (0);
             }
         }
 
-        Output::getInstance().setLogLevels();
-
-        // Prints out the welcome message to the logging facility
+        env->output->setLogLevels();
 
         if (!solver->setProblem(fileName))
         {
-            Output::getInstance().outputError(" Error when reading problem file.");
+            env->output->outputError(" Error when reading problem file.");
 
             return (0);
         }
 
-        Output::getInstance().outputSolverHeader();
-        Output::getInstance().outputOptionsReport();
-        Output::getInstance().outputProblemInstanceReport();
+        env->output->outputSolverHeader();
+        env->output->outputOptionsReport();
+        env->output->outputProblemInstanceReport();
 
         if (!solver->solveProblem()) // solve problem
         {
-            Output::getInstance().outputError(" Error when solving problem.");
+            env->output->outputError(" Error when solving problem.");
 
             return (0);
         }
 
-        Output::getInstance().outputSolutionReport();
+        env->output->outputSolutionReport();
 
-        Output::getInstance().outputSummary("╶─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n");
+        env->output->outputSummary("╶─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n");
     }
     catch (const ErrorClass &eclass)
     {
-        Output::getInstance().outputError(eclass.errormsg);
+        env->output->outputError(eclass.errormsg);
 
         return (0);
     }
@@ -164,23 +167,23 @@ int main(int argc, char *argv[])
 
     if (resultFile.empty())
     {
-        boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
-        resultPath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
+        boost::filesystem::path resultPath(env->settings->getStringSetting("ResultPath", "Output"));
+        resultPath /= env->process->originalProblem->getProblemInstance()->getInstanceName();
         resultPath = resultPath.replace_extension(".osrl");
-        Output::getInstance().outputSummary(" Results written to: " + resultPath.string());
+        env->output->outputSummary(" Results written to: " + resultPath.string());
 
         if (!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
         {
-            Output::getInstance().outputError(" Error when writing OSrL file: " + resultPath.string());
+            env->output->outputError(" Error when writing OSrL file: " + resultPath.string());
         }
     }
     else
     {
-        Output::getInstance().outputSummary(" Results written to: " + resultFile.string());
+        env->output->outputSummary(" Results written to: " + resultFile.string());
 
         if (!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
         {
-            Output::getInstance().outputError(" Error when writing OSrL file: " + resultFile.string());
+            env->output->outputError(" Error when writing OSrL file: " + resultFile.string());
         }
     }
 
@@ -188,21 +191,21 @@ int main(int argc, char *argv[])
 
     if (traceFile.empty())
     {
-        boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
-        tracePath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
+        boost::filesystem::path tracePath(env->settings->getStringSetting("ResultPath", "Output"));
+        tracePath /= env->process->originalProblem->getProblemInstance()->getInstanceName();
         tracePath = tracePath.replace_extension(".trc");
-        Output::getInstance().outputSummary("                     " + tracePath.string());
+        env->output->outputSummary("                     " + tracePath.string());
 
         if (!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
         {
-            Output::getInstance().outputError(" Error when writing trace file: " + tracePath.string());
+            env->output->outputError(" Error when writing trace file: " + tracePath.string());
         }
     }
     else
     {
         if (!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
         {
-            Output::getInstance().outputError(" Error when writing trace file: " + traceFile.string());
+            env->output->outputError(" Error when writing trace file: " + traceFile.string());
         }
     }
 

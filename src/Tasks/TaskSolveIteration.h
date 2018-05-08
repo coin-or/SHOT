@@ -17,12 +17,11 @@
 class TaskSolveIteration : public TaskBase
 {
   public:
-	TaskSolveIteration(IMIPSolver *MIPSolver);
-	virtual ~TaskSolveIteration();
+    TaskSolveIteration(EnvironmentPtr envPtr);
+    virtual ~TaskSolveIteration();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
-	IMIPSolver *MIPSolver;
 };

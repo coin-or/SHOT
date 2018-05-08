@@ -16,7 +16,7 @@
 class TaskAddHyperplanes : public TaskBase
 {
   public:
-    TaskAddHyperplanes(IMIPSolver *MIPSolver);
+    TaskAddHyperplanes(EnvironmentPtr envPtr);
     virtual ~TaskAddHyperplanes();
 
     virtual void run();
@@ -25,6 +25,4 @@ class TaskAddHyperplanes : public TaskBase
 
   private:
     int itersWithoutAddedHPs;
-
-    IMIPSolver *MIPSolver;
 };

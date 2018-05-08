@@ -17,7 +17,7 @@
 class Iteration
 {
   public:
-    Iteration();
+    Iteration(EnvironmentPtr envPtr);
     ~Iteration();
 
     E_IterationProblemType type;
@@ -57,4 +57,7 @@ class Iteration
 
     SolutionPoint getSolutionPointWithSmallestDeviation();
     int getSolutionPointWithSmallestDeviationIndex();
+
+  private:
+    EnvironmentPtr env;
 };

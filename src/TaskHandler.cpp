@@ -10,8 +10,10 @@
 
 #include "TaskHandler.h"
 
-TaskHandler::TaskHandler()
+TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 {
+    env = envPtr;
+
     nextTask = taskIDMap.begin();
 }
 
@@ -67,7 +69,7 @@ void TaskHandler::setNextTask(std::string taskID)
     if (!isFound)
     {
         // Cannot find the specified task
-        TaskExceptionNotFound e(taskID);
+        TaskExceptionNotFound e(env, taskID);
         throw(e);
     }
 }
@@ -89,6 +91,6 @@ TaskBase *TaskHandler::getTask(std::string taskID)
     }
 
     // Cannot find the specified task
-    TaskExceptionNotFound e(taskID);
+    TaskExceptionNotFound e(env, taskID);
     throw(e);
 }

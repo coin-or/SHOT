@@ -27,7 +27,7 @@
 class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 {
   public:
-    NLPSolverCuttingPlaneMinimax();
+    NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr);
     virtual ~NLPSolverCuttingPlaneMinimax();
 
     virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);

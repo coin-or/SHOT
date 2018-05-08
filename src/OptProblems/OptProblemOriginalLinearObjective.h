@@ -14,10 +14,10 @@
 class OptProblemOriginalLinearObjective : public OptProblemOriginal
 {
   public:
-	OptProblemOriginalLinearObjective();
-	~OptProblemOriginalLinearObjective();
+    OptProblemOriginalLinearObjective(EnvironmentPtr envPtr);
+    ~OptProblemOriginalLinearObjective();
 
-	virtual bool setProblem(OSInstance *instance);
+    virtual bool setProblem(OSInstance *instance);
 
   private:
 };

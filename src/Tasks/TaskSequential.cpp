@@ -10,11 +10,11 @@
 
 #include "TaskSequential.h"
 
-TaskSequential::TaskSequential()
+TaskSequential::TaskSequential(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
-TaskSequential::TaskSequential(int numberOfTasks)
+TaskSequential::TaskSequential(EnvironmentPtr envPtr, int numberOfTasks) : TaskBase(envPtr)
 {
     m_tasks.reserve(numberOfTasks);
 }

@@ -10,13 +10,13 @@
 
 #include "TaskSimple.h"
 
-TaskSimple::TaskSimple()
+TaskSimple::TaskSimple(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
-TaskSimple::TaskSimple(std::function<bool()> taskFunction)
+TaskSimple::TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction) : TaskBase(envPtr)
 {
-	task = taskFunction;
+    task = taskFunction;
 }
 
 TaskSimple::~TaskSimple()
@@ -25,25 +25,25 @@ TaskSimple::~TaskSimple()
 
 void TaskSimple::setFunction(std::function<bool()> taskFunction)
 {
-	task = taskFunction;
+    task = taskFunction;
 }
 
 void TaskSimple::run()
 {
-	if (task != nullptr)
-	{
-		task();
-	}
-	else
-	{
-		TaskExceptionFunctionNotDefined e("TaskSimple");
+    if (task != nullptr)
+    {
+        task();
+    }
+    else
+    {
+        TaskExceptionFunctionNotDefined e(env, "TaskSimple");
 
-		throw(e);
-	}
+        throw(e);
+    }
 }
 
 std::string TaskSimple::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

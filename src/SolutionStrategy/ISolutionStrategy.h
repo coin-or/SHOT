@@ -11,6 +11,7 @@
 #pragma once
 #include "OSInstance.h"
 #include "ProcessInfo.h"
+#include "Environment.h"
 
 class ISolutionStrategy
 {
@@ -19,4 +20,7 @@ class ISolutionStrategy
 
     virtual void initializeStrategy() = 0;
     virtual bool solveProblem() = 0;
+
+  protected:
+    EnvironmentPtr env;
 };

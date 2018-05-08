@@ -10,7 +10,7 @@
 
 #include "OptProblemOriginal.h"
 
-OptProblemOriginal::OptProblemOriginal()
+OptProblemOriginal::OptProblemOriginal(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
 }
 

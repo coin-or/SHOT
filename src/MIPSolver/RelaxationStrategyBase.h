@@ -21,4 +21,6 @@ class RelaxationStrategyBase
     bool isRelaxedSolutionInterior();
     bool isCurrentToleranceReached();
     bool isGapReached();
+
+    EnvironmentPtr env;
 };

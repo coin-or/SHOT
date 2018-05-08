@@ -16,7 +16,7 @@
 class TaskSelectPrimalFixedNLPPointsFromSolutionPool : public TaskBase
 {
   public:
-	TaskSelectPrimalFixedNLPPointsFromSolutionPool();
+	TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr);
 	virtual ~TaskSelectPrimalFixedNLPPointsFromSolutionPool();
 
 	virtual void run();

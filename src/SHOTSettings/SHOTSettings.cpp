@@ -41,7 +41,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
 
     if (oldvalue == value)
     {
-        Output::getInstance().outputInfo("Setting " + key.first + "." + key.second + " not updated. Same value " + oldvalue + " given.");
+        env->output->outputInfo("Setting " + key.first + "." + key.second + " not updated. Same value " + oldvalue + " given.");
         return;
     }
     else
@@ -49,7 +49,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
         _settings[key] = value;
         _isDefault[key] = false;
 
-        Output::getInstance().outputInfo("Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
+        env->output->outputInfo("Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
     }
 }
 
@@ -69,7 +69,7 @@ void Settings::createSetting(std::string name, std::string category, std::string
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + value + " created.");
+    env->output->outputInfo("Setting <" + name + "," + category + "> = " + value + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, std::string value)
@@ -79,14 +79,14 @@ void Settings::updateSetting(std::string name, std::string category, std::string
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::String)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type. (Expected string).");
+        env->output->outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type. (Expected string).");
 
         throw SettingSetWrongTypeException(name, category);
     }
@@ -101,14 +101,14 @@ std::string Settings::getStringSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::String)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -129,7 +129,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+    env->output->outputInfo("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
 }
 
 void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal,
@@ -150,21 +150,21 @@ void Settings::updateSetting(std::string name, std::string category, int value)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Integer)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
+        env->output->outputError("Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
 
     if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + ">: Not in interval [" + to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second) + "].");
+        env->output->outputError("Cannot update setting <" + name + "," + category + ">: Not in interval [" + std::to_string(_settingsBounds[key].first) + "," + std::to_string(_settingsBounds[key].second) + "].");
 
         throw SettingOutsideBoundsException(name, category, (double)value, _settingsBounds[key].first,
                                             _settingsBounds[key].second);
@@ -182,14 +182,14 @@ int Settings::getIntSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Integer)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -202,7 +202,7 @@ int Settings::getIntSetting(std::string name, std::string category)
     catch (boost::bad_lexical_cast &e)
     {
 
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -220,7 +220,7 @@ void Settings::createSetting(std::string name, std::string category, bool value,
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+    env->output->outputInfo("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
 }
 
 void Settings::createSetting(std::string name, std::string category, bool value, std::string description)
@@ -235,14 +235,14 @@ void Settings::updateSetting(std::string name, std::string category, bool value)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Boolean)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
+        env->output->outputError("Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
@@ -259,14 +259,14 @@ bool Settings::getBoolSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Boolean)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -278,7 +278,7 @@ bool Settings::getBoolSetting(std::string name, std::string category)
     }
     catch (boost::bad_lexical_cast &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -295,7 +295,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     {
         _enumDescription[make_tuple(name, category, i)] = enumDescriptions.at(i);
 
-        Output::getInstance().outputInfo(" Enum value " + to_string(i) + ": " + enumDescriptions.at(i));
+        env->output->outputInfo(" Enum value " + std::to_string(i) + ": " + enumDescriptions.at(i));
     }
 
     _settingsEnum[make_pair(name, category)] = true;
@@ -331,14 +331,14 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Integer)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -353,7 +353,7 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
     catch (boost::bad_lexical_cast &e)
     {
 
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -383,7 +383,7 @@ void Settings::createSetting(std::string name, std::string category, double valu
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    Output::getInstance().outputInfo("Setting <" + name + "," + category + "> = " + to_string(value) + " created.");
+    env->output->outputInfo("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, double value)
@@ -393,21 +393,21 @@ void Settings::updateSetting(std::string name, std::string category, double valu
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Double)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
+        env->output->outputError("Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
 
     if (_settingsBounds[key].first > value || _settingsBounds[key].second < value)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + ">: Not in interval [" + to_string(_settingsBounds[key].first) + "," + to_string(_settingsBounds[key].second) + "].");
+        env->output->outputError("Cannot update setting <" + name + "," + category + ">: Not in interval [" + std::to_string(_settingsBounds[key].first) + "," + std::to_string(_settingsBounds[key].second) + "].");
 
         throw SettingOutsideBoundsException(name, category, value, _settingsBounds[key].first,
                                             _settingsBounds[key].second);
@@ -425,14 +425,14 @@ double Settings::getDoubleSetting(std::string name, std::string category)
 
     if (_settingsIter == _settings.end())
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        env->output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
     if (_settingsType[key] != ESettingsType::Double)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -444,7 +444,7 @@ double Settings::getDoubleSetting(std::string name, std::string category)
     }
     catch (boost::bad_lexical_cast &e)
     {
-        Output::getInstance().Output::getInstance().outputError("Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+        env->output->outputError("Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
@@ -479,7 +479,7 @@ std::string Settings::getSettingsInOSolFormat()
     boost::property_tree::ptree pt;
     boost::property_tree::xml_writer_settings<std::string> settings(' ', 1);
 
-    stringstream ss;
+    std::stringstream ss;
     ss << osolwriter->writeOSoL(getSettingsAsOSOption());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
@@ -502,7 +502,7 @@ std::string Settings::getSettingsAsString()
 
     boost::property_tree::ptree pt;
 
-    stringstream ss;
+    std::stringstream ss;
 
     auto osOption = getSettingsAsOSOption();
     ss << osolwriter->writeOSoL(osOption);
@@ -539,7 +539,7 @@ std::string Settings::getUpdatedSettingsAsString()
 
     boost::property_tree::ptree pt;
 
-    stringstream ss;
+    std::stringstream ss;
 
     auto osOption = getSettingsAsOSOption();
     ss << osolwriter->writeOSoL(osOption);
@@ -578,7 +578,7 @@ std::string Settings::getUpdatedSettingsAsString()
 
 OSOption *Settings::getSettingsAsOSOption()
 {
-    Output::getInstance().outputDebug("Starting conversion of settings to OSOption object.");
+    env->output->outputDebug("Starting conversion of settings to OSOption object.");
 
     OSOption *options = new OSOption();
 
@@ -622,13 +622,13 @@ OSOption *Settings::getSettingsAsOSOption()
 
         options->setAnotherSolverOption(p.first, iterator->second, "SHOT", p.second, type.str(), desc.str());
 
-        Output::getInstance().outputDebug(" Setting <" + p.first + "," + p.second + "> converted.");
+        env->output->outputDebug(" Setting <" + p.first + "," + p.second + "> converted.");
 
         type.clear();
         desc.clear();
     }
 
-    Output::getInstance().outputDebug("Conversion of settings to OSOption object completed.");
+    env->output->outputDebug("Conversion of settings to OSOption object completed.");
 
     return options;
 }
@@ -645,7 +645,7 @@ std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
 
     boost::property_tree::ptree pt;
 
-    stringstream ss;
+    std::stringstream ss;
     ss << osolwriter->writeOSoL(getSettingsAsOSOption());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
@@ -703,7 +703,7 @@ std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
 void Settings::readSettingsFromOSoL(std::string osol)
 {
 
-    Output::getInstance().outputInfo("Starting conversion of settings from OSoL.");
+    env->output->outputInfo("Starting conversion of settings from OSoL.");
 
     OSoLReader *osolreader = new OSoLReader();
 
@@ -714,7 +714,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
 
 void Settings::readSettingsFromGAMSOptFormat(std::string options)
 {
-    Output::getInstance().outputInfo("Starting conversion of settings from GAMS options format.");
+    env->output->outputInfo("Starting conversion of settings from GAMS options format.");
 
     std::istringstream f(options);
     std::string line;
@@ -725,8 +725,8 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
         if (line == "" || boost::algorithm::starts_with(line, "*"))
             continue;
 
-        std::vector<string> nameCategoryPair;
-        std::vector<string> keyValuePair;
+        std::vector<std::string> nameCategoryPair;
+        std::vector<std::string> keyValuePair;
         boost::split(keyValuePair, line, boost::is_any_of("="));
         //boost::split(nameCategoryPair, keyValuePair.front(), std::bind1st(std::equal_to<char>(), '.'));
 
@@ -736,7 +736,7 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 
         if (keyValuePair.size() != 2)
         {
-            Output::getInstance().Output::getInstance().outputError("Error when reading line \"" + line + "\" in the options file; ignoring the option.");
+            env->output->outputError("Error when reading line \"" + line + "\" in the options file; ignoring the option.");
 
             continue;
         }
@@ -754,7 +754,7 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 
         if (_settingsIter == _settings.end())
         {
-            Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+            env->output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
             throw SettingKeyNotFoundException(name, category);
         }
@@ -784,14 +784,14 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
         }
         catch (boost::bad_lexical_cast &)
         {
-            Output::getInstance().Output::getInstance().outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
+            env->output->outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
         }
     }
 }
 
 void Settings::readSettingsFromOSOption(OSOption *options)
 {
-    Output::getInstance().outputInfo("Conversion of settings from OSOptions.");
+    env->output->outputInfo("Conversion of settings from OSOptions.");
 
     for (int i = 0; i < options->getNumberOfSolverOptions(); i++)
     {
@@ -831,7 +831,7 @@ void Settings::readSettingsFromOSOption(OSOption *options)
                     catch (boost::bad_lexical_cast &e)
                     {
 
-                        Output::getInstance().Output::getInstance().outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is not an integer. Using default value.");
+                        env->output->outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is not an integer. Using default value.");
                     }
                 }
                 else if (so->type == "double")
@@ -843,13 +843,13 @@ void Settings::readSettingsFromOSOption(OSOption *options)
                     }
                     catch (boost::bad_lexical_cast &e)
                     {
-                        Output::getInstance().Output::getInstance().outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is not a double. Using default value.");
+                        env->output->outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is not a double. Using default value.");
                     }
                 }
                 else
                 {
 
-                    Output::getInstance().Output::getInstance().outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is of unknown type. Skipping it.");
+                    env->output->outputError("Value for setting <" + so->name + "," + so->category + "> in OSoL file is of unknown type. Skipping it.");
                 }
             }
             catch (SettingKeyNotFoundException &e)
@@ -864,5 +864,5 @@ void Settings::readSettingsFromOSOption(OSOption *options)
         }
     }
 
-    Output::getInstance().outputInfo("Conversion of settings from OSoL completed.");
+    env->output->outputInfo("Conversion of settings from OSoL completed.");
 }

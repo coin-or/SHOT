@@ -10,17 +10,16 @@
 
 #include "TaskConditional.h"
 
-TaskConditional::TaskConditional()
+TaskConditional::TaskConditional(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-	taskFalseIsSet = false;
 }
 
-TaskConditional::TaskConditional(std::function<bool()> conditionFunct, TaskBase *taskTrue, TaskBase *taskFalse)
+TaskConditional::TaskConditional(EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskBase *taskTrue, TaskBase *taskFalse) : TaskBase(envPtr)
 {
-	condition = conditionFunct;
-	taskIfTrue = taskTrue;
-	taskIfFalse = taskFalse;
-	taskFalseIsSet = true;
+    condition = conditionFunct;
+    taskIfTrue = taskTrue;
+    taskIfFalse = taskFalse;
+    taskFalseIsSet = true;
 }
 
 TaskConditional::~TaskConditional()
@@ -29,41 +28,41 @@ TaskConditional::~TaskConditional()
 
 void TaskConditional::setCondition(std::function<bool()> conditionFunct)
 {
-	condition = conditionFunct;
+    condition = conditionFunct;
 }
 
 void TaskConditional::setTaskIfTrue(TaskBase *task)
 {
-	taskIfTrue = task;
+    taskIfTrue = task;
 }
 
 void TaskConditional::setTaskIfFalse(TaskBase *task)
 {
-	taskIfFalse = task;
-	taskFalseIsSet = true;
+    taskIfFalse = task;
+    taskFalseIsSet = true;
 }
 
 void TaskConditional::run()
 {
-	bool tmpCondition;
+    bool tmpCondition;
 
-	if (condition != nullptr)
-	{
-		tmpCondition = condition();
-	}
+    if (condition != nullptr)
+    {
+        tmpCondition = condition();
+    }
 
-	if (tmpCondition)
-	{
-		taskIfTrue->run();
-	}
-	else
-	{
-		if (taskFalseIsSet == true)
-			taskIfFalse->run();
-	}
+    if (tmpCondition)
+    {
+        taskIfTrue->run();
+    }
+    else
+    {
+        if (taskFalseIsSet == true)
+            taskIfFalse->run();
+    }
 }
 std::string TaskConditional::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

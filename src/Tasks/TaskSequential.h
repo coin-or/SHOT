@@ -15,8 +15,8 @@
 class TaskSequential : public TaskBase
 {
   public:
-    TaskSequential();
-    TaskSequential(int numberOfTasks);
+    TaskSequential(EnvironmentPtr envPtr);
+    TaskSequential(EnvironmentPtr envPtr, int numberOfTasks);
 
     virtual ~TaskSequential();
 

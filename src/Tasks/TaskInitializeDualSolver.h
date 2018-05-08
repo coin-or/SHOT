@@ -34,7 +34,7 @@
 class TaskInitializeDualSolver : public TaskBase
 {
   public:
-    TaskInitializeDualSolver(ES_MIPSolver solver, bool useLazyStrategy);
+    TaskInitializeDualSolver(EnvironmentPtr envPtr, bool useLazyStrategy);
     virtual ~TaskInitializeDualSolver();
 
     void run();

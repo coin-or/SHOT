@@ -19,7 +19,7 @@
 class TaskHandler
 {
   public:
-    TaskHandler();
+    TaskHandler(EnvironmentPtr envPtr);
     ~TaskHandler();
 
     void addTask(TaskBase *task, std::string taskID);
@@ -34,4 +34,6 @@ class TaskHandler
     std::string nextTaskID;
     std::list<std::pair<std::string, TaskBase *>> taskIDMap;
     std::list<TaskBase *> allTasks;
+
+    EnvironmentPtr env;
 };

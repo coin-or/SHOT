@@ -17,7 +17,7 @@
 class TaskInitializeLinesearch : public TaskBase
 {
   public:
-    TaskInitializeLinesearch();
+    TaskInitializeLinesearch(EnvironmentPtr envPtr);
     virtual ~TaskInitializeLinesearch();
 
     virtual void run();

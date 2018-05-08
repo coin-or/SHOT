@@ -9,7 +9,3 @@
 */
 
 #include "ILinesearchMethod.h"
-
-ILinesearchMethod::ILinesearchMethod()
-{
-}

@@ -9,6 +9,7 @@
 */
 
 #pragma once
+#include "../Environment.h"
 
 class IPrimalSolutionStrategy
 {

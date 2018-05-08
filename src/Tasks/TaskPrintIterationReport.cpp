@@ -10,7 +10,7 @@
 
 #include "TaskPrintIterationReport.h"
 
-TaskPrintIterationReport::TaskPrintIterationReport()
+TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
     lastNumHyperplane = 0;
 }
@@ -21,15 +21,15 @@ TaskPrintIterationReport::~TaskPrintIterationReport()
 
 void TaskPrintIterationReport::run()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
     std::stringstream tmpType;
 
     bool hasSolution = true;
 
-    bool isMIQP = (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-    bool isMIQCP = (ProcessInfo::getInstance().originalProblem->getQuadraticConstraintIndexes().size() > 0);
-    bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && ProcessInfo::getInstance().originalProblem->isProblemDiscrete();
+    bool isMIQP = (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
+    bool isMIQCP = (env->process->originalProblem->getQuadraticConstraintIndexes().size() > 0);
+    bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && env->process->originalProblem->isProblemDiscrete();
 
     if (isMIQCP && isDiscrete)
         tmpType << "MIQCP";
@@ -92,15 +92,15 @@ void TaskPrintIterationReport::run()
         hasSolution = false;
     }
 
-    Output::getInstance().outputIterationDetail(currIter->iterationNumber,
+    env->output->outputIterationDetail(currIter->iterationNumber,
                                                 tmpType.str(),
-                                                ProcessInfo::getInstance().getElapsedTime("Total"),
+                                                env->process->getElapsedTime("Total"),
                                                 currIter->numHyperplanesAdded,
                                                 currIter->totNumHyperplanes,
-                                                ProcessInfo::getInstance().getDualBound(),
-                                                ProcessInfo::getInstance().getPrimalBound(),
-                                                ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
-                                                ProcessInfo::getInstance().getRelativeObjectiveGap(),
+                                                env->process->getDualBound(),
+                                                env->process->getPrimalBound(),
+                                                env->process->getAbsoluteObjectiveGap(),
+                                                env->process->getRelativeObjectiveGap(),
                                                 currIter->objectiveValue,
                                                 currIter->maxDeviationConstraint,
                                                 currIter->maxDeviation,

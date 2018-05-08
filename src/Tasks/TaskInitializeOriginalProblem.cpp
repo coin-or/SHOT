@@ -10,9 +10,9 @@
 
 #include "TaskInitializeOriginalProblem.h"
 
-TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *originalInstance)
+TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(EnvironmentPtr envPtr, OSInstance *originalInstance) : TaskBase(envPtr)
 {
-    ProcessInfo::getInstance().startTimer("ProblemInitialization");
+    env->process->startTimer("ProblemInitialization");
 
     // This is needed to fix various problems later on.
     // TODO: figure out why...
@@ -20,9 +20,9 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
     instance = originalInstance;
 
-    bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
+    bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
 
-    bool useQuadraticConstraint = (static_cast<ES_QuadraticProblemStrategy>(Settings::getInstance().getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
+    bool useQuadraticConstraint = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
 
     bool isObjNonlinear = UtilityFunctions::isObjectiveGenerallyNonlinear(instance);
     bool isObjQuadratic = UtilityFunctions::isObjectiveQuadratic(instance);
@@ -30,42 +30,42 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(OSInstance *origina
 
     if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
     {
-        Output::getInstance().outputInfo("Nonlinear objective function detected.");
-        ProcessInfo::getInstance().originalProblem = new OptProblemOriginalNonlinearObjective();
+        env->output->outputInfo("Nonlinear objective function detected.");
+        env->process->originalProblem = new OptProblemOriginalNonlinearObjective(env);
     }
     else if (isObjQuadratic && isQuadraticUsed)
     {
-        Output::getInstance().outputInfo("Quadratic objective function detected.");
-        ProcessInfo::getInstance().originalProblem = new OptProblemOriginalQuadraticObjective();
+        env->output->outputInfo("Quadratic objective function detected.");
+        env->process->originalProblem = new OptProblemOriginalQuadraticObjective(env);
     }
     else //Linear objective function
     {
-        Output::getInstance().outputInfo("Linear objective function detected.");
-        ProcessInfo::getInstance().originalProblem = new OptProblemOriginalLinearObjective();
+        env->output->outputInfo("Linear objective function detected.");
+        env->process->originalProblem = new OptProblemOriginalLinearObjective(env);
     }
 
-    ProcessInfo::getInstance().originalProblem->setProblem(instance);
-    auto debugPath = Settings::getInstance().getStringSetting("Debug.Path", "Output");
+    env->process->originalProblem->setProblem(instance);
+    auto debugPath = env->settings->getStringSetting("Debug.Path", "Output");
 
-    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
-        ProcessInfo::getInstance().originalProblem->saveProblemModelToFile(
-            Settings::getInstance().getStringSetting("Debug.Path", "Output") + "/originalproblem.txt");
+        env->process->originalProblem->saveProblemModelToFile(
+            env->settings->getStringSetting("Debug.Path", "Output") + "/originalproblem.txt");
     }
 
-    int numConstr = ProcessInfo::getInstance().originalProblem->getNumberOfConstraints();
+    int numConstr = env->process->originalProblem->getNumberOfConstraints();
 
-    int numVar = ProcessInfo::getInstance().originalProblem->getNumberOfVariables();
+    int numVar = env->process->originalProblem->getNumberOfVariables();
 
-    if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear())
+    if (env->process->originalProblem->isObjectiveFunctionNonlinear())
     {
         numVar = numVar - 1;       // Removes the extra objective variable
         numConstr = numConstr - 1; // Removes the extra objective constraint
     }
 
-    ProcessInfo::getInstance().initializeResults(1, numVar, numConstr);
+    env->process->initializeResults(1, numVar, numConstr);
 
-    ProcessInfo::getInstance().stopTimer("ProblemInitialization");
+    env->process->stopTimer("ProblemInitialization");
 }
 
 TaskInitializeOriginalProblem::~TaskInitializeOriginalProblem()

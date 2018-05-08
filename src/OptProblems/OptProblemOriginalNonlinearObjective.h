@@ -14,7 +14,7 @@
 class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
 {
   public:
-    OptProblemOriginalNonlinearObjective();
+    OptProblemOriginalNonlinearObjective(EnvironmentPtr envPtr);
     ~OptProblemOriginalNonlinearObjective();
 
     virtual bool setProblem(OSInstance *instance);

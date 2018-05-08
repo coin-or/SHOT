@@ -16,7 +16,8 @@
 class LinesearchMethodBisection : public ILinesearchMethod
 {
   public:
-    LinesearchMethodBisection();
+    LinesearchMethodBisection(EnvironmentPtr envPtr);
+
     virtual ~LinesearchMethodBisection();
 
     virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,

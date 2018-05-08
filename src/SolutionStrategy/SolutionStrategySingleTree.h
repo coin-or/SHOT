@@ -64,7 +64,7 @@
 class SolutionStrategySingleTree : public ISolutionStrategy
 {
   public:
-    SolutionStrategySingleTree(OSInstance *osInstance);
+    SolutionStrategySingleTree(EnvironmentPtr envPtr, OSInstance *osInstance);
     virtual ~SolutionStrategySingleTree();
 
     virtual bool solveProblem();

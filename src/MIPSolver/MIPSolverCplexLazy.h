@@ -27,7 +27,7 @@
 class MIPSolverCplexLazy : public MIPSolverCplex
 {
   public:
-    MIPSolverCplexLazy();
+    MIPSolverCplexLazy(EnvironmentPtr envPtr);
     virtual ~MIPSolverCplexLazy();
 
     virtual void checkParameters();

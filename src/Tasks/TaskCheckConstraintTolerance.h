@@ -17,7 +17,7 @@
 class TaskCheckConstraintTolerance : public TaskBase
 {
   public:
-    TaskCheckConstraintTolerance(std::string taskIDTrue);
+    TaskCheckConstraintTolerance(EnvironmentPtr envPtr, std::string taskIDTrue);
     virtual ~TaskCheckConstraintTolerance();
 
     virtual void run();

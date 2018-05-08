@@ -15,12 +15,12 @@
 class TaskCalculateSolutionChangeNorm : public TaskBase
 {
   public:
-	TaskCalculateSolutionChangeNorm();
-	virtual ~TaskCalculateSolutionChangeNorm();
+    TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr);
+    virtual ~TaskCalculateSolutionChangeNorm();
 
-	virtual void run();
+    virtual void run();
 
-	virtual std::string getType();
+    virtual std::string getType();
 
   private:
 };

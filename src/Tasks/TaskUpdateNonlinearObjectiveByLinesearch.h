@@ -16,7 +16,7 @@
 class TaskUpdateNonlinearObjectiveByLinesearch : public TaskBase
 {
   public:
-    TaskUpdateNonlinearObjectiveByLinesearch();
+    TaskUpdateNonlinearObjectiveByLinesearch(EnvironmentPtr envPtr);
     virtual ~TaskUpdateNonlinearObjectiveByLinesearch();
     virtual void run();
     virtual std::string getType();

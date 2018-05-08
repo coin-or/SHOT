@@ -10,9 +10,9 @@
 
 #include "MIPSolutionLimitStrategyIncrease.h"
 
-MIPSolutionLimitStrategyIncrease::MIPSolutionLimitStrategyIncrease(IMIPSolver *MIPSolver)
+MIPSolutionLimitStrategyIncrease::MIPSolutionLimitStrategyIncrease(EnvironmentPtr envPtr)
 {
-    this->MIPSolver = MIPSolver;
+    env = envPtr;
 
     lastIterSolLimIncreased = 1;
     numSolLimIncremented = 1;
@@ -25,8 +25,8 @@ MIPSolutionLimitStrategyIncrease::~MIPSolutionLimitStrategyIncrease()
 
 bool MIPSolutionLimitStrategyIncrease::updateLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    auto currIter = env->process->getCurrentIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
     if (!currIter->isMIP())
     {
@@ -42,13 +42,13 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
     }
 
     // Solution limit has not been updated in the maximal number of iterations
-    if (prevIter->isMIP() && (currIter->iterationNumber - lastIterSolLimIncreased > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual") && currIter->iterationNumber - lastIterOptimal > Settings::getInstance().getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
+    if (prevIter->isMIP() && (currIter->iterationNumber - lastIterSolLimIncreased > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual") && currIter->iterationNumber - lastIterOptimal > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
     {
-        Output::getInstance().outputInfo("     Force solution limit update.");
+        env->output->outputInfo("     Force solution limit update.");
         return (true);
     }
 
-    bool useObjectiveLinesearchUpdate = Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual");
+    bool useObjectiveLinesearchUpdate = env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual");
 
     if (prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
     {
@@ -57,13 +57,13 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
     if (prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
     {
-        if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
+        if (prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
             return (true);
 
-        if (prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
+        if (prevIter->maxDeviation < env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
             return (true);
 
-        if (prevIter->maxDeviationConstraint == -1 && prevIter->maxDeviation < Settings::getInstance().getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual") * max(1.0, abs(prevIter->objectiveValue)))
+        if (prevIter->maxDeviationConstraint == -1 && prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual") * std::max(1.0, abs(prevIter->objectiveValue)))
         {
             return (true);
         }
@@ -74,11 +74,11 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
 int MIPSolutionLimitStrategyIncrease::getNewLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
     int newLimit;
 
-    newLimit = MIPSolver->getSolutionLimit() + 1;
+    newLimit = env->dualSolver->getSolutionLimit() + 1;
     lastIterSolLimIncreased = currIter->iterationNumber;
 
     return (newLimit);
@@ -86,5 +86,5 @@ int MIPSolutionLimitStrategyIncrease::getNewLimit()
 
 int MIPSolutionLimitStrategyIncrease::getInitialLimit()
 {
-    return (Settings::getInstance().getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
+    return (env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
 }

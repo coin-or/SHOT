@@ -21,7 +21,7 @@
 class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
 {
   public:
-    MIPSolverOsiCbc();
+    MIPSolverOsiCbc(EnvironmentPtr envPtr);
     virtual ~MIPSolverOsiCbc();
 
     virtual void checkParameters();
@@ -72,7 +72,7 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-    virtual pair<double, double> getCurrentVariableBounds(int varIndex);
+    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()
     {

@@ -20,6 +20,7 @@ class NLPSolverBase : virtual public INLPSolver
 {
   private:
   protected:
+    NLPSolverBase();
     OSInstance *originalInstance;
 
     bool isProblemInitialized;

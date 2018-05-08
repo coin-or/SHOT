@@ -15,7 +15,7 @@
 class TaskCheckObjectiveStagnation : public TaskBase
 {
   public:
-    TaskCheckObjectiveStagnation(std::string taskIDTrue);
+    TaskCheckObjectiveStagnation(EnvironmentPtr envPtr, std::string taskIDTrue);
     virtual ~TaskCheckObjectiveStagnation();
 
     virtual void run();

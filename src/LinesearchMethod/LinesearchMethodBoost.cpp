@@ -96,10 +96,11 @@ double Test::operator()(const double x)
     return (validNewPt);
 }
 
-LinesearchMethodBoost::LinesearchMethodBoost()
+LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr)
 {
+    env = envPtr;
     test = new Test();
-    test->originalProblem = (ProcessInfo::getInstance().originalProblem);
+    test->originalProblem = (env->process->originalProblem);
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
@@ -120,7 +121,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
 {
     if (ptA.size() != ptB.size())
     {
-        Output::getInstance().Output::getInstance().outputError(
+        env->output->outputError(
             "     Linesearch error: sizes of points vary: " + std::to_string(ptA.size()) + " != " + std::to_string(ptB.size()));
     }
 
@@ -141,8 +142,8 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     else
     {
         test->setActiveConstraints(constrIdxs);
-        test->valFirstPt = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(ptA).value;
-        test->valSecondPt = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(ptB).value;
+        test->valFirstPt = env->process->originalProblem->getMostDeviatingConstraint(ptA).value;
+        test->valSecondPt = env->process->originalProblem->getMostDeviatingConstraint(ptB).value;
     }
 
     if (test->getActiveConstraints().size() == 0) // All constraints are fulfilled.
@@ -159,11 +160,11 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         return (tmpPair);
     }
 
-    int tempFEvals = ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions;
+    int tempFEvals = env->process->solutionStatistics.numberOfFunctionEvalutions;
 
     Result r1;
 
-    if (static_cast<ES_RootsearchMethod>(Settings::getInstance().getIntSetting("Rootsearch.Method", "Subsolver")) == ES_RootsearchMethod::BoostTOMS748)
+    if (static_cast<ES_RootsearchMethod>(env->settings->getIntSetting("Rootsearch.Method", "Subsolver")) == ES_RootsearchMethod::BoostTOMS748)
     {
         r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
     }
@@ -172,16 +173,16 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         r1 = boost::math::tools::bisect(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
     }
 
-    int resFVals = ProcessInfo::getInstance().solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
+    int resFVals = env->process->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
     if (max_iter == Nmax)
     {
-        Output::getInstance().outputWarning(
-            "     Warning, number of line search iterations " + to_string(max_iter) + " reached!");
+        env->output->outputWarning(
+            "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
     }
     else
     {
-        Output::getInstance().outputInfo(
-            "     Line search iterations: " + to_string(max_iter) + ". Function evaluations: " + to_string(resFVals));
+        env->output->outputInfo(
+            "     Line search iterations: " + std::to_string(max_iter) + ". Function evaluations: " + std::to_string(resFVals));
     }
 
     for (int i = 0; i < length; i++)
@@ -190,20 +191,20 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         ptNew2.at(i) = r1.second * ptA.at(i) + (1 - r1.second) * ptB.at(i);
     }
 
-    auto validNewPt = ProcessInfo::getInstance().originalProblem->isConstraintsFulfilledInPoint(ptNew);
+    auto validNewPt = env->process->originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
     if (!validNewPt) // ptNew Outside feasible region
     {
-        ProcessInfo::getInstance().addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
-                                                              ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
+        env->process->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
+                                                 env->process->getCurrentIteration()->iterationNumber);
 
         std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
         return (tmpPair);
     }
     else
     {
-        ProcessInfo::getInstance().addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
-                                                              ProcessInfo::getInstance().getCurrentIteration()->iterationNumber);
+        env->process->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
+                                                 env->process->getCurrentIteration()->iterationNumber);
 
         std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptNew2);
         return (tmpPair);

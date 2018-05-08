@@ -16,8 +16,8 @@
 class TaskConditional : public TaskBase
 {
   public:
-    TaskConditional(std::function<bool()> conditionFunct, TaskBase *taskIfTrue, TaskBase *taskIfFalse);
-    TaskConditional();
+    TaskConditional(EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskBase *taskIfTrue, TaskBase *taskIfFalse);
+    TaskConditional(EnvironmentPtr envPtr);
     virtual ~TaskConditional();
 
     void setTaskIfTrue(TaskBase *task);

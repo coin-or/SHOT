@@ -9,7 +9,6 @@
 */
 
 #pragma once
-#include <vector>
 #include <ostream>
 #include "OSInstance.h"
 #include "boost/format.hpp"

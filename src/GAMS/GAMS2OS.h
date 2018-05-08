@@ -46,6 +46,8 @@ class GAMS2OS
     gevHandle_t gev;
     bool createdtmpdir;
 
+    EnvironmentPtr env;
+
     OSnLNode *parseGamsInstructions(int codelen,      /**< length of GAMS instructions */
                                     int *opcodes,     /**< opcodes of GAMS instructions */
                                     int *fields,      /**< fields of GAMS instructions */
@@ -54,12 +56,12 @@ class GAMS2OS
     );
 
   public:
-    GAMS2OS();
+    GAMS2OS(EnvironmentPtr envPtr);
     ~GAMS2OS();
     void readGms(const std::string &filename);
     void readCntr(const std::string &filename);
     void writeResult(OSResult &osresult);
-    void writeResult(ProcessInfo &info);
+    void writeResult();
     void clear();
     void createOSObjects();
 

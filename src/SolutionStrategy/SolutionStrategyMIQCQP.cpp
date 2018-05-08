@@ -10,64 +10,61 @@
 
 #include "SolutionStrategyMIQCQP.h"
 
-SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
+SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance *osInstance)
 {
-    ProcessInfo::getInstance().createTimer("ProblemInitialization", " - problem initialization");
-    ProcessInfo::getInstance().createTimer("InteriorPointSearch", " - interior point search");
+    env = envPtr;
 
-    ProcessInfo::getInstance().createTimer("DualStrategy", " - dual strategy");
-    ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    env->process->createTimer("ProblemInitialization", " - problem initialization");
+    env->process->createTimer("InteriorPointSearch", " - interior point search");
 
-    ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
+    env->process->createTimer("DualStrategy", " - dual strategy");
+    env->process->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
 
-    auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+    env->process->createTimer("PrimalStrategy", " - primal strategy");
 
-    TaskBase *tFinalizeSolution = new TaskSequential();
+    TaskBase *tFinalizeSolution = new TaskSequential(env);
 
-    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
-    ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, false);
+    env->process->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
+    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
+    env->process->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
-    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
-    ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(env);
+    env->process->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateDualProblem");
+    TaskBase *tInitializeIteration = new TaskInitializeIteration(env);
+    env->process->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase *tInitializeIteration = new TaskInitializeIteration();
-    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+    TaskBase *tSolveIteration = new TaskSolveIteration(env);
+    env->process->tasks->addTask(tSolveIteration, "SolveIter");
 
-
-    TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
-
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
+    env->process->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    TaskBase *tPrintIterReport = new TaskPrintIterationReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
+    TaskBase *tPrintIterReport = new TaskPrintIterationReport(env);
+    env->process->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
+    TaskBase *tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
+    env->process->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
+    env->process->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    TaskBase *tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
+    env->process->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
+    env->process->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
+    TaskBase *tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
+    env->process->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
+    env->process->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+    env->process->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
 SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP()
@@ -78,11 +75,11 @@ bool SolutionStrategyMIQCQP::solveProblem()
 {
     TaskBase *nextTask;
 
-    while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
+    while (env->process->tasks->getNextTask(nextTask))
     {
-        Output::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
+        env->output->outputInfo("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
-        Output::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
+        env->output->outputInfo("└─── Finished task: " + nextTask->getType());
     }
 
     return (true);

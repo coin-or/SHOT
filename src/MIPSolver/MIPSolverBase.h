@@ -20,13 +20,13 @@ class MIPSolverBase
 {
   private:
     std::vector<int> fixedVariableIndexes;
-    vector<pair<double, double>> fixedVariableOriginalBounds;
+    std::vector<std::pair<double, double>> fixedVariableOriginalBounds;
 
   protected:
     std::vector<GeneratedHyperplane> generatedHyperplanes;
+    EnvironmentPtr envPtr;
 
   public:
-    MIPSolverBase();
     ~MIPSolverBase();
 
     virtual void createHyperplane(Hyperplane hyperplane);
@@ -48,7 +48,7 @@ class MIPSolverBase
 
     virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes();
 
-    virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
     virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
@@ -73,4 +73,6 @@ class MIPSolverBase
     std::vector<SolutionPoint> lastSolutions;
 
     OptProblem *originalProblem;
+
+    EnvironmentPtr env;
 };

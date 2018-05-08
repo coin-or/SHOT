@@ -10,7 +10,7 @@
 
 #include "TaskSelectPrimalCandidatesFromSolutionPool.h"
 
-TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool()
+TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
 }
 
@@ -20,16 +20,16 @@ TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolut
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+	auto currIter = env->process->getCurrentIteration();
 
 	if (currIter->isMIP())
 	{
-		ProcessInfo::getInstance().startTimer("PrimalStrategy");
-		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
+		env->process->startTimer("PrimalStrategy");
+		auto allSolutions = env->process->getCurrentIteration()->solutionPoints;
 
-		ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
+		env->process->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
-		ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+		env->process->stopTimer("PrimalStrategy");
 	}
 }
 

@@ -44,7 +44,7 @@
 class SolutionStrategyMIQCQP : public ISolutionStrategy
 {
   public:
-    SolutionStrategyMIQCQP(OSInstance *osInstance);
+    SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance *osInstance);
     virtual ~SolutionStrategyMIQCQP();
 
     virtual bool solveProblem();

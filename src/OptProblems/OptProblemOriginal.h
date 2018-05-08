@@ -15,7 +15,7 @@
 class OptProblemOriginal : public OptProblem
 {
   public:
-    OptProblemOriginal();
+    OptProblemOriginal(EnvironmentPtr envPtr);
     ~OptProblemOriginal();
 
     virtual bool setProblem(OSInstance *instance) = 0;

@@ -16,7 +16,7 @@
 class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
   public:
-	TaskSelectPrimalCandidatesFromNLP();
+	TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr);
 	virtual ~TaskSelectPrimalCandidatesFromNLP();
 	virtual void run();
 	virtual std::string getType();

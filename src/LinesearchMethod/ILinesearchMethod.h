@@ -14,10 +14,14 @@
 class ILinesearchMethod
 {
   public:
-    ILinesearchMethod();
+    ILinesearchMethod(){};
+    ILinesearchMethod(EnvironmentPtr envPtr){};
     virtual ~ILinesearchMethod(){};
 
     virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA, std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol) = 0;
 
     virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA, std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs) = 0;
+
+  protected:
+    EnvironmentPtr env;
 };
