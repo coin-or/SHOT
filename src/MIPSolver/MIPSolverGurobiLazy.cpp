@@ -153,9 +153,9 @@ void GurobiCallback::callback()
 
                 SolutionPoint tmpPt;
                 tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-                tmpPt.maxDeviation = env->process->originalProblem->getMostDeviatingConstraint(
+                tmpPt.maxDeviation = env->model->originalProblem->getMostDeviatingConstraint(
                     primalSolution);
-                tmpPt.objectiveValue = env->process->originalProblem->calculateOriginalObjectiveValue(
+                tmpPt.objectiveValue = env->model->originalProblem->calculateOriginalObjectiveValue(
                     primalSolution);
                 tmpPt.point = primalSolution;
 
@@ -183,12 +183,12 @@ void GurobiCallback::callback()
                     solution.at(i) = getNodeRel(vars[i]);
                 }
 
-                auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(solution);
+                auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
 
                 SolutionPoint tmpSolPt;
 
                 tmpSolPt.point = solution;
-                tmpSolPt.objectiveValue = env->process->originalProblem->calculateOriginalObjectiveValue(
+                tmpSolPt.objectiveValue = env->model->originalProblem->calculateOriginalObjectiveValue(
                     solution);
                 tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
                 tmpSolPt.maxDeviation = mostDevConstr;
@@ -234,7 +234,7 @@ void GurobiCallback::callback()
                 solution.at(i) = getSolution(vars[i]);
             }
 
-            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(solution);
+            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
 
             SolutionPoint solutionCandidate;
 
@@ -253,8 +253,8 @@ void GurobiCallback::callback()
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
             currIter->objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
 
-            currIter->numberOfExploredNodes = lastExploredNodes - env->process->solutionStatistics.numberOfExploredNodes;
-            env->process->solutionStatistics.numberOfExploredNodes = lastExploredNodes;
+            currIter->numberOfExploredNodes = lastExploredNodes - env->solutionStatistics.numberOfExploredNodes;
+            env->solutionStatistics.numberOfExploredNodes = lastExploredNodes;
             currIter->numberOfOpenNodes = lastOpenNodes;
 
             auto bounds = std::make_pair(env->process->getDualBound(), env->process->getPrimalBound());
@@ -423,9 +423,9 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 {
     vars = xvars;
 
-    isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
 
-    env->process->solutionStatistics.iterationLastLazyAdded = 0;
+    env->solutionStatistics.iterationLastLazyAdded = 0;
 
     cbCalls = 0;
 
@@ -449,7 +449,7 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
-    if (env->process->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
         taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch(env));
     }
@@ -477,7 +477,7 @@ void GurobiCallback::createIntegerCut(std::vector<int> binaryIndexes)
 
         addLazy(expr <= binaryIndexes.size() - 1.0);
 
-        env->process->solutionStatistics.numberOfIntegerCuts++;
+        env->solutionStatistics.numberOfIntegerCuts++;
     }
     catch (GRBException &e)
     {

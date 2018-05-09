@@ -30,78 +30,78 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
     TaskBase *tFinalizeSolution = new TaskSequential(env);
 
     TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, true);
-    env->process->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+    env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
     TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    env->process->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
-    if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (env->process->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || env->process->originalProblem->getNumberOfNonlinearConstraints() != 0))
+    if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (env->model->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || env->model->originalProblem->getNumberOfNonlinearConstraints() != 0))
     {
         TaskBase *tFindIntPoint = new TaskFindInteriorPoint(env);
-        env->process->tasks->addTask(tFindIntPoint, "FindIntPoint");
+        env->tasks->addTask(tFindIntPoint, "FindIntPoint");
     }
 
     TaskBase *tCreateDualProblem = new TaskCreateDualProblem(env);
-    env->process->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
+    env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
     TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch(env);
-    env->process->tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
+    env->tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
 
     TaskBase *tInitializeIteration = new TaskInitializeIteration(env);
-    env->process->tasks->addTask(tInitializeIteration, "InitIter");
+    env->tasks->addTask(tInitializeIteration, "InitIter");
 
     TaskBase *tAddHPs = new TaskAddHyperplanes(env);
-    env->process->tasks->addTask(tAddHPs, "AddHPs");
+    env->tasks->addTask(tAddHPs, "AddHPs");
 
     if (static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
         TaskBase *tPresolve = new TaskPresolve(env);
-        env->process->tasks->addTask(tPresolve, "Presolve");
+        env->tasks->addTask(tPresolve, "Presolve");
     }
 
     TaskBase *tSolveIteration = new TaskSolveIteration(env);
-    env->process->tasks->addTask(tSolveIteration, "SolveIter");
+    env->tasks->addTask(tSolveIteration, "SolveIter");
 
     TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
-    env->process->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
     TaskBase *tPrintIterReport = new TaskPrintIterationReport(env);
-    env->process->tasks->addTask(tPrintIterReport, "PrintIterReport");
+    env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
     TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckRelGap, "CheckRelGap");
+    env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
     TaskBase *tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     TaskBase *tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckIterError, "CheckIterError");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
+    env->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
 
-    if (env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal") && env->process->originalProblem->getNumberOfNonlinearConstraints() > 0 && env->process->originalProblem->getNumberOfDiscreteVariables() > 0)
+    if (env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal") && env->model->originalProblem->getNumberOfNonlinearConstraints() > 0 && env->model->originalProblem->getNumberOfDiscreteVariables() > 0)
     {
         TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
-        env->process->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+        env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
         dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
         TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
-        env->process->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+        env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
         dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 
-        env->process->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-        env->process->tasks->addTask(tCheckRelGap, "CheckRelGap");
+        env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+        env->tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
 
-    env->process->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+    env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
 SolutionStrategySingleTree::~SolutionStrategySingleTree()
@@ -112,7 +112,7 @@ bool SolutionStrategySingleTree::solveProblem()
 {
     TaskBase *nextTask;
 
-    while (env->process->tasks->getNextTask(nextTask))
+    while (env->tasks->getNextTask(nextTask))
     {
         env->output->outputInfo("┌─── Started task:  " + nextTask->getType());
         nextTask->run();

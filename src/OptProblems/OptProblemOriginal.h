@@ -9,8 +9,10 @@
 */
 
 #pragma once
+#include "../Environment.h"
 #include "OptProblem.h"
 #include "../UtilityFunctions.h"
+#include "OSInstance.h"
 
 class OptProblemOriginal : public OptProblem
 {

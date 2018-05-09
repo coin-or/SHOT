@@ -49,13 +49,13 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     }
     else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
-        if (env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+        if (env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
         {
             env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
-        else if (env->process->getElapsedTime("Total") - env->process->solutionStatistics.timeLastFixedNLPCall > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+        else if (env->process->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
         {
             env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -65,7 +65,7 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
     if (!callNLPSolver)
     {
-        env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
     }
 
     env->process->stopTimer("PrimalBoundStrategyNLP");
@@ -88,19 +88,19 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
         tmpType << "CB";
     }
 
-    env->output->outputIterationDetail(currIter->iterationNumber,
-                                                tmpType.str(),
-                                                env->process->getElapsedTime("Total"),
-                                                this->lastNumAddedHyperplanes,
-                                                currIter->totNumHyperplanes,
-                                                env->process->getDualBound(),
-                                                env->process->getPrimalBound(),
-                                                env->process->getAbsoluteObjectiveGap(),
-                                                env->process->getRelativeObjectiveGap(),
-                                                solution.objectiveValue,
-                                                solution.maxDeviation.idx,
-                                                solution.maxDeviation.value,
-                                                E_IterationLineType::DualCallback);
+    env->report->outputIterationDetail(currIter->iterationNumber,
+                                       tmpType.str(),
+                                       env->process->getElapsedTime("Total"),
+                                       this->lastNumAddedHyperplanes,
+                                       currIter->totNumHyperplanes,
+                                       env->process->getDualBound(),
+                                       env->process->getPrimalBound(),
+                                       env->process->getAbsoluteObjectiveGap(),
+                                       env->process->getRelativeObjectiveGap(),
+                                       solution.objectiveValue,
+                                       solution.maxDeviation.idx,
+                                       solution.maxDeviation.value,
+                                       E_IterationLineType::DualCallback);
 
     this->lastNumAddedHyperplanes = 0;
 }

@@ -23,7 +23,7 @@ void TaskSolveIteration::run()
     env->process->startTimer("DualStrategy");
     auto currIter = env->process->getCurrentIteration();
 
-    bool isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
 
     // Sets the iteration time limit
     auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->process->getElapsedTime("Total");
@@ -75,9 +75,9 @@ void TaskSolveIteration::run()
     else // Must update the node stats if multi-tree strategy (otherwise it is done in the callbacks)
     {
         currIter->numberOfExploredNodes = env->dualSolver->getNumberOfExploredNodes();
-        env->process->solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
-        env->process->solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
-        //std::cout << "Nodes: " << env->process->solutionStatistics.numberOfExploredNodes << std::endl;
+        env->solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
+        env->solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
+        //std::cout << "Nodes: " << env->solutionStatistics.numberOfExploredNodes << std::endl;
     }
 
     currIter->solutionStatus = solStatus;
@@ -106,7 +106,7 @@ void TaskSolveIteration::run()
                 ss << currIter->iterationNumber - 1;
                 ss << ".txt";
                 UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point,
-                                                                env->process->originalProblem->getVariableNames(), ss.str());
+                                                                env->model->originalProblem->getVariableNames(), ss.str());
             }
 
             currIter->objectiveValue = env->dualSolver->getObjectiveValue();
@@ -127,7 +127,7 @@ void TaskSolveIteration::run()
                 UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
             }
 
-            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
+            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
 
             currIter->maxDeviationConstraint = mostDevConstr.idx;
             currIter->maxDeviation = mostDevConstr.value;
@@ -179,35 +179,35 @@ void TaskSolveIteration::run()
     // Update solution stats
     if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
-        if (env->process->originalProblem->isConstraintQuadratic(-1))
+        if (env->model->originalProblem->isConstraintQuadratic(-1))
         {
-            env->process->solutionStatistics.numberOfProblemsOptimalMIQP++;
+            env->solutionStatistics.numberOfProblemsOptimalMIQP++;
         }
         else
         {
-            env->process->solutionStatistics.numberOfProblemsOptimalMILP++;
+            env->solutionStatistics.numberOfProblemsOptimalMILP++;
         }
     }
     else if (currIter->type == E_IterationProblemType::Relaxed)
     {
-        if (env->process->originalProblem->isConstraintQuadratic(-1))
+        if (env->model->originalProblem->isConstraintQuadratic(-1))
         {
-            env->process->solutionStatistics.numberOfProblemsQP++;
+            env->solutionStatistics.numberOfProblemsQP++;
         }
         else
         {
-            env->process->solutionStatistics.numberOfProblemsLP++;
+            env->solutionStatistics.numberOfProblemsLP++;
         }
     }
     else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
-        if (env->process->originalProblem->isConstraintQuadratic(-1))
+        if (env->model->originalProblem->isConstraintQuadratic(-1))
         {
-            env->process->solutionStatistics.numberOfProblemsFeasibleMIQP++;
+            env->solutionStatistics.numberOfProblemsFeasibleMIQP++;
         }
         else
         {
-            env->process->solutionStatistics.numberOfProblemsFeasibleMILP++;
+            env->solutionStatistics.numberOfProblemsFeasibleMILP++;
         }
     }
 

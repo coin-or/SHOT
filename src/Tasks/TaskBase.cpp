@@ -9,6 +9,7 @@
 */
 
 #include "TaskBase.h"
+#include "../TaskHandler.h"
 
 TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr)
 {

@@ -10,11 +10,9 @@
 
 #include "OptProblem.h"
 
-OptProblem::OptProblem(EnvironmentPtr envPtr)
+OptProblem::OptProblem(EnvironmentPtr envPtr) : env(envPtr)
 {
-    env = envPtr;
     m_problemInstance = NULL;
-    //osilReader = NULL;
 }
 
 OptProblem::~OptProblem()
@@ -215,7 +213,7 @@ void OptProblem::saveProblemModelToFile(std::string fileName)
 
 std::string OptProblem::exportProblemToOsil()
 {
-    std::string osil = env->process->getOSiLFromProblemInstance(getProblemInstance());
+    std::string osil = env->model->getOSiLFromProblemInstance(getProblemInstance());
 
     return (osil);
 }
@@ -439,7 +437,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 {
     auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 
-    env->process->solutionStatistics.numberOfGradientEvaluations++;
+    env->solutionStatistics.numberOfGradientEvaluations++;
 
     if (idx != -1 && getProblemInstance()->getConstraintTypes()[idx] == 'G')
     {
@@ -488,7 +486,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
 double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
 {
     auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
-    env->process->solutionStatistics.numberOfFunctionEvalutions++;
+    env->solutionStatistics.numberOfFunctionEvalutions++;
 
     return tmpVal;
 }
@@ -505,7 +503,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
     if (!isObjectiveFunctionNonlinear() || idx != getNonlinearObjectiveConstraintIdx() || idx != -1) // Not the objective function
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-        env->process->solutionStatistics.numberOfFunctionEvalutions++;
+        env->solutionStatistics.numberOfFunctionEvalutions++;
 
         if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
         {
@@ -527,7 +525,7 @@ double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double>
     else
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
-        env->process->solutionStatistics.numberOfFunctionEvalutions++;
+        env->solutionStatistics.numberOfFunctionEvalutions++;
     }
 
     return tmpVal;
@@ -1164,8 +1162,8 @@ std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex
 void OptProblem::setProblemInstance(OSInstance *instance)
 {
     // Do not change the following four lines they are here for a reason, i.e. to deal with "bugs" in OSInstance
-    std::string osil = env->process->getOSiLFromProblemInstance(instance);
-    instance = env->process->getProblemInstanceFromOSiL(osil);
+    std::string osil = env->model->getOSiLFromProblemInstance(instance);
+    instance = env->model->getProblemInstanceFromOSiL(osil);
     m_problemInstance = instance;
     m_problemInstance->getJacobianSparsityPattern();
 }

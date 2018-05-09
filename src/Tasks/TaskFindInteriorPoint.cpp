@@ -10,7 +10,7 @@
 
 #include "TaskFindInteriorPoint.h"
 
-TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -23,17 +23,17 @@ void TaskFindInteriorPoint::run()
 {
     env->process->startTimer("InteriorPointSearch");
 
-    env->output->outputInteriorPointPreReport();
+    env->report->outputInteriorPointPreReport();
 
     env->output->outputDebug("Initializing NLP solver");
-    
+
     auto solver = static_cast<ES_InteriorPointStrategy>(env->settings->getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 
     if (solver == ES_InteriorPointStrategy::CuttingPlaneMiniMax)
     {
         NLPSolvers.emplace_back(new NLPSolverCuttingPlaneMinimax(env));
 
-        NLPSolvers[0]->setProblem(env->process->originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
 
         env->output->outputDebug("Cutting plane minimax selected as NLP solver.");
     }
@@ -41,7 +41,7 @@ void TaskFindInteriorPoint::run()
     {
         NLPSolvers.emplace_back(new NLPSolverIpoptMinimax(env));
 
-        NLPSolvers[0]->setProblem(env->process->originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
 
         env->output->outputDebug("Ipopt minimax selected as NLP solver.");
     }
@@ -49,7 +49,7 @@ void TaskFindInteriorPoint::run()
     {
         NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed(env));
 
-        NLPSolvers[0]->setProblem(env->process->originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
 
         env->output->outputDebug("Ipopt relaxed selected as NLP solver.");
     }
@@ -57,11 +57,11 @@ void TaskFindInteriorPoint::run()
     {
         NLPSolvers.emplace_back(new NLPSolverIpoptMinimax(env));
 
-        NLPSolvers[0]->setProblem(env->process->originalProblem->getProblemInstance());
+        NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
 
         NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed(env));
 
-        NLPSolvers[1]->setProblem(env->process->originalProblem->getProblemInstance());
+        NLPSolvers[1]->setProblem(env->model->originalProblem->getProblemInstance());
 
         env->output->outputDebug("Ipopt minimax and relaxed selected as NLP solver.");
     }
@@ -98,18 +98,18 @@ void TaskFindInteriorPoint::run()
 
         tmpIP->point = NLPSolvers.at(i)->getSolution();
 
-        if (solver == ES_InteriorPointStrategy::IpoptRelaxed && tmpIP->point.size() < env->process->originalProblem->getNumberOfVariables())
+        if (solver == ES_InteriorPointStrategy::IpoptRelaxed && tmpIP->point.size() < env->model->originalProblem->getNumberOfVariables())
         {
             tmpIP->point.push_back(
-                env->process->originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
+                env->model->originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
         }
 
-        while (tmpIP->point.size() > env->process->originalProblem->getNumberOfVariables())
+        while (tmpIP->point.size() > env->model->originalProblem->getNumberOfVariables())
         {
             tmpIP->point.pop_back();
         }
 
-        auto maxDev = env->process->originalProblem->getMostDeviatingConstraint(tmpIP->point);
+        auto maxDev = env->model->originalProblem->getMostDeviatingConstraint(tmpIP->point);
         tmpIP->maxDevatingConstraint = maxDev;
 
         if (maxDev.value > 0)
@@ -126,14 +126,14 @@ void TaskFindInteriorPoint::run()
 
         if (env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
-            auto tmpVars = env->process->originalProblem->getVariableNames();
+            auto tmpVars = env->model->originalProblem->getVariableNames();
             std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/interiorpoint_" + std::to_string(i) + ".txt";
             UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
         }
 
         if (tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimax || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptRelaxed || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)
         {
-            env->process->solutionStatistics.numberOfProblemsNLPInteriorPointSearch++;
+            env->solutionStatistics.numberOfProblemsNLPInteriorPointSearch++;
         }
     }
 
@@ -147,7 +147,7 @@ void TaskFindInteriorPoint::run()
 
     env->output->outputDebug("     Finished solving NLP problem.");
 
-    env->process->solutionStatistics.numberOfOriginalInteriorPoints = env->process->interiorPts.size();
+    env->solutionStatistics.numberOfOriginalInteriorPoints = env->process->interiorPts.size();
 
     env->process->stopTimer("InteriorPointSearch");
 }

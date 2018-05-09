@@ -23,7 +23,7 @@ void TaskCheckAbsoluteGap::run()
     if (env->process->isAbsoluteObjectiveGapToleranceMet())
     {
         env->process->terminationReason = E_TerminationReason::AbsoluteGap;
-        env->process->tasks->setNextTask(taskIDIfTrue);
+        env->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

@@ -12,16 +12,6 @@
 #include "Enums.h"
 #include "Structs.h"
 
-class ProcessInfo;
-class Settings;
-class IMIPSolver;
-class Output;
-
-typedef std::shared_ptr<ProcessInfo> ProcessPtr;
-typedef std::shared_ptr<Settings> SettingsPtr;
-typedef std::shared_ptr<IMIPSolver> MIPSolverPtr;
-typedef std::shared_ptr<Output> OutputPtr;
-
 class Environment
 {
   public:
@@ -30,10 +20,17 @@ class Environment
 
     ProcessPtr process;
     SettingsPtr settings;
+    ModelPtr model;
     MIPSolverPtr dualSolver;
     OutputPtr output;
+    ReportPtr report;
+    TaskHandlerPtr tasks;
+
+    SolutionStatistics solutionStatistics;
 
   private:
 };
 
 typedef std::shared_ptr<Environment> EnvironmentPtr;
+
+#include "TaskHandler.h"

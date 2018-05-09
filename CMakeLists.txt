@@ -62,11 +62,13 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 # Adding source files
 file(GLOB_RECURSE SOURCES
+  "${PROJECT_SOURCE_DIR}/src/SHOT.cpp"
   "${PROJECT_SOURCE_DIR}/src/Environment.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
   "${PROJECT_SOURCE_DIR}/src/ProcessInfo.cpp"
-  "${PROJECT_SOURCE_DIR}/src/SHOT.cpp"
   "${PROJECT_SOURCE_DIR}/src/SHOTSolver.cpp"
   "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
   "${PROJECT_SOURCE_DIR}/src/Timer.cpp"
@@ -101,8 +103,11 @@ file(GLOB_RECURSE SOURCES
 
 # Adding header files
 file(GLOB_RECURSE HEADERS
-  "${PROJECT_SOURCE_DIR}/src/Environment.h"
   "${PROJECT_SOURCE_DIR}/src/Enums.h"
+  "${PROJECT_SOURCE_DIR}/src/Structs.h"
+  "${PROJECT_SOURCE_DIR}/src/Environment.h"
+  "${PROJECT_SOURCE_DIR}/src/Model.h"
+  "${PROJECT_SOURCE_DIR}/src/Report.h"
   "${PROJECT_SOURCE_DIR}/src/Iteration.h"
   "${PROJECT_SOURCE_DIR}/src/Output.h"
   "${PROJECT_SOURCE_DIR}/src/ProcessInfo.h"

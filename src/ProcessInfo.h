@@ -10,57 +10,44 @@
 
 #pragma once
 #include "SHOTConfig.h"
+#include "UtilityFunctions.h"
+#include "SHOTSettings.h"
 #include "Enums.h"
 #include "Structs.h"
 #include "Output.h"
 #include "Iteration.h"
 #include "Timer.h"
-
-#include "UtilityFunctions.h"
-
-#include "SHOTSettings.h"
-
-#include "TaskHandler.h"
+#include "Model.h"
 
 #include "OSResult.h"
 #include "OSrLWriter.h"
-#include "OSiLWriter.h"
-#include "OSiLReader.h"
 #include "OSErrorClass.h"
 
 #include "boost/property_tree/ptree.hpp"
 #include "boost/property_tree/xml_parser.hpp"
+#include "OptProblems/OptProblemOriginal.h"
 
-class OptProblemOriginal;
-class IMIPSolver;
-class ILinesearchMethod;
-class IRelaxationStrategy;
-class Iteration;
-
-#include "LinesearchMethod/ILinesearchMethod.h"
 #include "MIPSolver/IRelaxationStrategy.h"
+#include "LinesearchMethod/ILinesearchMethod.h"
 
 #ifdef HAS_GAMS
 #include "gmomcc.h"
 #endif
+
+class Iteration;
 
 class ProcessInfo
 {
   public:
     std::unique_ptr<OSResult> osResult;
 
-    OptProblemOriginal *originalProblem;
-    OptimizationProblemStatistics problemStats;
-    SolutionStatistics solutionStatistics;
-
     IRelaxationStrategy *relaxationStrategy;
-
-    TaskHandler *tasks;
+    ILinesearchMethod *linesearchMethod;
 
     void initializeResults(int numObj, int numVar, int numConstr);
 
     std::vector<double> primalSolution; // TODO remove
-    //double lastObjectiveValue; // TODO remove
+
     std::vector<Iteration> iterations;
     std::vector<PrimalSolution> primalSolutions;
     std::vector<DualSolution> dualSolutions;
@@ -69,7 +56,7 @@ class ProcessInfo
     std::vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
     std::vector<DualSolution> dualSolutionCandidates;
 
-    std::pair<double, double> getCorrectedObjectiveBounds();
+    DoublePair getCorrectedObjectiveBounds();
 
     void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
                            IndexValuePair maxConstrDev);
@@ -106,8 +93,6 @@ class ProcessInfo
 
     std::vector<int> itersSolvedAsECP;
 
-    void setOriginalProblem(OptProblemOriginal *problem);
-
     void createTimer(std::string name, std::string description);
     void startTimer(std::string name);
     void stopTimer(std::string name);
@@ -143,16 +128,9 @@ class ProcessInfo
 
     std::vector<Timer> timers;
 
-    OSInstance *getProblemInstanceFromOSiL(std::string osil);
-    std::string getOSiLFromProblemInstance(OSInstance *instance);
-
-    void setProblemStats();
-
 #ifdef HAS_GAMS
     gmoHandle_t GAMSModelingObject;
 #endif
-
-    ILinesearchMethod *linesearchMethod;
 
     ~ProcessInfo();
 
@@ -162,11 +140,6 @@ class ProcessInfo
     bool objectiveUpdatedByLinesearch;
 
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
-
-    std::pair<double, double> currentObjectiveBounds;
-
-    std::vector<OSiLReader *> osilReaders;
-    OSiLWriter *osilWriter;
 
     EnvironmentPtr env;
 };

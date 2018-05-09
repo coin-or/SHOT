@@ -25,46 +25,46 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance
     TaskBase *tFinalizeSolution = new TaskSequential(env);
 
     TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, false);
-    env->process->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+    env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
     TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    env->process->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
     TaskBase *tCreateDualProblem = new TaskCreateDualProblem(env);
-    env->process->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
+    env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
     TaskBase *tInitializeIteration = new TaskInitializeIteration(env);
-    env->process->tasks->addTask(tInitializeIteration, "InitIter");
+    env->tasks->addTask(tInitializeIteration, "InitIter");
 
     TaskBase *tSolveIteration = new TaskSolveIteration(env);
-    env->process->tasks->addTask(tSolveIteration, "SolveIter");
+    env->tasks->addTask(tSolveIteration, "SolveIter");
 
     TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
-    env->process->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
     TaskBase *tPrintIterReport = new TaskPrintIterationReport(env);
-    env->process->tasks->addTask(tPrintIterReport, "PrintIterReport");
+    env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
     TaskBase *tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckIterError, "CheckIterError");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
     TaskBase *tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckRelGap, "CheckRelGap");
+    env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
     TaskBase *tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     TaskBase *tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckIterLim, "CheckIterLim");
+    env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
-    env->process->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    env->process->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+    env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
 SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP()
@@ -75,7 +75,7 @@ bool SolutionStrategyMIQCQP::solveProblem()
 {
     TaskBase *nextTask;
 
-    while (env->process->tasks->getNextTask(nextTask))
+    while (env->tasks->getNextTask(nextTask))
     {
         env->output->outputInfo("┌─── Started task:  " + nextTask->getType());
         nextTask->run();

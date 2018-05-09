@@ -18,9 +18,9 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env, cons
     cplexEnv = env;
     cplexInst = inst;
 
-    isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
 
-    env->process->solutionStatistics.iterationLastLazyAdded = 0;
+    env->solutionStatistics.iterationLastLazyAdded = 0;
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
@@ -42,7 +42,7 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env, cons
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP());
 
-    if (env->process->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
         taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch());
     }
@@ -92,8 +92,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             SolutionPoint tmpPt;
             tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-            tmpPt.maxDeviation = env->process->originalProblem->getMostDeviatingConstraint(primalSolution);
-            tmpPt.objectiveValue = env->process->originalProblem->calculateOriginalObjectiveValue(
+            tmpPt.maxDeviation = env->model->originalProblem->getMostDeviatingConstraint(primalSolution);
+            tmpPt.objectiveValue = env->model->originalProblem->calculateOriginalObjectiveValue(
                 primalSolution);
             tmpPt.point = primalSolution;
 
@@ -130,7 +130,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
                 tmpVals.end();
 
-                auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(solution);
+                auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
 
                 SolutionPoint tmpSolPt;
 
@@ -186,7 +186,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             tmpVals.end();
 
-            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(solution);
+            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
 
             //Remove??
             if (mostDevConstr.value <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
@@ -214,7 +214,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             currIter->objectiveValue = context.getCandidateObjective();
 
             env->process->getCurrentIteration()->numberOfOpenNodes = cplexInst.getNnodesLeft();
-            env->process->solutionStatistics.numberOfExploredNodes = std::max(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount), env->process->solutionStatistics.numberOfExploredNodes);
+            env->solutionStatistics.numberOfExploredNodes = std::max(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount), env->solutionStatistics.numberOfExploredNodes);
 
             auto bounds = std::make_pair(env->process->getDualBound(), env->process->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
@@ -388,7 +388,7 @@ void CplexCallback::createIntegerCut(std::vector<int> binaryIndexes, const IloCp
     IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     context.rejectCandidate(tmpRange);
-    env->process->solutionStatistics.numberOfIntegerCuts++;
+    env->solutionStatistics.numberOfIntegerCuts++;
 
     tmpRange.end();
     expr.end();

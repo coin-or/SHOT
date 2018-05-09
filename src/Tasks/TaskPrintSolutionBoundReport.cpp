@@ -10,7 +10,7 @@
 
 #include "TaskPrintSolutionBoundReport.h"
 
-TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     itersSinceLastPrintout = 0;
     timeLastPrintout = 0;
@@ -28,7 +28,7 @@ void TaskPrintSolutionBoundReport::run()
     {
         double absGap = env->process->getAbsoluteObjectiveGap();
         double relGap = env->process->getRelativeObjectiveGap();
-        auto objBounds = env->process->getCorrectedObjectiveBounds();
+        auto objBounds = env->model->getCorrectedObjectiveBounds();
         double objLB = objBounds.first;
         double objUB = objBounds.second;
 
@@ -46,9 +46,9 @@ void TaskPrintSolutionBoundReport::run()
         auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % env->process->getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
         env->output->outputSummary(tmpLine.str());
 
-        if (env->process->solutionStatistics.numberOfConstraintsRemovedInPresolve > 0 || env->process->solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)
+        if (env->solutionStatistics.numberOfConstraintsRemovedInPresolve > 0 || env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)
         {
-            tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.") % env->process->solutionStatistics.numberOfConstraintsRemovedInPresolve % env->process->solutionStatistics.numberOfVariableBoundsTightenedInPresolve;
+            tmpLine = boost::format(" Presolve: %1% constraint(s) removed and %2% variable bounds tightened.") % env->solutionStatistics.numberOfConstraintsRemovedInPresolve % env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve;
             env->output->outputSummary(tmpLine.str());
         }
 
@@ -58,10 +58,10 @@ void TaskPrintSolutionBoundReport::run()
                 " Number of interior points: " + std::to_string(env->process->interiorPts.size()));
         }
 
-        if (env->process->solutionStatistics.numberOfIntegerCuts > 0)
+        if (env->solutionStatistics.numberOfIntegerCuts > 0)
         {
             env->output->outputSummary(
-                " Number of integer cuts added: " + std::to_string(env->process->solutionStatistics.numberOfIntegerCuts));
+                " Number of integer cuts added: " + std::to_string(env->solutionStatistics.numberOfIntegerCuts));
         }
 
 #ifdef _WIN32

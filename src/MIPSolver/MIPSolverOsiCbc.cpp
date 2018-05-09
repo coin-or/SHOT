@@ -237,8 +237,8 @@ int MIPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements, d
 
 void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 {
-    auto variableTypes = originalProblem->getVariableTypes();
-    int numVar = originalProblem->getNumberOfVariables();
+    auto variableTypes = env->model->originalProblem->getVariableTypes();
+    int numVar = env->model->originalProblem->getNumberOfVariables();
 
     if (activate)
     {
@@ -402,8 +402,8 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
 
 void MIPSolverOsiCbc::addMIPStart(std::vector<double> point)
 {
-    auto numVar = originalProblem->getNumberOfVariables();
-    auto varNames = originalProblem->getVariableNames();
+    auto numVar = env->model->originalProblem->getNumberOfVariables();
+    auto varNames = env->model->originalProblem->getVariableNames();
 
     std::vector<std::pair<std::string, double>> variableValues;
 
@@ -455,7 +455,7 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
     try
     {
         // Fixes some strange behavior with the objective value when solving MIP vs LP problems
-        if (isMIP && originalProblem->isTypeOfObjectiveMinimize())
+        if (isMIP && env->model->originalProblem->isTypeOfObjectiveMinimize())
         {
             objVal = 1.0;
         }
@@ -562,9 +562,9 @@ void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, doubl
     }
 }
 
-std::pair<double, double> MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
+DoublePair MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
 {
-    std::pair<double, double> tmpBounds;
+    DoublePair tmpBounds;
 
     try
     {
@@ -608,7 +608,7 @@ double MIPSolverOsiCbc::getDualObjectiveValue()
 
 std::pair<std::vector<double>, std::vector<double>> MIPSolverOsiCbc::presolveAndGetNewBounds()
 {
-    return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableUpperBounds()));
+    return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableUpperBounds()));
 }
 
 void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)

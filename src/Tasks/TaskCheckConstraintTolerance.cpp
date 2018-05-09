@@ -10,7 +10,7 @@
 
 #include "TaskCheckConstraintTolerance.h"
 
-TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(EnvironmentPtr envPtr, std::string taskIDTrue): TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
 
@@ -20,12 +20,12 @@ void TaskCheckConstraintTolerance::run()
 {
     if (!isInitialized)
     {
-        this->isObjectiveNonlinear = env->process->problemStats.isObjectiveNonlinear();
-        this->nonlinearConstraintIndexes = env->process->originalProblem->getNonlinearConstraintIndexes();
+        this->isObjectiveNonlinear = env->model->statistics.isObjectiveNonlinear();
+        this->nonlinearConstraintIndexes = env->model->originalProblem->getNonlinearConstraintIndexes();
 
         if (this->isObjectiveNonlinear)
         {
-            this->nonlinearObjectiveConstraintIndex = env->process->originalProblem->getNonlinearObjectiveConstraintIdx();
+            this->nonlinearObjectiveConstraintIndex = env->model->originalProblem->getNonlinearObjectiveConstraintIdx();
 
             // Removes the nonlinear constraint index from the list
             std::vector<int>::iterator position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), -1);
@@ -44,7 +44,7 @@ void TaskCheckConstraintTolerance::run()
     // Checks if the nonlinear constraints are fulfilled to tolerance
     if (this->nonlinearConstraintIndexes.size() > 0)
     {
-        auto maxDev = env->process->originalProblem->getMostDeviatingConstraint(solutionPoint, this->nonlinearConstraintIndexes).first;
+        auto maxDev = env->model->originalProblem->getMostDeviatingConstraint(solutionPoint, this->nonlinearConstraintIndexes).first;
 
         if (maxDev.value >= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
             return;
@@ -53,19 +53,19 @@ void TaskCheckConstraintTolerance::run()
     // Checks if objective constraint is fulfilled to tolerance
     if (this->isObjectiveNonlinear)
     {
-        double objDev = env->process->originalProblem->calculateConstraintFunctionValue(this->nonlinearObjectiveConstraintIndex, solutionPoint);
+        double objDev = env->model->originalProblem->calculateConstraintFunctionValue(this->nonlinearObjectiveConstraintIndex, solutionPoint);
 
         if (objDev >= env->settings->getDoubleSetting("ObjectiveConstraintTolerance", "Termination"))
             return;
     }
 
-    if (env->process->problemStats.isDiscreteProblem)
+    if (env->model->statistics.isDiscreteProblem)
     {
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
             currIter->type == E_IterationProblemType::MIP)
         {
             env->process->terminationReason = E_TerminationReason::ConstraintTolerance;
-            env->process->tasks->setNextTask(taskIDIfTrue);
+            env->tasks->setNextTask(taskIDIfTrue);
         }
     }
     else
@@ -73,7 +73,7 @@ void TaskCheckConstraintTolerance::run()
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
         {
             env->process->terminationReason = E_TerminationReason::ConstraintTolerance;
-            env->process->tasks->setNextTask(taskIDIfTrue);
+            env->tasks->setNextTask(taskIDIfTrue);
         }
     }
 

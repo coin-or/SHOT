@@ -11,13 +11,18 @@
 #pragma once
 #include "ILinesearchMethod.h"
 #include "SHOTSettings.h"
-
+#include "../Model.h"
 #include "../OptProblems/OptProblemOriginal.h"
+#include "../ProcessInfo.h"
+
 #include "boost/math/tools/roots.hpp"
 
 class Test
 {
   private:
+    EnvironmentPtr env;
+    std::vector<int> nonlinearConstraints;
+
   public:
     std::vector<double> firstPt;
     std::vector<double> secondPt;
@@ -25,9 +30,7 @@ class Test
     double valFirstPt;
     double valSecondPt;
 
-    OptProblemOriginal *originalProblem;
-
-    Test();
+    Test(EnvironmentPtr envPtr);
     ~Test();
     void determineActiveConstraints(double constrTol);
     void setActiveConstraints(std::vector<int> constrIdxs);
@@ -69,4 +72,5 @@ class LinesearchMethodBoost : public ILinesearchMethod
 
   private:
     Test *test;
+    EnvironmentPtr env;
 };

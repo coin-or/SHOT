@@ -11,7 +11,7 @@
 #pragma once
 #include "Enums.h"
 #include "Structs.h"
-#include "SHOTSettings.h"
+#include "Environment.h"
 #include "ProcessInfo.h"
 
 class Iteration
@@ -26,7 +26,7 @@ class Iteration
     std::vector<SolutionPoint> solutionPoints;
 
     double objectiveValue;
-    std::pair<double, double> currentObjectiveBounds;
+    DoublePair currentObjectiveBounds;
 
     std::vector<double> constraintDeviations;
     double maxDeviation;

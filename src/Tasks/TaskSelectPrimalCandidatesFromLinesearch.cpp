@@ -44,10 +44,10 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
             {
                 auto xNLP = env->process->interiorPts.at(j)->point;
 
-                auto varTypes = env->process->originalProblem->getVariableTypes();
+                auto varTypes = env->model->originalProblem->getVariableTypes();
 
                 std::vector<double> xNLP2(xNLP.size());
-                for (int k = 0; k < env->process->originalProblem->getNumberOfVariables(); k++)
+                for (int k = 0; k < env->model->originalProblem->getNumberOfVariables(); k++)
                 {
                     if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
                     {
@@ -59,8 +59,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
                     }
                 }
 
-                auto maxDevNLP2 = env->process->originalProblem->getMostDeviatingAllConstraint(xNLP2);
-                auto maxDevMIP = env->process->originalProblem->getMostDeviatingAllConstraint(solPoints.at(i).point);
+                auto maxDevNLP2 = env->model->originalProblem->getMostDeviatingAllConstraint(xNLP2);
+                auto maxDevMIP = env->model->originalProblem->getMostDeviatingAllConstraint(solPoints.at(i).point);
 
                 if (maxDevNLP2.value <= 0 && maxDevMIP.value > 0)
                 {

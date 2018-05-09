@@ -23,7 +23,7 @@ void TaskCheckRelativeGap::run()
 	if (env->process->isRelativeObjectiveGapToleranceMet())
 	{
 		env->process->terminationReason = E_TerminationReason::RelativeGap;
-		env->process->tasks->setNextTask(taskIDIfTrue);
+		env->tasks->setNextTask(taskIDIfTrue);
 	}
 }
 

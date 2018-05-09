@@ -12,6 +12,7 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
+#include "../Report.h"
 
 class TaskPrintIterationReport : public TaskBase
 {

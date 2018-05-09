@@ -9,9 +9,9 @@
 */
 
 #pragma once
-#include "OSInstance.h"
 #include "ProcessInfo.h"
 #include "Environment.h"
+#include "TaskHandler.h"
 
 class ISolutionStrategy
 {

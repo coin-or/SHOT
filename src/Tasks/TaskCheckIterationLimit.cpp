@@ -25,7 +25,7 @@ void TaskCheckIterationLimit::run()
     if (currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination"))
     {
         env->process->terminationReason = E_TerminationReason::IterationLimit;
-        env->process->tasks->setNextTask(taskIDIfTrue);
+        env->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

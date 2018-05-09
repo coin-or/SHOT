@@ -8,19 +8,31 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include "Enums.h"
+#include "Structs.h"
+#include "Environment.h"
+#include "Output.h"
+#include "ProcessInfo.h"
+#include "SHOTSettings.h"
+#include "TaskHandler.h"
+#include "Report.h"
+#include "Model.h"
 #include "SHOTSolver.h"
 
 int main(int argc, char *argv[])
 {
     EnvironmentPtr env(new Environment);
-    env->output = OutputPtr(new Output(env));
+    env->output = OutputPtr(new Output());
     env->process = ProcessPtr(new ProcessInfo(env));
-    env->settings = SettingsPtr(new Settings(env));
+    env->settings = SettingsPtr(new Settings(env->output));
+    env->tasks = TaskHandlerPtr(new TaskHandler(env));
+    env->report = ReportPtr(new Report(env));
+    env->model = ModelPtr(new Model(env));
     std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
     if (argc == 1)
     {
-        env->output->outputSolverHeader();
+        env->report->outputSolverHeader();
         std::cout << " Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
 
         return (0);
@@ -75,7 +87,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            env->output->outputSolverHeader();
+            env->report->outputSolverHeader();
 
             return (0);
         }
@@ -86,7 +98,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            env->output->outputSolverHeader();
+            env->report->outputSolverHeader();
             std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
             return (0);
@@ -99,7 +111,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[2]))
         {
-            env->output->outputSolverHeader();
+            env->report->outputSolverHeader();
             std::cout << " Options file " << argv[2] << " not found!" << std::endl;
 
             return (0);
@@ -114,7 +126,7 @@ int main(int argc, char *argv[])
     {
         if (!boost::filesystem::exists(argv[1]))
         {
-            env->output->outputSolverHeader();
+            env->report->outputSolverHeader();
             std::cout << " Problem file " << argv[1] << " not found!" << std::endl;
 
             return (0);
@@ -126,13 +138,13 @@ int main(int argc, char *argv[])
         {
             if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
             {
-                env->output->outputSolverHeader();
+                env->report->outputSolverHeader();
                 std::cout << " Cannot set options!" << std::endl;
                 return (0);
             }
         }
 
-        env->output->setLogLevels();
+        env->output->setLogLevels(env->settings->getIntSetting("Console.LogLevel", "Output") + 1, env->settings->getIntSetting("File.LogLevel", "Output") + 1);
 
         if (!solver->setProblem(fileName))
         {
@@ -141,9 +153,9 @@ int main(int argc, char *argv[])
             return (0);
         }
 
-        env->output->outputSolverHeader();
-        env->output->outputOptionsReport();
-        env->output->outputProblemInstanceReport();
+        env->report->outputSolverHeader();
+        env->report->outputOptionsReport();
+        env->report->outputProblemInstanceReport();
 
         if (!solver->solveProblem()) // solve problem
         {
@@ -152,7 +164,7 @@ int main(int argc, char *argv[])
             return (0);
         }
 
-        env->output->outputSolutionReport();
+        env->report->outputSolutionReport();
 
         env->output->outputSummary("╶─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n");
     }
@@ -168,7 +180,7 @@ int main(int argc, char *argv[])
     if (resultFile.empty())
     {
         boost::filesystem::path resultPath(env->settings->getStringSetting("ResultPath", "Output"));
-        resultPath /= env->process->originalProblem->getProblemInstance()->getInstanceName();
+        resultPath /= env->model->originalProblem->getProblemInstance()->getInstanceName();
         resultPath = resultPath.replace_extension(".osrl");
         env->output->outputSummary(" Results written to: " + resultPath.string());
 
@@ -192,7 +204,7 @@ int main(int argc, char *argv[])
     if (traceFile.empty())
     {
         boost::filesystem::path tracePath(env->settings->getStringSetting("ResultPath", "Output"));
-        tracePath /= env->process->originalProblem->getProblemInstance()->getInstanceName();
+        tracePath /= env->model->originalProblem->getProblemInstance()->getInstanceName();
         tracePath = tracePath.replace_extension(".trc");
         env->output->outputSummary("                     " + tracePath.string());
 

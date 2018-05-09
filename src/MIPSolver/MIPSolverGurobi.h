@@ -68,7 +68,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex);
+    virtual DoublePair getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()
     {

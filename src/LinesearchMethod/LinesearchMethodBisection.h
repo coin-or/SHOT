@@ -11,6 +11,7 @@
 #pragma once
 #include "ILinesearchMethod.h"
 #include "SHOTSettings.h"
+#include "../Model.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
 class LinesearchMethodBisection : public ILinesearchMethod

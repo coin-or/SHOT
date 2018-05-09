@@ -47,7 +47,7 @@ void TaskAddIntegerCuts::run()
             }
 
             env->dualSolver->addLinearConstraint(elements, -(numOnes - 1.0));
-            env->process->solutionStatistics.numberOfIntegerCuts++;
+            env->solutionStatistics.numberOfIntegerCuts++;
         }
 
         env->output->outputInfo(

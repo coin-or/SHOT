@@ -45,19 +45,19 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
 
     if (env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal")) // Does not seem to work with Ipopt...
     {
-        auto numVar = env->process->originalProblem->getNumberOfVariables();
+        auto numVar = env->model->originalProblem->getNumberOfVariables();
 
         for (int i = 0; i < numVar; i++)
         {
-            if (i == env->process->originalProblem->getNonlinearObjectiveVariableIdx())
+            if (i == env->model->originalProblem->getNonlinearObjectiveVariableIdx())
                 continue;
 
-            if (env->process->originalProblem->hasVariableBoundsBeenTightened(i))
+            if (env->model->originalProblem->hasVariableBoundsBeenTightened(i))
             {
                 NLPProblem->setVariableLowerBound(i,
-                                                  env->process->originalProblem->getVariableLowerBound(i));
+                                                  env->model->originalProblem->getVariableLowerBound(i));
                 NLPProblem->setVariableUpperBound(i,
-                                                  env->process->originalProblem->getVariableUpperBound(i));
+                                                  env->model->originalProblem->getVariableUpperBound(i));
                 NLPProblem->setVariableBoundsAsTightened(i);
             }
         }

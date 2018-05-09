@@ -35,7 +35,7 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
 
     this->setObjectiveFunctionNonlinear(isConstraintNonlinear(-1));
 
-    env->process->setOriginalProblem(this);
+    env->model->setOriginalProblem(OriginalProblemPtr(this));
 
     this->setNonlinearConstraintIndexes();
 
@@ -69,7 +69,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
     if (idx != -1 && idx != this->getNonlinearObjectiveConstraintIdx()) // Not the objective function
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(idx, &point.at(0), true);
-        env->process->solutionStatistics.numberOfFunctionEvalutions++;
+        env->solutionStatistics.numberOfFunctionEvalutions++;
 
         if (getProblemInstance()->getConstraintTypes()[idx] == 'L')
         {
@@ -92,7 +92,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
     else // The nonlinear objective function constraint
     {
         tmpVal = getProblemInstance()->calculateFunctionValue(-1, &point.at(0), true);
-        env->process->solutionStatistics.numberOfFunctionEvalutions++;
+        env->solutionStatistics.numberOfFunctionEvalutions++;
 
         tmpVal = tmpVal - point.at(this->getNonlinearObjectiveVariableIdx());
     }
@@ -110,7 +110,7 @@ SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
     if (idx == -1 || idx == this->getNonlinearObjectiveConstraintIdx())
     {
         auto tmpArray = getProblemInstance()->calculateObjectiveFunctionGradient(&point.at(0), -1, true);
-        env->process->solutionStatistics.numberOfGradientEvaluations++;
+        env->solutionStatistics.numberOfGradientEvaluations++;
 
         number = getProblemInstance()->getVariableNumber();
         std::vector<int> tmpIndexes;

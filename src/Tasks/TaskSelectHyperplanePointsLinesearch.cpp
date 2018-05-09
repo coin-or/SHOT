@@ -35,7 +35,7 @@ void TaskSelectHyperplanePointsLinesearch::run(std::vector<SolutionPoint> solPoi
 
     auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
 
-    auto originalProblem = env->process->originalProblem;
+    auto originalProblem = env->model->originalProblem;
 
     int prevHPnum = env->process->hyperplaneWaitingList.size();
 
@@ -95,7 +95,7 @@ void TaskSelectHyperplanePointsLinesearch::run(std::vector<SolutionPoint> solPoi
                         "     Cannot find solution with linesearch, using solution point instead.");
                 }
 
-                auto tmpMostDevConstr = originalProblem->getMostDeviatingConstraint(externalPoint);
+                auto tmpMostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(externalPoint);
 
                 if (tmpMostDevConstr.value >= 0)
                 {

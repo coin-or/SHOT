@@ -10,13 +10,13 @@
 
 #include "TaskCreateDualProblem.h"
 
-TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
 
     env->output->outputDebug("Creating dual problem");
 
-    env->dualSolver->createLinearProblem(env->process->originalProblem);
+    env->dualSolver->createLinearProblem(env->model->originalProblem.get());
 
     env->dualSolver->initializeSolverSettings();
 

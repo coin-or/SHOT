@@ -21,6 +21,7 @@
 
 #include "../MIPSolver/MIPSolverOsiCbc.h"
 #include "INLPSolver.h"
+#include "../LinesearchMethod/ILinesearchMethod.h"
 
 class NLPSolverCuttingPlaneRelaxed : virtual public NLPSolverBase
 {

@@ -31,33 +31,33 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(EnvironmentPtr envP
     if (isObjNonlinear || (isObjQuadratic && !isQuadraticUsed))
     {
         env->output->outputInfo("Nonlinear objective function detected.");
-        env->process->originalProblem = new OptProblemOriginalNonlinearObjective(env);
+        env->model->originalProblem = OriginalProblemPtr(new OptProblemOriginalNonlinearObjective(env));
     }
     else if (isObjQuadratic && isQuadraticUsed)
     {
         env->output->outputInfo("Quadratic objective function detected.");
-        env->process->originalProblem = new OptProblemOriginalQuadraticObjective(env);
+        env->model->originalProblem = OriginalProblemPtr(new OptProblemOriginalQuadraticObjective(env));
     }
     else //Linear objective function
     {
         env->output->outputInfo("Linear objective function detected.");
-        env->process->originalProblem = new OptProblemOriginalLinearObjective(env);
+        env->model->originalProblem = OriginalProblemPtr(new OptProblemOriginalLinearObjective(env));
     }
 
-    env->process->originalProblem->setProblem(instance);
+    env->model->originalProblem->setProblem(instance);
     auto debugPath = env->settings->getStringSetting("Debug.Path", "Output");
 
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
-        env->process->originalProblem->saveProblemModelToFile(
+        env->model->originalProblem->saveProblemModelToFile(
             env->settings->getStringSetting("Debug.Path", "Output") + "/originalproblem.txt");
     }
 
-    int numConstr = env->process->originalProblem->getNumberOfConstraints();
+    int numConstr = env->model->originalProblem->getNumberOfConstraints();
 
-    int numVar = env->process->originalProblem->getNumberOfVariables();
+    int numVar = env->model->originalProblem->getNumberOfVariables();
 
-    if (env->process->originalProblem->isObjectiveFunctionNonlinear())
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
     {
         numVar = numVar - 1;       // Removes the extra objective variable
         numConstr = numConstr - 1; // Removes the extra objective constraint

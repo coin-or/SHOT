@@ -25,7 +25,7 @@ void TaskCheckTimeLimit::run()
     if (env->process->getElapsedTime("Total") >= env->settings->getDoubleSetting("TimeLimit", "Termination"))
     {
         env->process->terminationReason = E_TerminationReason::TimeLimit;
-        env->process->tasks->setNextTask(taskIDIfTrue);
+        env->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

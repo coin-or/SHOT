@@ -53,7 +53,7 @@ void HCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
 
-    bool isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
 
     if ((env->process->primalSolutions.size() > 0) && ((isMinimization && this->getIncumbentObjValue() > env->process->getPrimalBound()) || (!isMinimization && this->getIncumbentObjValue() < env->process->getPrimalBound())))
     {
@@ -90,7 +90,7 @@ void HCallbackI::main() // Called at each node...
 
         tmpVals.end();
 
-        auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(solution);
+        auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
 
         SolutionPoint tmpSolPt;
 
@@ -147,7 +147,7 @@ void InfoCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
 
-    bool isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
 
     auto absObjGap = env->process->getAbsoluteObjectiveGap();
     auto relObjGap = env->process->getRelativeObjectiveGap();
@@ -185,8 +185,8 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
 
-    env->process->solutionStatistics.iterationLastLazyAdded = 0;
-    isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    env->solutionStatistics.iterationLastLazyAdded = 0;
+    isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
     cbCalls = 0;
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
@@ -209,7 +209,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
-    if (env->process->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
         taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch(env));
     }
@@ -263,7 +263,7 @@ void CtCallbackI::main()
 
     tmpVals.end();
 
-    auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(solution);
+    auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
 
     double tmpDualObjBound = this->getBestObjValue();
 
@@ -302,7 +302,7 @@ void CtCallbackI::main()
 
             SolutionPoint tmpPt;
             tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-            tmpPt.maxDeviation = env->process->originalProblem->getMostDeviatingConstraint(primalSolution);
+            tmpPt.maxDeviation = env->model->originalProblem->getMostDeviatingConstraint(primalSolution);
             tmpPt.objectiveValue = this->getIncumbentObjValue();
             tmpPt.point = primalSolution;
 
@@ -321,7 +321,7 @@ void CtCallbackI::main()
 
     env->process->getCurrentIteration()->numberOfOpenNodes = this->getNremainingNodes();
 
-    env->process->solutionStatistics.numberOfExploredNodes = std::max((int)this->getNnodes(), env->process->solutionStatistics.numberOfExploredNodes);
+    env->solutionStatistics.numberOfExploredNodes = std::max((int)this->getNnodes(), env->solutionStatistics.numberOfExploredNodes);
 
     printIterationReport(candidatePoints.at(0), threadId);
 
@@ -374,7 +374,7 @@ void CtCallbackI::main()
         static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(candidatePoints);
     }
 
-    if (env->process->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
         taskUpdateObjectiveByLinesearch->updateObjectiveInPoint(candidatePoints.at(0));
     }
@@ -483,7 +483,7 @@ void CtCallbackI::createIntegerCut(std::vector<int> binaryIndexes)
     IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     add(tmpRange);
-    env->process->solutionStatistics.numberOfIntegerCuts++;
+    env->solutionStatistics.numberOfIntegerCuts++;
 
     tmpRange.end();
     expr.end();
@@ -520,7 +520,7 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
         MIPSolverCplex::initializeSolverSettings();
 
         /*
-        if (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+        if (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
         {
             cplexInstance.setParam(IloCplex::Threads, 1);
         }*/

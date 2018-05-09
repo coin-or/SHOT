@@ -22,7 +22,7 @@ void TaskGoto::run()
 {
     try
     {
-        env->process->tasks->setNextTask(gotoTaskID);
+        env->tasks->setNextTask(gotoTaskID);
     }
     catch (TaskExceptionNotFound &e)
     {

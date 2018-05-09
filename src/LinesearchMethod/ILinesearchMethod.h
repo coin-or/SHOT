@@ -9,7 +9,7 @@
 */
 
 #pragma once
-#include "../ProcessInfo.h"
+#include "../Environment.h"
 
 class ILinesearchMethod
 {

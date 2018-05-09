@@ -12,6 +12,26 @@
 #include "Enums.h"
 #include "OSGeneral.h"
 
+typedef std::pair<double, double> DoublePair;
+
+class ProcessInfo;
+class Settings;
+class Model;
+class IMIPSolver;
+class Output;
+class Report;
+class TaskHandler;
+class OptProblemOriginal;
+
+typedef std::shared_ptr<ProcessInfo> ProcessPtr;
+typedef std::shared_ptr<Settings> SettingsPtr;
+typedef std::shared_ptr<Model> ModelPtr;
+typedef std::shared_ptr<IMIPSolver> MIPSolverPtr;
+typedef std::shared_ptr<Output> OutputPtr;
+typedef std::shared_ptr<OptProblemOriginal> OriginalProblemPtr;
+typedef std::shared_ptr<Report> ReportPtr;
+typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
+
 struct SolutionPoint
 {
     std::vector<double> point;
@@ -79,7 +99,7 @@ struct GeneratedHyperplane
     int removedIter;
 };
 
-struct OptimizationProblemStatistics
+struct ModelStatistics
 {
     E_ProblemType problemType = E_ProblemType::None;
     E_ObjectiveFunctionType objectiveFunctionType = E_ObjectiveFunctionType::None;

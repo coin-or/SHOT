@@ -14,9 +14,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include "OSOption.h"
+#include "../Structs.h"
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
-#include "Environment.h"
 
 #include "Output.h"
 #include <boost/property_tree/ptree.hpp>
@@ -26,10 +26,10 @@ class Settings
 {
   private:
     void updateSettingBase(std::pair<std::string, std::string> key, std::string value);
-    EnvironmentPtr env;
+    OutputPtr output;
 
   public:
-    Settings(EnvironmentPtr envPtr) : env(envPtr)
+    Settings(OutputPtr outputPtr) : output(outputPtr)
     {
         settingsInitialized = false;
     }

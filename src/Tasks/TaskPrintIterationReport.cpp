@@ -10,7 +10,7 @@
 
 #include "TaskPrintIterationReport.h"
 
-TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     lastNumHyperplane = 0;
 }
@@ -27,9 +27,9 @@ void TaskPrintIterationReport::run()
 
     bool hasSolution = true;
 
-    bool isMIQP = (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-    bool isMIQCP = (env->process->originalProblem->getQuadraticConstraintIndexes().size() > 0);
-    bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && env->process->originalProblem->isProblemDiscrete();
+    bool isMIQP = (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
+    bool isMIQCP = (env->model->originalProblem->getQuadraticConstraintIndexes().size() > 0);
+    bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && env->model->originalProblem->isProblemDiscrete();
 
     if (isMIQCP && isDiscrete)
         tmpType << "MIQCP";
@@ -92,19 +92,19 @@ void TaskPrintIterationReport::run()
         hasSolution = false;
     }
 
-    env->output->outputIterationDetail(currIter->iterationNumber,
-                                                tmpType.str(),
-                                                env->process->getElapsedTime("Total"),
-                                                currIter->numHyperplanesAdded,
-                                                currIter->totNumHyperplanes,
-                                                env->process->getDualBound(),
-                                                env->process->getPrimalBound(),
-                                                env->process->getAbsoluteObjectiveGap(),
-                                                env->process->getRelativeObjectiveGap(),
-                                                currIter->objectiveValue,
-                                                currIter->maxDeviationConstraint,
-                                                currIter->maxDeviation,
-                                                E_IterationLineType::DualSolution);
+    env->report->outputIterationDetail(currIter->iterationNumber,
+                                       tmpType.str(),
+                                       env->process->getElapsedTime("Total"),
+                                       currIter->numHyperplanesAdded,
+                                       currIter->totNumHyperplanes,
+                                       env->process->getDualBound(),
+                                       env->process->getPrimalBound(),
+                                       env->process->getAbsoluteObjectiveGap(),
+                                       env->process->getRelativeObjectiveGap(),
+                                       currIter->objectiveValue,
+                                       currIter->maxDeviationConstraint,
+                                       currIter->maxDeviation,
+                                       E_IterationLineType::DualSolution);
 }
 
 std::string TaskPrintIterationReport::getType()

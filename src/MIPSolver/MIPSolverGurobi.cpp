@@ -391,8 +391,8 @@ int MIPSolverGurobi::getNumberOfSolutions()
 
 void MIPSolverGurobi::activateDiscreteVariables(bool activate)
 {
-    auto variableTypes = originalProblem->getVariableTypes();
-    int numVar = originalProblem->getNumberOfVariables();
+    auto variableTypes = env->model->originalProblem->getVariableTypes();
+    int numVar = env->model->originalProblem->getNumberOfVariables();
 
     if (activate)
     {
@@ -716,9 +716,9 @@ void MIPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doubl
     }
 }
 
-std::pair<double, double> MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
+DoublePair MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
 {
-    std::pair<double, double> tmpBounds;
+    DoublePair tmpBounds;
 
     try
     {
@@ -782,7 +782,7 @@ void MIPSolverGurobi::checkParameters()
 
 std::pair<std::vector<double>, std::vector<double>> MIPSolverGurobi::presolveAndGetNewBounds()
 {
-    return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
+    return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableLowerBounds()));
 }
 
 int MIPSolverGurobi::getNumberOfExploredNodes()

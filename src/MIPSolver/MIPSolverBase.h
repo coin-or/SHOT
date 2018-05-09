@@ -20,7 +20,7 @@ class MIPSolverBase
 {
   private:
     std::vector<int> fixedVariableIndexes;
-    std::vector<std::pair<double, double>> fixedVariableOriginalBounds;
+    std::vector<DoublePair> fixedVariableOriginalBounds;
 
   protected:
     std::vector<GeneratedHyperplane> generatedHyperplanes;
@@ -48,7 +48,7 @@ class MIPSolverBase
 
     virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes();
 
-    virtual std::pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+    virtual DoublePair getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
     virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);

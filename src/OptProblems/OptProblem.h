@@ -12,8 +12,12 @@
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "CoinFinite.hpp"
+#include "../Enums.h"
+#include "../Structs.h"
+#include "../Environment.h"
+#include "../Model.h"
+
 #include "SHOTSettings.h"
-#include "../ProcessInfo.h"
 #include "../UtilityFunctions.h"
 
 class OptProblem

@@ -11,21 +11,18 @@
 #pragma once
 #include <float.h>
 #include "Enums.h"
-#include "Environment.h"
 
 // Used for OSOutput
 #include "cstdio"
 #define HAVE_STDIO_H 1
 #include "OSOutput.h"
 
-#include "ProcessInfo.h"
-
 #include <boost/format.hpp>
 
 class Output
 {
   public:
-    Output(EnvironmentPtr envPtr);
+    Output();
     virtual ~Output();
 
     void outputAlways(std::string message);
@@ -38,58 +35,8 @@ class Output
     void outputTrace(std::string message);
     void outputDetailedTrace(std::string message);
 
-    void setLogLevels();
-
-    void outputSolverHeader();
-
-    void outputOptionsReport();
-
-    void outputProblemInstanceReport();
-
-    void outputInteriorPointPreReport();
-
-    void outputIterationDetailHeader();
-
-    void outputIterationDetail(int iterationNumber,
-                               std::string iterationDesc,
-                               double totalTime,
-                               int dualCutsAdded,
-                               int dualCutsTotal,
-                               double dualObjectiveValue,
-                               double primalObjectiveValue,
-                               double absoluteObjectiveGap,
-                               double relativeObjectiveGap,
-                               double currentObjectiveValue,
-                               int maxConstraintIndex,
-                               double maxConstraintError,
-                               E_IterationLineType lineType);
-
-    void outputIterationDetailHeaderMinimax();
-
-    void outputIterationDetailMinimax(int iterationNumber,
-                                      std::string iterationDesc,
-                                      double totalTime,
-                                      int dualCutsAdded,
-                                      int dualCutsTotal,
-                                      double dualObjectiveValue,
-                                      double primalObjectiveValue,
-                                      double absoluteObjectiveGap,
-                                      double relativeObjectiveGap);
-
-    void outputPrimalSolutionDetailedReport();
-
-    void outputSolutionReport();
+    void setLogLevels(int consoleLogLevel, int fileLogLevel);
 
   private:
-    EnvironmentPtr env;
     OSOutput *osOutput;
-
-    double lastDualObjectiveValue = -DBL_MAX;
-    double lastPrimalObjectiveValue = DBL_MAX;
-    double lastAbsoluteObjectiveGap = DBL_MAX;
-    double lastRelativeObjectiveGap = 1.0;
-    double lastIterationOutputTimeStamp = 0.0;
-    int iterationsWithoutPrintoutCounter = 0;
-    int iterationPrintoutsSinceLastHeader = 0;
-    bool firstIterationHeaderPrinted = false;
 };

@@ -16,6 +16,7 @@
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 #include "../Tasks/TaskUpdateInteriorPoint.h"
+#include "../Report.h"
 
 class MIPSolverCallbackBase
 {

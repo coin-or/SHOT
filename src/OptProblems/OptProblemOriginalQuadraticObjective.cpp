@@ -32,7 +32,7 @@ bool OptProblemOriginalQuadraticObjective::setProblem(OSInstance *instance)
         env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
     }
 
-    env->process->setOriginalProblem(this);
+    env->model->setOriginalProblem(OriginalProblemPtr(this));
 
     this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

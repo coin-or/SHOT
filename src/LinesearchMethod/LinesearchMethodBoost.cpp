@@ -13,8 +13,9 @@
 std::vector<int> activeConstraints;
 double lastActiveConstraintUpdateValue;
 
-Test::Test()
+Test::Test(EnvironmentPtr envPtr) : env(envPtr)
 {
+    nonlinearConstraints = env->model->originalProblem->getNonlinearConstraintIndexes();
 }
 
 Test::~Test()
@@ -28,14 +29,12 @@ void Test::determineActiveConstraints(double constrTol)
     valFirstPt = -OSDBL_MAX;
     valSecondPt = -OSDBL_MAX;
 
-    auto allNonlinearConstrIdxs = originalProblem->getNonlinearConstraintIndexes();
-
     clearActiveConstraints();
 
-    for (auto I : allNonlinearConstrIdxs)
+    for (auto I : nonlinearConstraints)
     {
-        auto tmpValFirstPt = originalProblem->calculateConstraintFunctionValue(I, firstPt);
-        auto tmpValSecondPt = originalProblem->calculateConstraintFunctionValue(I, secondPt);
+        auto tmpValFirstPt = env->model->originalProblem->calculateConstraintFunctionValue(I, firstPt);
+        auto tmpValSecondPt = env->model->originalProblem->calculateConstraintFunctionValue(I, secondPt);
 
         if ((tmpValFirstPt > constrTol && tmpValSecondPt <= 0) || (tmpValFirstPt <= 0 && tmpValSecondPt > constrTol))
         {
@@ -83,7 +82,7 @@ double Test::operator()(const double x)
     }
 
     auto tmpActiveConstraints = getActiveConstraints();
-    auto mostDevConstr = originalProblem->getMostDeviatingConstraint(ptNew, tmpActiveConstraints);
+    auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(ptNew, tmpActiveConstraints);
 
     double validNewPt = mostDevConstr.first.value;
 
@@ -96,11 +95,9 @@ double Test::operator()(const double x)
     return (validNewPt);
 }
 
-LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr)
+LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr)
 {
-    env = envPtr;
-    test = new Test();
-    test->originalProblem = (env->process->originalProblem);
+    test = new Test(env);
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
@@ -129,7 +126,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     std::vector<double> ptNew(length);
     std::vector<double> ptNew2(length);
 
-    typedef std::pair<double, double> Result;
+    typedef DoublePair Result;
     boost::uintmax_t max_iter = Nmax;
 
     test->firstPt = ptA;
@@ -142,8 +139,8 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     else
     {
         test->setActiveConstraints(constrIdxs);
-        test->valFirstPt = env->process->originalProblem->getMostDeviatingConstraint(ptA).value;
-        test->valSecondPt = env->process->originalProblem->getMostDeviatingConstraint(ptB).value;
+        test->valFirstPt = env->model->originalProblem->getMostDeviatingConstraint(ptA).value;
+        test->valSecondPt = env->model->originalProblem->getMostDeviatingConstraint(ptB).value;
     }
 
     if (test->getActiveConstraints().size() == 0) // All constraints are fulfilled.
@@ -160,7 +157,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         return (tmpPair);
     }
 
-    int tempFEvals = env->process->solutionStatistics.numberOfFunctionEvalutions;
+    int tempFEvals = env->solutionStatistics.numberOfFunctionEvalutions;
 
     Result r1;
 
@@ -173,7 +170,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         r1 = boost::math::tools::bisect(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
     }
 
-    int resFVals = env->process->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
+    int resFVals = env->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
     if (max_iter == Nmax)
     {
         env->output->outputWarning(
@@ -191,7 +188,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         ptNew2.at(i) = r1.second * ptA.at(i) + (1 - r1.second) * ptB.at(i);
     }
 
-    auto validNewPt = env->process->originalProblem->isConstraintsFulfilledInPoint(ptNew);
+    auto validNewPt = env->model->originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
     if (!validNewPt) // ptNew Outside feasible region
     {

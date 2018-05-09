@@ -14,7 +14,7 @@ TaskSelectHyperplanePointsIndividualLinesearch::TaskSelectHyperplanePointsIndivi
 {
     env->process->startTimer("DualCutGenerationRootSearch");
 
-    nonlinearConstraintIdxs = env->process->originalProblem->getNonlinearConstraintIndexes();
+    nonlinearConstraintIdxs = env->model->originalProblem->getNonlinearConstraintIndexes();
 
     env->process->stopTimer("DualCutGenerationRootSearch");
 }
@@ -63,11 +63,11 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoi
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(
-        env->process->originalProblem->getNumberOfNonlinearConstraints(), false);
+        env->model->originalProblem->getNumberOfNonlinearConstraints(), false);
 
     for (int i = 0; i < solPoints.size(); i++)
     {
-        auto maxDevConstr = env->process->originalProblem->getMostDeviatingConstraint(
+        auto maxDevConstr = env->model->originalProblem->getMostDeviatingConstraint(
             solPoints.at(i).point);
 
         if (maxDevConstr.value <= 0)
@@ -93,7 +93,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoi
                         continue;
 
                     auto constrDevExterior =
-                        env->process->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
+                        env->model->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
                                                                                         solPoints.at(i).point);
 
                     if (isnan(constrDevExterior))
@@ -139,7 +139,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoi
                     }
 
                     auto constrDevBoundary =
-                        env->process->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
+                        env->model->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
                                                                                         externalPoint);
 
                     if (constrDevBoundary >= 0)

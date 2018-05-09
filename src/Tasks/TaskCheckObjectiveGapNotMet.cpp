@@ -27,7 +27,7 @@ void TaskCheckObjectiveGapNotMet::run()
         !env->process->isAbsoluteObjectiveGapToleranceMet())
     {
         env->process->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
-        env->process->tasks->setNextTask(taskIDIfTrue);
+        env->tasks->setNextTask(taskIDIfTrue);
     }
 }
 

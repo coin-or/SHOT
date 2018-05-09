@@ -14,7 +14,7 @@ TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : Ta
 {
     env->process->startTimer("DualProblemsIntegerFixed");
 
-    discreteVariableIndexes = env->process->originalProblem->getDiscreteVariableIndices();
+    discreteVariableIndexes = env->model->originalProblem->getDiscreteVariableIndices();
 
     env->process->stopTimer("DualProblemsIntegerFixed");
 }
@@ -69,7 +69,7 @@ void TaskSolveFixedDualProblem::run()
         return;
     }
 
-    auto discreteIdxs = env->process->originalProblem->getDiscreteVariableIndices();
+    auto discreteIdxs = env->model->originalProblem->getDiscreteVariableIndices();
 
     auto currSolPt = prevIter->solutionPoints.at(0).point;
 
@@ -94,9 +94,9 @@ void TaskSolveFixedDualProblem::run()
 
     env->dualSolver->fixVariables(discreteVariableIndexes, fixValues);
 
-    int numVar = env->process->originalProblem->getNumberOfVariables();
+    int numVar = env->model->originalProblem->getNumberOfVariables();
 
-    bool isMinimization = env->process->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
 
     double prevObjVal = COIN_DBL_MAX;
 
@@ -105,8 +105,8 @@ void TaskSolveFixedDualProblem::run()
     double objTol = env->settings->getDoubleSetting("FixedInteger.ObjectiveTolerance", "Dual");
     double constrTol = env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual");
 
-    bool isMIQP = (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-    bool isMIQCP = (env->process->originalProblem->getQuadraticConstraintIndexes().size() > 0);
+    bool isMIQP = (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
+    bool isMIQCP = (env->model->originalProblem->getQuadraticConstraintIndexes().size() > 0);
     bool isDiscrete = false;
 
     for (int k = 0; k < maxIter; k++)
@@ -116,17 +116,17 @@ void TaskSolveFixedDualProblem::run()
         if (isMIQCP)
         {
             tmpType << "QCP-FIX";
-            env->process->solutionStatistics.numberOfProblemsQCQP++;
+            env->solutionStatistics.numberOfProblemsQCQP++;
         }
         else if (isMIQP)
         {
             tmpType << "QP-FIX";
-            env->process->solutionStatistics.numberOfProblemsQP++;
+            env->solutionStatistics.numberOfProblemsQP++;
         }
         else
         {
             tmpType << "LP-FIX";
-            env->process->solutionStatistics.numberOfProblemsLP++;
+            env->solutionStatistics.numberOfProblemsLP++;
         }
 
         totalIters++;
@@ -137,7 +137,7 @@ void TaskSolveFixedDualProblem::run()
 
             tmpType << "-I";
 
-            env->output->outputIterationDetail(totalIters,
+            env->report->outputIterationDetail(totalIters,
                                                tmpType.str(),
                                                env->process->getElapsedTime("Total"),
                                                1,
@@ -158,7 +158,7 @@ void TaskSolveFixedDualProblem::run()
             auto varSol = env->dualSolver->getVariableSolution(0);
             auto objVal = env->dualSolver->getObjectiveValue(0);
 
-            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(varSol);
+            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(varSol);
 
             std::vector<double> externalPoint = varSol;
             IndexValuePair errorExternal;
@@ -167,7 +167,7 @@ void TaskSolveFixedDualProblem::run()
             {
                 std::vector<double> internalPoint = env->process->interiorPts.at(0)->point;
 
-                auto tmpMostDevConstr2 = env->process->originalProblem->getMostDeviatingConstraint(internalPoint);
+                auto tmpMostDevConstr2 = env->model->originalProblem->getMostDeviatingConstraint(internalPoint);
 
                 try
                 {
@@ -189,7 +189,7 @@ void TaskSolveFixedDualProblem::run()
                 }
             }
 
-            errorExternal = env->process->originalProblem->getMostDeviatingConstraint(externalPoint);
+            errorExternal = env->model->originalProblem->getMostDeviatingConstraint(externalPoint);
 
             Hyperplane hyperplane;
             hyperplane.sourceConstraintIndex = errorExternal.idx;
@@ -236,7 +236,7 @@ void TaskSolveFixedDualProblem::run()
                 hasSolution = false;
             }
 
-            env->output->outputIterationDetail(totalIters,
+            env->report->outputIterationDetail(totalIters,
                                                tmpType.str(),
                                                env->process->getElapsedTime("Total"),
                                                1,

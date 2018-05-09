@@ -11,6 +11,7 @@
 #pragma once
 
 #include "NLPSolverBase.h"
+#include "../Report.h"
 #include "../OptProblems/OptProblemNLPMinimax.h"
 
 #ifdef HAS_CPLEX

@@ -12,7 +12,7 @@
 
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
-
+#include "../Report.h"
 #include "../MIPSolver/IMIPSolver.h"
 
 class TaskSolveFixedDualProblem : public TaskBase

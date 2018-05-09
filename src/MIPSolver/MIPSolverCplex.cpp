@@ -299,7 +299,7 @@ int MIPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, do
 
 void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
-    auto variableTypes = originalProblem->getVariableTypes();
+    auto variableTypes = env->model->originalProblem->getVariableTypes();
 
     try
     {
@@ -312,7 +312,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
         if (activate)
         {
-            for (int i = 0; i < originalProblem->getNumberOfVariables(); i++)
+            for (int i = 0; i < env->model->originalProblem->getNumberOfVariables(); i++)
             {
                 if (variableTypes.at(i) == 'I')
                 {
@@ -334,7 +334,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         }
         else
         {
-            for (int i = 0; i < originalProblem->getNumberOfVariables(); i++)
+            for (int i = 0; i < env->model->originalProblem->getNumberOfVariables(); i++)
             {
                 if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
                 {
@@ -495,7 +495,7 @@ int MIPSolverCplex::getSolutionLimit()
 
 std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
 {
-    bool isMIP = getDiscreteVariableStatus() && env->process->originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
     int numVar = cplexVars.getSize();
     std::vector<double> solution(numVar);
 
@@ -534,7 +534,7 @@ int MIPSolverCplex::getNumberOfSolutions()
 
     try
     {
-        if (env->process->originalProblem->isProblemDiscrete() && isMIP)
+        if (env->model->originalProblem->isProblemDiscrete() && isMIP)
         {
             numSols = cplexInstance.getSolnPoolNsolns();
         }
@@ -553,7 +553,7 @@ int MIPSolverCplex::getNumberOfSolutions()
 
 double MIPSolverCplex::getObjectiveValue(int solIdx)
 {
-    bool isMIP = getDiscreteVariableStatus() && env->process->originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
 
     double objVal = NAN;
 
@@ -711,9 +711,9 @@ void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double
     }
 }
 
-std::pair<double, double> MIPSolverCplex::getCurrentVariableBounds(int varIndex)
+DoublePair MIPSolverCplex::getCurrentVariableBounds(int varIndex)
 {
-    std::pair<double, double> tmpBounds;
+    DoublePair tmpBounds;
 
     try
     {
@@ -741,7 +741,7 @@ double MIPSolverCplex::getDualObjectiveValue()
 {
     double objVal = NAN;
 
-    bool isMIP = getDiscreteVariableStatus() && env->process->originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
 
     try
     {
@@ -764,7 +764,7 @@ double MIPSolverCplex::getDualObjectiveValue()
 
 std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndGetNewBounds()
 {
-    auto numVar = originalProblem->getNumberOfVariables();
+    auto numVar = env->model->originalProblem->getNumberOfVariables();
 
     IloNumArray redubs(cplexEnv, numVar);
     IloNumArray redlbs(cplexEnv, numVar);
@@ -810,7 +810,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
                 cplexInstance.extract(cplexModel);
                 env->output->outputInfo(
                     "     Removed " + std::to_string(numconstr) + " redundant constraints from MIP model.");
-                env->process->solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
+                env->solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
             }
         }
 
@@ -828,7 +828,7 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
 
         env->output->outputError("Error during presolve", e.getMessage());
 
-        return (std::make_pair(originalProblem->getVariableLowerBounds(), originalProblem->getVariableLowerBounds()));
+        return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableLowerBounds()));
     }
 }
 
@@ -921,7 +921,7 @@ void MIPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
     IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     auto addedConstr = addConstraintFunction(tmpRange);
-    env->process->solutionStatistics.numberOfIntegerCuts++;
+    env->solutionStatistics.numberOfIntegerCuts++;
 
     expr.end();
 }
@@ -945,7 +945,7 @@ int MIPSolverCplex::getNumberOfOpenNodes()
     {
         int nodesLeft = cplexInstance.getNnodesLeft();
 
-        env->process->solutionStatistics.numberOfOpenNodes = nodesLeft;
+        env->solutionStatistics.numberOfOpenNodes = nodesLeft;
 
         return (cplexInstance.getNnodesLeft());
     }

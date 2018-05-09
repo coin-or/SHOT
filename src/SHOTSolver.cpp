@@ -128,7 +128,7 @@ bool SHOTSolver::setProblem(std::string fileName)
         {
             std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
-            tmpInstance = env->process->getProblemInstanceFromOSiL(fileContents);
+            tmpInstance = env->model->getProblemInstanceFromOSiL(fileContents);
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
@@ -227,7 +227,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
             isProblemInitialized = true;
         }
 
-        env->process->setProblemStats();
+        env->model->setStatistics();
         return (true);
     }
 
@@ -276,7 +276,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
     isProblemInitialized = true;
 
-    env->process->setProblemStats();
+    env->model->setStatistics();
     return (true);
 }
 

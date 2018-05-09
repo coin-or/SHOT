@@ -46,7 +46,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
         throw std::logic_error("Unknown PrimalNLPSolver setting.");
     }
 
-    NLPSolver->setProblem(env->process->originalProblem->getProblemInstance());
+    NLPSolver->setProblem(env->model->originalProblem->getProblemInstance());
 
     if (env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
     {
@@ -88,21 +88,21 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
     NLPSolver->initializeProblem();
 
-    int numVars = env->process->originalProblem->getNumberOfVariables();
+    int numVars = env->model->originalProblem->getNumberOfVariables();
 
-    auto discreteVariableIndexes = env->process->originalProblem->getDiscreteVariableIndices();
-    auto realVariableIndexes = env->process->originalProblem->getRealVariableIndices();
+    auto discreteVariableIndexes = env->model->originalProblem->getDiscreteVariableIndices();
+    auto realVariableIndexes = env->model->originalProblem->getRealVariableIndices();
 
     bool isSolved;
 
     std::vector<PrimalFixedNLPCandidate> testPts;
 
     // Fix variables
-    auto varTypes = env->process->originalProblem->getVariableTypes();
+    auto varTypes = env->model->originalProblem->getVariableTypes();
 
     if (env->process->primalFixedNLPCandidates.size() == 0)
     {
-        env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return (false);
     }
 
@@ -131,7 +131,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
     if (testPts.size() == 0)
     {
-        env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return (false);
     }
 
@@ -198,7 +198,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
         auto solvestatus = NLPSolver->solveProblem();
 
         NLPSolver->unfixVariables();
-        env->process->solutionStatistics.numberOfProblemsFixedNLP++;
+        env->solutionStatistics.numberOfProblemsFixedNLP++;
 
         double timeEnd = env->process->getElapsedTime("Total");
 
@@ -231,18 +231,18 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
             double tmpObj = NLPSolver->getObjectiveValue();
             auto variableSolution = NLPSolver->getSolution();
 
-            if (env->process->originalProblem->isObjectiveFunctionNonlinear())
+            if (env->model->originalProblem->isObjectiveFunctionNonlinear())
             {
                 variableSolution.push_back(tmpObj);
             }
 
-            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(
+            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(
                 variableSolution);
 
             if (env->settings->getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
             {
                 int iters = std::max(ceil(env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
-                                originalNLPIter);
+                                     originalNLPIter);
 
                 if (iters > std::max(0.1 * this->originalIterFrequency, 1.0))
                     env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
@@ -257,19 +257,19 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 env->process->addPrimalSolutionCandidate(variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
             }
 
-            env->output->outputIterationDetail(env->process->solutionStatistics.numberOfProblemsFixedNLP,
-                                                        ("NLP" + sourceDesc),
-                                                        env->process->getElapsedTime("Total"),
-                                                        currIter->numHyperplanesAdded,
-                                                        currIter->totNumHyperplanes,
-                                                        env->process->getDualBound(),
-                                                        env->process->getPrimalBound(),
-                                                        env->process->getAbsoluteObjectiveGap(),
-                                                        env->process->getRelativeObjectiveGap(),
-                                                        tmpObj,
-                                                        mostDevConstr.idx,
-                                                        mostDevConstr.value,
-                                                        E_IterationLineType::PrimalNLP);
+            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                                               ("NLP" + sourceDesc),
+                                               env->process->getElapsedTime("Total"),
+                                               currIter->numHyperplanesAdded,
+                                               currIter->totNumHyperplanes,
+                                               env->process->getDualBound(),
+                                               env->process->getPrimalBound(),
+                                               env->process->getAbsoluteObjectiveGap(),
+                                               env->process->getRelativeObjectiveGap(),
+                                               tmpObj,
+                                               mostDevConstr.idx,
+                                               mostDevConstr.value,
+                                               E_IterationLineType::PrimalNLP);
         }
         else
         {
@@ -280,18 +280,18 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
             auto variableSolution = NLPSolver->getSolution();
 
-            if (env->process->originalProblem->isObjectiveFunctionNonlinear())
+            if (env->model->originalProblem->isObjectiveFunctionNonlinear())
             {
                 variableSolution.push_back(tmpObj);
             }
 
-            auto mostDevConstr = env->process->originalProblem->getMostDeviatingConstraint(variableSolution);
+            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(variableSolution);
 
             if (env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
             {
                 SolutionPoint tmpSolPt;
                 tmpSolPt.point = variableSolution;
-                tmpSolPt.objectiveValue = env->process->originalProblem->calculateOriginalObjectiveValue(
+                tmpSolPt.objectiveValue = env->model->originalProblem->calculateOriginalObjectiveValue(
                     variableSolution);
                 tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
                 tmpSolPt.maxDeviation = mostDevConstr;
@@ -333,25 +333,25 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                     "     Duration:  " + std::to_string(timeEnd - timeStart) + " s. New interval: " + std::to_string(interval) + " s or " + std::to_string(iters) + " iters.");
             }
 
-            env->output->outputIterationDetail(env->process->solutionStatistics.numberOfProblemsFixedNLP,
-                                                        ("NLP" + sourceDesc),
-                                                        env->process->getElapsedTime("Total"),
-                                                        currIter->numHyperplanesAdded,
-                                                        currIter->totNumHyperplanes,
-                                                        env->process->getDualBound(),
-                                                        env->process->getPrimalBound(),
-                                                        env->process->getAbsoluteObjectiveGap(),
-                                                        env->process->getRelativeObjectiveGap(),
-                                                        NAN,
-                                                        mostDevConstr.idx,
-                                                        mostDevConstr.value,
-                                                        E_IterationLineType::PrimalNLP);
+            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                                               ("NLP" + sourceDesc),
+                                               env->process->getElapsedTime("Total"),
+                                               currIter->numHyperplanesAdded,
+                                               currIter->totNumHyperplanes,
+                                               env->process->getDualBound(),
+                                               env->process->getPrimalBound(),
+                                               env->process->getAbsoluteObjectiveGap(),
+                                               env->process->getRelativeObjectiveGap(),
+                                               NAN,
+                                               mostDevConstr.idx,
+                                               mostDevConstr.value,
+                                               E_IterationLineType::PrimalNLP);
 
-            if (env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && env->process->originalProblem->getNumberOfIntegerVariables() == 0)
+            if (env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual") && env->model->originalProblem->getNumberOfIntegerVariables() == 0)
             {
                 //Add integer cut.
 
-                auto binVars = env->process->originalProblem->getBinaryVariableIndices();
+                auto binVars = env->model->originalProblem->getBinaryVariableIndices();
 
                 if (binVars.size() > 0)
                 {
@@ -369,8 +369,8 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
             }
         }
 
-        env->process->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
-        env->process->solutionStatistics.timeLastFixedNLPCall = env->process->getElapsedTime("Total");
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
+        env->solutionStatistics.timeLastFixedNLPCall = env->process->getElapsedTime("Total");
     }
 
     env->process->primalFixedNLPCandidates.clear();

@@ -35,7 +35,7 @@ std::vector<double> NLPSolverIpoptMinimax::getSolution()
         tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
     }
 
-    if (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+    if (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
     {
         tmpPoint.pop_back();
     }

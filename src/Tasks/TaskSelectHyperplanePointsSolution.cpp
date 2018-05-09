@@ -31,13 +31,13 @@ void TaskSelectHyperplanePointsSolution::run(std::vector<SolutionPoint> solPoint
 
     auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
 
-    auto originalProblem = env->process->originalProblem;
+    auto originalProblem = env->model->originalProblem;
 
     auto constrSelFactor = env->settings->getDoubleSetting("ECP.ConstraintSelectionFactor", "Dual");
 
     for (int i = 0; i < solPoints.size(); i++)
     {
-        auto tmpMostDevConstrs = originalProblem->getMostDeviatingConstraints(solPoints.at(i).point, constrSelFactor);
+        auto tmpMostDevConstrs = env->model->originalProblem->getMostDeviatingConstraints(solPoints.at(i).point, constrSelFactor);
 
         for (int j = 0; j < tmpMostDevConstrs.size(); j++)
         {

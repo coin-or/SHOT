@@ -26,7 +26,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
     try
     {
         int length = ptA.size();
-        bool validB = env->process->originalProblem->isConstraintsFulfilledInPoint(ptB);
+        bool validB = env->model->originalProblem->isConstraintsFulfilledInPoint(ptB);
 
         std::vector<double> ptNew(length);
         std::vector<double> ptNew2(length);
@@ -45,7 +45,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
                 ptNew2.at(i) = c * ptB.at(i) + (1 - c) * ptA.at(i);
             }
 
-            validNewPt = env->process->originalProblem->isConstraintsFulfilledInPoint(ptNew);
+            validNewPt = env->model->originalProblem->isConstraintsFulfilledInPoint(ptNew);
 
             if ((b - a) / 2 < lambdaTol)
             {
@@ -81,10 +81,10 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
     {
         env->output->outputError("Error while doing linesearch.");
 
-        if (!env->process->originalProblem->isConstraintsFulfilledInPoint(ptA))
+        if (!env->model->originalProblem->isConstraintsFulfilledInPoint(ptA))
             //Returns the NLP point if not on the interior
 
-            if (!env->process->originalProblem->isConstraintsFulfilledInPoint(ptA))
+            if (!env->model->originalProblem->isConstraintsFulfilledInPoint(ptA))
             {
 
                 std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);

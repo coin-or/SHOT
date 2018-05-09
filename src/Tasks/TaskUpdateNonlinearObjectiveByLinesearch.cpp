@@ -83,7 +83,7 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
     auto oldObjVal = solution.objectiveValue;
 
     double mu = dualSol.objectiveValue;
-    double error = env->process->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
+    double error = env->model->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
     std::vector<double> tmpPoint(dualSol.point);
     tmpPoint.back() = mu + (1 + std::min(0.01, 1 / abs(oldObjVal))) * error;
@@ -102,11 +102,11 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
         internalPoint = xNewc.first;
         externalPoint = xNewc.second;
 
-        auto mostDevInner = env->process->originalProblem->getMostDeviatingConstraint(internalPoint);
-        auto mostDevOuter = env->process->originalProblem->getMostDeviatingConstraint(externalPoint);
+        auto mostDevInner = env->model->originalProblem->getMostDeviatingConstraint(internalPoint);
+        auto mostDevOuter = env->model->originalProblem->getMostDeviatingConstraint(externalPoint);
 
         solution.maxDeviation = mostDevOuter;
-        solution.objectiveValue = env->process->originalProblem->calculateOriginalObjectiveValue(
+        solution.objectiveValue = env->model->originalProblem->calculateOriginalObjectiveValue(
             externalPoint);
         solution.point.back() = externalPoint.back();
 

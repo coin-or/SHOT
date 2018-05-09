@@ -157,7 +157,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
                 env->process->addPrimalSolutionCandidate(internalPoint, E_PrimalSolutionSource::NLPRelaxed,
                                                          env->process->getCurrentIteration()->iterationNumber);
 
-                auto errorExternal = env->process->originalProblem->getMostDeviatingConstraints(
+                auto errorExternal = env->model->originalProblem->getMostDeviatingConstraints(
                     externalPoint, constrSelTol);
 
                 numHyperAdded = errorExternal.size();

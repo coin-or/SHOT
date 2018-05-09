@@ -132,7 +132,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         // Solves the problem and obtains the solution
         auto solStatus = LPSolver->solveProblem();
-        env->process->solutionStatistics.numberOfProblemsMinimaxLP++;
+        env->solutionStatistics.numberOfProblemsMinimaxLP++;
 
         if (solStatus == E_ProblemSolutionStatus::Infeasible)
         {
@@ -178,7 +178,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             mu = LPObjVar;
             numHyperAdded = 0;
             numHyperTot = 0;
-            env->output->outputIterationDetailHeaderMinimax();
+            env->report->outputIterationDetailHeaderMinimax();
         }
         else
         {
@@ -203,15 +203,15 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
         }
 
-        env->output->outputIterationDetailMinimax((i + 1),
-                                                           "LP",
-                                                           env->process->getElapsedTime("Total"),
-                                                           numHyperAdded,
-                                                           numHyperTot,
-                                                           LPObjVar,
-                                                           mu,
-                                                           maxObjDiffAbs,
-                                                           maxObjDiffRel);
+        env->report->outputIterationDetailMinimax((i + 1),
+                                                  "LP",
+                                                  env->process->getElapsedTime("Total"),
+                                                  numHyperAdded,
+                                                  numHyperTot,
+                                                  LPObjVar,
+                                                  mu,
+                                                  maxObjDiffAbs,
+                                                  maxObjDiffRel);
 
         if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
         {
@@ -233,7 +233,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
             // Calculates the gradient
             auto nablag = NLPProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).idx, currSol);
-            env->process->solutionStatistics.numberOfGradientEvaluations++;
+            env->solutionStatistics.numberOfGradientEvaluations++;
 
             for (int i = 0; i < nablag->number; i++)
             {
@@ -255,7 +255,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             {
                 auto tmpPoint = currSol;
 
-                while (tmpPoint.size() > env->process->originalProblem->getNumberOfVariables())
+                while (tmpPoint.size() > env->model->originalProblem->getNumberOfVariables())
                 {
                     tmpPoint.pop_back();
                 }
@@ -295,7 +295,7 @@ std::vector<double> NLPSolverCuttingPlaneMinimax::getSolution()
 {
     auto tmpSol = solution;
 
-    if (env->process->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+    if (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
     {
         tmpSol.pop_back();
     }
