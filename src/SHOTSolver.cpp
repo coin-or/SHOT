@@ -800,6 +800,9 @@ void SHOTSolver::initializeSettings()
     Settings::getInstance().createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
 
     Settings::getInstance().settingsInitialized = true;
+
+    verifySettings();
+
     Output::getInstance().outputInfo("Initialization of settings complete.");
 }
 
@@ -838,18 +841,34 @@ void SHOTSolver::initializeDebugMode()
 
 void SHOTSolver::verifySettings()
 {
+    if (static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
+    {
+#ifndef HAS_CPLEX
+        Output::getInstance().outputError("SHOT has not been compiled with support for Cplex. Switching to Cbc.");
+        Settings::getInstance().updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+#endif
+    }
+
+    if (static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Gurobi)
+    {
+#ifndef HAS_GUROBI
+        Output::getInstance().outputError("SHOT has not been compiled with support for Gurobi. Switching to Cbc.");
+        Settings::getInstance().updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+#endif
+    }
+
     if (static_cast<ES_PrimalNLPSolver>(Settings::getInstance().getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
     {
 #ifdef HAS_GAMS
         if (gms2os == NULL)
         {
-            Output::getInstance().Output::getInstance().outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
+            Output::getInstance().outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
             Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
         }
 #endif
 
 #ifndef HAS_GAMS
-        Output::getInstance().Output::getInstance().outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
+        Output::getInstance().outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
         Settings::getInstance().updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
 #endif
     }

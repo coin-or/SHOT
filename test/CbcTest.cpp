@@ -10,9 +10,9 @@
 
 #include "SHOTSolver.h"
 
-bool CplexTest1(std::string filename);
+bool CbcTest1(std::string filename);
 
-int CplexTest(int argc, char *argv[])
+int CbcTest(int argc, char *argv[])
 {
 
     int defaultchoice = 1;
@@ -33,9 +33,9 @@ int CplexTest(int argc, char *argv[])
     switch (choice)
     {
     case 1:
-        std::cout << "Starting test to solve a MINLP problem with Cplex" << std::endl;
-        passed = CplexTest1("data/tls2.osil");
-        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
+        std::cout << "Starting test to solve a MINLP problem with Cbc." << std::endl;
+        passed = CbcTest1("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem with Cbc." << std::endl;
         break;
     default:
         passed = false;
@@ -48,12 +48,11 @@ int CplexTest(int argc, char *argv[])
         return -1;
 }
 
-bool CplexTest1(std::string filename)
+bool CbcTest1(std::string filename)
 {
     bool passed = true;
 
     unique_ptr<SHOTSolver> solver(new SHOTSolver());
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
 
     try
     {

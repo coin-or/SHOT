@@ -3,7 +3,7 @@ set(TEST_EXE_NAME test_runner)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp in the test directory
 set (cpptests SHOTSolver ${cplex_tests} ${gurobi_tests} ${gams_tests})
-set (SHOTSolver_parts 1 2 3)    # The different parts of each test (if any)
+set (SHOTSolver_parts 1 2 3 4)    # The different parts of each test (if any)
 
 if(HAS_CPLEX)
     set(Cplex_parts 1)
@@ -11,9 +11,12 @@ if(HAS_CPLEX)
 endif()
 
 if(HAS_GUROBI)
-set(Cplex_parts 1)
+    set(Cplex_parts 1)
     set(cpptests ${cpptests} Gurobi)
 endif()
+
+set(Cbc_parts 1)
+set(cpptests ${cpptests} Cbc)
 
 # Adds a "1" to tests without parts
 foreach(cpptest ${cpptests})

@@ -33,7 +33,7 @@ int GurobiTest(int argc, char *argv[])
     switch (choice)
     {
     case 1:
-        std::cout << "Starting test to solve a MINLP problem with Gurobi:" << std::endl;
+        std::cout << "Starting test to solve a MINLP problem with Gurobi." << std::endl;
         passed = GurobiTest1("data/tls2.osil");
         std::cout << "Finished test to solve a MINLP problem with Gurobi." << std::endl;
         break;
@@ -53,6 +53,7 @@ bool GurobiTest1(std::string filename)
     bool passed = true;
 
     unique_ptr<SHOTSolver> solver(new SHOTSolver());
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 
     try
     {
@@ -71,7 +72,6 @@ bool GurobiTest1(std::string filename)
         return false;
     }
 
-    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
     solver->solveProblem();
     std::string osrl = solver->getOSrL();
     std::string trace = solver->getTraceResult();

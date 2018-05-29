@@ -37,37 +37,26 @@ int SHOTSolverTest(int argc, char *argv[])
         std::cout << "Starting test to read OSiL files:" << std::endl;
         passed = SHOTSolverReadProblem("data/tls2.osil");
         std::cout << "Finished test to read OSiL files." << std::endl;
-
+        break;
+    case 2:
         std::cout << "Starting test to read Ampl nl files:" << std::endl;
         passed = SHOTSolverReadProblem("data/tls2.nl");
         std::cout << "Finished test to read Ampl nl files." << std::endl;
         break;
-    case 2:
+    case 3:
         std::cout << "Starting test to read and write OSoL files:" << std::endl;
         passed = SHOTSolverTestOptions(true);
         std::cout << "Finished test to read and write OSoL files." << std::endl;
-
+        break;
+    case 4:
         std::cout << "Starting test to read and write opt files:" << std::endl;
         passed = SHOTSolverTestOptions(false);
         std::cout << "Finished test to read and write opt files." << std::endl;
         break;
-    case 3:
-    /*
-#ifdef HAS_CPLEX
-        std::cout << "Starting test to solve a MINLP problem with Cplex:" << std::endl;
-        passed = SHOTSolverSolveProblem("data/tls2.osil", static_cast<int>(ES_MIPSolver::Cplex));
-        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
-#endif
-
-#ifdef HAS_GUROBI
-        std::cout << "Starting test to solve a MINLP problem with Gurobi:" << std::endl;
-        passed = SHOTSolverSolveProblem("data/tls2.osil", static_cast<int>(ES_MIPSolver::Gurobi));
-        std::cout << "Finished test to solve a MINLP problem with Gurobi." << std::endl;
-#endif*/
-        break;
     default:
         passed = false;
         cout << "Test #" << choice << " does not exist!\n";
+        break;
     }
 
     if (passed)

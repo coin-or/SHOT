@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 # Sets the release types, e.g. Release, Debug
 #set(CMAKE_BUILD_TYPE Release)          
 
-option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
+option (COMPILE_TESTS "Should the automated tests be compiled" ON)
 
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
