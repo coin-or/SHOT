@@ -197,7 +197,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 
 add_executable (${PROJECT_NAME} ${SOURCES})
-#add_library (SHOTSolver STATIC ${SOURCES})
+add_library (SHOTSolver STATIC ${SOURCES})
 
 target_link_libraries (${PROJECT_NAME} SHOTSettings)
 

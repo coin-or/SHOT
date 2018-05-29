@@ -9,10 +9,12 @@
 */
 
 #include "SHOTSolver.h"
-bool CplexTest1();
+
+bool CplexTest1(std::string filename);
 
 int CplexTest(int argc, char *argv[])
 {
+
     int defaultchoice = 1;
 
     int choice = defaultchoice;
@@ -31,9 +33,9 @@ int CplexTest(int argc, char *argv[])
     switch (choice)
     {
     case 1:
-        passed = CplexTest1();
-        break;
-    case 2:
+        std::cout << "Starting test to solve a MINLP problem with Cplex:" << std::endl;
+        passed = CplexTest1("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
         break;
     default:
         passed = false;
@@ -46,14 +48,49 @@ int CplexTest(int argc, char *argv[])
         return -1;
 }
 
-bool CplexTest1()
+bool CplexTest1(std::string filename)
 {
-    SHOTSolver testSolver;
     bool passed = true;
 
-    if (testSolver.setProblem("ss"))
+    unique_ptr<SHOTSolver> solver(new SHOTSolver());
+
+    try
     {
-        passed = true;
+        if (solver->setProblem(filename))
+        {
+            passed = true;
+        }
+        else
+        {
+            passed = false;
+        }
+    }
+    catch (ErrorClass &e)
+    {
+        std::cout << "Error: " << e.errormsg << std::endl;
+        return false;
+    }
+
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->solveProblem();
+    std::string osrl = solver->getOSrL();
+    std::string trace = solver->getTraceResult();
+    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    {
+        std::cout << "Could not write results to OSrL file." << std::endl;
+        passed = false;
+    }
+
+    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    {
+        std::cout << "Could not write results to trace file." << std::endl;
+        passed = false;
+    }
+
+    if (solver->getNumberOfPrimalSolutions() > 0)
+    {
+        std::cout << std::endl
+                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {

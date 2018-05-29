@@ -30,7 +30,6 @@ TaskInitializeLinesearch::TaskInitializeLinesearch()
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()
 {
-    delete ProcessInfo::getInstance().linesearchMethod;
 }
 
 void TaskInitializeLinesearch::run()

@@ -9,7 +9,8 @@
 */
 
 #include "SHOTSolver.h"
-bool GurobiTest1();
+
+bool GurobiTest1(std::string filename);
 
 int GurobiTest(int argc, char *argv[])
 {
@@ -32,9 +33,9 @@ int GurobiTest(int argc, char *argv[])
     switch (choice)
     {
     case 1:
-        passed = GurobiTest1();
-        break;
-    case 2:
+        std::cout << "Starting test to solve a MINLP problem with Gurobi:" << std::endl;
+        passed = GurobiTest1("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem with Gurobi." << std::endl;
         break;
     default:
         passed = false;
@@ -47,14 +48,49 @@ int GurobiTest(int argc, char *argv[])
         return -1;
 }
 
-bool GurobiTest1()
+bool GurobiTest1(std::string filename)
 {
-    SHOTSolver testSolver;
     bool passed = true;
 
-    if (testSolver.setProblem("ss"))
+    unique_ptr<SHOTSolver> solver(new SHOTSolver());
+
+    try
     {
-        passed = true;
+        if (solver->setProblem(filename))
+        {
+            passed = true;
+        }
+        else
+        {
+            passed = false;
+        }
+    }
+    catch (ErrorClass &e)
+    {
+        std::cout << "Error: " << e.errormsg << std::endl;
+        return false;
+    }
+
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->solveProblem();
+    std::string osrl = solver->getOSrL();
+    std::string trace = solver->getTraceResult();
+    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    {
+        std::cout << "Could not write results to OSrL file." << std::endl;
+        passed = false;
+    }
+
+    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    {
+        std::cout << "Could not write results to trace file." << std::endl;
+        passed = false;
+    }
+
+    if (solver->getNumberOfPrimalSolutions() > 0)
+    {
+        std::cout << std::endl
+                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {

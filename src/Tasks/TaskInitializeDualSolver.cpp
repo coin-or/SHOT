@@ -91,7 +91,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(ES_MIPSolver solver, bool use
 
 TaskInitializeDualSolver::~TaskInitializeDualSolver()
 {
-    delete ProcessInfo::getInstance().MIPSolver;
+    
 }
 
 void TaskInitializeDualSolver::run()

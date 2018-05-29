@@ -205,8 +205,10 @@ bool SHOTSolver::setProblem(std::string fileName)
     if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
         initializeDebugMode();
 
+std::cout << "3" << std::endl;
     bool status = this->setProblem(tmpInstance);
 
+std::cout << "4" << std::endl;
     return (status);
 }
 

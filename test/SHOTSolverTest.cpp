@@ -13,12 +13,9 @@
 
 bool SHOTSolverReadProblem(std::string filename);
 bool SHOTSolverTestOptions(bool useOSiL);
-bool SHOTSolverSolveProblem(std::string filename, int MIPSolver);
 
 int SHOTSolverTest(int argc, char *argv[])
 {
-    osoutput->AddChannel("shotlogfile");
-
     int defaultchoice = 1;
 
     int choice = defaultchoice;
@@ -55,9 +52,18 @@ int SHOTSolverTest(int argc, char *argv[])
         std::cout << "Finished test to read and write opt files." << std::endl;
         break;
     case 3:
-        std::cout << "Starting test to solve a MINLP problem:" << std::endl;
-        passed = SHOTSolverSolveProblem("data/tls2.osil", static_cast<int>(ES_MIPSolver::Cbc));
-        std::cout << "Finished test to solve a MINLP problem." << std::endl;
+    /*
+#ifdef HAS_CPLEX
+        std::cout << "Starting test to solve a MINLP problem with Cplex:" << std::endl;
+        passed = SHOTSolverSolveProblem("data/tls2.osil", static_cast<int>(ES_MIPSolver::Cplex));
+        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
+#endif
+
+#ifdef HAS_GUROBI
+        std::cout << "Starting test to solve a MINLP problem with Gurobi:" << std::endl;
+        passed = SHOTSolverSolveProblem("data/tls2.osil", static_cast<int>(ES_MIPSolver::Gurobi));
+        std::cout << "Finished test to solve a MINLP problem with Gurobi." << std::endl;
+#endif*/
         break;
     default:
         passed = false;
@@ -70,12 +76,12 @@ int SHOTSolverTest(int argc, char *argv[])
         return -1;
 }
 
-// Test the reading of an OSiL-file
+// Test the reading a problem
 bool SHOTSolverReadProblem(std::string filename)
 {
     bool passed = true;
 
-    SHOTSolver *solver = new SHOTSolver();
+    unique_ptr<SHOTSolver> solver(new SHOTSolver());
 
     try
     {
@@ -90,12 +96,9 @@ bool SHOTSolverReadProblem(std::string filename)
     }
     catch (ErrorClass &e)
     {
-        delete solver;
         std::cout << "Error: " << e.errormsg << std::endl;
         return false;
     }
-
-    delete solver;
 
     return passed;
 }
@@ -104,7 +107,7 @@ bool SHOTSolverReadProblem(std::string filename)
 bool SHOTSolverTestOptions(bool useOSiL)
 {
     bool passed = true;
-    SHOTSolver *solver = new SHOTSolver();
+    unique_ptr<SHOTSolver> solver(new SHOTSolver());
 
     std::string filename;
 
@@ -149,63 +152,5 @@ bool SHOTSolverTestOptions(bool useOSiL)
         passed = false;
     }
 
-    delete solver;
-    return passed;
-}
-
-// Test the solution of a problem
-bool SHOTSolverSolveProblem(std::string filename, int MIPSolver)
-{
-    bool passed = true;
-
-    SHOTSolver *solver = new SHOTSolver();
-
-    try
-    {
-        if (solver->setProblem(filename))
-        {
-            passed = true;
-        }
-        else
-        {
-            passed = false;
-        }
-    }
-    catch (ErrorClass &e)
-    {
-        delete solver;
-        std::cout << "Error: " << e.errormsg << std::endl;
-        return false;
-    }
-
-    solver->updateSetting("MIP.Solver", "Dual", MIPSolver);
-    solver->solveProblem();
-
-    std::string osrl = solver->getOSrL();
-    std::string trace = solver->getTraceResult();
-
-    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
-    {
-        std::cout << "Could not write results to OSrL file." << std::endl;
-        passed = false;
-    }
-
-    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
-    {
-        std::cout << "Could not write results to trace file." << std::endl;
-        passed = false;
-    }
-
-    if (solver->getNumberOfPrimalSolutions() > 0)
-    {
-        std::cout << std::endl
-                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
-    }
-    else
-    {
-        passed = false;
-    }
-
-    delete solver;
     return passed;
 }
