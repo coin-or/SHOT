@@ -1,5 +1,5 @@
-# SHOT
-The Supporting Hyperplane Optimization Toolkit solver for convex MINLP
+# The Supporting Hyperplane Optimization Toolkit (SHOT)
+## A deterministic solver for convex MINLP
 
 SHOT is a solver for convex mixed-integer nonlinear programming (MINLP) problems. It is
 described in the forthcoming paper:
