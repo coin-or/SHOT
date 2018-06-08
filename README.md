@@ -12,3 +12,5 @@ Some details are also given in:
 - Lundell, A., Kronqvist, J. and Westerlund, T. Proceedings of the XIII Global Optimization Workshop GOW’16 (2016). http://apolo.dps.uminho.pt/gow16/Proceedings_GOW16.pdf#page=112
 
 See the INSTALL file for installation instructions.
+
+The GAMS interface is contributed by Stefan Vigerske, GAMS Software GmbH.
