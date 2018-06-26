@@ -1,14 +1,20 @@
-Installation instructions for SHOT
+SomInstallation instructions for SHOT
 
-Updated March 22, 2018.
+Updated June 26th, 2018.
+
+SHOT has been tested to compile on Linux. It may also be possible to compile it on Windows 
+using e.g. the MSYS2 (https://www.msys2.org)  compitability layer, however this has not been 
+fully tested.
 
 Prerequisites:
 
--   SHOT requires that a relatively new version of the Optimization Services libraries are 
-    available on the system. Note that the trunk version is under active development and 
-    may not be completely stable.
+-   SHOT requires that a relatively new version (newer than version 2.10) of the Optimization 
+    Services (OS) libraries are available on the system. Note that the trunk version is under 
+    active development and may not be completely stable. Instructions for obtaining and installing 
+    OS can be found at https://projects.coin-or.org/OS. Some instructions are also available at
+    https://github.com/coin-or/SHOT/wiki/Compile-Optimization-Services
 
--   A version of the Boost libraries needs to be available. 
+-   A version of the Boost libraries (https://www.boost.org/) needs to be installed on the system. 
 
 
 Main installation:
@@ -21,9 +27,10 @@ Main installation:
 
     2.1 If you wish to compile with support for CPLEX and/or Gurobi, please set the 
         corresponding switches (HAS_CPLEX, HAS_GUROBI). You will also need to provide the 
-        location of their main installation folders. 
+        location of their main installation folders. For Gurobi you will also need to make
+        sure to link to the correct library (e.g. libgurobi75.so for the 7.5 version).
 
-        Depending on whether you have a version of CPLEX >12.8, you can also set the 
+        If you have at least version 12.8 of CPLEX, you can also set the 
         switch HAS_CPLEX_NEW_CALLBACK to activate the new type of callback functionality
         in CPLEX.
     
@@ -43,7 +50,7 @@ Main installation:
     <TYPE> with either 'Release' or 'Debug' depending on whether you will need debug 
     functionality. Normally this will be 'Release'
 
-    <PATH> with the path to the main SHOT folder you downloaded in step 1.
+    <PATH> with the path to the main SHOT source folder you downloaded in step 1.
 
     The cmake command can vary depending on your needs, but the one mentioned above should
     work on Unix-based systems.
@@ -67,14 +74,14 @@ To solve problems using SHOT, the following syntax can be used:
 to solve the problem specified in the file 'problem_file.osil'. The filesuffix should be either 
 .xml or .osil for OSiL-files, .nl for files in Ampl, or .gms for files in GAMS syntax. Note
 that to be able to read GAMS files, you need to have GAMS installed and SHOT compiled with
-support for it, c.f. 2.2 above.
+support for it, c.f. 2.2 above. A few test problems are included in the 'test/data' directory, 
+and more problems can be downloaded from MINLPLIB (http://www.minlplib.org).
 
-SHOT will then create default options files 'options.opt' and 'options.xml' in the runtime directory.
+SHOT will then create default options files 'options.opt' and 'options.xml' in the runtime directory; 
+the solver parameters are documented in the options files themselves.
 
 After the problem has been solved, it will give the solution in the file 'problem_file.osrl'.
 
 If you want to change some options, you can edit either 'options.opt' and 'options.xml' save it and call
 
     ./SHOT problem_file.osil options.opt
-
-For more information about how to call SHOT, run SHOT without arguments or see the documentation.
