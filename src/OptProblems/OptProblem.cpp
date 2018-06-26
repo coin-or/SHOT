@@ -693,14 +693,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < LBInt)
                 {
-                    Output::getInstance().outputInfo(
+                    Output::getInstance().outputDebug(
                         "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBInt));
                     destination->instanceData->variables->var[i]->lb = LBInt;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > UBInt)
                 {
-                    Output::getInstance().outputInfo(
+                    Output::getInstance().outputDebug(
                         "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBInt));
                     destination->instanceData->variables->var[i]->ub = UBInt;
                 }
@@ -709,14 +709,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < LBCont)
                 {
-                    Output::getInstance().outputInfo(
+                    Output::getInstance().outputDebug(
                         "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to " + to_string(LBCont));
                     destination->instanceData->variables->var[i]->lb = LBCont;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > UBCont)
                 {
-                    Output::getInstance().outputInfo(
+                    Output::getInstance().outputDebug(
                         "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to " + to_string(UBCont));
                     destination->instanceData->variables->var[i]->ub = UBCont;
                 }
@@ -725,14 +725,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < 0.0)
                 {
-                    Output::getInstance().outputInfo(
+                    Output::getInstance().outputDebug(
                         "Corrected lower bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->lb) + " to 0");
                     destination->instanceData->variables->var[i]->lb = 0.0;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > 1.0)
                 {
-                    Output::getInstance().outputInfo(
+                    Output::getInstance().outputDebug(
                         "Corrected upper bound for variable " + varname[i] + " from " + to_string(destination->instanceData->variables->var[i]->ub) + " to 1");
                     destination->instanceData->variables->var[i]->ub = 1.0;
                 }

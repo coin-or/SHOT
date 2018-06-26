@@ -128,6 +128,7 @@ int main(int argc, char *argv[])
         }
 
         Output::getInstance().setLogLevels();
+        Output::getInstance().outputSolverHeader();
 
         // Prints out the welcome message to the logging facility
 
@@ -138,7 +139,6 @@ int main(int argc, char *argv[])
             return (0);
         }
 
-        Output::getInstance().outputSolverHeader();
         Output::getInstance().outputOptionsReport();
         Output::getInstance().outputProblemInstanceReport();
 

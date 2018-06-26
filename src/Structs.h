@@ -19,6 +19,7 @@ struct SolutionPoint
     double objectiveValue;
     int iterFound;
     IndexValuePair maxDeviation;
+    bool isRelaxedPoint = false;
 };
 
 struct InteriorPoint

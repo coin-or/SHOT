@@ -57,7 +57,11 @@ void TaskSelectHyperplanePointsSolution::run(vector<SolutionPoint> solPoints)
                 hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
                 hyperplane.generatedPoint = solPoints.at(i).point;
 
-                if (i == 0 && currIter->isMIP())
+                if (solPoints.at(i).isRelaxedPoint)
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                }
+                else if (i == 0 && currIter->isMIP())
                 {
                     hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
                 }

@@ -284,6 +284,8 @@ void MIPSolverGurobi::initializeSolverSettings()
         gurobiModel->getEnv().set(GRB_IntParam_ScaleFlag, Settings::getInstance().getIntSetting("Gurobi.ScaleFlag", "Subsolver"));
         gurobiModel->getEnv().set(GRB_IntParam_NumericFocus, Settings::getInstance().getIntSetting("Gurobi.NumericFocus", "Subsolver"));
         gurobiModel->getEnv().set(GRB_IntParam_MIPFocus, Settings::getInstance().getIntSetting("Gurobi.MIPFocus", "Subsolver"));
+        gurobiModel->getEnv().set(GRB_IntParam_Threads, Settings::getInstance().getIntSetting("MIP.NumberOfThreads", "Dual"));
+
         //gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
         //gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
         //gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);

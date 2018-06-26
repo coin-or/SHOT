@@ -56,6 +56,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
     TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
     ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
 
+    TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(MIPSolver);
+    ProcessInfo::getInstance().tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+
     if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
         TaskBase *tPresolve = new TaskPresolve(MIPSolver);
@@ -89,6 +92,35 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(OSInstance *osInstance)
 
     TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet("FinalizeSolution");
     ProcessInfo::getInstance().tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
+
+    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+
+    if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+    {
+        TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
+        ProcessInfo::getInstance().tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
+
+        if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
+                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+        {
+            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
+            ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+        else
+        {
+            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
+            ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+    }
+    else
+    {
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
+        ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+    }
+
+
+    TaskBase *tGoto = new TaskGoto("AddHPs");
+    ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
 
     if (Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal") && ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() > 0 && ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() > 0)
     {

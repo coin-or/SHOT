@@ -20,21 +20,20 @@ TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolut
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
-	auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
 
-	if (currIter->isMIP())
-	{
-		ProcessInfo::getInstance().startTimer("PrimalStrategy");
-		auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
+    if (currIter->isMIP())
+    {
+        ProcessInfo::getInstance().startTimer("PrimalStrategy");
+        auto allSolutions = ProcessInfo::getInstance().getCurrentIteration()->solutionPoints;
+        ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
-		ProcessInfo::getInstance().addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
-
-		ProcessInfo::getInstance().stopTimer("PrimalStrategy");
-	}
+        ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+    }
 }
 
 std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

@@ -148,7 +148,11 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                         hyperplane.sourceConstraintIndex = currConstrIdx;
                         hyperplane.generatedPoint = externalPoint;
 
-                        if (i == 0 && currIter->isMIP())
+                        if (solPoints.at(i).isRelaxedPoint)
+                        {
+                            hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                        }
+                        else if (i == 0 && currIter->isMIP())
                         {
                             hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
                         }

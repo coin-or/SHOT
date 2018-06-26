@@ -96,6 +96,7 @@ void HCallbackI::main() // Called at each node...
         tmpSolPt.objectiveValue = getObjValue();
         tmpSolPt.iterFound = 0;
         tmpSolPt.maxDeviation = mostDevConstr;
+        tmpSolPt.isRelaxedPoint = true;
 
         solutionPoints.at(0) = tmpSolPt;
 
@@ -396,7 +397,7 @@ void CtCallbackI::main()
 
         if (addedIntegerCut)
         {
-            Output::getInstance().outputAlways(
+            Output::getInstance().outputInfo(
                 "     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
         }
 
@@ -447,7 +448,14 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         tmpPair.first.clear();
         expr.end();
 
-        add(tmpRange).end();
+        if (Settings::getInstance().getBoolSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver") && hyperplane.source == E_HyperplaneSource::MIPCallbackRelaxed)
+        {
+            addLocal(tmpRange).end();
+        }
+        else
+        {
+            add(tmpRange, IloCplex::CutManagement::UseCutPurge).end();
+        }
 
         // int constrIndex = 0;
         /*genHyperplane.generatedConstraintIndex = constrIndex;

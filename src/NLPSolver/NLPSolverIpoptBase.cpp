@@ -29,6 +29,12 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     try
     {
         IpoptNLPSolver->osinstance = NLPProblem->getProblemInstance();
+
+        // Needed to fix bugs in OSInstance
+        std::string osil = ProcessInfo::getInstance().getOSiLFromProblemInstance(NLPProblem->getProblemInstance());
+        IpoptNLPSolver->osinstance = ProcessInfo::getInstance().getProblemInstanceFromOSiL(osil);
+        IpoptNLPSolver->osinstance->getJacobianSparsityPattern();
+
         updateSettings();
 
         std::string solStatus;
@@ -36,8 +42,8 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
         try
         {
             IpoptNLPSolver->solve();
-            std::cout << "\e[A"; // Fix for removing unwanted output
-            std::cout << "\e[A";
+            //std::cout << "\e[A"; // Fix for removing unwanted output
+            //std::cout << "\e[A";
             solStatus = IpoptNLPSolver->osresult->getSolutionStatusType(0);
         }
         catch (ErrorClass e)
