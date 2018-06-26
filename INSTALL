@@ -2,13 +2,16 @@ Installation instructions for SHOT
 
 Updated June 26th, 2018.
 
-SHOT has been tested to compile on Linux. It may also be possible to compile it on Windows using e.g. the MSYS2 (https://www.msys2.org)  compitability layer, however this has not been fully tested.
+SHOT has been tested to compile on Linux. It may also be possible to compile it on Windows 
+using e.g. the MSYS2 (https://www.msys2.org)  compitability layer, however this has not been 
+fully tested.
 
 Prerequisites:
 
--   SHOT requires that a relatively new version (newer than version 2.10) of the Optimization Services (OS) libraries are 
-    available on the system. Note that the trunk version is under active development and 
-    may not be completely stable. Instructions for obtaining and installing OS can be found at https://projects.coin-or.org/OS. 
+-   SHOT requires that a relatively new version (newer than version 2.10) of the Optimization 
+    Services (OS) libraries are available on the system. Note that the trunk version is under 
+    active development and may not be completely stable. Instructions for obtaining and installing 
+    OS can be found at https://projects.coin-or.org/OS. 
 
 -   A version of the Boost libraries (https://www.boost.org/) needs to be available. 
 
