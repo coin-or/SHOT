@@ -1,4 +1,4 @@
-Installation instructions for SHOT
+SomInstallation instructions for SHOT
 
 Updated June 26th, 2018.
 
@@ -11,9 +11,10 @@ Prerequisites:
 -   SHOT requires that a relatively new version (newer than version 2.10) of the Optimization 
     Services (OS) libraries are available on the system. Note that the trunk version is under 
     active development and may not be completely stable. Instructions for obtaining and installing 
-    OS can be found at https://projects.coin-or.org/OS. 
+    OS can be found at https://projects.coin-or.org/OS. Some instructions are also available at
+    https://github.com/coin-or/SHOT/wiki/Compile-Optimization-Services
 
--   A version of the Boost libraries (https://www.boost.org/) needs to be available. 
+-   A version of the Boost libraries (https://www.boost.org/) needs to be installed on the system. 
 
 
 Main installation:
