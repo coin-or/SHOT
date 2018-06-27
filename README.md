@@ -4,7 +4,7 @@ SHOT is a solver for convex mixed-integer nonlinear programming (MINLP) problems
 described in the forthcoming paper:
 
 Lundell, A. Kronqvist, J. and Westerlund, T. The Supporting Hyperplane Optimization Toolkit: A Polyhedral Outer Approximation Based 
-Convex MINLP Solver Utilizing a Single Branching Tree Approach (2018)
+Convex MINLP Solver Utilizing a Single Branching Tree Approach (2018). www.optimization-online.org/DB_FILE/2018/06/6680.pdf
 
 Some details are also given in:
 
