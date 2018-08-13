@@ -165,7 +165,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         auto LPVarSol = LPSolver->getVariableSolution(0);
         LPObjVar = LPSolver->getObjectiveValue();
 
-        if (isnan(LPObjVar))
+        if (UtilityFunctions::isnan(LPObjVar))
         {
             statusCode = E_NLPSolutionStatus::Error;
             continue;

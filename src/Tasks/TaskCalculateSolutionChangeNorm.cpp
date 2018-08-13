@@ -51,7 +51,7 @@ void TaskCalculateSolutionChangeNorm::run()
 
 			distance = sqrt(distance + 0.001);
 
-			if (OSIsnan(distance)) // Checks for INF, do not remove!
+			if (UtilityFunctions::isnan(distance)) // Checks for INF, do not remove!
 			{
 				currIter->boundaryDistance = OSDBL_MAX;
 			}

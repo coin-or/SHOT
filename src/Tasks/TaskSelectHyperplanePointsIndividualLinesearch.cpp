@@ -96,7 +96,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(vector<SolutionPoint> s
                         ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(currConstrIdx,
                                                                                                      solPoints.at(i).point);
 
-                    if (isnan(constrDevExterior))
+                    if (UtilityFunctions::isnan(constrDevExterior))
                     {
                         continue;
                     }

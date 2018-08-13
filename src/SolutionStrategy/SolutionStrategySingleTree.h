@@ -53,9 +53,10 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 
+#include "../Tasks/TaskUpdateInteriorPoint.h"
 #include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
-#include "../Tasks/TaskSolveFixedDualProblem.h"
 
+#include "../Tasks/TaskSolveFixedDualProblem.h"
 #include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "SHOTSettings.h"
