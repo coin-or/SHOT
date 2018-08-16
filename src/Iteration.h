@@ -28,7 +28,7 @@ class Iteration
     double objectiveValue;
     DoublePair currentObjectiveBounds;
 
-    std::vector<double> constraintDeviations;
+    DoubleVector constraintDeviations;
     double maxDeviation;
     int maxDeviationConstraint;
 
@@ -53,7 +53,7 @@ class Iteration
 
     double solutionTime;
 
-    std::vector<std::vector<double>> hyperplanePoints;
+    std::vector<DoubleVector> hyperplanePoints;
 
     SolutionPoint getSolutionPointWithSmallestDeviation();
     int getSolutionPointWithSmallestDeviationIndex();

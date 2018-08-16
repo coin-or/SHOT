@@ -18,7 +18,7 @@ class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
     NLPSolverIpoptRelaxed(EnvironmentPtr envPtr);
     virtual ~NLPSolverIpoptRelaxed();
 
-    virtual std::vector<double> getSolution();
+    virtual DoubleVector getSolution();
 
   protected:
     bool createProblemInstance(OSInstance *origInstance);

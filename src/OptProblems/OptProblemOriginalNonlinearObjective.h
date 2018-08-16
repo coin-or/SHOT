@@ -18,8 +18,8 @@ class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
     ~OptProblemOriginalNonlinearObjective();
 
     virtual bool setProblem(OSInstance *instance);
-    double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-    SparseVector *calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+    double calculateConstraintFunctionValue(int idx, DoubleVector point);
+    SparseVector *calculateConstraintFunctionGradient(int idx, DoubleVector point);
     virtual int getNumberOfNonlinearConstraints();
     virtual int getNumberOfConstraints();
     virtual std::vector<std::string> getConstraintNames();
@@ -28,8 +28,8 @@ class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
     virtual std::vector<std::string> getVariableNames();
     virtual std::vector<char> getVariableTypes();
 
-    virtual std::vector<double> getVariableLowerBounds();
-    virtual std::vector<double> getVariableUpperBounds();
+    virtual DoubleVector getVariableLowerBounds();
+    virtual DoubleVector getVariableUpperBounds();
 
     virtual double getVariableLowerBound(int varIdx);
     virtual double getVariableUpperBound(int varIdx);
@@ -40,7 +40,7 @@ class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
     virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
     virtual double getObjectiveConstant();
 
-    IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
+    IndexValuePair getMostDeviatingAllConstraint(DoubleVector point);
 
     virtual void setNonlinearConstraintIndexes();
 

@@ -493,11 +493,11 @@ int MIPSolverCplex::getSolutionLimit()
     return (solLim);
 }
 
-std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
+DoubleVector MIPSolverCplex::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
     int numVar = cplexVars.getSize();
-    std::vector<double> solution(numVar);
+    DoubleVector solution(numVar);
 
     IloNumArray tmpSolsCplex(cplexEnv);
 
@@ -629,7 +629,7 @@ void MIPSolverCplex::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverCplex::addMIPStart(std::vector<double> point)
+void MIPSolverCplex::addMIPStart(DoubleVector point)
 {
     IloNumArray startVal(cplexEnv);
 
@@ -762,7 +762,7 @@ double MIPSolverCplex::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndGetNewBounds()
+std::pair<DoubleVector, DoubleVector> MIPSolverCplex::presolveAndGetNewBounds()
 {
     auto numVar = env->model->originalProblem->getNumberOfVariables();
 
@@ -777,8 +777,8 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
 
         cplexInstance.basicPresolve(cplexVars, redlbs, redubs, cplexConstrs, redund);
 
-        std::vector<double> newLBs;
-        std::vector<double> newUBs;
+        DoubleVector newLBs;
+        DoubleVector newUBs;
 
         newLBs.reserve(numVar);
         newUBs.reserve(numVar);

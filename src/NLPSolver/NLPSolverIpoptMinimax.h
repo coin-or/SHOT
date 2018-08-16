@@ -18,7 +18,7 @@ class NLPSolverIpoptMinimax : public NLPSolverBase, public NLPSolverIpoptBase
     NLPSolverIpoptMinimax(EnvironmentPtr envPtr);
     virtual ~NLPSolverIpoptMinimax();
 
-    std::vector<double> getSolution();
+    DoubleVector getSolution();
 
   protected:
     bool createProblemInstance(OSInstance *origInstance);

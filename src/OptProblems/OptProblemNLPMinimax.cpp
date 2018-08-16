@@ -93,10 +93,10 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
     std::vector<char> varTypes;
     varTypes.assign(source->getVariableTypes(), source->getVariableTypes() + numVar);
 
-    std::vector<double> varLBs;
+    DoubleVector varLBs;
     varLBs.assign(source->getVariableLowerBounds(), source->getVariableLowerBounds() + numVar);
 
-    std::vector<double> varUBs;
+    DoubleVector varUBs;
     varUBs.assign(source->getVariableUpperBounds(), source->getVariableUpperBounds() + numVar);
 
     if (destination->getVariableNumber() == 0)
@@ -229,7 +229,7 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
 
     std::vector<int> rowIndices;
     std::vector<int> colIndices;
-    std::vector<double> elements;
+    DoubleVector elements;
 
     rowIndices.reserve(numTotalElements);
     colIndices.reserve(numTotalElements);
@@ -335,7 +335,7 @@ void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *de
 
         std::vector<int> varOneIndexes;
         std::vector<int> varTwoIndexes;
-        std::vector<double> coefficients;
+        DoubleVector coefficients;
         std::vector<int> rowIndexes;
 
         varOneIndexes.reserve(numQuadTerms);

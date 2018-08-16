@@ -129,7 +129,7 @@ void GurobiCallback::callback()
 
             if ((isMinimization && tmpDualObjBound > env->process->getDualBound()) || (!isMinimization && tmpDualObjBound < env->process->getDualBound()))
             {
-                std::vector<double> doubleSolution; // Empty since we have no point
+                DoubleVector doubleSolution; // Empty since we have no point
 
                 DualSolution sol =
                     {doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, env->process->getCurrentIteration()->iterationNumber};
@@ -144,7 +144,7 @@ void GurobiCallback::callback()
 
             if ((tmpPrimalObjBound < 1e100) && ((isMinimization && tmpPrimalObjBound < env->process->getPrimalBound()) || (!isMinimization && tmpPrimalObjBound > env->process->getPrimalBound())))
             {
-                std::vector<double> primalSolution(numVar);
+                DoubleVector primalSolution(numVar);
 
                 for (int i = 0; i < numVar; i++)
                 {
@@ -176,7 +176,7 @@ void GurobiCallback::callback()
                 int waitingListSize = env->process->hyperplaneWaitingList.size();
                 std::vector<SolutionPoint> solutionPoints(1);
 
-                std::vector<double> solution(numVar);
+                DoubleVector solution(numVar);
 
                 for (int i = 0; i < numVar; i++)
                 {
@@ -227,7 +227,7 @@ void GurobiCallback::callback()
                 currIter = env->process->getCurrentIteration();
             }
 
-            std::vector<double> solution(numVar);
+            DoubleVector solution(numVar);
 
             for (int i = 0; i < numVar; i++)
             {
@@ -322,7 +322,7 @@ void GurobiCallback::callback()
             {
                 auto primalSol = env->process->primalSolution;
 
-                std::vector<double> primalSolution(numVar);
+                DoubleVector primalSolution(numVar);
 
                 for (int i = 0; i < numVar; i++)
                 {

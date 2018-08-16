@@ -70,8 +70,8 @@ void TaskSelectHyperplanePointsLinesearch::run(std::vector<SolutionPoint> solPoi
                 }
                 auto xNLP = env->process->interiorPts.at(j)->point;
 
-                std::vector<double> externalPoint;
-                std::vector<double> internalPoint;
+                DoubleVector externalPoint;
+                DoubleVector internalPoint;
 
                 try
                 {

@@ -343,12 +343,12 @@ int MIPSolverGurobi::addLinearConstraint(std::vector<IndexValuePair> elements, d
     return (gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
 }
 
-std::vector<double> MIPSolverGurobi::getVariableSolution(int solIdx)
+DoubleVector MIPSolverGurobi::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
 
     int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
-    std::vector<double> solution(numVar);
+    DoubleVector solution(numVar);
 
     try
     {
@@ -588,10 +588,10 @@ void MIPSolverGurobi::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverGurobi::addMIPStart(std::vector<double> point)
+void MIPSolverGurobi::addMIPStart(DoubleVector point)
 {
     int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
-    std::vector<double> solution(numVar);
+    DoubleVector solution(numVar);
 
     try
     {
@@ -675,7 +675,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 void MIPSolverGurobi::deleteMIPStarts()
 {
     int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
-    std::vector<double> solution(numVar);
+    DoubleVector solution(numVar);
 
     try
     {
@@ -780,7 +780,7 @@ void MIPSolverGurobi::checkParameters()
 {
 }
 
-std::pair<std::vector<double>, std::vector<double>> MIPSolverGurobi::presolveAndGetNewBounds()
+std::pair<DoubleVector, DoubleVector> MIPSolverGurobi::presolveAndGetNewBounds()
 {
     return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableLowerBounds()));
 }

@@ -85,7 +85,7 @@ void TaskSolveFixedDualProblem::run()
         return;
     }
 
-    std::vector<double> fixValues(discreteVariableIndexes.size());
+    DoubleVector fixValues(discreteVariableIndexes.size());
 
     for (int i = 0; i < discreteVariableIndexes.size(); i++)
     {
@@ -160,12 +160,12 @@ void TaskSolveFixedDualProblem::run()
 
             auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(varSol);
 
-            std::vector<double> externalPoint = varSol;
+            DoubleVector externalPoint = varSol;
             IndexValuePair errorExternal;
 
             if (env->process->interiorPts.size() > 0)
             {
-                std::vector<double> internalPoint = env->process->interiorPts.at(0)->point;
+                DoubleVector internalPoint = env->process->interiorPts.at(0)->point;
 
                 auto tmpMostDevConstr2 = env->model->originalProblem->getMostDeviatingConstraint(internalPoint);
 

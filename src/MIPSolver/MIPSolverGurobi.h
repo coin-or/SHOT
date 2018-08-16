@@ -57,7 +57,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 
     virtual void fixVariable(int varIndex, double value);
 
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+    virtual void fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues)
     {
         MIPSolverBase::fixVariables(variableIndexes, variableValues);
     }
@@ -75,7 +75,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
         return (MIPSolverBase::presolveAndUpdateBounds());
     }
 
-    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds();
+    virtual std::pair<DoubleVector, DoubleVector> presolveAndGetNewBounds();
 
     virtual void activateDiscreteVariables(bool activate);
     virtual bool getDiscreteVariableStatus()
@@ -86,7 +86,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     virtual E_ProblemSolutionStatus solveProblem();
     virtual E_ProblemSolutionStatus getSolutionStatus();
     virtual int getNumberOfSolutions();
-    virtual std::vector<double> getVariableSolution(int solIdx);
+    virtual DoubleVector getVariableSolution(int solIdx);
     virtual std::vector<SolutionPoint> getAllVariableSolutions()
     {
         return (MIPSolverBase::getAllVariableSolutions());
@@ -106,7 +106,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 
     virtual void setCutOff(double cutOff);
 
-    virtual void addMIPStart(std::vector<double> point);
+    virtual void addMIPStart(DoubleVector point);
     virtual void deleteMIPStarts();
 
     virtual bool supportsQuadraticObjective();

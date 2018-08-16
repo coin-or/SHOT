@@ -46,7 +46,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
 
                 auto varTypes = env->model->originalProblem->getVariableTypes();
 
-                std::vector<double> xNLP2(xNLP.size());
+                DoubleVector xNLP2(xNLP.size());
                 for (int k = 0; k < env->model->originalProblem->getNumberOfVariables(); k++)
                 {
                     if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
@@ -64,7 +64,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
 
                 if (maxDevNLP2.value <= 0 && maxDevMIP.value > 0)
                 {
-                    std::pair<std::vector<double>, std::vector<double>> xNewc;
+                    std::pair<DoubleVector, DoubleVector> xNewc;
 
                     try
                     {

@@ -36,14 +36,14 @@ class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
     INLPSolver *NLPSolver;
 
     std::vector<int> discreteVariableIndexes;
-    std::vector<std::vector<double>> testedPoints;
-    std::vector<double> fixPoint;
+    std::vector<DoubleVector> testedPoints;
+    DoubleVector fixPoint;
 
     double originalNLPTime;
     double originalNLPIter;
 
-    std::vector<double> originalLBs;
-    std::vector<double> originalUBs;
+    DoubleVector originalLBs;
+    DoubleVector originalUBs;
 
     TaskBase *taskSelectHPPts;
 

@@ -138,7 +138,7 @@ double NLPSolverIpoptBase::getObjectiveValue()
     return (value);
 }
 
-void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, DoubleVector variableValues)
 {
     startingPointVariableIndexes = variableIndexes;
     startingPointVariableValues = variableValues;
@@ -225,12 +225,12 @@ int NLPSolverIpoptBase::getObjectiveFunctionVariableIndex()
     return (NLPProblem->getNonlinearObjectiveVariableIdx());
 }
 
-std::vector<double> NLPSolverIpoptBase::getCurrentVariableLowerBounds()
+DoubleVector NLPSolverIpoptBase::getCurrentVariableLowerBounds()
 {
     return (NLPProblem->getVariableLowerBounds());
 }
 
-std::vector<double> NLPSolverIpoptBase::getCurrentVariableUpperBounds()
+DoubleVector NLPSolverIpoptBase::getCurrentVariableUpperBounds()
 {
     return (NLPProblem->getVariableUpperBounds());
 }
@@ -251,10 +251,10 @@ NLPSolverIpoptBase::~NLPSolverIpoptBase()
     delete osOption;
 }
 
-std::vector<double> NLPSolverIpoptBase::getSolution()
+DoubleVector NLPSolverIpoptBase::getSolution()
 {
     int numVar = NLPProblem->getNumberOfVariables();
-    std::vector<double> tmpPoint(numVar);
+    DoubleVector tmpPoint(numVar);
 
     for (int i = 0; i < numVar; i++)
     {
@@ -363,7 +363,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     setSolverSpecificInitialSettings();
 }
 
-void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues)
 {
 
     fixedVariableIndexes = variableIndexes;

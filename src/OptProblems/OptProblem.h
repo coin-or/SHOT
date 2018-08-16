@@ -49,8 +49,8 @@ class OptProblem
     virtual int getNumberOfRealVariables();
     virtual std::vector<std::string> getVariableNames();
     virtual std::vector<char> getVariableTypes();
-    virtual std::vector<double> getVariableLowerBounds();
-    virtual std::vector<double> getVariableUpperBounds();
+    virtual DoubleVector getVariableLowerBounds();
+    virtual DoubleVector getVariableUpperBounds();
 
     virtual double getVariableLowerBound(int varIdx);
     virtual double getVariableUpperBound(int varIdx);
@@ -73,28 +73,28 @@ class OptProblem
 
     std::string exportProblemToOsil();
 
-    virtual IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
+    virtual IndexValuePair getMostDeviatingConstraint(DoubleVector point);
 
-    virtual std::pair<IndexValuePair, std::vector<int>> getMostDeviatingConstraint(std::vector<double> point,
+    virtual std::pair<IndexValuePair, std::vector<int>> getMostDeviatingConstraint(DoubleVector point,
                                                                                    std::vector<int> constrIdxs);
 
-    virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
+    virtual IndexValuePair getMostDeviatingAllConstraint(DoubleVector point);
 
-    virtual std::vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
+    virtual std::vector<IndexValuePair> getMostDeviatingConstraints(DoubleVector point, double tolerance);
 
-    virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
-    virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isConstraintsFulfilledInPoint(DoubleVector point);
+    virtual bool isConstraintsFulfilledInPoint(DoubleVector point, double eps);
 
-    virtual bool isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps);
-    virtual bool isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isDiscreteVariablesFulfilledInPoint(DoubleVector point, double eps);
+    virtual bool isVariableBoundsFulfilledInPoint(DoubleVector point, double eps);
 
-    virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point);
-    virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isLinearConstraintsFulfilledInPoint(DoubleVector point);
+    virtual bool isLinearConstraintsFulfilledInPoint(DoubleVector point, double eps);
 
-    virtual SparseVector *calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+    virtual SparseVector *calculateConstraintFunctionGradient(int idx, DoubleVector point);
 
-    virtual double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-    virtual double calculateOriginalObjectiveValue(std::vector<double> point);
+    virtual double calculateConstraintFunctionValue(int idx, DoubleVector point);
+    virtual double calculateOriginalObjectiveValue(DoubleVector point);
 
     std::vector<int> getNonlinearConstraintIndexes();
     void setNonlinearConstraints(std::vector<int> idxs);
@@ -126,7 +126,7 @@ class OptProblem
 
     OSInstance *getProblemInstance();
 
-    std::vector<double> calculateGradientNumerically(int constraintIndex, std::vector<double> point);
+    DoubleVector calculateGradientNumerically(int constraintIndex, DoubleVector point);
 
     virtual void fixVariable(int varIdx, double value);
 

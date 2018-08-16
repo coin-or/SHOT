@@ -10,6 +10,8 @@
 
 #include "SHOTSettings.h"
 
+using namespace SHOT;
+
 enum ESettingsType
 {
     String,

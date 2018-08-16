@@ -85,11 +85,11 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
     double mu = dualSol.objectiveValue;
     double error = env->model->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
-    std::vector<double> tmpPoint(dualSol.point);
+    DoubleVector tmpPoint(dualSol.point);
     tmpPoint.back() = mu + (1 + std::min(0.01, 1 / abs(oldObjVal))) * error;
 
-    std::vector<double> internalPoint;
-    std::vector<double> externalPoint;
+    DoubleVector internalPoint;
+    DoubleVector externalPoint;
 
     bool changed = false;
 

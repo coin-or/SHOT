@@ -88,19 +88,19 @@ std::vector<char> OptProblem::getVariableTypes()
     return tmpVector;
 }
 
-std::vector<double> OptProblem::getVariableLowerBounds()
+DoubleVector OptProblem::getVariableLowerBounds()
 {
     double *tmpArray = getProblemInstance()->getVariableLowerBounds();
 
-    std::vector<double> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+    DoubleVector tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
     return tmpVector;
 }
 
-std::vector<double> OptProblem::getVariableUpperBounds()
+DoubleVector OptProblem::getVariableUpperBounds()
 {
     double *tmpArray = getProblemInstance()->getVariableUpperBounds();
-    std::vector<double> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+    DoubleVector tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
     return tmpVector;
 }
@@ -218,7 +218,7 @@ std::string OptProblem::exportProblemToOsil()
     return (osil);
 }
 
-IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
+IndexValuePair OptProblem::getMostDeviatingConstraint(DoubleVector point)
 {
     if (point.size() != this->getNumberOfVariables())
     {
@@ -233,7 +233,7 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
     return (this->getMostDeviatingConstraint(point, idxNLCs).first);
 }
 
-std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstraint(std::vector<double> point,
+std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstraint(DoubleVector point,
                                                                                    std::vector<int> constrIdxs)
 {
     IndexValuePair valpair;
@@ -248,7 +248,7 @@ std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstrai
     }
     else
     {
-        std::vector<double> constrDevs(constrIdxs.size());
+        DoubleVector constrDevs(constrIdxs.size());
 
         for (int i = 0; i < constrIdxs.size(); i++)
 
@@ -267,14 +267,14 @@ std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstrai
     return (std::make_pair(valpair, activeConstraints));
 }
 
-IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> point)
+IndexValuePair OptProblem::getMostDeviatingAllConstraint(DoubleVector point)
 {
 
     IndexValuePair valpair;
 
     int numConstr = this->getNumberOfConstraints();
 
-    std::vector<double> constrDevs(numConstr);
+    DoubleVector constrDevs(numConstr);
 
     for (int i = 0; i < numConstr; i++)
     {
@@ -295,7 +295,7 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
     return valpair;
 }
 
-std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<double> point, double tolerance)
+std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(DoubleVector point, double tolerance)
 {
     std::vector<IndexValuePair> valpairs;
 
@@ -316,7 +316,7 @@ std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<
         if (tolerance > 1)
             tolerance = 1;
 
-        std::vector<double> constrDevs(idxNLCs.size());
+        DoubleVector constrDevs(idxNLCs.size());
 
         for (int i = 0; i < idxNLCs.size(); i++)
         {
@@ -357,7 +357,7 @@ std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<
     return (valpairs);
 }
 
-bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isConstraintsFulfilledInPoint(DoubleVector point, double eps)
 {
     std::vector<int> idxNLCs = this->getNonlinearConstraintIndexes();
 
@@ -375,12 +375,12 @@ bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point, double
     return true;
 }
 
-bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point)
+bool OptProblem::isConstraintsFulfilledInPoint(DoubleVector point)
 {
     return isConstraintsFulfilledInPoint(point, 0);
 }
 
-bool OptProblem::isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isDiscreteVariablesFulfilledInPoint(DoubleVector point, double eps)
 {
     std::vector<int> idxDiscrete = this->getDiscreteVariableIndices();
 
@@ -393,7 +393,7 @@ bool OptProblem::isDiscreteVariablesFulfilledInPoint(std::vector<double> point, 
     return (true);
 }
 
-bool OptProblem::isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isVariableBoundsFulfilledInPoint(DoubleVector point, double eps)
 {
     int numVars = this->getNumberOfVariables();
 
@@ -410,7 +410,7 @@ bool OptProblem::isVariableBoundsFulfilledInPoint(std::vector<double> point, dou
     }
 }
 
-bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isLinearConstraintsFulfilledInPoint(DoubleVector point, double eps)
 {
 
     std::vector<int> idxLCs = this->getLinearConstraintIndexes();
@@ -428,12 +428,12 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point, 
     return true;
 }
 
-bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
+bool OptProblem::isLinearConstraintsFulfilledInPoint(DoubleVector point)
 {
     return isLinearConstraintsFulfilledInPoint(point, 0);
 }
 
-SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
+SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, DoubleVector point)
 {
     auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 
@@ -452,7 +452,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
     {
         auto numGradient = calculateGradientNumerically(idx, point);
 
-        std::vector<double> nonSparseGrad(point.size(), 0.0);
+        DoubleVector nonSparseGrad(point.size(), 0.0);
 
         for (int i = 0; i < gradient->number; i++)
         {
@@ -483,7 +483,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
     return (gradient);
 }
 
-double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
+double OptProblem::calculateOriginalObjectiveValue(DoubleVector point)
 {
     auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
     env->solutionStatistics.numberOfFunctionEvalutions++;
@@ -491,7 +491,7 @@ double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
     return tmpVal;
 }
 
-double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double> point)
+double OptProblem::calculateConstraintFunctionValue(int idx, DoubleVector point)
 {
     if (point.size() != this->getNumberOfVariables())
     {
@@ -1136,11 +1136,11 @@ void OptProblem::setVariableBoundsTightened(std::vector<bool> status)
     m_variableBoundTightened = status;
 }
 
-std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex, std::vector<double> point)
+DoubleVector OptProblem::calculateGradientNumerically(int constraintIndex, DoubleVector point)
 {
-    std::vector<double> point1(point);
-    std::vector<double> point2(point);
-    std::vector<double> numGradient(point.size(), 0.0);
+    DoubleVector point1(point);
+    DoubleVector point2(point);
+    DoubleVector numGradient(point.size(), 0.0);
 
     for (int i = 0; i < point.size(); i++)
     {

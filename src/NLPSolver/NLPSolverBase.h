@@ -32,6 +32,6 @@ class NLPSolverBase : virtual public INLPSolver
 
     virtual void saveProblemToFile(std::string fileName);
 
-    virtual std::vector<double> getVariableLowerBounds();
-    virtual std::vector<double> getVariableUpperBounds();
+    virtual DoubleVector getVariableLowerBounds();
+    virtual DoubleVector getVariableUpperBounds();
 };

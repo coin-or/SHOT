@@ -12,7 +12,10 @@
 #include "Enums.h"
 #include "OSGeneral.h"
 
+namespace SHOT
+{
 typedef std::pair<double, double> DoublePair;
+typedef std::vector<double> DoubleVector;
 
 class ProcessInfo;
 class Settings;
@@ -34,7 +37,7 @@ typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
 
 struct SolutionPoint
 {
-    std::vector<double> point;
+    DoubleVector point;
     double objectiveValue;
     int iterFound;
     IndexValuePair maxDeviation;
@@ -42,14 +45,14 @@ struct SolutionPoint
 
 struct InteriorPoint
 {
-    std::vector<double> point;
+    DoubleVector point;
     ES_InteriorPointStrategy NLPSolver;
     IndexValuePair maxDevatingConstraint;
 };
 
 struct PrimalSolution
 {
-    std::vector<double> point;
+    DoubleVector point;
     E_PrimalSolutionSource sourceType;
     std::string sourceDescription;
     double objValue;
@@ -64,7 +67,7 @@ struct PrimalSolution
 
 struct PrimalFixedNLPCandidate
 {
-    std::vector<double> point;
+    DoubleVector point;
     E_PrimalNLPSource sourceType;
     double objValue;
     int iterFound;
@@ -73,7 +76,7 @@ struct PrimalFixedNLPCandidate
 
 struct DualSolution
 {
-    std::vector<double> point;
+    DoubleVector point;
     E_DualSolutionSource sourceType;
     double objValue;
     int iterFound;
@@ -83,7 +86,7 @@ struct DualSolution
 struct Hyperplane
 {
     int sourceConstraintIndex;
-    std::vector<double> generatedPoint;
+    DoubleVector generatedPoint;
     E_HyperplaneSource source;
 };
 
@@ -91,7 +94,7 @@ struct GeneratedHyperplane
 {
     int generatedConstraintIndex;
     int sourceConstraintIndex;
-    std::vector<double> generatedPoint;
+    DoubleVector generatedPoint;
     E_HyperplaneSource source;
     bool isLazy;
     bool isRemoved;
@@ -187,3 +190,4 @@ struct SolutionStatistics
                 numberOfProblemsFixedNLP);
     };
 };
+}; // namespace SHOT

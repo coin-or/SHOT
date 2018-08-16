@@ -22,6 +22,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+namespace SHOT
+{
 class Settings
 {
   private:
@@ -132,4 +134,5 @@ class SettingOutsideBoundsException : public std::runtime_error
                                   const double &minVal, const double &maxVal) : std::runtime_error(str(boost::format("Exception: The value %1% of setting with <key,category> std::pair <%2%,%3%> is not between %4% and %5%!") % value % key % category % minVal % maxVal))
     {
     }
+};
 };

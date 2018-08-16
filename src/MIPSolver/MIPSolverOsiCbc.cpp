@@ -400,7 +400,7 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverOsiCbc::addMIPStart(std::vector<double> point)
+void MIPSolverOsiCbc::addMIPStart(DoubleVector point)
 {
     auto numVar = env->model->originalProblem->getNumberOfVariables();
     auto varNames = env->model->originalProblem->getVariableNames();
@@ -491,11 +491,11 @@ void MIPSolverOsiCbc::deleteMIPStarts()
     // Not implemented
 }
 
-std::vector<double> MIPSolverOsiCbc::getVariableSolution(int solIdx)
+DoubleVector MIPSolverOsiCbc::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
     int numVar = cbcModel->getNumCols();
-    std::vector<double> solution(numVar);
+    DoubleVector solution(numVar);
 
     try
     {
@@ -606,7 +606,7 @@ double MIPSolverOsiCbc::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<std::vector<double>, std::vector<double>> MIPSolverOsiCbc::presolveAndGetNewBounds()
+std::pair<DoubleVector, DoubleVector> MIPSolverOsiCbc::presolveAndGetNewBounds()
 {
     return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableUpperBounds()));
 }

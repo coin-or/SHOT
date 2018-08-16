@@ -67,7 +67,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
         if ((isMinimization && tmpDualObjBound > env->process->getDualBound()) || (!isMinimization && tmpDualObjBound < env->process->getDualBound()))
         {
-            std::vector<double> doubleSolution; // Empty since we have no point
+            DoubleVector doubleSolution; // Empty since we have no point
 
             DualSolution sol =
                 {doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, env->process->getCurrentIteration()->iterationNumber};
@@ -83,7 +83,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             context.getIncumbent(cplexVars, tmpPrimalVals);
 
-            std::vector<double> primalSolution(tmpPrimalVals.getSize());
+            DoubleVector primalSolution(tmpPrimalVals.getSize());
 
             for (int i = 0; i < tmpPrimalVals.getSize(); i++)
             {
@@ -121,7 +121,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
                 context.getRelaxationPoint(cplexVars, tmpVals);
 
-                std::vector<double> solution(tmpVals.getSize());
+                DoubleVector solution(tmpVals.getSize());
 
                 for (int i = 0; i < tmpVals.getSize(); i++)
                 {
@@ -177,7 +177,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             context.getCandidatePoint(cplexVars, tmpVals);
 
-            std::vector<double> solution(tmpVals.getSize());
+            DoubleVector solution(tmpVals.getSize());
 
             for (int i = 0; i < tmpVals.getSize(); i++)
             {
@@ -275,7 +275,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             IloNumArray tmpVals(context.getEnv());
 
-            std::vector<double> solution(primalSol.size());
+            DoubleVector solution(primalSol.size());
 
             for (int i = 0; i < primalSol.size(); i++)
             {

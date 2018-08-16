@@ -18,7 +18,7 @@ PointSelectionStrategyBase::~PointSelectionStrategyBase()
 {
 }
 
-std::vector<double> PointSelectionStrategyBase::selectPoint()
+DoubleVector PointSelectionStrategyBase::selectPoint()
 {
     return selectPoints(1)[0];
 }

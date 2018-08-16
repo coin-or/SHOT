@@ -26,7 +26,7 @@ bool UtilityFunctions::isnan(double val)
     return boost::math::isnan(val);
 }
 
-void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
+void UtilityFunctions::saveVariablePointVectorToFile(DoubleVector point, std::vector<std::string> variables,
                                                      std::string fileName)
 {
     if (point.size() != variables.size())
@@ -97,7 +97,7 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::ve
     writeStringToFile(fileName, str.str());
 }
 
-void UtilityFunctions::displayVector(std::vector<double> point)
+void UtilityFunctions::displayVector(DoubleVector point)
 {
     std::stringstream str;
 
@@ -115,7 +115,7 @@ void UtilityFunctions::displayVector(std::vector<double> point)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<double> point2)
+void UtilityFunctions::displayVector(DoubleVector point1, DoubleVector point2)
 {
     std::stringstream str;
 
@@ -136,7 +136,7 @@ void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<dou
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayDifferencesInVector(std::vector<double> point1, std::vector<double> point2, double tol)
+void UtilityFunctions::displayDifferencesInVector(DoubleVector point1, DoubleVector point2, double tol)
 {
     std::stringstream str;
 
@@ -196,7 +196,7 @@ void UtilityFunctions::displayVector(std::vector<std::string> point)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<double>> points)
+void UtilityFunctions::displayVector(std::vector<DoubleVector> points)
 {
     std::stringstream str;
 
@@ -329,7 +329,7 @@ bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
     return (true);
 }
 
-double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB)
+double UtilityFunctions::L2Norm(DoubleVector ptA, DoubleVector ptB)
 {
     double norm = 0.0;
 
@@ -348,9 +348,9 @@ double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB
     return (norm);
 }
 
-std::vector<double> UtilityFunctions::L2Norms(std::vector<std::vector<double>> ptsA, std::vector<double> ptB)
+DoubleVector UtilityFunctions::L2Norms(std::vector<DoubleVector> ptsA, DoubleVector ptB)
 {
-    std::vector<double> norms(ptsA.size());
+    DoubleVector norms(ptsA.size());
 
     for (int i = 0; i < ptsA.size(); i++)
     {
@@ -360,12 +360,12 @@ std::vector<double> UtilityFunctions::L2Norms(std::vector<std::vector<double>> p
     return (norms);
 }
 
-std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vector<double>> pts)
+DoubleVector UtilityFunctions::calculateCenterPoint(std::vector<DoubleVector> pts)
 {
     int ptSize = pts.at(0).size();
     int numPts = pts.size();
 
-    std::vector<double> newPt(ptSize, 0.0);
+    DoubleVector newPt(ptSize, 0.0);
 
     for (int i = 0; i < ptSize; i++)
     {
@@ -381,7 +381,7 @@ std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vect
     return (newPt);
 }
 
-int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+int UtilityFunctions::numDifferentRoundedSelectedElements(DoubleVector firstPt, DoubleVector secondPt,
                                                           std::vector<int> indexes)
 {
     int numDiff = 0;
@@ -396,7 +396,7 @@ int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> fi
     return (numDiff);
 }
 
-bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+bool UtilityFunctions::isDifferentRoundedSelectedElements(DoubleVector firstPt, DoubleVector secondPt,
                                                           std::vector<int> indexes)
 {
     for (int i = 0; i < indexes.size(); i++)
@@ -408,7 +408,7 @@ bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> fi
     return (false);
 }
 
-bool UtilityFunctions::isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+bool UtilityFunctions::isDifferentSelectedElements(DoubleVector firstPt, DoubleVector secondPt,
                                                    std::vector<int> indexes)
 {
     for (int i = 0; i < indexes.size(); i++)
@@ -471,7 +471,7 @@ void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<int> p
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<double> point2)
+void UtilityFunctions::displayVector(std::vector<int> point1, DoubleVector point2)
 {
     std::stringstream str;
 

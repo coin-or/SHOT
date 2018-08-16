@@ -74,7 +74,7 @@ std::vector<int> Test::getActiveConstraints()
 double Test::operator()(const double x)
 {
     int length = firstPt.size();
-    std::vector<double> ptNew(length);
+    DoubleVector ptNew(length);
 
     for (int i = 0; i < length; i++)
     {
@@ -106,15 +106,15 @@ LinesearchMethodBoost::~LinesearchMethodBoost()
     delete test;
 }
 
-std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZero(std::vector<double> ptA,
-                                                                                    std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol)
+std::pair<DoubleVector, DoubleVector> LinesearchMethodBoost::findZero(DoubleVector ptA,
+                                                                                    DoubleVector ptB, int Nmax, double lambdaTol, double constrTol)
 {
     std::vector<int> tmpVector;
     return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpVector));
 }
 
-std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZero(std::vector<double> ptA,
-                                                                                    std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs)
+std::pair<DoubleVector, DoubleVector> LinesearchMethodBoost::findZero(DoubleVector ptA,
+                                                                                    DoubleVector ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs)
 {
     if (ptA.size() != ptB.size())
     {
@@ -123,8 +123,8 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     }
 
     int length = ptA.size();
-    std::vector<double> ptNew(length);
-    std::vector<double> ptNew2(length);
+    DoubleVector ptNew(length);
+    DoubleVector ptNew2(length);
 
     typedef DoublePair Result;
     boost::uintmax_t max_iter = Nmax;
@@ -147,12 +147,12 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     {
         if (test->valFirstPt > test->valSecondPt)
         {
-            std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);
+            std::pair<DoubleVector, DoubleVector> tmpPair(ptB, ptA);
 
             return (tmpPair);
         }
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptA, ptB);
+        std::pair<DoubleVector, DoubleVector> tmpPair(ptA, ptB);
 
         return (tmpPair);
     }
@@ -195,7 +195,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         env->process->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
                                                  env->process->getCurrentIteration()->iterationNumber);
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
+        std::pair<DoubleVector, DoubleVector> tmpPair(ptNew2, ptNew);
         return (tmpPair);
     }
     else
@@ -203,7 +203,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         env->process->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
                                                  env->process->getCurrentIteration()->iterationNumber);
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptNew2);
+        std::pair<DoubleVector, DoubleVector> tmpPair(ptNew, ptNew2);
         return (tmpPair);
     }
 }

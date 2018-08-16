@@ -17,6 +17,6 @@ class IPointSelectionStrategy
     IPointSelectionStrategy();
     ~IPointSelectionStrategy();
 
-    virtual std::vector<double> selectPoint() = 0;
-    virtual std::vector<std::vector<double>> selectPoints(int maxNumPts) = 0;
+    virtual DoubleVector selectPoint() = 0;
+    virtual std::vector<DoubleVector> selectPoints(int maxNumPts) = 0;
 };

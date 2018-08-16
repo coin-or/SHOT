@@ -34,7 +34,7 @@ NLPSolverGAMS::~NLPSolverGAMS()
     delete NLPProblem;
 }
 
-void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, DoubleVector variableValues)
 {
     for (size_t i = 0; i < variableIndexes.size(); ++i)
     {
@@ -47,7 +47,7 @@ void NLPSolverGAMS::clearStartingPoint()
 {
 }
 
-void NLPSolverGAMS::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverGAMS::fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues)
 {
     for (size_t i = 0; i < variableIndexes.size(); ++i)
     {
@@ -71,9 +71,9 @@ void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
     //throw std::logic_error("saveOptionsToFile() not implemented");
 }
 
-std::vector<double> NLPSolverGAMS::getSolution()
+DoubleVector NLPSolverGAMS::getSolution()
 {
-    std::vector<double> sol(gmoN(gmo));
+    DoubleVector sol(gmoN(gmo));
 
     gmoGetVarL(gmo, &sol[0]);
 
@@ -191,33 +191,33 @@ int NLPSolverGAMS::getObjectiveFunctionVariableIndex()
 }
 
 #if 0
-std::vector<double> NLPSolverGAMS::getCurrentVariableLowerBounds()
+DoubleVector NLPSolverGAMS::getCurrentVariableLowerBounds()
 {
 	return (NLPProblem->getVariableLowerBounds());
 }
 
-std::vector<double> NLPSolverGAMS::getCurrentVariableUpperBounds()
+DoubleVector NLPSolverGAMS::getCurrentVariableUpperBounds()
 {
 	return (NLPProblem->getVariableUpperBounds());
 }
 #endif
 
-std::vector<double> NLPSolverGAMS::getCurrentVariableLowerBounds()
+DoubleVector NLPSolverGAMS::getCurrentVariableLowerBounds()
 {
     assert(gmo != NULL);
 
-    std::vector<double> lb(gmoN(gmo));
+    DoubleVector lb(gmoN(gmo));
 
     gmoGetVarLower(gmo, &lb[0]);
 
     return lb;
 }
 
-std::vector<double> NLPSolverGAMS::getCurrentVariableUpperBounds()
+DoubleVector NLPSolverGAMS::getCurrentVariableUpperBounds()
 {
     assert(gmo != NULL);
 
-    std::vector<double> ub(gmoN(gmo));
+    DoubleVector ub(gmoN(gmo));
 
     gmoGetVarUpper(gmo, &ub[0]);
 

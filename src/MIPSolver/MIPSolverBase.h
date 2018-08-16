@@ -39,19 +39,19 @@ class MIPSolverBase
     virtual bool getDiscreteVariableStatus();
     virtual std::vector<SolutionPoint> getAllVariableSolutions();
     virtual int getNumberOfSolutions() = 0;
-    virtual std::vector<double> getVariableSolution(int i) = 0;
+    virtual DoubleVector getVariableSolution(int i) = 0;
     virtual double getObjectiveValue(int i) = 0;
     virtual double getObjectiveValue();
 
     virtual void presolveAndUpdateBounds();
-    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
+    virtual std::pair<DoubleVector, DoubleVector> presolveAndGetNewBounds() = 0;
 
     virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes();
 
     virtual DoublePair getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues);
     virtual void unfixVariables();
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 

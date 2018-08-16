@@ -31,16 +31,16 @@ class NLPSolverGAMS : public NLPSolverBase
 
     virtual ~NLPSolverGAMS();
 
-    void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void setStartingPoint(std::vector<int> variableIndexes, DoubleVector variableValues);
     void clearStartingPoint();
 
-    void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues);
 
     void unfixVariables();
 
     void saveOptionsToFile(std::string fileName);
 
-    std::vector<double> getSolution();
+    DoubleVector getSolution();
     double getSolution(int i);
     double getObjectiveValue();
 
@@ -51,8 +51,8 @@ class NLPSolverGAMS : public NLPSolverBase
     E_NLPSolutionStatus solveProblemInstance();
     bool createProblemInstance(OSInstance *origInstance);
 
-    std::vector<double> getCurrentVariableLowerBounds();
-    std::vector<double> getCurrentVariableUpperBounds();
+    DoubleVector getCurrentVariableLowerBounds();
+    DoubleVector getCurrentVariableUpperBounds();
 
   private:
 };

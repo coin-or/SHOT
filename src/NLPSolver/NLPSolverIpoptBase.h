@@ -24,34 +24,34 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     OSoLWriter *osolwriter;
 
     std::vector<int> fixedVariableIndexes;
-    std::vector<double> fixedVariableValues;
+    DoubleVector fixedVariableValues;
 
     std::vector<int> startingPointVariableIndexes;
-    std::vector<double> startingPointVariableValues;
+    DoubleVector startingPointVariableValues;
 
     virtual E_NLPSolutionStatus solveProblemInstance();
 
-    void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues);
     void unfixVariables();
 
     virtual void setInitialSettings();
     virtual void setSolverSpecificInitialSettings() = 0;
     virtual void updateSettings();
 
-    virtual std::vector<double> getCurrentVariableLowerBounds();
-    virtual std::vector<double> getCurrentVariableUpperBounds();
+    virtual DoubleVector getCurrentVariableLowerBounds();
+    virtual DoubleVector getCurrentVariableUpperBounds();
 
-    std::vector<double> lowerBoundsBeforeFix;
-    std::vector<double> upperBoundsBeforeFix;
+    DoubleVector lowerBoundsBeforeFix;
+    DoubleVector upperBoundsBeforeFix;
 
   public:
     NLPSolverIpoptBase();
     virtual ~NLPSolverIpoptBase();
 
-    virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void setStartingPoint(std::vector<int> variableIndexes, DoubleVector variableValues);
     virtual void clearStartingPoint();
 
-    virtual std::vector<double> getSolution();
+    virtual DoubleVector getSolution();
     virtual double getSolution(int i);
     virtual double getObjectiveValue();
 

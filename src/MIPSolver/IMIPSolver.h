@@ -27,7 +27,7 @@ class IMIPSolver
     virtual bool createLinearProblem(OptProblem *origProblem) = 0;
     virtual void initializeSolverSettings() = 0;
 
-    virtual std::vector<double> getVariableSolution(int solIdx) = 0;
+    virtual DoubleVector getVariableSolution(int solIdx) = 0;
     virtual int getNumberOfSolutions() = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
@@ -55,11 +55,11 @@ class IMIPSolver
 
     virtual void setCutOff(double cutOff) = 0;
 
-    virtual void addMIPStart(std::vector<double> point) = 0;
+    virtual void addMIPStart(DoubleVector point) = 0;
     virtual void deleteMIPStarts() = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues) = 0;
+    virtual void fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues) = 0;
     virtual void unfixVariables() = 0;
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
@@ -67,7 +67,7 @@ class IMIPSolver
     virtual DoublePair getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void presolveAndUpdateBounds() = 0;
-    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
+    virtual std::pair<DoubleVector, DoubleVector> presolveAndGetNewBounds() = 0;
 
     virtual void createHyperplane(Hyperplane hyperplane) = 0;
     virtual void createIntegerCut(std::vector<int> binaryIndexes) = 0;

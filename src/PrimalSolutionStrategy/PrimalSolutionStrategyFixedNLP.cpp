@@ -142,12 +142,12 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
     {
         auto oldPrimalBound = env->process->getPrimalBound();
         double timeStart = env->process->getElapsedTime("Total");
-        std::vector<double> fixedVariableValues(discreteVariableIndexes.size());
+        DoubleVector fixedVariableValues(discreteVariableIndexes.size());
 
         int sizeOfVariableVector = NLPSolver->NLPProblem->getNumberOfVariables();
 
         std::vector<int> startingPointIndexes(sizeOfVariableVector);
-        std::vector<double> startingPointValues(sizeOfVariableVector);
+        DoubleVector startingPointValues(sizeOfVariableVector);
 
         // Sets the fixed values for discrete variables
         for (int k = 0; k < discreteVariableIndexes.size(); k++)

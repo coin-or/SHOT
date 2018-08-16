@@ -39,7 +39,7 @@ int round(double d);
 
 bool isnan(double val);
 
-void saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
+void saveVariablePointVectorToFile(DoubleVector point, std::vector<std::string> variables,
                                    std::string fileName);
 
 void savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables, std::string fileName);
@@ -50,29 +50,29 @@ bool areAllConstraintsLinear(OSInstance *instance);
 bool areAllConstraintsQuadratic(OSInstance *instance);
 bool areAllVariablesReal(OSInstance *instance);
 
-void displayVector(std::vector<double> point);
-void displayVector(std::vector<double> point1, std::vector<double> point2);
+void displayVector(DoubleVector point);
+void displayVector(DoubleVector point1, DoubleVector point2);
 void displayVector(std::vector<int> point);
 void displayVector(std::vector<std::string> point);
 void displayVector(std::vector<int> point1, std::vector<int> point2);
-void displayVector(std::vector<int> point1, std::vector<double> point2);
+void displayVector(std::vector<int> point1, DoubleVector point2);
 
-void displayVector(std::vector<std::vector<double>> points);
+void displayVector(std::vector<DoubleVector> points);
 void displayVector(std::vector<std::vector<int>> points);
 void displayVector(std::vector<std::vector<std::string>> points);
 
-void displayDifferencesInVector(std::vector<double> point1, std::vector<double> point2, double tol);
+void displayDifferencesInVector(DoubleVector point1, DoubleVector point2, double tol);
 
-double L2Norm(std::vector<double> ptA, std::vector<double> ptB);
-std::vector<double> L2Norms(std::vector<std::vector<double>> ptsA, std::vector<double> ptB);
-std::vector<double> calculateCenterPoint(std::vector<std::vector<double>> pts);
+double L2Norm(DoubleVector ptA, DoubleVector ptB);
+DoubleVector L2Norms(std::vector<DoubleVector> ptsA, DoubleVector ptB);
+DoubleVector calculateCenterPoint(std::vector<DoubleVector> pts);
 
-int numDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+int numDifferentRoundedSelectedElements(DoubleVector firstPt, DoubleVector secondPt,
                                         std::vector<int> indexes);
-bool isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+bool isDifferentRoundedSelectedElements(DoubleVector firstPt, DoubleVector secondPt,
                                         std::vector<int> indexes);
 
-bool isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
+bool isDifferentSelectedElements(DoubleVector firstPt, DoubleVector secondPt,
                                  std::vector<int> indexes);
 
 std::string toStringFormat(double value, std::string format, bool useInfinitySymbol);

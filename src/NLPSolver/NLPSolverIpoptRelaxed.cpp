@@ -56,10 +56,10 @@ void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
                                      "number", "");
 }
 
-std::vector<double> NLPSolverIpoptRelaxed::getSolution()
+DoubleVector NLPSolverIpoptRelaxed::getSolution()
 {
     int numVar = NLPProblem->getNumberOfVariables();
-    std::vector<double> tmpPoint(numVar);
+    DoubleVector tmpPoint(numVar);
 
     for (int i = 0; i < numVar; i++)
     {

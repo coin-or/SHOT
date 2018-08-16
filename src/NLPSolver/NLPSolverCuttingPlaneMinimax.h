@@ -31,25 +31,25 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
     NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr);
     virtual ~NLPSolverCuttingPlaneMinimax();
 
-    virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void setStartingPoint(std::vector<int> variableIndexes, DoubleVector variableValues);
     virtual void clearStartingPoint();
 
     virtual bool isObjectiveFunctionNonlinear();
     virtual int getObjectiveFunctionVariableIndex();
 
-    virtual std::vector<double> getCurrentVariableLowerBounds();
-    virtual std::vector<double> getCurrentVariableUpperBounds();
+    virtual DoubleVector getCurrentVariableLowerBounds();
+    virtual DoubleVector getCurrentVariableUpperBounds();
 
   private:
     IMIPSolver *LPSolver;
 
     virtual double getSolution(int i);
-    virtual std::vector<double> getSolution();
+    virtual DoubleVector getSolution();
     virtual double getObjectiveValue();
 
     virtual bool createProblemInstance(OSInstance *origInstance);
 
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues);
 
     virtual void unfixVariables();
 
@@ -59,6 +59,6 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 
     bool isProblemCreated;
 
-    std::vector<double> solution;
+    DoubleVector solution;
     double objectiveValue = NAN;
 };

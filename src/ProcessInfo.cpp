@@ -10,7 +10,7 @@
 
 #include "ProcessInfo.h"
 
-void ProcessInfo::addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter, IndexValuePair maxConstrDev)
+void ProcessInfo::addPrimalSolution(DoubleVector pt, E_PrimalSolutionSource source, double objVal, int iter, IndexValuePair maxConstrDev)
 {
     PrimalSolution sol;
 
@@ -23,14 +23,14 @@ void ProcessInfo::addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSour
     primalSolutions.push_back(sol);
 }
 
-void ProcessInfo::addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter)
+void ProcessInfo::addPrimalSolution(DoubleVector pt, E_PrimalSolutionSource source, double objVal, int iter)
 {
     auto maxConstrDev = env->model->originalProblem->getMostDeviatingConstraint(pt);
 
     ProcessInfo::addPrimalSolution(pt, source, objVal, iter, maxConstrDev);
 }
 
-void ProcessInfo::addDualSolution(std::vector<double> pt, E_DualSolutionSource source, double objVal, int iter)
+void ProcessInfo::addDualSolution(DoubleVector pt, E_DualSolutionSource source, double objVal, int iter)
 {
     DualSolution sol = {pt, source, objVal, iter, false};
 
@@ -56,7 +56,7 @@ void ProcessInfo::addDualSolution(DualSolution solution)
     }
 }
 
-void ProcessInfo::addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSolutionSource source, int iter)
+void ProcessInfo::addPrimalSolutionCandidate(DoubleVector pt, E_PrimalSolutionSource source, int iter)
 {
     PrimalSolution sol;
 
@@ -71,7 +71,7 @@ void ProcessInfo::addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSol
     this->checkPrimalSolutionCandidates();
 }
 
-void ProcessInfo::addPrimalSolutionCandidates(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source, int iter)
+void ProcessInfo::addPrimalSolutionCandidates(std::vector<DoubleVector> pts, E_PrimalSolutionSource source, int iter)
 {
     for (auto PT : pts)
     {
@@ -79,7 +79,7 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<std::vector<double>> p
     }
 }
 
-void ProcessInfo::addDualSolutionCandidate(std::vector<double> pt, E_DualSolutionSource source, int iter)
+void ProcessInfo::addDualSolutionCandidate(DoubleVector pt, E_DualSolutionSource source, int iter)
 {
     double tmpObjVal = env->model->originalProblem->calculateOriginalObjectiveValue(pt);
 
@@ -154,7 +154,7 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_
     }
 }
 
-void ProcessInfo::addPrimalFixedNLPCandidate(std::vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
+void ProcessInfo::addPrimalFixedNLPCandidate(DoubleVector pt, E_PrimalNLPSource source, double objVal, int iter,
                                              IndexValuePair maxConstrDev)
 {
     PrimalFixedNLPCandidate cand =
@@ -298,7 +298,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 {
     std::string sourceDesc;
 
-    std::vector<double> tmpPoint(primalSol.point);
+    DoubleVector tmpPoint(primalSol.point);
     double tmpObjVal = primalSol.objValue;
 
     bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
@@ -439,7 +439,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         auto discreteVarIndexes = env->model->originalProblem->getDiscreteVariableIndices();
 
-        std::vector<double> ptRounded(tmpPoint);
+        DoubleVector ptRounded(tmpPoint);
 
         double maxIntegerError = 0.0;
 
@@ -661,7 +661,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 		 auto discreteVarIndexes = env->model->originalProblem->getDiscreteVariableIndices();
 
-		 std::vector<double> ptRounded(tmpPoint);
+		 DoubleVector ptRounded(tmpPoint);
 
 		 double maxIntegerError = 0.0;
 
@@ -961,7 +961,7 @@ std::string ProcessInfo::getOSrl()
 
             osResult->setPrimalVariableValuesDense(i, &primalSolutions.at(i).point[0]);
 
-            std::vector<double> tmpConstrVals;
+            DoubleVector tmpConstrVals;
 
             osResult->setNumberOfDualValues(i, numConstr);
 

@@ -19,8 +19,8 @@ LinesearchMethodBisection::~LinesearchMethodBisection()
 {
 }
 
-std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::findZero(std::vector<double> ptA,
-                                                                                        std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol)
+std::pair<DoubleVector, DoubleVector> LinesearchMethodBisection::findZero(DoubleVector ptA,
+                                                                                        DoubleVector ptB, int Nmax, double lambdaTol, double constrTol)
 {
     bool validNewPt = false;
     try
@@ -28,8 +28,8 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
         int length = ptA.size();
         bool validB = env->model->originalProblem->isConstraintsFulfilledInPoint(ptB);
 
-        std::vector<double> ptNew(length);
-        std::vector<double> ptNew2(length);
+        DoubleVector ptNew(length);
+        DoubleVector ptNew2(length);
 
         double a = 0;
         double b = 1;
@@ -68,12 +68,12 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
         env->output->outputInfo("Linesearch completed in " + std::to_string(n) + "iterations.");
         if (!validNewPt)
         {
-            std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
+            std::pair<DoubleVector, DoubleVector> tmpPair(ptNew2, ptNew);
             return (tmpPair);
         }
         else
         {
-            std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptNew2);
+            std::pair<DoubleVector, DoubleVector> tmpPair(ptNew, ptNew2);
             return (tmpPair);
         }
     }
@@ -87,17 +87,17 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::f
             if (!env->model->originalProblem->isConstraintsFulfilledInPoint(ptA))
             {
 
-                std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);
+                std::pair<DoubleVector, DoubleVector> tmpPair(ptB, ptA);
                 return (tmpPair);
             }
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptA, ptB);
+        std::pair<DoubleVector, DoubleVector> tmpPair(ptA, ptB);
         return (tmpPair);
     }
 }
 
-std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBisection::findZero(std::vector<double> ptA,
-                                                                                        std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs)
+std::pair<DoubleVector, DoubleVector> LinesearchMethodBisection::findZero(DoubleVector ptA,
+                                                                                        DoubleVector ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs)
 {
     return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol));
 }

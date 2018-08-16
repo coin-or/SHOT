@@ -281,7 +281,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
     }
 }
 
-void MIPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void MIPSolverBase::fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues)
 {
     if (isVariablesFixed)
     {

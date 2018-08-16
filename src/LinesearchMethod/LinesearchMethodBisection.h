@@ -21,9 +21,9 @@ class LinesearchMethodBisection : public ILinesearchMethod
 
     virtual ~LinesearchMethodBisection();
 
-    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol);
+    virtual std::pair<DoubleVector, DoubleVector> findZero(DoubleVector ptA,
+                                                                         DoubleVector ptB, int Nmax, double lambdaTol, double constrTol);
 
-    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
+    virtual std::pair<DoubleVector, DoubleVector> findZero(DoubleVector ptA,
+                                                                         DoubleVector ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
 };

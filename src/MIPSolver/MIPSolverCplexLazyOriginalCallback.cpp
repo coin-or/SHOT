@@ -81,7 +81,7 @@ void HCallbackI::main() // Called at each node...
 
         getValues(tmpVals, cplexVars);
 
-        std::vector<double> solution(tmpVals.getSize());
+        DoubleVector solution(tmpVals.getSize());
 
         for (int i = 0; i < tmpVals.getSize(); i++)
         {
@@ -254,7 +254,7 @@ void CtCallbackI::main()
 
     this->getValues(tmpVals, cplexVars);
 
-    std::vector<double> solution(tmpVals.getSize());
+    DoubleVector solution(tmpVals.getSize());
 
     for (int i = 0; i < tmpVals.getSize(); i++)
     {
@@ -293,7 +293,7 @@ void CtCallbackI::main()
 
             this->getIncumbentValues(tmpPrimalVals, cplexVars);
 
-            std::vector<double> primalSolution(tmpPrimalVals.getSize());
+            DoubleVector primalSolution(tmpPrimalVals.getSize());
 
             for (int i = 0; i < tmpPrimalVals.getSize(); i++)
             {

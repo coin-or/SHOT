@@ -462,7 +462,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", true,
                                  "Update bounds (from presolve) to the MIP model");
 
-    env->settings->createSetting("MIP.NumberOfThreads", "Dual", 7, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
+    env->settings->createSetting("MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     env->settings->createSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual", 10000,
                                  "Iterations without dual bound updates for forcing optimal MIP solution", 0, OSINT_MAX);

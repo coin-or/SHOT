@@ -109,8 +109,8 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoi
                     if (constrDevExterior < env->settings->getDoubleSetting("ESH.Linesearch.ConstraintFactor", "Dual") * maxDevConstr.value)
                         continue;
 
-                    std::vector<double> externalPoint;
-                    std::vector<double> internalPoint;
+                    DoubleVector externalPoint;
+                    DoubleVector internalPoint;
 
                     std::vector<int> currentIndexes;
 

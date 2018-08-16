@@ -46,7 +46,7 @@ class ProcessInfo
 
     void initializeResults(int numObj, int numVar, int numConstr);
 
-    std::vector<double> primalSolution; // TODO remove
+    DoubleVector primalSolution; // TODO remove
 
     std::vector<Iteration> iterations;
     std::vector<PrimalSolution> primalSolutions;
@@ -58,19 +58,19 @@ class ProcessInfo
 
     DoublePair getCorrectedObjectiveBounds();
 
-    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
+    void addPrimalSolution(DoubleVector pt, E_PrimalSolutionSource source, double objVal, int iter,
                            IndexValuePair maxConstrDev);
-    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
+    void addPrimalSolution(DoubleVector pt, E_PrimalSolutionSource source, double objVal, int iter);
     void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
 
-    void addPrimalFixedNLPCandidate(std::vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
+    void addPrimalFixedNLPCandidate(DoubleVector pt, E_PrimalNLPSource source, double objVal, int iter,
                                     IndexValuePair maxConstrDev);
 
-    void addDualSolution(std::vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
+    void addDualSolution(DoubleVector pt, E_DualSolutionSource source, double objVal, int iter);
     void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolution(DualSolution solution);
-    void addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSolutionSource source, int iter);
-    void addPrimalSolutionCandidates(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidate(DoubleVector pt, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidates(std::vector<DoubleVector> pts, E_PrimalSolutionSource source, int iter);
 
     void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
     void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
@@ -83,7 +83,7 @@ class ProcessInfo
 
     void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
-    void addDualSolutionCandidate(std::vector<double> pt, E_DualSolutionSource source, int iter);
+    void addDualSolutionCandidate(DoubleVector pt, E_DualSolutionSource source, int iter);
     void addDualSolutionCandidate(DualSolution solution);
 
     double getAbsoluteObjectiveGap();

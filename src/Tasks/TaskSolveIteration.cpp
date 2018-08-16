@@ -113,7 +113,7 @@ void TaskSolveIteration::run()
 
             if (env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
-                std::vector<double> tmpObjValue;
+                DoubleVector tmpObjValue;
                 std::vector<std::string> tmpObjName;
 
                 tmpObjValue.push_back(env->dualSolver->getObjectiveValue());
@@ -134,7 +134,7 @@ void TaskSolveIteration::run()
 
             if (env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
-                std::vector<double> tmpMostDevValue;
+                DoubleVector tmpMostDevValue;
                 std::vector<std::string> tmpConstrIndex;
 
                 tmpMostDevValue.push_back(mostDevConstr.value);

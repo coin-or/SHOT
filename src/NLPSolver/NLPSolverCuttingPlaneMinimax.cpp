@@ -14,12 +14,12 @@
 class MinimizationFunction
 {
   private:
-    std::vector<double> firstPt;
-    std::vector<double> secondPt;
+    DoubleVector firstPt;
+    DoubleVector secondPt;
     OptProblem *NLPProblem;
 
   public:
-    MinimizationFunction(std::vector<double> ptA, std::vector<double> ptB, OptProblem *prob)
+    MinimizationFunction(DoubleVector ptA, DoubleVector ptB, OptProblem *prob)
     {
         firstPt = ptA;
         secondPt = ptB;
@@ -29,7 +29,7 @@ class MinimizationFunction
     double operator()(const double x)
     {
         int length = secondPt.size();
-        std::vector<double> ptNew(length);
+        DoubleVector ptNew(length);
 
         for (int i = 0; i < length; i++)
         {
@@ -101,7 +101,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
     int bitPrecision = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
     // currSol is the current LP solution, and prevSol the previous one
-    std::vector<double> currSol, prevSol;
+    DoubleVector currSol, prevSol;
 
     double lambda; // Variable in the linesearch minimization
     double mu;     // Objective value for the linesearch minimization value
@@ -291,7 +291,7 @@ double NLPSolverCuttingPlaneMinimax::getSolution(int i)
     return (solution.at(i));
 }
 
-std::vector<double> NLPSolverCuttingPlaneMinimax::getSolution()
+DoubleVector NLPSolverCuttingPlaneMinimax::getSolution()
 {
     auto tmpSol = solution;
 
@@ -323,7 +323,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance *origInstanc
     return (true);
 }
 
-void NLPSolverCuttingPlaneMinimax::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverCuttingPlaneMinimax::fixVariables(std::vector<int> variableIndexes, DoubleVector variableValues)
 {
     LPSolver->fixVariables(variableIndexes, variableValues);
 }
@@ -334,7 +334,7 @@ void NLPSolverCuttingPlaneMinimax::unfixVariables()
 }
 
 void NLPSolverCuttingPlaneMinimax::setStartingPoint(std::vector<int> variableIndexes,
-                                                    std::vector<double> variableValues)
+                                                    DoubleVector variableValues)
 {
 }
 
@@ -348,12 +348,12 @@ int NLPSolverCuttingPlaneMinimax::getObjectiveFunctionVariableIndex()
     return (COIN_INT_MAX);
 }
 
-std::vector<double> NLPSolverCuttingPlaneMinimax::getCurrentVariableLowerBounds()
+DoubleVector NLPSolverCuttingPlaneMinimax::getCurrentVariableLowerBounds()
 {
     return (NLPProblem->getVariableLowerBounds());
 }
 
-std::vector<double> NLPSolverCuttingPlaneMinimax::getCurrentVariableUpperBounds()
+DoubleVector NLPSolverCuttingPlaneMinimax::getCurrentVariableUpperBounds()
 {
     return (NLPProblem->getVariableUpperBounds());
 }

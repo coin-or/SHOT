@@ -25,9 +25,9 @@ class TaskSolveFixedDualProblem : public TaskBase
 
   private:
     std::vector<int> discreteVariableIndexes;
-    std::vector<std::vector<double>> testedPoints;
+    std::vector<DoubleVector> testedPoints;
 
-    std::vector<double> lastSolution;
+    DoubleVector lastSolution;
     double lastPrimalBound = NAN;
 
     int totalIters = 0;
