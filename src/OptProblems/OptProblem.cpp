@@ -10,6 +10,8 @@
 
 #include "OptProblem.h"
 
+using namespace SHOT;
+
 OptProblem::OptProblem(EnvironmentPtr envPtr) : env(envPtr)
 {
     m_problemInstance = NULL;
@@ -39,10 +41,10 @@ int OptProblem::getNumberOfConstraints()
     return getProblemInstance()->getConstraintNumber();
 }
 
-std::vector<std::string> OptProblem::getConstraintNames()
+VectorString OptProblem::getConstraintNames()
 {
     std::string *tmpArray = getProblemInstance()->getConstraintNames();
-    std::vector<std::string> tmpVector(tmpArray, tmpArray + getProblemInstance()->getConstraintNumber());
+    VectorString tmpVector(tmpArray, tmpArray + getProblemInstance()->getConstraintNumber());
 
     return tmpVector;
 }
@@ -72,10 +74,10 @@ int OptProblem::getNumberOfRealVariables()
     return getProblemInstance()->getVariableNumber() - getProblemInstance()->getNumberOfBinaryVariables() - getProblemInstance()->getNumberOfIntegerVariables();
 }
 
-std::vector<std::string> OptProblem::getVariableNames()
+VectorString OptProblem::getVariableNames()
 {
     std::string *tmpArray = getProblemInstance()->getVariableNames();
-    std::vector<std::string> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+    VectorString tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
     return tmpVector;
 }
@@ -88,19 +90,19 @@ std::vector<char> OptProblem::getVariableTypes()
     return tmpVector;
 }
 
-std::vector<double> OptProblem::getVariableLowerBounds()
+VectorDouble OptProblem::getVariableLowerBounds()
 {
     double *tmpArray = getProblemInstance()->getVariableLowerBounds();
 
-    std::vector<double> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+    VectorDouble tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
     return tmpVector;
 }
 
-std::vector<double> OptProblem::getVariableUpperBounds()
+VectorDouble OptProblem::getVariableUpperBounds()
 {
     double *tmpArray = getProblemInstance()->getVariableUpperBounds();
-    std::vector<double> tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
+    VectorDouble tmpVector(tmpArray, tmpArray + getProblemInstance()->getVariableNumber());
 
     return tmpVector;
 }
@@ -127,9 +129,9 @@ void OptProblem::setVariableLowerBound(int varIdx, double value)
     getProblemInstance()->bVariablesModified = true;
 }
 
-std::vector<int> OptProblem::getRealVariableIndices()
+VectorInteger OptProblem::getRealVariableIndices()
 {
-    std::vector<int> indices;
+    VectorInteger indices;
     indices.reserve(getNumberOfRealVariables());
 
     auto varTypes = getVariableTypes();
@@ -143,9 +145,9 @@ std::vector<int> OptProblem::getRealVariableIndices()
     return (indices);
 }
 
-std::vector<int> OptProblem::getDiscreteVariableIndices()
+VectorInteger OptProblem::getDiscreteVariableIndices()
 {
-    std::vector<int> indices;
+    VectorInteger indices;
     indices.reserve(getNumberOfIntegerVariables() + getNumberOfBinaryVariables());
 
     auto varTypes = getVariableTypes();
@@ -159,9 +161,9 @@ std::vector<int> OptProblem::getDiscreteVariableIndices()
     return (indices);
 }
 
-std::vector<int> OptProblem::getBinaryVariableIndices()
+VectorInteger OptProblem::getBinaryVariableIndices()
 {
-    std::vector<int> indices;
+    VectorInteger indices;
     indices.reserve(getNumberOfBinaryVariables());
 
     auto varTypes = getVariableTypes();
@@ -175,9 +177,9 @@ std::vector<int> OptProblem::getBinaryVariableIndices()
     return (indices);
 }
 
-std::vector<int> OptProblem::getIntegerVariableIndices()
+VectorInteger OptProblem::getIntegerVariableIndices()
 {
-    std::vector<int> indices;
+    VectorInteger indices;
     indices.reserve(getNumberOfIntegerVariables());
 
     auto varTypes = getVariableTypes();
@@ -218,7 +220,7 @@ std::string OptProblem::exportProblemToOsil()
     return (osil);
 }
 
-IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
+PairIndexValue OptProblem::getMostDeviatingConstraint(VectorDouble point)
 {
     if (point.size() != this->getNumberOfVariables())
     {
@@ -226,29 +228,29 @@ IndexValuePair OptProblem::getMostDeviatingConstraint(std::vector<double> point)
             "     Error: point size (" + std::to_string(point.size()) + ") does not match number of variables (" + std::to_string(this->getNumberOfVariables()) + ")!");
     }
 
-    IndexValuePair valpair;
+    PairIndexValue valpair;
 
-    std::vector<int> idxNLCs = this->getNonlinearConstraintIndexes();
+    VectorInteger idxNLCs = this->getNonlinearConstraintIndexes();
 
     return (this->getMostDeviatingConstraint(point, idxNLCs).first);
 }
 
-std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstraint(std::vector<double> point,
-                                                                                   std::vector<int> constrIdxs)
+std::pair<PairIndexValue, VectorInteger> OptProblem::getMostDeviatingConstraint(VectorDouble point,
+                                                                                VectorInteger constrIdxs)
 {
-    IndexValuePair valpair;
+    PairIndexValue valpair;
 
-    std::vector<int> activeConstraints;
+    VectorInteger activeConstraints;
 
     if (constrIdxs.size() == 0)
     {
         //Only a quadratic objective function and quadratic constraints
-        valpair.idx = -1;
+        valpair.index = -1;
         valpair.value = 0.0;
     }
     else
     {
-        std::vector<double> constrDevs(constrIdxs.size());
+        VectorDouble constrDevs(constrIdxs.size());
 
         for (int i = 0; i < constrIdxs.size(); i++)
 
@@ -260,21 +262,21 @@ std::pair<IndexValuePair, std::vector<int>> OptProblem::getMostDeviatingConstrai
         }
 
         auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-        valpair.idx = constrIdxs.at(std::distance(std::begin(constrDevs), biggest));
+        valpair.index = constrIdxs.at(std::distance(std::begin(constrDevs), biggest));
         valpair.value = *biggest;
     }
 
     return (std::make_pair(valpair, activeConstraints));
 }
 
-IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> point)
+PairIndexValue OptProblem::getMostDeviatingAllConstraint(VectorDouble point)
 {
 
-    IndexValuePair valpair;
+    PairIndexValue valpair;
 
     int numConstr = this->getNumberOfConstraints();
 
-    std::vector<double> constrDevs(numConstr);
+    VectorDouble constrDevs(numConstr);
 
     for (int i = 0; i < numConstr; i++)
     {
@@ -289,22 +291,22 @@ IndexValuePair OptProblem::getMostDeviatingAllConstraint(std::vector<double> poi
     }
 
     auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-    valpair.idx = std::distance(std::begin(constrDevs), biggest);
+    valpair.index = std::distance(std::begin(constrDevs), biggest);
     valpair.value = *biggest;
 
     return valpair;
 }
 
-std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<double> point, double tolerance)
+std::vector<PairIndexValue> OptProblem::getMostDeviatingConstraints(VectorDouble point, double tolerance)
 {
-    std::vector<IndexValuePair> valpairs;
+    std::vector<PairIndexValue> valpairs;
 
-    std::vector<int> idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
+    VectorInteger idxNLCs = this->getNonlinearOrQuadraticConstraintIndexes();
 
     if (idxNLCs.size() == 0) //Only a quadratic objective function and quadratic constraints
     {
-        IndexValuePair valpair;
-        valpair.idx = -1;
+        PairIndexValue valpair;
+        valpair.index = -1;
         valpair.value = 0.0;
 
         valpairs.push_back(valpair);
@@ -316,16 +318,16 @@ std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<
         if (tolerance > 1)
             tolerance = 1;
 
-        std::vector<double> constrDevs(idxNLCs.size());
+        VectorDouble constrDevs(idxNLCs.size());
 
         for (int i = 0; i < idxNLCs.size(); i++)
         {
             constrDevs.at(i) = calculateConstraintFunctionValue(idxNLCs.at(i), point);
         }
 
-        IndexValuePair valpair;
+        PairIndexValue valpair;
         auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-        valpair.idx = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
+        valpair.index = idxNLCs.at(std::distance(std::begin(constrDevs), biggest));
         valpair.value = *biggest;
         valpairs.push_back(valpair);
 
@@ -341,12 +343,12 @@ std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<
 
         for (int i = 0; i < idxNLCs.size(); i++)
         {
-            if (idxNLCs.at(i) != valpair.idx)
+            if (idxNLCs.at(i) != valpair.index)
             {
                 if (constrDevs.at(i) >= compVal)
                 {
-                    IndexValuePair tmpPair;
-                    tmpPair.idx = idxNLCs.at(i);
+                    PairIndexValue tmpPair;
+                    tmpPair.index = idxNLCs.at(i);
                     tmpPair.value = constrDevs.at(i);
                     valpairs.push_back(tmpPair);
                 }
@@ -357,9 +359,9 @@ std::vector<IndexValuePair> OptProblem::getMostDeviatingConstraints(std::vector<
     return (valpairs);
 }
 
-bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isConstraintsFulfilledInPoint(VectorDouble point, double eps)
 {
-    std::vector<int> idxNLCs = this->getNonlinearConstraintIndexes();
+    VectorInteger idxNLCs = this->getNonlinearConstraintIndexes();
 
     int numNLC = getNumberOfNonlinearConstraints();
 
@@ -375,14 +377,14 @@ bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point, double
     return true;
 }
 
-bool OptProblem::isConstraintsFulfilledInPoint(std::vector<double> point)
+bool OptProblem::isConstraintsFulfilledInPoint(VectorDouble point)
 {
     return isConstraintsFulfilledInPoint(point, 0);
 }
 
-bool OptProblem::isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isDiscreteVariablesFulfilledInPoint(VectorDouble point, double eps)
 {
-    std::vector<int> idxDiscrete = this->getDiscreteVariableIndices();
+    VectorInteger idxDiscrete = this->getDiscreteVariableIndices();
 
     for (int i = 0; i < idxDiscrete.size(); i++)
     {
@@ -393,7 +395,7 @@ bool OptProblem::isDiscreteVariablesFulfilledInPoint(std::vector<double> point, 
     return (true);
 }
 
-bool OptProblem::isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isVariableBoundsFulfilledInPoint(VectorDouble point, double eps)
 {
     int numVars = this->getNumberOfVariables();
 
@@ -410,10 +412,10 @@ bool OptProblem::isVariableBoundsFulfilledInPoint(std::vector<double> point, dou
     }
 }
 
-bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps)
+bool OptProblem::isLinearConstraintsFulfilledInPoint(VectorDouble point, double eps)
 {
 
-    std::vector<int> idxLCs = this->getLinearConstraintIndexes();
+    VectorInteger idxLCs = this->getLinearConstraintIndexes();
 
     int numLC = idxLCs.size();
 
@@ -428,12 +430,12 @@ bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point, 
     return true;
 }
 
-bool OptProblem::isLinearConstraintsFulfilledInPoint(std::vector<double> point)
+bool OptProblem::isLinearConstraintsFulfilledInPoint(VectorDouble point)
 {
     return isLinearConstraintsFulfilledInPoint(point, 0);
 }
 
-SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vector<double> point)
+SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, VectorDouble point)
 {
     auto gradient = getProblemInstance()->calculateConstraintFunctionGradient(&point.at(0), idx, true);
 
@@ -452,7 +454,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
     {
         auto numGradient = calculateGradientNumerically(idx, point);
 
-        std::vector<double> nonSparseGrad(point.size(), 0.0);
+        VectorDouble nonSparseGrad(point.size(), 0.0);
 
         for (int i = 0; i < gradient->number; i++)
         {
@@ -483,7 +485,7 @@ SparseVector *OptProblem::calculateConstraintFunctionGradient(int idx, std::vect
     return (gradient);
 }
 
-double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
+double OptProblem::calculateOriginalObjectiveValue(VectorDouble point)
 {
     auto tmpVal = getProblemInstance()->calculateAllObjectiveFunctionValues(&point[0], true)[0];
     env->solutionStatistics.numberOfFunctionEvalutions++;
@@ -491,7 +493,7 @@ double OptProblem::calculateOriginalObjectiveValue(std::vector<double> point)
     return tmpVal;
 }
 
-double OptProblem::calculateConstraintFunctionValue(int idx, std::vector<double> point)
+double OptProblem::calculateConstraintFunctionValue(int idx, VectorDouble point)
 {
     if (point.size() != this->getNumberOfVariables())
     {
@@ -916,7 +918,7 @@ void OptProblem::setNonlinearConstraintIndexes()
         }
     }
 
-    std::vector<int> NLCIndexes, QCIndexes;
+    VectorInteger NLCIndexes, QCIndexes;
 
     for (int i = 0; i < isNonlinear.size(); i++)
     {
@@ -939,9 +941,9 @@ void OptProblem::setNonlinearConstraintIndexes()
     QCIndexes.clear();
 }
 
-std::vector<int> OptProblem::getLinearConstraintIndexes()
+VectorInteger OptProblem::getLinearConstraintIndexes()
 {
-    std::vector<int> idxs;
+    VectorInteger idxs;
     int numCon = this->getProblemInstance()->getConstraintNumber();
 
     for (int i = 0; i < numCon; i++)
@@ -974,12 +976,12 @@ void OptProblem::setVariableBoundsAsTightened(int varIndex)
     m_variableBoundTightened.at(varIndex) = true;
 }
 
-std::vector<int> OptProblem::getNonlinearConstraintIndexes()
+VectorInteger OptProblem::getNonlinearConstraintIndexes()
 {
     return m_nonlinearConstraints;
 }
 
-void OptProblem::setNonlinearConstraints(std::vector<int> idxs)
+void OptProblem::setNonlinearConstraints(VectorInteger idxs)
 {
     m_nonlinearConstraints = idxs;
 
@@ -989,7 +991,7 @@ void OptProblem::setNonlinearConstraints(std::vector<int> idxs)
     }
     else
     {
-        std::vector<int> newVect;
+        VectorInteger newVect;
         set_union(m_nonlinearOrQuadraticConstraints.begin(), m_nonlinearOrQuadraticConstraints.end(),
                   m_nonlinearConstraints.begin(), m_nonlinearConstraints.end(), back_inserter(newVect));
 
@@ -997,12 +999,12 @@ void OptProblem::setNonlinearConstraints(std::vector<int> idxs)
     }
 }
 
-std::vector<int> OptProblem::getQuadraticConstraintIndexes()
+VectorInteger OptProblem::getQuadraticConstraintIndexes()
 {
     return m_quadraticConstraints;
 }
 
-void OptProblem::setQuadraticConstraints(std::vector<int> idxs)
+void OptProblem::setQuadraticConstraints(VectorInteger idxs)
 {
     m_quadraticConstraints = idxs;
 
@@ -1012,7 +1014,7 @@ void OptProblem::setQuadraticConstraints(std::vector<int> idxs)
     }
     else
     {
-        std::vector<int> newVect;
+        VectorInteger newVect;
         set_union(m_nonlinearOrQuadraticConstraints.begin(), m_nonlinearOrQuadraticConstraints.end(),
                   m_quadraticConstraints.begin(), m_quadraticConstraints.end(), back_inserter(newVect));
 
@@ -1022,7 +1024,7 @@ void OptProblem::setQuadraticConstraints(std::vector<int> idxs)
     }
 }
 
-std::vector<int> OptProblem::getNonlinearOrQuadraticConstraintIndexes()
+VectorInteger OptProblem::getNonlinearOrQuadraticConstraintIndexes()
 {
     return m_nonlinearOrQuadraticConstraints;
 }
@@ -1136,11 +1138,11 @@ void OptProblem::setVariableBoundsTightened(std::vector<bool> status)
     m_variableBoundTightened = status;
 }
 
-std::vector<double> OptProblem::calculateGradientNumerically(int constraintIndex, std::vector<double> point)
+VectorDouble OptProblem::calculateGradientNumerically(int constraintIndex, VectorDouble point)
 {
-    std::vector<double> point1(point);
-    std::vector<double> point2(point);
-    std::vector<double> numGradient(point.size(), 0.0);
+    VectorDouble point1(point);
+    VectorDouble point2(point);
+    VectorDouble numGradient(point.size(), 0.0);
 
     for (int i = 0; i < point.size(); i++)
     {

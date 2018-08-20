@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskPresolve : public TaskBase
 {
   public:
@@ -25,3 +27,4 @@ class TaskPresolve : public TaskBase
   private:
     bool isPresolved;
 };
+} // namespace SHOT

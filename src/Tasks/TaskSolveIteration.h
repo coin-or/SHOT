@@ -14,6 +14,8 @@
 
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskSolveIteration : public TaskBase
 {
   public:
@@ -25,3 +27,4 @@ class TaskSolveIteration : public TaskBase
 
   private:
 };
+} // namespace SHOT

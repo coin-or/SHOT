@@ -23,6 +23,8 @@
 #include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsSolution.h"
 
+namespace SHOT
+{
 class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
 {
   public:
@@ -35,18 +37,19 @@ class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
   private:
     INLPSolver *NLPSolver;
 
-    std::vector<int> discreteVariableIndexes;
-    std::vector<std::vector<double>> testedPoints;
-    std::vector<double> fixPoint;
+    VectorInteger discreteVariableIndexes;
+    std::vector<VectorDouble> testedPoints;
+    VectorDouble fixPoint;
 
     double originalNLPTime;
     double originalNLPIter;
 
-    std::vector<double> originalLBs;
-    std::vector<double> originalUBs;
+    VectorDouble originalLBs;
+    VectorDouble originalUBs;
 
     TaskBase *taskSelectHPPts;
 
     int originalIterFrequency;
     double originalTimeFrequency;
 };
+} // namespace SHOT

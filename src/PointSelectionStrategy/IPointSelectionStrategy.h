@@ -9,14 +9,17 @@
 */
 
 #pragma once
-#include "vector"
+#include "../Structs.h"
 
+namespace SHOT
+{
 class IPointSelectionStrategy
 {
   public:
     IPointSelectionStrategy();
     ~IPointSelectionStrategy();
 
-    virtual std::vector<double> selectPoint() = 0;
-    virtual std::vector<std::vector<double>> selectPoints(int maxNumPts) = 0;
+    virtual VectorDouble selectPoint() = 0;
+    virtual std::vector<VectorDouble> selectPoints(int maxNumPts) = 0;
 };
+} // namespace SHOT

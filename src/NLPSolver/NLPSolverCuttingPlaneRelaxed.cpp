@@ -63,7 +63,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
     boost::uintmax_t maxIterSubsolver = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
 
     // currSol is the current LP solution, and prevSol the previous one
-    std::vector<double> currSol, prevSol, LPVarSol;
+    VectorDouble currSol, prevSol, LPVarSol;
 
     double LPObjVar;
 
@@ -140,8 +140,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
 
         if (true)
         {
-            std::vector<double> externalPoint = LPVarSol;
-            std::vector<double> internalPoint = env->process->interiorPts.at(0)->point;
+            VectorDouble externalPoint = LPVarSol;
+            VectorDouble internalPoint = env->process->interiorPts.at(0)->point;
 
             try
             {
@@ -166,7 +166,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
                 for (int j = 0; j < numHyperAdded; j++)
                 {
                     Hyperplane hyperplane;
-                    hyperplane.sourceConstraintIndex = errorExternal.at(j).idx;
+                    hyperplane.sourceConstraintIndex = errorExternal.at(j).index;
                     hyperplane.generatedPoint = externalPoint;
                     hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
@@ -248,7 +248,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneRelaxed::solveProblemInstance()
             for (int j = 0; j < numHyperAdded; j++)
             {
                 Hyperplane hyperplane;
-                hyperplane.sourceConstraintIndex = tmpMostDevs.at(j).idx;
+                hyperplane.sourceConstraintIndex = tmpMostDevs.at(j).index;
                 hyperplane.generatedPoint = currSol;
                 hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
@@ -288,7 +288,7 @@ double NLPSolverCuttingPlaneRelaxed::getSolution(int i)
     return (solution.at(i));
 }
 
-std::vector<double> NLPSolverCuttingPlaneRelaxed::getSolution()
+VectorDouble NLPSolverCuttingPlaneRelaxed::getSolution()
 {
     auto tmpSol = solution;
 
@@ -359,7 +359,7 @@ bool NLPSolverCuttingPlaneRelaxed::createProblemInstance(OSInstance *origInstanc
     return (true);
 }
 
-void NLPSolverCuttingPlaneRelaxed::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverCuttingPlaneRelaxed::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
     LPSolver->fixVariables(variableIndexes, variableValues);
 }
@@ -369,8 +369,8 @@ void NLPSolverCuttingPlaneRelaxed::unfixVariables()
     LPSolver->unfixVariables();
 }
 
-void NLPSolverCuttingPlaneRelaxed::setStartingPoint(std::vector<int> variableIndexes,
-                                                    std::vector<double> variableValues)
+void NLPSolverCuttingPlaneRelaxed::setStartingPoint(VectorInteger variableIndexes,
+                                                    VectorDouble variableValues)
 {
 }
 
@@ -384,12 +384,12 @@ int NLPSolverCuttingPlaneRelaxed::getObjectiveFunctionVariableIndex()
     return (NLPProblem->getNonlinearObjectiveVariableIdx());
 }
 
-std::vector<double> NLPSolverCuttingPlaneRelaxed::getCurrentVariableLowerBounds()
+VectorDouble NLPSolverCuttingPlaneRelaxed::getCurrentVariableLowerBounds()
 {
     return (NLPProblem->getVariableLowerBounds());
 }
 
-std::vector<double> NLPSolverCuttingPlaneRelaxed::getCurrentVariableUpperBounds()
+VectorDouble NLPSolverCuttingPlaneRelaxed::getCurrentVariableUpperBounds()
 {
     return (NLPProblem->getVariableUpperBounds());
 }

@@ -16,6 +16,8 @@
 #include "../MIPSolver/RelaxationStrategyStandard.h"
 #include "../MIPSolver/RelaxationStrategyNone.h"
 
+namespace SHOT
+{
 class TaskExecuteRelaxationStrategy : public TaskBase
 {
   public:
@@ -30,3 +32,4 @@ class TaskExecuteRelaxationStrategy : public TaskBase
 
     bool isInitialized;
 };
+} // namespace SHOT

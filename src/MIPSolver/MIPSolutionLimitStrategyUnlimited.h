@@ -11,6 +11,8 @@
 #pragma once
 #include "IMIPSolutionLimitStrategy.h"
 
+namespace SHOT
+{
 class MIPSolutionLimitStrategyUnlimited : public IMIPSolutionLimitStrategy
 {
   public:
@@ -21,3 +23,4 @@ class MIPSolutionLimitStrategyUnlimited : public IMIPSolutionLimitStrategy
     virtual int getNewLimit();
     virtual int getInitialLimit();
 };
+} // namespace SHOT

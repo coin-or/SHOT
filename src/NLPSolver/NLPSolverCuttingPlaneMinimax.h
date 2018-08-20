@@ -25,31 +25,33 @@
 
 #include "boost/math/tools/minima.hpp"
 
+namespace SHOT
+{
 class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 {
   public:
     NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr);
     virtual ~NLPSolverCuttingPlaneMinimax();
 
-    virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();
 
     virtual bool isObjectiveFunctionNonlinear();
     virtual int getObjectiveFunctionVariableIndex();
 
-    virtual std::vector<double> getCurrentVariableLowerBounds();
-    virtual std::vector<double> getCurrentVariableUpperBounds();
+    virtual VectorDouble getCurrentVariableLowerBounds();
+    virtual VectorDouble getCurrentVariableUpperBounds();
 
   private:
     IMIPSolver *LPSolver;
 
     virtual double getSolution(int i);
-    virtual std::vector<double> getSolution();
+    virtual VectorDouble getSolution();
     virtual double getObjectiveValue();
 
     virtual bool createProblemInstance(OSInstance *origInstance);
 
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
 
     virtual void unfixVariables();
 
@@ -59,6 +61,7 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 
     bool isProblemCreated;
 
-    std::vector<double> solution;
+    VectorDouble solution;
     double objectiveValue = NAN;
 };
+} // namespace SHOT

@@ -10,6 +10,8 @@
 
 #include "SHOTSolver.h"
 
+using namespace SHOT;
+
 SHOTSolver::SHOTSolver(EnvironmentPtr envPtr) : env(envPtr)
 {
     initializeSettings();
@@ -337,7 +339,7 @@ void SHOTSolver::initializeSettings()
 
     // Dual strategy settings: ECP and ESH
 
-    std::vector<std::string> enumHyperplanePointStrategy;
+    VectorString enumHyperplanePointStrategy;
     enumHyperplanePointStrategy.push_back("ESH");
     enumHyperplanePointStrategy.push_back("ECP");
     env->settings->createSetting("CutStrategy", "Dual",
@@ -378,7 +380,7 @@ void SHOTSolver::initializeSettings()
 
     // Dual strategy settings: Interior point search strategy
 
-    std::vector<std::string> enumNLPSolver;
+    VectorString enumNLPSolver;
     enumNLPSolver.push_back("Cutting plane minimax");
     enumNLPSolver.push_back("Ipopt minimax");
     enumNLPSolver.push_back("Ipopt relaxed");
@@ -388,7 +390,7 @@ void SHOTSolver::initializeSettings()
                                  static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver);
     enumNLPSolver.clear();
 
-    std::vector<std::string> enumAddPrimalPointAsInteriorPoint;
+    VectorString enumAddPrimalPointAsInteriorPoint;
     enumAddPrimalPointAsInteriorPoint.push_back("No");
     enumAddPrimalPointAsInteriorPoint.push_back("Add as new");
     enumAddPrimalPointAsInteriorPoint.push_back("Replace old");
@@ -402,7 +404,7 @@ void SHOTSolver::initializeSettings()
                                  "No linesearch on a constraint if its value is less than this factor of the maximum", 1e-6,
                                  1.0);
 
-    std::vector<std::string> enumLinesearchConstraintStrategy;
+    VectorString enumLinesearchConstraintStrategy;
     enumLinesearchConstraintStrategy.push_back("Max function");
     enumLinesearchConstraintStrategy.push_back("Individual constraints");
     env->settings->createSetting("ESH.Linesearch.ConstraintStrategy", "Dual",
@@ -448,7 +450,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("MIP.CutOffTolerance", "Dual", 0.00001,
                                  "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, OSDBL_MAX);
 
-    std::vector<std::string> enumPresolve;
+    VectorString enumPresolve;
     enumPresolve.push_back("Never");
     enumPresolve.push_back("Once");
     enumPresolve.push_back("Always");
@@ -462,7 +464,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", true,
                                  "Update bounds (from presolve) to the MIP model");
 
-    env->settings->createSetting("MIP.NumberOfThreads", "Dual", 7, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
+    env->settings->createSetting("MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     env->settings->createSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual", 10000,
                                  "Iterations without dual bound updates for forcing optimal MIP solution", 0, OSINT_MAX);
@@ -480,7 +482,7 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("MIP.SolutionPool.Capacity", "Dual", 100, "The maximum number of solutions in the solution pool", 0, OSINT_MAX);
 
-    std::vector<std::string> enumMIPSolver;
+    VectorString enumMIPSolver;
     enumMIPSolver.push_back("Cplex");
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
@@ -495,7 +497,7 @@ void SHOTSolver::initializeSettings()
 
     // Dual strategy settings: Quadratic function strategy
 
-    std::vector<std::string> enumQPStrategy;
+    VectorString enumQPStrategy;
     enumQPStrategy.push_back("All nonlinear");
     enumQPStrategy.push_back("Use quadratic objective");
     enumQPStrategy.push_back("Use quadratic constraints");
@@ -519,7 +521,7 @@ void SHOTSolver::initializeSettings()
 
     // Dual strategy settings: Main tree strategy
 
-    std::vector<std::string> enumSolutionStrategy;
+    VectorString enumSolutionStrategy;
     enumSolutionStrategy.push_back("Multi-tree");
     enumSolutionStrategy.push_back("Single-tree");
     env->settings->createSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree),
@@ -538,7 +540,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
 
     // Logging and output settings
-    std::vector<std::string> enumLogLevel;
+    VectorString enumLogLevel;
     enumLogLevel.push_back("Error");
     enumLogLevel.push_back("Summary");
     enumLogLevel.push_back("Warning");
@@ -561,7 +563,7 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
 
-    std::vector<std::string> enumIterationDetail;
+    VectorString enumIterationDetail;
     enumIterationDetail.push_back("Full");
     enumIterationDetail.push_back("On objective gap update");
     enumIterationDetail.push_back("On objective gap update and all primal NLP calls");
@@ -571,7 +573,7 @@ void SHOTSolver::initializeSettings()
                                  "When should the fixed strategy be used", enumIterationDetail);
     enumIterationDetail.clear();
 
-    std::vector<std::string> enumOutputDirectory;
+    VectorString enumOutputDirectory;
     enumOutputDirectory.push_back("Problem directory");
     enumOutputDirectory.push_back("Program directory");
     env->settings->createSetting("OutputDirectory", "Output",
@@ -581,7 +583,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("SaveNumberOfSolutions", "Output", 1, "Save this number of primal solutions to OSrL file");
 
     // Primal settings: Fixed integer strategy
-    std::vector<std::string> enumPrimalNLPStrategy;
+    VectorString enumPrimalNLPStrategy;
     enumPrimalNLPStrategy.push_back("Use each iteration");
     enumPrimalNLPStrategy.push_back("Based on iteration or time");
     enumPrimalNLPStrategy.push_back("Based on iteration or time, and for all feasible MIP solutions");
@@ -608,7 +610,7 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, OSINT_MAX);
 
-    std::vector<std::string> enumPrimalNLPSolver;
+    VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("CuttingPlane");
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
@@ -617,7 +619,7 @@ void SHOTSolver::initializeSettings()
                                  "NLP solver to use", enumPrimalNLPSolver);
     enumPrimalNLPSolver.clear();
 
-    std::vector<std::string> enumPrimalBoundNLPStartingPoint;
+    VectorString enumPrimalBoundNLPStartingPoint;
     enumPrimalBoundNLPStartingPoint.push_back("All");
     enumPrimalBoundNLPStartingPoint.push_back("First");
     enumPrimalBoundNLPStartingPoint.push_back("All feasible");
@@ -716,7 +718,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("Ipopt.ConstraintViolationTolerance", "Subsolver", 1E-8,
                                  "Constraint violation tolerance in Ipopt", -OSDBL_MAX, OSDBL_MAX);
 
-    std::vector<std::string> enumIPOptSolver;
+    VectorString enumIPOptSolver;
     enumIPOptSolver.push_back("ma27");
     enumIPOptSolver.push_back("ma57");
     enumIPOptSolver.push_back("ma86");
@@ -740,7 +742,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("Rootsearch.MaxIterations", "Subsolver", 100, "Maximal root search iterations",
                                  0, OSINT_MAX);
 
-    std::vector<std::string> enumLinesearchMethod;
+    VectorString enumLinesearchMethod;
     enumLinesearchMethod.push_back("BoostTOMS748");
     enumLinesearchMethod.push_back("BoostBisection");
     enumLinesearchMethod.push_back("Bisection");
@@ -779,7 +781,7 @@ void SHOTSolver::initializeSettings()
 
     // Hidden settings for problem information
 
-    std::vector<std::string> enumFileFormat;
+    VectorString enumFileFormat;
     enumFileFormat.push_back("OSiL");
     enumFileFormat.push_back("GAMS");
     enumFileFormat.push_back("NL");
@@ -795,6 +797,8 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("OptionsFile", "Input", empty, "The name of the options file used", true);
 
     env->settings->createSetting("ResultPath", "Output", empty, "The path where to save the result information", true);
+
+    env->settings->settingsInitialized = true;
 
     env->output->outputInfo("Initialization of settings complete.");
 }

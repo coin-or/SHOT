@@ -119,11 +119,11 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
     }
 }
 
-boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
+boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
 {
     auto varNames = env->model->originalProblem->getVariableNames();
 
-    std::vector<IndexValuePair> elements;
+    std::vector<PairIndexValue> elements;
 
     double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
     auto nablag = env->model->originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
@@ -132,8 +132,8 @@ boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::c
 
     for (int i = 0; i < nablag->number; i++)
     {
-        IndexValuePair pair;
-        pair.idx = nablag->indexes[i];
+        PairIndexValue pair;
+        pair.index = nablag->indexes[i];
         pair.value = nablag->values[i];
 
         elements.push_back(pair);
@@ -143,7 +143,7 @@ boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::c
         env->output->outputInfo("     Gradient for variable " + varNames.at(nablag->indexes[i]) + " in point " + std::to_string(hyperplane.generatedPoint.at(nablag->indexes[i])) + ": " + std::to_string(nablag->values[i]));
     }
 
-    boost::optional<std::pair<std::vector<IndexValuePair>, double>> optional;
+    boost::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
     if (elements.size() > 0)
         optional = std::make_pair(elements, constant);
 
@@ -158,12 +158,12 @@ boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::c
 void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
     auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
-    std::vector<IndexValuePair> elements;
+    std::vector<PairIndexValue> elements;
 
     auto varNames = env->model->originalProblem->getVariableNames();
 
     double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
-                                                                        hyperplane.generatedPoint);
+                                                                                    hyperplane.generatedPoint);
 
     auto tmpArray = env->model->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
         &hyperplane.generatedPoint.at(0), -1, true);
@@ -174,8 +174,8 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
     {
         if (tmpArray[i] != 0)
         {
-            IndexValuePair pair;
-            pair.idx = i;
+            PairIndexValue pair;
+            pair.index = i;
             pair.value = tmpArray[i];
 
             elements.push_back(pair);
@@ -183,12 +183,12 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
         }
     }
 
-    IndexValuePair pair;
-    pair.idx = env->model->originalProblem->getNonlinearObjectiveVariableIdx();
+    PairIndexValue pair;
+    pair.index = env->model->originalProblem->getNonlinearObjectiveVariableIdx();
     pair.value = -1.0;
 
     elements.push_back(pair);
-    constant += hyperplane.generatedPoint.at(pair.idx);
+    constant += hyperplane.generatedPoint.at(pair.index);
 
     bool hyperplaneIsOk = true;
 
@@ -281,7 +281,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
     }
 }
 
-void MIPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
     if (isVariablesFixed)
     {
@@ -293,7 +293,7 @@ void MIPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<d
     if (size == 0)
         return;
 
-    std::vector<DoublePair> originalBounds(size);
+    std::vector<PairDouble> originalBounds(size);
 
     activateDiscreteVariables(false);
 
@@ -342,14 +342,14 @@ void MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
     }
 }
 
-void MIPSolverBase::createIntegerCut(std::vector<int> binaryIndexes)
+void MIPSolverBase::createIntegerCut(VectorInteger binaryIndexes)
 {
-    std::vector<IndexValuePair> elements;
+    std::vector<PairIndexValue> elements;
 
     for (int i = 0; i < binaryIndexes.size(); i++)
     {
-        IndexValuePair pair;
-        pair.idx = binaryIndexes.at(i);
+        PairIndexValue pair;
+        pair.index = binaryIndexes.at(i);
         pair.value = 1.0;
 
         elements.push_back(pair);

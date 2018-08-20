@@ -10,6 +10,8 @@
 
 #include "TaskHandler.h"
 
+using namespace SHOT;
+
 TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 {
     env = envPtr;

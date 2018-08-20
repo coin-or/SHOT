@@ -46,7 +46,7 @@ void TaskUpdateNonlinearObjectiveByLinesearch::run()
         if (changed && i == 0 /*&& (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal*/)
         {
             currIter->maxDeviation = allSolutions.at(i).maxDeviation.value;
-            currIter->maxDeviationConstraint = allSolutions.at(i).maxDeviation.idx;
+            currIter->maxDeviationConstraint = allSolutions.at(i).maxDeviation.index;
             currIter->objectiveValue = allSolutions.at(0).objectiveValue;
 
             env->process->setObjectiveUpdatedByLinesearch(true);
@@ -75,7 +75,7 @@ std::string TaskUpdateNonlinearObjectiveByLinesearch::getType()
 
 bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPoint &solution)
 {
-    std::vector<int> constrIdxs(1);
+    VectorInteger constrIdxs(1);
     constrIdxs.push_back(-1);
 
     auto dualSol = solution;
@@ -85,11 +85,11 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
     double mu = dualSol.objectiveValue;
     double error = env->model->originalProblem->calculateConstraintFunctionValue(-1, dualSol.point);
 
-    std::vector<double> tmpPoint(dualSol.point);
+    VectorDouble tmpPoint(dualSol.point);
     tmpPoint.back() = mu + (1 + std::min(0.01, 1 / abs(oldObjVal))) * error;
 
-    std::vector<double> internalPoint;
-    std::vector<double> externalPoint;
+    VectorDouble internalPoint;
+    VectorDouble externalPoint;
 
     bool changed = false;
 
@@ -119,7 +119,7 @@ bool TaskUpdateNonlinearObjectiveByLinesearch::updateObjectiveInPoint(SolutionPo
             if (diffobj > env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
             {
                 Hyperplane hyperplane;
-                hyperplane.sourceConstraintIndex = mostDevOuter.idx;
+                hyperplane.sourceConstraintIndex = mostDevOuter.index;
                 hyperplane.generatedPoint = externalPoint;
                 hyperplane.source = E_HyperplaneSource::PrimalSolutionSearch;
                 env->process->hyperplaneWaitingList.push_back(hyperplane);

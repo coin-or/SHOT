@@ -12,6 +12,8 @@
 #include "Enums.h"
 #include "Structs.h"
 
+namespace SHOT
+{
 class Environment
 {
   public:
@@ -32,5 +34,6 @@ class Environment
 };
 
 typedef std::shared_ptr<Environment> EnvironmentPtr;
+} // namespace SHOT
 
 #include "TaskHandler.h"

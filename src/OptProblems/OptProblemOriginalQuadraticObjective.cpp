@@ -10,6 +10,8 @@
 
 #include "OptProblemOriginalQuadraticObjective.h"
 
+using namespace SHOT;
+
 OptProblemOriginalQuadraticObjective::OptProblemOriginalQuadraticObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
 }
@@ -31,8 +33,6 @@ bool OptProblemOriginalQuadraticObjective::setProblem(OSInstance *instance)
         env->settings->updateSetting("Relaxation.IterationLimit", "Dual", 0);
         env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
     }
-
-    env->model->setOriginalProblem(OriginalProblemPtr(this));
 
     this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

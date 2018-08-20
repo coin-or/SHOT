@@ -10,10 +10,13 @@
 
 #pragma once
 #include "../Environment.h"
+#include "../Structs.h"
 #include "OptProblem.h"
 #include "../UtilityFunctions.h"
 #include "OSInstance.h"
 
+namespace SHOT
+{
 class OptProblemOriginal : public OptProblem
 {
   public:
@@ -22,3 +25,4 @@ class OptProblemOriginal : public OptProblem
 
     virtual bool setProblem(OSInstance *instance) = 0;
 };
+} // namespace SHOT

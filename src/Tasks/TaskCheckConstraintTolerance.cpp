@@ -28,7 +28,7 @@ void TaskCheckConstraintTolerance::run()
             this->nonlinearObjectiveConstraintIndex = env->model->originalProblem->getNonlinearObjectiveConstraintIdx();
 
             // Removes the nonlinear constraint index from the list
-            std::vector<int>::iterator position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), -1);
+            VectorInteger::iterator position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), -1);
             if (position != this->nonlinearConstraintIndexes.end()) // means the element was not found
                 this->nonlinearConstraintIndexes.erase(position);
 
@@ -39,6 +39,10 @@ void TaskCheckConstraintTolerance::run()
     }
 
     auto currIter = env->process->getCurrentIteration();
+
+    if (currIter->solutionPoints.size() == 0)
+        return;
+
     auto solutionPoint = currIter->solutionPoints.at(0).point;
 
     // Checks if the nonlinear constraints are fulfilled to tolerance

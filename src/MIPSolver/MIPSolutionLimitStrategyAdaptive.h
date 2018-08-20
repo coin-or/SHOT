@@ -11,6 +11,8 @@
 #pragma once
 #include "IMIPSolutionLimitStrategy.h"
 
+namespace SHOT
+{
 class MIPSolutionLimitStrategyAdaptive : public IMIPSolutionLimitStrategy
 {
   public:
@@ -24,3 +26,4 @@ class MIPSolutionLimitStrategyAdaptive : public IMIPSolutionLimitStrategy
     int lastIterSolLimIncreased;
     int numSolLimIncremented;
 };
+} // namespace SHOT

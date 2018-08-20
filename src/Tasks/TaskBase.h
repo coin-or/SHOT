@@ -16,6 +16,8 @@
 #include "TaskException.h"
 #include "../Environment.h"
 
+namespace SHOT
+{
 class TaskBase
 {
   public:
@@ -38,3 +40,4 @@ class TaskBase
   private:
     bool m_isActive;
 };
+} // namespace SHOT

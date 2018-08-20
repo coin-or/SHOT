@@ -12,15 +12,18 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCheckTimeLimit : public TaskBase
 {
   public:
-	TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskIDTrue);
-	virtual ~TaskCheckTimeLimit();
+    TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskIDTrue);
+    virtual ~TaskCheckTimeLimit();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
-	std::string taskIDIfTrue;
+    std::string taskIDIfTrue;
 };
+} // namespace SHOT

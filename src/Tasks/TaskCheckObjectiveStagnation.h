@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCheckObjectiveStagnation : public TaskBase
 {
   public:
@@ -24,3 +26,4 @@ class TaskCheckObjectiveStagnation : public TaskBase
   private:
     std::string taskIDIfTrue;
 };
+} // namespace SHOT

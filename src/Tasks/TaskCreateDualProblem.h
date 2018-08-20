@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskCreateDualProblem : public TaskBase
 {
   public:
@@ -24,3 +26,4 @@ class TaskCreateDualProblem : public TaskBase
 
   private:
 };
+} // namespace SHOT

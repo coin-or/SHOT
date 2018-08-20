@@ -14,6 +14,8 @@
 #include "../Model.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
+namespace SHOT
+{
 class LinesearchMethodBisection : public ILinesearchMethod
 {
   public:
@@ -21,9 +23,10 @@ class LinesearchMethodBisection : public ILinesearchMethod
 
     virtual ~LinesearchMethodBisection();
 
-    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol);
+    virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA,
+                                                           VectorDouble ptB, int Nmax, double lambdaTol, double constrTol);
 
-    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
+    virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA,
+                                                           VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs);
 };
+} // namespace SHOT

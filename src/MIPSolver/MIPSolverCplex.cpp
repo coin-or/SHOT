@@ -255,11 +255,11 @@ void MIPSolverCplex::initializeSolverSettings()
     catch (IloException &e)
     {
         env->output->outputError("Cplex error when initializing parameters for linear solver",
-                                                                e.getMessage());
+                                 e.getMessage());
     }
 }
 
-int MIPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan)
+int MIPSolverCplex::addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan)
 {
     try
     {
@@ -267,7 +267,7 @@ int MIPSolverCplex::addLinearConstraint(std::vector<IndexValuePair> elements, do
 
         for (int i = 0; i < elements.size(); i++)
         {
-            expr += elements.at(i).value * cplexVars[elements.at(i).idx];
+            expr += elements.at(i).value * cplexVars[elements.at(i).index];
         }
 
         if (isGreaterThan)
@@ -352,7 +352,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
     {
         if (activate)
             env->output->outputError("Error when activating discrete variables",
-                                                                    e.getMessage());
+                                     e.getMessage());
     }
 }
 
@@ -493,11 +493,11 @@ int MIPSolverCplex::getSolutionLimit()
     return (solLim);
 }
 
-std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
+VectorDouble MIPSolverCplex::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
     int numVar = cplexVars.getSize();
-    std::vector<double> solution(numVar);
+    VectorDouble solution(numVar);
 
     IloNumArray tmpSolsCplex(cplexEnv);
 
@@ -520,7 +520,7 @@ std::vector<double> MIPSolverCplex::getVariableSolution(int solIdx)
     catch (IloException &e)
     {
         env->output->outputError("Error when reading solution with index " + std::to_string(solIdx),
-                                                                e.getMessage());
+                                 e.getMessage());
     }
 
     tmpSolsCplex.end();
@@ -629,7 +629,7 @@ void MIPSolverCplex::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverCplex::addMIPStart(std::vector<double> point)
+void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
     IloNumArray startVal(cplexEnv);
 
@@ -711,9 +711,9 @@ void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double
     }
 }
 
-DoublePair MIPSolverCplex::getCurrentVariableBounds(int varIndex)
+PairDouble MIPSolverCplex::getCurrentVariableBounds(int varIndex)
 {
-    DoublePair tmpBounds;
+    PairDouble tmpBounds;
 
     try
     {
@@ -762,7 +762,7 @@ double MIPSolverCplex::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndGetNewBounds()
+std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
 {
     auto numVar = env->model->originalProblem->getNumberOfVariables();
 
@@ -777,8 +777,8 @@ std::pair<std::vector<double>, std::vector<double>> MIPSolverCplex::presolveAndG
 
         cplexInstance.basicPresolve(cplexVars, redlbs, redubs, cplexConstrs, redund);
 
-        std::vector<double> newLBs;
-        std::vector<double> newUBs;
+        VectorDouble newLBs;
+        VectorDouble newUBs;
 
         newLBs.reserve(numVar);
         newUBs.reserve(numVar);
@@ -883,7 +883,7 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
 
         for (int i = 0; i < tmpPair.first.size(); i++)
         {
-            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).idx];
+            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).index];
         }
 
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
@@ -908,7 +908,7 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
     }
 }
 
-void MIPSolverCplex::createIntegerCut(std::vector<int> binaryIndexes,
+void MIPSolverCplex::createIntegerCut(VectorInteger binaryIndexes,
                                       std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
     IloExpr expr(cplexEnv);

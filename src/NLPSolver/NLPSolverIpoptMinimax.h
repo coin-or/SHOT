@@ -12,13 +12,15 @@
 #include "NLPSolverIpoptBase.h"
 #include "../OptProblems/OptProblemNLPMinimax.h"
 
+namespace SHOT
+{
 class NLPSolverIpoptMinimax : public NLPSolverBase, public NLPSolverIpoptBase
 {
   public:
     NLPSolverIpoptMinimax(EnvironmentPtr envPtr);
     virtual ~NLPSolverIpoptMinimax();
 
-    std::vector<double> getSolution();
+    VectorDouble getSolution();
 
   protected:
     bool createProblemInstance(OSInstance *origInstance);
@@ -27,3 +29,4 @@ class NLPSolverIpoptMinimax : public NLPSolverBase, public NLPSolverIpoptBase
 
   private:
 };
+} // namespace SHOT

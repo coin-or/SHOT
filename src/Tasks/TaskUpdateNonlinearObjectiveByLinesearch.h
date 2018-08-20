@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
+namespace SHOT
+{
 class TaskUpdateNonlinearObjectiveByLinesearch : public TaskBase
 {
   public:
@@ -25,3 +27,4 @@ class TaskUpdateNonlinearObjectiveByLinesearch : public TaskBase
 
   private:
 };
+} // namespace SHOT

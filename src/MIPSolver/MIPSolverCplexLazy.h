@@ -24,6 +24,8 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
+namespace SHOT
+{
 class MIPSolverCplexLazy : public MIPSolverCplex
 {
   public:
@@ -61,7 +63,7 @@ class CplexCallback : public IloCplex::Callback::Function, public MIPSolverCallb
 
     void
     createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context &context);
-    void createIntegerCut(std::vector<int> binaryIndexes, const IloCplex::Callback::Context &context);
+    void createIntegerCut(VectorInteger binaryIndexes, const IloCplex::Callback::Context &context);
 
   public:
     /* Constructor with data */
@@ -76,3 +78,4 @@ class CplexCallback : public IloCplex::Callback::Function, public MIPSolverCallb
     /// Destructor
     virtual ~CplexCallback();
 };
+} // namespace SHOT

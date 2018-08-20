@@ -10,7 +10,9 @@
 
 #include "LinesearchMethodBoost.h"
 
-std::vector<int> activeConstraints;
+using namespace SHOT;
+
+VectorInteger activeConstraints;
 double lastActiveConstraintUpdateValue;
 
 Test::Test(EnvironmentPtr envPtr) : env(envPtr)
@@ -61,12 +63,12 @@ void Test::clearActiveConstraints()
     activeConstraints.clear();
 }
 
-void Test::setActiveConstraints(std::vector<int> constrIdxs)
+void Test::setActiveConstraints(VectorInteger constrIdxs)
 {
     activeConstraints = constrIdxs;
 }
 
-std::vector<int> Test::getActiveConstraints()
+VectorInteger Test::getActiveConstraints()
 {
     return (activeConstraints);
 }
@@ -74,7 +76,7 @@ std::vector<int> Test::getActiveConstraints()
 double Test::operator()(const double x)
 {
     int length = firstPt.size();
-    std::vector<double> ptNew(length);
+    VectorDouble ptNew(length);
 
     for (int i = 0; i < length; i++)
     {
@@ -106,15 +108,15 @@ LinesearchMethodBoost::~LinesearchMethodBoost()
     delete test;
 }
 
-std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZero(std::vector<double> ptA,
-                                                                                    std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol)
+std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDouble ptA,
+                                                                                    VectorDouble ptB, int Nmax, double lambdaTol, double constrTol)
 {
-    std::vector<int> tmpVector;
+    VectorInteger tmpVector;
     return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpVector));
 }
 
-std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZero(std::vector<double> ptA,
-                                                                                    std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs)
+std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDouble ptA,
+                                                                                    VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs)
 {
     if (ptA.size() != ptB.size())
     {
@@ -123,10 +125,10 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     }
 
     int length = ptA.size();
-    std::vector<double> ptNew(length);
-    std::vector<double> ptNew2(length);
+    VectorDouble ptNew(length);
+    VectorDouble ptNew2(length);
 
-    typedef DoublePair Result;
+    typedef PairDouble Result;
     boost::uintmax_t max_iter = Nmax;
 
     test->firstPt = ptA;
@@ -147,12 +149,12 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
     {
         if (test->valFirstPt > test->valSecondPt)
         {
-            std::pair<std::vector<double>, std::vector<double>> tmpPair(ptB, ptA);
+            std::pair<VectorDouble, VectorDouble> tmpPair(ptB, ptA);
 
             return (tmpPair);
         }
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptA, ptB);
+        std::pair<VectorDouble, VectorDouble> tmpPair(ptA, ptB);
 
         return (tmpPair);
     }
@@ -195,7 +197,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         env->process->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
                                                  env->process->getCurrentIteration()->iterationNumber);
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew2, ptNew);
+        std::pair<VectorDouble, VectorDouble> tmpPair(ptNew2, ptNew);
         return (tmpPair);
     }
     else
@@ -203,7 +205,7 @@ std::pair<std::vector<double>, std::vector<double>> LinesearchMethodBoost::findZ
         env->process->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
                                                  env->process->getCurrentIteration()->iterationNumber);
 
-        std::pair<std::vector<double>, std::vector<double>> tmpPair(ptNew, ptNew2);
+        std::pair<VectorDouble, VectorDouble> tmpPair(ptNew, ptNew2);
         return (tmpPair);
     }
 }

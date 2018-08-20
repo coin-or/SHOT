@@ -14,6 +14,8 @@
 #include "Tasks/TaskBase.h"
 #include "Tasks/TaskException.h"
 
+namespace SHOT
+{
 class TaskBase;
 
 class TaskHandler
@@ -37,3 +39,4 @@ class TaskHandler
 
     EnvironmentPtr env;
 };
+}

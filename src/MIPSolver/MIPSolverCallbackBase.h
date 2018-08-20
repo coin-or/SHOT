@@ -18,6 +18,8 @@
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 #include "../Report.h"
 
+namespace SHOT
+{
 class MIPSolverCallbackBase
 {
   public:
@@ -50,3 +52,4 @@ class MIPSolverCallbackBase
 
     EnvironmentPtr env;
 };
+} // namespace SHOT

@@ -13,6 +13,8 @@
 #include "Environment.h"
 #include "TaskHandler.h"
 
+namespace SHOT
+{
 class ISolutionStrategy
 {
   public:
@@ -24,3 +26,4 @@ class ISolutionStrategy
   protected:
     EnvironmentPtr env;
 };
+} // namespace SHOT

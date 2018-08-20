@@ -12,15 +12,18 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCheckRelativeGap : public TaskBase
 {
   public:
-	TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue);
-	virtual ~TaskCheckRelativeGap();
+    TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue);
+    virtual ~TaskCheckRelativeGap();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
-	std::string taskIDIfTrue;
+    std::string taskIDIfTrue;
 };
+} // namespace SHOT

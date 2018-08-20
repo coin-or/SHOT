@@ -9,3 +9,5 @@
 */
 
 #include "IMIPSolver.h"
+
+using namespace SHOT;

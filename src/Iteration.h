@@ -14,6 +14,8 @@
 #include "Environment.h"
 #include "ProcessInfo.h"
 
+namespace SHOT
+{
 class Iteration
 {
   public:
@@ -26,9 +28,9 @@ class Iteration
     std::vector<SolutionPoint> solutionPoints;
 
     double objectiveValue;
-    DoublePair currentObjectiveBounds;
+    PairDouble currentObjectiveBounds;
 
-    std::vector<double> constraintDeviations;
+    VectorDouble constraintDeviations;
     double maxDeviation;
     int maxDeviationConstraint;
 
@@ -53,7 +55,7 @@ class Iteration
 
     double solutionTime;
 
-    std::vector<std::vector<double>> hyperplanePoints;
+    std::vector<VectorDouble> hyperplanePoints;
 
     SolutionPoint getSolutionPointWithSmallestDeviation();
     int getSolutionPointWithSmallestDeviationIndex();
@@ -61,3 +63,4 @@ class Iteration
   private:
     EnvironmentPtr env;
 };
+} // namespace SHOT

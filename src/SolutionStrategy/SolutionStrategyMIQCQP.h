@@ -41,6 +41,8 @@
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class SolutionStrategyMIQCQP : public ISolutionStrategy
 {
   public:
@@ -52,3 +54,4 @@ class SolutionStrategyMIQCQP : public ISolutionStrategy
 
   protected:
 };
+} // namespace SHOT

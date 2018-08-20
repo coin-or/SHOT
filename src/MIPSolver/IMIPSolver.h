@@ -19,6 +19,8 @@
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 #include "../Structs.h"
 
+namespace SHOT
+{
 class IMIPSolver
 {
   public:
@@ -27,7 +29,7 @@ class IMIPSolver
     virtual bool createLinearProblem(OptProblem *origProblem) = 0;
     virtual void initializeSolverSettings() = 0;
 
-    virtual std::vector<double> getVariableSolution(int solIdx) = 0;
+    virtual VectorDouble getVariableSolution(int solIdx) = 0;
     virtual int getNumberOfSolutions() = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
@@ -48,32 +50,32 @@ class IMIPSolver
     virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
-    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant) = 0;
+    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan) = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
 
     virtual void setCutOff(double cutOff) = 0;
 
-    virtual void addMIPStart(std::vector<double> point) = 0;
+    virtual void addMIPStart(VectorDouble point) = 0;
     virtual void deleteMIPStarts() = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues) = 0;
+    virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
     virtual void unfixVariables() = 0;
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
-    virtual DoublePair getCurrentVariableBounds(int varIndex) = 0;
+    virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void presolveAndUpdateBounds() = 0;
-    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
+    virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
     virtual void createHyperplane(Hyperplane hyperplane) = 0;
-    virtual void createIntegerCut(std::vector<int> binaryIndexes) = 0;
+    virtual void createIntegerCut(VectorInteger binaryIndexes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
-    virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
+    virtual boost::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;
@@ -89,3 +91,4 @@ class IMIPSolver
 
   protected:
 };
+} // namespace SHOT

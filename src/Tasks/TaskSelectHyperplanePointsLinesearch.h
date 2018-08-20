@@ -14,6 +14,8 @@
 #include "../OptProblems/OptProblemOriginal.h"
 #include "TaskSelectHyperplanePointsSolution.h"
 
+namespace SHOT
+{
 class TaskSelectHyperplanePointsLinesearch : public TaskBase
 {
   public:
@@ -29,3 +31,4 @@ class TaskSelectHyperplanePointsLinesearch : public TaskBase
     TaskSelectHyperplanePointsSolution *tSelectHPPts;
     bool hyperplaneSolutionPointStrategyInitialized = false;
 };
+} // namespace SHOT

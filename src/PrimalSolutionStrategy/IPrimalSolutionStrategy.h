@@ -10,7 +10,10 @@
 
 #pragma once
 #include "../Environment.h"
+#include "../Structs.h"
 
+namespace SHOT
+{
 class IPrimalSolutionStrategy
 {
   public:
@@ -18,3 +21,4 @@ class IPrimalSolutionStrategy
 
     virtual bool runStrategy() = 0;
 };
+} // namespace SHOT

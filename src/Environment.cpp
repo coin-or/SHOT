@@ -10,6 +10,8 @@
 
 #include "Environment.h"
 
+using namespace SHOT;
+
 Environment::Environment()
 {
 }

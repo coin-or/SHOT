@@ -11,6 +11,8 @@
 #pragma once
 #include "OptProblem.h"
 
+namespace SHOT
+{
 class OptProblemNLPRelaxed : public OptProblem
 {
   public:
@@ -23,3 +25,4 @@ class OptProblemNLPRelaxed : public OptProblem
 
   private:
 };
+} // namespace SHOT

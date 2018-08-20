@@ -68,7 +68,7 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
     return (solStatus);
 }
 
-std::vector<double> NLPSolverBase::getVariableLowerBounds()
+VectorDouble NLPSolverBase::getVariableLowerBounds()
 {
 
     if (!isProblemInitialized)
@@ -77,7 +77,7 @@ std::vector<double> NLPSolverBase::getVariableLowerBounds()
     return (getCurrentVariableLowerBounds());
 }
 
-std::vector<double> NLPSolverBase::getVariableUpperBounds()
+VectorDouble NLPSolverBase::getVariableUpperBounds()
 {
     if (!isProblemInitialized)
         initializeProblem();

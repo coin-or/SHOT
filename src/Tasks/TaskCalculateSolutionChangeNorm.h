@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCalculateSolutionChangeNorm : public TaskBase
 {
   public:
@@ -24,3 +26,4 @@ class TaskCalculateSolutionChangeNorm : public TaskBase
 
   private:
 };
+} // namespace SHOT

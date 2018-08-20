@@ -12,13 +12,15 @@
 #include "NLPSolverIpoptBase.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 
+namespace SHOT
+{
 class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
   public:
     NLPSolverIpoptRelaxed(EnvironmentPtr envPtr);
     virtual ~NLPSolverIpoptRelaxed();
 
-    virtual std::vector<double> getSolution();
+    virtual VectorDouble getSolution();
 
   protected:
     bool createProblemInstance(OSInstance *origInstance);
@@ -27,3 +29,4 @@ class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 
   private:
 };
+} // namespace SHOT

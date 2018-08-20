@@ -14,6 +14,8 @@
 #include "../OptProblems/OptProblemOriginal.h"
 #include <algorithm>
 
+namespace SHOT
+{
 class TaskCheckConstraintTolerance : public TaskBase
 {
   public:
@@ -29,7 +31,8 @@ class TaskCheckConstraintTolerance : public TaskBase
 
     bool isInitialized = false;
     // Without the (possible) nonlinear objective constraint
-    std::vector<int> nonlinearConstraintIndexes;
+    VectorInteger nonlinearConstraintIndexes;
     bool isObjectiveNonlinear;
     int nonlinearObjectiveConstraintIndex;
 };
+} // namespace SHOT

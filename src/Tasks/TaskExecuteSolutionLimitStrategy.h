@@ -16,6 +16,8 @@
 #include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
 #include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
 
+namespace SHOT
+{
 class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
   public:
@@ -32,3 +34,4 @@ class TaskExecuteSolutionLimitStrategy : public TaskBase
     bool temporaryOptLimitUsed;
     int previousSolLimit;
 };
+} // namespace SHOT

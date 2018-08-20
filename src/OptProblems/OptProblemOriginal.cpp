@@ -10,6 +10,8 @@
 
 #include "OptProblemOriginal.h"
 
+using namespace SHOT;
+
 OptProblemOriginal::OptProblemOriginal(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
 }

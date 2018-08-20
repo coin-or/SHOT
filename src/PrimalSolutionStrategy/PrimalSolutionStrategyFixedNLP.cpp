@@ -142,12 +142,12 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
     {
         auto oldPrimalBound = env->process->getPrimalBound();
         double timeStart = env->process->getElapsedTime("Total");
-        std::vector<double> fixedVariableValues(discreteVariableIndexes.size());
+        VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
         int sizeOfVariableVector = NLPSolver->NLPProblem->getNumberOfVariables();
 
-        std::vector<int> startingPointIndexes(sizeOfVariableVector);
-        std::vector<double> startingPointValues(sizeOfVariableVector);
+        VectorInteger startingPointIndexes(sizeOfVariableVector);
+        VectorDouble startingPointValues(sizeOfVariableVector);
 
         // Sets the fixed values for discrete variables
         for (int k = 0; k < discreteVariableIndexes.size(); k++)
@@ -267,7 +267,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                                                env->process->getAbsoluteObjectiveGap(),
                                                env->process->getRelativeObjectiveGap(),
                                                tmpObj,
-                                               mostDevConstr.idx,
+                                               mostDevConstr.index,
                                                mostDevConstr.value,
                                                E_IterationLineType::PrimalNLP);
         }
@@ -343,7 +343,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                                                env->process->getAbsoluteObjectiveGap(),
                                                env->process->getRelativeObjectiveGap(),
                                                NAN,
-                                               mostDevConstr.idx,
+                                               mostDevConstr.index,
                                                mostDevConstr.value,
                                                E_IterationLineType::PrimalNLP);
 
@@ -355,7 +355,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
                 if (binVars.size() > 0)
                 {
-                    std::vector<int> elements;
+                    VectorInteger elements;
 
                     for (int i = 0; i < binVars.size(); i++)
                     {

@@ -30,6 +30,8 @@
 #include "GAMS/GAMS2OS.h"
 #endif
 
+namespace SHOT
+{
 class SHOTSolver
 {
   private:
@@ -85,3 +87,4 @@ class SHOTSolver
 
     E_TerminationReason getTerminationReason();
 };
+} // namespace SHOT

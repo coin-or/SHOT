@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskTerminate : public TaskBase
 {
   public:
@@ -23,3 +25,4 @@ class TaskTerminate : public TaskBase
 
   private:
 };
+} // namespace SHOT

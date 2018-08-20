@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "IMIPSolver.h"
 
+namespace SHOT
+{
 class RelaxationStrategyBase
 {
   public:
@@ -24,3 +26,5 @@ class RelaxationStrategyBase
 
     EnvironmentPtr env;
 };
+
+} // namespace SHOT

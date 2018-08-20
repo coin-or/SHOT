@@ -14,6 +14,8 @@
 #include "gmomcc.h"
 #include "gevmcc.h"
 
+namespace SHOT
+{
 class NLPSolverGAMS : public NLPSolverBase
 {
   private:
@@ -31,16 +33,16 @@ class NLPSolverGAMS : public NLPSolverBase
 
     virtual ~NLPSolverGAMS();
 
-    void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     void clearStartingPoint();
 
-    void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
 
     void unfixVariables();
 
     void saveOptionsToFile(std::string fileName);
 
-    std::vector<double> getSolution();
+    VectorDouble getSolution();
     double getSolution(int i);
     double getObjectiveValue();
 
@@ -51,8 +53,9 @@ class NLPSolverGAMS : public NLPSolverBase
     E_NLPSolutionStatus solveProblemInstance();
     bool createProblemInstance(OSInstance *origInstance);
 
-    std::vector<double> getCurrentVariableLowerBounds();
-    std::vector<double> getCurrentVariableUpperBounds();
+    VectorDouble getCurrentVariableLowerBounds();
+    VectorDouble getCurrentVariableUpperBounds();
 
   private:
 };
+} // namespace SHOT

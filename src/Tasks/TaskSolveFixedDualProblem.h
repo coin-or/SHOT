@@ -15,6 +15,8 @@
 #include "../Report.h"
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskSolveFixedDualProblem : public TaskBase
 {
   public:
@@ -24,11 +26,12 @@ class TaskSolveFixedDualProblem : public TaskBase
     virtual std::string getType();
 
   private:
-    std::vector<int> discreteVariableIndexes;
-    std::vector<std::vector<double>> testedPoints;
+    VectorInteger discreteVariableIndexes;
+    std::vector<VectorDouble> testedPoints;
 
-    std::vector<double> lastSolution;
+    VectorDouble lastSolution;
     double lastPrimalBound = NAN;
 
     int totalIters = 0;
 };
+} // namespace SHOT

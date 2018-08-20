@@ -85,7 +85,7 @@ void TaskSolveFixedDualProblem::run()
         return;
     }
 
-    std::vector<double> fixValues(discreteVariableIndexes.size());
+    VectorDouble fixValues(discreteVariableIndexes.size());
 
     for (int i = 0; i < discreteVariableIndexes.size(); i++)
     {
@@ -160,12 +160,12 @@ void TaskSolveFixedDualProblem::run()
 
             auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(varSol);
 
-            std::vector<double> externalPoint = varSol;
-            IndexValuePair errorExternal;
+            VectorDouble externalPoint = varSol;
+            PairIndexValue errorExternal;
 
             if (env->process->interiorPts.size() > 0)
             {
-                std::vector<double> internalPoint = env->process->interiorPts.at(0)->point;
+                VectorDouble internalPoint = env->process->interiorPts.at(0)->point;
 
                 auto tmpMostDevConstr2 = env->model->originalProblem->getMostDeviatingConstraint(internalPoint);
 
@@ -192,7 +192,7 @@ void TaskSolveFixedDualProblem::run()
             errorExternal = env->model->originalProblem->getMostDeviatingConstraint(externalPoint);
 
             Hyperplane hyperplane;
-            hyperplane.sourceConstraintIndex = errorExternal.idx;
+            hyperplane.sourceConstraintIndex = errorExternal.index;
             hyperplane.generatedPoint = externalPoint;
             hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
@@ -246,7 +246,7 @@ void TaskSolveFixedDualProblem::run()
                                                env->process->getAbsoluteObjectiveGap(),
                                                env->process->getRelativeObjectiveGap(),
                                                objVal,
-                                               mostDevConstr.idx,
+                                               mostDevConstr.index,
                                                mostDevConstr.value,
                                                E_IterationLineType::DualIntegerFixed);
 

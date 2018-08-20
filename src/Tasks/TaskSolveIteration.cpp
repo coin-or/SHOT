@@ -113,8 +113,8 @@ void TaskSolveIteration::run()
 
             if (env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
-                std::vector<double> tmpObjValue;
-                std::vector<std::string> tmpObjName;
+                VectorDouble tmpObjValue;
+                VectorString tmpObjName;
 
                 tmpObjValue.push_back(env->dualSolver->getObjectiveValue());
                 tmpObjName.push_back("objective");
@@ -129,16 +129,16 @@ void TaskSolveIteration::run()
 
             auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
 
-            currIter->maxDeviationConstraint = mostDevConstr.idx;
+            currIter->maxDeviationConstraint = mostDevConstr.index;
             currIter->maxDeviation = mostDevConstr.value;
 
             if (env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
-                std::vector<double> tmpMostDevValue;
-                std::vector<std::string> tmpConstrIndex;
+                VectorDouble tmpMostDevValue;
+                VectorString tmpConstrIndex;
 
                 tmpMostDevValue.push_back(mostDevConstr.value);
-                tmpConstrIndex.push_back(std::to_string(mostDevConstr.idx));
+                tmpConstrIndex.push_back(std::to_string(mostDevConstr.index));
 
                 std::stringstream ss;
                 ss << env->settings->getStringSetting("Debug.Path", "Output");

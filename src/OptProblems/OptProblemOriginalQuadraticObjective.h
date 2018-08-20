@@ -11,6 +11,8 @@
 #pragma once
 #include "OptProblemOriginal.h"
 
+namespace SHOT
+{
 class OptProblemOriginalQuadraticObjective : public OptProblemOriginal
 {
   public:
@@ -21,3 +23,5 @@ class OptProblemOriginalQuadraticObjective : public OptProblemOriginal
 
   private:
 };
+
+} // namespace SHOT

@@ -14,6 +14,8 @@
 #include "gurobi_c++.h"
 #include "MIPSolverBase.h"
 
+namespace SHOT
+{
 class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 {
   public:
@@ -28,18 +30,18 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     virtual void writeProblemToFile(std::string filename);
     virtual void writePresolvedToFile(std::string filename);
 
-    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant)
+    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant)
     {
         return (addLinearConstraint(elements, constant, false));
     }
-    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan);
+    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan);
 
     virtual void createHyperplane(Hyperplane hyperplane)
     {
         MIPSolverBase::createHyperplane(hyperplane);
     }
 
-    virtual void createIntegerCut(std::vector<int> binaryIndexes)
+    virtual void createIntegerCut(VectorInteger binaryIndexes)
     {
         MIPSolverBase::createIntegerCut(binaryIndexes);
     }
@@ -49,7 +51,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
         MIPSolverBase::createInteriorHyperplane(hyperplane);
     }
 
-    virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(
+    virtual boost::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(
         Hyperplane hyperplane)
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
@@ -57,7 +59,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 
     virtual void fixVariable(int varIndex, double value);
 
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+    virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
     {
         MIPSolverBase::fixVariables(variableIndexes, variableValues);
     }
@@ -68,14 +70,14 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-    virtual DoublePair getCurrentVariableBounds(int varIndex);
+    virtual PairDouble getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()
     {
         return (MIPSolverBase::presolveAndUpdateBounds());
     }
 
-    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds();
+    virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds();
 
     virtual void activateDiscreteVariables(bool activate);
     virtual bool getDiscreteVariableStatus()
@@ -86,7 +88,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     virtual E_ProblemSolutionStatus solveProblem();
     virtual E_ProblemSolutionStatus getSolutionStatus();
     virtual int getNumberOfSolutions();
-    virtual std::vector<double> getVariableSolution(int solIdx);
+    virtual VectorDouble getVariableSolution(int solIdx);
     virtual std::vector<SolutionPoint> getAllVariableSolutions()
     {
         return (MIPSolverBase::getAllVariableSolutions());
@@ -106,7 +108,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 
     virtual void setCutOff(double cutOff);
 
-    virtual void addMIPStart(std::vector<double> point);
+    virtual void addMIPStart(VectorDouble point);
     virtual void deleteMIPStarts();
 
     virtual bool supportsQuadraticObjective();
@@ -149,3 +151,4 @@ class GurobiInfoCallback : public GRBCallback
     int lastOpenNodes = 0;
     EnvironmentPtr env;
 };
+} // namespace SHOT

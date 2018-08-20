@@ -10,7 +10,7 @@
 
 #include "TaskSelectHyperplanePointsSolution.h"
 
-TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -54,7 +54,7 @@ void TaskSelectHyperplanePointsSolution::run(std::vector<SolutionPoint> solPoint
             else
             {
                 Hyperplane hyperplane;
-                hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).idx;
+                hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).index;
                 hyperplane.generatedPoint = solPoints.at(i).point;
 
                 if (i == 0 && currIter->isMIP())

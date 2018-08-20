@@ -12,16 +12,19 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskPrintSolutionBoundReport : public TaskBase
 {
   public:
-	TaskPrintSolutionBoundReport(EnvironmentPtr envPtr);
-	virtual ~TaskPrintSolutionBoundReport();
+    TaskPrintSolutionBoundReport(EnvironmentPtr envPtr);
+    virtual ~TaskPrintSolutionBoundReport();
 
-	void run();
-	virtual std::string getType();
+    void run();
+    virtual std::string getType();
 
   private:
-	int itersSinceLastPrintout;
-	double timeLastPrintout;
+    int itersSinceLastPrintout;
+    double timeLastPrintout;
 };
+} // namespace SHOT

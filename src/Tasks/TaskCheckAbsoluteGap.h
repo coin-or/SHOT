@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCheckAbsoluteGap : public TaskBase
 {
   public:
@@ -25,3 +27,4 @@ class TaskCheckAbsoluteGap : public TaskBase
   private:
     std::string taskIDIfTrue;
 };
+} // namespace SHOT

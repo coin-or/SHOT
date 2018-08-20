@@ -13,6 +13,8 @@
 #include <exception>
 #include "../Environment.h"
 
+namespace SHOT
+{
 class TaskException : public std::exception
 {
   public:
@@ -80,3 +82,4 @@ class TaskExceptionNotFound : public std::exception
   private:
     std::string taskID;
 };
+} // namespace SHOT

@@ -11,6 +11,8 @@
 #pragma once
 #include "OptProblemOriginal.h"
 
+namespace SHOT
+{
 class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
 {
   public:
@@ -18,18 +20,18 @@ class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
     ~OptProblemOriginalNonlinearObjective();
 
     virtual bool setProblem(OSInstance *instance);
-    double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-    SparseVector *calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+    double calculateConstraintFunctionValue(int idx, VectorDouble point);
+    SparseVector *calculateConstraintFunctionGradient(int idx, VectorDouble point);
     virtual int getNumberOfNonlinearConstraints();
     virtual int getNumberOfConstraints();
-    virtual std::vector<std::string> getConstraintNames();
+    virtual VectorString getConstraintNames();
     virtual int getNumberOfVariables();
     virtual int getNumberOfRealVariables();
-    virtual std::vector<std::string> getVariableNames();
+    virtual VectorString getVariableNames();
     virtual std::vector<char> getVariableTypes();
 
-    virtual std::vector<double> getVariableLowerBounds();
-    virtual std::vector<double> getVariableUpperBounds();
+    virtual VectorDouble getVariableLowerBounds();
+    virtual VectorDouble getVariableUpperBounds();
 
     virtual double getVariableLowerBound(int varIdx);
     virtual double getVariableUpperBound(int varIdx);
@@ -40,7 +42,7 @@ class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
     virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
     virtual double getObjectiveConstant();
 
-    IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
+    PairIndexValue getMostDeviatingAllConstraint(VectorDouble point);
 
     virtual void setNonlinearConstraintIndexes();
 
@@ -50,3 +52,5 @@ class OptProblemOriginalNonlinearObjective : public OptProblemOriginal
     double addedObjectiveVariableLowerBound;
     double addedObjectiveVariableUpperBound;
 };
+
+} // namespace SHOT

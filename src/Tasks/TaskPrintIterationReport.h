@@ -14,6 +14,8 @@
 #include "../OptProblems/OptProblemOriginal.h"
 #include "../Report.h"
 
+namespace SHOT
+{
 class TaskPrintIterationReport : public TaskBase
 {
   public:
@@ -26,3 +28,4 @@ class TaskPrintIterationReport : public TaskBase
   private:
     int lastNumHyperplane;
 };
+} // namespace SHOT

@@ -10,6 +10,8 @@
 
 #pragma once
 
+namespace SHOT
+{
 enum class E_DualSolutionSource
 {
     LPSolution,
@@ -263,3 +265,4 @@ enum class ES_TreeStrategy
     MultiTree,
     SingleTree
 };
+} // namespace SHOT

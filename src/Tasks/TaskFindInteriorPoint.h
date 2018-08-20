@@ -16,6 +16,8 @@
 #include "../NLPSolver/NLPSolverIpoptMinimax.h"
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 
+namespace SHOT
+{
 class TaskFindInteriorPoint : public TaskBase
 {
   public:
@@ -28,3 +30,4 @@ class TaskFindInteriorPoint : public TaskBase
   private:
     std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
 };
+} // namespace SHOT

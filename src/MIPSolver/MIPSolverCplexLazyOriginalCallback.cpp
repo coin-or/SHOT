@@ -81,7 +81,7 @@ void HCallbackI::main() // Called at each node...
 
         getValues(tmpVals, cplexVars);
 
-        std::vector<double> solution(tmpVals.getSize());
+        VectorDouble solution(tmpVals.getSize());
 
         for (int i = 0; i < tmpVals.getSize(); i++)
         {
@@ -254,7 +254,7 @@ void CtCallbackI::main()
 
     this->getValues(tmpVals, cplexVars);
 
-    std::vector<double> solution(tmpVals.getSize());
+    VectorDouble solution(tmpVals.getSize());
 
     for (int i = 0; i < tmpVals.getSize(); i++)
     {
@@ -293,7 +293,7 @@ void CtCallbackI::main()
 
             this->getIncumbentValues(tmpPrimalVals, cplexVars);
 
-            std::vector<double> primalSolution(tmpPrimalVals.getSize());
+            VectorDouble primalSolution(tmpPrimalVals.getSize());
 
             for (int i = 0; i < tmpPrimalVals.getSize(); i++)
             {
@@ -340,8 +340,8 @@ void CtCallbackI::main()
     if (checkFixedNLPStrategy(tmpSolPt))
     {
         env->process->addPrimalFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution,
-                                                              this->getObjValue(), env->process->getCurrentIteration()->iterationNumber,
-                                                              tmpSolPt.maxDeviation);
+                                                 this->getObjValue(), env->process->getCurrentIteration()->iterationNumber,
+                                                 tmpSolPt.maxDeviation);
 
         tSelectPrimNLP.get()->run();
 
@@ -443,7 +443,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
         for (int i = 0; i < tmpPair.first.size(); i++)
         {
-            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).idx];
+            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).index];
         }
 
         IloRange tmpRange(this->getEnv(), -IloInfinity, expr, -tmpPair.second);
@@ -471,7 +471,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     optional.get().first.clear();
 }
 
-void CtCallbackI::createIntegerCut(std::vector<int> binaryIndexes)
+void CtCallbackI::createIntegerCut(VectorInteger binaryIndexes)
 {
     IloExpr expr(this->getEnv());
 
@@ -534,7 +534,7 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     catch (IloException &e)
     {
         env->output->outputError("Cplex error when initializing parameters for linear solver",
-                                                                e.getMessage());
+                                 e.getMessage());
     }
 }
 

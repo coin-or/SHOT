@@ -56,6 +56,8 @@
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class SolutionStrategyNLP : public ISolutionStrategy
 {
   public:
@@ -67,3 +69,4 @@ class SolutionStrategyNLP : public ISolutionStrategy
 
   protected:
 };
+} // namespace SHOT

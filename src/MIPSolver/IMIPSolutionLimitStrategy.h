@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "IMIPSolver.h"
 
+namespace SHOT
+{
 class IMIPSolutionLimitStrategy
 {
   public:
@@ -29,3 +31,4 @@ class IMIPSolutionLimitStrategy
 
   protected:
 };
+} // namespace SHOT

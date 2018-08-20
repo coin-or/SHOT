@@ -10,6 +10,8 @@
 
 #include "OptProblemNLPRelaxed.h"
 
+using namespace SHOT;
+
 OptProblemNLPRelaxed::OptProblemNLPRelaxed(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
     env = envPtr;

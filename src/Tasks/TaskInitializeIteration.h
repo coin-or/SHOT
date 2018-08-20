@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../UtilityFunctions.h"
 
+namespace SHOT
+{
 class TaskInitializeIteration : public TaskBase
 {
   public:
@@ -24,3 +26,4 @@ class TaskInitializeIteration : public TaskBase
 
   private:
 };
+} // namespace SHOT

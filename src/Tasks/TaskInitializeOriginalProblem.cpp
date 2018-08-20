@@ -45,6 +45,18 @@ TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(EnvironmentPtr envP
     }
 
     env->model->originalProblem->setProblem(instance);
+
+    if (env->model->originalProblem->isTypeOfObjectiveMinimize())
+    {
+        env->model->currentObjectiveBounds.first = -OSDBL_MAX;
+        env->model->currentObjectiveBounds.second = OSDBL_MAX;
+    }
+    else
+    {
+        env->model->currentObjectiveBounds.first = OSDBL_MAX;
+        env->model->currentObjectiveBounds.second = -OSDBL_MAX;
+    }
+
     auto debugPath = env->settings->getStringSetting("Debug.Path", "Output");
 
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))

@@ -10,6 +10,8 @@
 
 #include "UtilityFunctions.h"
 
+using namespace SHOT;
+
 int UtilityFunctions::round(double d)
 {
     return static_cast<int>(d + 0.5);
@@ -26,7 +28,7 @@ bool UtilityFunctions::isnan(double val)
     return boost::math::isnan(val);
 }
 
-void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, std::vector<std::string> variables,
+void UtilityFunctions::saveVariablePointVectorToFile(VectorDouble point, VectorString variables,
                                                      std::string fileName)
 {
     if (point.size() != variables.size())
@@ -49,7 +51,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(std::vector<double> point, 
     writeStringToFile(fileName, str.str());
 }
 
-void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::vector<std::string> variables,
+void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, VectorString variables,
                                                 std::string fileName)
 {
     std::stringstream str;
@@ -63,11 +65,11 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::ve
     str << "Objective value: " << toStringFormat(solution.objValue, "%.8f", false);
     str << std::endl;
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.idx << "): "
+    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index << "): "
         << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
     str << std::endl;
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.idx << "): "
+    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index << "): "
         << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
     str << std::endl;
 
@@ -97,7 +99,7 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, std::ve
     writeStringToFile(fileName, str.str());
 }
 
-void UtilityFunctions::displayVector(std::vector<double> point)
+void UtilityFunctions::displayVector(VectorDouble point)
 {
     std::stringstream str;
 
@@ -115,7 +117,7 @@ void UtilityFunctions::displayVector(std::vector<double> point)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<double> point2)
+void UtilityFunctions::displayVector(VectorDouble point1, VectorDouble point2)
 {
     std::stringstream str;
 
@@ -136,7 +138,7 @@ void UtilityFunctions::displayVector(std::vector<double> point1, std::vector<dou
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayDifferencesInVector(std::vector<double> point1, std::vector<double> point2, double tol)
+void UtilityFunctions::displayDifferencesInVector(VectorDouble point1, VectorDouble point2, double tol)
 {
     std::stringstream str;
 
@@ -160,7 +162,7 @@ void UtilityFunctions::displayDifferencesInVector(std::vector<double> point1, st
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<int> point)
+void UtilityFunctions::displayVector(VectorInteger point)
 {
     std::stringstream str;
 
@@ -178,7 +180,7 @@ void UtilityFunctions::displayVector(std::vector<int> point)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::string> point)
+void UtilityFunctions::displayVector(VectorString point)
 {
     std::stringstream str;
 
@@ -196,7 +198,7 @@ void UtilityFunctions::displayVector(std::vector<std::string> point)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<double>> points)
+void UtilityFunctions::displayVector(std::vector<VectorDouble> points)
 {
     std::stringstream str;
 
@@ -216,7 +218,7 @@ void UtilityFunctions::displayVector(std::vector<std::vector<double>> points)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<int>> points)
+void UtilityFunctions::displayVector(std::vector<VectorInteger> points)
 {
     std::stringstream str;
 
@@ -236,7 +238,7 @@ void UtilityFunctions::displayVector(std::vector<std::vector<int>> points)
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<std::vector<std::string>> points)
+void UtilityFunctions::displayVector(std::vector<VectorString> points)
 {
     std::stringstream str;
 
@@ -329,7 +331,7 @@ bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
     return (true);
 }
 
-double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB)
+double UtilityFunctions::L2Norm(VectorDouble ptA, VectorDouble ptB)
 {
     double norm = 0.0;
 
@@ -348,9 +350,9 @@ double UtilityFunctions::L2Norm(std::vector<double> ptA, std::vector<double> ptB
     return (norm);
 }
 
-std::vector<double> UtilityFunctions::L2Norms(std::vector<std::vector<double>> ptsA, std::vector<double> ptB)
+VectorDouble UtilityFunctions::L2Norms(std::vector<VectorDouble> ptsA, VectorDouble ptB)
 {
-    std::vector<double> norms(ptsA.size());
+    VectorDouble norms(ptsA.size());
 
     for (int i = 0; i < ptsA.size(); i++)
     {
@@ -360,12 +362,12 @@ std::vector<double> UtilityFunctions::L2Norms(std::vector<std::vector<double>> p
     return (norms);
 }
 
-std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vector<double>> pts)
+VectorDouble UtilityFunctions::calculateCenterPoint(std::vector<VectorDouble> pts)
 {
     int ptSize = pts.at(0).size();
     int numPts = pts.size();
 
-    std::vector<double> newPt(ptSize, 0.0);
+    VectorDouble newPt(ptSize, 0.0);
 
     for (int i = 0; i < ptSize; i++)
     {
@@ -381,8 +383,8 @@ std::vector<double> UtilityFunctions::calculateCenterPoint(std::vector<std::vect
     return (newPt);
 }
 
-int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
-                                                          std::vector<int> indexes)
+int UtilityFunctions::numDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
+                                                          VectorInteger indexes)
 {
     int numDiff = 0;
 
@@ -396,8 +398,8 @@ int UtilityFunctions::numDifferentRoundedSelectedElements(std::vector<double> fi
     return (numDiff);
 }
 
-bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
-                                                          std::vector<int> indexes)
+bool UtilityFunctions::isDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
+                                                          VectorInteger indexes)
 {
     for (int i = 0; i < indexes.size(); i++)
     {
@@ -408,8 +410,8 @@ bool UtilityFunctions::isDifferentRoundedSelectedElements(std::vector<double> fi
     return (false);
 }
 
-bool UtilityFunctions::isDifferentSelectedElements(std::vector<double> firstPt, std::vector<double> secondPt,
-                                                   std::vector<int> indexes)
+bool UtilityFunctions::isDifferentSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
+                                                   VectorInteger indexes)
 {
     for (int i = 0; i < indexes.size(); i++)
     {
@@ -450,7 +452,7 @@ std::string UtilityFunctions::toString(double value)
     return (UtilityFunctions::toStringFormat(value, "%.3f", true));
 }
 
-void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<int> point2)
+void UtilityFunctions::displayVector(VectorInteger point1, VectorInteger point2)
 {
     std::stringstream str;
 
@@ -471,7 +473,7 @@ void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<int> p
     std::cout << str.str() << std::endl;
 }
 
-void UtilityFunctions::displayVector(std::vector<int> point1, std::vector<double> point2)
+void UtilityFunctions::displayVector(VectorInteger point1, VectorDouble point2)
 {
     std::stringstream str;
 

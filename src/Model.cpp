@@ -11,6 +11,8 @@
 #include "Model.h"
 #include "OptProblems/OptProblemOriginal.h"
 
+using namespace SHOT;
+
 Model::Model(EnvironmentPtr envPtr) : env(envPtr)
 {
     this->currentObjectiveBounds.first = -OSDBL_MAX;
@@ -115,24 +117,6 @@ void Model::setStatistics()
     }
 }
 
-void Model::setOriginalProblem(OriginalProblemPtr problem)
-{
-    originalProblem = problem;
-
-    bool isMinimization = originalProblem->isTypeOfObjectiveMinimize();
-
-    if (isMinimization)
-    {
-        this->currentObjectiveBounds.first = -OSDBL_MAX;
-        this->currentObjectiveBounds.second = OSDBL_MAX;
-    }
-    else
-    {
-        this->currentObjectiveBounds.first = OSDBL_MAX;
-        this->currentObjectiveBounds.second = -OSDBL_MAX;
-    }
-}
-
 OSInstance *Model::getProblemInstanceFromOSiL(std::string osil)
 {
     OSiLReader *osilReader = new OSiLReader();
@@ -147,9 +131,9 @@ std::string Model::getOSiLFromProblemInstance(OSInstance *instance)
     return (osilWriter->writeOSiL(instance));
 }
 
-DoublePair Model::getCorrectedObjectiveBounds()
+PairDouble Model::getCorrectedObjectiveBounds()
 {
-    DoublePair bounds;
+    PairDouble bounds;
 
     if (env->model->originalProblem->isTypeOfObjectiveMinimize())
     {

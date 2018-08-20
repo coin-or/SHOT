@@ -11,6 +11,8 @@
 #pragma once
 #include "OptProblem.h"
 
+namespace SHOT
+{
 class OptProblemNLPMinimax : public OptProblem
 {
   public:
@@ -29,3 +31,4 @@ class OptProblemNLPMinimax : public OptProblem
   private:
     int muindex;
 };
+} // namespace SHOT

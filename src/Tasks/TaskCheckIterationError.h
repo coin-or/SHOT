@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCheckIterationError : public TaskBase
 {
   public:
@@ -25,3 +27,4 @@ class TaskCheckIterationError : public TaskBase
   private:
     std::string taskIDIfTrue;
 };
+} // namespace SHOT

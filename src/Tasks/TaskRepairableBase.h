@@ -10,6 +10,8 @@
 
 #include "TaskBase.h"
 
+namespace SHOT
+{
 class TaskRepairableBase : public TaskBase
 {
   public:
@@ -20,3 +22,4 @@ class TaskRepairableBase : public TaskBase
 
   private:
 };
+} // namespace SHOT

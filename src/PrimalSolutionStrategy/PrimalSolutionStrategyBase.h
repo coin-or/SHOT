@@ -14,6 +14,8 @@
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
+namespace SHOT
+{
 class PrimalSolutionStrategyBase : public IPrimalSolutionStrategy
 {
   public:
@@ -25,3 +27,4 @@ class PrimalSolutionStrategyBase : public IPrimalSolutionStrategy
 
   private:
 };
+} // namespace SHOT

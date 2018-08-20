@@ -15,6 +15,8 @@
 #include "SHOTSettings.h"
 #include "ProcessInfo.h"
 
+namespace SHOT
+{
 class Report
 {
   public:
@@ -73,3 +75,4 @@ class Report
     int iterationPrintoutsSinceLastHeader = 0;
     bool firstIterationHeaderPrinted = false;
 };
+} // namespace SHOT

@@ -20,6 +20,8 @@
 #include "SHOTSettings.h"
 #include "../UtilityFunctions.h"
 
+namespace SHOT
+{
 class OptProblem
 {
   public:
@@ -40,17 +42,17 @@ class OptProblem
     virtual int getNumberOfNonlinearConstraints(OSInstance *instance);
     virtual int getNumberOfLinearConstraints();
     virtual int getNumberOfConstraints();
-    virtual std::vector<std::string> getConstraintNames();
+    virtual VectorString getConstraintNames();
 
     virtual int getNumberOfVariables();
     virtual int getNumberOfBinaryVariables();
     virtual int getNumberOfDiscreteVariables();
     virtual int getNumberOfIntegerVariables();
     virtual int getNumberOfRealVariables();
-    virtual std::vector<std::string> getVariableNames();
+    virtual VectorString getVariableNames();
     virtual std::vector<char> getVariableTypes();
-    virtual std::vector<double> getVariableLowerBounds();
-    virtual std::vector<double> getVariableUpperBounds();
+    virtual VectorDouble getVariableLowerBounds();
+    virtual VectorDouble getVariableUpperBounds();
 
     virtual double getVariableLowerBound(int varIdx);
     virtual double getVariableUpperBound(int varIdx);
@@ -58,10 +60,10 @@ class OptProblem
     virtual void setVariableUpperBound(int varIdx, double value);
     virtual void setVariableLowerBound(int varIdx, double value);
 
-    virtual std::vector<int> getRealVariableIndices();
-    virtual std::vector<int> getDiscreteVariableIndices();
-    virtual std::vector<int> getBinaryVariableIndices();
-    virtual std::vector<int> getIntegerVariableIndices();
+    virtual VectorInteger getRealVariableIndices();
+    virtual VectorInteger getDiscreteVariableIndices();
+    virtual VectorInteger getBinaryVariableIndices();
+    virtual VectorInteger getIntegerVariableIndices();
 
     virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
     virtual std::vector<QuadraticTerm *> getQuadraticTermsInConstraint(int constrIdx);
@@ -73,38 +75,38 @@ class OptProblem
 
     std::string exportProblemToOsil();
 
-    virtual IndexValuePair getMostDeviatingConstraint(std::vector<double> point);
+    virtual PairIndexValue getMostDeviatingConstraint(VectorDouble point);
 
-    virtual std::pair<IndexValuePair, std::vector<int>> getMostDeviatingConstraint(std::vector<double> point,
-                                                                                   std::vector<int> constrIdxs);
+    virtual std::pair<PairIndexValue, VectorInteger> getMostDeviatingConstraint(VectorDouble point,
+                                                                                VectorInteger constrIdxs);
 
-    virtual IndexValuePair getMostDeviatingAllConstraint(std::vector<double> point);
+    virtual PairIndexValue getMostDeviatingAllConstraint(VectorDouble point);
 
-    virtual std::vector<IndexValuePair> getMostDeviatingConstraints(std::vector<double> point, double tolerance);
+    virtual std::vector<PairIndexValue> getMostDeviatingConstraints(VectorDouble point, double tolerance);
 
-    virtual bool isConstraintsFulfilledInPoint(std::vector<double> point);
-    virtual bool isConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isConstraintsFulfilledInPoint(VectorDouble point);
+    virtual bool isConstraintsFulfilledInPoint(VectorDouble point, double eps);
 
-    virtual bool isDiscreteVariablesFulfilledInPoint(std::vector<double> point, double eps);
-    virtual bool isVariableBoundsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isDiscreteVariablesFulfilledInPoint(VectorDouble point, double eps);
+    virtual bool isVariableBoundsFulfilledInPoint(VectorDouble point, double eps);
 
-    virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point);
-    virtual bool isLinearConstraintsFulfilledInPoint(std::vector<double> point, double eps);
+    virtual bool isLinearConstraintsFulfilledInPoint(VectorDouble point);
+    virtual bool isLinearConstraintsFulfilledInPoint(VectorDouble point, double eps);
 
-    virtual SparseVector *calculateConstraintFunctionGradient(int idx, std::vector<double> point);
+    virtual SparseVector *calculateConstraintFunctionGradient(int idx, VectorDouble point);
 
-    virtual double calculateConstraintFunctionValue(int idx, std::vector<double> point);
-    virtual double calculateOriginalObjectiveValue(std::vector<double> point);
+    virtual double calculateConstraintFunctionValue(int idx, VectorDouble point);
+    virtual double calculateOriginalObjectiveValue(VectorDouble point);
 
-    std::vector<int> getNonlinearConstraintIndexes();
-    void setNonlinearConstraints(std::vector<int> idxs);
+    VectorInteger getNonlinearConstraintIndexes();
+    void setNonlinearConstraints(VectorInteger idxs);
 
-    std::vector<int> getLinearConstraintIndexes();
+    VectorInteger getLinearConstraintIndexes();
 
-    std::vector<int> getQuadraticConstraintIndexes();
-    void setQuadraticConstraints(std::vector<int> idxs);
+    VectorInteger getQuadraticConstraintIndexes();
+    void setQuadraticConstraints(VectorInteger idxs);
 
-    std::vector<int> getNonlinearOrQuadraticConstraintIndexes();
+    VectorInteger getNonlinearOrQuadraticConstraintIndexes();
 
     virtual bool isTypeOfObjectiveMinimize();
     virtual bool isObjectiveFunctionNonlinear();
@@ -126,7 +128,7 @@ class OptProblem
 
     OSInstance *getProblemInstance();
 
-    std::vector<double> calculateGradientNumerically(int constraintIndex, std::vector<double> point);
+    VectorDouble calculateGradientNumerically(int constraintIndex, VectorDouble point);
 
     virtual void fixVariable(int varIdx, double value);
 
@@ -147,9 +149,9 @@ class OptProblem
     EnvironmentPtr env;
 
   private:
-    std::vector<int> m_nonlinearConstraints;
-    std::vector<int> m_quadraticConstraints;
-    std::vector<int> m_nonlinearOrQuadraticConstraints;
+    VectorInteger m_nonlinearConstraints;
+    VectorInteger m_quadraticConstraints;
+    VectorInteger m_nonlinearOrQuadraticConstraints;
     std::vector<bool> m_variableBoundTightened;
 
     bool m_isTypeOfObjectiveMinimize;
@@ -163,3 +165,4 @@ class OptProblem
 
     E_ObjectiveFunctionType m_objectiveFunctionType;
 };
+} // namespace SHOT

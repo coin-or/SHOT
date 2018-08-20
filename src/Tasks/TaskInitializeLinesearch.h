@@ -14,6 +14,8 @@
 #include "../LinesearchMethod/LinesearchMethodBoost.h"
 #include "../LinesearchMethod/LinesearchMethodBisection.h"
 
+namespace SHOT
+{
 class TaskInitializeLinesearch : public TaskBase
 {
   public:
@@ -24,3 +26,4 @@ class TaskInitializeLinesearch : public TaskBase
 
     virtual std::string getType();
 };
+} // namespace SHOT

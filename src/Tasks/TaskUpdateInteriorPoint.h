@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
+namespace SHOT
+{
 class TaskUpdateInteriorPoint : public TaskBase
 {
   public:
@@ -23,3 +25,4 @@ class TaskUpdateInteriorPoint : public TaskBase
 
   private:
 };
+} // namespace SHOT

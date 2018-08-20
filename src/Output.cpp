@@ -10,6 +10,8 @@
 
 #include "Output.h"
 
+using namespace SHOT;
+
 Output::Output()
 {
     osOutput = new OSOutput();

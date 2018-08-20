@@ -11,6 +11,8 @@
 #include "TaskBase.h"
 #include "../TaskHandler.h"
 
+using namespace SHOT;
+
 TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr)
 {
 }

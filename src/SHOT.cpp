@@ -19,6 +19,8 @@
 #include "Model.h"
 #include "SHOTSolver.h"
 
+using namespace SHOT;
+
 int main(int argc, char *argv[])
 {
     EnvironmentPtr env(new Environment);

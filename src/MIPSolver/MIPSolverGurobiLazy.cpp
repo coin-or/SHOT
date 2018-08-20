@@ -85,7 +85,7 @@ E_ProblemSolutionStatus MIPSolverGurobiLazy::solveProblem()
 
     try
     {
-        GurobiCallback gurobiCallback = GurobiCallback(gurobiModel->getVars());
+        GurobiCallback gurobiCallback = GurobiCallback(gurobiModel->getVars(), env);
         gurobiModel->setCallback(&gurobiCallback);
         gurobiModel->optimize();
 
@@ -129,7 +129,7 @@ void GurobiCallback::callback()
 
             if ((isMinimization && tmpDualObjBound > env->process->getDualBound()) || (!isMinimization && tmpDualObjBound < env->process->getDualBound()))
             {
-                std::vector<double> doubleSolution; // Empty since we have no point
+                VectorDouble doubleSolution; // Empty since we have no point
 
                 DualSolution sol =
                     {doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, env->process->getCurrentIteration()->iterationNumber};
@@ -144,7 +144,7 @@ void GurobiCallback::callback()
 
             if ((tmpPrimalObjBound < 1e100) && ((isMinimization && tmpPrimalObjBound < env->process->getPrimalBound()) || (!isMinimization && tmpPrimalObjBound > env->process->getPrimalBound())))
             {
-                std::vector<double> primalSolution(numVar);
+                VectorDouble primalSolution(numVar);
 
                 for (int i = 0; i < numVar; i++)
                 {
@@ -176,7 +176,7 @@ void GurobiCallback::callback()
                 int waitingListSize = env->process->hyperplaneWaitingList.size();
                 std::vector<SolutionPoint> solutionPoints(1);
 
-                std::vector<double> solution(numVar);
+                VectorDouble solution(numVar);
 
                 for (int i = 0; i < numVar; i++)
                 {
@@ -227,7 +227,7 @@ void GurobiCallback::callback()
                 currIter = env->process->getCurrentIteration();
             }
 
-            std::vector<double> solution(numVar);
+            VectorDouble solution(numVar);
 
             for (int i = 0; i < numVar; i++)
             {
@@ -249,7 +249,7 @@ void GurobiCallback::callback()
             addLazyConstraint(candidatePoints);
 
             currIter->maxDeviation = mostDevConstr.value;
-            currIter->maxDeviationConstraint = mostDevConstr.idx;
+            currIter->maxDeviationConstraint = mostDevConstr.index;
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
             currIter->objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
 
@@ -268,8 +268,8 @@ void GurobiCallback::callback()
             if (checkFixedNLPStrategy(candidatePoints.at(0)))
             {
                 env->process->addPrimalFixedNLPCandidate(candidatePoints.at(0).point,
-                                                                      E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->process->getCurrentIteration()->iterationNumber,
-                                                                      candidatePoints.at(0).maxDeviation);
+                                                         E_PrimalNLPSource::FirstSolution, getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->process->getCurrentIteration()->iterationNumber,
+                                                         candidatePoints.at(0).maxDeviation);
 
                 tSelectPrimNLP.get()->run();
 
@@ -322,7 +322,7 @@ void GurobiCallback::callback()
             {
                 auto primalSol = env->process->primalSolution;
 
-                std::vector<double> primalSolution(numVar);
+                VectorDouble primalSolution(numVar);
 
                 for (int i = 0; i < numVar; i++)
                 {
@@ -393,7 +393,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 
             for (int i = 0; i < tmpPair.first.size(); i++)
             {
-                expr += +(tmpPair.first.at(i).value) * (vars[tmpPair.first.at(i).idx]);
+                expr += +(tmpPair.first.at(i).value) * (vars[tmpPair.first.at(i).index]);
             }
 
             addLazy(expr <= -tmpPair.second);
@@ -419,8 +419,9 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
     }
 }
 
-GurobiCallback::GurobiCallback(GRBVar *xvars)
+GurobiCallback::GurobiCallback(GRBVar *xvars, EnvironmentPtr envPtr)
 {
+    env = envPtr;
     vars = xvars;
 
     isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
@@ -464,7 +465,7 @@ GurobiCallback::GurobiCallback(GRBVar *xvars)
     numVar = (static_cast<MIPSolverGurobiLazy *>(env->dualSolver.get()))->gurobiModel->get(GRB_IntAttr_NumVars);
 }
 
-void GurobiCallback::createIntegerCut(std::vector<int> binaryIndexes)
+void GurobiCallback::createIntegerCut(VectorInteger binaryIndexes)
 {
     try
     {

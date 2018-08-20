@@ -11,6 +11,8 @@
 #pragma once
 #include "OptProblemOriginal.h"
 
+namespace SHOT
+{
 class OptProblemOriginalLinearObjective : public OptProblemOriginal
 {
   public:
@@ -21,3 +23,5 @@ class OptProblemOriginalLinearObjective : public OptProblemOriginal
 
   private:
 };
+
+} // namespace SHOT

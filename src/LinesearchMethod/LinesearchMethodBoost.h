@@ -17,15 +17,17 @@
 
 #include "boost/math/tools/roots.hpp"
 
+namespace SHOT
+{
 class Test
 {
   private:
     EnvironmentPtr env;
-    std::vector<int> nonlinearConstraints;
+    VectorInteger nonlinearConstraints;
 
   public:
-    std::vector<double> firstPt;
-    std::vector<double> secondPt;
+    VectorDouble firstPt;
+    VectorDouble secondPt;
 
     double valFirstPt;
     double valSecondPt;
@@ -33,8 +35,8 @@ class Test
     Test(EnvironmentPtr envPtr);
     ~Test();
     void determineActiveConstraints(double constrTol);
-    void setActiveConstraints(std::vector<int> constrIdxs);
-    std::vector<int> getActiveConstraints();
+    void setActiveConstraints(VectorInteger constrIdxs);
+    VectorInteger getActiveConstraints();
     void clearActiveConstraints();
     void addActiveConstraint(int constrIdx);
 
@@ -64,13 +66,14 @@ class LinesearchMethodBoost : public ILinesearchMethod
     LinesearchMethodBoost(EnvironmentPtr envPtr);
     virtual ~LinesearchMethodBoost();
 
-    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol);
+    virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA,
+                                                           VectorDouble ptB, int Nmax, double lambdaTol, double constrTol);
 
-    virtual std::pair<std::vector<double>, std::vector<double>> findZero(std::vector<double> ptA,
-                                                                         std::vector<double> ptB, int Nmax, double lambdaTol, double constrTol, std::vector<int> constrIdxs);
+    virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA,
+                                                           VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs);
 
   private:
     Test *test;
     EnvironmentPtr env;
 };
+} // namespace SHOT

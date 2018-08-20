@@ -13,14 +13,17 @@
 #include "../ProcessInfo.h"
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskSelectPrimalCandidatesFromSolutionPool : public TaskBase
 {
   public:
-	TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr);
-	virtual ~TaskSelectPrimalCandidatesFromSolutionPool();
+    TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr);
+    virtual ~TaskSelectPrimalCandidatesFromSolutionPool();
 
-	virtual void run();
-	virtual std::string getType();
+    virtual void run();
+    virtual std::string getType();
 
   private:
 };
+} // namespace SHOT

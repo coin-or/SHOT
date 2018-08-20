@@ -12,6 +12,8 @@
 #include "IRelaxationStrategy.h"
 #include "RelaxationStrategyBase.h"
 
+namespace SHOT
+{
 class RelaxationStrategyStandard : public IRelaxationStrategy, RelaxationStrategyBase
 {
   public:
@@ -36,3 +38,5 @@ class RelaxationStrategyStandard : public IRelaxationStrategy, RelaxationStrateg
 
     bool LPFinished;
 };
+
+} // namespace SHOT

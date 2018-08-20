@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include <functional>
 
+namespace SHOT
+{
 class TaskConditional : public TaskBase
 {
   public:
@@ -36,3 +38,4 @@ class TaskConditional : public TaskBase
 
   protected:
 };
+} // namespace SHOT

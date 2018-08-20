@@ -217,13 +217,13 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     }
 }
 
-int MIPSolverOsiCbc::addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan)
+int MIPSolverOsiCbc::addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan)
 {
     CoinPackedVector cut;
 
     for (int i = 0; i < elements.size(); i++)
     {
-        cut.insert(elements.at(i).idx, elements.at(i).value);
+        cut.insert(elements.at(i).index, elements.at(i).value);
     }
 
     // Adds the cutting plane
@@ -400,7 +400,7 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverOsiCbc::addMIPStart(std::vector<double> point)
+void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {
     auto numVar = env->model->originalProblem->getNumberOfVariables();
     auto varNames = env->model->originalProblem->getVariableNames();
@@ -491,11 +491,11 @@ void MIPSolverOsiCbc::deleteMIPStarts()
     // Not implemented
 }
 
-std::vector<double> MIPSolverOsiCbc::getVariableSolution(int solIdx)
+VectorDouble MIPSolverOsiCbc::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
     int numVar = cbcModel->getNumCols();
-    std::vector<double> solution(numVar);
+    VectorDouble solution(numVar);
 
     try
     {
@@ -562,9 +562,9 @@ void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, doubl
     }
 }
 
-DoublePair MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
+PairDouble MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
 {
-    DoublePair tmpBounds;
+    PairDouble tmpBounds;
 
     try
     {
@@ -606,7 +606,7 @@ double MIPSolverOsiCbc::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<std::vector<double>, std::vector<double>> MIPSolverOsiCbc::presolveAndGetNewBounds()
+std::pair<VectorDouble, VectorDouble> MIPSolverOsiCbc::presolveAndGetNewBounds()
 {
     return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableUpperBounds()));
 }

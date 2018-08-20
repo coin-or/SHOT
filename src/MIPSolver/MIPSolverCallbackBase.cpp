@@ -98,7 +98,7 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
                                        env->process->getAbsoluteObjectiveGap(),
                                        env->process->getRelativeObjectiveGap(),
                                        solution.objectiveValue,
-                                       solution.maxDeviation.idx,
+                                       solution.maxDeviation.index,
                                        solution.maxDeviation.value,
                                        E_IterationLineType::DualCallback);
 

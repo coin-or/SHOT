@@ -10,6 +10,8 @@
 
 #include "IPointSelectionStrategy.h"
 
+using namespace SHOT;
+
 IPointSelectionStrategy::IPointSelectionStrategy()
 {
 }

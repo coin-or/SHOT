@@ -10,6 +10,8 @@
 
 #include "IPrimalSolutionStrategy.h"
 
+using namespace SHOT;
+
 IPrimalSolutionStrategy::~IPrimalSolutionStrategy()
 {
 }

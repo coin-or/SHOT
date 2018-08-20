@@ -13,6 +13,8 @@
 #include "../OptProblems/OptProblemOriginal.h"
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskAddHyperplanes : public TaskBase
 {
   public:
@@ -26,3 +28,4 @@ class TaskAddHyperplanes : public TaskBase
   private:
     int itersWithoutAddedHPs;
 };
+} // namespace SHOT

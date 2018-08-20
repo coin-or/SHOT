@@ -16,6 +16,8 @@
 #include "iterator"
 #include "vector"
 
+namespace SHOT
+{
 class NLPSolverBase : virtual public INLPSolver
 {
   private:
@@ -32,6 +34,7 @@ class NLPSolverBase : virtual public INLPSolver
 
     virtual void saveProblemToFile(std::string fileName);
 
-    virtual std::vector<double> getVariableLowerBounds();
-    virtual std::vector<double> getVariableUpperBounds();
+    virtual VectorDouble getVariableLowerBounds();
+    virtual VectorDouble getVariableUpperBounds();
 };
+} // namespace SHOT

@@ -12,6 +12,10 @@
 #include "../Enums.h"
 #include "SHOTSettings.h"
 
+using namespace SHOT;
+
+namespace SHOT
+{
 class IRelaxationStrategy
 {
   public:
@@ -27,3 +31,4 @@ class IRelaxationStrategy
 
     virtual E_IterationProblemType getProblemType() = 0;
 };
+} // namespace SHOT

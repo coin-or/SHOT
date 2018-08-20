@@ -14,6 +14,8 @@
 #include "../OptProblems/OptProblemOriginal.h"
 #include "TaskSelectHyperplanePointsSolution.h"
 
+namespace SHOT
+{
 class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
 {
   public:
@@ -26,8 +28,9 @@ class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
     virtual std::string getType();
 
   private:
-    std::vector<int> nonlinearConstraintIdxs;
+    VectorInteger nonlinearConstraintIdxs;
 
     TaskSelectHyperplanePointsSolution *tSelectHPPts;
     bool hyperplaneSolutionPointStrategyInitialized = false;
 };
+} // namespace SHOT

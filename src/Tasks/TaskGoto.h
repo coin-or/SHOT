@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskGoto : public TaskBase
 {
   public:
@@ -24,3 +26,4 @@ class TaskGoto : public TaskBase
   private:
     std::string gotoTaskID;
 };
+} // namespace SHOT

@@ -10,6 +10,8 @@
 
 #include "OptProblemOriginalLinearObjective.h"
 
+using namespace SHOT;
+
 OptProblemOriginalLinearObjective::OptProblemOriginalLinearObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
 }
@@ -39,8 +41,6 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
         env->settings->updateSetting("Relaxation.IterationLimit", "Dual", 0);
         env->settings->updateSetting("MIP.SolutionLimit.Initial", "Dual", 1000);
     }
-
-    env->model->setOriginalProblem(OriginalProblemPtr(this));
 
     this->setVariableBoundsTightened(std::vector<bool>(getProblemInstance()->getVariableNumber(), false));
 

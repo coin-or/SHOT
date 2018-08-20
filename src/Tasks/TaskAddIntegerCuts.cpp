@@ -35,12 +35,12 @@ void TaskAddIntegerCuts::run()
             auto tmpBinaryCombination = env->process->integerCutWaitingList.at(j);
             int numOnes = tmpBinaryCombination.size();
 
-            std::vector<IndexValuePair> elements;
+            std::vector<PairIndexValue> elements;
 
             for (int i = 0; i < numOnes; i++)
             {
-                IndexValuePair pair;
-                pair.idx = tmpBinaryCombination.at(i);
+                PairIndexValue pair;
+                pair.index = tmpBinaryCombination.at(i);
                 pair.value = 1.0;
 
                 elements.push_back(pair);

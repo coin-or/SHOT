@@ -26,6 +26,9 @@
 #include "gevmcc.h"
 #include "GamsNLinstr.h"
 
+namespace SHOT
+{
+
 class ProcessInfo;
 
 /*
@@ -67,3 +70,4 @@ class GAMS2OS
 
     OSInstance *osinstance;
 };
+} // namespace SHOT

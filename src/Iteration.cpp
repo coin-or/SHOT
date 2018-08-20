@@ -10,6 +10,8 @@
 
 #include "Iteration.h"
 
+using namespace SHOT;
+
 Iteration::Iteration(EnvironmentPtr envPtr)
 {
     env = envPtr;

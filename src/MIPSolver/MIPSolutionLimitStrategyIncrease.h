@@ -12,6 +12,8 @@
 
 #include "IMIPSolutionLimitStrategy.h"
 
+namespace SHOT
+{
 class MIPSolutionLimitStrategyIncrease : public IMIPSolutionLimitStrategy
 {
   public:
@@ -26,3 +28,4 @@ class MIPSolutionLimitStrategyIncrease : public IMIPSolutionLimitStrategy
     int numSolLimIncremented;
     int lastIterOptimal;
 };
+} // namespace SHOT

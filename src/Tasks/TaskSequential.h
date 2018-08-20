@@ -12,6 +12,8 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskSequential : public TaskBase
 {
   public:
@@ -29,3 +31,4 @@ class TaskSequential : public TaskBase
   private:
     std::vector<TaskBase *> m_tasks;
 };
+} // namespace SHOT

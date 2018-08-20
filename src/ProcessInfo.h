@@ -34,6 +34,8 @@
 #include "gmomcc.h"
 #endif
 
+namespace SHOT
+{
 class Iteration;
 
 class ProcessInfo
@@ -46,7 +48,7 @@ class ProcessInfo
 
     void initializeResults(int numObj, int numVar, int numConstr);
 
-    std::vector<double> primalSolution; // TODO remove
+    VectorDouble primalSolution; // TODO remove
 
     std::vector<Iteration> iterations;
     std::vector<PrimalSolution> primalSolutions;
@@ -56,21 +58,21 @@ class ProcessInfo
     std::vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
     std::vector<DualSolution> dualSolutionCandidates;
 
-    DoublePair getCorrectedObjectiveBounds();
+    PairDouble getCorrectedObjectiveBounds();
 
-    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter,
-                           IndexValuePair maxConstrDev);
-    void addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter);
+    void addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter,
+                           PairIndexValue maxConstrDev);
+    void addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter);
     void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
 
-    void addPrimalFixedNLPCandidate(std::vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
-                                    IndexValuePair maxConstrDev);
+    void addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter,
+                                    PairIndexValue maxConstrDev);
 
-    void addDualSolution(std::vector<double> pt, E_DualSolutionSource source, double objVal, int iter);
+    void addDualSolution(VectorDouble pt, E_DualSolutionSource source, double objVal, int iter);
     void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolution(DualSolution solution);
-    void addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSolutionSource source, int iter);
-    void addPrimalSolutionCandidates(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter);
+    void addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter);
 
     void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
     void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
@@ -83,7 +85,7 @@ class ProcessInfo
 
     void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
-    void addDualSolutionCandidate(std::vector<double> pt, E_DualSolutionSource source, int iter);
+    void addDualSolutionCandidate(VectorDouble pt, E_DualSolutionSource source, int iter);
     void addDualSolutionCandidate(DualSolution solution);
 
     double getAbsoluteObjectiveGap();
@@ -91,7 +93,7 @@ class ProcessInfo
     void setObjectiveUpdatedByLinesearch(bool updated);
     bool getObjectiveUpdatedByLinesearch();
 
-    std::vector<int> itersSolvedAsECP;
+    VectorInteger itersSolvedAsECP;
 
     void createTimer(std::string name, std::string description);
     void startTimer(std::string name);
@@ -124,7 +126,7 @@ class ProcessInfo
 
     std::vector<Hyperplane> addedHyperplanes;
 
-    std::vector<std::vector<int>> integerCutWaitingList;
+    std::vector<VectorInteger> integerCutWaitingList;
 
     std::vector<Timer> timers;
 
@@ -143,3 +145,4 @@ class ProcessInfo
 
     EnvironmentPtr env;
 };
+}

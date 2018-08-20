@@ -10,6 +10,8 @@
 
 #include "OptProblemOriginalNonlinearObjective.h"
 
+using namespace SHOT;
+
 OptProblemOriginalNonlinearObjective::OptProblemOriginalNonlinearObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
 }
@@ -34,8 +36,6 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
     this->setTypeOfObjectiveMinimize(instance->instanceData->objectives->obj[0]->maxOrMin == "min");
 
     this->setObjectiveFunctionNonlinear(isConstraintNonlinear(-1));
-
-    env->model->setOriginalProblem(OriginalProblemPtr(this));
 
     this->setNonlinearConstraintIndexes();
 
@@ -62,7 +62,7 @@ bool OptProblemOriginalNonlinearObjective::setProblem(OSInstance *instance)
     return true;
 }
 
-double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(int idx, std::vector<double> point)
+double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(int idx, VectorDouble point)
 {
     double tmpVal = 0.0;
 
@@ -101,7 +101,7 @@ double OptProblemOriginalNonlinearObjective::calculateConstraintFunctionValue(in
 }
 
 SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionGradient(int idx,
-                                                                                        std::vector<double> point)
+                                                                                        VectorDouble point)
 {
     int number;
     SparseVector *tmpVector;
@@ -113,8 +113,8 @@ SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
         env->solutionStatistics.numberOfGradientEvaluations++;
 
         number = getProblemInstance()->getVariableNumber();
-        std::vector<int> tmpIndexes;
-        std::vector<double> tmpValues;
+        VectorInteger tmpIndexes;
+        VectorDouble tmpValues;
 
         int nonZeroVals = 0;
         for (int i = 0; i < number; i++)
@@ -147,13 +147,13 @@ SparseVector *OptProblemOriginalNonlinearObjective::calculateConstraintFunctionG
 }
 
 // For all constraints except the additional nonlinear objective constraint
-IndexValuePair OptProblemOriginalNonlinearObjective::getMostDeviatingAllConstraint(std::vector<double> point)
+PairIndexValue OptProblemOriginalNonlinearObjective::getMostDeviatingAllConstraint(VectorDouble point)
 {
-    IndexValuePair valpair;
+    PairIndexValue valpair;
 
     int numConstr = this->getNumberOfConstraints();
 
-    std::vector<double> constrDevs(numConstr);
+    VectorDouble constrDevs(numConstr);
 
     for (int i = 0; i < numConstr; i++)
     {
@@ -175,7 +175,7 @@ IndexValuePair OptProblemOriginalNonlinearObjective::getMostDeviatingAllConstrai
     }
 
     auto biggest = std::max_element(std::begin(constrDevs), std::end(constrDevs));
-    valpair.idx = std::distance(std::begin(constrDevs), biggest);
+    valpair.index = std::distance(std::begin(constrDevs), biggest);
     valpair.value = *biggest;
 
     return valpair;
@@ -195,11 +195,11 @@ int OptProblemOriginalNonlinearObjective::getNumberOfConstraints()
     return getProblemInstance()->getConstraintNumber() + 1;
 }
 
-std::vector<std::string> OptProblemOriginalNonlinearObjective::getConstraintNames()
+VectorString OptProblemOriginalNonlinearObjective::getConstraintNames()
 {
     std::string *tmpArray = getProblemInstance()->getConstraintNames();
 
-    std::vector<std::string> tmpVector;
+    VectorString tmpVector;
 
     for (int i = 0; i < getProblemInstance()->getConstraintNumber(); i++)
     {
@@ -221,11 +221,11 @@ int OptProblemOriginalNonlinearObjective::getNumberOfRealVariables()
     return getProblemInstance()->getVariableNumber() - getProblemInstance()->getNumberOfBinaryVariables() - getProblemInstance()->getNumberOfIntegerVariables() + 1;
 }
 
-std::vector<std::string> OptProblemOriginalNonlinearObjective::getVariableNames()
+VectorString OptProblemOriginalNonlinearObjective::getVariableNames()
 {
     std::string *tmpArray = getProblemInstance()->getVariableNames();
 
-    std::vector<std::string> tmpVector;
+    VectorString tmpVector;
 
     for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)
     {
@@ -253,11 +253,11 @@ std::vector<char> OptProblemOriginalNonlinearObjective::getVariableTypes()
     return tmpVector;
 }
 
-std::vector<double> OptProblemOriginalNonlinearObjective::getVariableLowerBounds()
+VectorDouble OptProblemOriginalNonlinearObjective::getVariableLowerBounds()
 {
     double *tmpArray = getProblemInstance()->getVariableLowerBounds();
 
-    std::vector<double> tmpVector;
+    VectorDouble tmpVector;
 
     for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)
     {
@@ -269,11 +269,11 @@ std::vector<double> OptProblemOriginalNonlinearObjective::getVariableLowerBounds
     return tmpVector;
 }
 
-std::vector<double> OptProblemOriginalNonlinearObjective::getVariableUpperBounds()
+VectorDouble OptProblemOriginalNonlinearObjective::getVariableUpperBounds()
 {
     double *tmpArray = getProblemInstance()->getVariableUpperBounds();
 
-    std::vector<double> tmpVector;
+    VectorDouble tmpVector;
 
     for (int i = 0; i < getProblemInstance()->getVariableNumber(); i++)
     {
@@ -358,7 +358,7 @@ void OptProblemOriginalNonlinearObjective::setNonlinearConstraintIndexes()
 
     auto NLCIndexes = getNonlinearConstraintIndexes();
 
-    std::vector<int>::iterator it;
+    VectorInteger::iterator it;
     it = NLCIndexes.begin();
 
     NLCIndexes.insert(it, -1);

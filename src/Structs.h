@@ -10,10 +10,13 @@
 
 #pragma once
 #include "Enums.h"
-#include "OSGeneral.h"
+#include <utility>
+#include <vector>
+#include <memory>
+#include <list>
 
-typedef std::pair<double, double> DoublePair;
-
+namespace SHOT
+{
 class ProcessInfo;
 class Settings;
 class Model;
@@ -32,30 +35,41 @@ typedef std::shared_ptr<OptProblemOriginal> OriginalProblemPtr;
 typedef std::shared_ptr<Report> ReportPtr;
 typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
 
+typedef std::pair<double, double> PairDouble;
+typedef std::vector<double> VectorDouble;
+typedef std::vector<int> VectorInteger;
+typedef std::vector<std::string> VectorString;
+
+struct PairIndexValue
+{
+    int index;
+    int value;
+};
+
 struct SolutionPoint
 {
-    std::vector<double> point;
+    VectorDouble point;
     double objectiveValue;
     int iterFound;
-    IndexValuePair maxDeviation;
+    PairIndexValue maxDeviation;
 };
 
 struct InteriorPoint
 {
-    std::vector<double> point;
+    VectorDouble point;
     ES_InteriorPointStrategy NLPSolver;
-    IndexValuePair maxDevatingConstraint;
+    PairIndexValue maxDevatingConstraint;
 };
 
 struct PrimalSolution
 {
-    std::vector<double> point;
+    VectorDouble point;
     E_PrimalSolutionSource sourceType;
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    IndexValuePair maxDevatingConstraintNonlinear;
-    IndexValuePair maxDevatingConstraintLinear;
+    PairIndexValue maxDevatingConstraintNonlinear;
+    PairIndexValue maxDevatingConstraintLinear;
     double maxIntegerToleranceError;       // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?
@@ -64,16 +78,16 @@ struct PrimalSolution
 
 struct PrimalFixedNLPCandidate
 {
-    std::vector<double> point;
+    VectorDouble point;
     E_PrimalNLPSource sourceType;
     double objValue;
     int iterFound;
-    IndexValuePair maxDevatingConstraint;
+    PairIndexValue maxDevatingConstraint;
 };
 
 struct DualSolution
 {
-    std::vector<double> point;
+    VectorDouble point;
     E_DualSolutionSource sourceType;
     double objValue;
     int iterFound;
@@ -83,7 +97,7 @@ struct DualSolution
 struct Hyperplane
 {
     int sourceConstraintIndex;
-    std::vector<double> generatedPoint;
+    VectorDouble generatedPoint;
     E_HyperplaneSource source;
 };
 
@@ -91,7 +105,7 @@ struct GeneratedHyperplane
 {
     int generatedConstraintIndex;
     int sourceConstraintIndex;
-    std::vector<double> generatedPoint;
+    VectorDouble generatedPoint;
     E_HyperplaneSource source;
     bool isLazy;
     bool isRemoved;
@@ -187,3 +201,4 @@ struct SolutionStatistics
                 numberOfProblemsFixedNLP);
     };
 };
+}; // namespace SHOT

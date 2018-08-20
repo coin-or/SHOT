@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include <functional>
 
+namespace SHOT
+{
 class TaskSimple : public TaskBase
 {
   public:
@@ -28,3 +30,4 @@ class TaskSimple : public TaskBase
   private:
     std::function<bool()> task;
 };
+} // namespace SHOT

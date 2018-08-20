@@ -10,7 +10,9 @@
 
 #include "ProcessInfo.h"
 
-void ProcessInfo::addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter, IndexValuePair maxConstrDev)
+using namespace SHOT;
+
+void ProcessInfo::addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
     PrimalSolution sol;
 
@@ -23,14 +25,14 @@ void ProcessInfo::addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSour
     primalSolutions.push_back(sol);
 }
 
-void ProcessInfo::addPrimalSolution(std::vector<double> pt, E_PrimalSolutionSource source, double objVal, int iter)
+void ProcessInfo::addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter)
 {
     auto maxConstrDev = env->model->originalProblem->getMostDeviatingConstraint(pt);
 
     ProcessInfo::addPrimalSolution(pt, source, objVal, iter, maxConstrDev);
 }
 
-void ProcessInfo::addDualSolution(std::vector<double> pt, E_DualSolutionSource source, double objVal, int iter)
+void ProcessInfo::addDualSolution(VectorDouble pt, E_DualSolutionSource source, double objVal, int iter)
 {
     DualSolution sol = {pt, source, objVal, iter, false};
 
@@ -56,7 +58,7 @@ void ProcessInfo::addDualSolution(DualSolution solution)
     }
 }
 
-void ProcessInfo::addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSolutionSource source, int iter)
+void ProcessInfo::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
 {
     PrimalSolution sol;
 
@@ -71,7 +73,7 @@ void ProcessInfo::addPrimalSolutionCandidate(std::vector<double> pt, E_PrimalSol
     this->checkPrimalSolutionCandidates();
 }
 
-void ProcessInfo::addPrimalSolutionCandidates(std::vector<std::vector<double>> pts, E_PrimalSolutionSource source, int iter)
+void ProcessInfo::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter)
 {
     for (auto PT : pts)
     {
@@ -79,7 +81,7 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<std::vector<double>> p
     }
 }
 
-void ProcessInfo::addDualSolutionCandidate(std::vector<double> pt, E_DualSolutionSource source, int iter)
+void ProcessInfo::addDualSolutionCandidate(VectorDouble pt, E_DualSolutionSource source, int iter)
 {
     double tmpObjVal = env->model->originalProblem->calculateOriginalObjectiveValue(pt);
 
@@ -154,8 +156,8 @@ void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_
     }
 }
 
-void ProcessInfo::addPrimalFixedNLPCandidate(std::vector<double> pt, E_PrimalNLPSource source, double objVal, int iter,
-                                             IndexValuePair maxConstrDev)
+void ProcessInfo::addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter,
+                                             PairIndexValue maxConstrDev)
 {
     PrimalFixedNLPCandidate cand =
         {pt, source, objVal, iter};
@@ -298,7 +300,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 {
     std::string sourceDesc;
 
-    std::vector<double> tmpPoint(primalSol.point);
+    VectorDouble tmpPoint(primalSol.point);
     double tmpObjVal = primalSol.objValue;
 
     bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
@@ -439,7 +441,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         auto discreteVarIndexes = env->model->originalProblem->getDiscreteVariableIndices();
 
-        std::vector<double> ptRounded(tmpPoint);
+        VectorDouble ptRounded(tmpPoint);
 
         double maxIntegerError = 0.0;
 
@@ -519,7 +521,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         auto linearConstraintIndexes = env->model->originalProblem->getLinearConstraintIndexes();
 
-        IndexValuePair mostDevLinearConstraints;
+        PairIndexValue mostDevLinearConstraints;
 
         if (linearConstraintIndexes.size() > 0)
         {
@@ -529,12 +531,12 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
             if (isLinConstrFulfilled)
             {
-                auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % mostDevLinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
+                auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % mostDevLinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevLinearConstraints.index);
                 env->output->outputInfo(tmpLine.str());
             }
             else
             {
-                auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % mostDevLinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevLinearConstraints.idx);
+                auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % mostDevLinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevLinearConstraints.index);
                 env->output->outputInfo(tmpLine.str());
 
                 return (false);
@@ -544,7 +546,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
     }
 
-    IndexValuePair mostDevNonlinearConstraints;
+    PairIndexValue mostDevNonlinearConstraints;
 
     if (env->model->originalProblem->getNumberOfNonlinearConstraints() > 0)
     {
@@ -555,7 +557,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         if (!isNonLinConstrFulfilled)
         {
-            if (env->model->originalProblem->isObjectiveFunctionNonlinear() && (mostDevNonlinearConstraints.idx == env->model->originalProblem->getNonlinearObjectiveConstraintIdx() || mostDevNonlinearConstraints.idx == -1))
+            if (env->model->originalProblem->isObjectiveFunctionNonlinear() && (mostDevNonlinearConstraints.index == env->model->originalProblem->getNonlinearObjectiveConstraintIdx() || mostDevNonlinearConstraints.index == -1))
             {
                 auto tmpLine =
                     boost::format(
@@ -567,7 +569,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             {
                 auto tmpLine = boost::format(
                                    "       Nonlinear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
-                               nonlinTol % mostDevNonlinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.idx);
+                               nonlinTol % mostDevNonlinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.index);
                 env->output->outputInfo(tmpLine.str());
             }
 
@@ -575,7 +577,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
         else
         {
-            if (env->model->originalProblem->isObjectiveFunctionNonlinear() && (mostDevNonlinearConstraints.idx == env->model->originalProblem->getNonlinearObjectiveConstraintIdx() || mostDevNonlinearConstraints.idx == -1))
+            if (env->model->originalProblem->isObjectiveFunctionNonlinear() && (mostDevNonlinearConstraints.index == env->model->originalProblem->getNonlinearObjectiveConstraintIdx() || mostDevNonlinearConstraints.index == -1))
             {
                 auto tmpLine =
                     boost::format(
@@ -587,7 +589,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             {
                 auto tmpLine = boost::format(
                                    "       Nonlinear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
-                               nonlinTol % mostDevNonlinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.idx);
+                               nonlinTol % mostDevNonlinearConstraints.value % env->model->originalProblem->getConstraintNames().at(mostDevNonlinearConstraints.index);
                 env->output->outputInfo(tmpLine.str());
             }
         }
@@ -661,7 +663,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 		 auto discreteVarIndexes = env->model->originalProblem->getDiscreteVariableIndices();
 
-		 std::vector<double> ptRounded(tmpPoint);
+		 VectorDouble ptRounded(tmpPoint);
 
 		 double maxIntegerError = 0.0;
 
@@ -961,7 +963,7 @@ std::string ProcessInfo::getOSrl()
 
             osResult->setPrimalVariableValuesDense(i, &primalSolutions.at(i).point[0]);
 
-            std::vector<double> tmpConstrVals;
+            VectorDouble tmpConstrVals;
 
             osResult->setNumberOfDualValues(i, numConstr);
 

@@ -10,6 +10,8 @@
 
 #include "SHOTSettings.h"
 
+using namespace SHOT;
+
 enum ESettingsType
 {
     String,
@@ -28,7 +30,7 @@ std::map<std::pair<std::string, std::string>, std::string> _settingsDesc;
 std::map<std::pair<std::string, std::string>, ESettingsType> _settingsType;
 std::map<std::pair<std::string, std::string>, bool> _isPrivate;
 std::map<std::pair<std::string, std::string>, bool> _isDefault;
-std::map<std::pair<std::string, std::string>, DoublePair> _settingsBounds;
+std::map<std::pair<std::string, std::string>, PairDouble> _settingsBounds;
 std::map<std::pair<std::string, std::string>, bool> _settingsEnum;
 std::map<std::tuple<std::string, std::string, int>, std::string> _enumDescription;
 
@@ -287,7 +289,7 @@ bool Settings::getBoolSetting(std::string name, std::string category)
 //Enum settings ==================================================================
 
 void Settings::createSetting(std::string name, std::string category, int value, std::string description,
-                             std::vector<std::string> enumDescriptions, bool isPrivate)
+                             VectorString enumDescriptions, bool isPrivate)
 {
     createSetting(name, category, value, description, -OSDBL_MAX, OSDBL_MAX, isPrivate);
 
@@ -302,7 +304,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
 }
 
 void Settings::createSetting(std::string name, std::string category, int value, std::string description,
-                             std::vector<std::string> enumDescriptions)
+                             VectorString enumDescriptions)
 {
     Settings::createSetting(name, category, value, description, enumDescriptions, false);
 }
@@ -725,8 +727,8 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
         if (line == "" || boost::algorithm::starts_with(line, "*"))
             continue;
 
-        std::vector<std::string> nameCategoryPair;
-        std::vector<std::string> keyValuePair;
+        VectorString nameCategoryPair;
+        VectorString keyValuePair;
         boost::split(keyValuePair, line, boost::is_any_of("="));
         //boost::split(nameCategoryPair, keyValuePair.front(), std::bind1st(std::equal_to<char>(), '.'));
 

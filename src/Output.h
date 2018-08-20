@@ -19,6 +19,8 @@
 
 #include <boost/format.hpp>
 
+namespace SHOT
+{
 class Output
 {
   public:
@@ -40,3 +42,4 @@ class Output
   private:
     OSOutput *osOutput;
 };
+}

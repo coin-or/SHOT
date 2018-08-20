@@ -12,6 +12,8 @@
 #include "OSExpressionTree.h"
 #include "vector"
 
+using namespace SHOT;
+
 OptProblemNLPMinimax::OptProblemNLPMinimax(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
 }
@@ -87,16 +89,16 @@ void OptProblemNLPMinimax::copyVariables(OSInstance *source, OSInstance *destina
         destination->setVariableNumber(numVar + 1);
     }
 
-    std::vector<std::string> varNames;
+    VectorString varNames;
     varNames.assign(source->getVariableNames(), source->getVariableNames() + numVar);
 
     std::vector<char> varTypes;
     varTypes.assign(source->getVariableTypes(), source->getVariableTypes() + numVar);
 
-    std::vector<double> varLBs;
+    VectorDouble varLBs;
     varLBs.assign(source->getVariableLowerBounds(), source->getVariableLowerBounds() + numVar);
 
-    std::vector<double> varUBs;
+    VectorDouble varUBs;
     varUBs.assign(source->getVariableUpperBounds(), source->getVariableUpperBounds() + numVar);
 
     if (destination->getVariableNumber() == 0)
@@ -227,9 +229,9 @@ void OptProblemNLPMinimax::copyLinearTerms(OSInstance *source, OSInstance *desti
         numTotalElements = numTotalElements + 2 + source->instanceData->objectives->obj[0]->numberOfObjCoef;
     }
 
-    std::vector<int> rowIndices;
-    std::vector<int> colIndices;
-    std::vector<double> elements;
+    VectorInteger rowIndices;
+    VectorInteger colIndices;
+    VectorDouble elements;
 
     rowIndices.reserve(numTotalElements);
     colIndices.reserve(numTotalElements);
@@ -333,10 +335,10 @@ void OptProblemNLPMinimax::copyQuadraticTerms(OSInstance *source, OSInstance *de
         auto quadTerms = source->getQuadraticTerms();
         auto varRowIndexes = quadTerms->rowIndexes;
 
-        std::vector<int> varOneIndexes;
-        std::vector<int> varTwoIndexes;
-        std::vector<double> coefficients;
-        std::vector<int> rowIndexes;
+        VectorInteger varOneIndexes;
+        VectorInteger varTwoIndexes;
+        VectorDouble coefficients;
+        VectorInteger rowIndexes;
 
         varOneIndexes.reserve(numQuadTerms);
         varTwoIndexes.reserve(numQuadTerms);

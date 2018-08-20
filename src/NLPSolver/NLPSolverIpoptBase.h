@@ -15,6 +15,8 @@
 #include "OSIpoptSolver.h"
 #include "OSOption.h"
 
+namespace SHOT
+{
 class NLPSolverIpoptBase : virtual public INLPSolver
 {
   private:
@@ -23,35 +25,35 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     IpoptSolver *IpoptNLPSolver;
     OSoLWriter *osolwriter;
 
-    std::vector<int> fixedVariableIndexes;
-    std::vector<double> fixedVariableValues;
+    VectorInteger fixedVariableIndexes;
+    VectorDouble fixedVariableValues;
 
-    std::vector<int> startingPointVariableIndexes;
-    std::vector<double> startingPointVariableValues;
+    VectorInteger startingPointVariableIndexes;
+    VectorDouble startingPointVariableValues;
 
     virtual E_NLPSolutionStatus solveProblemInstance();
 
-    void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
     void unfixVariables();
 
     virtual void setInitialSettings();
     virtual void setSolverSpecificInitialSettings() = 0;
     virtual void updateSettings();
 
-    virtual std::vector<double> getCurrentVariableLowerBounds();
-    virtual std::vector<double> getCurrentVariableUpperBounds();
+    virtual VectorDouble getCurrentVariableLowerBounds();
+    virtual VectorDouble getCurrentVariableUpperBounds();
 
-    std::vector<double> lowerBoundsBeforeFix;
-    std::vector<double> upperBoundsBeforeFix;
+    VectorDouble lowerBoundsBeforeFix;
+    VectorDouble upperBoundsBeforeFix;
 
   public:
     NLPSolverIpoptBase();
     virtual ~NLPSolverIpoptBase();
 
-    virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();
 
-    virtual std::vector<double> getSolution();
+    virtual VectorDouble getSolution();
     virtual double getSolution(int i);
     virtual double getObjectiveValue();
 
@@ -60,3 +62,4 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 
     virtual void saveOptionsToFile(std::string fileName);
 };
+} // namespace SHOT

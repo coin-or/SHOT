@@ -16,6 +16,8 @@
 #include "MIPSolverCallbackBase.h"
 #include "gurobi_c++.h"
 
+namespace SHOT
+{
 class MIPSolverGurobiLazy : public MIPSolverGurobi
 {
   public:
@@ -39,7 +41,7 @@ class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
 {
   public:
     GRBVar *vars;
-    GurobiCallback(GRBVar *xvars);
+    GurobiCallback(GRBVar *xvars, EnvironmentPtr envPtr);
 
   protected:
     void callback();
@@ -50,7 +52,8 @@ class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
     int lastOpenNodes = 0;
 
     void createHyperplane(Hyperplane hyperplane);
-    void createIntegerCut(std::vector<int> binaryIndexes);
+    void createIntegerCut(VectorInteger binaryIndexes);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 };
+} // namespace SHOT

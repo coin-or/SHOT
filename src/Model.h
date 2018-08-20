@@ -16,6 +16,8 @@
 #include "OSiLWriter.h"
 #include "OSiLReader.h"
 
+namespace SHOT
+{
 class Model
 {
   public:
@@ -26,12 +28,11 @@ class Model
 
     ModelStatistics statistics;
 
-    DoublePair currentObjectiveBounds;
+    PairDouble currentObjectiveBounds;
 
-    void setOriginalProblem(OriginalProblemPtr problem);
     void setStatistics();
 
-    DoublePair getCorrectedObjectiveBounds();
+    PairDouble getCorrectedObjectiveBounds();
 
     OSInstance *getProblemInstanceFromOSiL(std::string osil);
     std::string getOSiLFromProblemInstance(OSInstance *instance);
@@ -42,3 +43,4 @@ class Model
     std::vector<OSiLReader *> osilReaders;
     OSiLWriter *osilWriter;
 };
+} // namespace SHOT

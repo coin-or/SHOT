@@ -19,6 +19,8 @@
 #include <OSInstance.h>
 #include "../MIPSolver/IMIPSolver.h"
 
+namespace SHOT
+{
 class TaskInitializeOriginalProblem : public TaskBase
 {
   public:
@@ -32,3 +34,4 @@ class TaskInitializeOriginalProblem : public TaskBase
     OptProblem *problem;
     OSInstance *instance;
 };
+} // namespace SHOT

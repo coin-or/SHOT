@@ -31,6 +31,8 @@
 
 #include "../MIPSolver/MIPSolverOsiCbc.h"
 
+namespace SHOT
+{
 class TaskInitializeDualSolver : public TaskBase
 {
   public:
@@ -42,3 +44,4 @@ class TaskInitializeDualSolver : public TaskBase
 
   private:
 };
+} // namespace SHOT

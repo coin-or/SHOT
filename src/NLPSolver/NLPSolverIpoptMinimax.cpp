@@ -25,10 +25,10 @@ NLPSolverIpoptMinimax::~NLPSolverIpoptMinimax()
     delete NLPProblem;
 }
 
-std::vector<double> NLPSolverIpoptMinimax::getSolution()
+VectorDouble NLPSolverIpoptMinimax::getSolution()
 {
     int numVar = NLPProblem->getNumberOfVariables();
-    std::vector<double> tmpPoint(numVar);
+    VectorDouble tmpPoint(numVar);
 
     for (int i = 0; i < numVar; i++)
     {

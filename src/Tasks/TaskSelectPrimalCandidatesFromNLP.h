@@ -13,14 +13,17 @@
 #include "../ProcessInfo.h"
 #include "../PrimalSolutionStrategy/PrimalSolutionStrategyFixedNLP.h"
 
+namespace SHOT
+{
 class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
   public:
-	TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr);
-	virtual ~TaskSelectPrimalCandidatesFromNLP();
-	virtual void run();
-	virtual std::string getType();
+    TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr);
+    virtual ~TaskSelectPrimalCandidatesFromNLP();
+    virtual void run();
+    virtual std::string getType();
 
   private:
-	PrimalSolutionStrategyFixedNLP *primalStrategyFixedNLP;
+    PrimalSolutionStrategyFixedNLP *primalStrategyFixedNLP;
 };
+} // namespace SHOT

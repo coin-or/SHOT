@@ -10,6 +10,8 @@
 
 #include "Report.h"
 
+using namespace SHOT;
+
 Report::Report(EnvironmentPtr envPtr) : env(envPtr)
 {
 }
@@ -767,7 +769,7 @@ void Report::outputInteriorPointPreReport()
     std::stringstream report;
 
     report << "\r\n";
-    report << " ─ Interior point search ────────────────────────────────────────────────────────────────────────\r\n";
+    report << "╶ Interior point search ──────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
 
     report << " Strategy selected:          ";

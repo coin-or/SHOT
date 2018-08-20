@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
 
+namespace SHOT
+{
 class TaskSelectHyperplanePointsSolution : public TaskBase
 {
   public:
@@ -26,3 +28,4 @@ class TaskSelectHyperplanePointsSolution : public TaskBase
 
   private:
 };
+} // namespace SHOT

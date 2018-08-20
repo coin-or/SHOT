@@ -10,6 +10,8 @@
 
 #include "GAMS2OS.h"
 
+using namespace SHOT;
+
 GAMS2OS::GAMS2OS(EnvironmentPtr envPtr) : env(envPtr), gmo(NULL), gev(NULL), createdtmpdir(false), osinstance(NULL)
 {
 }

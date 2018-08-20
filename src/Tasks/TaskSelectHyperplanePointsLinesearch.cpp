@@ -10,7 +10,7 @@
 
 #include "TaskSelectHyperplanePointsLinesearch.h"
 
-TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskSelectHyperplanePointsLinesearch::TaskSelectHyperplanePointsLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -70,17 +70,17 @@ void TaskSelectHyperplanePointsLinesearch::run(std::vector<SolutionPoint> solPoi
                 }
                 auto xNLP = env->process->interiorPts.at(j)->point;
 
-                std::vector<double> externalPoint;
-                std::vector<double> internalPoint;
+                VectorDouble externalPoint;
+                VectorDouble internalPoint;
 
                 try
                 {
 
                     env->process->startTimer("DualCutGenerationRootSearch");
                     auto xNewc = env->process->linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-                                                                                       env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                                       env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                                                                                       env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
+                                                                          env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                          env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+                                                                          env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
 
                     env->process->stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;
@@ -100,7 +100,7 @@ void TaskSelectHyperplanePointsLinesearch::run(std::vector<SolutionPoint> solPoi
                 if (tmpMostDevConstr.value >= 0)
                 {
                     Hyperplane hyperplane;
-                    hyperplane.sourceConstraintIndex = tmpMostDevConstr.idx;
+                    hyperplane.sourceConstraintIndex = tmpMostDevConstr.index;
                     hyperplane.generatedPoint = externalPoint;
 
                     if (i == 0 && currIter->isMIP())
