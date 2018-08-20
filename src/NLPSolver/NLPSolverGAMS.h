@@ -44,10 +44,11 @@ class NLPSolverGAMS : public NLPSolverBase
 
     VectorDouble getSolution();
     double getSolution(int i);
-    double getObjectiveValue();
 
-    bool isObjectiveFunctionNonlinear();
+    virtual double getObjectiveValue();
+
     int getObjectiveFunctionVariableIndex();
+    bool isObjectiveFunctionNonlinear();
 
   protected:
     E_NLPSolutionStatus solveProblemInstance();

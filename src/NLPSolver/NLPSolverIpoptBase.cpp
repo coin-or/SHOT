@@ -29,6 +29,12 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     try
     {
         IpoptNLPSolver->osinstance = NLPProblem->getProblemInstance();
+
+        // Needed to fix bugs in OSInstance
+        std::string osil = env->model->getOSiLFromProblemInstance(NLPProblem->getProblemInstance());
+        IpoptNLPSolver->osinstance = env->model->getProblemInstanceFromOSiL(osil);
+        IpoptNLPSolver->osinstance->getJacobianSparsityPattern();
+
         updateSettings();
 
         std::string solStatus;

@@ -109,14 +109,14 @@ LinesearchMethodBoost::~LinesearchMethodBoost()
 }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDouble ptA,
-                                                                                    VectorDouble ptB, int Nmax, double lambdaTol, double constrTol)
+                                                                      VectorDouble ptB, int Nmax, double lambdaTol, double constrTol)
 {
     VectorInteger tmpVector;
     return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpVector));
 }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDouble ptA,
-                                                                                    VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs)
+                                                                      VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs)
 {
     if (ptA.size() != ptB.size())
     {

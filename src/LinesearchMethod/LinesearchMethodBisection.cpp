@@ -22,7 +22,7 @@ LinesearchMethodBisection::~LinesearchMethodBisection()
 }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBisection::findZero(VectorDouble ptA,
-                                                                                      VectorDouble ptB, int Nmax, double lambdaTol, double constrTol)
+                                                                          VectorDouble ptB, int Nmax, double lambdaTol, double constrTol)
 {
     bool validNewPt = false;
     try
@@ -99,7 +99,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBisection::findZero(Vector
 }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBisection::findZero(VectorDouble ptA,
-                                                                                      VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs)
+                                                                          VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs)
 {
     return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol));
 }

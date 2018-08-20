@@ -94,7 +94,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoi
 
                     auto constrDevExterior =
                         env->model->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
-                                                                                        solPoints.at(i).point);
+                                                                                      solPoints.at(i).point);
 
                     if (isnan(constrDevExterior))
                     {
@@ -140,7 +140,7 @@ void TaskSelectHyperplanePointsIndividualLinesearch::run(std::vector<SolutionPoi
 
                     auto constrDevBoundary =
                         env->model->originalProblem->calculateConstraintFunctionValue(currConstrIdx,
-                                                                                        externalPoint);
+                                                                                      externalPoint);
 
                     if (constrDevBoundary >= 0)
                     {

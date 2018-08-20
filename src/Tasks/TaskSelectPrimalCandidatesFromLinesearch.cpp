@@ -10,7 +10,7 @@
 
 #include "TaskSelectPrimalCandidatesFromLinesearch.h"
 
-TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -70,14 +70,14 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
                     {
                         env->process->startTimer("PrimalBoundStrategyRootSearch");
                         xNewc = env->process->linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
-                                                                                      env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                                      env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
+                                                                         env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                         env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0);
 
                         env->process->stopTimer("PrimalBoundStrategyRootSearch");
 
                         env->process->addPrimalSolutionCandidate(xNewc.first,
-                                                                              E_PrimalSolutionSource::Linesearch,
-                                                                              env->process->getCurrentIteration()->iterationNumber);
+                                                                 E_PrimalSolutionSource::Linesearch,
+                                                                 env->process->getCurrentIteration()->iterationNumber);
                     }
                     catch (std::exception &e)
                     {

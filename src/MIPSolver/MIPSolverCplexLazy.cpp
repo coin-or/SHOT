@@ -98,7 +98,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             tmpPt.point = primalSolution;
 
             env->process->addPrimalSolutionCandidate(tmpPt,
-                                                                  E_PrimalSolutionSource::LazyConstraintCallback);
+                                                     E_PrimalSolutionSource::LazyConstraintCallback);
 
             tmpPrimalVals.end();
         }
@@ -227,8 +227,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             if (checkFixedNLPStrategy(candidatePoints.at(0)))
             {
                 env->process->addPrimalFixedNLPCandidate(candidatePoints.at(0).point,
-                                                                      E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(), env->process->getCurrentIteration()->iterationNumber,
-                                                                      candidatePoints.at(0).maxDeviation);
+                                                         E_PrimalNLPSource::FirstSolution, context.getCandidateObjective(), env->process->getCurrentIteration()->iterationNumber,
+                                                         candidatePoints.at(0).maxDeviation);
 
                 tSelectPrimNLP.get()->run();
 
@@ -471,7 +471,7 @@ void MIPSolverCplexLazy::initializeSolverSettings()
     catch (IloException &e)
     {
         env->output->outputError("Cplex error when initializing parameters for linear solver",
-                                                                e.getMessage());
+                                 e.getMessage());
     }
 }
 

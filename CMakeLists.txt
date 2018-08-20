@@ -23,7 +23,7 @@ option (HAS_GAMS "Is GAMS available" ON)
 set(COINOS_DIR /opt/OS-2.10-stable)
 set(GUROBI_DIR /opt/gurobi751)
 set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio1263)
-set(GAMS_DIR /home/aton3/alundell/Research/COIN-OR/gams24.8)
+set(GAMS_DIR /opt/gams/gams25.1.2)
 
 # May be needed to specify the path to where Boost is installed, if not automatically detected
 #set(Boost_INCLUDE_DIR /usr/include)
