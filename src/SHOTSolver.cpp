@@ -133,6 +133,12 @@ bool SHOTSolver::setProblem(std::string fileName)
             tmpInstance = env->model->getProblemInstanceFromOSiL(fileContents);
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
+
+            if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
+            {
+                env->output->outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
+                env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
+            }
         }
         else if (problemExtension == ".nl")
         {
@@ -396,7 +402,7 @@ void SHOTSolver::initializeSettings()
     enumAddPrimalPointAsInteriorPoint.push_back("Replace old");
     enumAddPrimalPointAsInteriorPoint.push_back("Use avarage");
     env->settings->createSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual",
-                                 static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepOriginal),
+                                 static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage),
                                  "Utilize primal solution as interior point", enumAddPrimalPointAsInteriorPoint);
     enumAddPrimalPointAsInteriorPoint.clear();
 
@@ -428,7 +434,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("FixedInteger.ObjectiveTolerance", "Dual", 0.001,
                                  "Objective tolerance for fixed strategy", 0.0, OSDBL_MAX);
 
-    env->settings->createSetting("FixedInteger.Use", "Dual", true,
+    env->settings->createSetting("FixedInteger.Use", "Dual", false,
                                  "Solve a fixed LP problem if integer-values have not changes in several MIP iterations");
 
     // Dual strategy settings: Hyperplane generation
@@ -663,6 +669,9 @@ void SHOTSolver::initializeSettings()
 
     // Subsolver settings: Cplex
 
+    env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
+                                 "Whether to add lazy constraints generated in relaxed points as local or global");
+
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
     env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
@@ -840,14 +849,6 @@ void SHOTSolver::verifySettings()
 {
     if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
     {
-#ifdef HAS_GAMS
-        if (gms2os == NULL)
-        {
-            env->output->outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
-            env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
-        }
-#endif
-
 #ifndef HAS_GAMS
         env->output->outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
         env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);

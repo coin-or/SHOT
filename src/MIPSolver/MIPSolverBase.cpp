@@ -128,7 +128,7 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
     double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
     auto nablag = env->model->originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
 
-    env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(nablag->number) + " elements.");
+    env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(nablag->number) + " elements. Constraint error: " + std::to_string(constant) + ".");
 
     for (int i = 0; i < nablag->number; i++)
     {

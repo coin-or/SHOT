@@ -10,12 +10,13 @@
 
 #include "MIPSolverCplexLazy.h"
 
-CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env, const IloCplex &inst)
+CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, const IloCplex &inst)
 {
     std::lock_guard<std::mutex> lock(callbackMutex);
 
+    env = envPtr;
+
     cplexVars = vars;
-    cplexEnv = env;
     cplexInst = inst;
 
     isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
@@ -24,32 +25,32 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env, cons
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
-        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(new TaskUpdateInteriorPoint());
+        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(new TaskUpdateInteriorPoint(env));
 
         if (static_cast<ES_RootsearchConstraintStrategy>(env->settings->getIntSetting("ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
         {
-            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsLinesearch>(new TaskSelectHyperplanePointsLinesearch());
+            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsLinesearch>(new TaskSelectHyperplanePointsLinesearch(env));
         }
         else
         {
-            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsIndividualLinesearch>(new TaskSelectHyperplanePointsIndividualLinesearch());
+            taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsIndividualLinesearch>(new TaskSelectHyperplanePointsIndividualLinesearch(env));
         }
     }
     else
     {
-        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsSolution>(new TaskSelectHyperplanePointsSolution());
+        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsSolution>(new TaskSelectHyperplanePointsSolution(env));
     }
 
-    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP());
+    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
     if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
     {
-        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch());
+        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch(env));
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal"))
     {
-        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch());
+        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch(env));
     }
 
     lastUpdatedPrimal = env->process->getPrimalBound();
@@ -57,6 +58,7 @@ CplexCallback::CplexCallback(const IloNumVarArray &vars, const IloEnv &env, cons
 
 void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 {
+    std::cout << "hej" << std::endl;
     std::lock_guard<std::mutex> lock(callbackMutex);
     this->cbCalls++;
 
@@ -207,7 +209,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             addLazyConstraint(candidatePoints, context);
 
             currIter->maxDeviation = mostDevConstr.value;
-            currIter->maxDeviationConstraint = mostDevConstr.idx;
+            currIter->maxDeviationConstraint = mostDevConstr.index;
 
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
 
@@ -296,14 +298,14 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
         if (isMinimization)
         {
-            (static_cast<MIPSolverCplexLazy *>(env->dualSolver))->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
+            (static_cast<MIPSolverCplexLazy *>(env->dualSolver.get()))->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
 
             env->output->outputInfo(
                 "     Setting cutoff value to " + std::to_string(primalBound + cutOffTol) + " for minimization.");
         }
         else
         {
-            (static_cast<MIPSolverCplexLazy *>(env->dualSolver))->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
+            (static_cast<MIPSolverCplexLazy *>(env->dualSolver.get()))->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
 
             env->output->outputInfo(
                 "     Setting cutoff value to " + std::to_string(primalBound - cutOffTol) + " for maximization.");
@@ -353,7 +355,7 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
         for (int i = 0; i < tmpPair.first.size(); i++)
         {
-            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).idx];
+            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).index];
         }
 
         IloRange tmpRange(context.getEnv(), -IloInfinity, expr, -tmpPair.second);
@@ -378,14 +380,14 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
 void CplexCallback::createIntegerCut(VectorInteger binaryIndexes, const IloCplex::Callback::Context &context)
 {
-    IloExpr expr(cplexEnv);
+    IloExpr expr(context.getEnv());
 
     for (int i = 0; i < binaryIndexes.size(); i++)
     {
         expr += 1.0 * cplexVars[binaryIndexes.at(i)];
     }
 
-    IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
+    IloRange tmpRange(context.getEnv(), -IloInfinity, expr, binaryIndexes.size() - 1.0);
 
     context.rejectCandidate(tmpRange);
     env->solutionStatistics.numberOfIntegerCuts++;
@@ -488,7 +490,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             cplexInstance.extract(cplexModel);
         }
 
-        CplexCallback cCallback(cplexVars, cplexEnv, cplexInstance);
+        CplexCallback cCallback(env, cplexVars, cplexInstance);
         CPXLONG contextMask = 0;
 
         contextMask |= IloCplex::Callback::Context::Id::Candidate;
@@ -497,6 +499,9 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
         // If contextMask is not zero we add the callback.
         if (contextMask != 0)
             cplexInstance.use(&cCallback, contextMask);
+
+        // This fixes a bug in CPLEX
+        //cplexEnv.setNormalizer(false);
 
         cplexInstance.solve();
 

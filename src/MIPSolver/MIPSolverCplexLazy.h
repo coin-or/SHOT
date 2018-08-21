@@ -58,7 +58,6 @@ class CplexCallback : public IloCplex::Callback::Function, public MIPSolverCallb
     CplexCallback(const CplexCallback &tocopy);
 
     IloNumVarArray cplexVars;
-    IloEnv cplexEnv;
     IloCplex cplexInst;
 
     void
@@ -67,7 +66,7 @@ class CplexCallback : public IloCplex::Callback::Function, public MIPSolverCallb
 
   public:
     /* Constructor with data */
-    CplexCallback(const IloNumVarArray &vars, const IloEnv &env, const IloCplex &inst);
+    CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, const IloCplex &inst);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context &context);
 

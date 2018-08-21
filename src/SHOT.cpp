@@ -147,6 +147,7 @@ int main(int argc, char *argv[])
         }
 
         env->output->setLogLevels(env->settings->getIntSetting("Console.LogLevel", "Output") + 1, env->settings->getIntSetting("File.LogLevel", "Output") + 1);
+        env->report->outputSolverHeader();
 
         if (!solver->setProblem(fileName))
         {
@@ -155,7 +156,6 @@ int main(int argc, char *argv[])
             return (0);
         }
 
-        env->report->outputSolverHeader();
         env->report->outputOptionsReport();
         env->report->outputProblemInstanceReport();
 

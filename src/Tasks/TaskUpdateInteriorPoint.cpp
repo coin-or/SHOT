@@ -10,7 +10,7 @@
 
 #include "TaskUpdateInteriorPoint.h"
 
-TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -36,7 +36,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = env->process->primalSolutions.at(0).point;
         tmpIP->maxDevatingConstraint = env->process->primalSolutions.at(0).maxDevatingConstraintNonlinear;
 
-        env->output->outputAlways("     Interior point replaced with primal solution point since no interior point was previously available.");
+        env->output->outputInfo("     Interior point replaced with primal solution point since no interior point was previously available.");
 
         env->process->interiorPts.push_back(tmpIP);
 
@@ -56,7 +56,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputAlways("     Interior point replaced with primal solution point due to constraint deviation.");
+        env->output->outputInfo("     Interior point replaced with primal solution point due to constraint deviation.");
 
         env->process->interiorPts.back() = tmpIP;
     }
@@ -67,7 +67,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputAlways("     Primal solution point used as additional interior point.");
+        env->output->outputInfo("     Primal solution point used as additional interior point.");
 
         if (env->process->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
@@ -86,7 +86,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputAlways("     Interior point replaced with primal solution point.");
+        env->output->outputInfo("     Interior point replaced with primal solution point.");
 
         env->process->interiorPts.back() = tmpIP;
     }
@@ -103,7 +103,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = env->model->originalProblem->getMostDeviatingConstraint(tmpPrimalPoint);
 
-        env->output->outputAlways("     Interior point replaced with primal solution point.");
+        env->output->outputInfo("     Interior point replaced with primal solution point.");
 
         env->process->interiorPts.back() = tmpIP;
     }

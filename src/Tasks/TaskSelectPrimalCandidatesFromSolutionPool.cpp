@@ -10,7 +10,7 @@
 
 #include "TaskSelectPrimalCandidatesFromSolutionPool.h"
 
-TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -20,21 +20,20 @@ TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolut
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
-	auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->process->getCurrentIteration();
 
-	if (currIter->isMIP())
-	{
-		env->process->startTimer("PrimalStrategy");
-		auto allSolutions = env->process->getCurrentIteration()->solutionPoints;
+    if (currIter->isMIP())
+    {
+        env->process->startTimer("PrimalStrategy");
+        auto allSolutions = env->process->getCurrentIteration()->solutionPoints;
+        env->process->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
-		env->process->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
-
-		env->process->stopTimer("PrimalStrategy");
-	}
+        env->process->stopTimer("PrimalStrategy");
+    }
 }
 
 std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }

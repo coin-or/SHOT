@@ -22,6 +22,9 @@ void TaskCheckObjectiveGapNotMet::run()
 {
     auto currIter = env->process->getCurrentIteration();
 
+    if (currIter->type != E_IterationProblemType::MIP)
+        return;
+
     if (env->process->primalSolutions.size() > 0 &&
         !env->process->isRelativeObjectiveGapToleranceMet() &&
         !env->process->isAbsoluteObjectiveGapToleranceMet())

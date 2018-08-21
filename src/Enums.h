@@ -31,7 +31,8 @@ enum class E_HyperplaneSource
     LPFixedIntegers,
     PrimalSolutionSearch,
     PrimalSolutionSearchInteriorObjective,
-    InteriorPointSearch
+    InteriorPointSearch,
+    MIPCallbackRelaxed
 };
 
 enum class E_IterationLineType

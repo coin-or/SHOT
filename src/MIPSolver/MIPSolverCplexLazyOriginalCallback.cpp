@@ -98,6 +98,7 @@ void HCallbackI::main() // Called at each node...
         tmpSolPt.objectiveValue = getObjValue();
         tmpSolPt.iterFound = 0;
         tmpSolPt.maxDeviation = mostDevConstr;
+        tmpSolPt.isRelaxedPoint = true;
 
         solutionPoints.at(0) = tmpSolPt;
 
@@ -400,7 +401,7 @@ void CtCallbackI::main()
 
         if (addedIntegerCut)
         {
-            env->output->outputAlways(
+            env->output->outputInfo(
                 "     Added " + std::to_string(env->process->integerCutWaitingList.size()) + " integer cut(s).                                        ");
         }
 
@@ -451,7 +452,14 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         tmpPair.first.clear();
         expr.end();
 
-        add(tmpRange).end();
+        if (env->settings->getBoolSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver") && hyperplane.source == E_HyperplaneSource::MIPCallbackRelaxed)
+        {
+            addLocal(tmpRange).end();
+        }
+        else
+        {
+            add(tmpRange, IloCplex::CutManagement::UseCutPurge).end();
+        }
 
         // int constrIndex = 0;
         /*genHyperplane.generatedConstraintIndex = constrIndex;
@@ -518,14 +526,6 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     try
     {
         MIPSolverCplex::initializeSolverSettings();
-
-        /*
-        if (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
-        {
-            cplexInstance.setParam(IloCplex::Threads, 1);
-        }*/
-
-        //cplexInstance.setParam(IloCplex::RepeatPresolve, 3);
 
         cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
         cplexInstance.use(HCallback(env, cplexEnv, cplexVars));

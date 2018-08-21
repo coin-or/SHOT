@@ -196,8 +196,8 @@ void MIPSolverOsiCbc::initializeSolverSettings()
         cbcModel->setNumberThreads(env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"));
     }
 
-    cbcModel->setAllowableGap(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
-    cbcModel->setAllowableFractionGap(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 2.0);
+    cbcModel->setAllowableGap(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
+    cbcModel->setAllowableFractionGap(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setMaximumSolutions(solLimit);
     cbcModel->setMaximumSavedSolutions(env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
@@ -618,7 +618,7 @@ void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)
 
 void MIPSolverOsiCbc::checkParameters()
 {
-    env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 0);
+    env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
 
     // Some features are not available in Cbc
     env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));

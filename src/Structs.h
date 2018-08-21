@@ -43,7 +43,7 @@ typedef std::vector<std::string> VectorString;
 struct PairIndexValue
 {
     int index;
-    int value;
+    double value;
 };
 
 struct SolutionPoint
@@ -52,6 +52,7 @@ struct SolutionPoint
     double objectiveValue;
     int iterFound;
     PairIndexValue maxDeviation;
+    bool isRelaxedPoint = false;
 };
 
 struct InteriorPoint

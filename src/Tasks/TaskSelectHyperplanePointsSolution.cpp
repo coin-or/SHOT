@@ -31,8 +31,6 @@ void TaskSelectHyperplanePointsSolution::run(std::vector<SolutionPoint> solPoint
 
     auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
 
-    auto originalProblem = env->model->originalProblem;
-
     auto constrSelFactor = env->settings->getDoubleSetting("ECP.ConstraintSelectionFactor", "Dual");
 
     for (int i = 0; i < solPoints.size(); i++)
@@ -57,7 +55,11 @@ void TaskSelectHyperplanePointsSolution::run(std::vector<SolutionPoint> solPoint
                 hyperplane.sourceConstraintIndex = tmpMostDevConstrs.at(j).index;
                 hyperplane.generatedPoint = solPoints.at(i).point;
 
-                if (i == 0 && currIter->isMIP())
+                if (solPoints.at(i).isRelaxedPoint)
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                }
+                else if (i == 0 && currIter->isMIP())
                 {
                     hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
                 }

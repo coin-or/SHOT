@@ -53,6 +53,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
     TaskBase *tAddHPs = new TaskAddHyperplanes(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
+    TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+    env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+
     if (static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
         TaskBase *tPresolve = new TaskPresolve(env);
@@ -84,8 +87,35 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
     TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
+    //TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet(env, "FinalizeSolution");
+    //env->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
+
+    env->tasks->addTask(tInitializeIteration, "InitIter");
+
+    if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+    {
+        TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
+        env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
+        if (static_cast<ES_RootsearchConstraintStrategy>(env->settings->getIntSetting(
+                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+        {
+            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch(env);
+            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+        else
+        {
+            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch(env);
+            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+    }
+    else
+    {
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution(env);
+        env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+    }
+
+    TaskBase *tGoto = new TaskGoto(env, "AddHPs");
+    env->tasks->addTask(tGoto, "Goto");
 
     if (env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal") && env->model->originalProblem->getNumberOfNonlinearConstraints() > 0 && env->model->originalProblem->getNumberOfDiscreteVariables() > 0)
     {
@@ -95,7 +125,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
 
         TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
         env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+        //dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 
         env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");

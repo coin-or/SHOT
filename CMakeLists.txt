@@ -3,26 +3,26 @@ project (SHOT)
 set(CMAKE_CXX_STANDARD 11)
 
 # Sets the release types, e.g. Release, Debug
-#set(CMAKE_BUILD_TYPE Release)          
+#set(CMAKE_BUILD_TYPE Release)
 
 option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
 set(SHOT_VERSION_MINOR   9   CACHE STRING "Project minor version number.")
-set(SHOT_VERSION_PATCH   1   CACHE STRING "Project patch version number.")
+set(SHOT_VERSION_PATCH   2   CACHE STRING "Project patch version number.")
 mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
 
 # Activates subsolvers, note that corresponding libraries are needed
-option (HAS_CPLEX "Is Cplex available" ON) 
-option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" OFF) 
-option (HAS_GUROBI "Is Gurobi available" ON) 
+option (HAS_CPLEX "Is Cplex available" ON)
+option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON)
+option (HAS_GUROBI "Is Gurobi available" ON)
 option (HAS_GAMS "Is GAMS available" ON)
 
 # Sets the paths required. Edit these to suit your system:
 set(COINOS_DIR /opt/OS-2.10-stable)
-set(GUROBI_DIR /opt/gurobi751)
-set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio1263)
+set(GUROBI_DIR /opt/gurobi800)
+set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /opt/gams/gams25.1.2)
 
 # May be needed to specify the path to where Boost is installed, if not automatically detected
@@ -30,14 +30,14 @@ set(GAMS_DIR /opt/gams/gams25.1.2)
 #set(Boost_LIBRARY_DIR /usr/lib)
 
 # Passes the parameters to the compiler
-if(HAS_CPLEX) 
+if(HAS_CPLEX)
   add_definitions(-DHAS_CPLEX)
 
   # To make Cplex build
   add_definitions(-DIL_STD)
   add_definitions(-LDFLAGS="-Wl,--no-as-needed")
 
-    if(HAS_CPLEX_NEW_CALLBACK) 
+    if(HAS_CPLEX_NEW_CALLBACK)
         add_definitions(-DHAS_CPLEX_NEW_CALLBACK)
     endif()
 endif()
@@ -143,7 +143,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
   )
 
-if (HAS_CPLEX)  
+if (HAS_CPLEX)
   include_directories("${CPLEX_DIR}/cplex/include")
   include_directories("${CPLEX_DIR}/concert/include")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
@@ -160,7 +160,7 @@ if (HAS_CPLEX)
   set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
 endif (HAS_CPLEX)
 
-if (HAS_GUROBI)  
+if (HAS_GUROBI)
   include_directories("${GUROBI_DIR}/linux64/include")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
@@ -170,7 +170,7 @@ if (HAS_GUROBI)
   set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.h")
 endif (HAS_GUROBI)
 
-if (HAS_GAMS)  
+if (HAS_GAMS)
   include_directories("${GAMS_DIR}/apifiles/C/api")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
@@ -208,14 +208,15 @@ add_executable (${PROJECT_NAME} ${SOURCES})
 
 target_link_libraries (${PROJECT_NAME} SHOTSettings)
 
-if (HAS_CPLEX)  
+if (HAS_CPLEX)
   target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
   target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
   target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
 endif (HAS_CPLEX)
 
-if (HAS_GUROBI)  
-  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi75.so)
+if (HAS_GUROBI)
+  # Change the Gurobi library below to match the version on the system
+  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi80.so)
   target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
 endif (HAS_GUROBI)
 
@@ -228,7 +229,7 @@ target_link_libraries (${PROJECT_NAME} blas)
 target_link_libraries (${PROJECT_NAME} dl)
 target_link_libraries (${PROJECT_NAME} gomp)
 
-if (HAS_GAMS)  
+if (HAS_GAMS)
   target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
 endif (HAS_GAMS)
 
@@ -273,7 +274,7 @@ if(BUILD_DOCUMENTATION)
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
 endif()
 
-if(COMPILE_TESTS) 
+if(COMPILE_TESTS)
     # For performing automated tests
     enable_testing()
     add_subdirectory ("${PROJECT_SOURCE_DIR}/test")

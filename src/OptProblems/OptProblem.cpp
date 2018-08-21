@@ -694,14 +694,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < LBInt)
                 {
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         "Corrected lower bound for variable " + varname[i] + " from " + std::to_string(destination->instanceData->variables->var[i]->lb) + " to " + std::to_string(LBInt));
                     destination->instanceData->variables->var[i]->lb = LBInt;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > UBInt)
                 {
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         "Corrected upper bound for variable " + varname[i] + " from " + std::to_string(destination->instanceData->variables->var[i]->ub) + " to " + std::to_string(UBInt));
                     destination->instanceData->variables->var[i]->ub = UBInt;
                 }
@@ -710,14 +710,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < LBCont)
                 {
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         "Corrected lower bound for variable " + varname[i] + " from " + std::to_string(destination->instanceData->variables->var[i]->lb) + " to " + std::to_string(LBCont));
                     destination->instanceData->variables->var[i]->lb = LBCont;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > UBCont)
                 {
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         "Corrected upper bound for variable " + varname[i] + " from " + std::to_string(destination->instanceData->variables->var[i]->ub) + " to " + std::to_string(UBCont));
                     destination->instanceData->variables->var[i]->ub = UBCont;
                 }
@@ -726,14 +726,14 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
             {
                 if (destination->instanceData->variables->var[i]->lb < 0.0)
                 {
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         "Corrected lower bound for variable " + varname[i] + " from " + std::to_string(destination->instanceData->variables->var[i]->lb) + " to 0");
                     destination->instanceData->variables->var[i]->lb = 0.0;
                 }
 
                 if (destination->instanceData->variables->var[i]->ub > 1.0)
                 {
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         "Corrected upper bound for variable " + varname[i] + " from " + std::to_string(destination->instanceData->variables->var[i]->ub) + " to 1");
                     destination->instanceData->variables->var[i]->ub = 1.0;
                 }
