@@ -33,7 +33,9 @@ static const unsigned long __nan[2] =
 #endif
 
 // Fix for Visual Studio c++ compiler
-namespace SHOT::UtilityFunctions
+namespace SHOT
+{
+namespace UtilityFunctions
 {
 int round(double d);
 
@@ -84,4 +86,5 @@ double getJulianFractionalDate();
 bool writeStringToFile(std::string fileName, std::string str);
 
 std::string getFileAsString(std::string fileName);
-} // namespace SHOT::UtilityFunctions
+} // namespace UtilityFunctions
+} // namespace SHOT

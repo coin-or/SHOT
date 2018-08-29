@@ -15,7 +15,7 @@ using namespace SHOT;
 int UtilityFunctions::round(double d)
 {
     return static_cast<int>(d + 0.5);
-}
+};
 
 bool UtilityFunctions::isnan(double val)
 {
@@ -26,7 +26,7 @@ bool UtilityFunctions::isnan(double val)
 	 return _isnan(val) != 0;
 	 #endif*/
     return boost::math::isnan(val);
-}
+};
 
 void UtilityFunctions::saveVariablePointVectorToFile(VectorDouble point, VectorString variables,
                                                      std::string fileName)
@@ -49,7 +49,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(VectorDouble point, VectorS
     }
 
     writeStringToFile(fileName, str.str());
-}
+};
 
 void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, VectorString variables,
                                                 std::string fileName)
@@ -97,7 +97,7 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, VectorS
     }
 
     writeStringToFile(fileName, str.str());
-}
+};
 
 void UtilityFunctions::displayVector(VectorDouble point)
 {
@@ -115,7 +115,7 @@ void UtilityFunctions::displayVector(VectorDouble point)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(VectorDouble point1, VectorDouble point2)
 {
@@ -136,7 +136,7 @@ void UtilityFunctions::displayVector(VectorDouble point1, VectorDouble point2)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayDifferencesInVector(VectorDouble point1, VectorDouble point2, double tol)
 {
@@ -160,7 +160,7 @@ void UtilityFunctions::displayDifferencesInVector(VectorDouble point1, VectorDou
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(VectorInteger point)
 {
@@ -178,7 +178,7 @@ void UtilityFunctions::displayVector(VectorInteger point)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(VectorString point)
 {
@@ -196,7 +196,7 @@ void UtilityFunctions::displayVector(VectorString point)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(std::vector<VectorDouble> points)
 {
@@ -216,7 +216,7 @@ void UtilityFunctions::displayVector(std::vector<VectorDouble> points)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(std::vector<VectorInteger> points)
 {
@@ -236,7 +236,7 @@ void UtilityFunctions::displayVector(std::vector<VectorInteger> points)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(std::vector<VectorString> points)
 {
@@ -256,7 +256,7 @@ void UtilityFunctions::displayVector(std::vector<VectorString> points)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 bool UtilityFunctions::isObjectiveGenerallyNonlinear(OSInstance *instance)
 {
@@ -267,7 +267,7 @@ bool UtilityFunctions::isObjectiveGenerallyNonlinear(OSInstance *instance)
             return (true);
     }
     return (false);
-}
+};
 
 bool UtilityFunctions::isObjectiveQuadratic(OSInstance *instance)
 {
@@ -280,7 +280,7 @@ bool UtilityFunctions::isObjectiveQuadratic(OSInstance *instance)
     }
 
     return (false);
-}
+};
 
 bool UtilityFunctions::areAllConstraintsLinear(OSInstance *instance)
 {
@@ -319,7 +319,7 @@ bool UtilityFunctions::areAllConstraintsQuadratic(OSInstance *instance)
         return false;
 
     return (true);
-}
+};
 
 bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
 {
@@ -329,7 +329,7 @@ bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
         return (false);
 
     return (true);
-}
+};
 
 double UtilityFunctions::L2Norm(VectorDouble ptA, VectorDouble ptB)
 {
@@ -348,7 +348,7 @@ double UtilityFunctions::L2Norm(VectorDouble ptA, VectorDouble ptB)
     norm = sqrt(norm);
 
     return (norm);
-}
+};
 
 VectorDouble UtilityFunctions::L2Norms(std::vector<VectorDouble> ptsA, VectorDouble ptB)
 {
@@ -360,7 +360,7 @@ VectorDouble UtilityFunctions::L2Norms(std::vector<VectorDouble> ptsA, VectorDou
     }
 
     return (norms);
-}
+};
 
 VectorDouble UtilityFunctions::calculateCenterPoint(std::vector<VectorDouble> pts)
 {
@@ -381,7 +381,7 @@ VectorDouble UtilityFunctions::calculateCenterPoint(std::vector<VectorDouble> pt
     }
 
     return (newPt);
-}
+};
 
 int UtilityFunctions::numDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
                                                           VectorInteger indexes)
@@ -396,7 +396,7 @@ int UtilityFunctions::numDifferentRoundedSelectedElements(VectorDouble firstPt, 
         }
     }
     return (numDiff);
-}
+};
 
 bool UtilityFunctions::isDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
                                                           VectorInteger indexes)
@@ -408,7 +408,7 @@ bool UtilityFunctions::isDifferentRoundedSelectedElements(VectorDouble firstPt, 
     }
 
     return (false);
-}
+};
 
 bool UtilityFunctions::isDifferentSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
                                                    VectorInteger indexes)
@@ -420,7 +420,7 @@ bool UtilityFunctions::isDifferentSelectedElements(VectorDouble firstPt, VectorD
     }
 
     return (false);
-}
+};
 
 std::string UtilityFunctions::toStringFormat(double value, std::string format)
 {
@@ -445,7 +445,7 @@ std::string UtilityFunctions::toStringFormat(double value, std::string format, b
     }
 
     return (str);
-}
+};
 
 std::string UtilityFunctions::toString(double value)
 {
@@ -471,7 +471,7 @@ void UtilityFunctions::displayVector(VectorInteger point1, VectorInteger point2)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 void UtilityFunctions::displayVector(VectorInteger point1, VectorDouble point2)
 {
@@ -492,7 +492,7 @@ void UtilityFunctions::displayVector(VectorInteger point1, VectorDouble point2)
     }
 
     std::cout << str.str() << std::endl;
-}
+};
 
 double UtilityFunctions::getJulianFractionalDate()
 {
@@ -513,7 +513,7 @@ double UtilityFunctions::getJulianFractionalDate()
     auto julianDate = -2415020 + (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
 
     return julianDate;
-}
+};
 
 bool UtilityFunctions::writeStringToFile(std::string fileName, std::string str)
 {
@@ -530,7 +530,7 @@ bool UtilityFunctions::writeStringToFile(std::string fileName, std::string str)
 
     f.close();
     return true;
-}
+};
 
 std::string UtilityFunctions::getFileAsString(std::string fileName)
 {
@@ -547,4 +547,4 @@ std::string UtilityFunctions::getFileAsString(std::string fileName)
     }
 
     throw(errno);
-}
+};

@@ -14,6 +14,7 @@
 #include <vector>
 #include <memory>
 #include <list>
+#include <string>
 
 namespace SHOT
 {
@@ -35,6 +36,7 @@ typedef std::shared_ptr<OptProblemOriginal> OriginalProblemPtr;
 typedef std::shared_ptr<Report> ReportPtr;
 typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
 
+typedef std::pair<int, int> PairInteger;
 typedef std::pair<double, double> PairDouble;
 typedef std::vector<double> VectorDouble;
 typedef std::vector<int> VectorInteger;
@@ -46,6 +48,12 @@ struct PairIndexValue
     double value;
 };
 
+struct PairCoordinateValue
+{
+    PairInteger indexes;
+    double value;
+};
+
 struct SolutionPoint
 {
     VectorDouble point;
@@ -53,7 +61,7 @@ struct SolutionPoint
     int iterFound;
     PairIndexValue maxDeviation;
     bool isRelaxedPoint = false;
-};
+}; // namespace structSolutionPoint
 
 struct InteriorPoint
 {
