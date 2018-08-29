@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 # Sets the release types, e.g. Release, Debug
 #set(CMAKE_BUILD_TYPE Release)
 
-option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
+option (COMPILE_TESTS "Should the automated tests be compiled" ON)
 
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
@@ -65,6 +65,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/SHOT.cpp"
   "${PROJECT_SOURCE_DIR}/src/Environment.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/OptimizationProblem.cpp"
   "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
@@ -107,6 +108,13 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Structs.h"
   "${PROJECT_SOURCE_DIR}/src/Environment.h"
   "${PROJECT_SOURCE_DIR}/src/Model.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/ModelStructs.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/Constraints.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/OptimizationProblem.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/ModelHelperFunctions.h"
   "${PROJECT_SOURCE_DIR}/src/Report.h"
   "${PROJECT_SOURCE_DIR}/src/Iteration.h"
   "${PROJECT_SOURCE_DIR}/src/Output.h"
@@ -204,7 +212,7 @@ include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 
 add_executable (${PROJECT_NAME} ${SOURCES})
-#add_library (SHOTSolver STATIC ${SOURCES})
+add_library (SHOTSolver STATIC ${SOURCES})
 
 target_link_libraries (${PROJECT_NAME} SHOTSettings)
 

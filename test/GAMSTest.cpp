@@ -9,10 +9,15 @@
 */
 
 #include "SHOTSolver.h"
-bool GAMSTest1();
+
+#include <iostream>
+
+bool ReadGAMSProblem(std::string filename);
+bool SolveGAMSProblem(std::string filename);
 
 int GAMSTest(int argc, char *argv[])
 {
+    osoutput->AddChannel("shotlogfile");
 
     int defaultchoice = 1;
 
@@ -32,13 +37,17 @@ int GAMSTest(int argc, char *argv[])
     switch (choice)
     {
     case 1:
-        passed = GAMSTest1();
-        break;
+        std::cout << "Starting test to read GMS files:" << std::endl;
+        passed = ReadGAMSProblem("data/fo7.gms");
+        std::cout << "Finished test to read GMS files." << std::endl;
     case 2:
+        std::cout << "Starting test to solve a MINLP problem in GAMS syntax:" << std::endl;
+        passed = SolveGAMSProblem("data/enpro48pb.gms");
+        std::cout << "Finished test to solve a MINLP problem in GAMS syntax." << std::endl;
         break;
     default:
         passed = false;
-        cout << "Test #" << choice << " does not exist!\n";
+        std::cout << "Test #" << choice << " does not exist!\n";
     }
 
     if (passed)
@@ -47,14 +56,91 @@ int GAMSTest(int argc, char *argv[])
         return -1;
 }
 
-bool GAMSTest1()
+// Test the reading a problem
+bool ReadGAMSProblem(std::string filename)
 {
-    SHOTSolver testSolver;
     bool passed = true;
 
-    if (testSolver.setProblem("ss"))
+    EnvironmentPtr env(new Environment);
+    env->output = OutputPtr(new Output());
+    env->process = ProcessPtr(new ProcessInfo(env));
+    env->settings = SettingsPtr(new Settings(env->output));
+    env->tasks = TaskHandlerPtr(new TaskHandler(env));
+    env->report = ReportPtr(new Report(env));
+    env->model = ModelPtr(new Model(env));
+    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+
+    try
     {
-        passed = true;
+        if (solver->setProblem(filename))
+        {
+            passed = true;
+        }
+        else
+        {
+            passed = false;
+        }
+    }
+    catch (ErrorClass &e)
+    {
+        std::cout << "Error: " << e.errormsg << std::endl;
+        return false;
+    }
+
+    return passed;
+}
+
+bool SolveGAMSProblem(std::string filename)
+{
+    bool passed = true;
+
+    EnvironmentPtr env(new Environment);
+    env->output = OutputPtr(new Output());
+    env->process = ProcessPtr(new ProcessInfo(env));
+    env->settings = SettingsPtr(new Settings(env->output));
+    env->tasks = TaskHandlerPtr(new TaskHandler(env));
+    env->report = ReportPtr(new Report(env));
+    env->model = ModelPtr(new Model(env));
+    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+
+    //solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+
+    try
+    {
+        if (solver->setProblem(filename))
+        {
+            passed = true;
+        }
+        else
+        {
+            passed = false;
+        }
+    }
+    catch (ErrorClass &e)
+    {
+        std::cout << "Error: " << e.errormsg << std::endl;
+        return false;
+    }
+
+    solver->solveProblem();
+    std::string osrl = solver->getOSrL();
+    std::string trace = solver->getTraceResult();
+    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    {
+        std::cout << "Could not write results to OSrL file." << std::endl;
+        passed = false;
+    }
+
+    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    {
+        std::cout << "Could not write results to trace file." << std::endl;
+        passed = false;
+    }
+
+    if (solver->getNumberOfPrimalSolutions() > 0)
+    {
+        std::cout << std::endl
+                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {

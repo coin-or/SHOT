@@ -1,15 +1,16 @@
 /**
    The Supporting Hyperplane Optimization Toolkit (SHOT).
-
    @author Andreas Lundell, Åbo Akademi University
-
    @section LICENSE 
    This software is licensed under the Eclipse Public License 2.0. 
    Please see the README and LICENSE files for more information.
 */
 
 #include "SHOTSolver.h"
-bool CplexTest1();
+
+#include <iostream>
+
+bool CplexTest1(std::string filename);
 
 int CplexTest(int argc, char *argv[])
 {
@@ -31,13 +32,13 @@ int CplexTest(int argc, char *argv[])
     switch (choice)
     {
     case 1:
-        passed = CplexTest1();
-        break;
-    case 2:
+        std::cout << "Starting test to solve a MINLP problem with Cplex" << std::endl;
+        passed = CplexTest1("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem with Cplex." << std::endl;
         break;
     default:
         passed = false;
-        cout << "Test #" << choice << " does not exist!\n";
+        std::cout << "Test #" << choice << " does not exist!\n";
     }
 
     if (passed)
@@ -46,14 +47,57 @@ int CplexTest(int argc, char *argv[])
         return -1;
 }
 
-bool CplexTest1()
+bool CplexTest1(std::string filename)
 {
-    SHOTSolver testSolver;
     bool passed = true;
 
-    if (testSolver.setProblem("ss"))
+    EnvironmentPtr env(new Environment);
+    env->output = OutputPtr(new Output());
+    env->process = ProcessPtr(new ProcessInfo(env));
+    env->settings = SettingsPtr(new Settings(env->output));
+    env->tasks = TaskHandlerPtr(new TaskHandler(env));
+    env->report = ReportPtr(new Report(env));
+    env->model = ModelPtr(new Model(env));
+    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+
+    solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+
+    try
     {
-        passed = true;
+        if (solver->setProblem(filename))
+        {
+            passed = true;
+        }
+        else
+        {
+            passed = false;
+        }
+    }
+    catch (ErrorClass &e)
+    {
+        std::cout << "Error: " << e.errormsg << std::endl;
+        return false;
+    }
+
+    solver->solveProblem();
+    std::string osrl = solver->getOSrL();
+    std::string trace = solver->getTraceResult();
+    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    {
+        std::cout << "Could not write results to OSrL file." << std::endl;
+        passed = false;
+    }
+
+    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    {
+        std::cout << "Could not write results to trace file." << std::endl;
+        passed = false;
+    }
+
+    if (solver->getNumberOfPrimalSolutions() > 0)
+    {
+        std::cout << std::endl
+                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {

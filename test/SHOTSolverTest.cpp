@@ -13,12 +13,9 @@
 
 bool SHOTSolverReadProblem(std::string filename);
 bool SHOTSolverTestOptions(bool useOSiL);
-bool SHOTSolverSolveProblem(std::string filename, int MIPSolver);
 
 int SHOTSolverTest(int argc, char *argv[])
 {
-    osoutput->AddChannel("shotlogfile");
-
     int defaultchoice = 1;
 
     int choice = defaultchoice;
@@ -40,28 +37,26 @@ int SHOTSolverTest(int argc, char *argv[])
         std::cout << "Starting test to read OSiL files:" << std::endl;
         passed = SHOTSolverReadProblem("data/tls2.osil");
         std::cout << "Finished test to read OSiL files." << std::endl;
-
+        break;
+    case 2:
         std::cout << "Starting test to read Ampl nl files:" << std::endl;
         passed = SHOTSolverReadProblem("data/tls2.nl");
         std::cout << "Finished test to read Ampl nl files." << std::endl;
         break;
-    case 2:
+    case 3:
         std::cout << "Starting test to read and write OSoL files:" << std::endl;
         passed = SHOTSolverTestOptions(true);
         std::cout << "Finished test to read and write OSoL files." << std::endl;
-
+        break;
+    case 4:
         std::cout << "Starting test to read and write opt files:" << std::endl;
         passed = SHOTSolverTestOptions(false);
         std::cout << "Finished test to read and write opt files." << std::endl;
         break;
-    case 3:
-        std::cout << "Starting test to solve a MINLP problem:" << std::endl;
-        passed = SHOTSolverSolveProblem("data/tls2.osil", static_cast<int>(ES_MIPSolver::Cbc));
-        std::cout << "Finished test to solve a MINLP problem." << std::endl;
-        break;
     default:
         passed = false;
-        cout << "Test #" << choice << " does not exist!\n";
+        std::cout << "Test #" << choice << " does not exist!\n";
+        break;
     }
 
     if (passed)
@@ -70,12 +65,19 @@ int SHOTSolverTest(int argc, char *argv[])
         return -1;
 }
 
-// Test the reading of an OSiL-file
+// Test the reading a problem
 bool SHOTSolverReadProblem(std::string filename)
 {
     bool passed = true;
 
-    SHOTSolver *solver = new SHOTSolver();
+    EnvironmentPtr env(new Environment);
+    env->output = OutputPtr(new Output());
+    env->process = ProcessPtr(new ProcessInfo(env));
+    env->settings = SettingsPtr(new Settings(env->output));
+    env->tasks = TaskHandlerPtr(new TaskHandler(env));
+    env->report = ReportPtr(new Report(env));
+    env->model = ModelPtr(new Model(env));
+    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
     try
     {
@@ -90,12 +92,9 @@ bool SHOTSolverReadProblem(std::string filename)
     }
     catch (ErrorClass &e)
     {
-        delete solver;
         std::cout << "Error: " << e.errormsg << std::endl;
         return false;
     }
-
-    delete solver;
 
     return passed;
 }
@@ -104,7 +103,14 @@ bool SHOTSolverReadProblem(std::string filename)
 bool SHOTSolverTestOptions(bool useOSiL)
 {
     bool passed = true;
-    SHOTSolver *solver = new SHOTSolver();
+    EnvironmentPtr env(new Environment);
+    env->output = OutputPtr(new Output());
+    env->process = ProcessPtr(new ProcessInfo(env));
+    env->settings = SettingsPtr(new Settings(env->output));
+    env->tasks = TaskHandlerPtr(new TaskHandler(env));
+    env->report = ReportPtr(new Report(env));
+    env->model = ModelPtr(new Model(env));
+    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
     std::string filename;
 
@@ -149,63 +155,5 @@ bool SHOTSolverTestOptions(bool useOSiL)
         passed = false;
     }
 
-    delete solver;
-    return passed;
-}
-
-// Test the solution of a problem
-bool SHOTSolverSolveProblem(std::string filename, int MIPSolver)
-{
-    bool passed = true;
-
-    SHOTSolver *solver = new SHOTSolver();
-
-    try
-    {
-        if (solver->setProblem(filename))
-        {
-            passed = true;
-        }
-        else
-        {
-            passed = false;
-        }
-    }
-    catch (ErrorClass &e)
-    {
-        delete solver;
-        std::cout << "Error: " << e.errormsg << std::endl;
-        return false;
-    }
-
-    solver->updateSetting("MIP.Solver", "Dual", MIPSolver);
-    solver->solveProblem();
-
-    std::string osrl = solver->getOSrL();
-    std::string trace = solver->getTraceResult();
-
-    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
-    {
-        std::cout << "Could not write results to OSrL file." << std::endl;
-        passed = false;
-    }
-
-    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
-    {
-        std::cout << "Could not write results to trace file." << std::endl;
-        passed = false;
-    }
-
-    if (solver->getNumberOfPrimalSolutions() > 0)
-    {
-        std::cout << std::endl
-                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
-    }
-    else
-    {
-        passed = false;
-    }
-
-    delete solver;
     return passed;
 }
