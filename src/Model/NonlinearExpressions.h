@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <iostream>
 
 namespace SHOT
 {
@@ -25,11 +26,43 @@ class NonlinearExpression
 {
   public:
     virtual double calculate(const VectorDouble &point) = 0;
+    virtual std::ostream &print(std::ostream &) const = 0;
+
+    friend std::ostream &operator<<(std::ostream &stream, const NonlinearExpression &expr)
+    {
+        return expr.print(stream); // polymorphic print via reference
+    };
 };
 
 typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
 
-class ExpressionUnary : NonlinearExpression
+std::ostream &operator<<(std::ostream &stream, NonlinearExpressionPtr expr)
+{
+    stream << *expr;
+    return stream;
+}
+
+class ExpressionVariable : public NonlinearExpression
+{
+  public:
+    VariablePtr variable;
+
+    ExpressionVariable(VariablePtr var) : variable(var)
+    {
+    }
+
+    virtual double calculate(const VectorDouble &point) override
+    {
+        return (variable->calculate(point));
+    }
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        return stream << variable;
+    }
+};
+
+class ExpressionUnary : public NonlinearExpression
 {
   public:
     NonlinearExpressionPtr child;
@@ -37,7 +70,7 @@ class ExpressionUnary : NonlinearExpression
     virtual double calculate(const VectorDouble &point) = 0;
 };
 
-class ExpressionBinary : NonlinearExpression
+class ExpressionBinary : public NonlinearExpression
 {
   public:
     NonlinearExpressionPtr firstChild;
@@ -46,7 +79,7 @@ class ExpressionBinary : NonlinearExpression
     virtual double calculate(const VectorDouble &point) = 0;
 };
 
-class ExpressionGeneral : NonlinearExpression
+class ExpressionGeneral : public NonlinearExpression
 {
   public:
     std::vector<NonlinearExpressionPtr> children;
@@ -56,52 +89,119 @@ class ExpressionGeneral : NonlinearExpression
 
 // Begin unary operations
 
-class ExpressionNegate : ExpressionUnary
+class ExpressionNegate : public ExpressionUnary
 {
   public:
-    virtual double calculate(const VectorDouble &point)
+    ExpressionNegate();
+
+    ExpressionNegate(NonlinearExpressionPtr childExpression)
+    {
+        child = childExpression;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
     {
         return (-child->calculate(point));
     }
-};
 
-class ExpressionInvert : ExpressionUnary
-{
-  public:
-    virtual double calculate(const VectorDouble &point)
+    std::ostream &print(std::ostream &stream) const override
     {
-        return (1.0 / child->calculate(point));
+        stream << "(-" << child << ')';
+        return stream;
     }
 };
 
+class ExpressionInvert : public ExpressionUnary
+{
+  public:
+    ExpressionInvert();
+
+    ExpressionInvert(NonlinearExpressionPtr childExpression)
+    {
+        child = childExpression;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
+    {
+        return (1.0 / child->calculate(point));
+    }
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        stream << "1/(" << child << ')';
+        return stream;
+    }
+};
 // End unary operations
 
 // Begin binary operations
 
-class ExpressionPlus : ExpressionBinary
+class ExpressionPlus : public ExpressionBinary
 {
   public:
-    virtual double calculate(const VectorDouble &point)
+    ExpressionPlus();
+
+    ExpressionPlus(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
+    {
+        firstChild = childExpression1;
+        secondChild = childExpression2;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
     {
         return (firstChild->calculate(point) + secondChild->calculate(point));
     }
-};
 
-class ExpressionMinus : ExpressionBinary
-{
-  public:
-    virtual double calculate(const VectorDouble &point)
+    std::ostream &print(std::ostream &stream) const override
     {
-        return (firstChild->calculate(point) - secondChild->calculate(point));
+        stream << firstChild << '+' << secondChild;
+        return stream;
     }
 };
 
-class ExpressionPower : ExpressionBinary
+class ExpressionMinus : public ExpressionBinary
 {
   public:
-    virtual double calculate(const VectorDouble &point)
+    ExpressionMinus();
+
+    ExpressionMinus(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
+    {
+        firstChild = childExpression1;
+        secondChild = childExpression2;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
+    {
+        return (firstChild->calculate(point) - secondChild->calculate(point));
+    }
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        stream << firstChild << '-' << secondChild;
+        return stream;
+    }
+};
+
+class ExpressionPower : public ExpressionBinary
+{
+  public:
+    ExpressionPower();
+
+    ExpressionPower(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
+    {
+        firstChild = childExpression1;
+        secondChild = childExpression2;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
     {
         return (pow(firstChild->calculate(point), secondChild->calculate(point)));
+    }
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        stream << '(' << firstChild << ")^(" << secondChild << ')';
+        return stream;
     }
 };
 
@@ -109,10 +209,17 @@ class ExpressionPower : ExpressionBinary
 
 // Begin general operations
 
-class ExpressionTimes : ExpressionGeneral
+class ExpressionTimes : public ExpressionGeneral
 {
   public:
-    virtual double calculate(const VectorDouble &point)
+    ExpressionTimes();
+
+    ExpressionTimes(std::vector<NonlinearExpressionPtr> childExpressions)
+    {
+        children = childExpressions;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
     {
         double value = 1.0;
 
@@ -121,22 +228,46 @@ class ExpressionTimes : ExpressionGeneral
             double tmpValue = C->calculate(point);
 
             if (tmpValue == 0.0)
-            {
-                value = 0.0;
-                break;
-            }
+                return 0.0;
 
             value *= tmpValue;
         }
 
         return (value);
     }
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        if (children.size() == 1)
+        {
+            stream << children.at(0);
+            return stream;
+        }
+
+        stream << '(' << children.at(0);
+
+        for (int i = 1; i < children.size(); i++)
+        {
+            stream << '*' << children.at(i);
+        }
+
+        stream << ')';
+
+        return stream;
+    }
 };
 
-class ExpressionSum : ExpressionGeneral
+class ExpressionSum : public ExpressionGeneral
 {
   public:
-    virtual double calculate(const VectorDouble &point)
+    ExpressionSum();
+
+    ExpressionSum(std::vector<NonlinearExpressionPtr> childExpressions)
+    {
+        children = childExpressions;
+    }
+
+    virtual double calculate(const VectorDouble &point) override
     {
         double value = 0.0;
 
@@ -147,7 +278,26 @@ class ExpressionSum : ExpressionGeneral
 
         return (value);
     }
-};
 
+    std::ostream &print(std::ostream &stream) const override
+    {
+        if (children.size() == 1)
+        {
+            stream << children.at(0);
+            return stream;
+        }
+
+        stream << '(' << children.at(0);
+
+        for (int i = 1; i < children.size(); i++)
+        {
+            stream << '+' << children.at(i);
+        }
+
+        stream << ')';
+
+        return stream;
+    }
+};
 // End binary operations
 } // namespace SHOT

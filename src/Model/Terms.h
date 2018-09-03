@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <iostream>
 
 namespace SHOT
 {
@@ -36,6 +37,12 @@ class LinearTerm
 
 typedef std::shared_ptr<LinearTerm> LinearTermPtr;
 
+std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
+{
+    stream << term->coefficient << '*' << term->variable;
+    return stream;
+}
+
 class LinearTerms
 {
   public:
@@ -53,6 +60,21 @@ class LinearTerms
     }
 };
 
+std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
+{
+    if (linTerms.terms.size() == 0)
+        return stream;
+
+    stream << linTerms.terms.at(0);
+
+    for (int i = 1; i < linTerms.terms.size(); i++)
+    {
+        stream << '+' << linTerms.terms.at(i);
+    }
+
+    return stream;
+}
+
 class QuadraticTerm
 {
   public:
@@ -68,6 +90,12 @@ class QuadraticTerm
 };
 
 typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
+
+std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term)
+{
+    stream << term->coefficient << '*' << term->firstVariable << '*' << term->secondVariable;
+    return stream;
+}
 
 class QuadraticTerms
 {
@@ -85,6 +113,21 @@ class QuadraticTerms
         return value;
     }
 };
+
+std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
+{
+    if (quadTerms.terms.size() == 0)
+        return stream;
+
+    stream << quadTerms.terms.at(0);
+
+    for (int i = 1; i < quadTerms.terms.size(); i++)
+    {
+        stream << '+' << quadTerms.terms.at(i);
+    }
+
+    return stream;
+}
 
 class SignomialElement
 {

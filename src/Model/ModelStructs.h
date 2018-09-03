@@ -18,6 +18,7 @@
 #include <string>
 #include <sstream>
 #include <exception>
+#include <iostream>
 
 namespace SHOT
 {
@@ -52,6 +53,13 @@ class Variable
 };
 
 typedef std::shared_ptr<Variable> VariablePtr;
+
+std::ostream &operator<<(std::ostream &stream, VariablePtr var)
+{
+    stream << var->name;
+    return stream;
+}
+
 typedef std::vector<VariablePtr> Variables;
 
 enum class E_AuxilliaryVariableType

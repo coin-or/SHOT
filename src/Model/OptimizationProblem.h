@@ -67,12 +67,12 @@ class OptimizationProblem
   public:
     OptimizationProblem();
     virtual ~OptimizationProblem();
-
+    /*
     // Copy constructor
     OptimizationProblem(const OptimizationProblem &sourceProblem)
     {
         //TODO
-    }
+    }*/
 
     OptimizationProblemProperties properties;
     void updateProperties();

@@ -71,6 +71,8 @@ class ObjectiveFunction
     virtual double calculateNumericValue(VectorDouble point) = 0;
 };
 
+typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;
+
 class LinearObjectiveFunction : ObjectiveFunction
 {
   public:
@@ -82,8 +84,22 @@ class LinearObjectiveFunction : ObjectiveFunction
 
     LinearTerms linearTerms;
 
-    virtual void updateProperties();
+    virtual void updateProperties() override;
+
+    virtual double calculateNumericValue(VectorDouble point) override
+    {
+        double value = linearTerms.calculate(point);
+        return value;
+    }
 };
+
+typedef std::shared_ptr<LinearObjectiveFunction> LinearObjectiveFunctionPtr;
+
+std::ostream &operator<<(std::ostream &stream, LinearObjectiveFunction obj)
+{
+    stream << obj.linearTerms;
+    return stream;
+}
 
 class QuadraticObjectiveFunction : ObjectiveFunction
 {
@@ -97,8 +113,26 @@ class QuadraticObjectiveFunction : ObjectiveFunction
     LinearTerms linearTerms;
     QuadraticTerms quadraticTerms;
 
-    virtual void updateProperties();
+    virtual void updateProperties() override;
+
+    virtual double calculateNumericValue(VectorDouble point) override
+    {
+        double value = linearTerms.calculate(point);
+        value += quadraticTerms.calculate(point);
+        return value;
+    }
 };
+
+typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPtr;
+
+std::ostream &operator<<(std::ostream &stream, QuadraticObjectiveFunction obj)
+{
+    stream << obj.linearTerms;
+
+    if (obj.quadraticTerms.terms.size() > 0)
+        stream << '+' << obj.quadraticTerms;
+    return stream;
+}
 
 class NonlinearObjectiveFunction : ObjectiveFunction
 {
@@ -113,6 +147,17 @@ class NonlinearObjectiveFunction : ObjectiveFunction
     QuadraticTerms quadraticTerms;
     NonlinearExpressionPtr nonlinearExpression;
 
-    virtual void updateProperties();
+    virtual void updateProperties() override;
+
+    virtual double calculateNumericValue(VectorDouble point) override
+    {
+        double value = linearTerms.calculate(point);
+        value += quadraticTerms.calculate(point);
+        value += nonlinearExpression->calculate(point);
+        return value;
+    }
 };
+
+typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
+
 } // namespace SHOT

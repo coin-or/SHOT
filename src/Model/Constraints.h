@@ -18,6 +18,7 @@
 #include <memory>
 #include <limits>
 #include <algorithm>
+#include <iostream>
 
 namespace SHOT
 {
@@ -63,17 +64,33 @@ class Constraint
   public:
     virtual ~Constraint(){};
 
-    int constraintIndex;
+    int constraintIndex = -1;
     std::string constraintName;
 
     ConstraintProperties properties;
-    virtual void updateProperties();
+    //virtual void updateProperties();
 
-    virtual bool isConstraintValid(VectorDouble point) = 0;
+    virtual bool isFulfilled(const VectorDouble &point) = 0;
+
+    virtual std::ostream &print(std::ostream &) const = 0;
+    friend std::ostream &operator<<(std::ostream &stream, const Constraint &constraint)
+    {
+        if (constraint.constraintName != "")
+            stream << "\'" << constraint.constraintName << "\' ";
+
+        stream << "[" << constraint.constraintIndex << "]: ";
+        return constraint.print(stream); // polymorphic print via reference
+    };
 };
 
 typedef std::shared_ptr<Constraint> ConstraintPtr;
 typedef std::vector<ConstraintPtr> Constraints;
+
+std::ostream &operator<<(std::ostream &stream, ConstraintPtr constraint)
+{
+    stream << *constraint;
+    return stream;
+}
 
 class NumericConstraint;
 
@@ -97,7 +114,7 @@ struct NumericConstraintValue
 
 typedef std::vector<NumericConstraintValue> NumericConstraintValues;
 
-class NumericConstraint : std::enable_shared_from_this<NumericConstraint>, public Constraint
+class NumericConstraint : public Constraint, public std::enable_shared_from_this<NumericConstraint>
 {
   public:
     double valueLHS = -std::numeric_limits<double>::infinity();
@@ -111,7 +128,7 @@ class NumericConstraint : std::enable_shared_from_this<NumericConstraint>, publi
 
         NumericConstraintValue constrValue;
         constrValue.constraint = getPointer();
-
+        constrValue.functionValue = value;
         constrValue.isFulfilledRHS = (value <= valueRHS);
         constrValue.errorRHS = std::max(value - valueRHS, 0.0);
 
@@ -124,17 +141,14 @@ class NumericConstraint : std::enable_shared_from_this<NumericConstraint>, publi
         return constrValue;
     }
 
-    virtual bool isConstraintValid(const VectorDouble &point)
+    virtual bool isFulfilled(const VectorDouble &point) override
     {
         auto constraintValue = calculateNumericValue(point);
 
         return (constraintValue.isFulfilledLHS && constraintValue.isFulfilledRHS);
     };
 
-    virtual std::shared_ptr<NumericConstraint> getPointer()
-    {
-        return shared_from_this();
-    }
+    virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
 };
 
 class LinearConstraint : public NumericConstraint
@@ -144,56 +158,217 @@ class LinearConstraint : public NumericConstraint
 
     LinearTerms linearTerms;
 
-    virtual double calculateFunctionValue(const VectorDouble &point)
+    void add(LinearTerms terms)
+    {
+        if (linearTerms.terms.size() == 0)
+        {
+            linearTerms = terms;
+        }
+        else
+        {
+            for (auto T : terms.terms)
+            {
+                add(T);
+            }
+        }
+    }
+
+    void add(LinearTermPtr term)
+    {
+        linearTerms.terms.push_back(term);
+    }
+
+    virtual double calculateFunctionValue(const VectorDouble &point) override
     {
         double value = linearTerms.calculate(point);
+        return value;
     }
+
+    virtual bool isFulfilled(const VectorDouble &point) override
+    {
+        return NumericConstraint::isFulfilled(point);
+    }
+
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override
+    {
+        return NumericConstraint::calculateNumericValue(point);
+    }
+
+    virtual std::shared_ptr<NumericConstraint> getPointer() override
+    {
+        return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
+    };
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        if (valueLHS > -std::numeric_limits<double>::infinity())
+            stream << valueLHS << " <= ";
+
+        if (linearTerms.terms.size() > 0)
+            stream << linearTerms;
+
+        if (valueRHS < std::numeric_limits<double>::infinity())
+            stream << " <= " << valueRHS;
+
+        return stream;
+    };
 };
 
 typedef std::shared_ptr<LinearConstraint> LinearConstraintPtr;
+
+std::ostream &operator<<(std::ostream &stream, LinearConstraintPtr constraint)
+{
+    stream << *constraint;
+    return stream;
+}
+
 typedef std::vector<LinearConstraintPtr> LinearConstraints;
 
-class QuadraticConstraint : public NumericConstraint
+class QuadraticConstraint : public LinearConstraint
 {
   public:
-    QuadraticConstraint()
-    {
-    }
+    QuadraticConstraint(){};
 
-    LinearTerms linearTerms;
     QuadraticTerms quadraticTerms;
 
-    virtual double calculateFunctionValue(const VectorDouble &point)
+    void add(QuadraticTerms terms)
     {
-        double value = linearTerms.calculate(point);
+        if (quadraticTerms.terms.size() == 0)
+        {
+            quadraticTerms = terms;
+        }
+        else
+        {
+            for (auto T : terms.terms)
+            {
+                add(T);
+            }
+        }
+    }
+
+    void add(QuadraticTermPtr term)
+    {
+        quadraticTerms.terms.push_back(term);
+    }
+
+    virtual double calculateFunctionValue(const VectorDouble &point) override
+    {
+        double value = LinearConstraint::calculateFunctionValue(point);
         value += quadraticTerms.calculate(point);
 
         return value;
     }
+
+    virtual bool isFulfilled(const VectorDouble &point) override
+    {
+        return NumericConstraint::isFulfilled(point);
+    }
+
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override
+    {
+        return NumericConstraint::calculateNumericValue(point);
+    }
+
+    virtual std::shared_ptr<NumericConstraint> getPointer() override
+    {
+        return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
+    };
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        if (valueLHS > -std::numeric_limits<double>::infinity())
+            stream << valueLHS << " <= ";
+
+        if (linearTerms.terms.size() > 0)
+            stream << linearTerms;
+
+        if (quadraticTerms.terms.size() > 0)
+            stream << " +" << quadraticTerms;
+
+        if (valueRHS < std::numeric_limits<double>::infinity())
+            stream << " <= " << valueRHS;
+
+        return stream;
+    };
 };
 
 typedef std::shared_ptr<QuadraticConstraint> QuadraticConstraintPtr;
+
+std::ostream &operator<<(std::ostream &stream, QuadraticConstraintPtr constraint)
+{
+    stream << *constraint;
+    return stream;
+}
+
 typedef std::vector<QuadraticConstraintPtr> QuadraticConstraints;
 
-class NonlinearConstraint : public NumericConstraint
+class NonlinearConstraint : public QuadraticConstraint
 {
   public:
-    NonlinearConstraint();
+    NonlinearConstraint(){};
 
-    LinearTerms linearTerms;
-    QuadraticTerms quadraticTerms;
     NonlinearExpressionPtr nonlinearExpression;
 
-    virtual double calculateFunctionValue(const VectorDouble &point)
+    void add(NonlinearExpressionPtr expression)
     {
-        double value = linearTerms.calculate(point);
-        value += quadraticTerms.calculate(point);
+        auto tmpExpr = nonlinearExpression;
+
+        auto nonlinearExpression(new ExpressionPlus());
+        nonlinearExpression->firstChild = tmpExpr;
+        nonlinearExpression->secondChild = expression;
+    }
+
+    virtual double calculateFunctionValue(const VectorDouble &point) override
+    {
+        double value = QuadraticConstraint::calculateFunctionValue(point);
         value += nonlinearExpression->calculate(point);
 
         return value;
     }
+
+    virtual bool isFulfilled(const VectorDouble &point) override
+    {
+        return NumericConstraint::isFulfilled(point);
+    }
+
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override
+    {
+        return NumericConstraint::calculateNumericValue(point);
+    }
+
+    virtual std::shared_ptr<NumericConstraint> getPointer() override
+    {
+        return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
+    };
+
+    std::ostream &print(std::ostream &stream) const override
+    {
+        if (valueLHS > -std::numeric_limits<double>::infinity())
+            stream << valueLHS << " <= ";
+
+        if (linearTerms.terms.size() > 0)
+            stream << linearTerms;
+
+        if (quadraticTerms.terms.size() > 0)
+            stream << " +" << quadraticTerms;
+
+        stream << " +" << nonlinearExpression;
+
+        if (valueRHS < std::numeric_limits<double>::infinity())
+            stream << " <= " << valueRHS;
+
+        return stream;
+    };
 };
 
 typedef std::shared_ptr<NonlinearConstraint> NonlinearConstraintPtr;
+
+std::ostream &operator<<(std::ostream &stream, NonlinearConstraintPtr constraint)
+{
+    stream << *constraint;
+    return stream;
+}
+
 typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
+
 } // namespace SHOT
