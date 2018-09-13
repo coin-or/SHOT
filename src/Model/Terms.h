@@ -28,6 +28,9 @@ class LinearTerm
     double coefficient;
     VariablePtr variable;
 
+    LinearTerm(){};
+    LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
+
     double calculate(const VectorDouble &point)
     {
         double value = coefficient * variable->calculate(point);
@@ -39,7 +42,12 @@ typedef std::shared_ptr<LinearTerm> LinearTermPtr;
 
 std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
 {
-    stream << term->coefficient << '*' << term->variable;
+    if (term->coefficient != 1.0)
+    {
+        stream << term->coefficient << '*';
+    }
+
+    stream << term->variable->name;
     return stream;
 }
 
@@ -47,6 +55,11 @@ class LinearTerms
 {
   public:
     std::vector<LinearTermPtr> terms;
+
+    void add(LinearTermPtr term)
+    {
+        terms.push_back(term);
+    }
 
     double calculate(const VectorDouble &point)
     {
@@ -65,11 +78,18 @@ std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
     if (linTerms.terms.size() == 0)
         return stream;
 
-    stream << linTerms.terms.at(0);
+    if (linTerms.terms.at(0)->coefficient > 0)
+    {
+        stream << " +" << linTerms.terms.at(0);
+    }
+    else
+    {
+        stream << ' ' << linTerms.terms.at(0);
+    }
 
     for (int i = 1; i < linTerms.terms.size(); i++)
     {
-        stream << '+' << linTerms.terms.at(i);
+        stream << " +" << linTerms.terms.at(i);
     }
 
     return stream;
@@ -82,25 +102,42 @@ class QuadraticTerm
     VariablePtr firstVariable;
     VariablePtr secondVariable;
 
+    QuadraticTerm(){};
+    QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};
+
     double calculate(const VectorDouble &point)
     {
         double value = coefficient * firstVariable->calculate(point) * secondVariable->calculate(point);
         return value;
-    }
+    };
 };
 
 typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
 
 std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term)
 {
-    stream << term->coefficient << '*' << term->firstVariable << '*' << term->secondVariable;
+    if (term->coefficient != 1.0)
+    {
+        stream << term->coefficient << '*';
+    }
+
+    if (term->firstVariable == term->secondVariable)
+        stream << term->firstVariable->name << "^2";
+    else
+        stream << term->firstVariable->name << '*' << term->secondVariable->name;
+
     return stream;
-}
+};
 
 class QuadraticTerms
 {
   public:
     std::vector<QuadraticTermPtr> terms;
+
+    void add(QuadraticTermPtr term)
+    {
+        terms.push_back(term);
+    };
 
     double calculate(const VectorDouble &point)
     {
@@ -111,7 +148,7 @@ class QuadraticTerms
         }
 
         return value;
-    }
+    };
 };
 
 std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
@@ -119,16 +156,24 @@ std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
     if (quadTerms.terms.size() == 0)
         return stream;
 
-    stream << quadTerms.terms.at(0);
+    if (quadTerms.terms.at(0)->coefficient > 0)
+    {
+        stream << " +" << quadTerms.terms.at(0);
+    }
+    else
+    {
+        stream << ' ' << quadTerms.terms.at(0);
+    }
 
     for (int i = 1; i < quadTerms.terms.size(); i++)
     {
-        stream << '+' << quadTerms.terms.at(i);
+        stream << " +" << quadTerms.terms.at(i);
     }
 
     return stream;
-}
+};
 
+/*
 class SignomialElement
 {
   public:
@@ -182,6 +227,11 @@ class SignomialTerms
   public:
     std::vector<SignomialTermPtr> terms;
 
+    void add(SignomialTermPtr term)
+    {
+        terms.push_back(term);
+    }
+
     double calculate(const VectorDouble &point)
     {
         double value = 0.0;
@@ -193,5 +243,5 @@ class SignomialTerms
 
         return value;
     }
-};
+};*/
 } // namespace SHOT

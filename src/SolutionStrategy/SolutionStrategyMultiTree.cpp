@@ -129,11 +129,17 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr, OSIn
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
 
+    TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(env);
+    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    {
+        env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+        env->tasks->addTask(tCreateDualProblem, "CreateMILPProblem");
+    }
+
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
     env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
 
-    TaskBase *tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(env);
     env->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)

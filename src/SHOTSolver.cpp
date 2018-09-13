@@ -534,6 +534,8 @@ void SHOTSolver::initializeSettings()
                                  "The main strategy to use", enumSolutionStrategy);
     enumSolutionStrategy.clear();
 
+    env->settings->createSetting("TreeStrategy.Multi.Reinitialize", "Dual", false, "Reinitialize the dual model in the subsolver each iteration");
+
     // Optimization model settings
     env->settings->createSetting("ContinuousVariable.EmptyLowerBound", "Model", -9999999999.0, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
 

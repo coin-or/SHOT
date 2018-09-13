@@ -42,6 +42,22 @@ std::ostream &operator<<(std::ostream &stream, NonlinearExpressionPtr expr)
     return stream;
 }
 
+class NonlinearExpressions
+{
+  public:
+    std::vector<NonlinearExpressionPtr> expressions;
+
+    void add(NonlinearExpressionPtr expression)
+    {
+        expressions.push_back(expression);
+    };
+
+    size_t size() const
+    {
+        return expressions.size();
+    };
+};
+
 class ExpressionVariable : public NonlinearExpression
 {
   public:
@@ -58,9 +74,11 @@ class ExpressionVariable : public NonlinearExpression
 
     std::ostream &print(std::ostream &stream) const override
     {
-        return stream << variable;
+        return stream << variable->name;
     }
 };
+
+typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
 
 class ExpressionUnary : public NonlinearExpression
 {
@@ -82,7 +100,7 @@ class ExpressionBinary : public NonlinearExpression
 class ExpressionGeneral : public NonlinearExpression
 {
   public:
-    std::vector<NonlinearExpressionPtr> children;
+    NonlinearExpressions children;
 
     virtual double calculate(const VectorDouble &point) = 0;
 };
@@ -92,7 +110,9 @@ class ExpressionGeneral : public NonlinearExpression
 class ExpressionNegate : public ExpressionUnary
 {
   public:
-    ExpressionNegate();
+    ExpressionNegate()
+    {
+    }
 
     ExpressionNegate(NonlinearExpressionPtr childExpression)
     {
@@ -114,7 +134,9 @@ class ExpressionNegate : public ExpressionUnary
 class ExpressionInvert : public ExpressionUnary
 {
   public:
-    ExpressionInvert();
+    ExpressionInvert()
+    {
+    }
 
     ExpressionInvert(NonlinearExpressionPtr childExpression)
     {
@@ -139,7 +161,9 @@ class ExpressionInvert : public ExpressionUnary
 class ExpressionPlus : public ExpressionBinary
 {
   public:
-    ExpressionPlus();
+    ExpressionPlus()
+    {
+    }
 
     ExpressionPlus(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
     {
@@ -162,7 +186,9 @@ class ExpressionPlus : public ExpressionBinary
 class ExpressionMinus : public ExpressionBinary
 {
   public:
-    ExpressionMinus();
+    ExpressionMinus()
+    {
+    }
 
     ExpressionMinus(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
     {
@@ -185,7 +211,9 @@ class ExpressionMinus : public ExpressionBinary
 class ExpressionPower : public ExpressionBinary
 {
   public:
-    ExpressionPower();
+    ExpressionPower()
+    {
+    }
 
     ExpressionPower(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
     {
@@ -212,9 +240,11 @@ class ExpressionPower : public ExpressionBinary
 class ExpressionTimes : public ExpressionGeneral
 {
   public:
-    ExpressionTimes();
+    ExpressionTimes()
+    {
+    }
 
-    ExpressionTimes(std::vector<NonlinearExpressionPtr> childExpressions)
+    ExpressionTimes(NonlinearExpressions childExpressions)
     {
         children = childExpressions;
     }
@@ -223,7 +253,7 @@ class ExpressionTimes : public ExpressionGeneral
     {
         double value = 1.0;
 
-        for (auto C : children)
+        for (auto C : children.expressions)
         {
             double tmpValue = C->calculate(point);
 
@@ -240,15 +270,15 @@ class ExpressionTimes : public ExpressionGeneral
     {
         if (children.size() == 1)
         {
-            stream << children.at(0);
+            stream << children.expressions.at(0);
             return stream;
         }
 
-        stream << '(' << children.at(0);
+        stream << '(' << children.expressions.at(0);
 
-        for (int i = 1; i < children.size(); i++)
+        for (int i = 1; i < children.expressions.size(); i++)
         {
-            stream << '*' << children.at(i);
+            stream << '*' << children.expressions.at(i);
         }
 
         stream << ')';
@@ -260,9 +290,11 @@ class ExpressionTimes : public ExpressionGeneral
 class ExpressionSum : public ExpressionGeneral
 {
   public:
-    ExpressionSum();
+    ExpressionSum()
+    {
+    }
 
-    ExpressionSum(std::vector<NonlinearExpressionPtr> childExpressions)
+    ExpressionSum(NonlinearExpressions childExpressions)
     {
         children = childExpressions;
     }
@@ -271,7 +303,7 @@ class ExpressionSum : public ExpressionGeneral
     {
         double value = 0.0;
 
-        for (auto C : children)
+        for (auto C : children.expressions)
         {
             value += C->calculate(point);
         }
@@ -283,15 +315,15 @@ class ExpressionSum : public ExpressionGeneral
     {
         if (children.size() == 1)
         {
-            stream << children.at(0);
+            stream << children.expressions.at(0);
             return stream;
         }
 
-        stream << '(' << children.at(0);
+        stream << '(' << children.expressions.at(0);
 
-        for (int i = 1; i < children.size(); i++)
+        for (int i = 1; i < children.expressions.size(); i++)
         {
-            stream << '+' << children.at(i);
+            stream << '+' << children.expressions.at(i);
         }
 
         stream << ')';

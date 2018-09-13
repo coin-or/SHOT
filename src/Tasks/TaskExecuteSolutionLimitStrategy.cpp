@@ -10,7 +10,7 @@
 
 #include "TaskExecuteSolutionLimitStrategy.h"
 
-TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
 
@@ -20,6 +20,7 @@ TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPt
     solutionLimitStrategy = new MIPSolutionLimitStrategyIncrease(env);
     auto initLim = solutionLimitStrategy->getInitialLimit();
     env->dualSolver->setSolutionLimit(initLim);
+    previousSolLimit = initLim;
 
     env->process->stopTimer("DualStrategy");
 }
@@ -39,6 +40,9 @@ void TaskExecuteSolutionLimitStrategy::run()
 
     auto currIter = env->process->getCurrentIteration();
     auto prevIter = env->process->getPreviousIteration();
+
+    //previousSolLimit = prevIter->usedMIPSolutionLimit;
+    //std::cout << "prev solution limit" << previousSolLimit << " at iteration " << currIter->iterationNumber << std::endl;
 
     if (temporaryOptLimitUsed)
     {

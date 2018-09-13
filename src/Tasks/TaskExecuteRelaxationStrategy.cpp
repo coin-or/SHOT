@@ -10,7 +10,7 @@
 
 #include "TaskExecuteRelaxationStrategy.h"
 
-TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
 

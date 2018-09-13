@@ -4,7 +4,7 @@ set(TEST_EXE_NAME test_runner)
 # The main groups of tests, there should be a file matching the name +"test".cpp in the test directory
 set (cpptests Model SHOTSolver ${cplex_tests} ${gurobi_tests} ${gams_tests})
 
-set (Model_parts 1 2 3 4)    # The different parts of each test (if any)
+set (Model_parts 1 2 3 4 5 6)    # The different parts of each test (if any)
 set (SHOTSolver_parts 1 2 3)    # The different parts of each test (if any)
 
 if(HAS_CPLEX)

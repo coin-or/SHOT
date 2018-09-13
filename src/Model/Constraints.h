@@ -75,10 +75,13 @@ class Constraint
     virtual std::ostream &print(std::ostream &) const = 0;
     friend std::ostream &operator<<(std::ostream &stream, const Constraint &constraint)
     {
-        if (constraint.constraintName != "")
-            stream << "\'" << constraint.constraintName << "\' ";
+        stream << "[" << constraint.constraintIndex << "]";
 
-        stream << "[" << constraint.constraintIndex << "]: ";
+        if (constraint.constraintName != "")
+            stream << ' ' << constraint.constraintName;
+
+        stream << ":\t";
+
         return constraint.print(stream); // polymorphic print via reference
     };
 };
@@ -90,7 +93,7 @@ std::ostream &operator<<(std::ostream &stream, ConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
-}
+};
 
 class NumericConstraint;
 
@@ -151,12 +154,35 @@ class NumericConstraint : public Constraint, public std::enable_shared_from_this
     virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
 };
 
+std::ostream &operator<<(std::ostream &stream, NumericConstraintPtr constraint)
+{
+    stream << *constraint;
+    return stream;
+};
+
 class LinearConstraint : public NumericConstraint
 {
   public:
+    LinearTerms linearTerms;
+
     LinearConstraint(){};
 
-    LinearTerms linearTerms;
+    LinearConstraint(int index, std::string name, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    LinearConstraint(int index, std::string name, LinearTerms linTerms, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        linearTerms = linTerms;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
 
     void add(LinearTerms terms)
     {
@@ -171,28 +197,28 @@ class LinearConstraint : public NumericConstraint
                 add(T);
             }
         }
-    }
+    };
 
     void add(LinearTermPtr term)
     {
         linearTerms.terms.push_back(term);
-    }
+    };
 
     virtual double calculateFunctionValue(const VectorDouble &point) override
     {
         double value = linearTerms.calculate(point);
         return value;
-    }
+    };
 
     virtual bool isFulfilled(const VectorDouble &point) override
     {
         return NumericConstraint::isFulfilled(point);
-    }
+    };
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override
     {
         return NumericConstraint::calculateNumericValue(point);
-    }
+    };
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override
     {
@@ -220,16 +246,53 @@ std::ostream &operator<<(std::ostream &stream, LinearConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
-}
+};
 
 typedef std::vector<LinearConstraintPtr> LinearConstraints;
 
 class QuadraticConstraint : public LinearConstraint
 {
   public:
+    QuadraticTerms quadraticTerms;
+
     QuadraticConstraint(){};
 
-    QuadraticTerms quadraticTerms;
+    QuadraticConstraint(int index, std::string name, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    QuadraticConstraint(int index, std::string name, QuadraticTerms quadTerms, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        quadraticTerms = quadTerms;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    QuadraticConstraint(int index, std::string name, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        linearTerms = linTerms;
+        quadraticTerms = quadTerms;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    void add(LinearTerms terms)
+    {
+        LinearConstraint::add(terms);
+    };
+
+    void add(LinearTermPtr term)
+    {
+        LinearConstraint::add(term);
+    };
 
     void add(QuadraticTerms terms)
     {
@@ -244,12 +307,12 @@ class QuadraticConstraint : public LinearConstraint
                 add(T);
             }
         }
-    }
+    };
 
     void add(QuadraticTermPtr term)
     {
         quadraticTerms.terms.push_back(term);
-    }
+    };
 
     virtual double calculateFunctionValue(const VectorDouble &point) override
     {
@@ -257,17 +320,17 @@ class QuadraticConstraint : public LinearConstraint
         value += quadraticTerms.calculate(point);
 
         return value;
-    }
+    };
 
     virtual bool isFulfilled(const VectorDouble &point) override
     {
         return NumericConstraint::isFulfilled(point);
-    }
+    };
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override
     {
         return NumericConstraint::calculateNumericValue(point);
-    }
+    };
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override
     {
@@ -298,25 +361,98 @@ std::ostream &operator<<(std::ostream &stream, QuadraticConstraintPtr constraint
 {
     stream << *constraint;
     return stream;
-}
+};
 
 typedef std::vector<QuadraticConstraintPtr> QuadraticConstraints;
 
 class NonlinearConstraint : public QuadraticConstraint
 {
   public:
+    NonlinearExpressionPtr nonlinearExpression;
+
     NonlinearConstraint(){};
 
-    NonlinearExpressionPtr nonlinearExpression;
+    NonlinearConstraint(int index, std::string name, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    NonlinearConstraint(int index, std::string name, NonlinearExpressionPtr expression, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        nonlinearExpression = expression;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    NonlinearConstraint(int index, std::string name, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        quadraticTerms = quadTerms;
+        nonlinearExpression = expression;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    NonlinearConstraint(int index, std::string name, LinearTerms linTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        linearTerms = linTerms;
+        nonlinearExpression = expression;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    NonlinearConstraint(int index, std::string name, LinearTerms linTerms, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
+    {
+        constraintIndex = index;
+        constraintName = name;
+        linearTerms = linTerms;
+        quadraticTerms = quadTerms;
+        nonlinearExpression = expression;
+        valueLHS = LHS;
+        valueRHS = RHS;
+    };
+
+    void add(LinearTerms terms)
+    {
+        LinearConstraint::add(terms);
+    };
+
+    void add(LinearTermPtr term)
+    {
+        LinearConstraint::add(term);
+    };
+
+    void add(QuadraticTerms terms)
+    {
+        QuadraticConstraint::add(terms);
+    };
+
+    void add(QuadraticTermPtr term)
+    {
+        QuadraticConstraint::add(term);
+    };
 
     void add(NonlinearExpressionPtr expression)
     {
-        auto tmpExpr = nonlinearExpression;
+        if (nonlinearExpression != nullptr)
+        {
+            auto tmpExpr = nonlinearExpression;
 
-        auto nonlinearExpression(new ExpressionPlus());
-        nonlinearExpression->firstChild = tmpExpr;
-        nonlinearExpression->secondChild = expression;
-    }
+            auto nonlinearExpression(new ExpressionPlus(tmpExpr, expression));
+        }
+        else
+        {
+            nonlinearExpression = expression;
+        }
+    };
 
     virtual double calculateFunctionValue(const VectorDouble &point) override
     {
@@ -324,17 +460,17 @@ class NonlinearConstraint : public QuadraticConstraint
         value += nonlinearExpression->calculate(point);
 
         return value;
-    }
+    };
 
     virtual bool isFulfilled(const VectorDouble &point) override
     {
         return NumericConstraint::isFulfilled(point);
-    }
+    };
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override
     {
         return NumericConstraint::calculateNumericValue(point);
-    }
+    };
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override
     {
@@ -367,7 +503,7 @@ std::ostream &operator<<(std::ostream &stream, NonlinearConstraintPtr constraint
 {
     stream << *constraint;
     return stream;
-}
+};
 
 typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
 

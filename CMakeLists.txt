@@ -65,7 +65,6 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/SHOT.cpp"
   "${PROJECT_SOURCE_DIR}/src/Environment.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model/OptimizationProblem.cpp"
   "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"

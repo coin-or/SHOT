@@ -151,6 +151,8 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     IloRangeArray cplexConstrs;
     std::vector<IloConversion> cplexVarConvers;
 
+    int prevSolutionLimit = 1;
+
     bool modelUpdated /*= true*/;
 };
 } // namespace SHOT

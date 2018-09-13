@@ -57,6 +57,7 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
     if (prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
     {
+
         if (prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
             return (true);
 

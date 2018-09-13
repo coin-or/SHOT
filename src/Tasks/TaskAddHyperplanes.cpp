@@ -53,7 +53,11 @@ void TaskAddHyperplanes::run()
             }
         }
 
-        env->process->hyperplaneWaitingList.clear();
+        if (!env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        {
+            env->process->hyperplaneWaitingList.clear();
+        }
+
         itersWithoutAddedHPs = 0;
     }
     else

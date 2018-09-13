@@ -21,6 +21,8 @@ Iteration::Iteration(EnvironmentPtr envPtr)
 
     if (env->process->iterations.size() == 0)
         this->totNumHyperplanes = 0;
+    else if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        this->totNumHyperplanes = 0;
     else
         this->totNumHyperplanes = env->process->iterations.at(env->process->iterations.size() - 1).totNumHyperplanes;
 

@@ -32,6 +32,7 @@ MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
 
     checkParameters();
     modelUpdated = false;
+    prevSolutionLimit = 1;
 }
 
 MIPSolverCplex::~MIPSolverCplex()
@@ -46,6 +47,22 @@ MIPSolverCplex::~MIPSolverCplex()
 
 bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
 {
+    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    {
+        cplexModel = IloModel(cplexEnv);
+
+        cplexVars = IloNumVarArray(cplexEnv);
+        cplexConstrs = IloRangeArray(cplexEnv);
+
+        cachedSolutionHasChanged = true;
+
+        isVariablesFixed = false;
+
+        checkParameters();
+
+        modelUpdated = true;
+    }
+
     originalProblem = origProblem;
 
     auto numVar = origProblem->getNumberOfVariables();
@@ -200,7 +217,33 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
 
     try
     {
-        cplexInstance = IloCplex(cplexModel);
+        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        {
+            int setSolLimit;
+            bool discreteVariablesActivated = getDiscreteVariableStatus();
+
+            if (env->process->iterations.size() > 0)
+            {
+                setSolLimit = env->process->getCurrentIteration()->usedMIPSolutionLimit;
+                discreteVariablesActivated = env->process->getCurrentIteration()->isMIP();
+            }
+            else
+            {
+                setSolLimit = env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
+            }
+
+            cplexInstance = IloCplex(cplexModel);
+            setSolutionLimit(setSolLimit);
+
+            if (!discreteVariablesActivated)
+            {
+                activateDiscreteVariables(false);
+            }
+        }
+        else
+        {
+            cplexInstance = IloCplex(cplexModel);
+        }
     }
     catch (IloException &e)
     {
@@ -208,7 +251,7 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
         return (false);
     }
 
-    setSolutionLimit(9223372036800000000);
+    //setSolutionLimit(9223372036800000000);
 
     return (true);
 }
@@ -231,7 +274,15 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
 
-        cplexInstance.setParam(IloCplex::IntSolLim, 2100000000);
+        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        {
+            if (env->process->iterations.size() == 0)
+                cplexInstance.setParam(IloCplex::IntSolLim, env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
+        }
+        else
+        {
+            cplexInstance.setParam(IloCplex::IntSolLim, 21000000);
+        }
 
         cplexInstance.setParam(IloCplex::SolnPoolIntensity, env->settings->getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
         cplexInstance.setParam(IloCplex::SolnPoolReplace, env->settings->getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
@@ -466,7 +517,6 @@ int MIPSolverCplex::increaseSolutionLimit(int increment)
 
 void MIPSolverCplex::setSolutionLimit(long limit)
 {
-
     try
     {
         cplexInstance.setParam(IloCplex::IntSolLim, limit);
