@@ -11,6 +11,7 @@
 
 #pragma once
 #include "../Structs.h"
+
 #include <utility>
 #include <vector>
 #include <memory>
@@ -21,10 +22,35 @@
 #include <iostream>
 #include <limits>
 
+#include "../../ThirdParty/mcpp/ffunc.hpp"
+
 namespace SHOT
 {
+
+// Forward declaration
+class OptimizationProblem;
+typedef std::shared_ptr<OptimizationProblem> OptimizationProblemPtr;
+
 typedef std::vector<PairIndexValue> SparseVector;
 typedef std::vector<PairCoordinateValue> SparseMatrix;
+
+typedef mc::FFGraph FactorableFunctionGraph;
+typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
+typedef mc::FFVar FactorableFunction;
+typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
+typedef std::vector<FactorableFunctionPtr> FactorableFunctions;
+
+std::ostream &operator<<(std::ostream &stream, FactorableFunctionGraphPtr graph)
+{
+    stream << *graph;
+    return stream;
+};
+
+std::ostream &operator<<(std::ostream &stream, FactorableFunctionPtr function)
+{
+    stream << *function;
+    return stream;
+};
 
 // Variable definitions
 
@@ -39,13 +65,17 @@ enum class E_VariableType
 class Variable
 {
   public:
-    std::string name;
+    std::string name = "";
     int index;
 
     E_VariableType type;
+    OptimizationProblemPtr ownerProblem;
 
     double upperBound;
     double lowerBound;
+
+    bool isNonlinear = false;
+    FactorableFunction factorableFunctionVariable;
 
     Variable() : lowerBound(-std::numeric_limits<double>::infinity()),
                  upperBound(std::numeric_limits<double>::infinity()){};
@@ -65,6 +95,11 @@ class Variable
     double calculate(const VectorDouble &point)
     {
         return (point.at(index));
+    }
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        ownerProblem = owner;
     }
 };
 
@@ -101,10 +136,50 @@ std::ostream &operator<<(std::ostream &stream, VariablePtr var)
     }
 
     return stream;
-}
+};
 
 typedef std::vector<VariablePtr> Variables;
 
+/*
+class NonlinearVariable
+{
+  public:
+    FactorableFunctionPtr factorableFunctionVariable;
+    Variable originalVariable;
+
+    NonlinearVariable()
+    {
+        Variable::lowerBound = -std::numeric_limits<double>::infinity();
+        Variable::upperBound = std::numeric_limits<double>::infinity();
+    };
+
+    NonlinearVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
+    {
+        Variable::name = variableName;
+        Variable::index = variableIndex;
+        Variable::type = variableType;
+        Variable::lowerBound = LB;
+        Variable::upperBound = UB;
+    };
+
+    NonlinearVariable(std::string variableName, int variableIndex, E_VariableType variableType)
+    {
+        Variable::name = variableName;
+        Variable::index = variableIndex;
+        Variable::type = variableType;
+        Variable::lowerBound = -std::numeric_limits<double>::infinity();
+        Variable::upperBound = std::numeric_limits<double>::infinity();
+    };
+
+    void updateFactorableFunctionVariable(FactorableFunctionGraphPtr graph)
+    {
+        factorableFunctionVariable = std::make_shared<FactorableFunction>(graph.get());
+    };
+};
+
+typedef std::shared_ptr<NonlinearVariable> NonlinearVariablePtr;
+typedef std::vector<NonlinearVariablePtr> NonlinearVariables;
+*/
 /*
 enum class E_AuxilliaryVariableType
 {

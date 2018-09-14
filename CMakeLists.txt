@@ -25,6 +25,11 @@ set(GUROBI_DIR /opt/gurobi800)
 set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /opt/gams/gams25.1.2)
 
+set(PROFIL_DIR /opt/profil)
+set(FILIB_DIR /opt/filib)
+set(LAPACK_DIR /home/aton3/alundell/Research/mc++/MC++/src/3rdparty/cpplapack)
+set(FADBAD_DIR /home/aton3/alundell/Research/mc++/MC++/src/3rdparty/fadbad++)
+
 # May be needed to specify the path to where Boost is installed, if not automatically detected
 #set(Boost_INCLUDE_DIR /usr/include)
 #set(Boost_LIBRARY_DIR /usr/lib)
@@ -206,6 +211,11 @@ link_directories(${Boost_LIBRARY_DIR})
 include_directories("${COINOS_DIR}/include/coin")
 include_directories("${COINOS_DIR}/include/cppad")
 include_directories("${COINOS_DIR}/include")
+
+include_directories("${PROFIL_DIR}/include")
+include_directories("${FILIB_DIR}/include")
+include_directories("${LAPACK_DIR}/include")
+include_directories("${FADBAD_DIR}")
 
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")

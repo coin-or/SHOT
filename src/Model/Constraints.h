@@ -13,6 +13,7 @@
 #include "ModelStructs.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
+
 #include <vector>
 #include <string>
 #include <memory>
@@ -70,7 +71,14 @@ class Constraint
     ConstraintProperties properties;
     //virtual void updateProperties();
 
+    OptimizationProblemPtr ownerProblem;
+
     virtual bool isFulfilled(const VectorDouble &point) = 0;
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
 
     virtual std::ostream &print(std::ostream &) const = 0;
     friend std::ostream &operator<<(std::ostream &stream, const Constraint &constraint)
@@ -369,6 +377,7 @@ class NonlinearConstraint : public QuadraticConstraint
 {
   public:
     NonlinearExpressionPtr nonlinearExpression;
+    FactorableFunctionPtr factorableFunction;
 
     NonlinearConstraint(){};
 
@@ -446,12 +455,20 @@ class NonlinearConstraint : public QuadraticConstraint
         {
             auto tmpExpr = nonlinearExpression;
 
-            auto nonlinearExpression(new ExpressionPlus(tmpExpr, expression));
+            nonlinearExpression = std::make_shared<ExpressionPlus>(tmpExpr, expression);
         }
         else
         {
             nonlinearExpression = expression;
         }
+    };
+
+    void updateFactorableFunction()
+    {
+        // Should also include the linear part
+        factorableFunction = std::make_shared<FactorableFunction>(nonlinearExpression->getFactorableFunction());
+        std::cout << factorableFunction << '\n';
+        std::cout << nonlinearExpression << '\n';
     };
 
     virtual double calculateFunctionValue(const VectorDouble &point) override

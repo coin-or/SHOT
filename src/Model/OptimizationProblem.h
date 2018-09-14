@@ -20,6 +20,8 @@
 #include <memory>
 #include <boost/optional.hpp>
 
+#include "../../ThirdParty/mcpp/ffunc.hpp"
+
 namespace SHOT
 {
 
@@ -29,6 +31,9 @@ struct OptimizationProblemProperties
 
     bool isConvex = false;
     bool isNonconvex = false;
+
+    bool isNonlinear = false;
+    bool isDiscrete = false;
 
     bool isMINLPProblem = false;
     bool isNLPProblem = false;
@@ -45,6 +50,7 @@ struct OptimizationProblemProperties
     int numberOfBinaryVariables = 0;
     int numberOfIntegerVariables = 0; //Not including binary variables
     int numberOfSemicontinuousVariables = 0;
+    int numberOffNonlinearVariables = 0;
 
     int numberOfNumericConstraints = 0;
     int numberOfLinearConstraints = 0;
@@ -55,7 +61,7 @@ struct OptimizationProblemProperties
     std::string description = "";
 };
 
-class OptimizationProblem
+class OptimizationProblem : public std::enable_shared_from_this<OptimizationProblem>
 {
   private:
     Variables allVariables;
@@ -63,6 +69,7 @@ class OptimizationProblem
     Variables binaryVariables;
     Variables integerVariables;
     Variables semicontinuousVariables;
+    Variables nonlinearVariables;
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
@@ -78,6 +85,8 @@ class OptimizationProblem
     QuadraticConstraints quadraticConstraints;
     NonlinearConstraints nonlinearConstraints;
 
+    FactorableFunctionGraphPtr factorableFunctionsDAG;
+
     void updateVariables()
     {
         auto numVariables = allVariables.size();
@@ -89,10 +98,17 @@ class OptimizationProblem
         if (variableUpperBounds.size() != numVariables)
             variableUpperBounds.resize(numVariables);
 
-        for (int i = 0; i < numVariables; ++i)
+        int numNonlinearVars = 0;
+
+        nonlinearVariables.clear();
+
+        for (int i = 0; i < numVariables; i++)
         {
-            variableLowerBounds.at(i) = allVariables.at(i)->lowerBound;
-            variableUpperBounds.at(i) = allVariables.at(i)->upperBound;
+            variableLowerBounds[i] = allVariables[i]->lowerBound;
+            variableUpperBounds[i] = allVariables[i]->upperBound;
+
+            if (allVariables[i]->isNonlinear)
+                nonlinearVariables.push_back(allVariables[i]);
         }
 
         variablesUpdated = true;
@@ -100,29 +116,38 @@ class OptimizationProblem
 
     void updateProperties()
     {
+        if (!variablesUpdated)
+            updateVariables();
+
         properties.isConvex = true;
         properties.isNonconvex = false;
-       
+
         properties.numberOfVariables = allVariables.size();
         properties.numberOfRealVariables = realVariables.size();
         properties.numberOfBinaryVariables = binaryVariables.size();
         properties.numberOfIntegerVariables = integerVariables.size();
         properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
         properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
- 
-        properties.numberOfNumericConstraints = numericConstraints.size(); 
-        properties.numberOfLinearConstraints = linearConstraints.size(); 
-        properties.numberOfQuadraticConstraints = quadraticConstraints.size(); 
-        properties.numberOfNonlinearConstraints = nonlinearConstraints.size(); 
+        properties.numberOffNonlinearVariables = nonlinearVariables.size();
+
+        properties.numberOfNumericConstraints = numericConstraints.size();
+        properties.numberOfLinearConstraints = linearConstraints.size();
+        properties.numberOfQuadraticConstraints = quadraticConstraints.size();
+        properties.numberOfNonlinearConstraints = nonlinearConstraints.size();
 
         bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic);
         bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic);
         bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
-        bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);       
-        bool areVarsDiscrete = (properties.numberOfDiscreteVariables >0);
-        
+        bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
+        bool areVarsDiscrete = (properties.numberOfDiscreteVariables > 0);
+
+        if (areConstrsNonlinear || isObjNonlinear)
+            properties.isNonlinear = true;
+
         if (areVarsDiscrete)
         {
+            properties.isDiscrete = true;
+
             if (areConstrsNonlinear || isObjNonlinear)
                 properties.isMINLPProblem = true;
             else if (areConstrsQuadratic)
@@ -134,6 +159,8 @@ class OptimizationProblem
         }
         else
         {
+            properties.isDiscrete = false;
+
             if (areConstrsNonlinear || isObjNonlinear)
                 properties.isNLPProblem = true;
             else if (areConstrsQuadratic)
@@ -144,17 +171,34 @@ class OptimizationProblem
                 properties.isLPProblem = true;
         }
 
-	properties.isValid = true;
+        properties.isValid = true;
+    };
+
+    void updateFactorableFunctions()
+    {
+        factorableFunctionsDAG = std::make_shared<FactorableFunctionGraph>();
+
+        for (auto V : nonlinearVariables)
+        {
+            std::cout << "making variable " << V << " nonlinear\n";
+            V->factorableFunctionVariable;
+            V->factorableFunctionVariable.set(factorableFunctionsDAG.get());
+            // = std::make_shared<FactorableFunction>(factorableFunctionsDAG.get());
+        }
+
+        for (auto C : nonlinearConstraints)
+        {
+            std::cout << "updating factorable functions in constraint\n";
+            C->updateFactorableFunction();
+        }
     };
 
   public:
-    OptimizationProblem()
-    {
+    OptimizationProblem(){
+
     };
 
-    virtual ~OptimizationProblem()
-    {
-    };
+    virtual ~OptimizationProblem(){};
     /*
     // Copy constructor
     OptimizationProblem(const OptimizationProblem &sourceProblem)
@@ -163,6 +207,18 @@ class OptimizationProblem
     }*/
 
     OptimizationProblemProperties properties;
+
+    void finalize()
+    {
+        updateVariables();
+        updateProperties();
+        updateFactorableFunctions();
+    }
+
+    FactorableFunctionGraphPtr getFactorableFunctionDAG()
+    {
+        return factorableFunctionsDAG;
+    }
 
     ObjectiveFunctionPtr getObjectiveFunction()
     {
@@ -215,30 +271,41 @@ class OptimizationProblem
         default:
             break;
         }
+
+        variable->takeOwnership(shared_from_this());
+        variablesUpdated = false;
     };
 
     void add(LinearConstraintPtr constraint)
     {
         numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
         linearConstraints.push_back(constraint);
+
+        constraint->takeOwnership(shared_from_this());
     };
 
     void add(QuadraticConstraintPtr constraint)
     {
         numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
         quadraticConstraints.push_back(constraint);
+
+        constraint->takeOwnership(shared_from_this());
     };
 
     void add(NonlinearConstraintPtr constraint)
     {
         numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
         nonlinearConstraints.push_back(constraint);
+
+        constraint->takeOwnership(shared_from_this());
     };
 
     void add(ObjectiveFunctionPtr objective)
     {
         objectiveFunction = objective;
         objectiveFunction->updateProperties();
+
+        objective->takeOwnership(shared_from_this());
     };
 
     template <class T>
@@ -247,6 +314,8 @@ class OptimizationProblem
         for (auto E : elements)
         {
             add(E);
+
+            E->takeOwnership(shared_from_this());
         }
     };
 
@@ -351,13 +420,11 @@ class OptimizationProblem
             {
                 optional = constraintValue;
                 error = constraintValue.error;
-
             }
             else if (constraintValue.error > error)
             {
                 optional = constraintValue;
                 error = constraintValue.error;
-
             }
         }
 
@@ -472,8 +539,6 @@ class OptimizationProblem
         return stream;
     };
 };
-
-typedef std::shared_ptr<OptimizationProblem> OptimizationProblemPtr;
 
 std::ostream &operator<<(std::ostream &stream, OptimizationProblemPtr problem)
 {

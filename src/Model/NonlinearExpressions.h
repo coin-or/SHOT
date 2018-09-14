@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include "../../ThirdParty/mcpp/ffunc.hpp"
 
 namespace SHOT
 {
@@ -25,7 +26,16 @@ namespace SHOT
 class NonlinearExpression
 {
   public:
+    OptimizationProblemPtr ownerProblem;
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
+
     virtual double calculate(const VectorDouble &point) = 0;
+    virtual FactorableFunction getFactorableFunction() = 0;
+
     virtual std::ostream &print(std::ostream &) const = 0;
 
     friend std::ostream &operator<<(std::ostream &stream, const NonlinearExpression &expr)
@@ -63,19 +73,25 @@ class ExpressionVariable : public NonlinearExpression
   public:
     VariablePtr variable;
 
-    ExpressionVariable(VariablePtr var) : variable(var)
+    ExpressionVariable(VariablePtr variable) : variable(variable)
     {
-    }
+        variable->isNonlinear = true;
+    };
 
     virtual double calculate(const VectorDouble &point) override
     {
         return (variable->calculate(point));
-    }
+    };
+
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        return variable->factorableFunctionVariable;
+    };
 
     std::ostream &print(std::ostream &stream) const override
     {
         return stream << variable->name;
-    }
+    };
 };
 
 typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
@@ -86,6 +102,7 @@ class ExpressionUnary : public NonlinearExpression
     NonlinearExpressionPtr child;
 
     virtual double calculate(const VectorDouble &point) = 0;
+    virtual FactorableFunction getFactorableFunction() = 0;
 };
 
 class ExpressionBinary : public NonlinearExpression
@@ -95,6 +112,7 @@ class ExpressionBinary : public NonlinearExpression
     NonlinearExpressionPtr secondChild;
 
     virtual double calculate(const VectorDouble &point) = 0;
+    virtual FactorableFunction getFactorableFunction() = 0;
 };
 
 class ExpressionGeneral : public NonlinearExpression
@@ -103,6 +121,7 @@ class ExpressionGeneral : public NonlinearExpression
     NonlinearExpressions children;
 
     virtual double calculate(const VectorDouble &point) = 0;
+    virtual FactorableFunction getFactorableFunction() = 0;
 };
 
 // Begin unary operations
@@ -122,6 +141,11 @@ class ExpressionNegate : public ExpressionUnary
     virtual double calculate(const VectorDouble &point) override
     {
         return (-child->calculate(point));
+    }
+
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        return (-child->getFactorableFunction());
     }
 
     std::ostream &print(std::ostream &stream) const override
@@ -146,6 +170,11 @@ class ExpressionInvert : public ExpressionUnary
     virtual double calculate(const VectorDouble &point) override
     {
         return (1.0 / child->calculate(point));
+    }
+
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        return (1 / child->getFactorableFunction());
     }
 
     std::ostream &print(std::ostream &stream) const override
@@ -176,6 +205,11 @@ class ExpressionPlus : public ExpressionBinary
         return (firstChild->calculate(point) + secondChild->calculate(point));
     }
 
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        return (firstChild->getFactorableFunction() + secondChild->getFactorableFunction());
+    }
+
     std::ostream &print(std::ostream &stream) const override
     {
         stream << firstChild << '+' << secondChild;
@@ -201,6 +235,11 @@ class ExpressionMinus : public ExpressionBinary
         return (firstChild->calculate(point) - secondChild->calculate(point));
     }
 
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        return (firstChild->getFactorableFunction() - secondChild->getFactorableFunction());
+    }
+
     std::ostream &print(std::ostream &stream) const override
     {
         stream << firstChild << '-' << secondChild;
@@ -224,6 +263,11 @@ class ExpressionPower : public ExpressionBinary
     virtual double calculate(const VectorDouble &point) override
     {
         return (pow(firstChild->calculate(point), secondChild->calculate(point)));
+    }
+
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        return (pow(firstChild->getFactorableFunction(), secondChild->getFactorableFunction()));
     }
 
     std::ostream &print(std::ostream &stream) const override
@@ -264,6 +308,18 @@ class ExpressionTimes : public ExpressionGeneral
         }
 
         return (value);
+    }
+
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        FactorableFunction funct;
+
+        for (auto C : children.expressions)
+        {
+            funct *= C->getFactorableFunction();
+        }
+
+        return (funct);
     }
 
     std::ostream &print(std::ostream &stream) const override
@@ -309,6 +365,18 @@ class ExpressionSum : public ExpressionGeneral
         }
 
         return (value);
+    }
+
+    virtual FactorableFunction getFactorableFunction() override
+    {
+        FactorableFunction funct;
+
+        for (auto C : children.expressions)
+        {
+            funct += C->getFactorableFunction();
+        }
+
+        return (funct);
     }
 
     std::ostream &print(std::ostream &stream) const override

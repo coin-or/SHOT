@@ -28,6 +28,8 @@ class LinearTerm
     double coefficient;
     VariablePtr variable;
 
+    OptimizationProblemPtr ownerProblem;
+
     LinearTerm(){};
     LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
 
@@ -35,6 +37,11 @@ class LinearTerm
     {
         double value = coefficient * variable->calculate(point);
         return value;
+    }
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        ownerProblem = owner;
     }
 };
 
@@ -71,6 +78,14 @@ class LinearTerms
 
         return value;
     }
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        for (auto T : terms)
+        {
+            T->takeOwnership(owner);
+        }
+    }
 };
 
 std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
@@ -101,6 +116,7 @@ class QuadraticTerm
     double coefficient;
     VariablePtr firstVariable;
     VariablePtr secondVariable;
+    OptimizationProblemPtr ownerProblem;
 
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};
@@ -110,6 +126,11 @@ class QuadraticTerm
         double value = coefficient * firstVariable->calculate(point) * secondVariable->calculate(point);
         return value;
     };
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
 };
 
 typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
@@ -149,6 +170,14 @@ class QuadraticTerms
 
         return value;
     };
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        for (auto T : terms)
+        {
+            T->takeOwnership(owner);
+        }
+    }
 };
 
 std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)

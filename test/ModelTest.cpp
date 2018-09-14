@@ -150,9 +150,10 @@ bool ModelTestNonlinearExpressions()
 {
     bool passed = true;
 
-    VariablePtr var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
     ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
-    VariablePtr var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
+
+    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
     ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
 
     VectorDouble point;
@@ -172,7 +173,8 @@ bool ModelTestNonlinearExpressions()
     if (value != realValue)
         passed = false;
 
-    std::cout << "Creating plus expression\n";
+    std::cout
+        << "Creating plus expression\n";
 
     NonlinearExpressionPtr exprPlus = std::make_shared<ExpressionPlus>(expressionVariable_x, expressionVariable_y);
     std::cout << "Plus expression " << exprPlus << " created\n";
@@ -206,9 +208,10 @@ bool ModelTestObjective()
 {
     bool passed = true;
 
-    VariablePtr var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
     ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
-    VariablePtr var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
+
+    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
     ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
@@ -265,9 +268,10 @@ bool ModelTestConstraints()
 {
     bool passed = true;
 
-    VariablePtr var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
+    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
     ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
-    VariablePtr var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
+
+    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
     ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
@@ -354,16 +358,18 @@ bool ModelTestProblem()
 {
     bool passed = true;
 
-    // Creating variables
     OptimizationProblemPtr problem = std::make_shared<OptimizationProblem>();
 
-    VariablePtr var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
-    problem->add(var_x);
+    // Creating variables
+
+    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
     ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
 
-    VariablePtr var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
-    problem->add(var_y);
+    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
     ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
+
+    Variables variables = {var_x, var_y};
+    problem->add(variables);
 
     std::cout << "Creating objective function\n";
 
@@ -435,9 +441,17 @@ bool ModelTestProblem()
     problem->add(nonlinearConstraint);
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
-    std::cout << "Problem created:\n";
-    std::cout << problem;
+    std::cout << "Finalizing problem:\n";
+    problem->finalize();
+    std::cout << "Problem finalized\n";
 
+    std::cout << "Problem created:\n";
+    std::cout << problem << '\n';
+
+    std::cout << "Printing DAG:\n";
+    std::cout << problem->getFactorableFunctionDAG() << '\n';
+
+    
     point.at(0) = 20.0;
     point.at(1) = 1.0;
 
@@ -466,7 +480,7 @@ bool ModelTestProblem()
     std::cout << "Testing to get all deviating constraint values in a valid point (there should be none)\n";
 
     auto deviatingConstraints = problem->getAllDeviatingNumericConstraints(point, 0.0);
-    std::cout << "Number of invalid constraints in the point (x,y) = (" << point.at(0) << ',' << point.at(1) << ") is " 
+    std::cout << "Number of invalid constraints in the point (x,y) = (" << point.at(0) << ',' << point.at(1) << ") is "
               << deviatingConstraints.size() << '\n';
 
     if (deviatingConstraints.size() != 0)

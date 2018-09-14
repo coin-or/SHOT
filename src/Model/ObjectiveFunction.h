@@ -63,6 +63,7 @@ struct ObjectiveFunctionProperties
 
 class ObjectiveFunction
 {
+
   public:
     ~ObjectiveFunction()
     {
@@ -71,6 +72,13 @@ class ObjectiveFunction
     ObjectiveFunctionProperties properties;
 
     double constant = 0.0;
+
+    OptimizationProblemPtr ownerProblem;
+
+    void takeOwnership(OptimizationProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
 
     E_Curvature checkConvexity()
     {
