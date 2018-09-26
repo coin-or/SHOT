@@ -49,6 +49,12 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
 {
     if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
+	cplexVarConvers.clear();
+    	cplexModel.end();
+    	cplexVars.end();
+    	cplexConstrs.end();
+    	cplexInstance.end();
+
         cplexModel = IloModel(cplexEnv);
 
         cplexVars = IloNumVarArray(cplexEnv);

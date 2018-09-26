@@ -316,7 +316,8 @@ class ExpressionTimes : public ExpressionGeneral
 
         for (auto C : children.expressions)
         {
-            funct *= C->getFactorableFunction();
+            FactorableFunction tmpFunct = C->getFactorableFunction();
+            funct = funct * tmpFunct;
         }
 
         return (funct);
