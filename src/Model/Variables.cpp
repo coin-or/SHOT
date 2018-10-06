@@ -9,7 +9,7 @@
 */
 
 #include "Variables.h"
-#include "OptimizationProblem.h"
+#include "Problem.h"
 
 namespace SHOT
 {

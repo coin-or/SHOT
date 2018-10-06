@@ -69,11 +69,11 @@ class Constraint
 
     ConstraintProperties properties;
 
-    OptimizationProblemPtr ownerProblem;
+    ProblemPtr ownerProblem;
 
     virtual bool isFulfilled(const VectorDouble &point) = 0;
 
-    void takeOwnership(OptimizationProblemPtr owner);
+    void takeOwnership(ProblemPtr owner);
 
     virtual std::ostream &print(std::ostream &) const = 0;
 };

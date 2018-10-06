@@ -18,8 +18,8 @@ namespace SHOT
 
 // Forward declarations
 
-class OptimizationProblem;
-typedef std::shared_ptr<OptimizationProblem> OptimizationProblemPtr;
+class Problem;
+typedef std::shared_ptr<Problem> ProblemPtr;
 
 class Variable;
 typedef std::shared_ptr<Variable> VariablePtr;

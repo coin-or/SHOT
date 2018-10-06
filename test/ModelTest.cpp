@@ -13,7 +13,7 @@
 #include "Model/Constraints.h"
 #include "Model/NonlinearExpressions.h"
 #include "Model/ObjectiveFunction.h"
-#include "Model/OptimizationProblem.h"
+#include "Model/Problem.h"
 
 bool ModelTestVariables();
 bool ModelTestTerms();
@@ -357,7 +357,7 @@ bool ModelTestProblem()
 {
     bool passed = true;
 
-    SHOT::OptimizationProblemPtr problem = std::make_shared<SHOT::OptimizationProblem>();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>();
 
     // Creating variables
 

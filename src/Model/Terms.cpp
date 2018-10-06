@@ -9,7 +9,7 @@
 */
 
 #include "Terms.h"
-#include "OptimizationProblem.h"
+#include "Problem.h"
 #include "Variables.h"
 
 namespace SHOT
@@ -27,7 +27,7 @@ Interval LinearTerm::calculate(const IntervalVector &intervalVector)
     return value;
 }
 
-void LinearTerm::takeOwnership(OptimizationProblemPtr owner)
+void LinearTerm::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
 }
@@ -70,7 +70,7 @@ Interval LinearTerms::calculate(const IntervalVector &intervalVector)
     return value;
 }
 
-void LinearTerms::takeOwnership(OptimizationProblemPtr owner)
+void LinearTerms::takeOwnership(ProblemPtr owner)
 {
     for (auto T : terms)
     {
@@ -112,7 +112,7 @@ Interval QuadraticTerm::calculate(const IntervalVector &intervalVector)
     return value;
 }
 
-void QuadraticTerm::takeOwnership(OptimizationProblemPtr owner)
+void QuadraticTerm::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
 }
@@ -159,7 +159,7 @@ Interval QuadraticTerms::calculate(const IntervalVector &intervalVector)
     return value;
 }
 
-void QuadraticTerms::takeOwnership(OptimizationProblemPtr owner)
+void QuadraticTerms::takeOwnership(ProblemPtr owner)
 {
     for (auto T : terms)
     {

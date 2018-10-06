@@ -22,7 +22,7 @@ class Variable
     int index;
 
     E_VariableType type;
-    OptimizationProblemPtr ownerProblem;
+    ProblemPtr ownerProblem;
 
     double upperBound;
     double lowerBound;
@@ -55,7 +55,7 @@ class Variable
         return intervalVector[index];
     }
 
-    inline void takeOwnership(OptimizationProblemPtr owner)
+    inline void takeOwnership(ProblemPtr owner)
     {
         ownerProblem = owner;
     }

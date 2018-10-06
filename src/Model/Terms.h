@@ -26,7 +26,7 @@ class LinearTerm
     double coefficient;
     VariablePtr variable;
 
-    OptimizationProblemPtr ownerProblem;
+    ProblemPtr ownerProblem;
 
     LinearTerm(){};
     LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
@@ -34,7 +34,7 @@ class LinearTerm
     double calculate(const VectorDouble &point);
     Interval calculate(const IntervalVector &intervalVector);
 
-    void takeOwnership(OptimizationProblemPtr owner);
+    void takeOwnership(ProblemPtr owner);
 };
 
 class LinearTerms
@@ -47,7 +47,7 @@ class LinearTerms
     double calculate(const VectorDouble &point);
     Interval calculate(const IntervalVector &intervalVector);
 
-    void takeOwnership(OptimizationProblemPtr owner);
+    void takeOwnership(ProblemPtr owner);
 };
 
 std::ostream &operator<<(std::ostream &stream, LinearTermPtr term);
@@ -59,7 +59,7 @@ class QuadraticTerm
     double coefficient;
     VariablePtr firstVariable;
     VariablePtr secondVariable;
-    OptimizationProblemPtr ownerProblem;
+    ProblemPtr ownerProblem;
 
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};
@@ -68,7 +68,7 @@ class QuadraticTerm
 
     Interval calculate(const IntervalVector &intervalVector);
 
-    void takeOwnership(OptimizationProblemPtr owner);
+    void takeOwnership(ProblemPtr owner);
 };
 
 class QuadraticTerms
@@ -81,7 +81,7 @@ class QuadraticTerms
     double calculate(const VectorDouble &point);
     Interval calculate(const IntervalVector &intervalVector);
 
-    void takeOwnership(OptimizationProblemPtr owner);
+    void takeOwnership(ProblemPtr owner);
 };
 
 std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term);

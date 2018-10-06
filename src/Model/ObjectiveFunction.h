@@ -14,7 +14,7 @@
 #include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
-#include "OptimizationProblem.h"
+#include "Problem.h"
 
 #include <vector>
 #include <string>
@@ -75,9 +75,9 @@ class ObjectiveFunction
 
     double constant = 0.0;
 
-    OptimizationProblemPtr ownerProblem;
+    ProblemPtr ownerProblem;
 
-    void takeOwnership(OptimizationProblemPtr owner);
+    void takeOwnership(ProblemPtr owner);
 
     E_Curvature checkConvexity();
 

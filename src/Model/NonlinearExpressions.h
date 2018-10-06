@@ -24,9 +24,9 @@ namespace SHOT
 class NonlinearExpression
 {
   public:
-    OptimizationProblemPtr ownerProblem;
+    ProblemPtr ownerProblem;
 
-    inline void takeOwnership(OptimizationProblemPtr owner)
+    inline void takeOwnership(ProblemPtr owner)
     {
         ownerProblem = owner;
     }

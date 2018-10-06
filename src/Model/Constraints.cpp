@@ -12,11 +12,11 @@
 #include "Terms.h"
 #include "NonlinearExpressions.h"
 #include "Constraints.h"
-#include "OptimizationProblem.h"
+#include "Problem.h"
 namespace SHOT
 {
 
-void Constraint::takeOwnership(OptimizationProblemPtr owner)
+void Constraint::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
 }

@@ -12,12 +12,12 @@
 #include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
-#include "OptimizationProblem.h"
+#include "Problem.h"
 
 namespace SHOT
 {
 
-void ObjectiveFunction::takeOwnership(OptimizationProblemPtr owner)
+void ObjectiveFunction::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
 };
