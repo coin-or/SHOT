@@ -16,6 +16,9 @@
 #include "NonlinearExpressions.h"
 #include "Constraints.h"
 
+#include "../Environment.h"
+#include "../Output.h"
+
 #include <vector>
 #include <string>
 #include <memory>
@@ -65,6 +68,7 @@ struct ProblemProperties
 class Problem : public std::enable_shared_from_this<Problem>
 {
   private:
+    EnvironmentPtr env;
     bool variablesUpdated = false;
     bool constraintsUpdated = false;
     bool objectiveUpdated = false;
@@ -76,7 +80,7 @@ class Problem : public std::enable_shared_from_this<Problem>
     void updateFactorableFunctions();
 
   public:
-    Problem();
+    Problem(EnvironmentPtr env);
 
     virtual ~Problem();
 
@@ -111,7 +115,10 @@ class Problem : public std::enable_shared_from_this<Problem>
     void add(LinearConstraintPtr constraint);
     void add(QuadraticConstraintPtr constraint);
     void add(NonlinearConstraintPtr constraint);
-    void add(ObjectiveFunctionPtr objective);
+
+    void add(LinearObjectiveFunctionPtr objective);
+    void add(QuadraticObjectiveFunctionPtr objective);
+    void add(NonlinearObjectiveFunctionPtr objective);
 
     template <class T>
     void add(std::vector<T> elements);

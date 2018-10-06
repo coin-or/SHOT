@@ -23,10 +23,10 @@ void Constraint::takeOwnership(ProblemPtr owner)
 
 std::ostream &operator<<(std::ostream &stream, const Constraint &constraint)
 {
-    stream << "[" << constraint.constraintIndex << "]";
+    stream << "[" << constraint.index << "]";
 
-    if (constraint.constraintName != "")
-        stream << ' ' << constraint.constraintName;
+    if (constraint.name != "")
+        stream << ' ' << constraint.name;
 
     stream << ":\t";
 

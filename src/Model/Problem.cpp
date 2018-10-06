@@ -155,9 +155,7 @@ void Problem::updateFactorableFunctions()
     }
 };
 
-Problem::Problem(){
-
-};
+Problem::Problem(EnvironmentPtr env) : env(env){};
 
 Problem::~Problem(){};
 
@@ -198,6 +196,8 @@ void Problem::add(VariablePtr variable)
 
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
+
+    env->output->outputDebug("Added variable to problem: " + variable->name);
 };
 
 void Problem::add(LinearConstraintPtr constraint)
@@ -206,6 +206,8 @@ void Problem::add(LinearConstraintPtr constraint)
     linearConstraints.push_back(constraint);
 
     constraint->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added linear constraint to problem: " + constraint->name);
 };
 
 void Problem::add(QuadraticConstraintPtr constraint)
@@ -214,6 +216,8 @@ void Problem::add(QuadraticConstraintPtr constraint)
     quadraticConstraints.push_back(constraint);
 
     constraint->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added quadratic constraint to problem: " + constraint->name);
 };
 
 void Problem::add(NonlinearConstraintPtr constraint)
@@ -222,14 +226,38 @@ void Problem::add(NonlinearConstraintPtr constraint)
     nonlinearConstraints.push_back(constraint);
 
     constraint->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added nonlinear constraint to problem: " + constraint->name);
 };
 
-void Problem::add(ObjectiveFunctionPtr objective)
+void Problem::add(LinearObjectiveFunctionPtr objective)
 {
     objectiveFunction = objective;
     objectiveFunction->updateProperties();
 
     objective->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added linear objective function to problem.");
+};
+
+void Problem::add(QuadraticObjectiveFunctionPtr objective)
+{
+    objectiveFunction = objective;
+    objectiveFunction->updateProperties();
+
+    objective->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added quadratic objective function to problem.");
+};
+
+void Problem::add(NonlinearObjectiveFunctionPtr objective)
+{
+    objectiveFunction = objective;
+    objectiveFunction->updateProperties();
+
+    objective->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added nonlinear objective function to problem.");
 };
 
 template <class T>

@@ -64,8 +64,8 @@ class Constraint
   public:
     virtual ~Constraint(){};
 
-    int constraintIndex = -1;
-    std::string constraintName;
+    int index = -1;
+    std::string name;
 
     ConstraintProperties properties;
 
@@ -108,16 +108,16 @@ class LinearConstraint : public NumericConstraint
 
     LinearConstraint(int index, std::string name, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         valueLHS = LHS;
         valueRHS = RHS;
     };
 
     LinearConstraint(int index, std::string name, LinearTerms linTerms, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         linearTerms = linTerms;
         valueLHS = LHS;
         valueRHS = RHS;
@@ -154,16 +154,16 @@ class QuadraticConstraint : public LinearConstraint
 
     QuadraticConstraint(int index, std::string name, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         valueLHS = LHS;
         valueRHS = RHS;
     };
 
     QuadraticConstraint(int index, std::string name, QuadraticTerms quadTerms, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         quadraticTerms = quadTerms;
         valueLHS = LHS;
         valueRHS = RHS;
@@ -171,8 +171,8 @@ class QuadraticConstraint : public LinearConstraint
 
     QuadraticConstraint(int index, std::string name, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         linearTerms = linTerms;
         quadraticTerms = quadTerms;
         valueLHS = LHS;
@@ -211,16 +211,16 @@ class NonlinearConstraint : public QuadraticConstraint
 
     NonlinearConstraint(int index, std::string name, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         valueLHS = LHS;
         valueRHS = RHS;
     };
 
     NonlinearConstraint(int index, std::string name, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         nonlinearExpression = expression;
         valueLHS = LHS;
         valueRHS = RHS;
@@ -228,8 +228,8 @@ class NonlinearConstraint : public QuadraticConstraint
 
     NonlinearConstraint(int index, std::string name, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         quadraticTerms = quadTerms;
         nonlinearExpression = expression;
         valueLHS = LHS;
@@ -238,8 +238,8 @@ class NonlinearConstraint : public QuadraticConstraint
 
     NonlinearConstraint(int index, std::string name, LinearTerms linTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         linearTerms = linTerms;
         nonlinearExpression = expression;
         valueLHS = LHS;
@@ -248,8 +248,8 @@ class NonlinearConstraint : public QuadraticConstraint
 
     NonlinearConstraint(int index, std::string name, LinearTerms linTerms, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
-        constraintIndex = index;
-        constraintName = name;
+        index = index;
+        name = name;
         linearTerms = linTerms;
         quadraticTerms = quadTerms;
         nonlinearExpression = expression;

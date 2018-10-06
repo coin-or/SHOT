@@ -15,6 +15,8 @@
 #include "Model/ObjectiveFunction.h"
 #include "Model/Problem.h"
 
+#include "Environment.h"
+
 bool ModelTestVariables();
 bool ModelTestTerms();
 bool ModelTestNonlinearExpressions();
@@ -357,7 +359,9 @@ bool ModelTestProblem()
 {
     bool passed = true;
 
-    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>();
+    SHOT::EnvironmentPtr env(new SHOT::Environment);
+    env->output = SHOT::OutputPtr(new SHOT::Output());
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
     // Creating variables
 
@@ -507,7 +511,7 @@ bool ModelTestProblem()
     else
     {
         double error = mostDevConstraint.get().error;
-        auto name = mostDevConstraint.get().constraint->constraintName;
+        auto name = mostDevConstraint.get().constraint->name;
         std::cout << "The most deviating constraint in the point (x,y) = (" << point.at(0) << ',' << point.at(1) << ") is "
                   << name << " with error " << error << "\n";
 
