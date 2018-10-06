@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project (SHOT)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11 )
 
 # Sets the release types, e.g. Release, Debug
 #set(CMAKE_BUILD_TYPE Release)
@@ -16,19 +16,16 @@ mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
 # Activates subsolvers, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON)
 option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON)
-option (HAS_GUROBI "Is Gurobi available" ON)
+option (HAS_GUROBI "Is Gurobi available" OFF)
 option (HAS_GAMS "Is GAMS available" ON)
 
 # Sets the paths required. Edit these to suit your system:
-set(COINOS_DIR /opt/OS-2.10-stable)
-set(GUROBI_DIR /opt/gurobi800)
+set(COINOS_DIR /opt/OS-2.10)
+set(GUROBI_DIR /opt/gurobi/gurobi801)
 set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /opt/gams/gams25.1.2)
 
-set(PROFIL_DIR /opt/profil)
-set(FILIB_DIR /opt/filib)
-set(LAPACK_DIR /home/aton3/alundell/Research/mc++/MC++/src/3rdparty/cpplapack)
-set(FADBAD_DIR /home/aton3/alundell/Research/mc++/MC++/src/3rdparty/fadbad++)
+set(MCPP_DIR ThirdParty/mc++)
 
 # May be needed to specify the path to where Boost is installed, if not automatically detected
 #set(Boost_INCLUDE_DIR /usr/include)
@@ -67,9 +64,14 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 # Adding source files
 file(GLOB_RECURSE SOURCES
-  "${PROJECT_SOURCE_DIR}/src/SHOT.cpp"
   "${PROJECT_SOURCE_DIR}/src/Environment.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Constraints.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/OptimizationProblem.cpp"
   "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
@@ -112,7 +114,8 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Structs.h"
   "${PROJECT_SOURCE_DIR}/src/Environment.h"
   "${PROJECT_SOURCE_DIR}/src/Model.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/ModelStructs.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/ModelShared.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
   "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.h"
   "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
@@ -212,18 +215,17 @@ include_directories("${COINOS_DIR}/include/coin")
 include_directories("${COINOS_DIR}/include/cppad")
 include_directories("${COINOS_DIR}/include")
 
-include_directories("${PROFIL_DIR}/include")
-include_directories("${FILIB_DIR}/include")
-include_directories("${LAPACK_DIR}/include")
-include_directories("${FADBAD_DIR}")
+include_directories("${MCPP_DIR}/include")
+include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
+include_directories("${MCPP_DIR}/3rdparty/fadbad++")
 
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 
-add_executable (${PROJECT_NAME} ${SOURCES})
-add_library (SHOTSolver STATIC ${SOURCES})
+add_library (SHOTSolver SHARED ${SOURCES})
 
-target_link_libraries (${PROJECT_NAME} SHOTSettings)
+add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
+target_link_libraries (${PROJECT_NAME} SHOTSolver SHOTSettings)
 
 if (HAS_CPLEX)
   target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
@@ -252,8 +254,7 @@ endif (HAS_GAMS)
 
 target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinasl.so )
 target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinmumps.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinmetis.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipopt.so)
+target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipopt.so) 
 target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipoptamplinterface.so)
 target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCoinUtils.so )
 target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libClp.so )

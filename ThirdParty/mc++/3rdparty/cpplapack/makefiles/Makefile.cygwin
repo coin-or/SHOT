@@ -1,0 +1,38 @@
+#CPP = g++-2
+CPP = g++
+
+COMP_FLAGS = -O2 -Wall
+LINK_FLAGS = -O2 -Wall
+
+#MACROS = -DCPPL_VERBOSE -DCPPL_DEBUG
+
+CPPLAPACK_INCLUDE_DIR = $(HOME)/local/lib/cpplapack/include
+LAPACK_LIB_DIR = $(HOME)/local/lib/LAPACK
+BLAS_LIB_DIR = $(HOME)/local/lib/ATLAS
+
+INCLUDE_DIRS = -I$(CPPLAPACK_INCLUDE_DIR)
+LIB_DIRS = -L$(LAPACK_LIB_DIR) -L$(BLAS_LIB_DIR)
+
+LIBS = -llapack -lf77blas -latlas -lg2c -lm
+OBJECTS = main.o
+
+###############################################################################
+
+A.OUT: $(OBJECTS)
+	$(CPP) $(OBJECTS) $(LINK_FLAGS) $(LIB_DIRS) $(LIBS) -o $@
+
+.SUFFIXES: .cpp .o
+
+.cpp.o:
+	$(CPP) -c $< $(COMP_FLAGS) $(INCLUDE_DIRS) $(MACROS)
+
+do: A.OUT
+	./A.OUT > std 2> err
+
+clean:
+	rm -f *~ $(OBJECTS)
+
+fullclean:
+	rm -f *~ $(OBJECTS) A.OUT std err 
+
+remake: clean A.OUT

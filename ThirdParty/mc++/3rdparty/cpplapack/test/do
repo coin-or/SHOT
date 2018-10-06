@@ -1,0 +1,27 @@
+#!/bin/sh
+
+rootdir=`pwd`
+MAKEFILE=$HOME/local/cpplapack/makefiles/Makefile
+
+for i in `find * -type d | grep -v .svn`; do
+    if [ -d $i ]; then
+        echo "################ Enter into $i/ ################"
+        cd $i
+        if [ -f SUCCEEDED ]; then
+            echo "======== Skipping cause already succeeded ========"
+        elif [ -f main.cpp ]; then
+            echo "======== Making ========" &&\
+                make -f $MAKEFILE debug &&\
+                echo "======== Executing ./A.OUT ========" &&\
+                valgrind ./A.OUT &&\
+                make -f $MAKEFILE fullclean
+            if [ $? != 0 ]; then exit 1; fi
+            echo "======== Succeeded ========"
+            touch SUCCEEDED
+        else
+            echo "======== No main.cpp ========"
+        fi
+        cd $rootdir
+        echo "################ Exit  from $i/ ################"
+    fi
+done

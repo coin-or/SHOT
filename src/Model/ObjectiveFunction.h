@@ -1,4 +1,3 @@
-
 /**
    The Supporting Hyperplane Optimization Toolkit (SHOT).
 
@@ -10,9 +9,12 @@
 */
 
 #pragma once
-#include "ModelStructs.h"
+#include "ModelShared.h"
+#include "../UtilityFunctions.h"
+#include "Variables.h"
 #include "Terms.h"
 #include "NonlinearExpressions.h"
+#include "OptimizationProblem.h"
 
 #include <vector>
 #include <string>
@@ -75,43 +77,21 @@ class ObjectiveFunction
 
     OptimizationProblemPtr ownerProblem;
 
-    void takeOwnership(OptimizationProblemPtr owner)
-    {
-        ownerProblem = owner;
-    }
+    void takeOwnership(OptimizationProblemPtr owner);
 
-    E_Curvature checkConvexity()
-    {
-        return E_Curvature::Convex;
-    }
+    E_Curvature checkConvexity();
 
-    virtual void updateProperties()
-    {
-        if (properties.direction == E_ObjectiveFunctionDirection::Minimize)
-        {
-            properties.isMinimize = true;
-            properties.isMaximize = false;
-        }
+    virtual void updateProperties();
 
-        properties.curvature = checkConvexity();
-    }
+    virtual double calculateValue(const VectorDouble &point) = 0;
+    virtual Interval calculateValue(const IntervalVector &intervalVector) = 0;
 
-    virtual double calculateNumericValue(const VectorDouble &point) = 0;
+    virtual SparseVariableVector calculateGradient(const VectorDouble &point) = 0;
 
     virtual std::ostream &print(std::ostream &) const = 0;
-    friend std::ostream &operator<<(std::ostream &stream, const ObjectiveFunction &objective)
-    {
-        return objective.print(stream); // polymorphic print via reference
-    };
 };
 
-typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;
-
-std::ostream &operator<<(std::ostream &stream, ObjectiveFunctionPtr objective)
-{
-    stream << *objective;
-    return stream;
-}
+std::ostream &operator<<(std::ostream &stream, ObjectiveFunctionPtr objective);
 
 class LinearObjectiveFunction : public ObjectiveFunction
 {
@@ -138,71 +118,18 @@ class LinearObjectiveFunction : public ObjectiveFunction
 
     LinearTerms linearTerms;
 
-    void add(LinearTerms terms)
-    {
-        if (linearTerms.terms.size() == 0)
-        {
-            linearTerms = terms;
-            properties.isValid = false;
-        }
-        else
-        {
-            for (auto T : terms.terms)
-            {
-                add(T);
-            }
-        }
-    };
+    void add(LinearTerms terms);
 
-    void add(LinearTermPtr term)
-    {
-        linearTerms.terms.push_back(term);
-        properties.isValid = false;
-    };
+    void add(LinearTermPtr term);
+    virtual void updateProperties() override;
 
-    virtual void updateProperties() override
-    {
-        if (linearTerms.terms.size() > 0)
-        {
-            properties.hasLinearTerms = true;
-        }
+    virtual double calculateValue(const VectorDouble &point) override;
+    virtual Interval calculateValue(const IntervalVector &intervalVector) override;
 
-        if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart || properties.hasQuadraticTerms))
-            E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Linear;
+    virtual SparseVariableVector calculateGradient(const VectorDouble &point) override;
 
-        ObjectiveFunction::updateProperties();
-    };
-
-    virtual double calculateNumericValue(const VectorDouble &point) override
-    {
-        double value = linearTerms.calculate(point);
-        return value;
-    };
-
-    std::ostream &print(std::ostream &stream) const override
-    {
-        if (properties.isMinimize)
-            stream << "minimize: ";
-        else if (properties.isMaximize)
-            stream << "maximize: ";
-
-        if (constant != 0.0)
-            stream << constant;
-
-        if (properties.hasLinearTerms)
-            stream << linearTerms;
-
-        return stream;
-    };
+    std::ostream &print(std::ostream &stream) const override;
 };
-
-typedef std::shared_ptr<LinearObjectiveFunction> LinearObjectiveFunctionPtr;
-
-std::ostream &operator<<(std::ostream &stream, LinearObjectiveFunctionPtr objective)
-{
-    stream << *objective;
-    return stream;
-}
 
 class QuadraticObjectiveFunction : public LinearObjectiveFunction
 {
@@ -239,69 +166,21 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
     QuadraticTerms quadraticTerms;
 
     void add(LinearTerms terms);
-
     void add(LinearTermPtr term);
+    void add(QuadraticTerms terms);
+    void add(QuadraticTermPtr term);
 
-    void add(QuadraticTerms terms)
-    {
-        if (quadraticTerms.terms.size() == 0)
-        {
-            quadraticTerms = terms;
-            properties.isValid = false;
-        }
-        else
-        {
-            for (auto T : terms.terms)
-            {
-                add(T);
-            }
-        }
-    };
+    virtual void updateProperties() override;
 
-    void add(QuadraticTermPtr term)
-    {
-        quadraticTerms.terms.push_back(term);
-        properties.isValid = false;
-    };
+    virtual double calculateValue(const VectorDouble &point) override;
+    virtual Interval calculateValue(const IntervalVector &intervalVector) override;
 
-    virtual void updateProperties() override
-    {
-        if (quadraticTerms.terms.size() > 0)
-        {
-            properties.hasQuadraticTerms = true;
+    virtual SparseVariableVector calculateGradient(const VectorDouble &point) override;
 
-            if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart))
-                E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Quadratic;
-        }
-
-        LinearObjectiveFunction::updateProperties();
-    };
-
-    virtual double calculateNumericValue(const VectorDouble &point) override
-    {
-        double value = LinearObjectiveFunction::calculateNumericValue(point);
-        value += quadraticTerms.calculate(point);
-        return value;
-    };
-
-    std::ostream &print(std::ostream &stream) const override
-    {
-        LinearObjectiveFunction::print(stream);
-
-        if (properties.hasQuadraticTerms)
-            stream << quadraticTerms;
-
-        return stream;
-    };
+    std::ostream &print(std::ostream &stream) const override;
 };
 
-typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPtr;
-
-std::ostream &operator<<(std::ostream &stream, QuadraticObjectiveFunctionPtr objective)
-{
-    stream << *objective;
-    return stream;
-};
+std::ostream &operator<<(std::ostream &stream, QuadraticObjectiveFunctionPtr objective);
 
 class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 {
@@ -346,6 +225,10 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
     virtual ~NonlinearObjectiveFunction(){};
 
     NonlinearExpressionPtr nonlinearExpression;
+    FactorableFunctionPtr factorableFunction;
+    std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
+
+    int factorableFunctionIndex;
 
     void add(LinearTerms terms)
     {
@@ -367,68 +250,20 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
         QuadraticObjectiveFunction::add(term);
     }
 
-    void add(NonlinearExpressionPtr expression)
-    {
-        if (nonlinearExpression != nullptr)
-        {
-            auto tmpExpr = nonlinearExpression;
-            auto nonlinearExpression(new ExpressionPlus(tmpExpr, expression));
-        }
-        else
-        {
-            nonlinearExpression = expression;
-        }
+    void add(NonlinearExpressionPtr expression);
 
-        properties.isValid = false;
-    }
+    void updateFactorableFunction();
 
-    virtual void updateProperties() override
-    {
-        if (nonlinearExpression != nullptr)
-        {
-            properties.hasNonlinearExpression = true;
+    virtual void updateProperties() override;
 
-            if (properties.hasNonalgebraicPart)
-            {
-                E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Nonalgebraic;
-            }
-            else if (properties.hasSignomialTerms)
-            {
-                E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::GeneralizedSignomial;
-            }
-            else
-            {
-                E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Nonlinear;
-            }
-        }
+    virtual double calculateValue(const VectorDouble &point) override;
+    virtual Interval calculateValue(const IntervalVector &intervalVector) override;
 
-        QuadraticObjectiveFunction::updateProperties();
-    }
+    virtual SparseVariableVector calculateGradient(const VectorDouble &point) override;
 
-    virtual double calculateNumericValue(const VectorDouble &point) override
-    {
-        double value = QuadraticObjectiveFunction::calculateNumericValue(point);
-        value += nonlinearExpression->calculate(point);
-        return value;
-    };
-
-    std::ostream &print(std::ostream &stream) const override
-    {
-        QuadraticObjectiveFunction::print(stream);
-
-        if (properties.hasNonlinearExpression)
-            stream << " +(" << nonlinearExpression << ')';
-
-        return stream;
-    };
+    std::ostream &print(std::ostream &stream) const override;
 };
 
-typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
-
-std::ostream &operator<<(std::ostream &stream, NonlinearObjectiveFunctionPtr objective)
-{
-    stream << *objective;
-    return stream;
-};
+std::ostream &operator<<(std::ostream &stream, NonlinearObjectiveFunctionPtr objective);
 
 } // namespace SHOT

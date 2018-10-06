@@ -86,5 +86,34 @@ double getJulianFractionalDate();
 bool writeStringToFile(std::string fileName, std::string str);
 
 std::string getFileAsString(std::string fileName);
+
+/*
+ * Generic implementation to erase elements by value
+ * It iterates over all the elements and for every element it matches
+ * the value with the passed value, if it matches then it will delete
+ * that entry and move to next.
+ * From: https://thispointer.com/
+ */
+template<typename K, typename V>
+inline void erase_if(std::map<K, V> & mapOfElemen, V value)
+{
+	auto it = mapOfElemen.begin();
+	// Iterate through the map
+	while (it != mapOfElemen.end())
+	{
+		// Check if value of this entry matches with given value
+		if (it->second == value)
+		{
+			// Erase the current element, erase() will return the
+			// next iterator. So, don't need to increment
+			it = mapOfElemen.erase(it);
+		}
+		else
+		{
+			// Go to next entry in map
+			it++;
+		}
+	}
+}
 } // namespace UtilityFunctions
 } // namespace SHOT

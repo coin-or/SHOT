@@ -1,0 +1,8 @@
+#!/bin/sh
+pwd=$PWD
+for i in `find * -type d | grep -v .svn`; do
+    echo $i
+    cd $i
+    rm -f A.OUT main.o  A.dgematrix A.dsymatrix y.dcovector  answer.dcovector solution.dcovector *~
+    cd $pwd
+done

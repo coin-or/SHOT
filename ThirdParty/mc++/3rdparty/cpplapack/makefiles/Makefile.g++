@@ -1,0 +1,73 @@
+###############################################################################
+##                               Makefile.g++                                ##
+###############################################################################
+
+#######################################
+############### common ################
+#######################################
+
+CXX = g++
+
+######## FLAGS ########
+FLAGS += -O2 -funroll-loops #### -O3 is dangerous
+FLAGS += -ffast-math -fno-math-errno #-mfpmath=sse
+FLAGS += -fprefetch-loop-arrays -fstrength-reduce -malign-double
+#FLAGS += -std=c++0x # -std=c++98
+FLAGS += -msse4.2 #-march=corei7
+#FLAGS += -msse4.1 #-march=core2
+####FLAGS += -fforce-addr -falign-functions=4 -ftree-vectorize -ftree-vectorizer-verbose=5 -funsafe-loop-optimizations -Wunsafe-loop-optimizations
+#FLAGS += -fopenmp
+
+######## LFLAGS ########
+LFLAGS = $(FLAGS)
+#LFLAGS += -static
+
+######## CFLAGS ########
+CFLAGS = $(FLAGS)
+CFLAGS += -Wall -Wno-unknown-pragmas -Wextra -Wshadow -ftree-vectorizer-verbose=0
+##CFLAGS += --param large-function-growth=99999 --param max-inline-insns-single=99999 --param inline-unit-growth=99999 -Winline
+####CFLAGS += -fimplement-inlines -finline-limit=0 --param large-function-growth=0 --param max-inline-insns-single=0 --param inline-unit-growth=0
+
+######## others ########
+INCLUDE_DIRS = -I./  -I$(HOME)/local/cpplapack/include
+LIB_DIRS = 
+#LIBS = /usr/lib/sse2/liblapack.a /usr/lib/sse2/libblas.a -lm -lgfortran
+LIBS = -llapack -lblas -lgfortran -lm
+#LIBS = -llapack $(HOME)/local/ATLAS/libatlas.a -lgfortran -lm
+LIBS += -lboost_filesystem
+MACROS = 
+
+#######################################
+############ release mode #############
+#######################################
+ifdef RELEASE
+CFLAGS += -fomit-frame-pointer
+LFLAGS += -fomit-frame-pointer
+endif
+
+#######################################
+############ profile mode #############
+#######################################
+ifdef PROFILE
+CFLAGS += -pg #-g
+LFLAGS += -pg #-g
+endif
+
+#######################################
+############## debug mode #############
+#######################################
+ifdef DEBUG
+FLAGS = -g -O0
+CFLAGS = $(FLAGS) -Wall -Wno-unknown-pragmas -Wextra -Wshadow -fstack-protector-all -fbounds-check -ftrapv -ftrapping-math #-mfp-trap-mode=sui #-ffpe-trap=invalid,zero,overflow,underflow
+LFLAGS = $(FLAGS)
+MACROS += -DDEBUG
+MACROS += -DCPPL_DEBUG
+endif
+
+#######################################
+############ verbose mode #############
+#######################################
+ifdef VERBOSE
+MACROS += -DVERBOSE
+MACROS += -DCPPL_VERBOSE
+endif

@@ -548,3 +548,4 @@ std::string UtilityFunctions::getFileAsString(std::string fileName)
 
     throw(errno);
 };
+

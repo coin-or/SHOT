@@ -1,4 +1,3 @@
-
 /**
    The Supporting Hyperplane Optimization Toolkit (SHOT).
 
@@ -10,10 +9,9 @@
 */
 
 #pragma once
-#include "ModelStructs.h"
+#include "ModelShared.h"
 
 #include <math.h> /* pow */
-
 #include <vector>
 #include <string>
 #include <memory>
@@ -33,82 +31,27 @@ class LinearTerm
     LinearTerm(){};
     LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
 
-    double calculate(const VectorDouble &point)
-    {
-        double value = coefficient * variable->calculate(point);
-        return value;
-    }
+    double calculate(const VectorDouble &point);
+    Interval calculate(const IntervalVector &intervalVector);
 
-    void takeOwnership(OptimizationProblemPtr owner)
-    {
-        ownerProblem = owner;
-    }
+    void takeOwnership(OptimizationProblemPtr owner);
 };
-
-typedef std::shared_ptr<LinearTerm> LinearTermPtr;
-
-std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
-{
-    if (term->coefficient != 1.0)
-    {
-        stream << term->coefficient << '*';
-    }
-
-    stream << term->variable->name;
-    return stream;
-}
 
 class LinearTerms
 {
   public:
     std::vector<LinearTermPtr> terms;
 
-    void add(LinearTermPtr term)
-    {
-        terms.push_back(term);
-    }
+    void add(LinearTermPtr term);
 
-    double calculate(const VectorDouble &point)
-    {
-        double value = 0.0;
-        for (auto T : terms)
-        {
-            value += T->calculate(point);
-        }
+    double calculate(const VectorDouble &point);
+    Interval calculate(const IntervalVector &intervalVector);
 
-        return value;
-    }
-
-    void takeOwnership(OptimizationProblemPtr owner)
-    {
-        for (auto T : terms)
-        {
-            T->takeOwnership(owner);
-        }
-    }
+    void takeOwnership(OptimizationProblemPtr owner);
 };
 
-std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
-{
-    if (linTerms.terms.size() == 0)
-        return stream;
-
-    if (linTerms.terms.at(0)->coefficient > 0)
-    {
-        stream << " +" << linTerms.terms.at(0);
-    }
-    else
-    {
-        stream << ' ' << linTerms.terms.at(0);
-    }
-
-    for (int i = 1; i < linTerms.terms.size(); i++)
-    {
-        stream << " +" << linTerms.terms.at(i);
-    }
-
-    return stream;
-}
+std::ostream &operator<<(std::ostream &stream, LinearTermPtr term);
+std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms);
 
 class QuadraticTerm
 {
@@ -121,33 +64,11 @@ class QuadraticTerm
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};
 
-    double calculate(const VectorDouble &point)
-    {
-        double value = coefficient * firstVariable->calculate(point) * secondVariable->calculate(point);
-        return value;
-    };
+    double calculate(const VectorDouble &point);
 
-    void takeOwnership(OptimizationProblemPtr owner)
-    {
-        ownerProblem = owner;
-    }
-};
+    Interval calculate(const IntervalVector &intervalVector);
 
-typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
-
-std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term)
-{
-    if (term->coefficient != 1.0)
-    {
-        stream << term->coefficient << '*';
-    }
-
-    if (term->firstVariable == term->secondVariable)
-        stream << term->firstVariable->name << "^2";
-    else
-        stream << term->firstVariable->name << '*' << term->secondVariable->name;
-
-    return stream;
+    void takeOwnership(OptimizationProblemPtr owner);
 };
 
 class QuadraticTerms
@@ -155,52 +76,16 @@ class QuadraticTerms
   public:
     std::vector<QuadraticTermPtr> terms;
 
-    void add(QuadraticTermPtr term)
-    {
-        terms.push_back(term);
-    };
+    void add(QuadraticTermPtr term);
 
-    double calculate(const VectorDouble &point)
-    {
-        double value = 0.0;
-        for (auto T : terms)
-        {
-            value += T->calculate(point);
-        }
+    double calculate(const VectorDouble &point);
+    Interval calculate(const IntervalVector &intervalVector);
 
-        return value;
-    };
-
-    void takeOwnership(OptimizationProblemPtr owner)
-    {
-        for (auto T : terms)
-        {
-            T->takeOwnership(owner);
-        }
-    }
+    void takeOwnership(OptimizationProblemPtr owner);
 };
 
-std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
-{
-    if (quadTerms.terms.size() == 0)
-        return stream;
-
-    if (quadTerms.terms.at(0)->coefficient > 0)
-    {
-        stream << " +" << quadTerms.terms.at(0);
-    }
-    else
-    {
-        stream << ' ' << quadTerms.terms.at(0);
-    }
-
-    for (int i = 1; i < quadTerms.terms.size(); i++)
-    {
-        stream << " +" << quadTerms.terms.at(i);
-    }
-
-    return stream;
-};
+std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term);
+std::ostream &operator<<(std::ostream &stream, QuadraticTerms linTerms);
 
 /*
 class SignomialElement

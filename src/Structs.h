@@ -61,7 +61,7 @@ struct SolutionPoint
     int iterFound;
     PairIndexValue maxDeviation;
     bool isRelaxedPoint = false;
-}; // namespace structSolutionPoint
+};
 
 struct InteriorPoint
 {

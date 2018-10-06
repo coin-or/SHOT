@@ -8,13 +8,12 @@
    Please see the README and LICENSE files for more information.
 */
 #include <iostream>
+#include "Model/ModelShared.h"
 #include "Model/Terms.h"
 #include "Model/Constraints.h"
 #include "Model/NonlinearExpressions.h"
 #include "Model/ObjectiveFunction.h"
 #include "Model/OptimizationProblem.h"
-
-using namespace SHOT;
 
 bool ModelTestVariables();
 bool ModelTestTerms();
@@ -76,10 +75,10 @@ bool ModelTestVariables()
     bool passed = true;
 
     std::cout << "Creating variable:\n";
-    VariablePtr var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
+    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
     std::cout << "Variable " << var_x << " created.\n";
 
-    VectorDouble point;
+    SHOT::VectorDouble point;
     point.push_back(2.0);
 
     double value = var_x->calculate(point);
@@ -97,14 +96,14 @@ bool ModelTestTerms()
 {
     bool passed = true;
 
-    VariablePtr var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
-    VariablePtr var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
+    SHOT::VariablePtr var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::VariablePtr var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
 
-    VectorDouble point;
+    SHOT::VectorDouble point;
     point.push_back(3.0);
 
     std::cout << "Creating linear term: \n";
-    LinearTermPtr linearTerm = std::make_shared<LinearTerm>(-1, var_x);
+    SHOT::LinearTermPtr linearTerm = std::make_shared<SHOT::LinearTerm>(-1, var_x);
     std::cout << "Linear term created: " << linearTerm << "\n";
 
     double value = linearTerm->calculate(point);
@@ -116,10 +115,10 @@ bool ModelTestTerms()
         passed = false;
 
     std::cout << "Creating quadratic term: \n";
-    QuadraticTermPtr quadraticTerm1 = std::make_shared<QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
     std::cout << "Quadratic term created: " << quadraticTerm1 << "\n";
 
-    VectorDouble point2;
+    SHOT::VectorDouble point2;
     point2.push_back(2.0);
     point2.push_back(3.0);
 
@@ -132,7 +131,7 @@ bool ModelTestTerms()
         passed = false;
 
     std::cout << "Creating quadratic term: \n";
-    QuadraticTermPtr quadraticTerm2 = std::make_shared<QuadraticTerm>(1, var_x, var_x);
+    SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_x);
     std::cout << "Quadratic term created: " << quadraticTerm2 << "\n";
 
     value = quadraticTerm2->calculate(point2);
@@ -150,18 +149,18 @@ bool ModelTestNonlinearExpressions()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
-    ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
-    ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
-    VectorDouble point;
+    SHOT::VectorDouble point;
     point.push_back(2.0);
     point.push_back(3.0);
 
     std::cout << "Creating negate expression\n";
-    NonlinearExpressionPtr exprNegate = std::make_shared<ExpressionNegate>(expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprNegate = std::make_shared<SHOT::ExpressionNegate>(expressionVariable_x);
     std::cout << "Negate expression " << exprNegate << " created\n";
 
     auto value = exprNegate->calculate(point);
@@ -176,7 +175,7 @@ bool ModelTestNonlinearExpressions()
     std::cout
         << "Creating plus expression\n";
 
-    NonlinearExpressionPtr exprPlus = std::make_shared<ExpressionPlus>(expressionVariable_x, expressionVariable_y);
+    SHOT::NonlinearExpressionPtr exprPlus = std::make_shared<SHOT::ExpressionPlus>(expressionVariable_x, expressionVariable_y);
     std::cout << "Plus expression " << exprPlus << " created\n";
 
     value = exprPlus->calculate(point);
@@ -189,7 +188,7 @@ bool ModelTestNonlinearExpressions()
         passed = false;
 
     std::cout << "Creating power expression\n";
-    NonlinearExpressionPtr exprPower = std::make_shared<ExpressionPower>(exprPlus, exprNegate);
+    SHOT::NonlinearExpressionPtr exprPower = std::make_shared<SHOT::ExpressionPower>(exprPlus, exprNegate);
     std::cout << "Power expression " << exprPower << " created \n";
 
     value = exprPower->calculate(point);
@@ -208,50 +207,50 @@ bool ModelTestObjective()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
-    ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
-    ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
-    LinearTermPtr linearTerm1 = std::make_shared<LinearTerm>(-1, var_x);
-    LinearTermPtr linearTerm2 = std::make_shared<LinearTerm>(1.2, var_y);
-    LinearTerms linearTerms;
+    SHOT::LinearTermPtr linearTerm1 = std::make_shared<SHOT::LinearTerm>(-1, var_x);
+    SHOT::LinearTermPtr linearTerm2 = std::make_shared<SHOT::LinearTerm>(1.2, var_y);
+    SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
     std::cout << "Linear terms " << linearTerms << " created\n";
 
     std::cout << "Creating quadratic terms\n";
-    QuadraticTermPtr quadraticTerm1 = std::make_shared<QuadraticTerm>(1, var_x, var_y);
-    QuadraticTermPtr quadraticTerm2 = std::make_shared<QuadraticTerm>(2, var_x, var_x);
-    QuadraticTerms quadraticTerms;
+    SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
     std::cout << "Quadratic terms " << quadraticTerms << " created\n";
 
     std::cout << "Creating nonlinear expression:\n";
-    NonlinearExpressions expressions;
+    SHOT::NonlinearExpressions expressions;
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_y);
-    NonlinearExpressionPtr exprTimes = std::make_shared<ExpressionTimes>(expressions);
+    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionTimes>(expressions);
     std::cout << "Nonlinear expression " << exprTimes << " created\n";
 
-    VectorDouble point;
+    SHOT::VectorDouble point;
     point.push_back(2.0);
     point.push_back(3.0);
 
     std::cout << "Creating objective function:\n";
-    NonlinearObjectiveFunctionPtr nonlinearObjective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize,
-                                                                                                    linearTerms,
-                                                                                                    quadraticTerms,
-                                                                                                    exprTimes,
-                                                                                                    10.0);
+    SHOT::NonlinearObjectiveFunctionPtr nonlinearObjective = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize,
+                                                                                                                linearTerms,
+                                                                                                                quadraticTerms,
+                                                                                                                exprTimes,
+                                                                                                                10.0);
 
     std::cout << "Objective function "
               << nonlinearObjective << " created\n";
-    double objectiveValue = nonlinearObjective->calculateNumericValue(point);
+    double objectiveValue = nonlinearObjective->calculateValue(point);
     double realValue = linearTerm1->coefficient * point.at(0) + linearTerm2->coefficient * point.at(1) + quadraticTerm1->coefficient * point.at(0) * point.at(1) +
                        +quadraticTerm2->coefficient * point.at(0) * point.at(0) + point.at(0) * point.at(0) * point.at(1);
 
@@ -268,33 +267,33 @@ bool ModelTestConstraints()
 {
     bool passed = true;
 
-    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
-    ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
-    ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
     std::cout << "Creating linear terms\n";
-    LinearTermPtr linearTerm1 = std::make_shared<LinearTerm>(-1, var_x);
-    LinearTermPtr linearTerm2 = std::make_shared<LinearTerm>(1.2, var_y);
-    LinearTerms linearTerms;
+    SHOT::LinearTermPtr linearTerm1 = std::make_shared<SHOT::LinearTerm>(-1, var_x);
+    SHOT::LinearTermPtr linearTerm2 = std::make_shared<SHOT::LinearTerm>(1.2, var_y);
+    SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
     std::cout << "Linear terms " << linearTerms << " created\n";
 
     std::cout << "Creating quadratic terms\n";
-    QuadraticTermPtr quadraticTerm1 = std::make_shared<QuadraticTerm>(1, var_x, var_y);
-    QuadraticTermPtr quadraticTerm2 = std::make_shared<QuadraticTerm>(2, var_x, var_x);
-    QuadraticTerms quadraticTerms;
+    SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
     std::cout << "Quadratic terms " << quadraticTerms << " created\n";
 
     std::cout << "Creating quadratic constraint:\n";
-    QuadraticConstraintPtr quadraticConstraint = std::make_shared<QuadraticConstraint>(0, "quadconstr", linearTerms, quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(0, "quadconstr", linearTerms, quadraticTerms, -10.0, 20.0);
     std::cout << "Quadratic constraint created\n";
 
-    VectorDouble point;
+    SHOT::VectorDouble point;
     point.push_back(2.0);
     point.push_back(3.0);
 
@@ -309,15 +308,15 @@ bool ModelTestConstraints()
         passed = false;
 
     std::cout << "Creating nonlinear expression:\n";
-    NonlinearExpressions expressions;
+    SHOT::NonlinearExpressions expressions;
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_y);
-    NonlinearExpressionPtr exprTimes = std::make_shared<ExpressionTimes>(expressions);
+    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionTimes>(expressions);
     std::cout << "Nonlinear expression " << exprTimes << " created\n";
 
     std::cout << "Creating nonlinear constraint:\n";
-    NonlinearConstraintPtr nonlinearConstraint = std::make_shared<NonlinearConstraint>(0, "nlconstr", linearTerms, quadraticTerms, exprTimes, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", linearTerms, quadraticTerms, exprTimes, -10.0, 20.0);
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
     constraintValue = nonlinearConstraint->calculateNumericValue(point);
@@ -358,28 +357,31 @@ bool ModelTestProblem()
 {
     bool passed = true;
 
-    OptimizationProblemPtr problem = std::make_shared<OptimizationProblem>();
+    SHOT::OptimizationProblemPtr problem = std::make_shared<SHOT::OptimizationProblem>();
 
     // Creating variables
 
-    auto var_x = std::make_shared<Variable>("x", 0, E_VariableType::Real, 0.0, 100.0);
-    ExpressionVariablePtr expressionVariable_x = std::make_shared<ExpressionVariable>(var_x);
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
 
-    auto var_y = std::make_shared<Variable>("y", 1, E_VariableType::Integer, 0.0, 1.0);
-    ExpressionVariablePtr expressionVariable_y = std::make_shared<ExpressionVariable>(var_y);
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
 
-    Variables variables = {var_x, var_y};
+    auto var_z = std::make_shared<SHOT::Variable>("z", 2, SHOT::E_VariableType::Integer, 0.0, 2.0);
+    SHOT::ExpressionVariablePtr expressionVariable_z = std::make_shared<SHOT::ExpressionVariable>(var_z);
+
+    SHOT::Variables variables = {var_x, var_y, var_z};
     problem->add(variables);
 
     std::cout << "Creating objective function\n";
 
-    NonlinearObjectiveFunctionPtr objectiveFunction = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    SHOT::NonlinearObjectiveFunctionPtr objectiveFunction = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
 
     //std::cout << "Creating linear terms\n";
-    LinearTermPtr objLinearTerm1 = std::make_shared<LinearTerm>(1.0, var_x);
-    LinearTermPtr objLinearTerm2 = std::make_shared<LinearTerm>(1.0, var_y);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
 
-    LinearTerms objLinearTerms;
+    SHOT::LinearTerms objLinearTerms;
     objLinearTerms.add(objLinearTerm1);
     objLinearTerms.add(objLinearTerm2);
 
@@ -387,60 +389,68 @@ bool ModelTestProblem()
     //std::cout << "Linear terms " << objLinearTerms << " created\n";
 
     //std::cout << "Creating quadratic terms\n";
-    QuadraticTermPtr objQuadraticTerm1 = std::make_shared<QuadraticTerm>(1, var_x, var_y);
-    QuadraticTermPtr objQuadraticTerm2 = std::make_shared<QuadraticTerm>(2, var_x, var_x);
-    QuadraticTerms objQuadraticTerms;
+    SHOT::QuadraticTermPtr objQuadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr objQuadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms objQuadraticTerms;
     objQuadraticTerms.add(objQuadraticTerm1);
     objQuadraticTerms.add(objQuadraticTerm2);
     objectiveFunction->add(objQuadraticTerms);
     //std::cout << "Quadratic terms " << quadraticTerms << " created\n";
 
     //std::cout << "Creating nonlinear expression:\n";
-    NonlinearExpressions objExpressions;
-    objExpressions.add(expressionVariable_x);
+    SHOT::NonlinearExpressions objExpressions;
     objExpressions.add(expressionVariable_x);
     objExpressions.add(expressionVariable_y);
-    NonlinearExpressionPtr objExprTimes = std::make_shared<ExpressionTimes>(objExpressions);
+    SHOT::NonlinearExpressionPtr objExprTimes = std::make_shared<SHOT::ExpressionSum>(objExpressions);
     objectiveFunction->add(objExprTimes);
     //std::cout << "Nonlinear expression " << exprTimes << " created\n";
     problem->add(objectiveFunction);
 
     std::cout << "Objective function " << objectiveFunction << "created\n";
 
-    VectorDouble point;
+    SHOT::VectorDouble point;
     point.push_back(2.0);
     point.push_back(3.0);
+    point.push_back(1.0);
 
     std::cout << "Creating linear constraint\n";
-    LinearTermPtr linearTerm1 = std::make_shared<LinearTerm>(-1, var_x);
-    LinearTermPtr linearTerm2 = std::make_shared<LinearTerm>(1.2, var_y);
-    LinearTerms linearTerms;
+    SHOT::LinearTermPtr linearTerm1 = std::make_shared<SHOT::LinearTerm>(-1, var_x);
+    SHOT::LinearTermPtr linearTerm2 = std::make_shared<SHOT::LinearTerm>(1.2, var_y);
+    SHOT::LinearTerms linearTerms;
     linearTerms.add(linearTerm1);
     linearTerms.add(linearTerm2);
-    LinearConstraintPtr linearConstraint = std::make_shared<LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
+    SHOT::LinearConstraintPtr linearConstraint = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
     problem->add(linearConstraint);
     std::cout << "Linear constraint " << linearConstraint << " created\n";
 
     std::cout << "Creating quadratic constraint:\n";
-    QuadraticTermPtr quadraticTerm1 = std::make_shared<QuadraticTerm>(1, var_x, var_y);
-    QuadraticTermPtr quadraticTerm2 = std::make_shared<QuadraticTerm>(2, var_x, var_x);
-    QuadraticTerms quadraticTerms;
+    SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms quadraticTerms;
     quadraticTerms.add(quadraticTerm1);
     quadraticTerms.add(quadraticTerm2);
-    QuadraticConstraintPtr quadraticConstraint = std::make_shared<QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
+    SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
     problem->add(quadraticConstraint);
     std::cout << "Quadratic constraint " << quadraticConstraint << " created\n";
 
     std::cout << "Creating nonlinear constraint:\n";
-    NonlinearExpressions expressions;
+    SHOT::NonlinearExpressions expressions;
+    expressions.add(expressionVariable_z);
     expressions.add(expressionVariable_x);
-    expressions.add(expressionVariable_x);
-    expressions.add(expressionVariable_y);
-    NonlinearExpressionPtr exprTimes = std::make_shared<ExpressionTimes>(expressions);
-    NonlinearConstraintPtr nonlinearConstraint = std::make_shared<NonlinearConstraint>(2, "nlconstr", linearTerms, exprTimes, -10.0, 20.0);
+
+    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionSum>(expressions);
+    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
+    SHOT::NonlinearExpressionPtr exprPower = std::make_shared<SHOT::ExpressionPower>(expressionVariable_z, exprConstant);
+
+    SHOT::NonlinearExpressions expressions2;
+    expressions2.add(exprPower);
+    expressions2.add(exprTimes);
+
+    SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions2);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", linearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
-
     std::cout << "Finalizing problem:\n";
     problem->finalize();
     std::cout << "Problem finalized\n";
@@ -448,12 +458,45 @@ bool ModelTestProblem()
     std::cout << "Problem created:\n";
     std::cout << problem << '\n';
 
-    std::cout << "Printing DAG:\n";
-    std::cout << problem->getFactorableFunctionDAG() << '\n';
+    std::cout << "Calculating gradient for function in linear constraint:\n";
+    auto gradientLinear = linearConstraint->calculateGradient(point);
 
-    
+    for (auto const &G : gradientLinear)
+    {
+        std::cout << G.first->name << ": " << G.second << '\n';
+    }
+
+    std::cout << "Calculating gradient for function in quadratic constraint:\n";
+    auto gradientQuadratic = quadraticConstraint->calculateGradient(point);
+
+    for (auto const &G : gradientQuadratic)
+    {
+        std::cout << G.first->name << ": " << G.second << '\n';
+    }
+
+    std::cout << "Calculating gradient for function in nonlinear constraint:\n";
+    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point);
+
+    for (auto const &G : gradientNonlinear)
+    {
+        std::cout << G.first->name << ":  " << G.second << '\n';
+    }
+
+    SHOT::Interval X(1., 2.);
+    SHOT::Interval Y(2., 3.);
+    SHOT::Interval Z(3., 4.);
+
+    SHOT::IntervalVector vector;
+    vector.push_back(X);
+    vector.push_back(Y);
+    vector.push_back(Z);
+
+    std::cout << exprTimes->calculate(vector) << '\n';
+    std::cout << nonlinearConstraint->calculateFunctionValue(vector) << '\n';
+
     point.at(0) = 20.0;
     point.at(1) = 1.0;
+    point.at(2) = 1.0;
 
     std::cout << "Testing for an invalid point for all constraints:\n";
     auto mostDevConstraint = problem->getMostDeviatingNumericConstraint(point);
@@ -476,6 +519,7 @@ bool ModelTestProblem()
 
     point.at(0) = 0.0;
     point.at(1) = 1.0;
+    point.at(2) = 2.0;
 
     std::cout << "Testing to get all deviating constraint values in a valid point (there should be none)\n";
 

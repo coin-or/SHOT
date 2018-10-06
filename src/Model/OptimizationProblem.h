@@ -9,7 +9,8 @@
 */
 
 #pragma once
-#include "ModelStructs.h"
+#include "ModelShared.h"
+#include "Variables.h"
 #include "Terms.h"
 #include "ObjectiveFunction.h"
 #include "NonlinearExpressions.h"
@@ -18,9 +19,8 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <boost/optional.hpp>
 
-#include "../../ThirdParty/mcpp/ffunc.hpp"
+#include <boost/optional.hpp>
 
 namespace SHOT
 {
@@ -50,12 +50,13 @@ struct OptimizationProblemProperties
     int numberOfBinaryVariables = 0;
     int numberOfIntegerVariables = 0; //Not including binary variables
     int numberOfSemicontinuousVariables = 0;
-    int numberOffNonlinearVariables = 0;
+    int numberOfNonlinearVariables = 0;
 
     int numberOfNumericConstraints = 0;
     int numberOfLinearConstraints = 0;
     int numberOfQuadraticConstraints = 0;
     int numberOfNonlinearConstraints = 0;
+    int numberOfNonlinearExpressions = 0; //This includes a possible nonlinear objective
 
     std::string name = "";
     std::string description = "";
@@ -64,6 +65,23 @@ struct OptimizationProblemProperties
 class OptimizationProblem : public std::enable_shared_from_this<OptimizationProblem>
 {
   private:
+    bool variablesUpdated = false;
+    bool constraintsUpdated = false;
+    bool objectiveUpdated = false;
+
+    void updateVariables();
+
+    void updateProperties();
+
+    void updateFactorableFunctions();
+
+  public:
+    OptimizationProblem();
+
+    virtual ~OptimizationProblem();
+
+    OptimizationProblemProperties properties;
+
     Variables allVariables;
     Variables realVariables;
     Variables binaryVariables;
@@ -74,10 +92,6 @@ class OptimizationProblem : public std::enable_shared_from_this<OptimizationProb
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
 
-    bool variablesUpdated = false;
-    bool constraintsUpdated = false;
-    bool objectiveUpdated = false;
-
     ObjectiveFunctionPtr objectiveFunction;
 
     NumericConstraints numericConstraints;
@@ -86,463 +100,79 @@ class OptimizationProblem : public std::enable_shared_from_this<OptimizationProb
     NonlinearConstraints nonlinearConstraints;
 
     FactorableFunctionGraphPtr factorableFunctionsDAG;
+    std::vector<FactorableFunction> factorableFunctionVariables;
+    std::vector<FactorableFunction> factorableFunctions;
 
-    void updateVariables()
-    {
-        auto numVariables = allVariables.size();
+    void finalize();
 
-        // Update bound vectors
-        if (variableLowerBounds.size() != numVariables)
-            variableLowerBounds.resize(numVariables);
+    void add(VariablePtr variable);
+    void add(Variables variables);
 
-        if (variableUpperBounds.size() != numVariables)
-            variableUpperBounds.resize(numVariables);
-
-        int numNonlinearVars = 0;
-
-        nonlinearVariables.clear();
-
-        for (int i = 0; i < numVariables; i++)
-        {
-            variableLowerBounds[i] = allVariables[i]->lowerBound;
-            variableUpperBounds[i] = allVariables[i]->upperBound;
-
-            if (allVariables[i]->isNonlinear)
-                nonlinearVariables.push_back(allVariables[i]);
-        }
-
-        variablesUpdated = true;
-    };
-
-    void updateProperties()
-    {
-        if (!variablesUpdated)
-            updateVariables();
-
-        properties.isConvex = true;
-        properties.isNonconvex = false;
-
-        properties.numberOfVariables = allVariables.size();
-        properties.numberOfRealVariables = realVariables.size();
-        properties.numberOfBinaryVariables = binaryVariables.size();
-        properties.numberOfIntegerVariables = integerVariables.size();
-        properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
-        properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
-        properties.numberOffNonlinearVariables = nonlinearVariables.size();
-
-        properties.numberOfNumericConstraints = numericConstraints.size();
-        properties.numberOfLinearConstraints = linearConstraints.size();
-        properties.numberOfQuadraticConstraints = quadraticConstraints.size();
-        properties.numberOfNonlinearConstraints = nonlinearConstraints.size();
-
-        bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic);
-        bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic);
-        bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
-        bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
-        bool areVarsDiscrete = (properties.numberOfDiscreteVariables > 0);
-
-        if (areConstrsNonlinear || isObjNonlinear)
-            properties.isNonlinear = true;
-
-        if (areVarsDiscrete)
-        {
-            properties.isDiscrete = true;
-
-            if (areConstrsNonlinear || isObjNonlinear)
-                properties.isMINLPProblem = true;
-            else if (areConstrsQuadratic)
-                properties.isMIQCQPProblem = true;
-            else if (isObjQuadratic)
-                properties.isMIQPProblem = true;
-            else
-                properties.isMILPProblem = true;
-        }
-        else
-        {
-            properties.isDiscrete = false;
-
-            if (areConstrsNonlinear || isObjNonlinear)
-                properties.isNLPProblem = true;
-            else if (areConstrsQuadratic)
-                properties.isQCQPProblem = true;
-            else if (isObjQuadratic)
-                properties.isQPProblem = true;
-            else
-                properties.isLPProblem = true;
-        }
-
-        properties.isValid = true;
-    };
-
-    void updateFactorableFunctions()
-    {
-        factorableFunctionsDAG = std::make_shared<FactorableFunctionGraph>();
-
-        for (auto V : nonlinearVariables)
-        {
-            std::cout << "making variable " << V << " nonlinear\n";
-            V->factorableFunctionVariable;
-            V->factorableFunctionVariable.set(factorableFunctionsDAG.get());
-            // = std::make_shared<FactorableFunction>(factorableFunctionsDAG.get());
-        }
-
-        for (auto C : nonlinearConstraints)
-        {
-            std::cout << "updating factorable functions in constraint\n";
-            C->updateFactorableFunction();
-        }
-    };
-
-  public:
-    OptimizationProblem(){
-
-    };
-
-    virtual ~OptimizationProblem(){};
-    /*
-    // Copy constructor
-    OptimizationProblem(const OptimizationProblem &sourceProblem)
-    {
-        //TODO
-    }*/
-
-    OptimizationProblemProperties properties;
-
-    void finalize()
-    {
-        updateVariables();
-        updateProperties();
-        updateFactorableFunctions();
-    }
-
-    FactorableFunctionGraphPtr getFactorableFunctionDAG()
-    {
-        return factorableFunctionsDAG;
-    }
-
-    ObjectiveFunctionPtr getObjectiveFunction()
-    {
-        return objectiveFunction;
-    };
-
-    Variables getAllVariables()
-    {
-        return allVariables;
-    };
-
-    Variables getRealVariables()
-    {
-        return realVariables;
-    };
-
-    Variables getBinaryVariables()
-    {
-        return binaryVariables;
-    };
-
-    Variables getIntegerVariables()
-    {
-        return integerVariables;
-    };
-
-    Variables getSemicontinuousVariables()
-    {
-        return semicontinuousVariables;
-    };
-
-    void add(VariablePtr variable)
-    {
-        allVariables.push_back(variable);
-
-        switch (variable->type)
-        {
-        case (E_VariableType::Real):
-            realVariables.push_back(variable);
-            break;
-        case (E_VariableType::Binary):
-            binaryVariables.push_back(variable);
-            break;
-        case (E_VariableType::Integer):
-            integerVariables.push_back(variable);
-            break;
-        case (E_VariableType::Semicontinuous):
-            semicontinuousVariables.push_back(variable);
-            break;
-        default:
-            break;
-        }
-
-        variable->takeOwnership(shared_from_this());
-        variablesUpdated = false;
-    };
-
-    void add(LinearConstraintPtr constraint)
-    {
-        numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
-        linearConstraints.push_back(constraint);
-
-        constraint->takeOwnership(shared_from_this());
-    };
-
-    void add(QuadraticConstraintPtr constraint)
-    {
-        numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
-        quadraticConstraints.push_back(constraint);
-
-        constraint->takeOwnership(shared_from_this());
-    };
-
-    void add(NonlinearConstraintPtr constraint)
-    {
-        numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
-        nonlinearConstraints.push_back(constraint);
-
-        constraint->takeOwnership(shared_from_this());
-    };
-
-    void add(ObjectiveFunctionPtr objective)
-    {
-        objectiveFunction = objective;
-        objectiveFunction->updateProperties();
-
-        objective->takeOwnership(shared_from_this());
-    };
+    void add(LinearConstraintPtr constraint);
+    void add(QuadraticConstraintPtr constraint);
+    void add(NonlinearConstraintPtr constraint);
+    void add(ObjectiveFunctionPtr objective);
 
     template <class T>
-    void add(std::vector<T> elements)
-    {
-        for (auto E : elements)
-        {
-            add(E);
+    void add(std::vector<T> elements);
 
-            E->takeOwnership(shared_from_this());
-        }
-    };
+    VariablePtr getVariable(int variableIndex);
 
-    VariablePtr getVariable(int variableIndex)
-    {
-        if (variableIndex > allVariables.size())
-        {
-            throw new VariableNotFoundException(" with variableIndex " + std::to_string(variableIndex));
-        }
+    double getVariableLowerBound(int variableIndex);
+    double getVariableUpperBound(int variableIndex);
 
-        return allVariables.at(variableIndex);
-    };
+    VectorDouble getVariableLowerBounds();
+    VectorDouble getVariableUpperBounds();
 
-    double getVariableLowerBound(int variableIndex)
-    {
-        return allVariables.at(variableIndex)->lowerBound;
-    };
+    void setVariableLowerBound(int variableIndex, double bound);
 
-    double getVariableUpperBound(int variableIndex)
-    {
-        return allVariables.at(variableIndex)->upperBound;
-    };
+    void setVariableUpperBound(int variableIndex, double bound);
+    void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
 
-    VectorDouble getVariableLowerBounds()
-    {
-        if (!variablesUpdated)
-        {
-            updateVariables();
-        }
+    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
 
-        return variableLowerBounds;
-    };
-
-    VectorDouble getVariableUpperBounds()
-    {
-        if (!variablesUpdated)
-        {
-            updateVariables();
-        }
-
-        return variableUpperBounds;
-    };
-
-    void setVariableLowerBound(int variableIndex, double bound)
-    {
-        allVariables.at(variableIndex)->lowerBound = bound;
-        variablesUpdated = true;
-    };
-
-    void setVariableUpperBound(int variableIndex, double bound)
-    {
-        allVariables.at(variableIndex)->upperBound = bound;
-        variablesUpdated = true;
-    };
-
-    void setVariableBounds(int variableIndex, double lowerBound, double upperBound)
-    {
-        allVariables.at(variableIndex)->lowerBound = lowerBound;
-        allVariables.at(variableIndex)->upperBound = upperBound;
-        variablesUpdated = true;
-    };
-
-    //Methods for constraints
-    NumericConstraints getAllNumericConstraints()
-    {
-        return numericConstraints;
-    };
-
-    LinearConstraints getLinearConstraints()
-    {
-        return linearConstraints;
-    };
-
-    QuadraticConstraints getQuadraticConstraints()
-    {
-        return quadraticConstraints;
-    };
-
-    NonlinearConstraints getNonlinearConstraints()
-    {
-        return nonlinearConstraints;
-    };
-
-    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point)
-    {
-        return (this->getMostDeviatingNumericConstraint(point, numericConstraints));
-    };
-
-    virtual boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, NumericConstraints constraintSelection)
-    {
-        boost::optional<NumericConstraintValue> optional;
-        double error = -1;
-
-        for (auto C : constraintSelection)
-        {
-            auto constraintValue = C->calculateNumericValue(point);
-
-            if (constraintValue.isFulfilled)
-                continue;
-
-            if (!optional) // No constraint with error found yet
-            {
-                optional = constraintValue;
-                error = constraintValue.error;
-            }
-            else if (constraintValue.error > error)
-            {
-                optional = constraintValue;
-                error = constraintValue.error;
-            }
-        }
-
-        return optional;
-    };
+    virtual boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, NumericConstraints constraintSelection);
 
     template <class T>
-    NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection)
-    {
-        NumericConstraintValues constraintValues;
-        for (auto C : constraintSelection)
-        {
-            NumericConstraintValue constraintValue = C->calculateNumericValue(point);
-            if (constraintValue.error > tolerance)
-                constraintValues.push_back(constraintValue);
-        }
+    NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection);
 
-        return constraintValues;
-    };
+    virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance);
 
-    virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance)
-    {
-        return getAllDeviatingConstraints(point, tolerance, numericConstraints);
-    };
+    virtual NumericConstraintValues getAllDeviatingLinearConstraints(const VectorDouble &point, double tolerance);
+    virtual NumericConstraintValues getAllDeviatingQuadraticConstraints(const VectorDouble &point, double tolerance);
 
-    virtual NumericConstraintValues getAllDeviatingLinearConstraints(const VectorDouble &point, double tolerance)
-    {
-        return getAllDeviatingConstraints(point, tolerance, linearConstraints);
-    };
+    virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance);
 
-    virtual NumericConstraintValues getAllDeviatingQuadraticConstraints(const VectorDouble &point, double tolerance)
-    {
-        return getAllDeviatingConstraints(point, tolerance, quadraticConstraints);
-    };
+    virtual bool areLinearConstraintsFulfilled(VectorDouble point, double tolerance);
 
-    virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance)
-    {
-        return getAllDeviatingConstraints(point, tolerance, nonlinearConstraints);
-    };
+    virtual bool areQuadraticConstraintsFulfilled(VectorDouble point, double tolerance);
 
-    virtual bool areLinearConstraintsFulfilled(VectorDouble point, double tolerance)
-    {
-        auto deviatingConstraints = getAllDeviatingLinearConstraints(point, tolerance);
-        return (deviatingConstraints.size() == 0);
-    };
+    virtual bool areNonlinearConstraintsFulfilled(VectorDouble point, double tolerance);
 
-    virtual bool areQuadraticConstraintsFulfilled(VectorDouble point, double tolerance)
-    {
-        auto deviatingConstraints = getAllDeviatingQuadraticConstraints(point, tolerance);
-        return (deviatingConstraints.size() == 0);
-    };
+    virtual bool areNumericConstraintsFulfilled(VectorDouble point, double tolerance);
 
-    virtual bool areNonlinearConstraintsFulfilled(VectorDouble point, double tolerance)
-    {
-        auto deviatingConstraints = getAllDeviatingNonlinearConstraints(point, tolerance);
-        return (deviatingConstraints.size() == 0);
-    };
+    virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance);
 
-    virtual bool areNumericConstraintsFulfilled(VectorDouble point, double tolerance)
-    {
-        auto deviatingConstraints = getAllDeviatingNumericConstraints(point, tolerance);
-        return (deviatingConstraints.size() == 0);
-    };
+    bool areVariableBoundsFulfilled(VectorDouble point, double tolerance);
 
-    virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance)
-    {
-        for (auto V : integerVariables)
-        {
-            if (abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
-                return false;
-        }
-
-        return true;
-    };
-
-    bool areVariableBoundsFulfilled(VectorDouble point, double tolerance)
-    {
-        for (int i = 0; i < properties.numberOfVariables; ++i)
-        {
-            if (point.at(i) - tolerance > allVariables.at(i)->upperBound)
-            {
-                return false;
-            }
-            if (point.at(i) + tolerance < allVariables.at(i)->lowerBound)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    };
-
-    friend std::ostream &operator<<(std::ostream &stream, const OptimizationProblem &problem)
-    {
-        stream << problem.objectiveFunction << '\n';
-
-        if (problem.numericConstraints.size() > 0)
-            stream << "subject to:\n";
-
-        for (auto C : problem.numericConstraints)
-        {
-            stream << C << '\n';
-        }
-
-        stream << "variables:\n";
-
-        for (auto V : problem.allVariables)
-        {
-            stream << V << '\n';
-        }
-
-        return stream;
-    };
+    friend std::ostream &operator<<(std::ostream &stream, const OptimizationProblem &problem);
 };
 
-std::ostream &operator<<(std::ostream &stream, OptimizationProblemPtr problem)
+inline std::ostream &operator<<(std::ostream &stream, OptimizationProblemPtr problem)
 {
     stream << *problem;
+    return stream;
+};
+
+inline std::ostream &operator<<(std::ostream &stream, FactorableFunctionGraphPtr graph)
+{
+    stream << *graph;
+    return stream;
+};
+
+inline std::ostream &operator<<(std::ostream &stream, FactorableFunctionPtr function)
+{
+    stream << *function;
     return stream;
 };
 

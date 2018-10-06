@@ -1,0 +1,88 @@
+<p>
+Let A, B, C, and X be the dgematrix objects, 
+and A, B, and C be the same size and initialized properly. 
+</p>
+
+<!---------------------------------------------------------------------------->
+<center><table border="3">
+<caption align="top">
+Calculation Procedures to Process "X=A*B+C;"</caption>
+<tr>
+  <td></td>
+  <td>CPPLapack</td>
+  <td>ordinary matrix libraries</td>
+</tr>
+
+<tr>
+  <td>operator*</td>
+  <td>calculate A*B, and put it to a local _dgematrix object P to return</td>
+  <td>calculate A*B, and put it to a local  dgematrix object P to return</td>
+</tr>
+
+<tr>
+  <td>passing of returned object</td>
+  <td>make a temporary _dgematrix object Q as the shallow copy of P</td>
+  <td>make a temporary  dgematrix object Q as the    deep copy of P</td>
+</tr>
+
+<tr>
+  <td>destructor for local object</td>
+  <td>destruct local object P without deleting the array data</td>
+  <td>destruct local object P    with deleting the array data</td>
+</tr>
+
+<tr>
+  <td>operator+</td>
+  <td>add C into Q, and return Q.</td>
+  <td>calculate C+Q and, put it to a local dgematrix object R to return.</td>
+</tr>
+
+<tr>
+  <td>passing of returned object</td>
+  <td>make a temporary _dgematrix object R as the shallow copy of Q</td>
+  <td>make a temporary  dgematrix object S as the    deep copy of R</td>
+</tr>
+
+<tr>
+  <td>destructor for local object</td>
+  <td>destruct local object Q without deleting the array data</td>
+  <td>destruct local object R    with deleting the array data</td>
+</tr>
+
+<tr>
+  <td>operator=</td>
+  <td>set the array address of X to that of R</td>
+  <td>copy whole the data of S to X</td>
+</tr>
+
+<tr>
+  <td>implicit destructer (;)</td>
+  <td>destruct the temporary object R without deleting the array data</td>
+  <td>destruct the temporary objects Q and S with deleting the array data</td>
+</tr>
+
+</table></center>
+<!---------------------------------------------------------------------------->
+
+<p>
+CPPLapack does not consume any extra memory space 
+using its original "Smart-Temporary" system.
+On the other hand, ordinary matrix libraries always generate useless 
+temporary objects implicitly and consume a lot of extra memory space.
+CPPLapack is efficient not only in computing speed 
+but also in saving memory space.
+</p>
+
+
+<p>
+[NOTE]
+Recent advanced compilers automatically optimize 
+the way of passing returned objects. 
+The steps shown above is the case of the most primitive compiler. 
+The performance of ordinary matrix libraries using advanced compilers
+becomes close to the performance of CPPLapack.
+However, CPPLapack still has some advantages in terms of 
+the stepwise elimination, minimization of the number of temporary objects,
+and so on.
+</p>
+

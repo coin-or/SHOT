@@ -1,0 +1,11 @@
+Package: cpplapack
+Version: 2010.03.27
+Section: devel
+Priority: optional
+Architecture: all
+Essential: no
+Homepage: http://cpplapack.sourceforge.net/
+Maintainer: Yuki ONISHI <yuki.onishi@nifty.com>
+Description: CPPLapack library header files
+ CPPLapack is a C++ matrix library designed as a class wrapper for BLAS and LAPACK.
+ Visit http://cpplapack.sourceforge.net/ to obtain the documentation, update information, and the latest version in the subversion (svn) repository.

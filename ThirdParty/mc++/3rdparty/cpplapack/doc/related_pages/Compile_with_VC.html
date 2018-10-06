@@ -1,0 +1,29 @@
+<p>
+VC++.NET2002 or later is necessary. CPPLapack doesn't work with VC++6.
+</p>
+
+[Install CLAPACK]
+<ul>
+<li>download "CLAPACK3-Windows.zip" from <a href="http://www.netlib.org/clapack/">CLAPACK home page</a></li>
+<li>expand "CLAPACK3-Windows.zip" at anywhere you like</li>
+</ul>
+
+[Install CPPLapack]
+<ul>
+<li>download latest "cpplapack-XXXX_XX_XX.tar.gz" from <a href="http://sourceforge.net/project/showfiles.php?group_id=78519&package_id=87720">CPPLapack web page</a></li>
+<li>expand "cpplapack-XXXX_XX_XX.tar.gz" at anywhere you like</li>
+<li>rename the directory from "cpplapack-XXXX_XX_XX" to "cpplapack"</li>
+<li>edit CPPLAPACK_INCLUDE_DIR and LIBS in "cpplapack\makefiles\Makefile.cl" properly</li>
+</ul>
+
+<p>
+*NOTE* "/MD" or "/MDd" is essential to the compiler option for runtime library.
+</p>
+
+[Verification of CPPLapack]
+<ul>
+<li>open a command prompt</li>
+<li>change the current directory to one of the test program directory (ex. "cpplapack\test\dgematrix\dgematrix_io")</li>
+<li>exec "nmake -f ..\..\..\makefile\Makefile.cl"</li>
+<li>exec "A.EXE"</li>
+</ul>

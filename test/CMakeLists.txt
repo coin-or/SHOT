@@ -1,5 +1,8 @@
-# The name of the test executable file
+  # The name of the test executable file
 set(TEST_EXE_NAME test_runner)
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_STANDARD 11)
+
 
 # The main groups of tests, there should be a file matching the name +"test".cpp in the test directory
 set (cpptests Model SHOTSolver ${cplex_tests} ${gurobi_tests} ${gams_tests})
@@ -32,7 +35,6 @@ foreach(cpptest ${cpptests})
   set(cpptestsrc ${cpptestsrc} ${cpptest}Test.cpp)
 endforeach()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
 
@@ -74,7 +76,7 @@ endif (HAS_GAMS)
 
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinasl.so )
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinmumps.so )
-target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinmetis.so )
+#target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinmetis.so )
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libipopt.so)
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libipoptamplinterface.so)
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libCoinUtils.so )
