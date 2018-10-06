@@ -1,0 +1,179 @@
+/**
+   The Supporting Hyperplane Optimization Toolkit (SHOT).
+
+   @author Andreas Lundell, Åbo Akademi University
+
+   @section LICENSE 
+   This software is licensed under the Eclipse Public License 2.0. 
+   Please see the README and LICENSE files for more information.
+*/
+
+#pragma once
+#include "ModelShared.h"
+#include "Variables.h"
+#include "Terms.h"
+#include "ObjectiveFunction.h"
+#include "NonlinearExpressions.h"
+#include "Constraints.h"
+
+#include <vector>
+#include <string>
+#include <memory>
+
+#include <boost/optional.hpp>
+
+namespace SHOT
+{
+
+struct ProblemProperties
+{
+    bool isValid = false; // Whether the values here are valid anymore
+
+    bool isConvex = false;
+    bool isNonconvex = false;
+
+    bool isNonlinear = false;
+    bool isDiscrete = false;
+
+    bool isMINLPProblem = false;
+    bool isNLPProblem = false;
+    bool isMIQPProblem = false;
+    bool isQPProblem = false;
+    bool isMIQCQPProblem = false;
+    bool isQCQPProblem = false;
+    bool isMILPProblem = false;
+    bool isLPProblem = false;
+
+    int numberOfVariables = 0;
+    int numberOfRealVariables = 0;
+    int numberOfDiscreteVariables = 0; //Binary and integer variables
+    int numberOfBinaryVariables = 0;
+    int numberOfIntegerVariables = 0; //Not including binary variables
+    int numberOfSemicontinuousVariables = 0;
+    int numberOfNonlinearVariables = 0;
+
+    int numberOfNumericConstraints = 0;
+    int numberOfLinearConstraints = 0;
+    int numberOfQuadraticConstraints = 0;
+    int numberOfNonlinearConstraints = 0;
+    int numberOfNonlinearExpressions = 0; //This includes a possible nonlinear objective
+
+    std::string name = "";
+    std::string description = "";
+};
+
+class Problem : public std::enable_shared_from_this<Problem>
+{
+  private:
+    bool variablesUpdated = false;
+    bool constraintsUpdated = false;
+    bool objectiveUpdated = false;
+
+    void updateVariables();
+
+    void updateProperties();
+
+    void updateFactorableFunctions();
+
+  public:
+    Problem();
+
+    virtual ~Problem();
+
+    ProblemProperties properties;
+
+    Variables allVariables;
+    Variables realVariables;
+    Variables binaryVariables;
+    Variables integerVariables;
+    Variables semicontinuousVariables;
+    Variables nonlinearVariables;
+
+    VectorDouble variableLowerBounds;
+    VectorDouble variableUpperBounds;
+
+    ObjectiveFunctionPtr objectiveFunction;
+
+    NumericConstraints numericConstraints;
+    LinearConstraints linearConstraints;
+    QuadraticConstraints quadraticConstraints;
+    NonlinearConstraints nonlinearConstraints;
+
+    FactorableFunctionGraphPtr factorableFunctionsDAG;
+    std::vector<FactorableFunction> factorableFunctionVariables;
+    std::vector<FactorableFunction> factorableFunctions;
+
+    void finalize();
+
+    void add(VariablePtr variable);
+    void add(Variables variables);
+
+    void add(LinearConstraintPtr constraint);
+    void add(QuadraticConstraintPtr constraint);
+    void add(NonlinearConstraintPtr constraint);
+    void add(ObjectiveFunctionPtr objective);
+
+    template <class T>
+    void add(std::vector<T> elements);
+
+    VariablePtr getVariable(int variableIndex);
+
+    double getVariableLowerBound(int variableIndex);
+    double getVariableUpperBound(int variableIndex);
+
+    VectorDouble getVariableLowerBounds();
+    VectorDouble getVariableUpperBounds();
+
+    void setVariableLowerBound(int variableIndex, double bound);
+
+    void setVariableUpperBound(int variableIndex, double bound);
+    void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
+
+    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
+
+    virtual boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, NumericConstraints constraintSelection);
+
+    template <class T>
+    NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection);
+
+    virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance);
+
+    virtual NumericConstraintValues getAllDeviatingLinearConstraints(const VectorDouble &point, double tolerance);
+    virtual NumericConstraintValues getAllDeviatingQuadraticConstraints(const VectorDouble &point, double tolerance);
+
+    virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance);
+
+    virtual bool areLinearConstraintsFulfilled(VectorDouble point, double tolerance);
+
+    virtual bool areQuadraticConstraintsFulfilled(VectorDouble point, double tolerance);
+
+    virtual bool areNonlinearConstraintsFulfilled(VectorDouble point, double tolerance);
+
+    virtual bool areNumericConstraintsFulfilled(VectorDouble point, double tolerance);
+
+    virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance);
+
+    bool areVariableBoundsFulfilled(VectorDouble point, double tolerance);
+
+    friend std::ostream &operator<<(std::ostream &stream, const Problem &problem);
+};
+
+inline std::ostream &operator<<(std::ostream &stream, ProblemPtr problem)
+{
+    stream << *problem;
+    return stream;
+};
+
+inline std::ostream &operator<<(std::ostream &stream, FactorableFunctionGraphPtr graph)
+{
+    stream << *graph;
+    return stream;
+};
+
+inline std::ostream &operator<<(std::ostream &stream, FactorableFunctionPtr function)
+{
+    stream << *function;
+    return stream;
+};
+
+} // namespace SHOT
