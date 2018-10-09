@@ -18,6 +18,7 @@
 #include "OSOutput.h"
 
 #include <boost/format.hpp>
+#include <memory>
 
 namespace SHOT
 {
@@ -40,6 +41,6 @@ class Output
     void setLogLevels(int consoleLogLevel, int fileLogLevel);
 
   private:
-    OSOutput *osOutput;
+    std::unique_ptr<OSOutput> osOutput;
 };
 }

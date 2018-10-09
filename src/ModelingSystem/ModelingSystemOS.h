@@ -13,9 +13,8 @@
 #include "../Structs.h"
 #include "../Environment.h"
 #include "../Output.h"
-#include "../SHOTSettings.h"
+#include "../SHOTSettings/SHOTSettings.h"
 
-#include "../Model/ModelShared.h"
 #include "../Model/Problem.h"
 
 #include "OSInstance.h"
@@ -28,12 +27,13 @@
 
 #include "IModelingSystem.h"
 
-#include "vector"
+#include <vector>
+#include <memory>
 
 namespace SHOT
 {
 
-typedef std::shared<OSInstance> OSInstancePtr;
+//typedef std::shared_ptr<OSInstance> OSInstance *;
 
 enum class E_OSInputFileFormat
 {
@@ -57,25 +57,39 @@ class ModelingSystemOS : public IModelingSystem
     E_ProblemCreationStatus createProblem(ProblemPtr &problem, const std::string &filename, E_OSInputFileFormat fileformat);
 
     // Create the optimization problem from an OSInstance
-    E_ProblemCreationStatus createProblem(ProblemPtr &problem, const OSInstancePtr &instance);
+    E_ProblemCreationStatus createProblem(ProblemPtr &problem, OSInstance *instance);
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution();
 
-  protected:
-    virtual OSInstancePtr readInstanceFromOSiL(const std::string &text);
-    virtual OSInstancePtr readInstanceFromOSiLFile(const std::string &filename);
-    virtual OSInstancePtr readInstanceFromAmplFile(const std::string &filename);
-
-    virtual bool copyVariables(OSInstancePtr source, ProblemPtr destination);
-
-    virtual bool copyObjectiveFunction(OSInstancePtr source, ProblemPtr destination);
-
-    virtual bool copyConstraints(OSInstancePtr source, ProblemPtr destination);
-
   private:
-    std::vector<std::unique_ptr<OSiLReader>> osilReaders;
-    std::unique_ptr<OSiLWriter> osilWriter;
-    std::unique_ptr<OSnl2OS> nl2os;
+    OSInstance *readInstanceFromOSiL(const std::string &text);
+    OSInstance *readInstanceFromOSiLFile(const std::string &filename);
+    OSInstance *readInstanceFromAmplFile(const std::string &filename);
+
+    bool copyVariables(OSInstance *source, ProblemPtr destination);
+    bool copyObjectiveFunction(OSInstance *source, ProblemPtr destination);
+    bool copyConstraints(OSInstance *source, ProblemPtr destination);
+    bool copyLinearTerms(OSInstance *source, ProblemPtr destination);
+    bool copyQuadraticTerms(OSInstance *source, ProblemPtr destination);
+    bool copyNonlinearExpressions(OSInstance *source, ProblemPtr destination);
+    NonlinearExpressionPtr convertOSNonlinearNode(OSnLNode *node, const ProblemPtr &destination);
+
+    bool isObjectiveGenerallyNonlinear(OSInstance *instance);
+    bool isObjectiveQuadratic(OSInstance *instance);
+
+    std::vector<std::shared_ptr<OSiLReader>> osilReaders;
+    std::shared_ptr<OSiLWriter> osilWriter;
+    std::shared_ptr<OSnl2OS> nl2os;
+
+    //bool areAllConstraintsLinear(OSInstance* instance);
+    //bool areAllConstraintsQuadratic(OSInstance* instance);
+    //bool areAllVariablesReal(OSInstance* instance);
+
+    //bool isConstraintNonlinear(OSInstance* instance);
+    //bool isConstraintQuadratic(OSInstance* instance);
+
+    // Determines whether all individual constraints are linear, quadratic or nonlinear
+    std::vector<E_ConstraintClassification> getConstraintClassifications(OSInstance *instance);
 };
 } // namespace SHOT

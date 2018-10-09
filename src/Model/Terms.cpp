@@ -34,7 +34,19 @@ void LinearTerm::takeOwnership(ProblemPtr owner)
 
 std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
 {
-    if (term->coefficient != 1.0)
+    if (term->coefficient == 1.0)
+    {
+        stream << '+';
+    }
+    else if (term->coefficient == -1.0)
+    {
+        stream << '-';
+    }
+    else if (term->coefficient > 0)
+    {
+        stream << '+' << term->coefficient << '*';
+    }
+    else
     {
         stream << term->coefficient << '*';
     }
@@ -83,18 +95,11 @@ std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
     if (linTerms.terms.size() == 0)
         return stream;
 
-    if (linTerms.terms.at(0)->coefficient > 0)
-    {
-        stream << " +" << linTerms.terms.at(0);
-    }
-    else
-    {
-        stream << ' ' << linTerms.terms.at(0);
-    }
+    stream << ' ' << linTerms.terms.at(0);
 
     for (int i = 1; i < linTerms.terms.size(); i++)
     {
-        stream << " +" << linTerms.terms.at(i);
+        stream << linTerms.terms.at(i);
     }
 
     return stream;

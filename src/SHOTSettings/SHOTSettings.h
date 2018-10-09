@@ -28,11 +28,13 @@ class Settings
 {
   private:
     void updateSettingBase(std::pair<std::string, std::string> key, std::string value);
-    OutputPtr output;
+
+    Output *output;
 
   public:
-    Settings(OutputPtr outputPtr) : output(outputPtr)
+    Settings(OutputPtr outputPtr)
     {
+        output = outputPtr.get();
         settingsInitialized = false;
     }
 
@@ -135,4 +137,4 @@ class SettingOutsideBoundsException : public std::runtime_error
     {
     }
 };
-};
+}; // namespace SHOT

@@ -14,7 +14,7 @@ using namespace SHOT;
 
 Output::Output()
 {
-    osOutput = new OSOutput();
+    osOutput = std::unique_ptr<OSOutput>(new OSOutput());
 
     // Adds a file output
     osOutput->AddChannel("shotlogfile");
@@ -23,8 +23,7 @@ Output::Output()
 
 Output::~Output()
 {
-    delete osOutput;
-    osOutput = NULL;
+    outputAlways("output deleted");
 }
 
 void Output::outputAlways(std::string message)

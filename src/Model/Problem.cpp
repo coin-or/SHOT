@@ -42,6 +42,8 @@ void Problem::updateVariables()
 
 void Problem::updateProperties()
 {
+    objectiveFunction->updateProperties();
+
     if (!variablesUpdated)
         updateVariables();
 
@@ -110,24 +112,22 @@ void Problem::updateFactorableFunctions()
 
     for (auto V : nonlinearVariables)
     {
-        std::cout << "making variable " << V << " nonlinear\n";
         auto factorableFunctionsVar = std::make_shared<FactorableFunction>();
         factorableFunctionsVar->set(factorableFunctionsDAG.get());
         V->factorableFunctionVariable = factorableFunctionsVar;
         factorableFunctionVariables.push_back(*factorableFunctionsVar.get());
     }
+
     for (auto C : nonlinearConstraints)
     {
-        std::cout << "updating factorable functions in constraint\n";
         C->updateFactorableFunction();
         factorableFunctions.push_back(*C->factorableFunction.get());
     }
 
-    int objectiveFactorableFunctionIndex;
+    int objectiveFactorableFunctionIndex = -1;
 
     if (objectiveFunction->properties.hasNonlinearExpression)
     {
-        std::cout << "updating facorable functions in objective\n";
         auto objective = static_cast<NonlinearObjectiveFunction *>(objectiveFunction.get());
         objective->updateFactorableFunction();
         factorableFunctions.push_back(*objective->factorableFunction.get());
@@ -135,7 +135,6 @@ void Problem::updateFactorableFunctions()
         objective->factorableFunctionIndex = factorableFunctions.size() - 1;
     }
 
-    // Gets the jacobian in sparse format; note that it will add nodes to the DAG!
     auto jacobian = factorableFunctionsDAG->SFAD(properties.numberOfNonlinearConstraints, &factorableFunctions[0], properties.numberOfNonlinearVariables, &factorableFunctionVariables[0]);
 
     for (int i = 0; i < std::get<0>(jacobian); i++)
@@ -153,11 +152,34 @@ void Problem::updateFactorableFunctions()
         auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
         nonlinearConstraint->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
     }
+
+    delete[] std::get<1>(jacobian);
+    delete[] std::get<2>(jacobian);
+    delete[] std::get<3>(jacobian);
 };
 
 Problem::Problem(EnvironmentPtr env) : env(env){};
 
-Problem::~Problem(){};
+Problem::~Problem()
+{
+    allVariables.clear();
+    realVariables.clear();
+    binaryVariables.clear();
+    integerVariables.clear();
+    semicontinuousVariables.clear();
+    nonlinearVariables.clear();
+
+    variableLowerBounds.clear();
+    variableUpperBounds.clear();
+
+    numericConstraints.clear();
+    linearConstraints.clear();
+    quadraticConstraints.clear();
+    nonlinearConstraints.clear();
+
+    factorableFunctionVariables.clear();
+    factorableFunctions.clear();
+};
 
 void Problem::finalize()
 {
@@ -230,6 +252,16 @@ void Problem::add(NonlinearConstraintPtr constraint)
     env->output->outputDebug("Added nonlinear constraint to problem: " + constraint->name);
 };
 
+void Problem::add(ObjectiveFunctionPtr objective)
+{
+    objectiveFunction = objective;
+    objectiveFunction->updateProperties();
+
+    objective->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added objective function to problem.");
+};
+
 void Problem::add(LinearObjectiveFunctionPtr objective)
 {
     objectiveFunction = objective;
@@ -275,10 +307,20 @@ VariablePtr Problem::getVariable(int variableIndex)
 {
     if (variableIndex > allVariables.size())
     {
-        throw new VariableNotFoundException(" with variableIndex " + std::to_string(variableIndex));
+        throw new VariableNotFoundException(" with index " + std::to_string(variableIndex));
     }
 
     return allVariables.at(variableIndex);
+};
+
+ConstraintPtr Problem::getConstraint(int constraintIndex)
+{
+    if (constraintIndex > numericConstraints.size())
+    {
+        throw new ConstraintNotFoundException(" with index " + std::to_string(constraintIndex));
+    }
+
+    return numericConstraints.at(constraintIndex);
 };
 
 double Problem::getVariableLowerBound(int variableIndex)

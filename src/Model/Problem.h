@@ -116,6 +116,7 @@ class Problem : public std::enable_shared_from_this<Problem>
     void add(QuadraticConstraintPtr constraint);
     void add(NonlinearConstraintPtr constraint);
 
+    void add(ObjectiveFunctionPtr objective);
     void add(LinearObjectiveFunctionPtr objective);
     void add(QuadraticObjectiveFunctionPtr objective);
     void add(NonlinearObjectiveFunctionPtr objective);
@@ -124,6 +125,7 @@ class Problem : public std::enable_shared_from_this<Problem>
     void add(std::vector<T> elements);
 
     VariablePtr getVariable(int variableIndex);
+    ConstraintPtr getConstraint(int constraintIndex);
 
     double getVariableLowerBound(int variableIndex);
     double getVariableUpperBound(int variableIndex);

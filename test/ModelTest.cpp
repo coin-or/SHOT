@@ -15,6 +15,9 @@
 #include "Model/ObjectiveFunction.h"
 #include "Model/Problem.h"
 
+#include "ModelingSystem/ModelingSystemOS.h"
+
+#include "SHOTSolver.h"
 #include "Environment.h"
 
 bool ModelTestVariables();
@@ -22,7 +25,9 @@ bool ModelTestTerms();
 bool ModelTestNonlinearExpressions();
 bool ModelTestObjective();
 bool ModelTestConstraints();
-bool ModelTestProblem();
+bool ModelTestCreateProblem();
+bool ModelTestReadProblem();
+bool ModelTestModelingSystemOS();
 
 int ModelTest(int argc, char *argv[])
 {
@@ -59,7 +64,10 @@ int ModelTest(int argc, char *argv[])
         passed = ModelTestConstraints();
         break;
     case 6:
-        passed = ModelTestProblem();
+        passed = ModelTestCreateProblem();
+        break;
+    case 7:
+        passed = ModelTestReadProblem();
         break;
     default:
         passed = false;
@@ -236,8 +244,8 @@ bool ModelTestObjective()
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_y);
-    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionTimes>(expressions);
-    std::cout << "Nonlinear expression " << exprTimes << " created\n";
+    SHOT::NonlinearExpressionPtr exprProduct = std::make_shared<SHOT::ExpressionProduct>(expressions);
+    std::cout << "Nonlinear expression " << exprProduct << " created\n";
 
     SHOT::VectorDouble point;
     point.push_back(2.0);
@@ -247,7 +255,7 @@ bool ModelTestObjective()
     SHOT::NonlinearObjectiveFunctionPtr nonlinearObjective = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize,
                                                                                                                 linearTerms,
                                                                                                                 quadraticTerms,
-                                                                                                                exprTimes,
+                                                                                                                exprProduct,
                                                                                                                 10.0);
 
     std::cout << "Objective function "
@@ -314,11 +322,11 @@ bool ModelTestConstraints()
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_x);
     expressions.add(expressionVariable_y);
-    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionTimes>(expressions);
-    std::cout << "Nonlinear expression " << exprTimes << " created\n";
+    SHOT::NonlinearExpressionPtr exprProduct = std::make_shared<SHOT::ExpressionProduct>(expressions);
+    std::cout << "Nonlinear expression " << exprProduct << " created\n";
 
     std::cout << "Creating nonlinear constraint:\n";
-    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", linearTerms, quadraticTerms, exprTimes, -10.0, 20.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", linearTerms, quadraticTerms, exprProduct, -10.0, 20.0);
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
     constraintValue = nonlinearConstraint->calculateNumericValue(point);
@@ -355,7 +363,7 @@ bool ModelTestConstraints()
     return passed;
 }
 
-bool ModelTestProblem()
+bool ModelTestCreateProblem()
 {
     bool passed = true;
 
@@ -377,11 +385,7 @@ bool ModelTestProblem()
     SHOT::Variables variables = {var_x, var_y, var_z};
     problem->add(variables);
 
-    std::cout << "Creating objective function\n";
-
     SHOT::NonlinearObjectiveFunctionPtr objectiveFunction = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
-
-    //std::cout << "Creating linear terms\n";
     SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
     SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
 
@@ -390,34 +394,23 @@ bool ModelTestProblem()
     objLinearTerms.add(objLinearTerm2);
 
     objectiveFunction->add(objLinearTerms);
-    //std::cout << "Linear terms " << objLinearTerms << " created\n";
 
-    //std::cout << "Creating quadratic terms\n";
     SHOT::QuadraticTermPtr objQuadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
     SHOT::QuadraticTermPtr objQuadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
     SHOT::QuadraticTerms objQuadraticTerms;
     objQuadraticTerms.add(objQuadraticTerm1);
     objQuadraticTerms.add(objQuadraticTerm2);
     objectiveFunction->add(objQuadraticTerms);
-    //std::cout << "Quadratic terms " << quadraticTerms << " created\n";
 
-    //std::cout << "Creating nonlinear expression:\n";
     SHOT::NonlinearExpressions objExpressions;
     objExpressions.add(expressionVariable_x);
     objExpressions.add(expressionVariable_y);
-    SHOT::NonlinearExpressionPtr objExprTimes = std::make_shared<SHOT::ExpressionSum>(objExpressions);
-    objectiveFunction->add(objExprTimes);
-    //std::cout << "Nonlinear expression " << exprTimes << " created\n";
+    SHOT::NonlinearExpressionPtr objExprSum = std::make_shared<SHOT::ExpressionSum>(objExpressions);
+    objectiveFunction->add(objExprSum);
     problem->add(objectiveFunction);
 
     std::cout << "Objective function " << objectiveFunction << "created\n";
 
-    SHOT::VectorDouble point;
-    point.push_back(2.0);
-    point.push_back(3.0);
-    point.push_back(1.0);
-
-    std::cout << "Creating linear constraint\n";
     SHOT::LinearTermPtr linearTerm1 = std::make_shared<SHOT::LinearTerm>(-1, var_x);
     SHOT::LinearTermPtr linearTerm2 = std::make_shared<SHOT::LinearTerm>(1.2, var_y);
     SHOT::LinearTerms linearTerms;
@@ -425,9 +418,10 @@ bool ModelTestProblem()
     linearTerms.add(linearTerm2);
     SHOT::LinearConstraintPtr linearConstraint = std::make_shared<SHOT::LinearConstraint>(0, "linconstr", linearTerms, -2.0, 4.0);
     problem->add(linearConstraint);
+
+    std::cout << '\n';
     std::cout << "Linear constraint " << linearConstraint << " created\n";
 
-    std::cout << "Creating quadratic constraint:\n";
     SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
     SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
     SHOT::QuadraticTerms quadraticTerms;
@@ -435,32 +429,42 @@ bool ModelTestProblem()
     quadraticTerms.add(quadraticTerm2);
     SHOT::QuadraticConstraintPtr quadraticConstraint = std::make_shared<SHOT::QuadraticConstraint>(1, "quadconstr", quadraticTerms, -10.0, 20.0);
     problem->add(quadraticConstraint);
+
+    std::cout << '\n';
     std::cout << "Quadratic constraint " << quadraticConstraint << " created\n";
 
-    std::cout << "Creating nonlinear constraint:\n";
-    SHOT::NonlinearExpressions expressions;
-    expressions.add(expressionVariable_z);
-    expressions.add(expressionVariable_x);
-
-    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionSum>(expressions);
+    SHOT::NonlinearExpressionPtr exprPlus = std::make_shared<SHOT::ExpressionPlus>(expressionVariable_z, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
     SHOT::NonlinearExpressionPtr exprPower = std::make_shared<SHOT::ExpressionPower>(expressionVariable_z, exprConstant);
 
-    SHOT::NonlinearExpressions expressions2;
-    expressions2.add(exprPower);
-    expressions2.add(exprTimes);
+    SHOT::NonlinearExpressions expressions;
+    expressions.add(exprPower);
+    expressions.add(exprPlus);
 
-    SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions2);
+    SHOT::NonlinearExpressionPtr exprSum = std::make_shared<SHOT::ExpressionSum>(expressions);
 
     SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(2, "nlconstr", linearTerms, exprSum, -10.0, 20.0);
     problem->add(nonlinearConstraint);
+
+    std::cout << '\n';
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
+
+    std::cout << '\n';
     std::cout << "Finalizing problem:\n";
     problem->finalize();
-    std::cout << "Problem finalized\n";
 
-    std::cout << "Problem created:\n";
+    std::cout << '\n';
+    std::cout << "Problem created:\n\n";
     std::cout << problem << '\n';
+
+    std::cout << '\n';
+    std::cout << "Nonlinear DAG:\n\n";
+    std::cout << problem->factorableFunctionsDAG << '\n';
+
+    SHOT::VectorDouble point;
+    point.push_back(2.0);
+    point.push_back(3.0);
+    point.push_back(1.0);
 
     std::cout << "Calculating gradient for function in linear constraint:\n";
     auto gradientLinear = linearConstraint->calculateGradient(point);
@@ -470,7 +474,7 @@ bool ModelTestProblem()
         std::cout << G.first->name << ": " << G.second << '\n';
     }
 
-    std::cout << "Calculating gradient for function in quadratic constraint:\n";
+    std::cout << "\nCalculating gradient for function in quadratic constraint:\n";
     auto gradientQuadratic = quadraticConstraint->calculateGradient(point);
 
     for (auto const &G : gradientQuadratic)
@@ -478,7 +482,7 @@ bool ModelTestProblem()
         std::cout << G.first->name << ": " << G.second << '\n';
     }
 
-    std::cout << "Calculating gradient for function in nonlinear constraint:\n";
+    std::cout << "\nCalculating gradient for function in nonlinear constraint:\n";
     auto gradientNonlinear = nonlinearConstraint->calculateGradient(point);
 
     for (auto const &G : gradientNonlinear)
@@ -495,14 +499,46 @@ bool ModelTestProblem()
     vector.push_back(Y);
     vector.push_back(Z);
 
-    std::cout << exprTimes->calculate(vector) << '\n';
-    std::cout << nonlinearConstraint->calculateFunctionValue(vector) << '\n';
+    std::cout << "\nCalculating function interval value for interval vector\n";
+    std::cout << "x = " << X << '\n';
+    std::cout << "y = " << Y << '\n';
+    std::cout << "z = " << Z << '\n';
+
+    auto linearIntervalValue = linearConstraint->calculateFunctionValue(vector);
+    std::cout << "\nValue for linear constraint is:\n";
+    std::cout << linearIntervalValue << '\n';
+
+    if (abs(linearIntervalValue.l() - 0.4) > (1.0e-12) || abs(linearIntervalValue.u() - 2.6) > (1.0e-12))
+    {
+        std::cout << "Interval is not correct.\n";
+        passed = false;
+    }
+
+    auto quadraticIntervalValue = quadraticConstraint->calculateFunctionValue(vector);
+    std::cout << "\nValue for quadratic constraint is:\n";
+    std::cout << quadraticIntervalValue << '\n';
+
+    if (abs(quadraticIntervalValue.l() - 4) > (1.0e-12) || abs(quadraticIntervalValue.u() - 14) > (1.0e-12))
+    {
+        std::cout << "Interval is not correct.\n";
+        passed = false;
+    }
+
+    auto nonlinearIntervalValue = nonlinearConstraint->calculateFunctionValue(vector);
+    std::cout << "\nValue for nonlinear constraint is:\n";
+    std::cout << nonlinearIntervalValue << '\n';
+
+    if (abs(nonlinearIntervalValue.l() - 31.4) > (1.0e-12) || abs(nonlinearIntervalValue.u() - 72.6) > (1.0e-12))
+    {
+        std::cout << "Interval is not correct.\n";
+        passed = false;
+    }
 
     point.at(0) = 20.0;
     point.at(1) = 1.0;
     point.at(2) = 1.0;
 
-    std::cout << "Testing for an invalid point for all constraints:\n";
+    std::cout << "\nTesting for an invalid point for all constraints:\n";
     auto mostDevConstraint = problem->getMostDeviatingNumericConstraint(point);
     if (!mostDevConstraint)
     {
@@ -519,7 +555,7 @@ bool ModelTestProblem()
             passed = false;
     }
 
-    std::cout << "Test finished\n";
+    std::cout << '\n';
 
     point.at(0) = 0.0;
     point.at(1) = 1.0;
@@ -536,7 +572,7 @@ bool ModelTestProblem()
         passed = false;
     }
 
-    std::cout << "Test finished\n";
+    std::cout << '\n';
 
     std::cout << "Testing to get the most deviating constraint value in a valid point:\n";
 
@@ -552,7 +588,78 @@ bool ModelTestProblem()
         passed = false;
     }
 
-    std::cout << "Test finished\n";
+    return passed;
+}
+
+bool ModelTestReadProblem()
+{
+    bool passed = true;
+
+    {
+        SHOT::EnvironmentPtr env(new SHOT::Environment);
+        env->output = SHOT::OutputPtr(new SHOT::Output());
+        env->process = SHOT::ProcessPtr(new SHOT::ProcessInfo(env));
+        env->settings = SHOT::SettingsPtr(new SHOT::Settings(env->output));
+        env->tasks = SHOT::TaskHandlerPtr(new SHOT::TaskHandler(env));
+        env->report = SHOT::ReportPtr(new SHOT::Report(env));
+        env->model = SHOT::ModelPtr(new SHOT::Model(env));
+        std::unique_ptr<SHOT::SHOTSolver> solver(new SHOT::SHOTSolver(env));
+        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
+
+        auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
+        SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+        std::string problemFile;
+        problemFile = "data/tls2.osil";
+
+        std::cout << "Testing to read problem in OSiL format: " << problemFile << '\n';
+
+        if (modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::OSiL) != E_ProblemCreationStatus::NormalCompletion)
+        {
+            std::cout << "Error while reading problem";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "Problem read successfully:\n\n";
+            std::cout << problem << "\n\n";
+            std::cout << problem->factorableFunctionsDAG << '\n';
+        }
+    }
+
+    //TODO: Figure out why nl format import is not working...
+
+    {
+        SHOT::EnvironmentPtr env(new SHOT::Environment);
+        env->output = SHOT::OutputPtr(new SHOT::Output());
+        env->process = SHOT::ProcessPtr(new SHOT::ProcessInfo(env));
+        env->settings = SHOT::SettingsPtr(new SHOT::Settings(env->output));
+        env->tasks = SHOT::TaskHandlerPtr(new SHOT::TaskHandler(env));
+        env->report = SHOT::ReportPtr(new SHOT::Report(env));
+        env->model = SHOT::ModelPtr(new SHOT::Model(env));
+        std::unique_ptr<SHOT::SHOTSolver> solver(new SHOT::SHOTSolver(env));
+        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
+
+        auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
+        SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+        std::string problemFile;
+        problemFile = "data/tls2.nl";
+
+        std::cout << "Testing to read problem in nl format: " << problemFile << '\n';
+
+        if (modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::Ampl) != E_ProblemCreationStatus::NormalCompletion)
+        {
+            std::cout << "Error while reading problem";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "Problem read successfully:\n\n";
+            std::cout << problem << "\n\n";
+            std::cout << problem->factorableFunctionsDAG << '\n';
+        }
+    }
 
     return passed;
 }

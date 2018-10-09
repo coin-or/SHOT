@@ -145,4 +145,5 @@ class ProcessInfo
 
     EnvironmentPtr env;
 };
-}
+
+} // namespace SHOT

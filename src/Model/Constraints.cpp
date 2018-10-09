@@ -39,8 +39,7 @@ std::ostream &operator<<(std::ostream &stream, ConstraintPtr constraint)
     return stream;
 }
 
-NumericConstraintValue
-NumericConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble &point)
 {
     double value = calculateFunctionValue(point);
 
@@ -90,12 +89,14 @@ void LinearConstraint::add(LinearTermPtr term)
 double LinearConstraint::calculateFunctionValue(const VectorDouble &point)
 {
     double value = linearTerms.calculate(point);
+    value += constant;
     return value;
 };
 
 Interval LinearConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
 {
     Interval value = linearTerms.calculate(intervalVector);
+    value += Interval(constant);
     return value;
 };
 
@@ -104,8 +105,7 @@ bool LinearConstraint::isFulfilled(const VectorDouble &point)
     return NumericConstraint::isFulfilled(point);
 };
 
-SparseVariableVector
-LinearConstraint::calculateGradient(const VectorDouble &point)
+SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble &point)
 {
     SparseVariableVector gradient;
 
@@ -125,8 +125,7 @@ LinearConstraint::calculateGradient(const VectorDouble &point)
     return gradient;
 };
 
-NumericConstraintValue
-LinearConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble &point)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -174,8 +173,7 @@ double QuadraticConstraint::calculateFunctionValue(const VectorDouble &point)
     return value;
 };
 
-Interval QuadraticConstraint::calculateFunctionValue(
-    const IntervalVector &intervalVector)
+Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
 {
     Interval value = LinearConstraint::calculateFunctionValue(intervalVector);
     value += quadraticTerms.calculate(intervalVector);
@@ -187,8 +185,7 @@ bool QuadraticConstraint::isFulfilled(const VectorDouble &point)
     return NumericConstraint::isFulfilled(point);
 };
 
-SparseVariableVector
-QuadraticConstraint::calculateGradient(const VectorDouble &point)
+SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &point)
 {
     SparseVariableVector gradient = LinearConstraint::calculateGradient(point);
 
@@ -232,8 +229,7 @@ QuadraticConstraint::calculateGradient(const VectorDouble &point)
     return gradient;
 };
 
-NumericConstraintValue
-QuadraticConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble &point)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -265,22 +261,20 @@ void NonlinearConstraint::add(QuadraticTermPtr term)
 
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
-    if (nonlinearExpression != nullptr)
+    /*if (nonlinearExpression.get() != nullptr)
     {
-        auto tmpExpr = nonlinearExpression;
-
-        nonlinearExpression = std::make_shared<ExpressionPlus>(tmpExpr, expression);
+        nonlinearExpression = std::make_shared<ExpressionPlus>(nonlinearExpression, expression);
     }
     else
-    {
-        nonlinearExpression = expression;
-    }
+    {*/
+    std::cout << "E: " << expression << std::endl;
+    nonlinearExpression = expression;
+    //}
 };
 
 void NonlinearConstraint::updateFactorableFunction()
 {
-    factorableFunction = std::make_shared<FactorableFunction>(
-        nonlinearExpression->getFactorableFunction());
+    factorableFunction = std::make_shared<FactorableFunction>(nonlinearExpression->getFactorableFunction());
 };
 
 double NonlinearConstraint::calculateFunctionValue(const VectorDouble &point)
@@ -291,8 +285,7 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble &point)
     return value;
 };
 
-Interval NonlinearConstraint::calculateFunctionValue(
-    const IntervalVector &intervalVector)
+Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
 {
     Interval value = QuadraticConstraint::calculateFunctionValue(intervalVector);
     value += nonlinearExpression->calculate(intervalVector);
@@ -307,7 +300,11 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble &
     for (auto E : symbolicSparseJacobian)
     {
         double value[1];
-        ownerProblem->factorableFunctionsDAG->eval(1, &E.second, value, 3, &ownerProblem->factorableFunctionVariables[0], &point[0]);
+
+        if (auto sharedOwnerProblem = ownerProblem.lock())
+        {
+            sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &point[0]);
+        }
 
         auto element = gradient.insert(std::make_pair(E.first, value[0]));
 
@@ -352,13 +349,13 @@ std::ostream &operator<<(std::ostream &stream, LinearConstraintPtr constraint)
 
 std::ostream &LinearConstraint::print(std::ostream &stream) const
 {
-    if (valueLHS > -std::numeric_limits<double>::infinity())
+    if (valueLHS > -std::numeric_limits<double>::max())
         stream << valueLHS << " <= ";
 
     if (linearTerms.terms.size() > 0)
         stream << linearTerms;
 
-    if (valueRHS < std::numeric_limits<double>::infinity())
+    if (valueRHS < std::numeric_limits<double>::max())
         stream << " <= " << valueRHS;
 
     return stream;
@@ -373,7 +370,7 @@ std::ostream &operator<<(std::ostream &stream,
 
 std::ostream &QuadraticConstraint::print(std::ostream &stream) const
 {
-    if (valueLHS > -std::numeric_limits<double>::infinity())
+    if (valueLHS > -std::numeric_limits<double>::max())
         stream << valueLHS << " <= ";
 
     if (linearTerms.terms.size() > 0)
@@ -382,7 +379,7 @@ std::ostream &QuadraticConstraint::print(std::ostream &stream) const
     if (quadraticTerms.terms.size() > 0)
         stream << " +" << quadraticTerms;
 
-    if (valueRHS < std::numeric_limits<double>::infinity())
+    if (valueRHS < std::numeric_limits<double>::max())
         stream << " <= " << valueRHS;
 
     return stream;
@@ -396,7 +393,7 @@ std::ostream &operator<<(std::ostream &stream, NonlinearConstraintPtr constraint
 
 std::ostream &NonlinearConstraint::print(std::ostream &stream) const
 {
-    if (valueLHS > -std::numeric_limits<double>::infinity())
+    if (valueLHS > -std::numeric_limits<double>::max())
         stream << valueLHS << " <= ";
 
     if (linearTerms.terms.size() > 0)
@@ -407,7 +404,7 @@ std::ostream &NonlinearConstraint::print(std::ostream &stream) const
 
     stream << " +" << nonlinearExpression;
 
-    if (valueRHS < std::numeric_limits<double>::infinity())
+    if (valueRHS < std::numeric_limits<double>::max())
         stream << " <= " << valueRHS;
 
     return stream;

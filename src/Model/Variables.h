@@ -22,7 +22,7 @@ class Variable
     int index;
 
     E_VariableType type;
-    ProblemPtr ownerProblem;
+    std::weak_ptr<Problem> ownerProblem;
 
     double upperBound;
     double lowerBound;

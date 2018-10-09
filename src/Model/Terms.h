@@ -26,7 +26,7 @@ class LinearTerm
     double coefficient;
     VariablePtr variable;
 
-    ProblemPtr ownerProblem;
+    std::weak_ptr<Problem> ownerProblem;
 
     LinearTerm(){};
     LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
@@ -59,7 +59,7 @@ class QuadraticTerm
     double coefficient;
     VariablePtr firstVariable;
     VariablePtr secondVariable;
-    ProblemPtr ownerProblem;
+    std::weak_ptr<Problem> ownerProblem;
 
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};

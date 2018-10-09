@@ -3,7 +3,7 @@ project (SHOT)
 set(CMAKE_CXX_STANDARD 11 )
 
 # Sets the release types, e.g. Release, Debug
-#set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 option (COMPILE_TESTS "Should the automated tests be compiled" ON)
 
@@ -80,6 +80,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
   "${PROJECT_SOURCE_DIR}/src/Timer.cpp"
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.cpp"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
@@ -131,6 +132,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Timer.h"
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"  
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/*.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"

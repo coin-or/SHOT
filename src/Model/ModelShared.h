@@ -46,6 +46,9 @@ class QuadraticTerm;
 typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
 class QuadraticTerms;
 
+class NonlinearExpression;
+typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
+
 class Constraint;
 typedef std::shared_ptr<Constraint> ConstraintPtr;
 typedef std::vector<ConstraintPtr> Constraints;
@@ -65,9 +68,6 @@ typedef std::vector<QuadraticConstraintPtr> QuadraticConstraints;
 class NonlinearConstraint;
 typedef std::shared_ptr<NonlinearConstraint> NonlinearConstraintPtr;
 typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
-
-class NonlinearExpression;
-typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
 
 class ExpressionVariable;
 typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
@@ -133,6 +133,46 @@ class VariableNotFoundException : public std::exception
     {
         std::stringstream message;
         message << "Could not find variable ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+
+class ConstraintNotFoundException : public std::exception
+{
+  private:
+    std::string errorMessage;
+
+  public:
+    ConstraintNotFoundException(std::string message) : errorMessage(message)
+    {
+    }
+
+    inline const char *what() const throw()
+    {
+        std::stringstream message;
+        message << "Could not find constraint ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+
+class OperationNotImplementedException : public std::exception
+{
+  private:
+    std::string errorMessage;
+
+  public:
+    OperationNotImplementedException(std::string message) : errorMessage(message)
+    {
+    }
+
+    inline const char *what() const throw()
+    {
+        std::stringstream message;
+        message << "The following operation is not implemented: ";
         message << errorMessage;
 
         return (message.str().c_str());

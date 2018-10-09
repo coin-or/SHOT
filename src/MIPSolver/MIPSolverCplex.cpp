@@ -49,11 +49,11 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
 {
     if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
-	cplexVarConvers.clear();
-    	cplexModel.end();
-    	cplexVars.end();
-    	cplexConstrs.end();
-    	cplexInstance.end();
+        cplexVarConvers.clear();
+        cplexModel.end();
+        cplexVars.end();
+        cplexConstrs.end();
+        cplexInstance.end();
 
         cplexModel = IloModel(cplexEnv);
 
@@ -120,7 +120,7 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
         objExpr += tmpObjPairs.at(i).second * cplexVars[tmpObjPairs.at(i).first];
     }
 
-    // Add quadratic terms in the objective if they exist (and the strategy is to solve QPs)
+    // Add quadratic terms in the objective if they exist
     if (origProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
     {
         auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);

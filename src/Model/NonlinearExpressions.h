@@ -24,7 +24,7 @@ namespace SHOT
 class NonlinearExpression
 {
   public:
-    ProblemPtr ownerProblem;
+    std::weak_ptr<Problem> ownerProblem;
 
     inline void takeOwnership(ProblemPtr owner)
     {
@@ -65,8 +65,8 @@ class NonlinearExpressions
 class ExpressionConstant : public NonlinearExpression
 {
   public:
-    int constant = 0;
-    ExpressionConstant(int constant) : constant(constant){};
+    double constant = 0;
+    ExpressionConstant(double constant) : constant(constant){};
 
     inline virtual double calculate(const VectorDouble &point) override
     {
@@ -75,7 +75,7 @@ class ExpressionConstant : public NonlinearExpression
 
     inline virtual Interval calculate(const IntervalVector &intervalVector) override
     {
-        return (Interval(constant, constant));
+        return (Interval(constant));
     };
 
     inline virtual FactorableFunction getFactorableFunction() override
@@ -221,14 +221,14 @@ class ExpressionInvert : public ExpressionUnary
     }
 };
 
-class ExpressionSqrt : public ExpressionUnary
+class ExpressionSquareRoot : public ExpressionUnary
 {
   public:
-    ExpressionSqrt()
+    ExpressionSquareRoot()
     {
     }
 
-    ExpressionSqrt(NonlinearExpressionPtr childExpression)
+    ExpressionSquareRoot(NonlinearExpressionPtr childExpression)
     {
         child = childExpression;
     }
@@ -319,6 +319,42 @@ class ExpressionExp : public ExpressionUnary
     inline std::ostream &print(std::ostream &stream) const override
     {
         stream << "exp(" << child << ')';
+        return stream;
+    }
+};
+
+class ExpressionSquare : public ExpressionUnary
+{
+  public:
+    ExpressionSquare()
+    {
+    }
+
+    ExpressionSquare(NonlinearExpressionPtr childExpression)
+    {
+        child = childExpression;
+    }
+
+    inline virtual double calculate(const VectorDouble &point) override
+    {
+        auto value = child->calculate(point);
+        return (value * value);
+    }
+
+    inline virtual Interval calculate(const IntervalVector &intervalVector) override
+    {
+        auto value = child->calculate(intervalVector);
+        return (value * value);
+    }
+
+    inline virtual FactorableFunction getFactorableFunction() override
+    {
+        return (child->getFactorableFunction() * child->getFactorableFunction());
+    }
+
+    inline std::ostream &print(std::ostream &stream) const override
+    {
+        stream << "(" << child << ")^2";
         return stream;
     }
 };
@@ -527,6 +563,40 @@ class ExpressionArcTan : public ExpressionUnary
     }
 };
 
+class ExpressionAbs : public ExpressionUnary
+{
+  public:
+    ExpressionAbs()
+    {
+    }
+
+    ExpressionAbs(NonlinearExpressionPtr childExpression)
+    {
+        child = childExpression;
+    }
+
+    inline virtual double calculate(const VectorDouble &point) override
+    {
+        return (abs(child->calculate(point)));
+    }
+
+    inline virtual Interval calculate(const IntervalVector &intervalVector) override
+    {
+        return (abs(child->calculate(intervalVector)));
+    }
+
+    inline virtual FactorableFunction getFactorableFunction() override
+    {
+        return (fabs(child->getFactorableFunction()));
+    }
+
+    inline std::ostream &print(std::ostream &stream) const override
+    {
+        stream << "abs(" << child << ')';
+        return stream;
+    }
+};
+
 // End unary operations
 
 // Begin binary operations
@@ -601,6 +671,76 @@ class ExpressionMinus : public ExpressionBinary
     }
 };
 
+class ExpressionTimes : public ExpressionBinary
+{
+  public:
+    ExpressionTimes()
+    {
+    }
+
+    ExpressionTimes(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
+    {
+        firstChild = childExpression1;
+        secondChild = childExpression2;
+    }
+
+    inline virtual double calculate(const VectorDouble &point) override
+    {
+        return (firstChild->calculate(point) * secondChild->calculate(point));
+    }
+
+    inline virtual Interval calculate(const IntervalVector &intervalVector) override
+    {
+        return (firstChild->calculate(intervalVector) * secondChild->calculate(intervalVector));
+    }
+
+    inline virtual FactorableFunction getFactorableFunction() override
+    {
+        return (firstChild->getFactorableFunction() * secondChild->getFactorableFunction());
+    }
+
+    inline std::ostream &print(std::ostream &stream) const override
+    {
+        stream << firstChild << '*' << secondChild;
+        return stream;
+    }
+};
+
+class ExpressionDivide : public ExpressionBinary
+{
+  public:
+    ExpressionDivide()
+    {
+    }
+
+    ExpressionDivide(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
+    {
+        firstChild = childExpression1;
+        secondChild = childExpression2;
+    }
+
+    inline virtual double calculate(const VectorDouble &point) override
+    {
+        return (firstChild->calculate(point) / secondChild->calculate(point));
+    }
+
+    inline virtual Interval calculate(const IntervalVector &intervalVector) override
+    {
+        return (firstChild->calculate(intervalVector) / secondChild->calculate(intervalVector));
+    }
+
+    inline virtual FactorableFunction getFactorableFunction() override
+    {
+        return (firstChild->getFactorableFunction() / secondChild->getFactorableFunction());
+    }
+
+    inline std::ostream &print(std::ostream &stream) const override
+    {
+        stream << firstChild << '/' << secondChild;
+        return stream;
+    }
+};
+
 class ExpressionPower : public ExpressionBinary
 {
   public:
@@ -640,80 +780,6 @@ class ExpressionPower : public ExpressionBinary
 
 // Begin general operations
 
-class ExpressionTimes : public ExpressionGeneral
-{
-  public:
-    ExpressionTimes()
-    {
-    }
-
-    ExpressionTimes(NonlinearExpressions childExpressions)
-    {
-        children = childExpressions;
-    }
-
-    inline virtual double calculate(const VectorDouble &point) override
-    {
-        double value = 1.0;
-
-        for (auto C : children.expressions)
-        {
-            double tmpValue = C->calculate(point);
-
-            if (tmpValue == 0.0)
-                return 0.0;
-
-            value *= tmpValue;
-        }
-
-        return (value);
-    }
-
-    inline virtual Interval calculate(const IntervalVector &intervalVector) override
-    {
-        Interval tmpInterval(1., 1.);
-
-        for (auto C : children.expressions)
-        {
-            tmpInterval *= C->calculate(intervalVector);
-        }
-
-        return (tmpInterval);
-    }
-
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        FactorableFunction funct;
-
-        for (auto C : children.expressions)
-        {
-            funct *= C->getFactorableFunction();
-        }
-
-        return (funct);
-    }
-
-    inline std::ostream &print(std::ostream &stream) const override
-    {
-        if (children.size() == 1)
-        {
-            stream << children.expressions.at(0);
-            return stream;
-        }
-
-        stream << '(' << children.expressions.at(0);
-
-        for (int i = 1; i < children.expressions.size(); i++)
-        {
-            stream << '*' << children.expressions.at(i);
-        }
-
-        stream << ')';
-
-        return stream;
-    }
-};
-
 class ExpressionSum : public ExpressionGeneral
 {
   public:
@@ -740,8 +806,7 @@ class ExpressionSum : public ExpressionGeneral
 
     inline virtual Interval calculate(const IntervalVector &intervalVector) override
     {
-        Interval tmpInterval(0., 0.);
-        std::cout << tmpInterval << std::endl;
+        Interval tmpInterval(0.);
 
         for (auto C : children.expressions)
         {
@@ -783,5 +848,89 @@ class ExpressionSum : public ExpressionGeneral
         return stream;
     }
 };
+
+class ExpressionProduct : public ExpressionGeneral
+{
+  public:
+    ExpressionProduct()
+    {
+    }
+
+    ExpressionProduct(NonlinearExpressions childExpressions)
+    {
+        children = childExpressions;
+    }
+
+    inline virtual double calculate(const VectorDouble &point) override
+    {
+        double value = 1.0;
+
+        for (auto C : children.expressions)
+        {
+            double tmpValue = C->calculate(point);
+
+            if (tmpValue == 0.0)
+                return 0.0;
+
+            value = value * tmpValue;
+        }
+
+        return (value);
+    }
+
+    inline virtual Interval calculate(const IntervalVector &intervalVector) override
+    {
+        Interval tmpInterval(1., 1.);
+
+        for (auto C : children.expressions)
+        {
+            tmpInterval = tmpInterval * C->calculate(intervalVector);
+        }
+
+        return (tmpInterval);
+    }
+
+    inline virtual FactorableFunction getFactorableFunction() override
+    {
+        FactorableFunction funct;
+
+        std::vector<FactorableFunction> factors(children.size());
+
+        for (int i = 0; i < children.size(); i++)
+        {
+            factors[i] = children.expressions[i]->getFactorableFunction();
+        }
+
+        funct = factors[0];
+
+        for (int i = 1; i < children.size(); i++)
+        {
+            funct = funct * factors[i];
+        }
+
+        return (funct);
+    }
+
+    inline std::ostream &print(std::ostream &stream) const override
+    {
+        if (children.size() == 1)
+        {
+            stream << children.expressions.at(0);
+            return stream;
+        }
+
+        stream << '(' << children.expressions.at(0);
+
+        for (int i = 1; i < children.expressions.size(); i++)
+        {
+            stream << '*' << children.expressions.at(i);
+        }
+
+        stream << ')';
+
+        return stream;
+    }
+};
+
 // End general operations
 } // namespace SHOT

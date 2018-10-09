@@ -29,17 +29,14 @@ enum class E_ProblemCreationStatus
 class IModelingSystem
 {
   public:
-    IModelingSystem(EnvironmentPtr envPtr);
-    virtual ~IModelingSystem();
+    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr){};
+    virtual ~IModelingSystem(){};
 
     // Adds modeling system specific settings
     virtual void augmentSettings(SettingsPtr settings) = 0;
 
     // Get specific settings from modeling system
     virtual void updateSettings(SettingsPtr settings) = 0;
-
-    // Get the optimization problem from the modeling system
-    //virtual ProblemPtr createProblem() = 0;
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution() = 0;

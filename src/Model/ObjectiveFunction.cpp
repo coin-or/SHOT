@@ -22,14 +22,9 @@ void ObjectiveFunction::takeOwnership(ProblemPtr owner)
     ownerProblem = owner;
 };
 
-E_Curvature ObjectiveFunction::checkConvexity()
-{
-    return E_Curvature::Convex;
-};
-
 void ObjectiveFunction::updateProperties()
 {
-    if (properties.direction == E_ObjectiveFunctionDirection::Minimize)
+    if (direction == E_ObjectiveFunctionDirection::Minimize)
     {
         properties.isMinimize = true;
         properties.isMaximize = false;
@@ -82,6 +77,11 @@ void LinearObjectiveFunction::updateProperties()
         E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Linear;
 
     ObjectiveFunction::updateProperties();
+};
+
+E_Curvature LinearObjectiveFunction::checkConvexity()
+{
+    return E_Curvature::Convex;
 };
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble &point)
@@ -174,6 +174,11 @@ void QuadraticObjectiveFunction::updateProperties()
     LinearObjectiveFunction::updateProperties();
 };
 
+E_Curvature QuadraticObjectiveFunction::checkConvexity()
+{
+    return E_Curvature::Convex;
+};
+
 double QuadraticObjectiveFunction::calculateValue(const VectorDouble &point)
 {
     double value = LinearObjectiveFunction::calculateValue(point);
@@ -189,8 +194,7 @@ Interval QuadraticObjectiveFunction::calculateValue(
     return value;
 };
 
-SparseVariableVector
-QuadraticObjectiveFunction::calculateGradient(const VectorDouble &point)
+SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorDouble &point)
 {
     SparseVariableVector gradient = LinearObjectiveFunction::calculateGradient(point);
 
@@ -293,6 +297,11 @@ void NonlinearObjectiveFunction::updateProperties()
     QuadraticObjectiveFunction::updateProperties();
 }
 
+E_Curvature NonlinearObjectiveFunction::checkConvexity()
+{
+    return E_Curvature::Convex;
+};
+
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble &point)
 {
     double value = QuadraticObjectiveFunction::calculateValue(point);
@@ -316,7 +325,11 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
     for (auto E : symbolicSparseJacobian)
     {
         double value[1];
-        ownerProblem->factorableFunctionsDAG->eval(1, &E.second, value, 3, &ownerProblem->factorableFunctionVariables[0], &point[0]);
+
+        if (auto sharedOwnerProblem = ownerProblem.lock())
+        {
+            sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &point[0]);
+        }
 
         auto element = gradient.insert(std::make_pair(E.first, value[0]));
 

@@ -697,6 +697,7 @@ ProcessInfo::ProcessInfo(EnvironmentPtr envPtr) : env(envPtr)
 
 ProcessInfo::~ProcessInfo()
 {
+    timers.clear();
     iterations.clear();
 
     primalSolution.clear();
@@ -711,9 +712,7 @@ ProcessInfo::~ProcessInfo()
 
 void ProcessInfo::createTimer(std::string name, std::string description)
 {
-    Timer tmpTimer = Timer(name, description);
-
-    timers.push_back(tmpTimer);
+    timers.push_back(Timer(name, description));
 }
 
 void ProcessInfo::startTimer(std::string name)
