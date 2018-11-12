@@ -17,4 +17,4 @@ std::ostream &operator<<(std::ostream &stream, NonlinearExpressionPtr expr)
     stream << *expr;
     return stream;
 };
-}
+} // namespace SHOT

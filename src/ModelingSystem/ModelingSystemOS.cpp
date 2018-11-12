@@ -31,7 +31,7 @@ void ModelingSystemOS::updateSettings(SettingsPtr settings)
 {
 }
 
-E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, const std::string &filename, E_OSInputFileFormat type)
+E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, const std::string &filename, const E_OSInputFileFormat &type)
 {
     if (false && !boost::filesystem::exists(filename))
     {
@@ -79,7 +79,7 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, con
 
     E_ProblemCreationStatus status = createProblem(problem, instance);
 
-    return (E_ProblemCreationStatus::NormalCompletion);
+    return (status);
 }
 
 E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, OSInstance *instance)
@@ -257,6 +257,11 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
             auto variable = std::make_shared<SHOT::Variable>(source->instanceData->variables->var[i]->name, i, variableType, variableLB, variableUB);
             destination->add(variable);
         }
+    }
+    else
+    {
+        env->output->outputError("Problem has no variables.");
+        return (false);
     }
 
     env->output->outputDebug("Finished copying variables between OSInstance and SHOT problem objects.");

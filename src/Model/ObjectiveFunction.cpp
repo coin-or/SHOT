@@ -86,7 +86,7 @@ E_Curvature LinearObjectiveFunction::checkConvexity()
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble &point)
 {
-    double value = linearTerms.calculate(point);
+    double value = constant + linearTerms.calculate(point);
     return value;
 };
 
@@ -256,7 +256,7 @@ std::ostream &operator<<(std::ostream &stream, QuadraticObjectiveFunctionPtr obj
 
 void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
 {
-    if (nonlinearExpression != nullptr)
+    if (nonlinearExpression.get() != nullptr)
     {
         auto tmpExpr = nonlinearExpression;
         auto nonlinearExpression(new ExpressionPlus(tmpExpr, expression));

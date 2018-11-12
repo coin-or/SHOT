@@ -16,6 +16,7 @@
 #include "Model/Problem.h"
 
 #include "ModelingSystem/ModelingSystemOS.h"
+#include "ModelingSystem/ModelingSystemGAMS.h"
 
 #include "SHOTSolver.h"
 #include "Environment.h"
@@ -26,7 +27,8 @@ bool ModelTestNonlinearExpressions();
 bool ModelTestObjective();
 bool ModelTestConstraints();
 bool ModelTestCreateProblem();
-bool ModelTestReadProblem();
+bool ModelTestReadOSiLProblem();
+bool ModelTestReadGAMSProblem();
 bool ModelTestModelingSystemOS();
 
 int ModelTest(int argc, char *argv[])
@@ -67,7 +69,10 @@ int ModelTest(int argc, char *argv[])
         passed = ModelTestCreateProblem();
         break;
     case 7:
-        passed = ModelTestReadProblem();
+        passed = ModelTestReadOSiLProblem();
+        break;
+    case 8:
+        passed = ModelTestReadGAMSProblem();
         break;
     default:
         passed = false;
@@ -261,7 +266,7 @@ bool ModelTestObjective()
     std::cout << "Objective function "
               << nonlinearObjective << " created\n";
     double objectiveValue = nonlinearObjective->calculateValue(point);
-    double realValue = linearTerm1->coefficient * point.at(0) + linearTerm2->coefficient * point.at(1) + quadraticTerm1->coefficient * point.at(0) * point.at(1) +
+    double realValue = nonlinearObjective->constant + linearTerm1->coefficient * point.at(0) + linearTerm2->coefficient * point.at(1) + quadraticTerm1->coefficient * point.at(0) * point.at(1) +
                        +quadraticTerm2->coefficient * point.at(0) * point.at(0) + point.at(0) * point.at(0) * point.at(1);
 
     std::cout
@@ -591,7 +596,7 @@ bool ModelTestCreateProblem()
     return passed;
 }
 
-bool ModelTestReadProblem()
+bool ModelTestReadOSiLProblem()
 {
     bool passed = true;
 
@@ -649,6 +654,45 @@ bool ModelTestReadProblem()
         std::cout << "Testing to read problem in nl format: " << problemFile << '\n';
 
         if (modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::Ampl) != E_ProblemCreationStatus::NormalCompletion)
+        {
+            std::cout << "Error while reading problem";
+            passed = false;
+        }
+        else
+        {
+            std::cout << "Problem read successfully:\n\n";
+            std::cout << problem << "\n\n";
+            std::cout << problem->factorableFunctionsDAG << '\n';
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestReadGAMSProblem()
+{
+    bool passed = true;
+
+    {
+        SHOT::EnvironmentPtr env(new SHOT::Environment);
+        env->output = SHOT::OutputPtr(new SHOT::Output());
+        env->process = SHOT::ProcessPtr(new SHOT::ProcessInfo(env));
+        env->settings = SHOT::SettingsPtr(new SHOT::Settings(env->output));
+        env->tasks = SHOT::TaskHandlerPtr(new SHOT::TaskHandler(env));
+        env->report = SHOT::ReportPtr(new SHOT::Report(env));
+        env->model = SHOT::ModelPtr(new SHOT::Model(env));
+        std::unique_ptr<SHOT::SHOTSolver> solver(new SHOT::SHOTSolver(env));
+        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+
+        auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+        SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+        std::string problemFile;
+        problemFile = "data/fo7.gms";
+
+        std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
+
+        if (modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile) != E_ProblemCreationStatus::NormalCompletion)
         {
             std::cout << "Error while reading problem";
             passed = false;

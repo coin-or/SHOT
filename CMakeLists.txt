@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 project (SHOT)
-set(CMAKE_CXX_STANDARD 11 )
+set(CMAKE_CXX_STANDARD 17 )
 
 # Sets the release types, e.g. Release, Debug
 set(CMAKE_BUILD_TYPE Debug)
@@ -54,7 +54,7 @@ endif()
 
 INCLUDE(FindPkgConfig)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
 
@@ -81,6 +81,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Timer.cpp"
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.cpp"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
@@ -132,7 +133,8 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Timer.h"
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"  
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h" 
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS'.h"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/*.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"

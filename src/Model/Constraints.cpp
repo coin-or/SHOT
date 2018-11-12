@@ -261,15 +261,14 @@ void NonlinearConstraint::add(QuadraticTermPtr term)
 
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
-    /*if (nonlinearExpression.get() != nullptr)
+    if (nonlinearExpression.get() != nullptr)
     {
         nonlinearExpression = std::make_shared<ExpressionPlus>(nonlinearExpression, expression);
     }
     else
-    {*/
-    std::cout << "E: " << expression << std::endl;
-    nonlinearExpression = expression;
-    //}
+    {
+        nonlinearExpression = expression;
+    }
 };
 
 void NonlinearConstraint::updateFactorableFunction()

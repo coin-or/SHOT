@@ -54,7 +54,7 @@ class ModelingSystemOS : public IModelingSystem
     virtual void updateSettings(SettingsPtr settings);
 
     // Create the optimization problem by filename in either OSiL or Ampl format
-    E_ProblemCreationStatus createProblem(ProblemPtr &problem, const std::string &filename, E_OSInputFileFormat fileformat);
+    E_ProblemCreationStatus createProblem(ProblemPtr &problem, const std::string &filename, const E_OSInputFileFormat &fileformat);
 
     // Create the optimization problem from an OSInstance
     E_ProblemCreationStatus createProblem(ProblemPtr &problem, OSInstance *instance);

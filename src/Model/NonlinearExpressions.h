@@ -38,6 +38,8 @@ class NonlinearExpression
 
     virtual std::ostream &print(std::ostream &) const = 0;
 
+    virtual std::string getType() = 0;
+
     inline friend std::ostream &operator<<(std::ostream &stream, const NonlinearExpression &expr)
     {
         return expr.print(stream); // polymorphic print via reference
@@ -87,6 +89,11 @@ class ExpressionConstant : public NonlinearExpression
     {
         return stream << constant;
     };
+
+    inline std::string getType() override
+    {
+        return "constant";
+    };
 };
 
 class ExpressionVariable : public NonlinearExpression
@@ -118,6 +125,11 @@ class ExpressionVariable : public NonlinearExpression
     {
         return stream << variable->name;
     };
+
+    inline std::string getType() override
+    {
+        return "variable";
+    };
 };
 
 class ExpressionUnary : public NonlinearExpression
@@ -128,6 +140,7 @@ class ExpressionUnary : public NonlinearExpression
     virtual double calculate(const VectorDouble &point) = 0;
     virtual Interval calculate(const IntervalVector &intervalVector) = 0;
     virtual FactorableFunction getFactorableFunction() = 0;
+    virtual std::string getType() = 0;
 };
 
 class ExpressionBinary : public NonlinearExpression
@@ -139,6 +152,7 @@ class ExpressionBinary : public NonlinearExpression
     virtual double calculate(const VectorDouble &point) = 0;
     virtual Interval calculate(const IntervalVector &intervalVector) = 0;
     virtual FactorableFunction getFactorableFunction() = 0;
+    virtual std::string getType() = 0;
 };
 
 class ExpressionGeneral : public NonlinearExpression
@@ -149,6 +163,7 @@ class ExpressionGeneral : public NonlinearExpression
     virtual double calculate(const VectorDouble &point) = 0;
     virtual Interval calculate(const IntervalVector &intervalVector) = 0;
     virtual FactorableFunction getFactorableFunction() = 0;
+    virtual std::string getType() = 0;
 };
 
 // Begin unary operations
@@ -185,6 +200,11 @@ class ExpressionNegate : public ExpressionUnary
         stream << "(-" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "negate";
+    }
 };
 
 class ExpressionInvert : public ExpressionUnary
@@ -218,6 +238,11 @@ class ExpressionInvert : public ExpressionUnary
     {
         stream << "1/(" << child << ')';
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "invert";
     }
 };
 
@@ -253,6 +278,11 @@ class ExpressionSquareRoot : public ExpressionUnary
         stream << "sqrt(" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "squareroot";
+    }
 };
 
 class ExpressionLog : public ExpressionUnary
@@ -287,6 +317,11 @@ class ExpressionLog : public ExpressionUnary
         stream << "log(" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "log";
+    }
 };
 
 class ExpressionExp : public ExpressionUnary
@@ -320,6 +355,11 @@ class ExpressionExp : public ExpressionUnary
     {
         stream << "exp(" << child << ')';
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "exp";
     }
 };
 
@@ -357,6 +397,11 @@ class ExpressionSquare : public ExpressionUnary
         stream << "(" << child << ")^2";
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "square";
+    }
 };
 
 class ExpressionSin : public ExpressionUnary
@@ -390,6 +435,11 @@ class ExpressionSin : public ExpressionUnary
     {
         stream << "sin(" << child << ')';
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "sin";
     }
 };
 
@@ -425,6 +475,11 @@ class ExpressionCos : public ExpressionUnary
         stream << "cos(" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "cos";
+    }
 };
 
 class ExpressionTan : public ExpressionUnary
@@ -459,6 +514,11 @@ class ExpressionTan : public ExpressionUnary
         stream << "tan(" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "tan";
+    }
 };
 
 class ExpressionArcSin : public ExpressionUnary
@@ -490,8 +550,13 @@ class ExpressionArcSin : public ExpressionUnary
 
     inline std::ostream &print(std::ostream &stream) const override
     {
-        stream << "sin(" << child << ')';
+        stream << "arcsin(" << child << ')';
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "arcsin";
     }
 };
 
@@ -527,6 +592,11 @@ class ExpressionArcCos : public ExpressionUnary
         stream << "arccos(" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "arccos";
+    }
 };
 
 class ExpressionArcTan : public ExpressionUnary
@@ -561,6 +631,11 @@ class ExpressionArcTan : public ExpressionUnary
         stream << "arctan(" << child << ')';
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "arctan";
+    }
 };
 
 class ExpressionAbs : public ExpressionUnary
@@ -594,6 +669,11 @@ class ExpressionAbs : public ExpressionUnary
     {
         stream << "abs(" << child << ')';
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "abs";
     }
 };
 
@@ -634,6 +714,11 @@ class ExpressionPlus : public ExpressionBinary
         stream << firstChild << '+' << secondChild;
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "plus";
+    }
 };
 
 class ExpressionMinus : public ExpressionBinary
@@ -668,6 +753,11 @@ class ExpressionMinus : public ExpressionBinary
     {
         stream << firstChild << '-' << secondChild;
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "minus";
     }
 };
 
@@ -704,6 +794,11 @@ class ExpressionTimes : public ExpressionBinary
         stream << firstChild << '*' << secondChild;
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "times";
+    }
 };
 
 class ExpressionDivide : public ExpressionBinary
@@ -739,6 +834,11 @@ class ExpressionDivide : public ExpressionBinary
         stream << firstChild << '/' << secondChild;
         return stream;
     }
+
+    inline std::string getType() override
+    {
+        return "divide";
+    }
 };
 
 class ExpressionPower : public ExpressionBinary
@@ -773,6 +873,11 @@ class ExpressionPower : public ExpressionBinary
     {
         stream << '(' << firstChild << ")^(" << secondChild << ')';
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "power";
     }
 };
 
@@ -846,6 +951,11 @@ class ExpressionSum : public ExpressionGeneral
         stream << ')';
 
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "sum";
     }
 };
 
@@ -929,6 +1039,11 @@ class ExpressionProduct : public ExpressionGeneral
         stream << ')';
 
         return stream;
+    }
+
+    inline std::string getType() override
+    {
+        return "product";
     }
 };
 
