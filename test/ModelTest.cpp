@@ -8,6 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 #include <iostream>
+#include <utility> // for unique_ptr
 #include "Model/ModelShared.h"
 #include "Model/Terms.h"
 #include "Model/Constraints.h"
@@ -27,8 +28,9 @@ bool ModelTestNonlinearExpressions();
 bool ModelTestObjective();
 bool ModelTestConstraints();
 bool ModelTestCreateProblem();
-bool ModelTestReadOSiLProblem();
-bool ModelTestReadGAMSProblem();
+bool ModelTestReadOSiLProblem(const std::string &problemFile);
+bool ModelTestReadNLProblem(const std::string &problemFile);
+bool ModelTestReadGAMSProblem(const std::string &problemFile);
 bool ModelTestModelingSystemOS();
 
 int ModelTest(int argc, char *argv[])
@@ -69,10 +71,13 @@ int ModelTest(int argc, char *argv[])
         passed = ModelTestCreateProblem();
         break;
     case 7:
-        passed = ModelTestReadOSiLProblem();
+        passed = ModelTestReadOSiLProblem("data/tls2.osil");
         break;
     case 8:
-        passed = ModelTestReadGAMSProblem();
+        passed = ModelTestReadNLProblem("data/tls2.nl");
+        break;
+    case 9:
+        passed = ModelTestReadGAMSProblem("data/fo7.gms");
         break;
     default:
         passed = false;
@@ -372,8 +377,8 @@ bool ModelTestCreateProblem()
 {
     bool passed = true;
 
-    SHOT::EnvironmentPtr env(new SHOT::Environment);
-    env->output = SHOT::OutputPtr(new SHOT::Output());
+    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+    env->output = std::make_shared<SHOT::Output>();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
     // Creating variables
@@ -596,26 +601,18 @@ bool ModelTestCreateProblem()
     return passed;
 }
 
-bool ModelTestReadOSiLProblem()
+bool ModelTestReadOSiLProblem(const std::string &problemFile)
 {
     bool passed = true;
 
     {
-        SHOT::EnvironmentPtr env(new SHOT::Environment);
-        env->output = SHOT::OutputPtr(new SHOT::Output());
-        env->process = SHOT::ProcessPtr(new SHOT::ProcessInfo(env));
-        env->settings = SHOT::SettingsPtr(new SHOT::Settings(env->output));
-        env->tasks = SHOT::TaskHandlerPtr(new SHOT::TaskHandler(env));
-        env->report = SHOT::ReportPtr(new SHOT::Report(env));
-        env->model = SHOT::ModelPtr(new SHOT::Model(env));
-        std::unique_ptr<SHOT::SHOTSolver> solver(new SHOT::SHOTSolver(env));
+        auto solver = std::make_unique<SHOT::SHOTSolver>();
+        auto env = solver->getEnvironment();
+
         solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
 
         auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
         SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-        std::string problemFile;
-        problemFile = "data/tls2.osil";
 
         std::cout << "Testing to read problem in OSiL format: " << problemFile << '\n';
 
@@ -632,63 +629,50 @@ bool ModelTestReadOSiLProblem()
         }
     }
 
-    //TODO: Figure out why nl format import is not working...
+    return passed;
+}
 
+bool ModelTestReadNLProblem(const std::string &problemFile)
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
+
+    auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    std::cout << "Testing to read problem in nl format: " << problemFile << '\n';
+
+    if (modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::Ampl) != E_ProblemCreationStatus::NormalCompletion)
     {
-        SHOT::EnvironmentPtr env(new SHOT::Environment);
-        env->output = SHOT::OutputPtr(new SHOT::Output());
-        env->process = SHOT::ProcessPtr(new SHOT::ProcessInfo(env));
-        env->settings = SHOT::SettingsPtr(new SHOT::Settings(env->output));
-        env->tasks = SHOT::TaskHandlerPtr(new SHOT::TaskHandler(env));
-        env->report = SHOT::ReportPtr(new SHOT::Report(env));
-        env->model = SHOT::ModelPtr(new SHOT::Model(env));
-        std::unique_ptr<SHOT::SHOTSolver> solver(new SHOT::SHOTSolver(env));
-        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
-
-        auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
-        SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-        std::string problemFile;
-        problemFile = "data/tls2.nl";
-
-        std::cout << "Testing to read problem in nl format: " << problemFile << '\n';
-
-        if (modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::Ampl) != E_ProblemCreationStatus::NormalCompletion)
-        {
-            std::cout << "Error while reading problem";
-            passed = false;
-        }
-        else
-        {
-            std::cout << "Problem read successfully:\n\n";
-            std::cout << problem << "\n\n";
-            std::cout << problem->factorableFunctionsDAG << '\n';
-        }
+        std::cout << "Error while reading problem";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "Problem read successfully:\n\n";
+        std::cout << problem << "\n\n";
+        std::cout << problem->factorableFunctionsDAG << '\n';
     }
 
     return passed;
 }
 
-bool ModelTestReadGAMSProblem()
+bool ModelTestReadGAMSProblem(const std::string &problemFile)
 {
     bool passed = true;
 
     {
-        SHOT::EnvironmentPtr env(new SHOT::Environment);
-        env->output = SHOT::OutputPtr(new SHOT::Output());
-        env->process = SHOT::ProcessPtr(new SHOT::ProcessInfo(env));
-        env->settings = SHOT::SettingsPtr(new SHOT::Settings(env->output));
-        env->tasks = SHOT::TaskHandlerPtr(new SHOT::TaskHandler(env));
-        env->report = SHOT::ReportPtr(new SHOT::Report(env));
-        env->model = SHOT::ModelPtr(new SHOT::Model(env));
-        std::unique_ptr<SHOT::SHOTSolver> solver(new SHOT::SHOTSolver(env));
+        auto solver = std::make_unique<SHOT::SHOTSolver>();
+        auto env = solver->getEnvironment();
+
         solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
 
         auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
         SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-        std::string problemFile;
-        problemFile = "data/fo7.gms";
 
         std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
 

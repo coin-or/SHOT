@@ -9,8 +9,10 @@
 */
 
 #include "UtilityFunctions.h"
+//#include "Model/Variables.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 int UtilityFunctions::round(double d)
 {
@@ -28,8 +30,7 @@ bool UtilityFunctions::isnan(double val)
     return boost::math::isnan(val);
 };
 
-void UtilityFunctions::saveVariablePointVectorToFile(VectorDouble point, VectorString variables,
-                                                     std::string fileName)
+void UtilityFunctions::saveVariablePointVectorToFile(const VectorDouble &point, const VectorString &variables, const std::string &fileName)
 {
     if (point.size() != variables.size())
     {
@@ -51,8 +52,30 @@ void UtilityFunctions::saveVariablePointVectorToFile(VectorDouble point, VectorS
     writeStringToFile(fileName, str.str());
 };
 
-void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, VectorString variables,
-                                                std::string fileName)
+void UtilityFunctions::saveVariablePointVectorToFile(const VectorDouble &point, const Variables &variables, const std::string &fileName)
+{
+    if (point.size() != variables.size())
+    {
+        std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
+                  << variables.size() << std::endl;
+        return;
+    }
+
+    std::stringstream str;
+
+    for (int i = 0; i < point.size(); i++)
+    {
+        str << variables.at(i);
+        str << "\t";
+        str << point.at(i);
+        str << std::endl;
+    }
+
+    writeStringToFile(fileName, str.str());
+};
+
+void UtilityFunctions::savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString &variables,
+                                                const std::string &fileName)
 {
     std::stringstream str;
 
@@ -99,7 +122,7 @@ void UtilityFunctions::savePrimalSolutionToFile(PrimalSolution solution, VectorS
     writeStringToFile(fileName, str.str());
 };
 
-void UtilityFunctions::displayVector(VectorDouble point)
+void UtilityFunctions::displayVector(const VectorDouble &point)
 {
     std::stringstream str;
 
@@ -117,7 +140,7 @@ void UtilityFunctions::displayVector(VectorDouble point)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(VectorDouble point1, VectorDouble point2)
+void UtilityFunctions::displayVector(const VectorDouble &point1, const VectorDouble &point2)
 {
     std::stringstream str;
 
@@ -138,7 +161,7 @@ void UtilityFunctions::displayVector(VectorDouble point1, VectorDouble point2)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayDifferencesInVector(VectorDouble point1, VectorDouble point2, double tol)
+void UtilityFunctions::displayDifferencesInVector(const VectorDouble &point1, const VectorDouble &point2, double tol)
 {
     std::stringstream str;
 
@@ -162,7 +185,7 @@ void UtilityFunctions::displayDifferencesInVector(VectorDouble point1, VectorDou
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(VectorInteger point)
+void UtilityFunctions::displayVector(const VectorInteger &point)
 {
     std::stringstream str;
 
@@ -180,7 +203,7 @@ void UtilityFunctions::displayVector(VectorInteger point)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(VectorString point)
+void UtilityFunctions::displayVector(const VectorString &point)
 {
     std::stringstream str;
 
@@ -198,7 +221,7 @@ void UtilityFunctions::displayVector(VectorString point)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(std::vector<VectorDouble> points)
+void UtilityFunctions::displayVector(const std::vector<VectorDouble> &points)
 {
     std::stringstream str;
 
@@ -218,7 +241,7 @@ void UtilityFunctions::displayVector(std::vector<VectorDouble> points)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(std::vector<VectorInteger> points)
+void UtilityFunctions::displayVector(const std::vector<VectorInteger> &points)
 {
     std::stringstream str;
 
@@ -238,7 +261,7 @@ void UtilityFunctions::displayVector(std::vector<VectorInteger> points)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(std::vector<VectorString> points)
+void UtilityFunctions::displayVector(const std::vector<VectorString> &points)
 {
     std::stringstream str;
 
@@ -331,7 +354,7 @@ bool UtilityFunctions::areAllVariablesReal(OSInstance *instance)
     return (true);
 };
 
-double UtilityFunctions::L2Norm(VectorDouble ptA, VectorDouble ptB)
+double UtilityFunctions::L2Norm(const VectorDouble &ptA, const VectorDouble &ptB)
 {
     double norm = 0.0;
 
@@ -350,7 +373,7 @@ double UtilityFunctions::L2Norm(VectorDouble ptA, VectorDouble ptB)
     return (norm);
 };
 
-VectorDouble UtilityFunctions::L2Norms(std::vector<VectorDouble> ptsA, VectorDouble ptB)
+VectorDouble UtilityFunctions::L2Norms(const std::vector<VectorDouble> &ptsA, const VectorDouble &ptB)
 {
     VectorDouble norms(ptsA.size());
 
@@ -362,7 +385,7 @@ VectorDouble UtilityFunctions::L2Norms(std::vector<VectorDouble> ptsA, VectorDou
     return (norms);
 };
 
-VectorDouble UtilityFunctions::calculateCenterPoint(std::vector<VectorDouble> pts)
+VectorDouble UtilityFunctions::calculateCenterPoint(const std::vector<VectorDouble> &pts)
 {
     int ptSize = pts.at(0).size();
     int numPts = pts.size();
@@ -383,8 +406,8 @@ VectorDouble UtilityFunctions::calculateCenterPoint(std::vector<VectorDouble> pt
     return (newPt);
 };
 
-int UtilityFunctions::numDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
-                                                          VectorInteger indexes)
+int UtilityFunctions::numDifferentRoundedSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
+                                                          const VectorInteger &indexes)
 {
     int numDiff = 0;
 
@@ -398,8 +421,8 @@ int UtilityFunctions::numDifferentRoundedSelectedElements(VectorDouble firstPt, 
     return (numDiff);
 };
 
-bool UtilityFunctions::isDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
-                                                          VectorInteger indexes)
+bool UtilityFunctions::isDifferentRoundedSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
+                                                          const VectorInteger &indexes)
 {
     for (int i = 0; i < indexes.size(); i++)
     {
@@ -410,8 +433,8 @@ bool UtilityFunctions::isDifferentRoundedSelectedElements(VectorDouble firstPt, 
     return (false);
 };
 
-bool UtilityFunctions::isDifferentSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
-                                                   VectorInteger indexes)
+bool UtilityFunctions::isDifferentSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
+                                                   const VectorInteger &indexes)
 {
     for (int i = 0; i < indexes.size(); i++)
     {
@@ -422,12 +445,12 @@ bool UtilityFunctions::isDifferentSelectedElements(VectorDouble firstPt, VectorD
     return (false);
 };
 
-std::string UtilityFunctions::toStringFormat(double value, std::string format)
+std::string UtilityFunctions::toStringFormat(const double value, const std::string &format)
 {
     return (UtilityFunctions::toStringFormat(value, format, true));
 }
 
-std::string UtilityFunctions::toStringFormat(double value, std::string format, bool useInfinitySymbol)
+std::string UtilityFunctions::toStringFormat(double value, const std::string &format, const bool useInfinitySymbol)
 {
     std::string str;
 
@@ -452,7 +475,7 @@ std::string UtilityFunctions::toString(double value)
     return (UtilityFunctions::toStringFormat(value, "%.3f", true));
 }
 
-void UtilityFunctions::displayVector(VectorInteger point1, VectorInteger point2)
+void UtilityFunctions::displayVector(const VectorInteger &point1, const VectorInteger &point2)
 {
     std::stringstream str;
 
@@ -473,7 +496,7 @@ void UtilityFunctions::displayVector(VectorInteger point1, VectorInteger point2)
     std::cout << str.str() << std::endl;
 };
 
-void UtilityFunctions::displayVector(VectorInteger point1, VectorDouble point2)
+void UtilityFunctions::displayVector(const VectorInteger &point1, const VectorDouble &point2)
 {
     std::stringstream str;
 
@@ -515,7 +538,7 @@ double UtilityFunctions::getJulianFractionalDate()
     return julianDate;
 };
 
-bool UtilityFunctions::writeStringToFile(std::string fileName, std::string str)
+bool UtilityFunctions::writeStringToFile(const std::string &fileName, const std::string &str)
 {
     std::ofstream f(fileName);
 
@@ -532,7 +555,7 @@ bool UtilityFunctions::writeStringToFile(std::string fileName, std::string str)
     return true;
 };
 
-std::string UtilityFunctions::getFileAsString(std::string fileName)
+std::string UtilityFunctions::getFileAsString(const std::string &fileName)
 {
     std::ifstream in(fileName, std::ios::in | std::ios::binary);
     if (in)
@@ -548,4 +571,4 @@ std::string UtilityFunctions::getFileAsString(std::string fileName)
 
     throw(errno);
 };
-
+}; // namespace SHOT

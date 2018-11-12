@@ -461,22 +461,34 @@ void Report::outputProblemInstanceReport()
 
     report << " Objective function type:    ";
 
-    switch (static_cast<E_ObjectiveFunctionType>(env->model->statistics.objectiveFunctionType))
+    switch (static_cast<E_ObjectiveFunctionClassification>(env->problem->objectiveFunction->properties.classification))
     {
-    case (E_ObjectiveFunctionType::Linear):
+    case (E_ObjectiveFunctionClassification::Linear):
         report << "linear";
         break;
 
-    case (E_ObjectiveFunctionType::Nonlinear):
-        report << "nonlinear";
-        break;
-
-    case (E_ObjectiveFunctionType::Quadratic):
+    case (E_ObjectiveFunctionClassification::Quadratic):
         report << "quadratic";
         break;
 
-    case (E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear):
+    case (E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear):
         report << "quadratic but considered as nonlinear";
+        break;
+
+    case (E_ObjectiveFunctionClassification::Signomial):
+        report << "signomial";
+        break;
+
+    case (E_ObjectiveFunctionClassification::Nonlinear):
+        report << "nonlinear";
+        break;
+
+    case (E_ObjectiveFunctionClassification::GeneralizedSignomial):
+        report << "generalized signomial";
+        break;
+
+    case (E_ObjectiveFunctionClassification::Nonalgebraic):
+        report << "nonalgebraic";
         break;
 
     default:
@@ -487,33 +499,33 @@ void Report::outputProblemInstanceReport()
     report << "\r\n";
     report << "\r\n";
 
-    report << " Number of constraints:      " << env->model->statistics.numberOfConstraints << "\r\n";
+    report << " Number of constraints:      " << env->problem->properties.numberOfNumericConstraints << "\r\n";
 
-    if (env->model->statistics.numberOfLinearConstraints > 0)
-        report << "  - linear:                  " << env->model->statistics.numberOfLinearConstraints << "\r\n";
-    if (env->model->statistics.numberOfNonlinearConstraints > 0)
-        report << "  - nonlinear:               " << env->model->statistics.numberOfNonlinearConstraints << "\r\n";
-    if (env->model->statistics.numberOfQuadraticConstraints > 0)
+    if (env->problem->properties.numberOfLinearConstraints > 0)
+        report << "  - linear:                  " << env->problem->properties.numberOfLinearConstraints << "\r\n";
+    if (env->problem->properties.numberOfNonlinearConstraints > 0)
+        report << "  - nonlinear:               " << env->problem->properties.numberOfNonlinearConstraints << "\r\n";
+    if (env->problem->properties.numberOfQuadraticConstraints > 0)
     {
-        report << "  - quadratic:               " << env->model->statistics.numberOfQuadraticConstraints;
+        report << "  - quadratic:               " << env->problem->properties.numberOfQuadraticConstraints;
 
-        if (env->model->statistics.quadraticTermsReformulatedAsNonlinear)
-            report << " (considered as nonlinear)\r\n";
-        else
-            report << "\r\n";
+        //if (env->problem->properties->quadraticTermsReformulatedAsNonlinear)
+        //report << " (considered as nonlinear)\r\n";
+        //else
+        report << "\r\n";
     }
 
     report << "\r\n";
 
-    report << " Number of variables:        " << env->model->statistics.numberOfVariables << "\r\n";
-    if (env->model->statistics.numberOfContinousVariables > 0)
-        report << "  - continous:               " << env->model->statistics.numberOfContinousVariables << "\r\n";
-    if (env->model->statistics.numberOfBinaryVariables > 0)
-        report << "  - binary:                  " << env->model->statistics.numberOfBinaryVariables << "\r\n";
-    if (env->model->statistics.numberOfIntegerVariables > 0)
-        report << "  - integer:                 " << env->model->statistics.numberOfIntegerVariables << "\r\n";
-    if (env->model->statistics.numberOfSemicontinuousVariables > 0)
-        report << "  - semicontinuous:          " << env->model->statistics.numberOfSemicontinuousVariables << "\r\n";
+    report << " Number of variables:        " << env->problem->properties.numberOfVariables << "\r\n";
+    if (env->problem->properties.numberOfRealVariables > 0)
+        report << "  - real:                    " << env->problem->properties.numberOfRealVariables << "\r\n";
+    if (env->problem->properties.numberOfBinaryVariables > 0)
+        report << "  - binary:                  " << env->problem->properties.numberOfBinaryVariables << "\r\n";
+    if (env->problem->properties.numberOfIntegerVariables > 0)
+        report << "  - integer:                 " << env->problem->properties.numberOfIntegerVariables << "\r\n";
+    if (env->problem->properties.numberOfSemicontinuousVariables > 0)
+        report << "  - semicontinuous:          " << env->problem->properties.numberOfSemicontinuousVariables << "\r\n";
 
     env->output->outputSummary(report.str());
 }

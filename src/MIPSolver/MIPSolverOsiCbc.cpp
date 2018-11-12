@@ -90,7 +90,7 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
     // Add quadratic terms in the objective if they exist (and the strategy is to solve QPs)
     // Since this is not used for the Cbc solver here, it should never happen and quadratic objective functions
     // are regarded as general nonlinear
-    if (origProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
+    /*if (origProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
     {
         auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
 
@@ -98,7 +98,7 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
         {
             coinModel->setQuadraticElement(T->idxOne, T->idxTwo, T->coef);
         }
-    }
+    }*/
 
     double objConstant = origProblem->getObjectiveConstant();
     coinModel->setObjectiveOffset(objConstant);

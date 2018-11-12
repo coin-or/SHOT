@@ -66,7 +66,7 @@ class OptProblem
     virtual VectorInteger getIntegerVariableIndices();
 
     virtual std::vector<std::pair<int, double>> getObjectiveFunctionVarCoeffPairs();
-    virtual std::vector<QuadraticTerm *> getQuadraticTermsInConstraint(int constrIdx);
+    virtual std::vector<::QuadraticTerm *> getQuadraticTermsInConstraint(int constrIdx);
     virtual double getObjectiveConstant();
 
     void exportProblemToOsil(std::string fileName);

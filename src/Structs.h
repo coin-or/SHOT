@@ -21,6 +21,8 @@ namespace SHOT
 class ProcessInfo;
 class Settings;
 class Model;
+class Problem;
+class IModelingSystem;
 class IMIPSolver;
 class Output;
 class Report;
@@ -30,6 +32,8 @@ class OptProblemOriginal;
 typedef std::shared_ptr<ProcessInfo> ProcessPtr;
 typedef std::shared_ptr<Settings> SettingsPtr;
 typedef std::shared_ptr<Model> ModelPtr;
+typedef std::shared_ptr<Problem> ProblemPtr;
+typedef std::shared_ptr<IModelingSystem> ModelingSystemPtr;
 typedef std::shared_ptr<IMIPSolver> MIPSolverPtr;
 typedef std::shared_ptr<Output> OutputPtr;
 typedef std::shared_ptr<OptProblemOriginal> OriginalProblemPtr;

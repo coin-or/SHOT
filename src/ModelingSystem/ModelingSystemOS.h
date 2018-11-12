@@ -92,4 +92,7 @@ class ModelingSystemOS : public IModelingSystem
     // Determines whether all individual constraints are linear, quadratic or nonlinear
     std::vector<E_ConstraintClassification> getConstraintClassifications(OSInstance *instance);
 };
+
+typedef std::shared_ptr<ModelingSystemOS> ModelingSystemOSPtr;
+
 } // namespace SHOT

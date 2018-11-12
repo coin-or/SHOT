@@ -14,6 +14,8 @@
 
 #include "../MIPSolver/IMIPSolver.h"
 
+#include "../Model/ObjectiveFunction.h"
+
 namespace SHOT
 {
 class TaskSolveIteration : public TaskBase

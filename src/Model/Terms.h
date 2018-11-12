@@ -85,7 +85,7 @@ class QuadraticTerms
 };
 
 std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term);
-std::ostream &operator<<(std::ostream &stream, QuadraticTerms linTerms);
+std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms);
 
 /*
 class SignomialElement

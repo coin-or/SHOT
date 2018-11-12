@@ -23,6 +23,9 @@ class Environment
     ProcessPtr process;
     SettingsPtr settings;
     ModelPtr model;
+    ProblemPtr problem;
+    ProblemPtr reformulatedProblem;
+    ModelingSystemPtr modelingSystem;
     MIPSolverPtr dualSolver;
     OutputPtr output;
     ReportPtr report;

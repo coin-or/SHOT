@@ -7,42 +7,35 @@
    This software is licensed under the Eclipse Public License 2.0. 
    Please see the README and LICENSE files for more information.
 */
+#include <memory>
+#include <utility> // for unique_ptr
 
 #include "Enums.h"
 #include "Structs.h"
 #include "Environment.h"
 #include "Output.h"
-#include "ProcessInfo.h"
 #include "SHOTSettings.h"
-#include "TaskHandler.h"
 #include "Report.h"
-#include "Model.h"
 #include "SHOTSolver.h"
 
 using namespace SHOT;
 
 int main(int argc, char *argv[])
 {
-    EnvironmentPtr env(new Environment);
-    env->output = OutputPtr(new Output());
-    env->process = ProcessPtr(new ProcessInfo(env));
-    env->settings = SettingsPtr(new Settings(env->output));
-    env->tasks = TaskHandlerPtr(new TaskHandler(env));
-    env->report = ReportPtr(new Report(env));
-    env->model = ModelPtr(new Model(env));
-    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+    std::unique_ptr<SHOTSolver> solver = std::make_unique<SHOTSolver>();
+    auto env = solver->getEnvironment();
 
     if (argc == 1)
     {
         env->report->outputSolverHeader();
-        std::cout << " Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
+        std::cout << " Usage: filename.[osil|xml|gms|nl] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
 
         return (0);
     }
 
     bool defaultOptionsGenerated = false;
 
-    env->process->startTimer("Total");
+    solver->getEnvironment()->process->startTimer("Total");
 
     boost::filesystem::path resultFile, optionsFile, traceFile;
 

@@ -15,13 +15,15 @@
 #include <stdio.h>
 #include <cmath>
 #include <boost/math/special_functions/fpclassify.hpp> // isnan
-#include "Structs.h"
 #include <chrono>
 #include <ctime>
 #include <iostream>
 #include <fstream>
 #include <cerrno>
 #include "OSInstance.h"
+
+#include "Structs.h"
+#include "Model/Variables.h"
 
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32
@@ -33,18 +35,16 @@ static const unsigned long __nan[2] =
 #endif
 
 // Fix for Visual Studio c++ compiler
-namespace SHOT
-{
-namespace UtilityFunctions
+namespace SHOT::UtilityFunctions
 {
 int round(double d);
 
 bool isnan(double val);
 
-void saveVariablePointVectorToFile(VectorDouble point, VectorString variables,
-                                   std::string fileName);
+void saveVariablePointVectorToFile(const VectorDouble &point, const VectorString &variables, const std::string &fileName);
+void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &variables, const std::string &fileName);
 
-void savePrimalSolutionToFile(PrimalSolution solution, VectorString variables, std::string fileName);
+void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString &variables, const std::string &fileName);
 
 bool isObjectiveGenerallyNonlinear(OSInstance *instance);
 bool isObjectiveQuadratic(OSInstance *instance);
@@ -52,40 +52,40 @@ bool areAllConstraintsLinear(OSInstance *instance);
 bool areAllConstraintsQuadratic(OSInstance *instance);
 bool areAllVariablesReal(OSInstance *instance);
 
-void displayVector(VectorDouble point);
-void displayVector(VectorDouble point1, VectorDouble point2);
-void displayVector(VectorInteger point);
-void displayVector(VectorString point);
-void displayVector(VectorInteger point1, VectorInteger point2);
-void displayVector(VectorInteger point1, VectorDouble point2);
+void displayVector(const VectorDouble &point);
+void displayVector(const VectorDouble &point1, const VectorDouble &point2);
+void displayVector(const VectorInteger &point);
+void displayVector(const VectorString &point);
+void displayVector(const VectorInteger &point1, const VectorInteger &point2);
+void displayVector(const VectorInteger &point1, const VectorDouble &point2);
 
-void displayVector(std::vector<VectorDouble> points);
-void displayVector(std::vector<VectorInteger> points);
-void displayVector(std::vector<VectorString> points);
+void displayVector(const std::vector<VectorDouble> &points);
+void displayVector(const std::vector<VectorInteger> &points);
+void displayVector(const std::vector<VectorString> &points);
 
-void displayDifferencesInVector(VectorDouble point1, VectorDouble point2, double tol);
+void displayDifferencesInVector(const VectorDouble &point1, const VectorDouble &point2, double tol);
 
-double L2Norm(VectorDouble ptA, VectorDouble ptB);
-VectorDouble L2Norms(std::vector<VectorDouble> ptsA, VectorDouble ptB);
-VectorDouble calculateCenterPoint(std::vector<VectorDouble> pts);
+double L2Norm(const VectorDouble &ptA, const VectorDouble &ptB);
+VectorDouble L2Norms(const std::vector<VectorDouble> &ptsA, const VectorDouble &ptB);
+VectorDouble calculateCenterPoint(const std::vector<VectorDouble> &pts);
 
-int numDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
-                                        VectorInteger indexes);
-bool isDifferentRoundedSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
-                                        VectorInteger indexes);
+int numDifferentRoundedSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
+                                        const VectorInteger &indexes);
+bool isDifferentRoundedSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
+                                        const VectorInteger &indexes);
 
-bool isDifferentSelectedElements(VectorDouble firstPt, VectorDouble secondPt,
-                                 VectorInteger indexes);
+bool isDifferentSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
+                                 const VectorInteger &indexes);
 
-std::string toStringFormat(double value, std::string format, bool useInfinitySymbol);
-std::string toStringFormat(double value, std::string format);
-std::string toString(double value);
+std::string toStringFormat(const double value, const std::string &format, const bool useInfinitySymbol);
+std::string toStringFormat(const double value, const std::string &format);
+std::string toString(const double value);
 
 double getJulianFractionalDate();
 
-bool writeStringToFile(std::string fileName, std::string str);
+bool writeStringToFile(const std::string &fileName, const std::string &str);
 
-std::string getFileAsString(std::string fileName);
+std::string getFileAsString(const std::string &fileName);
 
 /*
  * Generic implementation to erase elements by value
@@ -94,26 +94,25 @@ std::string getFileAsString(std::string fileName);
  * that entry and move to next.
  * From: https://thispointer.com/
  */
-template<typename K, typename V>
-inline void erase_if(std::map<K, V> & mapOfElemen, V value)
+template <typename K, typename V>
+inline void erase_if(std::map<K, V> &mapOfElemen, V value)
 {
-	auto it = mapOfElemen.begin();
-	// Iterate through the map
-	while (it != mapOfElemen.end())
-	{
-		// Check if value of this entry matches with given value
-		if (it->second == value)
-		{
-			// Erase the current element, erase() will return the
-			// next iterator. So, don't need to increment
-			it = mapOfElemen.erase(it);
-		}
-		else
-		{
-			// Go to next entry in map
-			it++;
-		}
-	}
+    auto it = mapOfElemen.begin();
+    // Iterate through the map
+    while (it != mapOfElemen.end())
+    {
+        // Check if value of this entry matches with given value
+        if (it->second == value)
+        {
+            // Erase the current element, erase() will return the
+            // next iterator. So, don't need to increment
+            it = mapOfElemen.erase(it);
+        }
+        else
+        {
+            // Go to next entry in map
+            it++;
+        }
+    }
 }
-} // namespace UtilityFunctions
-} // namespace SHOT
+} // namespace SHOT::UtilityFunctions

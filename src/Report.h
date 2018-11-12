@@ -14,6 +14,8 @@
 #include "Environment.h"
 #include "SHOTSettings.h"
 #include "ProcessInfo.h"
+#include "Model/Problem.h"
+#include "Model/ObjectiveFunction.h"
 
 namespace SHOT
 {

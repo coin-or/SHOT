@@ -128,7 +128,7 @@ void TaskFindInteriorPoint::run()
         {
             auto tmpVars = env->model->originalProblem->getVariableNames();
             std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/interiorpoint_" + std::to_string(i) + ".txt";
-            UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, tmpVars, filename);
+            UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, env->problem->allVariables, filename);
         }
 
         if (tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimax || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptRelaxed || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)

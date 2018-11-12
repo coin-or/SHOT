@@ -23,7 +23,7 @@ void TaskSolveIteration::run()
     env->process->startTimer("DualStrategy");
     auto currIter = env->process->getCurrentIteration();
 
-    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
     // Sets the iteration time limit
     auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->process->getElapsedTime("Total");
@@ -105,8 +105,7 @@ void TaskSolveIteration::run()
                 ss << "/lpsolpt";
                 ss << currIter->iterationNumber - 1;
                 ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point,
-                                                                env->model->originalProblem->getVariableNames(), ss.str());
+                UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point, env->problem->allVariables, ss.str());
             }
 
             currIter->objectiveValue = env->dualSolver->getObjectiveValue();

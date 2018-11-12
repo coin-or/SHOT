@@ -74,7 +74,7 @@ void LinearObjectiveFunction::updateProperties()
     }
 
     if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart || properties.hasQuadraticTerms))
-        E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Linear;
+        properties.classification = E_ObjectiveFunctionClassification::Linear;
 
     ObjectiveFunction::updateProperties();
 };
@@ -168,7 +168,7 @@ void QuadraticObjectiveFunction::updateProperties()
         properties.hasQuadraticTerms = true;
 
         if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart))
-            E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Quadratic;
+            properties.classification = E_ObjectiveFunctionClassification::Quadratic;
     }
 
     LinearObjectiveFunction::updateProperties();
@@ -282,15 +282,15 @@ void NonlinearObjectiveFunction::updateProperties()
 
         if (properties.hasNonalgebraicPart)
         {
-            E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Nonalgebraic;
+            properties.classification = E_ObjectiveFunctionClassification::Nonalgebraic;
         }
         else if (properties.hasSignomialTerms)
         {
-            E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::GeneralizedSignomial;
+            properties.classification = E_ObjectiveFunctionClassification::GeneralizedSignomial;
         }
         else
         {
-            E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::Nonlinear;
+            properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
         }
     }
 

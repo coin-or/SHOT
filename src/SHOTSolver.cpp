@@ -12,6 +12,19 @@
 
 using namespace SHOT;
 
+SHOTSolver::SHOTSolver()
+{
+    env = std::make_shared<Environment>();
+
+    env->output = std::make_shared<Output>();
+    env->process = std::make_shared<ProcessInfo>(env);
+    env->settings = std::make_shared<Settings>(env->output);
+    env->tasks = std::make_shared<TaskHandler>(env);
+    env->report = std::make_shared<Report>(env);
+    env->model = std::make_shared<Model>(env);
+    initializeSettings();
+}
+
 SHOTSolver::SHOTSolver(EnvironmentPtr envPtr) : env(envPtr)
 {
     initializeSettings();
@@ -128,6 +141,20 @@ bool SHOTSolver::setProblem(std::string fileName)
     {
         if (problemExtension == ".osil" || problemExtension == ".xml")
         {
+            auto modelingSystem = std::make_shared<ModelingSystemOS>(env);
+            ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+            if (modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::OSiL) != E_ProblemCreationStatus::NormalCompletion)
+            {
+            }
+            else
+            {
+            }
+
+            env->modelingSystem = modelingSystem;
+            env->problem = problem;
+            env->reformulatedProblem = problem;
+
             std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
             tmpInstance = env->model->getProblemInstanceFromOSiL(fileContents);
@@ -142,6 +169,20 @@ bool SHOTSolver::setProblem(std::string fileName)
         }
         else if (problemExtension == ".nl")
         {
+            auto modelingSystem = std::make_shared<ModelingSystemOS>(env);
+            ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+            if (modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::Ampl) != E_ProblemCreationStatus::NormalCompletion)
+            {
+            }
+            else
+            {
+            }
+
+            env->modelingSystem = modelingSystem;
+            env->problem = problem;
+            env->reformulatedProblem = problem;
+
             nl2os = std::unique_ptr<OSnl2OS>(new OSnl2OS());
             nl2os->readNl(fileName);
             nl2os->createOSObjects();
@@ -153,6 +194,21 @@ bool SHOTSolver::setProblem(std::string fileName)
 #ifdef HAS_GAMS
         else if (problemExtension == ".gms")
         {
+            auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+            SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+            if (modelingSystem->createProblem(problem, fileName, E_GAMSInputSource::ProblemFile) != E_ProblemCreationStatus::NormalCompletion)
+            {
+                std::cout << "Error while reading problem";
+            }
+            else
+            {
+            }
+
+            env->modelingSystem = modelingSystem;
+            env->problem = problem;
+            env->reformulatedProblem = problem;
+
             gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
             gms2os->readGms(fileName);
             gms2os->createOSObjects();

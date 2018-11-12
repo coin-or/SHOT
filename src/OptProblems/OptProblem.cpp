@@ -672,9 +672,9 @@ void OptProblem::copyVariables(OSInstance *source, OSInstance *destination, bool
         double *varlb = source->getVariableLowerBounds();
         double *varub = source->getVariableUpperBounds();
 
-        destination->instanceData->variables = new Variables();
+        destination->instanceData->variables = new ::Variables();
         destination->instanceData->variables->numberOfVariables = nvar;
-        destination->instanceData->variables->var = new Variable *[nvar];
+        destination->instanceData->variables->var = new ::Variable *[nvar];
 
         if (!destination->setVariables(nvar, varname, varlb, varub, vartype))
             throw ErrorClass(
@@ -777,9 +777,9 @@ void OptProblem::copyConstraints(OSInstance *source, OSInstance *destination)
         double *conub = source->getConstraintUpperBounds();
         double *con_c = source->getConstraintConstants();
 
-        destination->instanceData->constraints = new Constraints();
+        destination->instanceData->constraints = new ::Constraints();
         destination->instanceData->constraints->numberOfConstraints = ncon;
-        destination->instanceData->constraints->con = new Constraint *[ncon];
+        destination->instanceData->constraints->con = new ::Constraint *[ncon];
 
         if (!destination->setConstraints(ncon, conname, conlb, conub, con_c))
             throw ErrorClass(
@@ -792,7 +792,7 @@ void OptProblem::copyQuadraticTerms(OSInstance *source, OSInstance *destination)
     if (source->instanceData->quadraticCoefficients != NULL)
     {
         int nquad = source->getNumberOfQuadraticTerms();
-        QuadraticTerms *qcoef = source->getQuadraticTerms();
+        auto *qcoef = source->getQuadraticTerms();
 #ifdef _WIN32
         if (!destination->setQuadraticCoefficients(nquad, qcoef->rowIndexes, qcoef->varOneIndexes, qcoef->varTwoIndexes,
                                                    qcoef->coefficients, 0, nquad - 1))
@@ -1264,10 +1264,10 @@ void OptProblem::repairNonboundedVariables()
     }
 }
 
-std::vector<QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int constrIdx)
+std::vector<::QuadraticTerm *> OptProblem::getQuadraticTermsInConstraint(int constrIdx)
 {
     auto QPStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"));
-    std::vector<QuadraticTerm *> quadTerms;
+    std::vector<::QuadraticTerm *> quadTerms;
 
     if (constrIdx != -1 && QPStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
     {

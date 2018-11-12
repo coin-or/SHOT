@@ -13,6 +13,9 @@
 #include "Enums.h"
 #include "Structs.h"
 #include "Environment.h"
+#include "ModelingSystem/IModelingSystem.h"
+#include "ModelingSystem/ModelingSystemOS.h"
+#include "Model/Problem.h"
 #include "Output.h"
 #include "SHOTSettings.h"
 #include "SolutionStrategy/ISolutionStrategy.h"
@@ -27,6 +30,7 @@
 #include "OSnl2OS.h"
 
 #ifdef HAS_GAMS
+#include "ModelingSystem/ModelingSystemGAMS.h"
 #include "GAMS/GAMS2OS.h"
 #endif
 
@@ -54,8 +58,11 @@ class SHOTSolver
     EnvironmentPtr env;
 
   public:
+    SHOTSolver();
     SHOTSolver(EnvironmentPtr environment);
     ~SHOTSolver();
+
+    inline EnvironmentPtr getEnvironment() { return env; };
 
     bool setOptions(std::string fileName);
     bool setOptions(OSOption *osOptions);
