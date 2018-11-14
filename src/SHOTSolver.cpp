@@ -155,6 +155,8 @@ bool SHOTSolver::setProblem(std::string fileName)
             env->problem = problem;
             env->reformulatedProblem = problem;
 
+            std::cout << problem << std::endl;
+
             std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
             tmpInstance = env->model->getProblemInstanceFromOSiL(fileContents);
@@ -552,10 +554,6 @@ void SHOTSolver::initializeSettings()
     enumMIPSolver.clear();
 
     env->settings->createSetting("MIP.UpdateObjectiveBounds", "Dual", false, "Update nonlinear objective variable bounds to primal/dual bounds");
-
-    // Dual strategy settings: Objective linesearch
-
-    env->settings->createSetting("ObjectiveLinesearch.Use", "Dual", true, "Update the solution value for a nonlinear objective variable through a linesearch");
 
     // Dual strategy settings: Quadratic function strategy
 

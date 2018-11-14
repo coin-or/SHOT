@@ -66,9 +66,9 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr, OSIn
     TaskBase *tSolveIteration = new TaskSolveIteration(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
     {
-        TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch(env);
+        TaskBase *tUpdateNonlinearObjectiveSolution = new TaskSelectHyperplanePointsByObjectiveLinesearch(env);
         env->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
     }
 

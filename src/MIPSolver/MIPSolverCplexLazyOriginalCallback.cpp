@@ -210,9 +210,9 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
     {
-        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch(env));
+        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal"))
@@ -375,7 +375,7 @@ void CtCallbackI::main()
         static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts.get())->run(candidatePoints);
     }
 
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
     {
         taskUpdateObjectiveByLinesearch->updateObjectiveInPoint(candidatePoints.at(0));
     }

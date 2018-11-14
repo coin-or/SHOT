@@ -35,7 +35,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(const VectorDouble &point, 
     if (point.size() != variables.size())
     {
         std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
-                  << variables.size() << std::endl;
+                  << variables.size() << '\n';
         return;
     }
 
@@ -46,7 +46,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(const VectorDouble &point, 
         str << variables.at(i);
         str << "\t";
         str << point.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
     writeStringToFile(fileName, str.str());
@@ -57,7 +57,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(const VectorDouble &point, 
     if (point.size() != variables.size())
     {
         std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
-                  << variables.size() << std::endl;
+                  << variables.size() << '\n';
         return;
     }
 
@@ -68,7 +68,7 @@ void UtilityFunctions::saveVariablePointVectorToFile(const VectorDouble &point, 
         str << variables.at(i);
         str << "\t";
         str << point.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
     writeStringToFile(fileName, str.str());
@@ -80,35 +80,35 @@ void UtilityFunctions::savePrimalSolutionToFile(const PrimalSolution &solution, 
     std::stringstream str;
 
     str << "Source: " << solution.sourceDescription;
-    str << std::endl;
+    str << '\n';
 
     str << "Iteration found: " << solution.iterFound;
-    str << std::endl;
+    str << '\n';
 
     str << "Objective value: " << toStringFormat(solution.objValue, "%.8f", false);
-    str << std::endl;
+    str << '\n';
 
     str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index << "): "
         << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
-    str << std::endl;
+    str << '\n';
 
     str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index << "): "
         << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
-    str << std::endl;
+    str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
-    str << std::endl;
+    str << '\n';
 
     str << "Integer rounding performed: " << (solution.integerRoundingPerformed ? "true" : "false");
-    str << std::endl;
+    str << '\n';
 
     str << "Max integer rounding error: " << toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
 
-    str << std::endl;
-    str << std::endl;
+    str << '\n';
+    str << '\n';
 
     str << "Solution point: ";
-    str << std::endl;
+    str << '\n';
 
     for (int i = 0; i < solution.point.size(); i++)
     {
@@ -116,7 +116,7 @@ void UtilityFunctions::savePrimalSolutionToFile(const PrimalSolution &solution, 
         str << "\t";
         str << toStringFormat(solution.point.at(i), "%.8f", false);
         ;
-        str << std::endl;
+        str << '\n';
     }
 
     writeStringToFile(fileName, str.str());
@@ -134,10 +134,10 @@ void UtilityFunctions::displayVector(const VectorDouble &point)
         str << i;
         str << "\t";
         str << point.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const VectorDouble &point1, const VectorDouble &point2)
@@ -155,10 +155,34 @@ void UtilityFunctions::displayVector(const VectorDouble &point1, const VectorDou
 
         str << "\t";
         str << point2.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
+};
+
+void UtilityFunctions::displayVector(const VectorDouble &point1, const VectorDouble &point2, const VectorDouble &point3)
+{
+    std::stringstream str;
+
+    if (point1.size() != point2.size())
+        return;
+
+    for (int i = 0; i < point1.size(); i++)
+    {
+        str << i;
+        str << "\t";
+        str << point1.at(i);
+
+        str << "\t";
+        str << point2.at(i);
+
+        str << "\t";
+        str << point3.at(i);
+        str << '\n';
+    }
+
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayDifferencesInVector(const VectorDouble &point1, const VectorDouble &point2, double tol)
@@ -178,11 +202,11 @@ void UtilityFunctions::displayDifferencesInVector(const VectorDouble &point1, co
 
             str << "\t";
             str << point2.at(i);
-            str << std::endl;
+            str << '\n';
         }
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const VectorInteger &point)
@@ -197,10 +221,10 @@ void UtilityFunctions::displayVector(const VectorInteger &point)
         str << i;
         str << "\t";
         str << point.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const VectorString &point)
@@ -215,10 +239,10 @@ void UtilityFunctions::displayVector(const VectorString &point)
         str << i;
         str << "\t";
         str << point.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const std::vector<VectorDouble> &points)
@@ -235,10 +259,10 @@ void UtilityFunctions::displayVector(const std::vector<VectorDouble> &points)
             str << points.at(j).at(i);
         }
 
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const std::vector<VectorInteger> &points)
@@ -255,10 +279,10 @@ void UtilityFunctions::displayVector(const std::vector<VectorInteger> &points)
             str << points.at(j).at(i);
         }
 
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const std::vector<VectorString> &points)
@@ -275,10 +299,10 @@ void UtilityFunctions::displayVector(const std::vector<VectorString> &points)
             str << points.at(j).at(i);
         }
 
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 bool UtilityFunctions::isObjectiveGenerallyNonlinear(OSInstance *instance)
@@ -490,10 +514,10 @@ void UtilityFunctions::displayVector(const VectorInteger &point1, const VectorIn
 
         str << "\t";
         str << point2.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 void UtilityFunctions::displayVector(const VectorInteger &point1, const VectorDouble &point2)
@@ -511,10 +535,10 @@ void UtilityFunctions::displayVector(const VectorInteger &point1, const VectorDo
 
         str << "\t";
         str << point2.at(i);
-        str << std::endl;
+        str << '\n';
     }
 
-    std::cout << str.str() << std::endl;
+    std::cout << str.str() << '\n';
 };
 
 double UtilityFunctions::getJulianFractionalDate()

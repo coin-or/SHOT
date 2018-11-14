@@ -10,14 +10,14 @@
 
 #include "LinesearchMethodBoost.h"
 
-using namespace SHOT;
-
-VectorInteger activeConstraints;
+namespace SHOT
+{
+//VectorInteger activeConstraints;
+std::vector<NonlinearConstraint *> activeConstraints;
 double lastActiveConstraintUpdateValue;
 
 Test::Test(EnvironmentPtr envPtr) : env(envPtr)
 {
-    nonlinearConstraints = env->model->originalProblem->getNonlinearConstraintIndexes();
 }
 
 Test::~Test()
@@ -26,36 +26,9 @@ Test::~Test()
     secondPt.clear();
 }
 
-void Test::determineActiveConstraints(double constrTol)
+void Test::addActiveConstraint(NonlinearConstraint *constraint)
 {
-    valFirstPt = -OSDBL_MAX;
-    valSecondPt = -OSDBL_MAX;
-
-    clearActiveConstraints();
-
-    for (auto I : nonlinearConstraints)
-    {
-        auto tmpValFirstPt = env->model->originalProblem->calculateConstraintFunctionValue(I, firstPt);
-        auto tmpValSecondPt = env->model->originalProblem->calculateConstraintFunctionValue(I, secondPt);
-
-        if ((tmpValFirstPt > constrTol && tmpValSecondPt <= 0) || (tmpValFirstPt <= 0 && tmpValSecondPt > constrTol))
-        {
-            addActiveConstraint(I);
-        }
-
-        // For reuse of the function value
-        if (tmpValFirstPt > valFirstPt)
-            valFirstPt = tmpValFirstPt;
-        if (tmpValSecondPt > valSecondPt)
-            valSecondPt = tmpValSecondPt;
-    }
-
-    lastActiveConstraintUpdateValue = OSDBL_MAX;
-}
-
-void Test::addActiveConstraint(int constrIdx)
-{
-    activeConstraints.push_back(constrIdx);
+    activeConstraints.push_back(constraint);
 }
 
 void Test::clearActiveConstraints()
@@ -63,12 +36,13 @@ void Test::clearActiveConstraints()
     activeConstraints.clear();
 }
 
-void Test::setActiveConstraints(VectorInteger constrIdxs)
+void Test::setActiveConstraints(const std::vector<NonlinearConstraint *> &constraints)
 {
-    activeConstraints = constrIdxs;
+    for (auto C : constraints)
+        addActiveConstraint(C);
 }
 
-VectorInteger Test::getActiveConstraints()
+std::vector<NonlinearConstraint *> Test::getActiveConstraints()
 {
     return (activeConstraints);
 }
@@ -83,46 +57,77 @@ double Test::operator()(const double x)
         ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
     }
 
-    auto tmpActiveConstraints = getActiveConstraints();
-    auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(ptNew, tmpActiveConstraints);
+    double calculatedValue = NAN;
 
-    double validNewPt = mostDevConstr.first.value;
+    auto currentConstraints = getActiveConstraints();
 
-    if (validNewPt > 0 && validNewPt <= lastActiveConstraintUpdateValue && mostDevConstr.second.size() < tmpActiveConstraints.size())
+    std::vector<NonlinearConstraint *> activeConstraints;
+
+    if (auto sharedProblem = problem.lock())
     {
-        setActiveConstraints(mostDevConstr.second);
-        lastActiveConstraintUpdateValue = validNewPt;
+        auto constraintValue = sharedProblem->getMaxNumericConstraintValue(ptNew, currentConstraints, activeConstraints);
+        calculatedValue = constraintValue.normalizedValue;
+
+        if (!constraintValue.isFulfilled && calculatedValue <= lastActiveConstraintUpdateValue && activeConstraints.size() < currentConstraints.size())
+        {
+            setActiveConstraints(activeConstraints);
+            lastActiveConstraintUpdateValue = calculatedValue;
+        }
     }
 
-    return (validNewPt);
+    return (calculatedValue);
+}
+
+TestObjective::TestObjective(EnvironmentPtr envPtr) : env(envPtr)
+{
+}
+
+TestObjective::~TestObjective()
+{
+}
+
+double TestObjective::operator()(const double x)
+{
+    // Change the value of the auxilliary objective function variable
+    double ptNew = x * firstPt + (1 - x) * secondPt;
+
+    double calculatedValue = cachedObjectiveValue - ptNew;
+
+    //std::cout << firstPt << " < " << ptNew << " < " << secondPt << ": " << calculatedValue << std::endl;
+
+    return (calculatedValue);
 }
 
 LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr)
 {
     test = new Test(env);
+    testObjective = new TestObjective(env);
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
 {
     activeConstraints.clear();
     delete test;
+    delete testObjective;
 }
 
-std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDouble ptA,
-                                                                      VectorDouble ptB, int Nmax, double lambdaTol, double constrTol)
+std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const VectorDouble &ptA, const VectorDouble &ptB,
+                                                                      int Nmax, double lambdaTol, double constrTol,
+                                                                      const NonlinearConstraints &constraints)
 {
-    VectorInteger tmpVector;
-    return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpVector));
-}
 
-std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDouble ptA,
-                                                                      VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs)
-{
     if (ptA.size() != ptB.size())
     {
         env->output->outputError(
-            "     Linesearch error: sizes of points vary: " + std::to_string(ptA.size()) + " != " + std::to_string(ptB.size()));
+            "     Line search error: sizes of points vary: " + std::to_string(ptA.size()) + " != " + std::to_string(ptB.size()));
     }
+
+    if (constraints.size() == 0)
+    {
+        env->output->outputError("     No constraints selected for line search");
+    }
+
+    test->problem = constraints[0]->ownerProblem;
 
     int length = ptA.size();
     VectorDouble ptNew(length);
@@ -134,15 +139,18 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDoub
     test->firstPt = ptA;
     test->secondPt = ptB;
 
-    if (constrIdxs.size() == 0)
+    std::vector<NonlinearConstraint *> firstActiveConstraints;
+    std::vector<NonlinearConstraint *> secondActiveConstraints;
+
+    if (auto sharedProblem = test->problem.lock())
     {
-        test->determineActiveConstraints(constrTol);
-    }
-    else
-    {
-        test->setActiveConstraints(constrIdxs);
-        test->valFirstPt = env->model->originalProblem->getMostDeviatingConstraint(ptA).value;
-        test->valSecondPt = env->model->originalProblem->getMostDeviatingConstraint(ptB).value;
+        test->valFirstPt = sharedProblem->getMaxNumericConstraintValue(ptA, constraints, firstActiveConstraints).normalizedValue;
+        test->valSecondPt = sharedProblem->getMaxNumericConstraintValue(ptB, constraints, secondActiveConstraints).normalizedValue;
+
+        if (test->valFirstPt > 0)
+            test->setActiveConstraints(firstActiveConstraints);
+        else
+            test->setActiveConstraints(secondActiveConstraints);
     }
 
     if (test->getActiveConstraints().size() == 0) // All constraints are fulfilled.
@@ -190,7 +198,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDoub
         ptNew2.at(i) = r1.second * ptA.at(i) + (1 - r1.second) * ptB.at(i);
     }
 
-    auto validNewPt = env->model->originalProblem->isConstraintsFulfilledInPoint(ptNew);
+    auto validNewPt = env->problem->areNonlinearConstraintsFulfilled(ptNew, 0);
 
     if (!validNewPt) // ptNew Outside feasible region
     {
@@ -209,3 +217,68 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(VectorDoub
         return (tmpPair);
     }
 }
+
+std::pair<double, double> LinesearchMethodBoost::findZero(const VectorDouble &pt, double objectiveLB, double objectiveUB,
+                                                          int Nmax, double lambdaTol, double constrTol,
+                                                          const NonlinearObjectiveFunctionPtr &objectiveFunction)
+{
+    testObjective->solutionPoint = pt;
+    testObjective->firstPt = objectiveLB;
+    testObjective->secondPt = objectiveUB;
+
+    if (auto sharedProblem = objectiveFunction->ownerProblem.lock())
+    {
+        testObjective->cachedObjectiveValue = sharedProblem->objectiveFunction->calculateValue(pt);
+    }
+
+    typedef PairDouble Result;
+    boost::uintmax_t max_iter = Nmax;
+
+    int tempFEvals = env->solutionStatistics.numberOfFunctionEvalutions;
+
+    Result r1;
+
+    if (static_cast<ES_RootsearchMethod>(env->settings->getIntSetting("Rootsearch.Method", "Subsolver")) == ES_RootsearchMethod::BoostTOMS748)
+    {
+        r1 = boost::math::tools::toms748_solve(*testObjective, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
+    }
+    else
+    {
+        r1 = boost::math::tools::bisect(*testObjective, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
+    }
+
+    int resFVals = env->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
+    if (max_iter == Nmax)
+    {
+        env->output->outputWarning(
+            "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
+    }
+    else
+    {
+        env->output->outputInfo(
+            "     Line search iterations: " + std::to_string(max_iter) + ". Function evaluations: " + std::to_string(resFVals));
+    }
+
+    double ptNew = r1.first * objectiveLB + (1 - r1.first) * objectiveUB;
+    double ptNew2 = r1.second * objectiveLB + (1 - r1.second) * objectiveUB;
+
+    if (ptNew2 < ptNew)
+    {
+        // TODO: check that this is not needed
+        /*env->process->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
+                                                 env->process->getCurrentIteration()->iterationNumber);*/
+
+        std::pair<double, double> tmpPair(ptNew2, ptNew);
+        return (tmpPair);
+    }
+    else
+    {
+        // TODO: check that this is not needed
+        /*env->process->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
+                                                 env->process->getCurrentIteration()->iterationNumber);*/
+
+        std::pair<double, double> tmpPair(ptNew, ptNew2);
+        return (tmpPair);
+    }
+}
+} // namespace SHOT

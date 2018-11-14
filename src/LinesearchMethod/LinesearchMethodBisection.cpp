@@ -84,7 +84,6 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBisection::findZero(Vector
         env->output->outputError("Error while doing linesearch.");
 
         if (!env->model->originalProblem->isConstraintsFulfilledInPoint(ptA))
-            //Returns the NLP point if not on the interior
 
             if (!env->model->originalProblem->isConstraintsFulfilledInPoint(ptA))
             {

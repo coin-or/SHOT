@@ -11,6 +11,7 @@
 #pragma once
 #include "IMIPSolver.h"
 #include "MIPSolverBase.h"
+#include "MIPSolverCplex.h"
 #include "MIPSolverCallbackBase.h"
 
 #include <functional>

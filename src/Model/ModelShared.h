@@ -75,16 +75,16 @@ typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
 struct NumericConstraintValue
 {
     NumericConstraintPtr constraint;
-    double functionValue;
 
-    bool isFulfilledLHS;
-    double errorLHS;
-
-    bool isFulfilledRHS;
-    double errorRHS;
-
-    bool isFulfilled;
-    double error;
+    // Considering a constraint L <= f(x) <= U:
+    double functionValue;      // This is the function value of f(x)
+    bool isFulfilledLHS;       // Is L <= f(x)?
+    double normalizedLHSValue; // This is the value of L - f(x)
+    bool isFulfilledRHS;       // Is f(x) <= U
+    double normalizedRHSValue; // This is the value of f(x) - U
+    bool isFulfilled;          // Is L <= f(x) <= U?
+    double error;              // max(0, max(L - f(x), f(x) - U)
+    double normalizedValue;    // max(L - f(x), f(x)-U)
 };
 
 typedef std::vector<NumericConstraintValue> NumericConstraintValues;

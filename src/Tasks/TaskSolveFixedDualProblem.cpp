@@ -174,7 +174,8 @@ void TaskSolveFixedDualProblem::run()
                     auto xNewc = env->process->linesearchMethod->findZero(internalPoint, externalPoint,
                                                                           env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                                                                           env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                                                                          env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"));
+                                                                          env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
+                                                                          env->reformulatedProblem->nonlinearConstraints);
 
                     env->process->stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;

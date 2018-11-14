@@ -300,7 +300,7 @@
     <ClCompile Include="..\src\Tasks\TaskTerminate.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Tasks\TaskUpdateNonlinearObjectiveByLinesearch.cpp">
+    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsByObjectiveLinesearch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Timer.cpp">
@@ -599,7 +599,7 @@
     <ClInclude Include="..\src\Tasks\TaskTerminate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Tasks\TaskUpdateNonlinearObjectiveByLinesearch.h">
+    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsByObjectiveLinesearch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Timer.h">

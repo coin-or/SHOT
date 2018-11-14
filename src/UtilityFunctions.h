@@ -54,6 +54,7 @@ bool areAllVariablesReal(OSInstance *instance);
 
 void displayVector(const VectorDouble &point);
 void displayVector(const VectorDouble &point1, const VectorDouble &point2);
+void displayVector(const VectorDouble &point1, const VectorDouble &point2, const VectorDouble &point3);
 void displayVector(const VectorInteger &point);
 void displayVector(const VectorString &point);
 void displayVector(const VectorInteger &point1, const VectorInteger &point2);

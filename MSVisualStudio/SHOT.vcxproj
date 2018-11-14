@@ -222,7 +222,7 @@
     <ClCompile Include="..\src\Tasks\TaskSolveIteration.cpp" />
     <ClCompile Include="..\src\Tasks\TaskSwitchToLazyConstraints.cpp" />
     <ClCompile Include="..\src\Tasks\TaskTerminate.cpp" />
-    <ClCompile Include="..\src\Tasks\TaskUpdateNonlinearObjectiveByLinesearch.cpp" />
+    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsByObjectiveLinesearch.cpp" />
     <ClCompile Include="..\src\Timer.cpp" />
     <ClCompile Include="..\src\UtilityFunctions.cpp" />
   </ItemGroup>
@@ -323,7 +323,7 @@
     <ClInclude Include="..\src\Tasks\TaskSolveIteration.h" />
     <ClInclude Include="..\src\Tasks\TaskSwitchToLazyConstraints.h" />
     <ClInclude Include="..\src\Tasks\TaskTerminate.h" />
-    <ClInclude Include="..\src\Tasks\TaskUpdateNonlinearObjectiveByLinesearch.h" />
+    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsByObjectiveLinesearch.h" />
     <ClInclude Include="..\src\Timer.h" />
     <ClInclude Include="..\src\UtilityFunctions.h" />
   </ItemGroup>

@@ -43,9 +43,9 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, 
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear() && env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
     {
-        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch>(new TaskUpdateNonlinearObjectiveByLinesearch(env));
+        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal"))
@@ -58,7 +58,6 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, 
 
 void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 {
-    std::cout << "hej" << std::endl;
     std::lock_guard<std::mutex> lock(callbackMutex);
     this->cbCalls++;
 

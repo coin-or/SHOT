@@ -14,8 +14,12 @@
 #include "../Model.h"
 #include "../OptProblems/OptProblemOriginal.h"
 #include "../ProcessInfo.h"
+#include "../Environment.h"
+#include "../Model/Problem.h"
+#include "../Model/Constraints.h"
 
 #include "boost/math/tools/roots.hpp"
+#include <memory>
 
 namespace SHOT
 {
@@ -23,9 +27,10 @@ class Test
 {
   private:
     EnvironmentPtr env;
-    VectorInteger nonlinearConstraints;
 
   public:
+    std::weak_ptr<Problem> problem;
+
     VectorDouble firstPt;
     VectorDouble secondPt;
 
@@ -34,11 +39,29 @@ class Test
 
     Test(EnvironmentPtr envPtr);
     ~Test();
-    void determineActiveConstraints(double constrTol);
-    void setActiveConstraints(VectorInteger constrIdxs);
-    VectorInteger getActiveConstraints();
+
+    void setActiveConstraints(const std::vector<NonlinearConstraint *> &constraints);
+    std::vector<NonlinearConstraint *> getActiveConstraints();
     void clearActiveConstraints();
-    void addActiveConstraint(int constrIdx);
+    void addActiveConstraint(NonlinearConstraint *constraint);
+
+    double operator()(const double x);
+};
+
+class TestObjective
+{
+  private:
+    EnvironmentPtr env;
+
+  public:
+    VectorDouble solutionPoint;
+    double cachedObjectiveValue;
+
+    double firstPt;
+    double secondPt;
+
+    TestObjective(EnvironmentPtr envPtr);
+    ~TestObjective();
 
     double operator()(const double x);
 };
@@ -66,14 +89,17 @@ class LinesearchMethodBoost : public ILinesearchMethod
     LinesearchMethodBoost(EnvironmentPtr envPtr);
     virtual ~LinesearchMethodBoost();
 
-    virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA,
-                                                           VectorDouble ptB, int Nmax, double lambdaTol, double constrTol);
+    virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
+                                                           int Nmax, double lambdaTol, double constrTol,
+                                                           const NonlinearConstraints &constraints);
 
-    virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA,
-                                                           VectorDouble ptB, int Nmax, double lambdaTol, double constrTol, VectorInteger constrIdxs);
+    virtual std::pair<double, double> findZero(const VectorDouble &pt, double objectiveLB, double objectiveUB,
+                                               int Nmax, double lambdaTol, double constrTol,
+                                               const NonlinearObjectiveFunctionPtr &objectiveFunction);
 
   private:
     Test *test;
+    TestObjective *testObjective;
     EnvironmentPtr env;
 };
 } // namespace SHOT

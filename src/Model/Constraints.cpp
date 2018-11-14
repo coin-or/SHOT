@@ -47,14 +47,16 @@ NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDoub
     constrValue.constraint = getPointer();
     constrValue.functionValue = value;
     constrValue.isFulfilledRHS = (value <= valueRHS);
-    constrValue.errorRHS = std::max(value - valueRHS, 0.0);
+    constrValue.normalizedRHSValue = value - valueRHS;
 
     constrValue.isFulfilledLHS = (value >= valueLHS);
-    constrValue.errorLHS = std::max(valueLHS - value, 0.0);
+    constrValue.normalizedLHSValue = valueLHS - value;
 
     constrValue.isFulfilled =
         (constrValue.isFulfilledRHS && constrValue.isFulfilledLHS);
-    constrValue.error = std::max(constrValue.errorRHS, constrValue.errorLHS);
+
+    constrValue.normalizedValue = std::max(constrValue.normalizedRHSValue, constrValue.normalizedLHSValue);
+    constrValue.error = std::max(0.0, constrValue.normalizedValue);
 
     return constrValue;
 }

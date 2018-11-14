@@ -48,7 +48,7 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
         return (true);
     }
 
-    bool useObjectiveLinesearchUpdate = env->settings->getBoolSetting("ObjectiveLinesearch.Use", "Dual");
+    bool useObjectiveLinesearchUpdate = true;
 
     if (prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
     {

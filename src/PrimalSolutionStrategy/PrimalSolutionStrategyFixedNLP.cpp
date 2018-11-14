@@ -19,12 +19,12 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
 
     switch (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")))
     {
-    case (ES_PrimalNLPSolver::CuttingPlane):
+    /*case (ES_PrimalNLPSolver::CuttingPlane):
     {
         env->process->usedPrimalNLPSolver = ES_PrimalNLPSolver::CuttingPlane;
         NLPSolver = new NLPSolverCuttingPlaneRelaxed(env);
         break;
-    }
+    }*/
     case (ES_PrimalNLPSolver::Ipopt):
     {
         env->process->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;

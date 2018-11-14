@@ -9,7 +9,7 @@
 */
 
 #pragma once
-#include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
@@ -38,7 +38,7 @@ class MIPSolverCallbackBase
 
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> tSelectPrimNLP;
     std::shared_ptr<TaskBase> taskSelectHPPts;
-    std::shared_ptr<TaskUpdateNonlinearObjectiveByLinesearch> taskUpdateObjectiveByLinesearch;
+    std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch> taskUpdateObjectiveByLinesearch;
     std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch> taskSelectPrimalSolutionFromLinesearch;
     std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
 

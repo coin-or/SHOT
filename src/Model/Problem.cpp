@@ -377,7 +377,8 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
     return (this->getMostDeviatingNumericConstraint(point, numericConstraints));
 };
 
-boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, NumericConstraints constraintSelection)
+template <typename T>
+boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection)
 {
     boost::optional<NumericConstraintValue> optional;
     double error = -1;
@@ -404,7 +405,129 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
     return optional;
 };
 
-template <class T>
+template <typename T>
+boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+                                                                                   std::vector<T *> &activeConstraints)
+{
+    assert(activeConstraints.size() == 0);
+
+    boost::optional<NumericConstraintValue>
+        optional;
+    double error = -1;
+
+    for (auto C : constraintSelection)
+    {
+        auto constraintValue = C->calculateNumericValue(point);
+
+        if (constraintValue.isFulfilled)
+            continue;
+        else
+            activeConstraints.push_back(C.get());
+
+        if (!optional) // No constraint with error found yet
+        {
+            optional = constraintValue;
+            error = constraintValue.error;
+        }
+        else if (constraintValue.error > error)
+        {
+            optional = constraintValue;
+            error = constraintValue.error;
+        }
+    }
+
+    return optional;
+};
+
+template <typename T>
+boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+                                                                                   std::vector<std::shared_ptr<T>> &activeConstraints)
+{
+    assert(activeConstraints.size() == 0);
+
+    boost::optional<NumericConstraintValue>
+        optional;
+    double error = -1;
+
+    for (auto C : constraintSelection)
+    {
+        auto constraintValue = C->calculateNumericValue(point);
+
+        if (constraintValue.isFulfilled)
+            continue;
+        else
+            activeConstraints.push_back(C);
+
+        if (!optional) // No constraint with error found yet
+        {
+            optional = constraintValue;
+            error = constraintValue.error;
+        }
+        else if (constraintValue.error > error)
+        {
+            optional = constraintValue;
+            error = constraintValue.error;
+        }
+    }
+
+    return optional;
+};
+
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints &constraintSelection,
+                                                             std::vector<NonlinearConstraint *> &activeConstraints)
+{
+    assert(activeConstraints.size() == 0);
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValue(point);
+
+    if (value.error > 0)
+        activeConstraints.push_back(constraintSelection[0].get());
+
+    for (int i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+
+        if (tmpValue.error > value.error)
+        {
+            value = tmpValue;
+        }
+
+        if (tmpValue.error > 0)
+            activeConstraints.push_back(constraintSelection[i].get());
+    }
+
+    return value;
+};
+
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, std::vector<NonlinearConstraint *> &constraintSelection,
+                                                             std::vector<NonlinearConstraint *> &activeConstraints)
+{
+    assert(activeConstraints.size() == 0);
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValue(point);
+
+    if (value.error > 0)
+        activeConstraints.push_back(constraintSelection[0]);
+
+    for (int i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+
+        if (tmpValue.error > value.error)
+        {
+            value = tmpValue;
+        }
+
+        if (tmpValue.error > 0)
+            activeConstraints.push_back(constraintSelection[i]);
+    }
+
+    return value;
+};
+
+template <typename T>
 NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection)
 {
     NumericConstraintValues constraintValues;

@@ -13,6 +13,8 @@
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
 #include "TaskSelectHyperplanePointsSolution.h"
+#include "../Model/Problem.h"
+#include "../Model/Constraints.h"
 
 namespace SHOT
 {
@@ -28,9 +30,7 @@ class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
     virtual std::string getType();
 
   private:
-    VectorInteger nonlinearConstraintIdxs;
-
-    TaskSelectHyperplanePointsSolution *tSelectHPPts;
+        TaskSelectHyperplanePointsSolution *tSelectHPPts;
     bool hyperplaneSolutionPointStrategyInitialized = false;
 };
 } // namespace SHOT

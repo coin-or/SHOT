@@ -32,7 +32,8 @@ enum class E_HyperplaneSource
     PrimalSolutionSearch,
     PrimalSolutionSearchInteriorObjective,
     InteriorPointSearch,
-    MIPCallbackRelaxed
+    MIPCallbackRelaxed,
+    ObjectiveLinesearch
 };
 
 enum class E_IterationLineType

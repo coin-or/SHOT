@@ -286,4 +286,5 @@ std::ostream &operator<<(std::ostream &stream, NumericConstraintPtr constraint);
 std::ostream &operator<<(std::ostream &stream, LinearConstraintPtr constraint);
 std::ostream &operator<<(std::ostream &stream, QuadraticConstraintPtr constraint);
 std::ostream &operator<<(std::ostream &stream, NonlinearConstraintPtr constraint);
+
 } // namespace SHOT

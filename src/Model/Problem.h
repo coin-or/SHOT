@@ -140,9 +140,24 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
 
-    virtual boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, NumericConstraints constraintSelection);
+    template <typename T>
+    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection);
 
-    template <class T>
+    template <typename T>
+    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+                                                                              std::vector<T *> &activeConstraints);
+
+    template <typename T>
+    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+                                                                              std::vector<std::shared_ptr<T>> &activeConstraints);
+
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints &constraintSelection,
+                                                        std::vector<NonlinearConstraint *> &activeConstraints);
+
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, std::vector<NonlinearConstraint *> &constraintSelection,
+                                                        std::vector<NonlinearConstraint *> &activeConstraints);
+
+    template <typename T>
     NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection);
 
     virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance);

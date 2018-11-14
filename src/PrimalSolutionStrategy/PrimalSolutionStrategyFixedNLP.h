@@ -12,7 +12,7 @@
 #include "PrimalSolutionStrategyBase.h"
 #include "../NLPSolver/INLPSolver.h"
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
-#include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
+//#include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
 #include "../Report.h"
 
 #ifdef HAS_GAMS

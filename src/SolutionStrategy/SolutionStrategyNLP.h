@@ -50,7 +50,7 @@
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 
-#include "../Tasks/TaskUpdateNonlinearObjectiveByLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
 #include "SHOTSettings.h"

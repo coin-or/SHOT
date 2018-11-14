@@ -390,7 +390,7 @@ void GAMS2OS::createOSObjects()
 
     if (osinstance->instanceData->nonlinearExpressions == NULL)
         osinstance->instanceData->nonlinearExpressions =
-            new NonlinearExpressions();
+            new ::NonlinearExpressions();
 
     osinstance->instanceData->nonlinearExpressions->numberOfNonlinearExpressions = gmoNLM(gmo) + (gmoGetObjOrder(gmo) == gmoorder_NL ? 1 : 0);
     osinstance->instanceData->nonlinearExpressions->nl = CoinCopyOfArrayOrZero((Nl **)NULL,

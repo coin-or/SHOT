@@ -15,11 +15,11 @@
 
 namespace SHOT
 {
-class TaskUpdateNonlinearObjectiveByLinesearch : public TaskBase
+class TaskSelectHyperplanePointsByObjectiveLinesearch : public TaskBase
 {
   public:
-    TaskUpdateNonlinearObjectiveByLinesearch(EnvironmentPtr envPtr);
-    virtual ~TaskUpdateNonlinearObjectiveByLinesearch();
+    TaskSelectHyperplanePointsByObjectiveLinesearch(EnvironmentPtr envPtr);
+    virtual ~TaskSelectHyperplanePointsByObjectiveLinesearch();
     virtual void run();
     virtual std::string getType();
 

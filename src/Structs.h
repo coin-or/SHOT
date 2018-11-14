@@ -109,7 +109,8 @@ struct DualSolution
 
 struct Hyperplane
 {
-    int sourceConstraintIndex;
+    ConstraintPtr sourceConstraint;
+    int sourceConstraintIndex; //TODO remove
     VectorDouble generatedPoint;
     E_HyperplaneSource source;
 };
