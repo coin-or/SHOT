@@ -10,8 +10,8 @@
 
 #include "Output.h"
 
-using namespace SHOT;
-
+namespace SHOT
+{
 Output::Output()
 {
     osOutput = std::unique_ptr<OSOutput>(new OSOutput());
@@ -84,3 +84,4 @@ void Output::setLogLevels(int consoleLogLevel, int fileLogLevel)
     osOutput->SetPrintLevel("shotlogfile",
                             (ENUM_OUTPUT_LEVEL)(fileLogLevel));
 }
+} // namespace SHOT

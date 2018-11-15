@@ -10,6 +10,9 @@
 
 #include "TaskExecuteRelaxationStrategy.h"
 
+namespace SHOT
+{
+
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
@@ -49,3 +52,4 @@ std::string TaskExecuteRelaxationStrategy::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

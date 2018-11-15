@@ -10,7 +10,8 @@
 
 #include "OptProblem.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 OptProblem::OptProblem(EnvironmentPtr envPtr) : env(envPtr)
 {
@@ -1323,3 +1324,4 @@ bool OptProblem::isProblemDiscrete()
 
     return (false);
 }
+} // namespace SHOT

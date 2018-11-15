@@ -9,6 +9,8 @@
 */
 
 #include "TaskPrintSolutionBoundReport.h"
+namespace SHOT
+{
 
 TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
@@ -87,3 +89,4 @@ std::string TaskPrintSolutionBoundReport::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

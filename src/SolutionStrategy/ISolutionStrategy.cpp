@@ -10,6 +10,11 @@
 
 #include "ISolutionStrategy.h"
 
+namespace SHOT
+{
+
 ISolutionStrategy::~ISolutionStrategy()
 {
 }
+
+} // namespace SHOT

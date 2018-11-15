@@ -10,6 +10,9 @@
 
 #include "MIPSolutionLimitStrategyIncrease.h"
 
+namespace SHOT
+{
+
 MIPSolutionLimitStrategyIncrease::MIPSolutionLimitStrategyIncrease(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -89,3 +92,4 @@ int MIPSolutionLimitStrategyIncrease::getInitialLimit()
 {
     return (env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
 }
+} // namespace SHOT

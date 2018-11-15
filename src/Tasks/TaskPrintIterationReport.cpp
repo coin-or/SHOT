@@ -10,6 +10,9 @@
 
 #include "TaskPrintIterationReport.h"
 
+namespace SHOT
+{
+
 TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     lastNumHyperplane = 0;
@@ -112,3 +115,4 @@ std::string TaskPrintIterationReport::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

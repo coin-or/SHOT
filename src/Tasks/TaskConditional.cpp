@@ -10,6 +10,9 @@
 
 #include "TaskConditional.h"
 
+namespace SHOT
+{
+
 TaskConditional::TaskConditional(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -66,3 +69,4 @@ std::string TaskConditional::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

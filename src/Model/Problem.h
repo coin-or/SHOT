@@ -1,3 +1,4 @@
+
 /**
    The Supporting Hyperplane Optimization Toolkit (SHOT).
 
@@ -140,6 +141,8 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
 
+    boost::optional<NumericConstraintValue> getMostDeviatingNonlinearConstraint(const VectorDouble &point);
+
     template <typename T>
     boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection);
 
@@ -154,8 +157,8 @@ class Problem : public std::enable_shared_from_this<Problem>
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints &constraintSelection,
                                                         std::vector<NonlinearConstraint *> &activeConstraints);
 
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, std::vector<NonlinearConstraint *> &constraintSelection,
-                                                        std::vector<NonlinearConstraint *> &activeConstraints);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<NumericConstraint *> &constraintSelection,
+                                                        std::vector<NumericConstraint *> &activeConstraints);
 
     template <typename T>
     NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection);

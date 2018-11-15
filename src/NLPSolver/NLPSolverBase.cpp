@@ -10,6 +10,9 @@
 
 #include "NLPSolverBase.h"
 
+namespace SHOT
+{
+
 NLPSolverBase::NLPSolverBase()
 {
 }
@@ -84,3 +87,4 @@ VectorDouble NLPSolverBase::getVariableUpperBounds()
 
     return (getCurrentVariableUpperBounds());
 }
+} // namespace SHOT

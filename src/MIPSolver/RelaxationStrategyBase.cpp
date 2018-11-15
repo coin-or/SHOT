@@ -10,6 +10,9 @@
 
 #include "RelaxationStrategyBase.h"
 
+namespace SHOT
+{
+
 bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
 {
     auto prevIter = env->process->getPreviousIteration();
@@ -62,3 +65,4 @@ bool RelaxationStrategyBase::isGapReached()
 
     return false;
 }
+} // namespace SHOT

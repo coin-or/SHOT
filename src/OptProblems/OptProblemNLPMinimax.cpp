@@ -12,7 +12,8 @@
 #include "OSExpressionTree.h"
 #include "vector"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 OptProblemNLPMinimax::OptProblemNLPMinimax(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
@@ -420,3 +421,4 @@ void OptProblemNLPMinimax::copyNonlinearExpressions(OSInstance *source, OSInstan
 
     destination->bConstraintsModified = true;
 }
+} // namespace SHOT

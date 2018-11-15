@@ -29,6 +29,8 @@ class Report;
 class TaskHandler;
 class OptProblemOriginal;
 
+class Constraint;
+
 typedef std::shared_ptr<ProcessInfo> ProcessPtr;
 typedef std::shared_ptr<Settings> SettingsPtr;
 typedef std::shared_ptr<Model> ModelPtr;
@@ -39,6 +41,8 @@ typedef std::shared_ptr<Output> OutputPtr;
 typedef std::shared_ptr<OptProblemOriginal> OriginalProblemPtr;
 typedef std::shared_ptr<Report> ReportPtr;
 typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
+
+typedef std::shared_ptr<Constraint> ConstraintPtr;
 
 typedef std::pair<int, int> PairInteger;
 typedef std::pair<double, double> PairDouble;

@@ -10,6 +10,9 @@
 
 #include "TaskSelectPrimalCandidatesFromSolutionPool.h"
 
+namespace SHOT
+{
+
 TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -37,3 +40,4 @@ std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

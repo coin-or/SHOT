@@ -10,6 +10,9 @@
 
 #include "TaskCheckIterationError.h"
 
+namespace SHOT
+{
+
 TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
@@ -60,3 +63,4 @@ std::string TaskCheckIterationError::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

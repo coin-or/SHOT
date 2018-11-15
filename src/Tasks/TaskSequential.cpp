@@ -10,6 +10,9 @@
 
 #include "TaskSequential.h"
 
+namespace SHOT
+{
+
 TaskSequential::TaskSequential(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -49,3 +52,4 @@ std::string TaskSequential::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

@@ -11,6 +11,9 @@
 #include "NLPSolverCuttingPlaneRelaxed.h"
 #include "../Tasks/TaskAddHyperplanes.h"
 
+namespace SHOT
+{
+
 NLPSolverCuttingPlaneRelaxed::NLPSolverCuttingPlaneRelaxed(EnvironmentPtr envPtr) : INLPSolver(envPtr)
 {
     auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
@@ -401,3 +404,4 @@ void NLPSolverCuttingPlaneRelaxed::clearStartingPoint()
 void NLPSolverCuttingPlaneRelaxed::saveOptionsToFile(std::string fileName)
 {
 }
+} // namespace SHOT

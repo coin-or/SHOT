@@ -10,7 +10,10 @@
 
 #include "TaskSelectPrimalCandidatesFromNLP.h"
 
-TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr): TaskBase(envPtr)
+namespace SHOT
+{
+
+TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("PrimalStrategy");
     env->process->startTimer("PrimalBoundStrategyNLP");
@@ -47,3 +50,4 @@ std::string TaskSelectPrimalCandidatesFromNLP::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

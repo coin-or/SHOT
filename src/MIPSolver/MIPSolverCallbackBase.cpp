@@ -10,6 +10,9 @@
 
 #include "MIPSolverCallbackBase.h"
 
+namespace SHOT
+{
+
 bool MIPSolverCallbackBase::checkIterationLimit()
 {
     auto currIter = env->process->getCurrentIteration();
@@ -108,3 +111,4 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 MIPSolverCallbackBase::~MIPSolverCallbackBase()
 {
 }
+} // namespace SHOT

@@ -10,7 +10,8 @@
 
 #include "OptProblemOriginalLinearObjective.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 OptProblemOriginalLinearObjective::OptProblemOriginalLinearObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
@@ -47,3 +48,4 @@ bool OptProblemOriginalLinearObjective::setProblem(OSInstance *instance)
     this->repairNonboundedVariables();
     return true;
 }
+} // namespace SHOT

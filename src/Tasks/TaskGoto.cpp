@@ -9,6 +9,8 @@
 */
 
 #include "TaskGoto.h"
+namespace SHOT
+{
 
 TaskGoto::TaskGoto(EnvironmentPtr envPtr, std::string taskID) : TaskBase(envPtr), gotoTaskID(taskID)
 {
@@ -35,3 +37,4 @@ std::string TaskGoto::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

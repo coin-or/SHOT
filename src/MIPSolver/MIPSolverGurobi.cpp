@@ -10,6 +10,9 @@
 
 #include "MIPSolverGurobi.h"
 
+namespace SHOT
+{
+
 MIPSolverGurobi::MIPSolverGurobi()
 {
     //Should not be called
@@ -820,3 +823,4 @@ void GurobiInfoCallback::callback()
         env->output->outputError("Gurobi error when running main callback method", e.getMessage());
     }
 }
+} // namespace SHOT

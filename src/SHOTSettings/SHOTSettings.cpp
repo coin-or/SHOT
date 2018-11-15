@@ -10,7 +10,8 @@
 
 #include "SHOTSettings.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 enum ESettingsType
 {
@@ -868,3 +869,4 @@ void Settings::readSettingsFromOSOption(OSOption *options)
 
     output->outputInfo("Conversion of settings from OSoL completed.");
 }
+} // namespace SHOT

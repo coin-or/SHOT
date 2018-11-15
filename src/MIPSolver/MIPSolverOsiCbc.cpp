@@ -10,6 +10,9 @@
 
 #include "MIPSolverOsiCbc.h"
 
+namespace SHOT
+{
+
 MIPSolverOsiCbc::MIPSolverOsiCbc(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -640,3 +643,4 @@ int MIPSolverOsiCbc::getNumberOfExploredNodes()
         return 0;
     }
 }
+} // namespace SHOT

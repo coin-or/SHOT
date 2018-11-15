@@ -10,7 +10,8 @@
 
 #include "LinesearchMethodBisection.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 LinesearchMethodBisection::LinesearchMethodBisection(EnvironmentPtr envPtr)
 {
@@ -102,3 +103,4 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBisection::findZero(Vector
 {
     return (findZero(ptA, ptB, Nmax, lambdaTol, constrTol));
 }
+} // namespace SHOT

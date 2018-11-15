@@ -10,6 +10,8 @@
 
 #include <iostream>
 
+using namespace SHOT;
+
 bool CplexTest1(std::string filename);
 
 int CplexTest(int argc, char *argv[])

@@ -10,6 +10,9 @@
 
 #include "TaskCheckIterationLimit.h"
 
+namespace SHOT
+{
+
 TaskCheckIterationLimit::TaskCheckIterationLimit(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
@@ -34,3 +37,4 @@ std::string TaskCheckIterationLimit::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

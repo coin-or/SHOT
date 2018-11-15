@@ -10,6 +10,9 @@
 
 #include "TaskAddIntegerCuts.h"
 
+namespace SHOT
+{
+
 TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -64,3 +67,4 @@ std::string TaskAddIntegerCuts::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

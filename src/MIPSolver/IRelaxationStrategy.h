@@ -12,8 +12,6 @@
 #include "../Enums.h"
 #include "SHOTSettings.h"
 
-using namespace SHOT;
-
 namespace SHOT
 {
 class IRelaxationStrategy

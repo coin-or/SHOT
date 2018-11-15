@@ -10,6 +10,9 @@
 
 #include "TaskSolveIteration.h"
 
+namespace SHOT
+{
+
 TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -218,3 +221,4 @@ std::string TaskSolveIteration::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

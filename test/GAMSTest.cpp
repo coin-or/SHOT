@@ -12,6 +12,8 @@
 
 #include <iostream>
 
+using namespace SHOT;
+
 bool ReadGAMSProblem(std::string filename);
 bool SolveGAMSProblem(std::string filename);
 

@@ -10,7 +10,8 @@
 
 #include "Report.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 Report::Report(EnvironmentPtr envPtr) : env(envPtr)
 {
@@ -807,3 +808,4 @@ void Report::outputInteriorPointPreReport()
 
     env->output->outputSummary(report.str());
 }
+} // namespace SHOT

@@ -10,6 +10,9 @@
 
 #include "TaskSelectPrimalCandidatesFromLinesearch.h"
 
+namespace SHOT
+{
+
 TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -92,3 +95,4 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
         }
     }
 }
+} // namespace SHOT

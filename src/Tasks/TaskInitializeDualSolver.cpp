@@ -9,6 +9,8 @@
 */
 
 #include "TaskInitializeDualSolver.h"
+namespace SHOT
+{
 
 TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool useLazyStrategy) : TaskBase(envPtr)
 {
@@ -103,3 +105,4 @@ std::string TaskInitializeDualSolver::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

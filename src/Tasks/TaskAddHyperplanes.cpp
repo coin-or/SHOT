@@ -10,6 +10,9 @@
 
 #include "TaskAddHyperplanes.h"
 
+namespace SHOT
+{
+
 TaskAddHyperplanes::TaskAddHyperplanes(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
@@ -73,3 +76,4 @@ std::string TaskAddHyperplanes::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

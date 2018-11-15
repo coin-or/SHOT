@@ -10,6 +10,9 @@
 
 #include "TaskCheckObjectiveStagnation.h"
 
+namespace SHOT
+{
+
 TaskCheckObjectiveStagnation::TaskCheckObjectiveStagnation(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
@@ -62,3 +65,4 @@ std::string TaskCheckObjectiveStagnation::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

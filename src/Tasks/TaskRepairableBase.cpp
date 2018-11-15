@@ -9,3 +9,6 @@
 */
 
 #include "TaskRepairableBase.h"
+namespace SHOT
+{
+}

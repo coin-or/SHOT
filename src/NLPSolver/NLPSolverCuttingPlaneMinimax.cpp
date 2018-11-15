@@ -11,6 +11,9 @@
 #include "NLPSolverCuttingPlaneMinimax.h"
 #include "../Tasks/TaskAddHyperplanes.h"
 
+namespace SHOT
+{
+
 class MinimizationFunction
 {
   private:
@@ -365,3 +368,4 @@ void NLPSolverCuttingPlaneMinimax::clearStartingPoint()
 void NLPSolverCuttingPlaneMinimax::saveOptionsToFile(std::string fileName)
 {
 }
+} // namespace SHOT

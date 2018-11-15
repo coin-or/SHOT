@@ -10,6 +10,9 @@
 
 #include "SolutionStrategyNLP.h"
 
+namespace SHOT
+{
+
 SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osInstance)
 {
     env = envPtr;
@@ -51,6 +54,9 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osIn
 
     TaskBase *tAddHPs = new TaskAddHyperplanes(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
+
+    TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+    env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
 
     if (static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
@@ -156,3 +162,4 @@ bool SolutionStrategyNLP::solveProblem()
 void SolutionStrategyNLP::initializeStrategy()
 {
 }
+} // namespace SHOT

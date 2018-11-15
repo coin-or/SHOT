@@ -10,7 +10,8 @@
 
 #include "ProcessInfo.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 void ProcessInfo::addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
@@ -1322,4 +1323,5 @@ double ProcessInfo::getRelativeObjectiveGap()
     double gap = abs(getDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
 
     return (gap);
+}
 }

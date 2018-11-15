@@ -10,6 +10,9 @@
 
 #include "TaskCheckTimeLimit.h"
 
+namespace SHOT
+{
+
 TaskCheckTimeLimit::TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
@@ -34,3 +37,4 @@ std::string TaskCheckTimeLimit::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

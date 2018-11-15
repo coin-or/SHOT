@@ -377,11 +377,16 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
     return (this->getMostDeviatingNumericConstraint(point, numericConstraints));
 };
 
+boost::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearConstraint(const VectorDouble &point)
+{
+    return (this->getMostDeviatingNumericConstraint(point, nonlinearConstraints));
+};
+
 template <typename T>
 boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection)
 {
     boost::optional<NumericConstraintValue> optional;
-    double error = -1;
+    double error = 0;
 
     for (auto C : constraintSelection)
     {
@@ -500,8 +505,8 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     return value;
 };
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, std::vector<NonlinearConstraint *> &constraintSelection,
-                                                             std::vector<NonlinearConstraint *> &activeConstraints)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<NumericConstraint *> &constraintSelection,
+                                                             std::vector<NumericConstraint *> &activeConstraints)
 {
     assert(activeConstraints.size() == 0);
     assert(constraintSelection.size() > 0);

@@ -10,7 +10,8 @@
 
 #include "OptProblemOriginalQuadraticObjective.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 OptProblemOriginalQuadraticObjective::OptProblemOriginalQuadraticObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
@@ -40,3 +41,4 @@ bool OptProblemOriginalQuadraticObjective::setProblem(OSInstance *instance)
 
     return true;
 }
+} // namespace SHOT

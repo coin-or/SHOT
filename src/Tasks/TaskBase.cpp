@@ -11,7 +11,8 @@
 #include "TaskBase.h"
 #include "../TaskHandler.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr)
 {
@@ -46,3 +47,4 @@ std::string TaskBase::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

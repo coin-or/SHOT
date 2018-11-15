@@ -10,6 +10,9 @@
 
 #include "MIPSolutionLimitStrategyUnlimited.h"
 
+namespace SHOT
+{
+
 MIPSolutionLimitStrategyUnlimited::MIPSolutionLimitStrategyUnlimited(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -34,3 +37,4 @@ int MIPSolutionLimitStrategyUnlimited::getInitialLimit()
     auto tmpVal = env->dualSolver->getSolutionLimit();
     return tmpVal;
 }
+} // namespace SHOT

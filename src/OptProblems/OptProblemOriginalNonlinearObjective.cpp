@@ -10,7 +10,8 @@
 
 #include "OptProblemOriginalNonlinearObjective.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 OptProblemOriginalNonlinearObjective::OptProblemOriginalNonlinearObjective(EnvironmentPtr envPtr) : OptProblemOriginal(envPtr)
 {
@@ -365,3 +366,4 @@ void OptProblemOriginalNonlinearObjective::setNonlinearConstraintIndexes()
 
     setNonlinearConstraints(NLCIndexes);
 }
+} // namespace SHOT

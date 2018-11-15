@@ -10,4 +10,6 @@
 
 #include "IMIPSolutionLimitStrategy.h"
 
-using namespace SHOT;
+namespace SHOT
+{
+}

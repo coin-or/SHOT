@@ -10,6 +10,9 @@
 
 #include "TaskSelectHyperplanePointsSolution.h"
 
+namespace SHOT
+{
+
 TaskSelectHyperplanePointsSolution::TaskSelectHyperplanePointsSolution(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -87,3 +90,4 @@ std::string TaskSelectHyperplanePointsSolution::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

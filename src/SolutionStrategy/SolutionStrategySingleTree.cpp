@@ -10,6 +10,9 @@
 
 #include "SolutionStrategySingleTree.h"
 
+namespace SHOT
+{
+
 SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OSInstance *osInstance)
 {
     env = envPtr;
@@ -155,3 +158,4 @@ bool SolutionStrategySingleTree::solveProblem()
 void SolutionStrategySingleTree::initializeStrategy()
 {
 }
+} // namespace SHOT

@@ -10,6 +10,9 @@
 
 #include "TaskCheckObjectiveGapNotMet.h"
 
+namespace SHOT
+{
+
 TaskCheckObjectiveGapNotMet::TaskCheckObjectiveGapNotMet(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
@@ -39,3 +42,4 @@ std::string TaskCheckObjectiveGapNotMet::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

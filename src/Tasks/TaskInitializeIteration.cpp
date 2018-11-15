@@ -9,6 +9,7 @@
 */
 
 #include "TaskInitializeIteration.h"
+namespace SHOT{
 
 TaskInitializeIteration::TaskInitializeIteration(EnvironmentPtr envPtr): TaskBase(envPtr)
 {
@@ -27,4 +28,5 @@ std::string TaskInitializeIteration::getType()
 {
     std::string type = typeid(this).name();
     return (type);
+}
 }

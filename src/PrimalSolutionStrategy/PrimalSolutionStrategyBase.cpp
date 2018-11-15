@@ -10,11 +10,9 @@
 
 #include "PrimalSolutionStrategyBase.h"
 
-/*PrimalSolutionStrategyBase::PrimalSolutionStrategyBase(EnvironmentPtr envPtr)
+namespace SHOT
 {
-    env = envPtr;
-}*/
-
 PrimalSolutionStrategyBase::~PrimalSolutionStrategyBase()
 {
 }
+} // namespace SHOT

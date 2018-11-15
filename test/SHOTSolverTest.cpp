@@ -11,6 +11,8 @@
 #include "SHOTSolver.h"
 #include "UtilityFunctions.h"
 
+using namespace SHOT;
+
 bool SHOTSolverReadProblem(std::string filename);
 bool SHOTSolverTestOptions(bool useOSiL);
 

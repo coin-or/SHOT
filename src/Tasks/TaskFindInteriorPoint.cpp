@@ -10,6 +10,9 @@
 
 #include "TaskFindInteriorPoint.h"
 
+namespace SHOT
+{
+
 TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -157,3 +160,4 @@ std::string TaskFindInteriorPoint::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

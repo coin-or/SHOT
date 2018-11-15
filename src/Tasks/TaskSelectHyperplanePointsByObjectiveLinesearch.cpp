@@ -9,6 +9,8 @@
 */
 
 #include "TaskSelectHyperplanePointsByObjectiveLinesearch.h"
+namespace SHOT
+{
 
 TaskSelectHyperplanePointsByObjectiveLinesearch::TaskSelectHyperplanePointsByObjectiveLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
@@ -82,7 +84,7 @@ bool TaskSelectHyperplanePointsByObjectiveLinesearch::updateObjectiveInPoint(Sol
         auto xNewc = env->process->linesearchMethod->findZero(solution.point, objectiveLB, objectiveUB,
                                                               env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                                                               env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
-                                                              std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction));
+                                                              std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
 
         double diffobj = abs(oldObjVal - xNewc.second);
 
@@ -103,3 +105,4 @@ bool TaskSelectHyperplanePointsByObjectiveLinesearch::updateObjectiveInPoint(Sol
 
     return (changed);
 }
+} // namespace SHOT

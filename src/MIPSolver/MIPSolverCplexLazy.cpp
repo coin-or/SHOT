@@ -10,6 +10,9 @@
 
 #include "MIPSolverCplexLazy.h"
 
+namespace SHOT
+{
+
 CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, const IloCplex &inst)
 {
     std::lock_guard<std::mutex> lock(callbackMutex);
@@ -569,3 +572,4 @@ int MIPSolverCplexLazy::getSolutionLimit()
 void MIPSolverCplexLazy::checkParameters()
 {
 }
+} // namespace SHOT

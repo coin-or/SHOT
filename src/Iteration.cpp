@@ -10,7 +10,8 @@
 
 #include "Iteration.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 Iteration::Iteration(EnvironmentPtr envPtr)
 {
@@ -108,3 +109,4 @@ int Iteration::getSolutionPointWithSmallestDeviationIndex()
 
     return (tmpIdx);
 }
+} // namespace SHOT

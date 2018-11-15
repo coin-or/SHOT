@@ -10,6 +10,9 @@
 
 #include "RelaxationStrategyNone.h"
 
+namespace SHOT
+{
+
 RelaxationStrategyNone::RelaxationStrategyNone(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -44,3 +47,4 @@ E_IterationProblemType RelaxationStrategyNone::getProblemType()
     else
         return E_IterationProblemType::Relaxed;
 }
+} // namespace SHOT

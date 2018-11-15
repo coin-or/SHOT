@@ -10,6 +10,9 @@
 
 #include "TaskCheckAbsoluteGap.h"
 
+namespace SHOT
+{
+
 TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
@@ -32,3 +35,4 @@ std::string TaskCheckAbsoluteGap::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

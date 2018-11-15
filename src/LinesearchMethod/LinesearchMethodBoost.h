@@ -29,7 +29,7 @@ class Test
     EnvironmentPtr env;
 
   public:
-    std::weak_ptr<Problem> problem;
+    Problem *problem;
 
     VectorDouble firstPt;
     VectorDouble secondPt;
@@ -40,10 +40,10 @@ class Test
     Test(EnvironmentPtr envPtr);
     ~Test();
 
-    void setActiveConstraints(const std::vector<NonlinearConstraint *> &constraints);
-    std::vector<NonlinearConstraint *> getActiveConstraints();
+    void setActiveConstraints(const std::vector<NumericConstraint *> &constraints);
+    std::vector<NumericConstraint *> getActiveConstraints();
     void clearActiveConstraints();
-    void addActiveConstraint(NonlinearConstraint *constraint);
+    void addActiveConstraint(NumericConstraint *constraint);
 
     double operator()(const double x);
 };
@@ -91,11 +91,15 @@ class LinesearchMethodBoost : public ILinesearchMethod
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
                                                            int Nmax, double lambdaTol, double constrTol,
-                                                           const NonlinearConstraints &constraints);
+                                                           const NonlinearConstraints constraints);
+
+    std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
+                                                   int Nmax, double lambdaTol, double constrTol,
+                                                   const std::vector<NumericConstraint *> constraints);
 
     virtual std::pair<double, double> findZero(const VectorDouble &pt, double objectiveLB, double objectiveUB,
                                                int Nmax, double lambdaTol, double constrTol,
-                                               const NonlinearObjectiveFunctionPtr &objectiveFunction);
+                                               const NonlinearObjectiveFunction *objectiveFunction);
 
   private:
     Test *test;

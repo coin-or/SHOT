@@ -10,7 +10,10 @@
 
 #include "TaskCheckRelativeGap.h"
 
-TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue): TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+namespace SHOT
+{
+
+TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
 
@@ -20,15 +23,16 @@ TaskCheckRelativeGap::~TaskCheckRelativeGap()
 
 void TaskCheckRelativeGap::run()
 {
-	if (env->process->isRelativeObjectiveGapToleranceMet())
-	{
-		env->process->terminationReason = E_TerminationReason::RelativeGap;
-		env->tasks->setNextTask(taskIDIfTrue);
-	}
+    if (env->process->isRelativeObjectiveGapToleranceMet())
+    {
+        env->process->terminationReason = E_TerminationReason::RelativeGap;
+        env->tasks->setNextTask(taskIDIfTrue);
+    }
 }
 
 std::string TaskCheckRelativeGap::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }
+} // namespace SHOT

@@ -10,6 +10,9 @@
 
 #include "NLPSolverIpoptRelaxed.h"
 
+namespace SHOT
+{
+
 NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr) : INLPSolver(envPtr)
 {
     osolwriter = new OSoLWriter();
@@ -68,3 +71,4 @@ VectorDouble NLPSolverIpoptRelaxed::getSolution()
 
     return (tmpPoint);
 }
+} // namespace SHOT

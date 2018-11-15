@@ -10,6 +10,9 @@
 
 #include "MIPSolverGurobiLazy.h"
 
+namespace SHOT
+{
+
 MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -523,3 +526,4 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
         env->output->outputError("Gurobi error when invoking adding lazy constraint", e.getMessage());
     }
 }
+} // namespace SHOT

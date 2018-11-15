@@ -10,6 +10,9 @@
 
 #include "SolutionStrategyMIQCQP.h"
 
+namespace SHOT
+{
+
 SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance *osInstance)
 {
     env = envPtr;
@@ -88,3 +91,4 @@ bool SolutionStrategyMIQCQP::solveProblem()
 void SolutionStrategyMIQCQP::initializeStrategy()
 {
 }
+} // namespace SHOT

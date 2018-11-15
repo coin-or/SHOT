@@ -10,6 +10,9 @@
 
 #include "NLPSolverIpoptMinimax.h"
 
+namespace SHOT
+{
+
 NLPSolverIpoptMinimax::NLPSolverIpoptMinimax(EnvironmentPtr envPtr) : INLPSolver(envPtr)
 {
     osolwriter = new OSoLWriter();
@@ -74,3 +77,4 @@ void NLPSolverIpoptMinimax::setSolverSpecificInitialSettings()
     osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
                                      "number", "");
 }
+} // namespace SHOT

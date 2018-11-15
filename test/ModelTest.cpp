@@ -19,8 +19,12 @@
 #include "ModelingSystem/ModelingSystemOS.h"
 #include "ModelingSystem/ModelingSystemGAMS.h"
 
+#include "LinesearchMethod/LinesearchMethodBoost.h"
+
 #include "SHOTSolver.h"
 #include "Environment.h"
+
+using namespace SHOT;
 
 bool ModelTestVariables();
 bool ModelTestTerms();
@@ -32,6 +36,7 @@ bool ModelTestReadOSiLProblem(const std::string &problemFile);
 bool ModelTestReadNLProblem(const std::string &problemFile);
 bool ModelTestReadGAMSProblem(const std::string &problemFile);
 bool ModelTestModelingSystemOS();
+bool ModelTestRootsearch(const std::string &problemFile);
 
 int ModelTest(int argc, char *argv[])
 {
@@ -78,6 +83,9 @@ int ModelTest(int argc, char *argv[])
         break;
     case 9:
         passed = ModelTestReadGAMSProblem("data/fo7.gms");
+        break;
+    case 10:
+        passed = ModelTestRootsearch("data/shot_ex_jogo.gms");
         break;
     default:
         passed = false;
@@ -688,6 +696,86 @@ bool ModelTestReadGAMSProblem(const std::string &problemFile)
             std::cout << problem->factorableFunctionsDAG << '\n';
         }
     }
+
+    return passed;
+}
+
+bool ModelTestRootsearch(const std::string &problemFile)
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+
+    auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
+
+    if (modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile) != E_ProblemCreationStatus::NormalCompletion)
+    {
+        std::cout << "Error while reading problem";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "Problem read successfully:\n\n";
+        std::cout << problem << "\n\n";
+        //std::cout << problem->factorableFunctionsDAG << '\n';
+    }
+
+    VectorDouble interiorPoint;
+    interiorPoint.push_back(7.44902);
+    interiorPoint.push_back(8.53506);
+
+    VectorDouble exteriorPoint;
+    exteriorPoint.push_back(20.0);
+    exteriorPoint.push_back(20.0);
+
+    std::cout << "Interior point:\n";
+    UtilityFunctions::displayVector(interiorPoint);
+
+    std::cout << "Exterior point:\n";
+    UtilityFunctions::displayVector(exteriorPoint);
+
+    auto rootsearch = std::make_unique<LinesearchMethodBoost>(env);
+
+    auto root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, problem->nonlinearConstraints);
+
+    std::cout << "Root found:\n";
+    UtilityFunctions::displayVector(root.first, root.second);
+
+    exteriorPoint.clear();
+    exteriorPoint.push_back(8.47199);
+    exteriorPoint.push_back(20.0);
+
+    std::cout << "Interior point:\n";
+    UtilityFunctions::displayVector(interiorPoint);
+
+    std::cout << "Exterior point:\n";
+    UtilityFunctions::displayVector(exteriorPoint);
+
+    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, problem->nonlinearConstraints);
+
+    std::cout << "Root found:\n";
+    UtilityFunctions::displayVector(root.first, root.second);
+
+    exteriorPoint.clear();
+    exteriorPoint.push_back(1.0);
+    exteriorPoint.push_back(10.0);
+
+    std::cout << "Interior point:\n";
+    UtilityFunctions::displayVector(interiorPoint);
+
+    std::cout << "Exterior point:\n";
+    UtilityFunctions::displayVector(exteriorPoint);
+
+    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, problem->nonlinearConstraints);
+
+    std::cout << "Root found:\n";
+    UtilityFunctions::displayVector(root.first, root.second);
 
     return passed;
 }

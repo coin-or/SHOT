@@ -10,6 +10,9 @@
 
 #include "MIPSolverBase.h"
 
+namespace SHOT
+{
+
 MIPSolverBase::~MIPSolverBase()
 {
     lastSolutions.clear();
@@ -363,3 +366,4 @@ int MIPSolverBase::getNumberOfOpenNodes()
 {
     return (env->solutionStatistics.numberOfOpenNodes);
 }
+} // namespace SHOT

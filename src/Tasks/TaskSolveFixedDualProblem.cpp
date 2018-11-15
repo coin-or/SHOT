@@ -10,6 +10,9 @@
 
 #include "TaskSolveFixedDualProblem.h"
 
+namespace SHOT
+{
+
 TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualProblemsIntegerFixed");
@@ -277,3 +280,4 @@ std::string TaskSolveFixedDualProblem::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

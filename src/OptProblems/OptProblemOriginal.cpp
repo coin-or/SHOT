@@ -10,8 +10,8 @@
 
 #include "OptProblemOriginal.h"
 
-using namespace SHOT;
-
+namespace SHOT
+{
 OptProblemOriginal::OptProblemOriginal(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
 }
@@ -19,3 +19,4 @@ OptProblemOriginal::OptProblemOriginal(EnvironmentPtr envPtr) : OptProblem(envPt
 OptProblemOriginal::~OptProblemOriginal()
 {
 }
+} // namespace SHOT

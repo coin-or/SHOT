@@ -10,7 +10,8 @@
 
 #include "TaskHandler.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 {
@@ -96,3 +97,4 @@ TaskBase *TaskHandler::getTask(std::string taskID)
     TaskExceptionNotFound e(env, taskID);
     throw(e);
 }
+} // namespace SHOT

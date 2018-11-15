@@ -10,6 +10,9 @@
 
 #include "MIPSolverCplex.h"
 
+namespace SHOT
+{
+
 MIPSolverCplex::MIPSolverCplex()
 {
     // Should not be called
@@ -1011,3 +1014,4 @@ int MIPSolverCplex::getNumberOfOpenNodes()
         return 0;
     }
 }
+} // namespace SHOT

@@ -9,3 +9,7 @@
 */
 
 #include "IRelaxationStrategy.h"
+
+namespace SHOT
+{
+}

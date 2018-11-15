@@ -10,6 +10,9 @@
 
 #include "TaskInitializeLinesearch.h"
 
+namespace SHOT
+{
+
 TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualCutGenerationRootSearch");
@@ -42,3 +45,4 @@ std::string TaskInitializeLinesearch::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

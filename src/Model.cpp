@@ -11,7 +11,8 @@
 #include "Model.h"
 #include "OptProblems/OptProblemOriginal.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 Model::Model(EnvironmentPtr envPtr) : env(envPtr)
 {
@@ -148,3 +149,4 @@ PairDouble Model::getCorrectedObjectiveBounds()
 
     return (bounds);
 }
+} // namespace SHOT

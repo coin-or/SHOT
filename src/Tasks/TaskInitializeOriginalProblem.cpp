@@ -10,6 +10,9 @@
 
 #include "TaskInitializeOriginalProblem.h"
 
+namespace SHOT
+{
+
 TaskInitializeOriginalProblem::TaskInitializeOriginalProblem(EnvironmentPtr envPtr, OSInstance *originalInstance) : TaskBase(envPtr)
 {
     env->process->startTimer("ProblemInitialization");
@@ -95,3 +98,4 @@ std::string TaskInitializeOriginalProblem::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

@@ -27,11 +27,15 @@ class ILinesearchMethod
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
                                                            int Nmax, double lambdaTol, double constrTol,
-                                                           const NonlinearConstraints &constraints) = 0;
+                                                           const std::vector<NumericConstraint *> constraints) = 0;
+
+    virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
+                                                           int Nmax, double lambdaTol, double constrTol,
+                                                           const NonlinearConstraints constraints) = 0;
 
     virtual std::pair<double, double> findZero(const VectorDouble &pt, double objectiveLB, double objectiveUB,
-                                                           int Nmax, double lambdaTol, double constrTol,
-                                                           const NonlinearObjectiveFunctionPtr &objectiveFunction) = 0;
+                                               int Nmax, double lambdaTol, double constrTol,
+                                               const NonlinearObjectiveFunction *objectiveFunction) = 0;
 
   protected:
     EnvironmentPtr env;

@@ -10,6 +10,9 @@
 
 #include "PrimalSolutionStrategyFixedNLP.h"
 
+namespace SHOT
+{
+
 PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -377,3 +380,4 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
     return (true);
 }
+} // namespace SHOT

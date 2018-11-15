@@ -10,6 +10,9 @@
 
 #include "MIPSolutionLimitStrategyAdaptive.h"
 
+namespace SHOT
+{
+
 MIPSolutionLimitStrategyAdaptive::MIPSolutionLimitStrategyAdaptive(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -66,3 +69,4 @@ int MIPSolutionLimitStrategyAdaptive::getInitialLimit()
 {
     return env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
 }
+} // namespace SHOT

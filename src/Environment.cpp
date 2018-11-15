@@ -10,8 +10,8 @@
 
 #include "Environment.h"
 
-using namespace SHOT;
-
+namespace SHOT
+{
 Environment::Environment()
 {
 }
@@ -19,3 +19,4 @@ Environment::Environment()
 Environment::~Environment()
 {
 }
+} // namespace SHOT

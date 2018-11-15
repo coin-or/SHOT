@@ -10,6 +10,9 @@
 
 #include "NLPSolverIpoptBase.h"
 
+namespace SHOT
+{
+
 E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 {
     env->output->outputInfo(" Starting solution of Ipopt problem.");
@@ -487,3 +490,4 @@ void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
 
     UtilityFunctions::writeStringToFile(fileName, ss.str());
 }
+} // namespace SHOT

@@ -10,6 +10,9 @@
 
 #include "RelaxationStrategyStandard.h"
 
+namespace SHOT
+{
+
 RelaxationStrategyStandard::RelaxationStrategyStandard(EnvironmentPtr envPtr)
 {
     env = envPtr;
@@ -130,3 +133,4 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
 
     return (false);
 }
+} // namespace SHOT

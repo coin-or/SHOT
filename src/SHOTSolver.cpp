@@ -10,7 +10,8 @@
 
 #include "SHOTSolver.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 SHOTSolver::SHOTSolver()
 {
@@ -978,3 +979,4 @@ E_TerminationReason SHOTSolver::getTerminationReason()
 {
     return (env->process->terminationReason);
 }
+} // namespace SHOT

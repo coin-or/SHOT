@@ -10,8 +10,8 @@
 
 #include "INLPSolver.h"
 
-using namespace SHOT;
-
+namespace SHOT
+{
 INLPSolver::INLPSolver(EnvironmentPtr envPtr) : env(envPtr)
 {
 }
@@ -19,3 +19,4 @@ INLPSolver::INLPSolver(EnvironmentPtr envPtr) : env(envPtr)
 INLPSolver::~INLPSolver()
 {
 }
+} // namespace SHOT

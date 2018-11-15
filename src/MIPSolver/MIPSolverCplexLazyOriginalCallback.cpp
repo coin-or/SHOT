@@ -10,6 +10,9 @@
 
 #include "MIPSolverCplexLazyOriginalCallback.h"
 
+namespace SHOT
+{
+
 HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2) : IloCplex::HeuristicCallbackI(iloEnv), cplexVars(xx2)
 {
     env = envPtr;
@@ -621,3 +624,4 @@ int MIPSolverCplexLazyOriginalCallback::getSolutionLimit()
 void MIPSolverCplexLazyOriginalCallback::checkParameters()
 {
 }
+} // namespace SHOT

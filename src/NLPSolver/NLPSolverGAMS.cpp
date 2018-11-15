@@ -12,6 +12,9 @@
 #include "../GAMS/GAMS2OS.h"
 #include "../OptProblems/OptProblemNLPRelaxed.h"
 
+namespace SHOT
+{
+
 NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr) : INLPSolver(envPtr), gmo(NULL), gev(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)
 {
     NLPProblem = new OptProblemNLPRelaxed(env);
@@ -223,3 +226,4 @@ VectorDouble NLPSolverGAMS::getCurrentVariableUpperBounds()
 
     return ub;
 }
+} // namespace SHOT

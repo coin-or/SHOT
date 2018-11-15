@@ -10,7 +10,10 @@
 
 #include "TaskCalculateSolutionChangeNorm.h"
 
-TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr): TaskBase(envPtr)
+namespace SHOT
+{
+
+TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -70,3 +73,4 @@ std::string TaskCalculateSolutionChangeNorm::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

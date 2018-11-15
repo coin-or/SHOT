@@ -10,7 +10,8 @@
 
 #include "OptProblemNLPRelaxed.h"
 
-using namespace SHOT;
+namespace SHOT
+{
 
 OptProblemNLPRelaxed::OptProblemNLPRelaxed(EnvironmentPtr envPtr) : OptProblem(envPtr)
 {
@@ -73,3 +74,4 @@ void OptProblemNLPRelaxed::copyObjectiveFunction(OSInstance *source, OSInstance 
     destination->addObjective(-1, "newobj", "min", 0.0, 1.0, newobjcoeff);
     delete newobjcoeff;
 }
+} // namespace SHOT

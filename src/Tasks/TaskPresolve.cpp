@@ -10,7 +10,10 @@
 
 #include "TaskPresolve.h"
 
-TaskPresolve::TaskPresolve(EnvironmentPtr envPtr): TaskBase(envPtr)
+namespace SHOT
+{
+
+TaskPresolve::TaskPresolve(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
 
@@ -75,3 +78,4 @@ std::string TaskPresolve::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

@@ -10,6 +10,9 @@
 
 #include "TaskSimple.h"
 
+namespace SHOT
+{
+
 TaskSimple::TaskSimple(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
@@ -47,3 +50,4 @@ std::string TaskSimple::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

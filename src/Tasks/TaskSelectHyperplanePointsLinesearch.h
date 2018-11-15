@@ -30,5 +30,6 @@ class TaskSelectHyperplanePointsLinesearch : public TaskBase
   private:
     TaskSelectHyperplanePointsSolution *tSelectHPPts;
     bool hyperplaneSolutionPointStrategyInitialized = false;
+    std::vector<Constraint *> nonlinearConstraints;
 };
 } // namespace SHOT

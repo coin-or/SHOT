@@ -10,6 +10,9 @@
 
 #include "TaskExecuteSolutionLimitStrategy.h"
 
+namespace SHOT
+{
+
 TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->process->startTimer("DualStrategy");
@@ -100,3 +103,4 @@ std::string TaskExecuteSolutionLimitStrategy::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT
