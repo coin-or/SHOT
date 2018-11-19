@@ -25,7 +25,7 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
     auto currIter = env->process->getCurrentIteration();
 
-    if (currIter->isMIP())
+    if (currIter->isMIP() || env->process->usedSolutionStrategy == E_SolutionStrategy::NLP)
     {
         env->process->startTimer("PrimalStrategy");
         auto allSolutions = env->process->getCurrentIteration()->solutionPoints;

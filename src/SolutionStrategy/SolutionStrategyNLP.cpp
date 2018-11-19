@@ -135,7 +135,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osIn
 
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    TaskBase *tGoto = new TaskGoto(env, "PrintIterHeaderCheck");
+    TaskBase *tGoto = new TaskGoto(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");

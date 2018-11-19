@@ -36,7 +36,7 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
 {
     auto currIter = env->process->getCurrentIteration();
 
-    if (currIter->isMIP() && env->process->getRelativeObjectiveGap() > 1e-10)
+    if (currIter->isMIP() && env->process->getRelativeObjectiveGap() > 1e-10 || env->process->usedSolutionStrategy == E_SolutionStrategy::NLP)
     {
         env->process->startTimer("PrimalStrategy");
         env->process->startTimer("PrimalBoundStrategyRootSearch");
