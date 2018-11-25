@@ -210,8 +210,8 @@
     <ClCompile Include="..\src\Tasks\TaskPrintSolutionBoundReport.cpp" />
     <ClCompile Include="..\src\Tasks\TaskRepairableBase.cpp" />
     <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsIndividualLinesearch.cpp" />
-    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsLinesearch.cpp" />
-    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsSolution.cpp" />
+    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsESH.cpp" />
+    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsECP.cpp" />
     <ClCompile Include="..\src\Tasks\TaskSelectPrimalCandidatesFromLinesearch.cpp" />
     <ClCompile Include="..\src\Tasks\TaskSelectPrimalCandidatesFromNLP.cpp" />
     <ClCompile Include="..\src\Tasks\TaskSelectPrimalCandidatesFromSolutionPool.cpp" />
@@ -311,8 +311,8 @@
     <ClInclude Include="..\src\Tasks\TaskPrintSolutionBoundReport.h" />
     <ClInclude Include="..\src\Tasks\TaskRepairableBase.h" />
     <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsIndividualLinesearch.h" />
-    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsLinesearch.h" />
-    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsSolution.h" />
+    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsESH.h" />
+    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsECP.h" />
     <ClInclude Include="..\src\Tasks\TaskSelectPrimalCandidatesFromLinesearch.h" />
     <ClInclude Include="..\src\Tasks\TaskSelectPrimalCandidatesFromNLP.h" />
     <ClInclude Include="..\src\Tasks\TaskSelectPrimalCandidatesFromSolutionPool.h" />

@@ -412,8 +412,8 @@ void SHOTSolver::initializeSettings()
                                  enumHyperplanePointStrategy);
     enumHyperplanePointStrategy.clear();
 
-    env->settings->createSetting("ECP.ConstraintSelectionFactor", "Dual", 0.0,
-                                 "The fraction of violated constraints to generate cutting planes for",
+    env->settings->createSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0,
+                                 "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for",
                                  0.0, 1.0);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual", 8,
@@ -465,19 +465,11 @@ void SHOTSolver::initializeSettings()
                                  "Utilize primal solution as interior point", enumAddPrimalPointAsInteriorPoint);
     enumAddPrimalPointAsInteriorPoint.clear();
 
-    env->settings->createSetting("ESH.Linesearch.ConstraintFactor", "Dual", 0.5,
-                                 "No linesearch on a constraint if its value is less than this factor of the maximum", 1e-6,
+    env->settings->createSetting("HyperplaneCuts.MaxConstraintFactor", "Dual", 0.5,
+                                 "Linesearch performed on constraints with values larger than this factor times the maximum value", 1e-6,
                                  1.0);
 
-    VectorString enumLinesearchConstraintStrategy;
-    enumLinesearchConstraintStrategy.push_back("Max function");
-    enumLinesearchConstraintStrategy.push_back("Individual constraints");
-    env->settings->createSetting("ESH.Linesearch.ConstraintStrategy", "Dual",
-                                 static_cast<int>(ES_RootsearchConstraintStrategy::IndividualConstraints),
-                                 "Perform root search on", enumLinesearchConstraintStrategy);
-    enumLinesearchConstraintStrategy.clear();
-
-    env->settings->createSetting("ESH.Linesearch.IndividualConstraints.Unique", "Dual", true, "Allow only one hyperplane per constraint per iteration");
+    env->settings->createSetting("ESH.Linesearch.UniqueConstraints", "Dual", false, "Allow only one hyperplane per constraint per iteration");
 
     env->settings->createSetting("ESH.Linesearch.ConstraintTolerance", "Dual", 1e-8,
                                  "Constraint tolerance for when not to add individual hyperplanes", 0, OSDBL_MAX);

@@ -19,9 +19,8 @@
 #include "../NLPSolver/NLPSolverGAMS.h"
 #endif
 
-#include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsSolution.h"
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
 
 namespace SHOT
 {

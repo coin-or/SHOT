@@ -86,6 +86,7 @@ class Problem : public std::enable_shared_from_this<Problem>
     virtual ~Problem();
 
     ProblemProperties properties;
+    std::string name = "";
 
     Variables allVariables;
     Variables realVariables;
@@ -154,14 +155,21 @@ class Problem : public std::enable_shared_from_this<Problem>
     boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
                                                                               std::vector<std::shared_ptr<T>> &activeConstraints);
 
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints &constraintSelection,
-                                                        std::vector<NonlinearConstraint *> &activeConstraints);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NumericConstraints constraintSelection);
+
+    template <typename T>
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<T *> &constraintSelection,
+                                                        std::vector<T *> &activeConstraints);
 
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<NumericConstraint *> &constraintSelection,
                                                         std::vector<NumericConstraint *> &activeConstraints);
 
     template <typename T>
     NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection);
+
+    NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction);
 
     virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance);
 

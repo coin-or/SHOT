@@ -12,17 +12,15 @@
 #include "TaskBase.h"
 #include "../ProcessInfo.h"
 #include "../OptProblems/OptProblemOriginal.h"
-#include "TaskSelectHyperplanePointsSolution.h"
-#include "../Model/Problem.h"
-#include "../Model/Constraints.h"
+#include "TaskSelectHyperplanePointsECP.h"
 
 namespace SHOT
 {
-class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
+class TaskSelectHyperplanePointsESH : public TaskBase
 {
   public:
-    TaskSelectHyperplanePointsIndividualLinesearch(EnvironmentPtr envPtr);
-    virtual ~TaskSelectHyperplanePointsIndividualLinesearch();
+    TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr);
+    virtual ~TaskSelectHyperplanePointsESH();
 
     virtual void run();
     virtual void run(std::vector<SolutionPoint> solPoints);
@@ -30,7 +28,8 @@ class TaskSelectHyperplanePointsIndividualLinesearch : public TaskBase
     virtual std::string getType();
 
   private:
-        TaskSelectHyperplanePointsSolution *tSelectHPPts;
+    TaskSelectHyperplanePointsECP *tSelectHPPts;
     bool hyperplaneSolutionPointStrategyInitialized = false;
+    std::vector<Constraint *> nonlinearConstraints;
 };
 } // namespace SHOT

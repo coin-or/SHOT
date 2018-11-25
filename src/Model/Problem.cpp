@@ -110,7 +110,7 @@ void Problem::updateFactorableFunctions()
 {
     factorableFunctionsDAG = std::make_shared<FactorableFunctionGraph>();
 
-    for (auto V : nonlinearVariables)
+    for (auto &V : nonlinearVariables)
     {
         auto factorableFunctionsVar = std::make_shared<FactorableFunction>();
         factorableFunctionsVar->set(factorableFunctionsDAG.get());
@@ -118,7 +118,7 @@ void Problem::updateFactorableFunctions()
         factorableFunctionVariables.push_back(*factorableFunctionsVar.get());
     }
 
-    for (auto C : nonlinearConstraints)
+    for (auto &C : nonlinearConstraints)
     {
         C->updateFactorableFunction();
         factorableFunctions.push_back(*C->factorableFunction.get());
@@ -478,8 +478,9 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
     return optional;
 };
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints &constraintSelection,
-                                                             std::vector<NonlinearConstraint *> &activeConstraints)
+template <typename T>
+NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<std::shared_ptr<T>> constraintSelection,
+                                                    std::vector<T *> &activeConstraints)
 {
     assert(activeConstraints.size() == 0);
     assert(constraintSelection.size() > 0);
@@ -504,6 +505,63 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
 
     return value;
 };
+
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection)
+{
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValue(point);
+
+    for (int i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+
+        if (tmpValue.error > value.error)
+        {
+            value = tmpValue;
+        }
+    }
+
+    return value;
+}
+
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection)
+{
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValue(point);
+
+    for (int i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+
+        if (tmpValue.error > value.error)
+        {
+            value = tmpValue;
+        }
+    }
+
+    return value;
+}
+
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NumericConstraints constraintSelection)
+{
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValue(point);
+
+    for (int i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+
+        if (tmpValue.error > value.error)
+        {
+            value = tmpValue;
+        }
+    }
+
+    return value;
+}
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<NumericConstraint *> &constraintSelection,
                                                              std::vector<NumericConstraint *> &activeConstraints)
@@ -544,6 +602,28 @@ NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble &
     }
 
     return constraintValues;
+};
+
+NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction)
+{
+    if (fraction > 1)
+        fraction = 1;
+    else if (fraction < 0)
+        fraction = 0;
+
+    int fractionNumbers = std::max(1, (int)ceil(fraction * this->nonlinearConstraints.size()));
+
+    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints);
+
+    std::sort(values.begin(), values.end(), std::greater<NumericConstraintValue>());
+
+    if (values.size() <= fractionNumbers) // Not enough elements to need truncating
+    {
+        return values;
+    }
+
+    values.resize(fractionNumbers);
+    return values;
 };
 
 NumericConstraintValues Problem::getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance)

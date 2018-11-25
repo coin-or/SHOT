@@ -44,9 +44,8 @@
 #include "../Tasks/TaskCheckObjectiveGapNotMet.h"
 
 #include "../Tasks/TaskInitializeLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsIndividualLinesearch.h"
-#include "../Tasks/TaskSelectHyperplanePointsSolution.h"
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
 #include "../Tasks/TaskAddHyperplanes.h"
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"

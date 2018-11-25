@@ -37,6 +37,7 @@ bool ModelTestReadNLProblem(const std::string &problemFile);
 bool ModelTestReadGAMSProblem(const std::string &problemFile);
 bool ModelTestModelingSystemOS();
 bool ModelTestRootsearch(const std::string &problemFile);
+bool ModelTestGradient(const std::string &problemFile);
 
 int ModelTest(int argc, char *argv[])
 {
@@ -86,6 +87,9 @@ int ModelTest(int argc, char *argv[])
         break;
     case 10:
         passed = ModelTestRootsearch("data/shot_ex_jogo.gms");
+        break;
+    case 11:
+        passed = ModelTestGradient("data/flay02h.gms");
         break;
     default:
         passed = false;
@@ -467,6 +471,16 @@ bool ModelTestCreateProblem()
     std::cout << '\n';
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
+    SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(40.0);
+    SHOT::NonlinearExpressionPtr exprDivide = std::make_shared<SHOT::ExpressionDivide>(exprConstant2, expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionMinus>(exprDivide, expressionVariable_y);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraintDivide = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
+    problem->add(nonlinearConstraintDivide);
+
+    std::cout << '\n';
+    std::cout << "Nonlinear constraint " << nonlinearConstraintDivide << " created\n";
+
     std::cout << '\n';
     std::cout << "Finalizing problem:\n";
     problem->finalize();
@@ -500,10 +514,18 @@ bool ModelTestCreateProblem()
         std::cout << G.first->name << ": " << G.second << '\n';
     }
 
-    std::cout << "\nCalculating gradient for function in nonlinear constraint:\n";
+    std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
     auto gradientNonlinear = nonlinearConstraint->calculateGradient(point);
 
     for (auto const &G : gradientNonlinear)
+    {
+        std::cout << G.first->name << ":  " << G.second << '\n';
+    }
+
+    std::cout << "\nCalculating gradient for function in second nonlinear constraint:\n";
+    auto gradientNonlinear2 = nonlinearConstraintDivide->calculateGradient(point);
+
+    for (auto const &G : gradientNonlinear2)
     {
         std::cout << G.first->name << ":  " << G.second << '\n';
     }
@@ -776,6 +798,60 @@ bool ModelTestRootsearch(const std::string &problemFile)
 
     std::cout << "Root found:\n";
     UtilityFunctions::displayVector(root.first, root.second);
+
+    return passed;
+}
+
+bool ModelTestGradient(const std::string &problemFile)
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+
+    auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
+
+    if (modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile) != E_ProblemCreationStatus::NormalCompletion)
+    {
+        std::cout << "Error while reading problem";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "Problem read successfully:\n\n";
+        std::cout << problem << "\n\n";
+        std::cout << problem->factorableFunctionsDAG << '\n';
+    }
+
+    VectorDouble point;
+
+    for (auto &V : problem->allVariables)
+    {
+        point.push_back((V->upperBound - V->lowerBound) / 2.0);
+    }
+
+    std::cout << "Point to evaluate gradients in:\n";
+    UtilityFunctions::displayVector(point);
+
+    for (auto &C : problem->numericConstraints)
+    {
+
+        std::cout << "\nCalculating gradient for constraint:\t" << C << ":\n";
+
+        auto gradient = C->calculateGradient(point);
+
+        for (auto const &G : gradient)
+        {
+            std::cout << G.first->name << ":  " << G.second << '\n';
+        }
+
+        std::cout << '\n';
+    }
 
     return passed;
 }

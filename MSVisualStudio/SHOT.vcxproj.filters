@@ -264,10 +264,10 @@
     <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsIndividualLinesearch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsLinesearch.cpp">
+    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsESH.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsSolution.cpp">
+    <ClCompile Include="..\src\Tasks\TaskSelectHyperplanePointsECP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\Tasks\TaskSelectPrimalCandidatesFromLinesearch.cpp">
@@ -563,10 +563,10 @@
     <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsIndividualLinesearch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsLinesearch.h">
+    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsESH.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsSolution.h">
+    <ClInclude Include="..\src\Tasks\TaskSelectHyperplanePointsECP.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\Tasks\TaskSelectPrimalCandidatesFromLinesearch.h">

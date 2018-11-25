@@ -126,6 +126,9 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
 
     try
     {
+        gmoNameInput(gmo, buffer);
+        problem->name = buffer;
+
         if (!copyVariables(problem))
             return (E_ProblemCreationStatus::ErrorInVariables);
 

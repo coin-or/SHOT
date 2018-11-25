@@ -43,8 +43,8 @@ class ProcessInfo
   public:
     std::unique_ptr<OSResult> osResult;
 
-    IRelaxationStrategy *relaxationStrategy;
-    ILinesearchMethod *linesearchMethod;
+    std::shared_ptr<IRelaxationStrategy> relaxationStrategy;
+    std::shared_ptr<ILinesearchMethod> linesearchMethod;
 
     void initializeResults(int numObj, int numVar, int numConstr);
 
@@ -60,17 +60,13 @@ class ProcessInfo
 
     PairDouble getCorrectedObjectiveBounds();
 
-    void addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter,
-                           PairIndexValue maxConstrDev);
-    void addPrimalSolution(VectorDouble pt, E_PrimalSolutionSource source, double objVal, int iter);
-    void addPrimalSolution(SolutionPoint pt, E_PrimalSolutionSource source);
-
     void addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter,
                                     PairIndexValue maxConstrDev);
 
-    void addDualSolution(VectorDouble pt, E_DualSolutionSource source, double objVal, int iter);
-    void addDualSolution(SolutionPoint pt, E_DualSolutionSource source);
     void addDualSolution(DualSolution solution);
+    void addDualSolutionCandidate(DualSolution solution);
+    void checkDualSolutionCandidates();
+
     void addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter);
     void addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter);
 
@@ -78,15 +74,9 @@ class ProcessInfo
     void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
 
     void checkPrimalSolutionCandidates();
-    void checkDualSolutionCandidates();
 
     bool isRelativeObjectiveGapToleranceMet();
     bool isAbsoluteObjectiveGapToleranceMet();
-
-    void addDualSolutionCandidate(SolutionPoint pt, E_DualSolutionSource source);
-    void addDualSolutionCandidates(std::vector<SolutionPoint> pts, E_DualSolutionSource source);
-    void addDualSolutionCandidate(VectorDouble pt, E_DualSolutionSource source, int iter);
-    void addDualSolutionCandidate(DualSolution solution);
 
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();

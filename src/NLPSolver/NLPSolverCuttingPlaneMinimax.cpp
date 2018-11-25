@@ -264,6 +264,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 }
 
                 Hyperplane hyperplane;
+                hyperplane.sourceConstraint = std::dynamic_pointer_cast<NumericConstraint>(env->reformulatedProblem->getConstraint(j));
                 hyperplane.sourceConstraintIndex = j;
                 hyperplane.generatedPoint = tmpPoint;
                 hyperplane.source = E_HyperplaneSource::InteriorPointSearch;

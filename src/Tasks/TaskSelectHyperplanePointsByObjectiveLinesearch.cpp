@@ -89,6 +89,7 @@ bool TaskSelectHyperplanePointsByObjectiveLinesearch::updateObjectiveInPoint(Sol
         double diffobj = abs(oldObjVal - xNewc.second);
 
         Hyperplane hyperplane;
+        hyperplane.isObjectiveHyperplane = true;
         hyperplane.sourceConstraintIndex = -1;
         hyperplane.generatedPoint = solution.point;
         hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;

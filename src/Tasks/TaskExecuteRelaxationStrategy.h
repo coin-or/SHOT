@@ -28,7 +28,7 @@ class TaskExecuteRelaxationStrategy : public TaskBase
     virtual std::string getType();
 
   private:
-    IRelaxationStrategy *relaxationStrategy;
+    std::shared_ptr<IRelaxationStrategy> relaxationStrategy;
 
     bool isInitialized;
 };

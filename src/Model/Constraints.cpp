@@ -298,28 +298,44 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble &
 {
     SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point);
 
-    for (auto E : symbolicSparseJacobian)
+    try
     {
-        double value[1];
-
-        if (auto sharedOwnerProblem = ownerProblem.lock())
+        for (auto E : symbolicSparseJacobian)
         {
-            sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &point[0]);
+            double value[1];
+
+            if (auto sharedOwnerProblem = ownerProblem.lock())
+            {
+                // Collecting the values corresponding to nonlinear variables from the point
+                VectorDouble newPoint;
+                newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
+
+                for (auto &V : sharedOwnerProblem->nonlinearVariables)
+                {
+                    newPoint.push_back(point.at(V->index));
+                }
+
+                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
+            }
+
+            auto element = gradient.insert(std::make_pair(E.first, value[0]));
+
+            if (!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value[0];
+            }
         }
 
-        auto element = gradient.insert(std::make_pair(E.first, value[0]));
-
-        if (!element.second)
-        {
-            // Element already exists for the variable
-            element.first->second += value[0];
-        }
+        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+    }
+    catch (mc::FFGraph::Exceptions &e)
+    {
+        std::cout << "Error when evaluating gradient: " << e.what();
     }
 
-    UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
-
     return gradient;
-};
+}; // namespace SHOT
 
 bool NonlinearConstraint::isFulfilled(const VectorDouble &point)
 {

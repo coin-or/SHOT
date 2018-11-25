@@ -99,21 +99,12 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
     {
         TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
         env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
-        if (static_cast<ES_RootsearchConstraintStrategy>(env->settings->getIntSetting(
-                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
-        {
-            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch(env);
-            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
-        }
-        else
-        {
-            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch(env);
-            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
-        }
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsESH(env);
+        env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
     else
     {
-        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution(env);
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
 

@@ -23,6 +23,7 @@
 #include "OSInstance.h"
 
 #include "Structs.h"
+#include "Model/ModelShared.h"
 #include "Model/Variables.h"
 
 // Fix for missing NAN i Visual Studio
@@ -45,6 +46,7 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const VectorString
 void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &variables, const std::string &fileName);
 
 void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString &variables, const std::string &fileName);
+void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &variables, const std::string &fileName);
 
 bool isObjectiveGenerallyNonlinear(OSInstance *instance);
 bool isObjectiveQuadratic(OSInstance *instance);

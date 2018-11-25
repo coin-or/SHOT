@@ -86,6 +86,8 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, OSI
 {
     try
     {
+        problem->name = instance->getInstanceName();
+
         if (!copyVariables(instance, problem))
             return (E_ProblemCreationStatus::ErrorInVariables);
 

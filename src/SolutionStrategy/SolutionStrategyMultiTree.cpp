@@ -79,7 +79,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr, OSIn
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    if (env->settings->getBoolSetting("Linesearch.Use", "Primal"))
+    if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch(env);
         env->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
@@ -149,22 +149,12 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr, OSIn
     {
         TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
         env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
-
-        if (static_cast<ES_RootsearchConstraintStrategy>(env->settings->getIntSetting(
-                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
-        {
-            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch(env);
-            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
-        }
-        else
-        {
-            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch(env);
-            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
-        }
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsESH(env);
+        env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
     else
     {
-        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution(env);
+        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
 

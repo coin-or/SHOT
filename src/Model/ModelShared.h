@@ -72,6 +72,17 @@ typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
 class ExpressionVariable;
 typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
 
+//typedef std::vector<PairCoordinateValue> SparseMatrix;
+
+typedef mc::FFGraph FactorableFunctionGraph;
+typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
+typedef mc::FFVar FactorableFunction;
+typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
+typedef std::vector<FactorableFunctionPtr> FactorableFunctions;
+
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
+
 struct NumericConstraintValue
 {
     NumericConstraintPtr constraint;
@@ -85,20 +96,15 @@ struct NumericConstraintValue
     bool isFulfilled;          // Is L <= f(x) <= U?
     double error;              // max(0, max(L - f(x), f(x) - U)
     double normalizedValue;    // max(L - f(x), f(x)-U)
+
+    // Sorts in reverse order, i.e. so that larger errors are before smaller ones
+    bool operator>(const NumericConstraintValue &otherValue) const
+    {
+        return error > otherValue.error;
+    }
 };
 
 typedef std::vector<NumericConstraintValue> NumericConstraintValues;
-
-//typedef std::vector<PairCoordinateValue> SparseMatrix;
-
-typedef mc::FFGraph FactorableFunctionGraph;
-typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
-typedef mc::FFVar FactorableFunction;
-typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
-typedef std::vector<FactorableFunctionPtr> FactorableFunctions;
-
-typedef mc::Interval Interval;
-typedef std::vector<Interval> IntervalVector;
 
 enum class E_VariableType
 {

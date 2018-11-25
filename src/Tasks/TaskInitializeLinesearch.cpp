@@ -17,23 +17,13 @@ TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : Task
 {
     env->process->startTimer("DualCutGenerationRootSearch");
 
-    /*if (env->settings->getIntSetting("Rootsearch.Method", "Subsolver") == static_cast<int>(ES_RootsearchMethod::Bisection))
-    {
-        env->process->linesearchMethod = new LinesearchMethodBisection(env);
-        env->output->outputInfo("Bisection linesearch implementation selected.");
-    }
-    else
-    {*/
-    env->process->linesearchMethod = new LinesearchMethodBoost(env);
-    env->output->outputInfo("Boost linesearch implementation selected.");
-    //}
+    env->process->linesearchMethod = std::dynamic_pointer_cast<ILinesearchMethod>(std::make_shared<LinesearchMethodBoost>(env));
 
     env->process->stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()
 {
-    delete env->process->linesearchMethod;
 }
 
 void TaskInitializeLinesearch::run()

@@ -328,7 +328,16 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 
         if (auto sharedOwnerProblem = ownerProblem.lock())
         {
-            sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &point[0]);
+            // Collecting the values corresponding to nonlinear variables from the point
+            VectorDouble newPoint;
+            newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
+
+            for (auto &V : sharedOwnerProblem->nonlinearVariables)
+            {
+                newPoint.push_back(point.at(V->index));
+            }
+
+            sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
         }
 
         auto element = gradient.insert(std::make_pair(E.first, value[0]));

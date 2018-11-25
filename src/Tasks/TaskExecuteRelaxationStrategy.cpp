@@ -17,7 +17,7 @@ TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envP
 {
     env->process->startTimer("DualStrategy");
 
-    relaxationStrategy = new RelaxationStrategyStandard(env);
+    relaxationStrategy = std::dynamic_pointer_cast<IRelaxationStrategy>(std::make_shared<RelaxationStrategyStandard>(env));
 
     env->process->relaxationStrategy = relaxationStrategy;
 
@@ -28,8 +28,6 @@ TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envP
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
 {
-    env->process->relaxationStrategy = NULL;
-    delete relaxationStrategy;
 }
 
 void TaskExecuteRelaxationStrategy::run()

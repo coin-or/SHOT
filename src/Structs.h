@@ -30,6 +30,7 @@ class TaskHandler;
 class OptProblemOriginal;
 
 class Constraint;
+class NumericConstraint;
 
 typedef std::shared_ptr<ProcessInfo> ProcessPtr;
 typedef std::shared_ptr<Settings> SettingsPtr;
@@ -43,6 +44,7 @@ typedef std::shared_ptr<Report> ReportPtr;
 typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
 
 typedef std::shared_ptr<Constraint> ConstraintPtr;
+typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;
 
 typedef std::pair<int, int> PairInteger;
 typedef std::pair<double, double> PairDouble;
@@ -54,6 +56,10 @@ struct PairIndexValue
 {
     int index;
     double value;
+
+  public:
+    PairIndexValue(){};
+    PairIndexValue(int index, double value) : index(index), value(value){};
 };
 
 struct PairCoordinateValue
@@ -113,10 +119,11 @@ struct DualSolution
 
 struct Hyperplane
 {
-    ConstraintPtr sourceConstraint;
+    NumericConstraintPtr sourceConstraint;
     int sourceConstraintIndex; //TODO remove
     VectorDouble generatedPoint;
     E_HyperplaneSource source;
+    bool isObjectiveHyperplane = false;
 };
 
 struct GeneratedHyperplane

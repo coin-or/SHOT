@@ -26,7 +26,7 @@ double MIPSolverBase::getObjectiveValue()
 
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
-    if (env->model->originalProblem->getNumberOfDiscreteVariables() == 0)
+    if (env->problem->properties.numberOfDiscreteVariables == 0)
     {
         return (false);
     }
@@ -43,7 +43,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
     int numSol = getNumberOfSolutions();
 
-    int numVar = env->model->originalProblem->getNumberOfVariables();
+    int numVar = env->reformulatedProblem->properties.numberOfVariables;
     std::vector<SolutionPoint> lastSolutions(numSol);
 
     for (int i = 0; i < numSol; i++)
@@ -52,12 +52,15 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
         auto tmpPt = getVariableSolution(i);
 
-        auto maxDev = env->model->originalProblem->getMostDeviatingConstraint(tmpPt);
-
         tmpSolPt.point = tmpPt;
         tmpSolPt.objectiveValue = getObjectiveValue(i);
         tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-        tmpSolPt.maxDeviation = maxDev;
+
+        if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        {
+            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(tmpPt, env->reformulatedProblem->nonlinearConstraints);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        }
 
         lastSolutions.at(i) = tmpSolPt;
     }
@@ -124,39 +127,50 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
 boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
 {
-    auto varNames = env->model->originalProblem->getVariableNames();
-
     std::vector<PairIndexValue> elements;
+    double constant = 0.0;
+    SparseVariableVector gradient;
 
-    double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
-    auto nablag = env->model->originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
+    if (hyperplane.isObjectiveHyperplane)
+    {
+        constant = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
+        gradient = env->reformulatedProblem->objectiveFunction->calculateGradient(hyperplane.generatedPoint);
 
-    env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(nablag->number) + " elements. Constraint error: " + std::to_string(constant) + ".");
+        env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size()) + " elements.");
+    }
+    else
+    {
+        assert(hyperplane.sourceConstraint);
+        auto maxDev = hyperplane.sourceConstraint->calculateNumericValue(hyperplane.generatedPoint);
 
-    for (int i = 0; i < nablag->number; i++)
+        constant = maxDev.normalizedRHSValue;
+        gradient = hyperplane.sourceConstraint->calculateGradient(hyperplane.generatedPoint);
+
+        env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size()) + " elements. Constraint error: " + std::to_string(constant) + ".");
+    }
+
+    for (auto const &G : gradient)
     {
         PairIndexValue pair;
-        pair.index = nablag->indexes[i];
-        pair.value = nablag->values[i];
+        pair.index = G.first->index;
+        pair.value = G.second;
 
         elements.push_back(pair);
 
-        constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
+        constant += -G.second * hyperplane.generatedPoint.at(G.first->index);
 
-        env->output->outputInfo("     Gradient for variable " + varNames.at(nablag->indexes[i]) + " in point " + std::to_string(hyperplane.generatedPoint.at(nablag->indexes[i])) + ": " + std::to_string(nablag->values[i]));
+        env->output->outputInfo("     Gradient for variable " + G.first->name + " in point " + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": " + std::to_string(G.second));
     }
 
     boost::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
+
     if (elements.size() > 0)
         optional = std::make_pair(elements, constant);
 
-    delete nablag;
-
     elements.clear();
-    varNames.clear();
 
     return (optional);
-}
+};
 
 void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {

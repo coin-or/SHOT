@@ -55,19 +55,11 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
     {
         if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
         {
-            if (static_cast<ES_RootsearchConstraintStrategy>(env->settings->getIntSetting(
-                    "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
-            {
-                taskSelectHPPts = new TaskSelectHyperplanePointsLinesearch(env);
-            }
-            else
-            {
-                taskSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch(env);
-            }
+            taskSelectHPPts = new TaskSelectHyperplanePointsESH(env);
         }
         else
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsSolution(env);
+            taskSelectHPPts = new TaskSelectHyperplanePointsECP(env);
         }
     }
 
@@ -304,19 +296,11 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting(
                         "CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
                 {
-                    if (static_cast<ES_RootsearchConstraintStrategy>(env->settings->getIntSetting(
-                            "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
-                    {
-                        static_cast<TaskSelectHyperplanePointsLinesearch *>(taskSelectHPPts)->run(solutionPoints);
-                    }
-                    else
-                    {
-                        static_cast<TaskSelectHyperplanePointsIndividualLinesearch *>(taskSelectHPPts)->run(solutionPoints);
-                    }
+                    static_cast<TaskSelectHyperplanePointsESH *>(taskSelectHPPts)->run(solutionPoints);
                 }
                 else
                 {
-                    static_cast<TaskSelectHyperplanePointsSolution *>(taskSelectHPPts)->run(solutionPoints);
+                    static_cast<TaskSelectHyperplanePointsECP *>(taskSelectHPPts)->run(solutionPoints);
                 }
             }
 

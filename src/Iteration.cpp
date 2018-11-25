@@ -37,7 +37,7 @@ Iteration::Iteration(EnvironmentPtr envPtr)
     currentObjectiveBounds.first = env->process->getDualBound();
     currentObjectiveBounds.second = env->process->getPrimalBound();
 
-    if (env->process->relaxationStrategy != NULL)
+    if (env->process->relaxationStrategy)
     {
         this->type = env->process->relaxationStrategy->getProblemType();
     }

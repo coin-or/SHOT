@@ -112,10 +112,56 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString
 
     for (int i = 0; i < solution.point.size(); i++)
     {
-        str << i;
+        str << variables.at(i);
         str << "\t";
         str << toStringFormat(solution.point.at(i), "%.8f", false);
-        ;
+        str << '\n';
+    }
+
+    writeStringToFile(fileName, str.str());
+};
+
+void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &variables,
+                              const std::string &fileName)
+{
+    std::stringstream str;
+
+    str << "Source: " << solution.sourceDescription;
+    str << '\n';
+
+    str << "Iteration found: " << solution.iterFound;
+    str << '\n';
+
+    str << "Objective value: " << toStringFormat(solution.objValue, "%.8f", false);
+    str << '\n';
+
+    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index << "): "
+        << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+    str << '\n';
+
+    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index << "): "
+        << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+    str << '\n';
+
+    str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
+    str << '\n';
+
+    str << "Integer rounding performed: " << (solution.integerRoundingPerformed ? "true" : "false");
+    str << '\n';
+
+    str << "Max integer rounding error: " << toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
+
+    str << '\n';
+    str << '\n';
+
+    str << "Solution point: ";
+    str << '\n';
+
+    for (int i = 0; i < solution.point.size(); i++)
+    {
+        str << variables.at(i)->name;
+        str << "\t";
+        str << toStringFormat(solution.point.at(i), "%.8f", false);
         str << '\n';
     }
 
@@ -595,4 +641,4 @@ std::string getFileAsString(const std::string &fileName)
 
     throw(errno);
 };
-}; // namespace SHOT
+}; // namespace SHOT::UtilityFunctions
