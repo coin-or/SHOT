@@ -61,6 +61,13 @@ class Variable
     }
 };
 
+class AuxilliaryVariable : public Variable
+{
+  public:
+    E_AuxilliaryVariableType auxillaryType = E_AuxilliaryVariableType::None;
+};
+
 std::ostream &operator<<(std::ostream &stream, VariablePtr var);
+std::ostream &operator<<(std::ostream &stream, AuxilliaryVariablePtr var);
 
 } // namespace SHOT

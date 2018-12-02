@@ -260,7 +260,195 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
         return (false);
     }
 
-    //setSolutionLimit(9223372036800000000);
+    return (true);
+}
+
+bool MIPSolverCplex::createLinearProblem(ProblemPtr sourceProblem) : MIPSolverBase::sourceProblem(sourceProblem)
+{
+    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    {
+        cplexVarConvers.clear();
+        cplexModel.end();
+        cplexVars.end();
+        cplexConstrs.end();
+        cplexInstance.end();
+
+        cplexModel = IloModel(cplexEnv);
+
+        cplexVars = IloNumVarArray(cplexEnv);
+        cplexConstrs = IloRangeArray(cplexEnv);
+
+        cachedSolutionHasChanged = true;
+
+        isVariablesFixed = false;
+
+        checkParameters();
+
+        modelUpdated = true;
+    }
+
+    int numVar = sourceProblem->properties.numberOfVariables;
+
+    // Now creating the variables
+
+    for (auto &V : sourceProblem->realVariables)
+    {
+        cplexVars.add(IloNumVar(cplexEnv, V->lowerBound, V->upperBound, ILOFLOAT, V->name.c_str()));
+    }
+
+    for (auto &V : sourceProblem->integerVariables)
+    {
+        cplexVars.add(IloNumVar(cplexEnv, V->lowerBound, V->upperBound, ILOINT, V->name.c_str()));
+    }
+
+    for (auto &V : sourceProblem->binaryVariables)
+    {
+        cplexVars.add(IloNumVar(cplexEnv, V->lowerBound, V->upperBound, ILOBOOL, V->name.c_str()));
+    }
+
+    for (auto &V : sourceProblem->semicontinuousVariables)
+    {
+        cplexVars.add(IloSemiContVar(cplexEnv, V->lowerBound, V->upperBound, ILOFLOAT, V->name.c_str()));
+    }
+
+    //Nonlinear objective variable
+    if (sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
+    {
+        double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+        cpexVars.add(IloNumVar(cplexEnv, -objVarBound, objVarBound, ILOFLOAT, "shot_objvar"))
+    }
+
+    cplexModel.add(cplexVars);
+
+    // Now creating the objective function
+
+    IloExpr objExpr(cplexEnv);
+
+    // Linear terms
+    for (auto &T : sourceProblem->objectiveFunction->linearTerms.terms)
+    {
+        objExpr += T.coefficient * cplexVars[T.variable->index];
+    }
+
+    // Quadratic terms
+    if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
+    {
+        for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
+        {
+            objExpr += T.coefficient * cplexVars[T.firstVariable->index] * cplexVars[T.secondVariable->index];
+        }
+    }
+
+    // Constant in objective
+    double objConstant = sourceProblem->objectiveFunction->constant;
+    if (objConstant != 0.0)
+        objExpr += objConstant;
+
+    // Minimization or maximization
+    if (sourceProblem->objectiveFunction->properties.isMinimization)
+    {
+        cplexModel.add(IloMinimize(cplexEnv, objExpr));
+    }
+    else
+    {
+        cplexModel.add(IloMaximize(cplexEnv, objExpr));
+    }
+
+    objExpr.end();
+
+    // Now creating the constraints
+
+    // Linear constraints
+    for (auto &C : env->problem->linearConstraints)
+    {
+        IloExpr expr(cplexEnv);
+
+        for (auto &T : C->linearTerms.terms)
+        {
+            expr += T->coefficient * cplexVars[T->variable->index];
+        }
+        expr += C->constant;
+
+        if (C->lowerBound <= C->upperBound)
+        {
+            IloRange tmpRange = IloRange(cplexEnv, C->lowerBound, expr, C->upperBound, C->name.c_str());
+            cplexConstrs.add(tmpRange);
+        }
+        else
+        {
+            IloRange tmpRange = IloRange(cplexEnv, C->upperBound, expr, C->lowerbound, C->name.c_str());
+            cplexConstrs.add(tmpRange);
+        }
+
+        expr.end();
+    }
+
+    // Quadratic constraints
+    for (auto &C : env->problem->quadraticConstraints)
+    {
+        IloExpr expr(cplexEnv);
+
+        for (auto &T : C->linearTerms.terms)
+        {
+            expr += T->coefficient * cplexVars[T->variable->index];
+        }
+
+        for (auto &T : C->quadraticTerms.terms)
+        {
+            expr += T.coefficient * cplexVars[T.firstVariable->index] * cplexVars[T.secondVariable->index];
+        }
+
+        expr += C->constant;
+
+        if (C->lowerBound <= C->upperBound)
+        {
+            IloRange tmpRange = IloRange(cplexEnv, C->lowerBound, expr, C->upperBound, C->name.c_str());
+            cplexConstrs.add(tmpRange);
+        }
+        else
+        {
+            IloRange tmpRange = IloRange(cplexEnv, C->upperBound, expr, C->lowerbound, C->name.c_str());
+            cplexConstrs.add(tmpRange);
+        }
+
+        expr.end();
+    }
+
+    try
+    {
+        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual")) // Recreate model every iteration
+        {
+            int setSolLimit;
+            bool discreteVariablesActivated = getDiscreteVariableStatus();
+
+            if (env->process->iterations.size() > 0)
+            {
+                setSolLimit = env->process->getCurrentIteration()->usedMIPSolutionLimit;
+                discreteVariablesActivated = env->process->getCurrentIteration()->isMIP();
+            }
+            else
+            {
+                setSolLimit = env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
+            }
+
+            cplexInstance = IloCplex(cplexModel);
+            setSolutionLimit(setSolLimit);
+
+            if (!discreteVariablesActivated)
+            {
+                activateDiscreteVariables(false);
+            }
+        }
+        else
+        {
+            cplexInstance = IloCplex(cplexModel);
+        }
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when creating model", e.getMessage());
+        return (false);
+    }
 
     return (true);
 }

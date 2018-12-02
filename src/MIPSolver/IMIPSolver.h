@@ -18,6 +18,7 @@
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 #include "../Structs.h"
+#include "../Model/Problem.h"
 
 namespace SHOT
 {
@@ -27,6 +28,8 @@ class IMIPSolver
     virtual void checkParameters() = 0;
 
     virtual bool createLinearProblem(OptProblem *origProblem) = 0;
+    virtual bool createLinearProblem(ProblemPtr sourceProblem) = 0;
+
     virtual void initializeSolverSettings() = 0;
 
     virtual VectorDouble getVariableSolution(int solIdx) = 0;

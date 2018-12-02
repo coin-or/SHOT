@@ -33,6 +33,8 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     virtual void checkParameters();
 
     virtual bool createLinearProblem(OptProblem *origProblem);
+    virtual bool createLinearProblem(ProblemPtr sourceProblem);
+
     virtual void initializeSolverSettings();
 
     virtual void writeProblemToFile(std::string filename);

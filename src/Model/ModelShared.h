@@ -26,6 +26,10 @@ typedef std::shared_ptr<Variable> VariablePtr;
 typedef std::map<VariablePtr, double> SparseVariableVector;
 typedef std::vector<VariablePtr> Variables;
 
+class AuxilliaryVariable;
+typedef std::shared_ptr<AuxilliaryVariable> AuxilliaryVariablePtr;
+typedef std::vector<AuxilliaryVariablePtr> AuxilliaryVariables;
+
 class ObjectiveFunction;
 typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;
 
@@ -112,6 +116,12 @@ enum class E_VariableType
     Binary,
     Integer,
     Semicontinuous
+};
+
+enum class E_AuxilliaryVariableType
+{
+    None,
+    NonlinearObjectiveFunction // From epigraph formulation of (nonlinear) objective function
 };
 
 enum class E_Curvature

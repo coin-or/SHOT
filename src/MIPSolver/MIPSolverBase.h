@@ -15,6 +15,11 @@
 #include "SHOTSettings.h"
 #include "../ProcessInfo.h"
 #include "../UtilityFunctions.h"
+#include "../Model/ModelShared.h"
+#include "../Model/Terms.h"
+#include "../Model/ObjectiveFunction.h"
+#include "../Model/Constraints.h"
+#include "../Model/Problem.h"
 
 namespace SHOT
 {
@@ -75,6 +80,7 @@ class MIPSolverBase
     std::vector<SolutionPoint> lastSolutions;
 
     OptProblem *originalProblem;
+    ProblemPtr sourceProblem;
 
     EnvironmentPtr env;
 };

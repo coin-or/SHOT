@@ -18,6 +18,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance
     env = envPtr;
 
     env->process->createTimer("ProblemInitialization", " - problem initialization");
+    env->process->createTimer("ProblemReformulation", " - problem reformulation");
     env->process->createTimer("InteriorPointSearch", " - interior point search");
 
     env->process->createTimer("DualStrategy", " - dual strategy");
@@ -32,6 +33,9 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance
 
     TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
     env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+
+    TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
+    env->tasks->addTask(tReformulateProblem, "ReformlateProb");
 
     TaskBase *tCreateDualProblem = new TaskCreateDualProblem(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");

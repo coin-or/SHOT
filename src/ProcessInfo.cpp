@@ -603,7 +603,7 @@ void ProcessInfo::startTimer(std::string name)
 
     if (timer == timers.end())
     {
-        env->output->outputError("Timer with name  \" " + name + "\" not found!");
+        env->output->outputError("Timer with name  \"" + name + "\" not found!");
         return;
     }
 
@@ -618,7 +618,7 @@ void ProcessInfo::restartTimer(std::string name)
 
     if (timer == timers.end())
     {
-        env->output->outputError("Timer with name  \" " + name + "\" not found!");
+        env->output->outputError("Timer with name  \"" + name + "\" not found!");
         return;
     }
 
@@ -633,7 +633,7 @@ void ProcessInfo::stopTimer(std::string name)
 
     if (timer == timers.end())
     {
-        env->output->outputError("Timer with name  \" " + name + "\" not found!");
+        env->output->outputError("Timer with name  \"" + name + "\" not found!");
         return;
     }
 
@@ -648,7 +648,7 @@ double ProcessInfo::getElapsedTime(std::string name)
 
     if (timer == timers.end())
     {
-        env->output->outputError("Timer with name  \" " + name + "\" not found!");
+        env->output->outputError("Timer with name  \"" + name + "\" not found!");
         return (0.0);
     }
 

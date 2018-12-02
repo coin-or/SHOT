@@ -21,6 +21,8 @@
 
 #include "LinesearchMethod/LinesearchMethodBoost.h"
 
+#include "Tasks/TaskReformulateProblem.h"
+
 #include "SHOTSolver.h"
 #include "Environment.h"
 
@@ -38,6 +40,7 @@ bool ModelTestReadGAMSProblem(const std::string &problemFile);
 bool ModelTestModelingSystemOS();
 bool ModelTestRootsearch(const std::string &problemFile);
 bool ModelTestGradient(const std::string &problemFile);
+bool ModelTestReformulateProblem(const std::string &problemFile);
 
 int ModelTest(int argc, char *argv[])
 {
@@ -90,6 +93,9 @@ int ModelTest(int argc, char *argv[])
         break;
     case 11:
         passed = ModelTestGradient("data/flay02h.gms");
+        break;
+    case 12:
+        passed = ModelTestReformulateProblem("data/synthes1.gms");
         break;
     default:
         passed = false;
@@ -852,6 +858,41 @@ bool ModelTestGradient(const std::string &problemFile)
 
         std::cout << '\n';
     }
+
+    return passed;
+}
+
+bool ModelTestReformulateProblem(const std::string &problemFile)
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+
+    auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
+
+    if (modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile) != E_ProblemCreationStatus::NormalCompletion)
+    {
+        std::cout << "Error while reading problem";
+        passed = false;
+    }
+    else
+    {
+        std::cout << "Problem read successfully:\n\n";
+        std::cout << problem << "\n\n";
+    }
+
+    env->problem = problem;
+    auto taskReformulate = std::make_unique<TaskReformulateProblem>(env);
+
+    taskReformulate->run();
+
+    std::cout << env->reformulatedProblem << std::endl;
 
     return passed;
 }

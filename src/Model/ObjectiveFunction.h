@@ -172,8 +172,16 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
 
     QuadraticTerms quadraticTerms;
 
-    void add(LinearTerms terms);
-    void add(LinearTermPtr term);
+    void add(LinearTerms terms)
+    {
+        LinearObjectiveFunction::add(terms);
+    }
+
+    void add(LinearTermPtr term)
+    {
+        LinearObjectiveFunction::add(term);
+    }
+
     void add(QuadraticTerms terms);
     void add(QuadraticTermPtr term);
 

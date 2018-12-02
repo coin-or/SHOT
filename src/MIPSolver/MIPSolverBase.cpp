@@ -130,11 +130,12 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
     std::vector<PairIndexValue> elements;
     double constant = 0.0;
     SparseVariableVector gradient;
+    double signFactor = 1.0; // Will be -1.0 for greater than constraints
 
     if (hyperplane.isObjectiveHyperplane)
     {
-        constant = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
-        gradient = env->reformulatedProblem->objectiveFunction->calculateGradient(hyperplane.generatedPoint);
+        constant = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
+        gradient = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateGradient(hyperplane.generatedPoint);
 
         env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size()) + " elements.");
     }
@@ -143,9 +144,17 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
         assert(hyperplane.sourceConstraint);
         auto maxDev = hyperplane.sourceConstraint->calculateNumericValue(hyperplane.generatedPoint);
 
-        constant = maxDev.normalizedRHSValue;
-        gradient = hyperplane.sourceConstraint->calculateGradient(hyperplane.generatedPoint);
+        if (maxDev.isFulfilledRHS && !maxDev.isFulfilledLHS)
+        {
+            signFactor = -1.0;
+            constant = signFactor * maxDev.normalizedLHSValue;
+        }
+        else
+        {
+            constant = maxDev.normalizedRHSValue;
+        }
 
+        gradient = hyperplane.sourceConstraint->calculateGradient(hyperplane.generatedPoint);
         env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size()) + " elements. Constraint error: " + std::to_string(constant) + ".");
     }
 
@@ -153,7 +162,7 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
     {
         PairIndexValue pair;
         pair.index = G.first->index;
-        pair.value = G.second;
+        pair.value = signFactor * G.second;
 
         elements.push_back(pair);
 

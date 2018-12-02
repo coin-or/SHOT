@@ -391,7 +391,7 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             }
 
             auto variable = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
-            destination->add(variable);
+            destination->add(std::move(variable));
         }
         delete[] variableLBs;
         delete[] variableUBs;

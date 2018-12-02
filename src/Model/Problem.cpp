@@ -44,6 +44,21 @@ void Problem::updateProperties()
 {
     objectiveFunction->updateProperties();
 
+    for (auto &C : linearConstraints)
+    {
+        C->properties.classification = E_ConstraintClassification::Linear;
+    }
+
+    for (auto &C : quadraticConstraints)
+    {
+        C->properties.classification = E_ConstraintClassification::Quadratic;
+    }
+
+    for (auto &C : nonlinearConstraints)
+    {
+        C->properties.classification = E_ConstraintClassification::Nonlinear;
+    }
+
     if (!variablesUpdated)
         updateVariables();
 
@@ -125,17 +140,22 @@ void Problem::updateFactorableFunctions()
     }
 
     int objectiveFactorableFunctionIndex = -1;
-
     if (objectiveFunction->properties.hasNonlinearExpression)
     {
-        auto objective = static_cast<NonlinearObjectiveFunction *>(objectiveFunction.get());
+        auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
         objective->updateFactorableFunction();
         factorableFunctions.push_back(*objective->factorableFunction.get());
 
         objective->factorableFunctionIndex = factorableFunctions.size() - 1;
+        objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
     }
 
-    auto jacobian = factorableFunctionsDAG->SFAD(properties.numberOfNonlinearConstraints, &factorableFunctions[0], properties.numberOfNonlinearVariables, &factorableFunctionVariables[0]);
+    int numberNonlinearExpressions = properties.numberOfNonlinearConstraints;
+
+    if (objectiveFunction->properties.hasNonlinearExpression)
+        numberNonlinearExpressions++;
+
+    auto jacobian = factorableFunctionsDAG->SFAD(numberNonlinearExpressions, &factorableFunctions[0], properties.numberOfNonlinearVariables, &factorableFunctionVariables[0]);
 
     for (int i = 0; i < std::get<0>(jacobian); i++)
     {
@@ -144,7 +164,7 @@ void Problem::updateFactorableFunctions()
 
         if (objectiveFunction->properties.hasNonlinearExpression && std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
         {
-            auto objective = static_cast<NonlinearObjectiveFunction *>(objectiveFunction.get());
+            auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
             objective->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
             continue;
         }

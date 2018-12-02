@@ -193,6 +193,11 @@ class Problem : public std::enable_shared_from_this<Problem>
     friend std::ostream &operator<<(std::ostream &stream, const Problem &problem);
 };
 
+class ReformulatedProblem : public Problem
+{
+    AuxilliaryVariables auxilliaryVariables;
+};
+
 inline std::ostream &operator<<(std::ostream &stream, ProblemPtr problem)
 {
     stream << *problem;

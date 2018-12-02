@@ -18,6 +18,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
     env = envPtr;
 
     env->process->createTimer("ProblemInitialization", " - problem initialization");
+    env->process->createTimer("ProblemReformulation", " - problem reformulation");
     env->process->createTimer("InteriorPointSearch", " - interior point search");
 
     env->process->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
@@ -37,6 +38,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr, OS
 
     TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
     env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+
+    TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
+    env->tasks->addTask(tReformulateProblem, "ReformlateProb");
 
     if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (env->model->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || env->model->originalProblem->getNumberOfNonlinearConstraints() != 0))
     {

@@ -20,6 +20,7 @@
 #include "../Tasks/TaskConditional.h"
 
 #include "../Tasks/TaskInitializeOriginalProblem.h"
+#include "../Tasks/TaskReformulateProblem.h"
 #include "../Tasks/TaskInitializeIteration.h"
 #include "../Tasks/TaskTerminate.h"
 
