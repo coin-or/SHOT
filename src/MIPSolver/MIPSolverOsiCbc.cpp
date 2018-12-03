@@ -44,7 +44,6 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
         this->cutOff = -DBL_MAX;
     }
 
-    CoinModel *coinModel;
     coinModel = new CoinModel();
 
     auto numVar = origProblem->getNumberOfVariables();
@@ -190,6 +189,89 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
     setSolutionLimit(1);
 
     return (true);
+}
+
+void MIPSolverOsiCbc::addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound)
+{
+    coinModel->setColumnBounds(index, lowerBound, upperBound);
+    coinModel->setColName(index, name.c_str());
+
+    switch (type)
+    {
+    case E_VariableType::Real:
+        break;
+
+    case E_VariableType::Integer:
+    case E_VariableType::Binary:
+        coinModel->setInteger(index);
+        break;
+
+    case E_VariableType::Semicontinuous:
+        coinModel->setInteger(index);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void MIPSolverOsiCbc::initializeObjective()
+{
+}
+
+void MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableIndex)
+{
+    coinModel->setColObjective(coefficient, variableIndex);
+}
+
+void MIPSolverOsiCbc::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    // Not implemented
+}
+
+void MIPSolverOsiCbc::finalizeObjective(bool isMinimize, double constant)
+{
+    if (constant != 0.0)
+        coinModel->setObjectiveOffset(constant);
+
+    if (isMinimize)
+    {
+        coinModel->setOptimizationDirection(1.0);
+    }
+    else
+    {
+        coinModel->setOptimizationDirection(-1.0);
+    }
+}
+
+void MIPSolverOsiCbc::initializeConstraint()
+{
+}
+
+void MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
+{
+    coinModel->setElement(addedConstraints, variableIndex, coefficient);
+}
+
+void MIPSolverOsiCbc::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    // Not implemented
+}
+
+void MIPSolverOsiCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
+{
+    if (valueLHS <= valueRHS)
+    {
+        coinModel->setRowBounds(addedConstraints, valueLHS - constant, valueRHS - constant);
+    }
+    else
+    {
+        coinModel->setRowBounds(addedConstraints, valueRHS - constant, valueLHS - constant);
+    }
+
+    coinModel->setRowName(addedConstraints, name.c_str());
+
+    addedConstraints++;
 }
 
 void MIPSolverOsiCbc::initializeSolverSettings()

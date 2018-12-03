@@ -278,6 +278,115 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
     return (true);
 }
 
+void MIPSolverGurobi::addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound)
+{
+    switch (type)
+    {
+    case E_VariableType::Real:
+        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_CONTINUOUS, name);
+        break;
+
+    case E_VariableType::Integer:
+        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_INTEGER, name);
+        break;
+
+    case E_VariableType::Binary:
+        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_BINARY, name);
+        break;
+
+    case E_VariableType::Semicontinuous:
+        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMICONT, name);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void MIPSolverGurobi::initializeObjective()
+{
+    objectiveQuadraticExpression = GRBQuadExpr(0);
+    objectiveLinearExpression = GRBLinExpr(0);
+}
+
+void MIPSolverGurobi::addLinearTermToObjective(double coefficient, int variableIndex)
+{
+    objectiveLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
+}
+
+void MIPSolverGurobi::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    objectiveQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
+}
+
+void MIPSolverGurobi::finalizeObjective(bool isMinimize, double constant)
+{
+    if (constant != 0.0)
+        objectiveLinearExpression += constant;
+
+    if (isMinimize)
+    {
+        gurobiModel->setObjective(objectiveLinearExpression + objectiveQuadraticExpression, GRB_MINIMIZE);
+    }
+    else
+    {
+        gurobiModel->setObjective(objectiveLinearExpression + objectiveQuadraticExpression, GRB_MAXIMIZE);
+    }
+}
+
+void MIPSolverGurobi::initializeConstraint()
+{
+    constraintQuadraticExpression = GRBQuadExpr(0);
+    constraintLinearExpression = GRBLinExpr(0);
+}
+
+void MIPSolverGurobi::addLinearTermToConstraint(double coefficient, int variableIndex)
+{
+    constraintLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
+}
+
+void MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    constraintQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
+}
+
+void MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
+{
+    if (constant != 0.0)
+        constraintLinearExpression += constant;
+
+    if (constraintQuadraticExpression != 0.0)
+    {
+        if (valueLHS == valueRHS)
+        {
+            gurobiModel->addConstr(constraintLinearExpression == valueRHS, name);
+        }
+        else if (valueLHS < valueRHS)
+        {
+            gurobiModel->addConstr(valueLHS <= constraintLinearExpression <= valueRHS, name);
+        }
+        else
+        {
+            gurobiModel->addConstr(valueLHS >= constraintLinearExpression >= valueRHS, name);
+        }
+    }
+    else
+    {
+        if (valueLHS == valueRHS)
+        {
+            // Not supported
+        }
+        else if (valueLHS < valueRHS)
+        {
+            gurobiModel->addQConstr(valueLHS <= constraintLinearExpression + constraintQuadraticExpression <= valueRHS, name);
+        }
+        else
+        {
+            gurobiModel->addQConstr(valueLHS >= constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name);
+        }
+    }
+}
+
 void MIPSolverGurobi::initializeSolverSettings()
 {
     try

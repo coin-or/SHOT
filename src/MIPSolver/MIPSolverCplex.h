@@ -35,6 +35,18 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     virtual bool createLinearProblem(OptProblem *origProblem);
     virtual bool createLinearProblem(ProblemPtr sourceProblem);
 
+    virtual void addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound);
+
+    virtual void initializeObjective();
+    virtual void addLinearTermToObjective(double coefficient, int variableIndex);
+    virtual void addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex);
+    virtual void finalizeObjective(bool isMinimize, double constant = 0.0);
+
+    virtual void initializeConstraint();
+    virtual void addLinearTermToConstraint(double coefficient, int variableIndex);
+    virtual void addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex);
+    virtual void finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0);
+
     virtual void initializeSolverSettings();
 
     virtual void writeProblemToFile(std::string filename);
@@ -152,6 +164,9 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     IloNumVarArray cplexVars;
     IloRangeArray cplexConstrs;
     std::vector<IloConversion> cplexVarConvers;
+
+    IloExpr objExpression;
+    IloExpr constrExpression;
 
     int prevSolutionLimit = 1;
 

@@ -30,6 +30,18 @@ class IMIPSolver
     virtual bool createLinearProblem(OptProblem *origProblem) = 0;
     virtual bool createLinearProblem(ProblemPtr sourceProblem) = 0;
 
+    virtual void addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound) = 0;
+
+    virtual void initializeObjective() = 0;
+    virtual void addLinearTermToObjective(double coefficient, int variableIndex) = 0;
+    virtual void addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
+    virtual void finalizeObjective(bool isMinimize, double constant = 0.0) = 0;
+
+    virtual void initializeConstraint() = 0;
+    virtual void addLinearTermToConstraint(double coefficient, int variableIndex) = 0;
+    virtual void addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
+    virtual void finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0) = 0;
+
     virtual void initializeSolverSettings() = 0;
 
     virtual VectorDouble getVariableSolution(int solIdx) = 0;
