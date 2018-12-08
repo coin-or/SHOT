@@ -101,11 +101,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             objective->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
         }
 
-        objective->add(copyNonlinearExpression(originalObjective->nonlinearExpression.get(), env->problem));
+        objective->add(copyNonlinearExpression(originalObjective->nonlinearExpression.get(), newProblem));
 
         newProblem->add(objective);
-        //double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        //newProblem->add(std::make_shared<Variable>("auxobjvar", newProblem->allVariables.size(), E_VariableType::Real, -objVarBound, objVarBound));
+
     }
 
     newProblem->objectiveFunction->updateProperties();
