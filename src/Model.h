@@ -9,12 +9,7 @@
 */
 
 #pragma once
-#include "Enums.h"
-#include "Structs.h"
-#include "Environment.h"
-
-#include "OSiLWriter.h"
-#include "OSiLReader.h"
+#include "Shared.h"
 
 namespace SHOT
 {

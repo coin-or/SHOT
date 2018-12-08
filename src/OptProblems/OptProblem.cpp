@@ -810,7 +810,7 @@ void OptProblem::copyQuadraticTerms(OSInstance *source, OSInstance *destination)
 void OptProblem::copyNonlinearExpressions(OSInstance *source, OSInstance *destination)
 {
     int numNonlinearExpressions = source->getNumberOfNonlinearExpressions();
-    destination->instanceData->nonlinearExpressions = new NonlinearExpressions();
+    destination->instanceData->nonlinearExpressions = new ::NonlinearExpressions();
     destination->instanceData->nonlinearExpressions->numberOfNonlinearExpressions = numNonlinearExpressions;
 
     if (numNonlinearExpressions > 0)

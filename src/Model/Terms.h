@@ -9,13 +9,7 @@
 */
 
 #pragma once
-#include "ModelShared.h"
-
-#include <math.h> /* pow */
-#include <vector>
-#include <string>
-#include <memory>
-#include <iostream>
+#include "../Shared.h"
 
 namespace SHOT
 {
@@ -31,27 +25,102 @@ class LinearTerm
     LinearTerm(){};
     LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
 
-    double calculate(const VectorDouble &point);
-    Interval calculate(const IntervalVector &intervalVector);
+    inline double calculate(const VectorDouble &point)
+    {
+        double value = coefficient * variable->calculate(point);
+        return value;
+    }
 
-    void takeOwnership(ProblemPtr owner);
+    inline Interval calculate(const IntervalVector &intervalVector)
+    {
+        Interval value = coefficient * variable->calculate(intervalVector);
+        return value;
+    }
+
+    void takeOwnership(ProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
 };
+
+inline std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
+{
+    if (term->coefficient == 1.0)
+    {
+        stream << '+';
+    }
+    else if (term->coefficient == -1.0)
+    {
+        stream << '-';
+    }
+    else if (term->coefficient > 0)
+    {
+        stream << '+' << term->coefficient << '*';
+    }
+    else
+    {
+        stream << term->coefficient << '*';
+    }
+
+    stream << term->variable->name;
+    return stream;
+}
 
 class LinearTerms
 {
   public:
     std::vector<LinearTermPtr> terms;
 
-    void add(LinearTermPtr term);
+    void add(LinearTermPtr term)
+    {
+        terms.push_back(term);
+    }
 
-    double calculate(const VectorDouble &point);
-    Interval calculate(const IntervalVector &intervalVector);
+    double calculate(const VectorDouble &point)
+    {
+        double value = 0.0;
+        for (auto T : terms)
+        {
+            value += T->calculate(point);
+        }
 
-    void takeOwnership(ProblemPtr owner);
+        return value;
+    }
+
+    Interval calculate(const IntervalVector &intervalVector)
+    {
+        Interval value = Interval(0.0, 0.0);
+        for (auto T : terms)
+        {
+            value += T->calculate(intervalVector);
+        }
+
+        return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        for (auto T : terms)
+        {
+            T->takeOwnership(owner);
+        }
+    }
 };
 
-std::ostream &operator<<(std::ostream &stream, LinearTermPtr term);
-std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms);
+inline std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
+{
+    if (linTerms.terms.size() == 0)
+        return stream;
+
+    stream << ' ' << linTerms.terms.at(0);
+
+    for (int i = 1; i < linTerms.terms.size(); i++)
+    {
+        stream << linTerms.terms.at(i);
+    }
+
+    return stream;
+}
 
 class QuadraticTerm
 {
@@ -64,11 +133,37 @@ class QuadraticTerm
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};
 
-    double calculate(const VectorDouble &point);
+    inline double calculate(const VectorDouble &point)
+    {
+        double value = coefficient * firstVariable->calculate(point) * secondVariable->calculate(point);
+        return value;
+    };
 
-    Interval calculate(const IntervalVector &intervalVector);
+    inline Interval calculate(const IntervalVector &intervalVector)
+    {
+        Interval value = coefficient * firstVariable->calculate(intervalVector) * secondVariable->calculate(intervalVector);
+        return value;
+    }
 
-    void takeOwnership(ProblemPtr owner);
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
+};
+
+inline std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term)
+{
+    if (term->coefficient != 1.0)
+    {
+        stream << term->coefficient << '*';
+    }
+
+    if (term->firstVariable == term->secondVariable)
+        stream << term->firstVariable->name << "^2";
+    else
+        stream << term->firstVariable->name << '*' << term->secondVariable->name;
+
+    return stream;
 };
 
 class QuadraticTerms
@@ -76,16 +171,65 @@ class QuadraticTerms
   public:
     std::vector<QuadraticTermPtr> terms;
 
-    void add(QuadraticTermPtr term);
+    QuadraticTerms(){};
 
-    double calculate(const VectorDouble &point);
-    Interval calculate(const IntervalVector &intervalVector);
+    inline void add(QuadraticTermPtr term)
+    {
+        terms.push_back(term);
+    };
 
-    void takeOwnership(ProblemPtr owner);
+    inline double calculate(const VectorDouble &point)
+    {
+        double value = 0.0;
+        for (auto T : terms)
+        {
+            value += T->calculate(point);
+        }
+
+        return value;
+    };
+
+    inline Interval calculate(const IntervalVector &intervalVector)
+    {
+        Interval value = Interval(0.0, 0.0);
+        for (auto T : terms)
+        {
+            value += T->calculate(intervalVector);
+        }
+
+        return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        for (auto T : terms)
+        {
+            T->takeOwnership(owner);
+        }
+    }
 };
 
-std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term);
-std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms);
+inline std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
+{
+    if (quadTerms.terms.size() == 0)
+        return stream;
+
+    if (quadTerms.terms.at(0)->coefficient > 0)
+    {
+        stream << " +" << quadTerms.terms.at(0);
+    }
+    else
+    {
+        stream << ' ' << quadTerms.terms.at(0);
+    }
+
+    for (int i = 1; i < quadTerms.terms.size(); i++)
+    {
+        stream << " +" << quadTerms.terms.at(i);
+    }
+
+    return stream;
+};
 
 /*
 class SignomialElement

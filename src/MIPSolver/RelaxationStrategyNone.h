@@ -9,7 +9,6 @@
 */
 
 #pragma once
-#include "IRelaxationStrategy.h"
 #include "RelaxationStrategyBase.h"
 
 namespace SHOT

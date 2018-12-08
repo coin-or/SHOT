@@ -10,20 +10,19 @@
 
 #pragma once
 #include "NLPSolverIpoptBase.h"
-#include "../OptProblems/OptProblemNLPRelaxed.h"
 
 namespace SHOT
 {
 class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
   public:
-    NLPSolverIpoptRelaxed(EnvironmentPtr envPtr);
+    NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, OSInstance *instance);
     virtual ~NLPSolverIpoptRelaxed();
 
     virtual VectorDouble getSolution();
 
   protected:
-    bool createProblemInstance(OSInstance *origInstance);
+    //bool createProblemInstance(OSInstance *origInstance);
 
     virtual void setSolverSpecificInitialSettings();
 

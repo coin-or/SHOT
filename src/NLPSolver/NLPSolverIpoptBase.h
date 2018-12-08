@@ -9,11 +9,7 @@
 */
 
 #pragma once
-#include "INLPSolver.h"
 #include "NLPSolverBase.h"
-
-#include "OSIpoptSolver.h"
-#include "OSOption.h"
 
 namespace SHOT
 {
@@ -21,8 +17,9 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 {
   private:
   protected:
+    OSInstance *osInstance;
     OSOption *osOption;
-    IpoptSolver *IpoptNLPSolver;
+    IpoptSolver *IpoptNLPSolver = NULL;
     OSoLWriter *osolwriter;
 
     VectorInteger fixedVariableIndexes;
@@ -36,19 +33,25 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
     void unfixVariables();
 
+    void setIntegers(bool useDiscrete);
+
     virtual void setInitialSettings();
     virtual void setSolverSpecificInitialSettings() = 0;
     virtual void updateSettings();
 
-    virtual VectorDouble getCurrentVariableLowerBounds();
-    virtual VectorDouble getCurrentVariableUpperBounds();
+    virtual VectorDouble getVariableLowerBounds();
+    virtual VectorDouble getVariableUpperBounds();
 
     VectorDouble lowerBoundsBeforeFix;
     VectorDouble upperBoundsBeforeFix;
 
+    std::vector<char> originalVariableType;
+
   public:
-    NLPSolverIpoptBase();
-    virtual ~NLPSolverIpoptBase();
+    //NLPSolverIpoptBase(EnvironmentPtr envPtr, OSInstance *instance);
+    virtual ~NLPSolverIpoptBase(){};
+
+    //virtual void setProblem(OSInstance *instance);
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();
@@ -57,9 +60,10 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     virtual double getSolution(int i);
     virtual double getObjectiveValue();
 
-    virtual bool isObjectiveFunctionNonlinear();
-    virtual int getObjectiveFunctionVariableIndex();
+    //virtual bool isObjectiveFunctionNonlinear();
+    //virtual int getObjectiveFunctionVariableIndex();
 
     virtual void saveOptionsToFile(std::string fileName);
+    virtual void saveProblemToFile(std::string fileName);
 };
 } // namespace SHOT

@@ -10,8 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../OptProblems/OptProblemOriginal.h"
+
 #include "TaskSelectHyperplanePointsECP.h"
 
 namespace SHOT

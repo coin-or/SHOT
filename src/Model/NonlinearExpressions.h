@@ -9,14 +9,7 @@
 */
 
 #pragma once
-#include "ModelShared.h"
-#include "Variables.h"
-
-#include <math.h>
-#include <vector>
-#include <string>
-#include <memory>
-#include <iostream>
+#include "../Shared.h"
 
 namespace SHOT
 {
@@ -74,7 +67,11 @@ class NonlinearExpression
     };
 };
 
-std::ostream &operator<<(std::ostream &stream, NonlinearExpressionPtr expr);
+inline std::ostream &operator<<(std::ostream &stream, NonlinearExpressionPtr expr)
+{
+    stream << *expr;
+    return stream;
+};
 
 class NonlinearExpressions
 {
@@ -144,7 +141,7 @@ class ExpressionVariable : public NonlinearExpression
         variable->isNonlinear = true;
     };
 
-    ExpressionVariable(VariablePtr variable) : variable(variable)
+    ExpressionVariable(VariablePtr variable): variable(variable)
     {
         variable->isNonlinear = true;
     };
@@ -161,7 +158,7 @@ class ExpressionVariable : public NonlinearExpression
 
     inline virtual FactorableFunction getFactorableFunction() override
     {
-        return *variable->factorableFunctionVariable.get();
+        return *(variable->factorableFunctionVariable.get());
     };
 
     inline std::ostream &print(std::ostream &stream) const override

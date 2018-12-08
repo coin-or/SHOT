@@ -9,12 +9,7 @@
 */
 
 #pragma once
-
-#include "SHOTSettings.h"
-#include "../ProcessInfo.h"
 #include "INLPSolver.h"
-#include "iterator"
-#include "vector"
 
 namespace SHOT
 {
@@ -23,18 +18,17 @@ class NLPSolverBase : virtual public INLPSolver
   private:
   protected:
     NLPSolverBase();
-    OSInstance *originalInstance;
 
-    bool isProblemInitialized;
+    //bool isProblemInitialized = false;
 
   public:
-    virtual void setProblem(OSInstance *origInstance);
-    virtual void initializeProblem();
+    //virtual void setProblem(OSInstance *origInstance);
+    //virtual void initializeProblem();
     virtual E_NLPSolutionStatus solveProblem();
 
-    virtual void saveProblemToFile(std::string fileName);
+    //virtual void saveProblemToFile(std::string fileName);
 
-    virtual VectorDouble getVariableLowerBounds();
-    virtual VectorDouble getVariableUpperBounds();
+    //virtual VectorDouble getCurrentVariableLowerBounds() = 0;
+    //virtual VectorDouble getCurrentVariableUpperBounds() = 0;
 };
 } // namespace SHOT

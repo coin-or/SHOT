@@ -9,16 +9,63 @@
 */
 
 #pragma once
-#include "ProcessInfo.h"
-#include "Environment.h"
+#include "../Shared.h"
 #include "TaskHandler.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+#include "../Tasks/TaskFindInteriorPoint.h"
+#include "../Tasks/TaskBase.h"
+#include "../Tasks/TaskSequential.h"
+#include "../Tasks/TaskGoto.h"
+#include "../Tasks/TaskConditional.h"
+
+#include "../Tasks/TaskInitializeOriginalProblem.h"
+#include "../Tasks/TaskReformulateProblem.h"
+#include "../Tasks/TaskInitializeIteration.h"
+#include "../Tasks/TaskTerminate.h"
+
+#include "../Tasks/TaskInitializeDualSolver.h"
+#include "../Tasks/TaskCreateDualProblem.h"
+
+#include "../Tasks/TaskExecuteSolutionLimitStrategy.h"
+#include "../Tasks/TaskExecuteRelaxationStrategy.h"
+
+#include "../Tasks/TaskPrintIterationReport.h"
+
+#include "../Tasks/TaskSolveIteration.h"
+#include "../Tasks/TaskPresolve.h"
+
+#include "../Tasks/TaskCheckAbsoluteGap.h"
+#include "../Tasks/TaskCheckIterationError.h"
+#include "../Tasks/TaskCheckIterationLimit.h"
+#include "../Tasks/TaskCheckObjectiveStagnation.h"
+#include "../Tasks/TaskCheckConstraintTolerance.h"
+#include "../Tasks/TaskCheckRelativeGap.h"
+#include "../Tasks/TaskCheckTimeLimit.h"
+
+#include "../Tasks/TaskInitializeLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Tasks/TaskAddHyperplanes.h"
+
+#include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+#include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+
+#include "../Tasks/TaskUpdateInteriorPoint.h"
+
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
+#include "../Tasks/TaskSolveFixedDualProblem.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
 
 namespace SHOT
 {
 class ISolutionStrategy
 {
   public:
-    ~ISolutionStrategy();
+    ~ISolutionStrategy() {};
 
     virtual void initializeStrategy() = 0;
     virtual bool solveProblem() = 0;

@@ -13,11 +13,15 @@
 namespace SHOT
 {
 
-NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr) : INLPSolver(envPtr)
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, OSInstance *instance) : INLPSolver(envPtr)
 {
+    osInstance = instance;
     osolwriter = new OSoLWriter();
 
-    NLPProblem = new OptProblemNLPRelaxed(env);
+    for (int i = 0; i < osInstance->getVariableNumber(); i++)
+    {
+        originalVariableType.push_back(osInstance->instanceData->variables->var[i]->type);
+    }
 
     setInitialSettings();
 }
@@ -25,9 +29,10 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr) : INLPSolver
 NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 {
     delete osolwriter;
-    delete NLPProblem;
+    //delete NLPProblem;
 }
 
+/*
 bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
 {
     env->output->outputInfo("     Creating relaxed Ipopt problem.");
@@ -37,7 +42,7 @@ bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
     env->output->outputInfo("     Ipopt relaxed NLP problem created.");
 
     return (true);
-}
+}*/
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
@@ -61,7 +66,7 @@ void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 
 VectorDouble NLPSolverIpoptRelaxed::getSolution()
 {
-    int numVar = NLPProblem->getNumberOfVariables();
+    int numVar = osInstance->getVariableNumber();
     VectorDouble tmpPoint(numVar);
 
     for (int i = 0; i < numVar; i++)

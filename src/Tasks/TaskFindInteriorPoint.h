@@ -9,12 +9,10 @@
 */
 
 #pragma once
-#include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../NLPSolver/INLPSolver.h"
-#include "../NLPSolver/NLPSolverIpoptMinimax.h"
-#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
+
+#include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+//#include "../NLPSolver/NLPSolverIpoptMinimax.h"
 
 namespace SHOT
 {

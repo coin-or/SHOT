@@ -10,6 +10,8 @@
 
 #include "TaskCheckConstraintTolerance.h"
 
+#include "../OptProblems/OptProblemOriginal.h"
+
 namespace SHOT
 {
 

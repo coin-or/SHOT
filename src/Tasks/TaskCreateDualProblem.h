@@ -10,7 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
+
 #include "../MIPSolver/IMIPSolver.h"
 
 namespace SHOT
@@ -25,5 +25,6 @@ class TaskCreateDualProblem : public TaskBase
     virtual std::string getType();
 
   private:
+    bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr sourceProblem);
 };
 } // namespace SHOT

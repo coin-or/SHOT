@@ -22,6 +22,18 @@ MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
+    initializeProblem();
+    checkParameters();
+}
+
+MIPSolverGurobi::~MIPSolverGurobi()
+{
+    delete gurobiModel;
+    delete gurobiEnv;
+}
+
+bool MIPSolverGurobi::initializeProblem()
+{
     discreteVariablesActivated = true;
 
     try
@@ -32,24 +44,19 @@ MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
     catch (GRBException &e)
     {
         {
-            env->output->outputError("Error when initializing Gurobi:", e.getMessage());
+            env->output->outputError("Error when initializing problem:", e.getMessage());
         }
 
-        return;
+        return (false);
     }
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
 
-    checkParameters();
+    return (true);
 }
 
-MIPSolverGurobi::~MIPSolverGurobi()
-{
-    delete gurobiModel;
-    delete gurobiEnv;
-}
-
+/*
 bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
 {
     originalProblem = origProblem;
@@ -276,115 +283,233 @@ bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
     }
 
     return (true);
-}
+}*/
 
-void MIPSolverGurobi::addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
-    switch (type)
+    try
     {
-    case E_VariableType::Real:
-        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_CONTINUOUS, name);
-        break;
-
-    case E_VariableType::Integer:
-        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_INTEGER, name);
-        break;
-
-    case E_VariableType::Binary:
-        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_BINARY, name);
-        break;
-
-    case E_VariableType::Semicontinuous:
-        gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMICONT, name);
-        break;
-
-    default:
-        break;
-    }
-}
-
-void MIPSolverGurobi::initializeObjective()
-{
-    objectiveQuadraticExpression = GRBQuadExpr(0);
-    objectiveLinearExpression = GRBLinExpr(0);
-}
-
-void MIPSolverGurobi::addLinearTermToObjective(double coefficient, int variableIndex)
-{
-    objectiveLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
-}
-
-void MIPSolverGurobi::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
-{
-    objectiveQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
-}
-
-void MIPSolverGurobi::finalizeObjective(bool isMinimize, double constant)
-{
-    if (constant != 0.0)
-        objectiveLinearExpression += constant;
-
-    if (isMinimize)
-    {
-        gurobiModel->setObjective(objectiveLinearExpression + objectiveQuadraticExpression, GRB_MINIMIZE);
-    }
-    else
-    {
-        gurobiModel->setObjective(objectiveLinearExpression + objectiveQuadraticExpression, GRB_MAXIMIZE);
-    }
-}
-
-void MIPSolverGurobi::initializeConstraint()
-{
-    constraintQuadraticExpression = GRBQuadExpr(0);
-    constraintLinearExpression = GRBLinExpr(0);
-}
-
-void MIPSolverGurobi::addLinearTermToConstraint(double coefficient, int variableIndex)
-{
-    constraintLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
-}
-
-void MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
-{
-    constraintQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
-}
-
-void MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
-{
-    if (constant != 0.0)
-        constraintLinearExpression += constant;
-
-    if (constraintQuadraticExpression != 0.0)
-    {
-        if (valueLHS == valueRHS)
+        switch (type)
         {
-            gurobiModel->addConstr(constraintLinearExpression == valueRHS, name);
+        case E_VariableType::Real:
+            gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_CONTINUOUS, name);
+            break;
+
+        case E_VariableType::Integer:
+            isProblemDiscrete = true;
+            gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_INTEGER, name);
+            break;
+
+        case E_VariableType::Binary:
+            isProblemDiscrete = true;
+            gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_BINARY, name);
+            break;
+
+        case E_VariableType::Semicontinuous:
+            isProblemDiscrete = true;
+            gurobiModel->addVar(lowerBound, upperBound, 0.0, GRB_SEMICONT, name);
+            break;
+
+        default:
+            break;
         }
-        else if (valueLHS < valueRHS)
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when adding variable to model: ", e.getMessage());
+        return (false);
+    }
+
+    variableTypes.push_back(type);
+    variableNames.push_back(name);
+    variableLowerBounds.push_back(lowerBound);
+    variableUpperBounds.push_back(upperBound);
+    numberOfVariables++;
+    return (true);
+}
+
+bool MIPSolverGurobi::initializeObjective()
+{
+    try
+    {
+        objectiveQuadraticExpression = GRBQuadExpr(0);
+        objectiveLinearExpression = GRBLinExpr(0);
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when initializing objective function: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::addLinearTermToObjective(double coefficient, int variableIndex)
+{
+    try
+    {
+        objectiveLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when adding linear term to objective: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    try
+    {
+        objectiveQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when adding quadratic term to objective: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::finalizeObjective(bool isMinimize, double constant)
+{
+    try
+    {
+        if (constant != 0.0)
+            objectiveLinearExpression += constant;
+
+        if (isMinimize)
         {
-            gurobiModel->addConstr(valueLHS <= constraintLinearExpression <= valueRHS, name);
+            gurobiModel->setObjective(objectiveLinearExpression + objectiveQuadraticExpression, GRB_MINIMIZE);
+            isMinimizationProblem = true;
         }
         else
         {
-            gurobiModel->addConstr(valueLHS >= constraintLinearExpression >= valueRHS, name);
+            gurobiModel->setObjective(objectiveLinearExpression + objectiveQuadraticExpression, GRB_MAXIMIZE);
+            isMinimizationProblem = false;
         }
     }
-    else
+    catch (GrbException &e)
     {
-        if (valueLHS == valueRHS)
+        objExpression.end();
+        env->output->outputError("Gurobi exception caught when adding objective function to model: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::initializeConstraint()
+{
+    try
+    {
+        constraintQuadraticExpression = GRBQuadExpr(0);
+        constraintLinearExpression = GRBLinExpr(0);
+    }
+    catch (GrbException &e)
+    {
+        objExpression.end();
+        env->output->outputError("Gurobi exception caught when initializing constraint: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::addLinearTermToConstraint(double coefficient, int variableIndex)
+{
+    try
+    {
+        constraintLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when adding linear term to constraint: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    try
+    {
+        constraintQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when adding quadratic term to constraint: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
+{
+    try
+    {
+        if (constant != 0.0)
+            constraintLinearExpression += constant;
+
+        if (constraintQuadraticExpression != 0.0)
         {
-            // Not supported
-        }
-        else if (valueLHS < valueRHS)
-        {
-            gurobiModel->addQConstr(valueLHS <= constraintLinearExpression + constraintQuadraticExpression <= valueRHS, name);
+            if (valueLHS == valueRHS)
+            {
+                gurobiModel->addConstr(constraintLinearExpression == valueRHS, name);
+            }
+            else if (valueLHS < valueRHS)
+            {
+                gurobiModel->addConstr(valueLHS <= constraintLinearExpression <= valueRHS, name);
+            }
+            else
+            {
+                gurobiModel->addConstr(valueLHS >= constraintLinearExpression >= valueRHS, name);
+            }
         }
         else
         {
-            gurobiModel->addQConstr(valueLHS >= constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name);
+            if (valueLHS == valueRHS)
+            {
+                // Not supported
+            }
+            else if (valueLHS < valueRHS)
+            {
+                gurobiModel->addQConstr(valueLHS <= constraintLinearExpression + constraintQuadraticExpression <= valueRHS, name);
+            }
+            else
+            {
+                gurobiModel->addQConstr(valueLHS >= constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name);
+            }
         }
     }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when adding constraint to model: ", e.getMessage());
+        return (false);
+    }
+
+    numberOfConstraints++;
+    return (true);
+}
+
+bool MIPSolverGurobi::finalizeProblem()
+{
+    try
+    {
+        gurobiModel->update();
+    }
+    catch (GrbException &e)
+    {
+        env->output->outputError("Gurobi exception caught when finalizing model", e.getMessage());
+        return (false);
+    }
+
+    return (true);
 }
 
 void MIPSolverGurobi::initializeSolverSettings()
@@ -421,7 +546,7 @@ void MIPSolverGurobi::initializeSolverSettings()
     }
 }
 
-int MIPSolverGurobi::addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan)
+int MIPSolverGurobi::addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan)
 {
     try
     {
@@ -504,22 +629,19 @@ int MIPSolverGurobi::getNumberOfSolutions()
 
 void MIPSolverGurobi::activateDiscreteVariables(bool activate)
 {
-    auto variableTypes = env->model->originalProblem->getVariableTypes();
-    int numVar = env->model->originalProblem->getNumberOfVariables();
-
     if (activate)
     {
         env->output->outputInfo("Activating MIP strategy.");
 
-        for (int i = 0; i < numVar; i++)
+        for (int i = 0; i < numberOfVariables; i++)
         {
-            if (variableTypes.at(i) == 'I')
+            if (variableTypes.at(i) == E_VariableType::Integer)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
 
                 tmpVar.set(GRB_CharAttr_VType, 'I');
             }
-            else if (variableTypes.at(i) == 'B')
+            else if (variableTypes.at(i) == E_VariableType::Binary)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
 
@@ -532,9 +654,9 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
     else
     {
         env->output->outputInfo("Activating LP strategy.");
-        for (int i = 0; i < numVar; i++)
+        for (int i = 0; i < numberOfVariables; i++)
         {
-            if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
+            if (variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 GRBVar tmpVar = gurobiModel->getVar(i);
 
@@ -681,7 +803,7 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 
         double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
 
-        if (originalProblem->isTypeOfObjectiveMinimize())
+        if (isMinimizationProblem)
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
 
@@ -895,7 +1017,7 @@ void MIPSolverGurobi::checkParameters()
 
 std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
 {
-    return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableLowerBounds()));
+    return (variableLowerBounds, variableUpperBounds));
 }
 
 int MIPSolverGurobi::getNumberOfExploredNodes()

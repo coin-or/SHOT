@@ -9,9 +9,6 @@
 */
 
 #pragma once
-#include "../Structs.h"
-#include "ffunc.hpp"
-#include <sstream>
 
 namespace SHOT
 {
@@ -109,29 +106,6 @@ struct NumericConstraintValue
 };
 
 typedef std::vector<NumericConstraintValue> NumericConstraintValues;
-
-enum class E_VariableType
-{
-    Real,
-    Binary,
-    Integer,
-    Semicontinuous
-};
-
-enum class E_AuxilliaryVariableType
-{
-    None,
-    NonlinearObjectiveFunction // From epigraph formulation of (nonlinear) objective function
-};
-
-enum class E_Curvature
-{
-    None,
-    Convex,
-    Concave,
-    Nonconvex,
-    Indeterminate
-};
 
 // Begin exception definitions
 

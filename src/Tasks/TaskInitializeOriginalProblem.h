@@ -10,13 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../UtilityFunctions.h"
-#include "../OptProblems/OptProblem.h"
-#include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
-#include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
-#include "../OptProblems/OptProblemOriginalLinearObjective.h"
-#include <OSInstance.h>
+
 #include "../MIPSolver/IMIPSolver.h"
 
 namespace SHOT

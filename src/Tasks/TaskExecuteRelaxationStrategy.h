@@ -10,7 +10,6 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
 
 #include "../MIPSolver/IRelaxationStrategy.h"
 #include "../MIPSolver/RelaxationStrategyStandard.h"

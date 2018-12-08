@@ -11,8 +11,7 @@
 #pragma once
 
 #include "NLPSolverBase.h"
-#include "../Report.h"
-#include "../OptProblems/OptProblemNLPMinimax.h"
+#include "../Tasks/TaskAddHyperplanes.h"
 
 #ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
@@ -23,15 +22,15 @@
 
 #include "../MIPSolver/MIPSolverOsiCbc.h"
 
-#include "boost/math/tools/minima.hpp"
-
 namespace SHOT
 {
 class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 {
   public:
-    NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr);
+    NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem);
     virtual ~NLPSolverCuttingPlaneMinimax();
+
+    //virtual void setProblem(ProblemPtr problem);
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();
@@ -39,17 +38,21 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
     virtual bool isObjectiveFunctionNonlinear();
     virtual int getObjectiveFunctionVariableIndex();
 
-    virtual VectorDouble getCurrentVariableLowerBounds();
-    virtual VectorDouble getCurrentVariableUpperBounds();
+    virtual VectorDouble getVariableLowerBounds();
+    virtual VectorDouble getVariableUpperBounds();
+
+    virtual void saveProblemToFile(std::string fileName);
 
   private:
-    IMIPSolver *LPSolver;
+    std::unique_ptr<IMIPSolver> LPSolver;
+    ProblemPtr originalProblem;
+    VectorString variableNames;
 
     virtual double getSolution(int i);
     virtual VectorDouble getSolution();
     virtual double getObjectiveValue();
 
-    virtual bool createProblemInstance(OSInstance *origInstance);
+    //virtual bool createProblemInstance();
 
     virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
 
@@ -59,9 +62,12 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 
     virtual void saveOptionsToFile(std::string fileName);
 
+    virtual NumericConstraintValue calculateNumericValue(NumericConstraintPtr C, const VectorDouble &point);
     bool isProblemCreated;
 
     VectorDouble solution;
     double objectiveValue = NAN;
+
+    bool createProblem(IMIPSolver *destinationProblem, ProblemPtr sourceProblem);
 };
 } // namespace SHOT

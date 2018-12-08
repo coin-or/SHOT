@@ -18,7 +18,9 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 
     env->output->outputDebug("Creating dual problem");
 
-    env->dualSolver->createLinearProblem(env->model->originalProblem.get());
+    createProblem(env->dualSolver, env->reformulatedProblem);
+
+    env->dualSolver->finalizeProblem();
 
     env->dualSolver->initializeSolverSettings();
 
@@ -37,13 +39,16 @@ TaskCreateDualProblem::~TaskCreateDualProblem()
 
 void TaskCreateDualProblem::run()
 {
+    // Only run this task after intialization if we want to rebuild the tree in the multi-tree strategy
     if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
         env->process->startTimer("DualStrategy");
 
         env->output->outputDebug("Creating dual problem");
 
-        env->dualSolver->createLinearProblem(env->model->originalProblem.get());
+        createProblem(env->dualSolver, env->reformulatedProblem);
+
+        env->dualSolver->finalizeProblem();
 
         env->dualSolver->initializeSolverSettings();
 
@@ -55,6 +60,107 @@ void TaskCreateDualProblem::run()
         env->output->outputDebug("Dual problem created");
         env->process->stopTimer("DualStrategy");
     }
+}
+
+bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr sourceProblem)
+{
+    // Now creating the variables
+
+    bool variablesInitialized = true;
+
+    for (auto &V : sourceProblem->allVariables)
+    {
+        variablesInitialized = variablesInitialized && destination->addVariable(V->name.c_str(), V->type, V->lowerBound, V->upperBound);
+    }
+
+    //Nonlinear objective variable
+    if (sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
+    {
+        double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+        destination->hasAuxilliaryObjectiveVariable = true;
+        destination->auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
+
+        variablesInitialized = variablesInitialized && destination->addVariable("shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
+    }
+
+    if (!variablesInitialized)
+        return false;
+
+    // Now creating the objective function
+
+    bool objectiveInitialized = true;
+
+    objectiveInitialized = objectiveInitialized && destination->initializeObjective();
+
+    // Linear terms
+    for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms.terms)
+    {
+        objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
+    }
+
+    // Quadratic terms
+    if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
+    {
+        for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
+        {
+            objectiveInitialized = objectiveInitialized && destination->addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+        }
+    }
+
+    objectiveInitialized = objectiveInitialized && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
+
+    if (!objectiveInitialized)
+        return false;
+
+    // Now creating the constraints
+
+    bool constraintsInitialized = true;
+
+
+    for (auto &C : env->problem->linearConstraints)
+    {
+        constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
+
+        if (C->properties.hasLinearTerms)
+        {
+            for (auto &T : C->linearTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+            }
+        }
+
+        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+    }
+
+    for (auto &C : env->problem->quadraticConstraints)
+    {
+        constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
+
+        if (C->properties.hasLinearTerms)
+        {
+            for (auto &T : C->linearTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+            }
+        }
+
+        if (C->properties.hasQuadraticTerms)
+        {
+            for (auto &T : C->quadraticTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && destination->addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+            }
+        }
+
+        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+    }
+    
+    if (!constraintsInitialized)
+        return false;
+
+    bool problemFinalized = destination->finalizeProblem();
+
+    return (problemFinalized);
 }
 
 std::string TaskCreateDualProblem::getType()

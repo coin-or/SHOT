@@ -10,17 +10,18 @@
 
 #pragma once
 #include "PrimalSolutionStrategyBase.h"
-#include "../NLPSolver/INLPSolver.h"
+
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
-//#include "../NLPSolver/NLPSolverCuttingPlaneRelaxed.h"
-#include "../Report.h"
 
 #ifdef HAS_GAMS
 #include "../NLPSolver/NLPSolverGAMS.h"
+#include "../ModelingSystem/ModelingSystemGAMS.h"
 #endif
 
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
 #include "../Tasks/TaskSelectHyperplanePointsECP.h"
+
+#include "../ModelingSystem/ModelingSystemOS.h"
 
 namespace SHOT
 {

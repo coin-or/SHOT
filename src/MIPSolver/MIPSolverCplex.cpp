@@ -21,21 +21,7 @@ MIPSolverCplex::MIPSolverCplex()
 MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
 {
     env = envPtr;
-
-    discreteVariablesActivated = true;
-
-    cplexModel = IloModel(cplexEnv);
-
-    cplexVars = IloNumVarArray(cplexEnv);
-    cplexConstrs = IloRangeArray(cplexEnv);
-
-    cachedSolutionHasChanged = true;
-
-    isVariablesFixed = false;
-
-    checkParameters();
-    modelUpdated = false;
-    prevSolutionLimit = 1;
+    initializeProblem();
 }
 
 MIPSolverCplex::~MIPSolverCplex()
@@ -48,28 +34,50 @@ MIPSolverCplex::~MIPSolverCplex()
     cplexEnv.end();
 }
 
-bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
+bool MIPSolverCplex::initializeProblem()
 {
-    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    discreteVariablesActivated = true;
+
+    if (alreadyInitialized)
     {
         cplexVarConvers.clear();
         cplexModel.end();
         cplexVars.end();
         cplexConstrs.end();
         cplexInstance.end();
+    }
+    else
+    {
+        prevSolutionLimit = 1;
+        alreadyInitialized = true;
+    }
 
+    try
+    {
         cplexModel = IloModel(cplexEnv);
 
         cplexVars = IloNumVarArray(cplexEnv);
         cplexConstrs = IloRangeArray(cplexEnv);
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when initializing model", e.getMessage());
+        return (false);
+    }
 
-        cachedSolutionHasChanged = true;
+    cachedSolutionHasChanged = true;
+    isVariablesFixed = false;
 
-        isVariablesFixed = false;
+    checkParameters();
+    modelUpdated = false;
+}
 
-        checkParameters();
-
-        modelUpdated = true;
+/*
+bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
+{
+    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    {
+        initializeProblem();
     }
 
     originalProblem = origProblem;
@@ -261,60 +269,48 @@ bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
     }
 
     return (true);
-}
+}*/
 
-bool MIPSolverCplex::createLinearProblem(ProblemPtr sourceProblem)
+/*bool MIPSolverCplex::createLinearProblem(ProblemPtr sourceProblem)
 {
-    MIPSolverBase::sourceProblem = sourceProblem;
+    //MIPSolverBase::sourceProblem = sourceProblem;
 
-    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    /*if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
-        cplexVarConvers.clear();
-        cplexModel.end();
-        cplexVars.end();
-        cplexConstrs.end();
-        cplexInstance.end();
+        initializeProblem();
+    }*/
 
-        cplexModel = IloModel(cplexEnv);
-
-        cplexVars = IloNumVarArray(cplexEnv);
-        cplexConstrs = IloRangeArray(cplexEnv);
-
-        cachedSolutionHasChanged = true;
-
-        isVariablesFixed = false;
-
-        checkParameters();
-
-        modelUpdated = true;
-    }
-
-    int numVar = sourceProblem->properties.numberOfVariables;
-
-    // Now creating the variables
+// Now creating the variables
+/*
+    bool variablesInitialized = true;
 
     for (auto &V : sourceProblem->allVariables)
     {
-        addVariable(V->index, V->name.c_str(), V->type, V->lowerBound, V->upperBound);
+        variablesInitialized = variablesInitialized && addVariable(V->index, V->name.c_str(), V->type, V->lowerBound, V->upperBound);
     }
 
     //Nonlinear objective variable
     if (sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
     {
         double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        cplexVars.add(IloNumVar(cplexEnv, -objVarBound, objVarBound, ILOFLOAT, "shot_objvar"));
-        }
+        auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
 
-    cplexModel.add(cplexVars);
+        variablesInitialized = variablesInitialized && addVariable(auxilliaryObjectiveVariableIndex, "shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
+    }
+
+    if (!variablesInitialized)
+        return false;
 
     // Now creating the objective function
 
-    IloExpr objExpr(cplexEnv);
+    bool objectiveInitialized = true;
+
+    objectiveInitialized = objectiveInitialized && initializeObjective();
 
     // Linear terms
     for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms.terms)
     {
-        objExpr += T->coefficient * cplexVars[T->variable->index];
+        objectiveInitialized = objectiveInitialized && addLinearTermToObjective(T->coefficient, T->variable->index);
     }
 
     // Quadratic terms
@@ -322,88 +318,266 @@ bool MIPSolverCplex::createLinearProblem(ProblemPtr sourceProblem)
     {
         for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
         {
-            objExpr += T->coefficient * cplexVars[T->firstVariable->index] * cplexVars[T->secondVariable->index];
+            objectiveInitialized = objectiveInitialized && addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
         }
     }
 
-    // Constant in objective
-    double objConstant = sourceProblem->objectiveFunction->constant;
-    if (objConstant != 0.0)
-        objExpr += objConstant;
+    objectiveInitialized = objectiveInitialized && finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
 
-    // Minimization or maximization
-    if (sourceProblem->objectiveFunction->properties.isMinimize)
-    {
-        cplexModel.add(IloMinimize(cplexEnv, objExpr));
-    }
-    else
-    {
-        cplexModel.add(IloMaximize(cplexEnv, objExpr));
-    }
-
-    objExpr.end();
+    if (!objectiveInitialized)
+        return false;
 
     // Now creating the constraints
 
-    // Linear constraints
-    for (auto &C : env->problem->linearConstraints)
+    bool constraintsInitialized = true;
+
+    for (auto &C : env->problem->numericConstraints)
     {
-        IloExpr expr(cplexEnv);
+        constraintsInitialized = constraintsInitialized && initializeConstraint();
 
-        for (auto &T : C->linearTerms.terms)
+        switch (C->properties.classification)
         {
-            expr += T->coefficient * cplexVars[T->variable->index];
-        }
-        expr += C->constant;
+        case E_ConstraintClassification::Linear:
 
-        if (C->valueLHS <= C->valueRHS)
-        {
-            IloRange tmpRange = IloRange(cplexEnv, C->valueLHS, expr, C->valueRHS, C->name.c_str());
-            cplexConstrs.add(tmpRange);
-        }
-        else
-        {
-            IloRange tmpRange = IloRange(cplexEnv, C->valueRHS, expr, C->valueLHS, C->name.c_str());
-            cplexConstrs.add(tmpRange);
+            for (auto &T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && addLinearTermToConstraint(T->coefficient, T->variable->index);
+            }
+
+        case E_ConstraintClassification::Quadratic:
+        case E_ConstraintClassification::Nonlinear:
+
+            for (auto &T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && addLinearTermToConstraint(T->coefficient, T->variable->index);
+            }
+
+            for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+            }
+
+        default:
+            break;
         }
 
-        expr.end();
+        constraintsInitialized = constraintsInitialized && finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    // Quadratic constraints
-    for (auto &C : env->problem->quadraticConstraints)
-    {
-        IloExpr expr(cplexEnv);
+    if (!constraintsInitialized)
+        return false;
 
-        for (auto &T : C->linearTerms.terms)
-        {
-            expr += T->coefficient * cplexVars[T->variable->index];
-        }
+    return (true);
+}*/
 
-        for (auto &T : C->quadraticTerms.terms)
-        {
-            expr += T->coefficient * cplexVars[T->firstVariable->index] * cplexVars[T->secondVariable->index];
-        }
-
-        expr += C->constant;
-
-        if (C->valueLHS <= C->valueRHS)
-        {
-            IloRange tmpRange = IloRange(cplexEnv, C->valueLHS, expr, C->valueRHS, C->name.c_str());
-            cplexConstrs.add(tmpRange);
-        }
-        else
-        {
-            IloRange tmpRange = IloRange(cplexEnv, C->valueRHS, expr, C->valueLHS, C->name.c_str());
-            cplexConstrs.add(tmpRange);
-        }
-
-        expr.end();
-    }
-
+bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+{
     try
     {
-        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual")) // Recreate model every iteration
+        switch (type)
+        {
+        case E_VariableType::Real:
+        {
+            auto cplexVar = IloNumVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str());
+            cplexVars.add(cplexVar);
+            cplexModel.add(cplexVar);
+            break;
+        }
+        case E_VariableType::Integer:
+        case E_VariableType::Binary:
+        {
+            isProblemDiscrete = true;
+            auto cplexVar = IloNumVar(cplexEnv, lowerBound, upperBound, ILOINT, name.c_str());
+            cplexVars.add(cplexVar);
+            cplexModel.add(cplexVar);
+            break;
+        }
+        case E_VariableType::Semicontinuous:
+        {
+            isProblemDiscrete = true;
+            auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str());
+            cplexVars.add(cplexVar);
+            cplexModel.add(cplexVar);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+        }
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when adding variable to model: ", e.getMessage());
+        return (false);
+    }
+
+    variableTypes.push_back(type);
+    variableNames.push_back(name);
+    variableLowerBounds.push_back(lowerBound);
+    variableUpperBounds.push_back(upperBound);
+    numberOfVariables++;
+    return (true);
+}
+
+bool MIPSolverCplex::initializeObjective()
+{
+    try
+    {
+        objExpression = IloExpr(cplexEnv);
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when initializing objective function: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverCplex::addLinearTermToObjective(double coefficient, int variableIndex)
+{
+    try
+    {
+        objExpression += coefficient * cplexVars[variableIndex];
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when adding linear term to objective: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverCplex::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    try
+    {
+        objExpression += coefficient * cplexVars[firstVariableIndex] * cplexVars[secondVariableIndex];
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when adding quadratic term to objective: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverCplex::finalizeObjective(bool isMinimize, double constant)
+{
+    try
+    {
+        if (constant != 0.0)
+            objExpression += constant;
+
+        if (isMinimize)
+        {
+            cplexModel.add(IloMinimize(cplexEnv, objExpression));
+            isMinimizationProblem = true;
+        }
+        else
+        {
+            cplexModel.add(IloMaximize(cplexEnv, objExpression));
+            isMinimizationProblem = false;
+        }
+    }
+    catch (IloException &e)
+    {
+        objExpression.end();
+        env->output->outputError("Cplex exception caught when adding objective function to model: ", e.getMessage());
+        return (false);
+    }
+
+    objExpression.end();
+    return (true);
+}
+
+bool MIPSolverCplex::initializeConstraint()
+{
+    try
+    {
+        constrExpression = IloExpr(cplexEnv);
+    }
+    catch (IloException &e)
+    {
+        objExpression.end();
+        env->output->outputError("Cplex exception caught when initializing constraint: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverCplex::addLinearTermToConstraint(double coefficient, int variableIndex)
+{
+    try
+    {
+        constrExpression += coefficient * cplexVars[variableIndex];
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when adding linear term to constraint: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverCplex::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
+{
+    try
+    {
+        constrExpression += coefficient * cplexVars[firstVariableIndex] * cplexVars[secondVariableIndex];
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Cplex exception caught when adding quadratic term to constraint: ", e.getMessage());
+        return (false);
+    }
+
+    return (true);
+}
+
+bool MIPSolverCplex::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
+{
+    try
+    {
+        if (constant != 0.0)
+            constrExpression += constant;
+
+        if (valueLHS <= valueRHS)
+        {
+            IloRange tmpRange = IloRange(cplexEnv, valueLHS, constrExpression, valueRHS, name.c_str());
+            cplexConstrs.add(tmpRange);
+            cplexModel.add(tmpRange);
+        }
+        else
+        {
+            IloRange tmpRange = IloRange(cplexEnv, valueRHS, constrExpression, valueLHS, name.c_str());
+            cplexConstrs.add(tmpRange);
+            cplexModel.add(tmpRange);
+        }
+    }
+    catch (IloException &e)
+    {
+        constrExpression.end();
+        env->output->outputError("Cplex exception caught when adding constraint to model: ", e.getMessage());
+        return (false);
+    }
+
+    constrExpression.end();
+
+    numberOfConstraints++;
+    return (true);
+}
+
+bool MIPSolverCplex::finalizeProblem()
+{
+    try
+    {
+        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
@@ -433,99 +607,11 @@ bool MIPSolverCplex::createLinearProblem(ProblemPtr sourceProblem)
     }
     catch (IloException &e)
     {
-        env->output->outputError("Cplex exception caught when creating model", e.getMessage());
+        env->output->outputError("Cplex exception caught when finalizing model", e.getMessage());
         return (false);
     }
 
     return (true);
-}
-
-void MIPSolverCplex::addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound)
-{
-    switch (type)
-    {
-    case E_VariableType::Real:
-        cplexVars.add(IloNumVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str()));
-        break;
-
-    case E_VariableType::Integer:
-    case E_VariableType::Binary:
-        cplexVars.add(IloNumVar(cplexEnv, lowerBound, upperBound, ILOINT, name.c_str()));
-        break;
-
-    case E_VariableType::Semicontinuous:
-        cplexVars.add(IloSemiContVar(cplexEnv, lowerBound, upperBound, ILOFLOAT, name.c_str()));
-        break;
-
-    default:
-        break;
-    }
-}
-
-void MIPSolverCplex::initializeObjective()
-{
-    objExpression = IloExpr(cplexEnv);
-}
-
-void MIPSolverCplex::addLinearTermToObjective(double coefficient, int variableIndex)
-{
-    objExpression += coefficient * cplexVars[variableIndex];
-}
-
-void MIPSolverCplex::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
-{
-    objExpression += coefficient * cplexVars[firstVariableIndex] * cplexVars[secondVariableIndex];
-}
-
-void MIPSolverCplex::finalizeObjective(bool isMinimize, double constant)
-{
-    if (constant != 0.0)
-        objExpression += constant;
-
-    if (isMinimize)
-    {
-        cplexModel.add(IloMinimize(cplexEnv, objExpression));
-    }
-    else
-    {
-        cplexModel.add(IloMaximize(cplexEnv, objExpression));
-    }
-
-    objExpression.end();
-}
-
-void MIPSolverCplex::initializeConstraint()
-{
-    constrExpression = IloExpr(cplexEnv);
-}
-
-void MIPSolverCplex::addLinearTermToConstraint(double coefficient, int variableIndex)
-{
-    constrExpression += coefficient * cplexVars[variableIndex];
-}
-
-void MIPSolverCplex::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
-{
-    constrExpression += coefficient * cplexVars[firstVariableIndex] * cplexVars[secondVariableIndex];
-}
-
-void MIPSolverCplex::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
-{
-    if (constant != 0.0)
-        constrExpression += constant;
-
-    if (valueLHS <= valueRHS)
-    {
-        IloRange tmpRange = IloRange(cplexEnv, valueLHS, constrExpression, valueRHS, name.c_str());
-        cplexConstrs.add(tmpRange);
-    }
-    else
-    {
-        IloRange tmpRange = IloRange(cplexEnv, valueRHS, constrExpression, valueLHS, name.c_str());
-        cplexConstrs.add(tmpRange);
-    }
-
-    constrExpression.end();
 }
 
 void MIPSolverCplex::initializeSolverSettings()
@@ -582,7 +668,7 @@ void MIPSolverCplex::initializeSolverSettings()
     }
 }
 
-int MIPSolverCplex::addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan)
+int MIPSolverCplex::addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan)
 {
     try
     {
@@ -622,8 +708,6 @@ int MIPSolverCplex::addLinearConstraint(std::vector<PairIndexValue> elements, do
 
 void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
-    auto variableTypes = env->model->originalProblem->getVariableTypes();
-
     try
     {
         for (int i = 0; i < cplexVarConvers.size(); i++)
@@ -635,16 +719,16 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
         if (activate)
         {
-            for (int i = 0; i < env->model->originalProblem->getNumberOfVariables(); i++)
+            for (int i = 0; i < numberOfVariables; i++)
             {
-                if (variableTypes.at(i) == 'I')
+                if (variableTypes.at(i) == E_VariableType::Integer)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOINT);
                     cplexModel.add(tmpConv);
                     cplexVarConvers.push_back(tmpConv);
                 }
-                else if (variableTypes.at(i) == 'B')
+                else if (variableTypes.at(i) == E_VariableType::Binary)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOBOOL);
@@ -657,9 +741,9 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         }
         else
         {
-            for (int i = 0; i < env->model->originalProblem->getNumberOfVariables(); i++)
+            for (int i = 0; i < numberOfVariables; i++)
             {
-                if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
+                if (variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOFLOAT);
@@ -817,7 +901,7 @@ int MIPSolverCplex::getSolutionLimit()
 
 VectorDouble MIPSolverCplex::getVariableSolution(int solIdx)
 {
-    bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && isProblemDiscrete;
     int numVar = cplexVars.getSize();
     VectorDouble solution(numVar);
 
@@ -856,7 +940,7 @@ int MIPSolverCplex::getNumberOfSolutions()
 
     try
     {
-        if (env->model->originalProblem->isProblemDiscrete() && isMIP)
+        if (isProblemDiscrete && isMIP)
         {
             numSols = cplexInstance.getSolnPoolNsolns();
         }
@@ -875,7 +959,7 @@ int MIPSolverCplex::getNumberOfSolutions()
 
 double MIPSolverCplex::getObjectiveValue(int solIdx)
 {
-    bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && isProblemDiscrete;
 
     double objVal = NAN;
 
@@ -931,7 +1015,7 @@ void MIPSolverCplex::setCutOff(double cutOff)
 
     try
     {
-        if (originalProblem->isTypeOfObjectiveMinimize())
+        if (isMinimizationProblem)
         {
             cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
 
@@ -1063,7 +1147,7 @@ double MIPSolverCplex::getDualObjectiveValue()
 {
     double objVal = NAN;
 
-    bool isMIP = getDiscreteVariableStatus() && env->model->originalProblem->isProblemDiscrete();
+    bool isMIP = getDiscreteVariableStatus() && isProblemDiscrete;
 
     try
     {
@@ -1086,10 +1170,8 @@ double MIPSolverCplex::getDualObjectiveValue()
 
 std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
 {
-    auto numVar = env->model->originalProblem->getNumberOfVariables();
-
-    IloNumArray redubs(cplexEnv, numVar);
-    IloNumArray redlbs(cplexEnv, numVar);
+    IloNumArray redubs(cplexEnv, numberOfVariables);
+    IloNumArray redlbs(cplexEnv, numberOfVariables);
 
     IloBoolArray redund(cplexEnv);
 
@@ -1102,10 +1184,10 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
         VectorDouble newLBs;
         VectorDouble newUBs;
 
-        newLBs.reserve(numVar);
-        newUBs.reserve(numVar);
+        newLBs.reserve(numberOfVariables);
+        newUBs.reserve(numberOfVariables);
 
-        for (int i = 0; i < numVar; i++)
+        for (int i = 0; i < numberOfVariables; i++)
         {
             newLBs.push_back(redlbs[i]);
             newUBs.push_back(redubs[i]);
@@ -1150,7 +1232,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
 
         env->output->outputError("Error during presolve", e.getMessage());
 
-        return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableLowerBounds()));
+        return (std::make_pair(variableLowerBounds, variableUpperBounds));
     }
 }
 

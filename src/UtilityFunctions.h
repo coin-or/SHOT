@@ -9,22 +9,7 @@
 */
 
 #pragma once
-#include <ostream>
-#include "boost/format.hpp"
-#include <math.h>
-#include <stdio.h>
-#include <cmath>
-#include <boost/math/special_functions/fpclassify.hpp> // isnan
-#include <chrono>
-#include <ctime>
-#include <iostream>
-#include <fstream>
-#include <cerrno>
-#include "OSInstance.h"
-
-#include "Structs.h"
-#include "Model/ModelShared.h"
-#include "Model/Variables.h"
+#include "Shared.h"
 
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32

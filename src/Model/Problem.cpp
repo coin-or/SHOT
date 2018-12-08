@@ -514,12 +514,12 @@ NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, c
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.error > value.error)
+        if (tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
 
-        if (tmpValue.error > 0)
+        if (tmpValue.normalizedValue > 0)
             activeConstraints.push_back(constraintSelection[i].get());
     }
 
@@ -536,7 +536,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.error > value.error)
+        if (tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -555,7 +555,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.error > value.error)
+        if (tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -574,7 +574,7 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.error > value.error)
+        if (tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -591,19 +591,19 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
 
     auto value = constraintSelection[0]->calculateNumericValue(point);
 
-    if (value.error > 0)
+    if (value.normalizedValue > 0)
         activeConstraints.push_back(constraintSelection[0]);
 
     for (int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.error > value.error)
+        if (tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
 
-        if (tmpValue.error > 0)
+        if (tmpValue.normalizedValue > 0)
             activeConstraints.push_back(constraintSelection[i]);
     }
 
@@ -717,6 +717,17 @@ bool Problem::areVariableBoundsFulfilled(VectorDouble point, double tolerance)
 
     return true;
 };
+
+void Problem::saveProblemToFile(std::string filename)
+{
+    std::stringstream stream;
+    stream << this;
+
+    if (!UtilityFunctions::writeStringToFile(filename, stream.str()))
+    {
+        env->output->outputError("Error when writing to file " + filename);
+    }
+}
 
 std::ostream &operator<<(std::ostream &stream, const Problem &problem)
 {

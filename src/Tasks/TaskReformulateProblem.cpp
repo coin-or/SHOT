@@ -79,6 +79,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             objective->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
         }
 
+        objective->direction = env->problem->objectiveFunction->direction;
         newProblem->add(objective);
     }
     else if (env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
@@ -169,7 +170,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                 constraint->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
             }
 
-            constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), env->problem));
+            constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
 
             newProblem->add(std::move(constraint));
             break;
@@ -181,8 +182,6 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     newProblem->finalize();
     env->reformulatedProblem = newProblem;
-
-    std::cout << newProblem << std::endl;
 
     env->process->stopTimer("ProblemReformulation");
 }
@@ -292,7 +291,6 @@ NonlinearExpressionPtr TaskReformulateProblem::copyNonlinearExpression(Nonlinear
     case E_NonlinearExpressionTypes::Variable:
     {
         int variableIndex = ((ExpressionVariable *)expression)->variable->index;
-
         return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
     }
     default:

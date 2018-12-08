@@ -9,11 +9,7 @@
 */
 
 #pragma once
-#include "../Environment.h"
-#include "../Structs.h"
 #include "OptProblem.h"
-#include "../UtilityFunctions.h"
-#include "OSInstance.h"
 
 namespace SHOT
 {

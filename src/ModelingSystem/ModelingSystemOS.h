@@ -9,26 +9,7 @@
 */
 
 #pragma once
-#include "../Enums.h"
-#include "../Structs.h"
-#include "../Environment.h"
-#include "../Output.h"
-#include "../SHOTSettings/SHOTSettings.h"
-
-#include "../Model/Problem.h"
-
-#include "OSInstance.h"
-#include "OSiLWriter.h"
-#include "OSiLReader.h"
-#include "OSnl2OS.h"
-#include "boost/filesystem.hpp"
-
-#include "../ProcessInfo.h"
-
 #include "IModelingSystem.h"
-
-#include <vector>
-#include <memory>
 
 namespace SHOT
 {
@@ -61,6 +42,8 @@ class ModelingSystemOS : public IModelingSystem
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution();
+
+    OSInstance *originalInstance;
 
   private:
     OSInstance *readInstanceFromOSiL(const std::string &text);

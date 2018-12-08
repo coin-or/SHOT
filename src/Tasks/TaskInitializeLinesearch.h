@@ -10,9 +10,8 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
+
 #include "../LinesearchMethod/LinesearchMethodBoost.h"
-//#include "../LinesearchMethod/LinesearchMethodBisection.h"
 
 namespace SHOT
 {

@@ -563,11 +563,6 @@ int MIPSolverCplexLazyOriginalCallback::increaseSolutionLimit(int increment)
 
 void MIPSolverCplexLazyOriginalCallback::setSolutionLimit(long limit)
 {
-    if (MIPSolverBase::originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
-    {
-        limit = env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
-    }
-
     try
     {
         cplexInstance.setParam(IloCplex::IntSolLim, limit);

@@ -12,12 +12,28 @@
 
 namespace SHOT
 {
+
+enum class E_AuxilliaryVariableType
+{
+    None,
+    NonlinearObjectiveFunction // From epigraph formulation of (nonlinear) objective function
+};
+
 enum class E_DualSolutionSource
 {
     LPSolution,
     MIPSolutionOptimal,
     ObjectiveConstraint,
     MIPSolverBound
+};
+
+enum class E_Curvature
+{
+    None,
+    Convex,
+    Concave,
+    Nonconvex,
+    Indeterminate
 };
 
 enum class E_HyperplaneSource
@@ -149,6 +165,14 @@ enum class E_TerminationReason
     UserAbort,
     ObjectiveGapNotReached,
     None
+};
+
+enum class E_VariableType
+{
+    Real,
+    Binary,
+    Integer,
+    Semicontinuous
 };
 
 enum class ES_AddPrimalPointAsInteriorPoint

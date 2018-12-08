@@ -8,11 +8,8 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Variables.h"
-#include "Terms.h"
-#include "NonlinearExpressions.h"
 #include "Constraints.h"
-#include "Problem.h"
+
 namespace SHOT
 {
 
@@ -73,6 +70,7 @@ void LinearConstraint::add(LinearTerms terms)
     if (linearTerms.terms.size() == 0)
     {
         linearTerms = terms;
+        properties.hasLinearTerms = true;
     }
     else
     {
@@ -86,6 +84,7 @@ void LinearConstraint::add(LinearTerms terms)
 void LinearConstraint::add(LinearTermPtr term)
 {
     linearTerms.terms.push_back(term);
+    properties.hasLinearTerms = true;
 };
 
 double LinearConstraint::calculateFunctionValue(const VectorDouble &point)
@@ -152,6 +151,7 @@ void QuadraticConstraint::add(QuadraticTerms terms)
     if (quadraticTerms.terms.size() == 0)
     {
         quadraticTerms = terms;
+        properties.hasQuadraticTerms = true;
     }
     else
     {
@@ -165,6 +165,7 @@ void QuadraticConstraint::add(QuadraticTerms terms)
 void QuadraticConstraint::add(QuadraticTermPtr term)
 {
     quadraticTerms.terms.push_back(term);
+    properties.hasQuadraticTerms = true;
 };
 
 double QuadraticConstraint::calculateFunctionValue(const VectorDouble &point)
@@ -271,6 +272,8 @@ void NonlinearConstraint::add(NonlinearExpressionPtr expression)
     {
         nonlinearExpression = expression;
     }
+
+    properties.hasNonlinearExpression = true;
 };
 
 void NonlinearConstraint::updateFactorableFunction()

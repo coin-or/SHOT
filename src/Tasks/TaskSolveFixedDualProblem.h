@@ -11,8 +11,7 @@
 #pragma once
 
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../Report.h"
+
 #include "../MIPSolver/IMIPSolver.h"
 
 namespace SHOT

@@ -9,16 +9,7 @@
 */
 
 #pragma once
-#include "ModelShared.h"
-#include "../UtilityFunctions.h"
-
-#include <vector>
-#include <string>
-#include <memory>
-#include <limits>
-#include <algorithm>
-#include <iostream>
-#include <map>
+#include "../Shared.h"
 
 namespace SHOT
 {
@@ -122,6 +113,8 @@ class LinearConstraint : public NumericConstraint
         linearTerms = linTerms;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
     };
 
     void add(LinearTerms terms);
@@ -168,6 +161,8 @@ class QuadraticConstraint : public LinearConstraint
         quadraticTerms = quadTerms;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
     };
 
     QuadraticConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS, double RHS)
@@ -178,6 +173,9 @@ class QuadraticConstraint : public LinearConstraint
         quadraticTerms = quadTerms;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
     };
 
     void add(LinearTerms terms);
@@ -225,6 +223,8 @@ class NonlinearConstraint : public QuadraticConstraint
         nonlinearExpression = expression;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasNonlinearExpression = true;
     };
 
     NonlinearConstraint(int constraintIndex, std::string constraintName, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
@@ -235,6 +235,9 @@ class NonlinearConstraint : public QuadraticConstraint
         nonlinearExpression = expression;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
+        properties.hasNonlinearExpression = true;
     };
 
     NonlinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
@@ -245,6 +248,9 @@ class NonlinearConstraint : public QuadraticConstraint
         nonlinearExpression = expression;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
+        properties.hasNonlinearExpression = true;
     };
 
     NonlinearConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
@@ -256,6 +262,10 @@ class NonlinearConstraint : public QuadraticConstraint
         nonlinearExpression = expression;
         valueLHS = LHS;
         valueRHS = RHS;
+
+        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
+        properties.hasNonlinearExpression = true;
     };
 
     void add(LinearTerms terms);

@@ -10,9 +10,6 @@
 
 #pragma once
 #include "../PrimalSolutionStrategy/IPrimalSolutionStrategy.h"
-#include "SHOTSettings.h"
-#include "../ProcessInfo.h"
-#include "../OptProblems/OptProblemOriginal.h"
 
 namespace SHOT
 {
@@ -20,7 +17,7 @@ class PrimalSolutionStrategyBase : public IPrimalSolutionStrategy
 {
   public:
     //PrimalSolutionStrategyBase(EnvironmentPtr envPtr);
-    virtual ~PrimalSolutionStrategyBase();
+    virtual ~PrimalSolutionStrategyBase() {};
 
   protected:
     EnvironmentPtr env;

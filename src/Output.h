@@ -9,16 +9,13 @@
 */
 
 #pragma once
-#include <float.h>
-#include "Enums.h"
+#include "Shared.h"
 
 // Used for OSOutput
 #include "cstdio"
 #define HAVE_STDIO_H 1
 #include "OSOutput.h"
 
-#include <boost/format.hpp>
-#include <memory>
 
 namespace SHOT
 {

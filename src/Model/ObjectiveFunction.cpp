@@ -9,10 +9,6 @@
 */
 
 #include "ObjectiveFunction.h"
-#include "Variables.h"
-#include "Terms.h"
-#include "NonlinearExpressions.h"
-#include "Problem.h"
 
 namespace SHOT
 {
@@ -28,6 +24,11 @@ void ObjectiveFunction::updateProperties()
     {
         properties.isMinimize = true;
         properties.isMaximize = false;
+    }
+    else
+    {
+        properties.isMinimize = false;
+        properties.isMaximize = true;
     }
 
     properties.curvature = checkConvexity();

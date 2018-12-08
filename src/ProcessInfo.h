@@ -9,23 +9,8 @@
 */
 
 #pragma once
+#include "Shared.h"
 #include "SHOTConfig.h"
-#include "UtilityFunctions.h"
-#include "SHOTSettings.h"
-#include "Enums.h"
-#include "Structs.h"
-#include "Output.h"
-#include "Iteration.h"
-#include "Timer.h"
-//#include "Model.h"
-
-#include "OSResult.h"
-#include "OSrLWriter.h"
-#include "OSErrorClass.h"
-
-#include "boost/property_tree/ptree.hpp"
-#include "boost/property_tree/xml_parser.hpp"
-#include "OptProblems/OptProblemOriginal.h"
 
 #include "MIPSolver/IRelaxationStrategy.h"
 #include "LinesearchMethod/ILinesearchMethod.h"
@@ -37,6 +22,8 @@
 namespace SHOT
 {
 class Iteration;
+
+class IRelaxationStrategy;
 
 class ProcessInfo
 {

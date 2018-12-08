@@ -17,44 +17,34 @@ NLPSolverBase::NLPSolverBase()
 {
 }
 
-void NLPSolverBase::setProblem(OSInstance *origInstance)
-{
-    originalInstance = origInstance;
-    isProblemInitialized = false;
-}
-
+/*
 void NLPSolverBase::initializeProblem()
 {
     if (!isProblemInitialized)
     {
-        createProblemInstance(originalInstance);
+        createProblemInstance();
 
         isProblemInitialized = true;
     }
-}
+}*/
 
-void NLPSolverBase::saveProblemToFile(std::string fileName)
+/*void NLPSolverBase::saveProblemToFile(std::string fileName)
 {
-    if (!isProblemInitialized)
-        initializeProblem();
 
     NLPProblem->saveProblemModelToFile(fileName);
-}
+}*/
 
 E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
-    if (!isProblemInitialized)
-        initializeProblem();
-
+    /*if (!isProblemInitialized)
+        initializeProblem();*/
+    /*
     if (env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal")) // Does not seem to work with Ipopt...
     {
         auto numVar = env->model->originalProblem->getNumberOfVariables();
 
         for (int i = 0; i < numVar; i++)
         {
-            if (i == env->model->originalProblem->getNonlinearObjectiveVariableIdx())
-                continue;
-
             if (env->model->originalProblem->hasVariableBoundsBeenTightened(i))
             {
                 NLPProblem->setVariableLowerBound(i,
@@ -64,27 +54,27 @@ E_NLPSolutionStatus NLPSolverBase::solveProblem()
                 NLPProblem->setVariableBoundsAsTightened(i);
             }
         }
-    }
+    }*/
 
     auto solStatus = solveProblemInstance();
 
     return (solStatus);
 }
 
-VectorDouble NLPSolverBase::getVariableLowerBounds()
-{
+// VectorDouble NLPSolverBase::getVariableLowerBounds()
+// {
 
-    if (!isProblemInitialized)
-        initializeProblem();
+//     /*if (!isProblemInitialized)
+//         initializeProblem();*/
 
-    return (getCurrentVariableLowerBounds());
-}
+//     return (getCurrentVariableLowerBounds());
+// }
 
-VectorDouble NLPSolverBase::getVariableUpperBounds()
-{
-    if (!isProblemInitialized)
-        initializeProblem();
+// VectorDouble NLPSolverBase::getVariableUpperBounds()
+// {
+//     /*if (!isProblemInitialized)
+//         initializeProblem();*/
 
-    return (getCurrentVariableUpperBounds());
-}
+//     return (getCurrentVariableUpperBounds());
+// }
 } // namespace SHOT

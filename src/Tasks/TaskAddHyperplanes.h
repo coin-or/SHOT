@@ -10,7 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../OptProblems/OptProblemOriginal.h"
+
 #include "../MIPSolver/IMIPSolver.h"
 
 namespace SHOT

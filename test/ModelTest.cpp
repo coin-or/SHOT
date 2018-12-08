@@ -7,14 +7,8 @@
    This software is licensed under the Eclipse Public License 2.0. 
    Please see the README and LICENSE files for more information.
 */
-#include <iostream>
-#include <utility> // for unique_ptr
-#include "Model/ModelShared.h"
-#include "Model/Terms.h"
-#include "Model/Constraints.h"
-#include "Model/NonlinearExpressions.h"
-#include "Model/ObjectiveFunction.h"
-#include "Model/Problem.h"
+
+#include "SHOTSolver.h"
 
 #include "ModelingSystem/ModelingSystemOS.h"
 #include "ModelingSystem/ModelingSystemGAMS.h"
@@ -22,9 +16,6 @@
 #include "LinesearchMethod/LinesearchMethodBoost.h"
 
 #include "Tasks/TaskReformulateProblem.h"
-
-#include "SHOTSolver.h"
-#include "Environment.h"
 
 using namespace SHOT;
 
@@ -605,7 +596,6 @@ bool ModelTestCreateProblem()
 
     point.at(0) = 0.0;
     point.at(1) = 1.0;
-    point.at(2) = 2.0;
 
     std::cout << "Testing to get all deviating constraint values in a valid point (there should be none)\n";
 

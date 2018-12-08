@@ -9,16 +9,7 @@
 */
 
 #pragma once
-#include "CoinPackedMatrix.hpp"
-#include "CoinPackedVector.hpp"
-#include "CoinFinite.hpp"
-#include "../Enums.h"
-#include "../Structs.h"
-#include "../Environment.h"
-#include "../Model.h"
-
-#include "SHOTSettings.h"
-#include "../UtilityFunctions.h"
+#include "../Shared.h"
 
 namespace SHOT
 {

@@ -9,16 +9,16 @@
 */
 
 #pragma once
-#include "Enums.h"
-#include "Structs.h"
+#include "Shared.h"
 
 namespace SHOT
 {
+
 class Environment
 {
   public:
-    Environment();
-    ~Environment();
+    inline Environment() {};
+    inline ~Environment() {};
 
     ProcessPtr process;
     SettingsPtr settings;

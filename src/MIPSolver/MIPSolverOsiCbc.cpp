@@ -16,14 +16,7 @@ namespace SHOT
 MIPSolverOsiCbc::MIPSolverOsiCbc(EnvironmentPtr envPtr)
 {
     env = envPtr;
-
-    discreteVariablesActivated = true;
-
-    osiInterface = new OsiClpSolverInterface();
-
-    cachedSolutionHasChanged = true;
-    isVariablesFixed = false;
-
+    initializeProblem();
     checkParameters();
 }
 
@@ -31,6 +24,20 @@ MIPSolverOsiCbc::~MIPSolverOsiCbc()
 {
 }
 
+bool MIPSolverOsiCbc::initializeProblem()
+{
+    discreteVariablesActivated = true;
+
+    osiInterface = std::make_unique<OsiClpSolverInterface>();
+    coinModel = std::make_unique<CoinModel>();
+
+    cachedSolutionHasChanged = true;
+    isVariablesFixed = false;
+
+    return (true);
+}
+
+/*
 bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
 {
     originalProblem = origProblem;
@@ -89,18 +96,6 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
         coinModel->setColObjective(tmpObjPairs.at(i).first, tmpObjPairs.at(i).second);
     }
 
-    // Add quadratic terms in the objective if they exist (and the strategy is to solve QPs)
-    // Since this is not used for the Cbc solver here, it should never happen and quadratic objective functions
-    // are regarded as general nonlinear
-    /*if (origProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
-    {
-        auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
-
-        for (auto T : quadTerms)
-        {
-            coinModel->setQuadraticElement(T->idxOne, T->idxTwo, T->coef);
-        }
-    }*/
 
     double objConstant = origProblem->getObjectiveConstant();
     coinModel->setObjectiveOffset(objConstant);
@@ -189,89 +184,180 @@ bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
     setSolutionLimit(1);
 
     return (true);
-}
+}*/
 
-void MIPSolverOsiCbc::addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverOsiCbc::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
-    coinModel->setColumnBounds(index, lowerBound, upperBound);
-    coinModel->setColName(index, name.c_str());
+    int index = numberOfVariables;
 
-    switch (type)
+    try
     {
-    case E_VariableType::Real:
-        break;
+        coinModel->setColumnBounds(index, lowerBound, upperBound);
+        coinModel->setColName(index, name.c_str());
 
-    case E_VariableType::Integer:
-    case E_VariableType::Binary:
-        coinModel->setInteger(index);
-        break;
+        switch (type)
+        {
+        case E_VariableType::Real:
+            break;
 
-    case E_VariableType::Semicontinuous:
-        coinModel->setInteger(index);
-        break;
+        case E_VariableType::Integer:
+        case E_VariableType::Binary:
+            isProblemDiscrete = true;
+            coinModel->setInteger(index);
+            break;
 
-    default:
-        break;
+        case E_VariableType::Semicontinuous:
+            isProblemDiscrete = true;
+            coinModel->setInteger(index);
+            break;
+
+        default:
+            break;
+        }
     }
+    catch (std::exception &e)
+    {
+        env->output->outputError("Cbc exception caught when adding variable to model: ", e.what());
+        return (false);
+    }
+
+    variableTypes.push_back(type);
+    variableNames.push_back(name);
+    variableLowerBounds.push_back(lowerBound);
+    variableUpperBounds.push_back(upperBound);
+    numberOfVariables++;
+    return (true);
 }
 
-void MIPSolverOsiCbc::initializeObjective()
+bool MIPSolverOsiCbc::initializeObjective()
 {
+    return (true);
 }
 
-void MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableIndex)
+bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableIndex)
 {
-    coinModel->setColObjective(coefficient, variableIndex);
+    try
+    {
+        coinModel->setColObjective(coefficient, variableIndex);
+    }
+    catch (std::exception &e)
+    {
+        env->output->outputError("Cbc exception caught when adding linear term to objective: ", e.what());
+        return (false);
+    }
+
+    return (true);
 }
 
-void MIPSolverOsiCbc::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
+bool MIPSolverOsiCbc::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
 {
     // Not implemented
+    return (false);
 }
 
-void MIPSolverOsiCbc::finalizeObjective(bool isMinimize, double constant)
+bool MIPSolverOsiCbc::finalizeObjective(bool isMinimize, double constant)
 {
-    if (constant != 0.0)
-        coinModel->setObjectiveOffset(constant);
-
-    if (isMinimize)
+    try
     {
-        coinModel->setOptimizationDirection(1.0);
+        if (constant != 0.0)
+            coinModel->setObjectiveOffset(constant);
+
+        if (isMinimize)
+        {
+            coinModel->setOptimizationDirection(1.0);
+            isMinimizationProblem = true;
+        }
+        else
+        {
+            coinModel->setOptimizationDirection(-1.0);
+            isMinimizationProblem = false;
+        }
     }
-    else
+    catch (std::exception &e)
     {
-        coinModel->setOptimizationDirection(-1.0);
+        env->output->outputError("Cbc exception caught when adding objective function to model: ", e.what());
+        return (false);
     }
+
+    return (true);
 }
 
-void MIPSolverOsiCbc::initializeConstraint()
+bool MIPSolverOsiCbc::initializeConstraint()
 {
+    return (true);
 }
 
-void MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
+bool MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
 {
-    coinModel->setElement(addedConstraints, variableIndex, coefficient);
+    try
+    {
+        coinModel->setElement(numberOfConstraints, variableIndex, coefficient);
+    }
+    catch (std::exception &e)
+    {
+        env->output->outputError("Cbc exception caught when adding linear term to constraint: ", e.what());
+        return (false);
+    }
+
+    numberOfConstraints++;
+    return (true);
 }
 
-void MIPSolverOsiCbc::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
+bool MIPSolverOsiCbc::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
 {
     // Not implemented
+    return (false);
 }
 
-void MIPSolverOsiCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
+bool MIPSolverOsiCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
 {
-    if (valueLHS <= valueRHS)
+    int index = numberOfConstraints;
+    try
     {
-        coinModel->setRowBounds(addedConstraints, valueLHS - constant, valueRHS - constant);
+        if (valueLHS <= valueRHS)
+        {
+            coinModel->setRowBounds(index, valueLHS - constant, valueRHS - constant);
+        }
+        else
+        {
+            coinModel->setRowBounds(index, valueRHS - constant, valueLHS - constant);
+        }
+
+        coinModel->setRowName(index, name.c_str());
     }
-    else
+    catch (std::exception &e)
     {
-        coinModel->setRowBounds(addedConstraints, valueRHS - constant, valueLHS - constant);
+        env->output->outputError("Cbc exception caught when adding constraint to model: ", e.what());
+        return (false);
     }
 
-    coinModel->setRowName(addedConstraints, name.c_str());
+    numberOfConstraints++;
+    return (true);
+}
 
-    addedConstraints++;
+bool MIPSolverOsiCbc::finalizeProblem()
+{
+    try
+    {
+        osiInterface->loadFromCoinModel(*coinModel);
+        cbcModel = std::make_unique<CbcModel>(*osiInterface);
+        CbcMain0(*cbcModel);
+
+        if (!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
+        {
+            cbcModel->setLogLevel(0);
+            osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+        }
+
+        setSolutionLimit(1);
+    }
+    catch (std::exception &e)
+    {
+        env->output->outputError("Cbc exception caught when finalizing model", e.what());
+        return (false);
+    }
+
+    return (true);
 }
 
 void MIPSolverOsiCbc::initializeSolverSettings()
@@ -287,14 +373,14 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     cbcModel->setMaximumSavedSolutions(env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
     // Cbc has problems with too large cutoff values
-    if (originalProblem->isTypeOfObjectiveMinimize() && abs(this->cutOff) < 10e20)
+    if (isMinimizationProblem && abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
 
         env->output->outputInfo(
             "     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
     }
-    else if (!originalProblem->isTypeOfObjectiveMinimize() && abs(this->cutOff) < 10e20)
+    else if (!isMinimizationProblem && abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
         env->output->outputInfo(
@@ -302,7 +388,7 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     }
 }
 
-int MIPSolverOsiCbc::addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan)
+int MIPSolverOsiCbc::addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan)
 {
     CoinPackedVector cut;
 
@@ -322,16 +408,13 @@ int MIPSolverOsiCbc::addLinearConstraint(std::vector<PairIndexValue> elements, d
 
 void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 {
-    auto variableTypes = env->model->originalProblem->getVariableTypes();
-    int numVar = env->model->originalProblem->getNumberOfVariables();
-
     if (activate)
     {
         env->output->outputInfo("Activating MIP strategy");
 
-        for (int i = 0; i < numVar; i++)
+        for (int i = 0; i < numberOfVariables; i++)
         {
-            if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
+            if (variableTypes.at(i) ==E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setInteger(i);
             }
@@ -342,9 +425,9 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
     else
     {
         env->output->outputInfo("Activating LP strategy");
-        for (int i = 0; i < numVar; i++)
+        for (int i = 0; i < numberOfVariables; i++)
         {
-            if (variableTypes.at(i) == 'I' || variableTypes.at(i) == 'B')
+            if (variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setContinuous(i);
             }
@@ -393,7 +476,7 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
 
     try
     {
-        cbcModel = new CbcModel(*osiInterface);
+        cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
         initializeSolverSettings();
 
@@ -464,7 +547,7 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     try
     {
 
-        if (originalProblem->isTypeOfObjectiveMinimize())
+        if (isMinimizationProblem)
         {
             this->cutOff = cutOff + cutOffTol;
 
@@ -487,16 +570,13 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
 
 void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {
-    auto numVar = env->model->originalProblem->getNumberOfVariables();
-    auto varNames = env->model->originalProblem->getVariableNames();
-
     std::vector<std::pair<std::string, double>> variableValues;
 
-    for (int i = 0; i < numVar; i++)
+    for (int i = 0; i < numberOfVariables; i++)
     {
         std::pair<std::string, double> tmpPair;
 
-        tmpPair.first = varNames.at(i);
+        tmpPair.first = variableNames.at(i);
         tmpPair.second = point.at(i);
 
         variableValues.push_back(tmpPair);
@@ -540,11 +620,11 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
     try
     {
         // Fixes some strange behavior with the objective value when solving MIP vs LP problems
-        if (isMIP && env->model->originalProblem->isTypeOfObjectiveMinimize())
+        if (isMIP && isMinimizationProblem)
         {
             objVal = 1.0;
         }
-        else if (isMIP && !originalProblem->isTypeOfObjectiveMinimize())
+        else if (isMIP && !isMinimizationProblem)
         {
             objVal = -1.0;
         }
@@ -693,7 +773,7 @@ double MIPSolverOsiCbc::getDualObjectiveValue()
 
 std::pair<VectorDouble, VectorDouble> MIPSolverOsiCbc::presolveAndGetNewBounds()
 {
-    return (std::make_pair(originalProblem->getVariableLowerBounds(), env->model->originalProblem->getVariableUpperBounds()));
+    return (std::make_pair(variableLowerBounds, variableUpperBounds));
 }
 
 void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)

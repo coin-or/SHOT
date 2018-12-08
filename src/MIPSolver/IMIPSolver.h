@@ -9,38 +9,40 @@
 */
 
 #pragma once
-#include "vector"
-#include "../Enums.h"
-#include "OSInstance.h"
-#include "../ProcessInfo.h"
+#include "../Shared.h"
+
 #include "../OptProblems/OptProblemOriginal.h"
 #include "../OptProblems/OptProblemOriginalLinearObjective.h"
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
-#include "../Structs.h"
-#include "../Model/Problem.h"
 
 namespace SHOT
 {
 class IMIPSolver
 {
   public:
+    bool hasAuxilliaryObjectiveVariable = false;
+    int auxilliaryObjectiveVariableIndex;
+
+    virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
 
-    virtual bool createLinearProblem(OptProblem *origProblem) = 0;
-    virtual bool createLinearProblem(ProblemPtr sourceProblem) = 0;
+    //virtual bool createLinearProblem(OptProblem *origProblem) = 0;
+    //virtual bool createLinearProblem(ProblemPtr sourceProblem) = 0;
 
-    virtual void addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound) = 0;
+    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound) = 0;
 
-    virtual void initializeObjective() = 0;
-    virtual void addLinearTermToObjective(double coefficient, int variableIndex) = 0;
-    virtual void addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
-    virtual void finalizeObjective(bool isMinimize, double constant = 0.0) = 0;
+    virtual bool initializeObjective() = 0;
+    virtual bool addLinearTermToObjective(double coefficient, int variableIndex) = 0;
+    virtual bool addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
+    virtual bool finalizeObjective(bool isMinimize, double constant = 0.0) = 0;
 
-    virtual void initializeConstraint() = 0;
-    virtual void addLinearTermToConstraint(double coefficient, int variableIndex) = 0;
-    virtual void addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
-    virtual void finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0) = 0;
+    virtual bool initializeConstraint() = 0;
+    virtual bool addLinearTermToConstraint(double coefficient, int variableIndex) = 0;
+    virtual bool addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
+    virtual bool finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0) = 0;
+
+    virtual bool finalizeProblem() = 0;
 
     virtual void initializeSolverSettings() = 0;
 
@@ -65,8 +67,8 @@ class IMIPSolver
     virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant) = 0;
-    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan) = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
 
@@ -96,8 +98,6 @@ class IMIPSolver
     virtual bool supportsQuadraticConstraints() = 0;
 
     virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes() = 0;
-
-    virtual void updateNonlinearObjectiveFromPrimalDualBounds() = 0;
 
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;

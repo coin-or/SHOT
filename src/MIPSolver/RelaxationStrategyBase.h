@@ -9,8 +9,7 @@
 */
 
 #pragma once
-#include "SHOTSettings.h"
-#include "../ProcessInfo.h"
+#include "IRelaxationStrategy.h"
 #include "IMIPSolver.h"
 
 namespace SHOT

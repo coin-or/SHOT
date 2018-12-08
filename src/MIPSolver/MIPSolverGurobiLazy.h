@@ -9,12 +9,9 @@
 */
 
 #pragma once
-#include "../Enums.h"
-#include "IMIPSolver.h"
 #include "MIPSolverBase.h"
 #include "MIPSolverGurobi.h"
 #include "MIPSolverCallbackBase.h"
-#include "gurobi_c++.h"
 
 namespace SHOT
 {

@@ -7,13 +7,7 @@
    This software is licensed under the Eclipse Public License 2.0. 
    Please see the README and LICENSE files for more information.
 */
-#include <memory>
-#include <utility> // for unique_ptr
-
-#include "Enums.h"
-#include "Structs.h"
-#include "Environment.h"
-#include "Output.h"
+#include "Shared.h"
 #include "SHOTSettings.h"
 #include "Report.h"
 #include "SHOTSolver.h"

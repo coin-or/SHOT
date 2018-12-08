@@ -9,18 +9,11 @@
 */
 
 #pragma once
+#include "../Shared.h"
 
-#include <boost/format.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
 #include "OSOption.h"
-#include "../Structs.h"
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
-
-#include "Output.h"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace SHOT
 {

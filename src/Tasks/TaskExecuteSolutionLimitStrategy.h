@@ -10,7 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
+
 #include "../MIPSolver/IMIPSolutionLimitStrategy.h"
 #include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
 #include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"

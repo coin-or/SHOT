@@ -9,12 +9,11 @@
 */
 
 #pragma once
-#include "IRelaxationStrategy.h"
 #include "RelaxationStrategyBase.h"
 
 namespace SHOT
 {
-class RelaxationStrategyStandard : public IRelaxationStrategy, RelaxationStrategyBase
+class RelaxationStrategyStandard : public IRelaxationStrategy, public RelaxationStrategyBase
 {
   public:
     RelaxationStrategyStandard(EnvironmentPtr envPtr);

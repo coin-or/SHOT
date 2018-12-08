@@ -9,16 +9,7 @@
 */
 
 #pragma once
-#include "ModelShared.h"
-#include "../UtilityFunctions.h"
-#include "Variables.h"
-#include "Terms.h"
-#include "NonlinearExpressions.h"
-#include "Problem.h"
-
-#include <vector>
-#include <string>
-#include <memory>
+#include "../Shared.h"
 
 namespace SHOT
 {
@@ -282,8 +273,6 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 
     std::ostream &print(std::ostream &stream) const override;
 };
-
-typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
 
 std::ostream &operator<<(std::ostream &stream, NonlinearObjectiveFunctionPtr objective);
 

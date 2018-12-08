@@ -9,18 +9,10 @@
 */
 
 #pragma once
-
+#include "../Shared.h"
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h> // for mkdir
-#include "boost/filesystem.hpp"
-#include "CoinHelperFunctions.hpp" // for CoinCopyOfArrayOrZero, maybe should eliminate this
-#include "../ProcessInfo.h"
-
-#include "OSInstance.h"
-#include "OSResult.h"
-#include "OSOption.h"
-#include "OSoLReader.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"
@@ -28,19 +20,6 @@
 
 namespace SHOT
 {
-
-class ProcessInfo;
-
-/*
-class GAMSOSInstance : public OSInstance
-{
-  public:
-    gmoHandle_t gmo;
-
-    GAMSOSInstance(gmoHandle_t gmo_) : gmo(gmo_), OSInstance()
-    {
-    }
-};*/
 
 class GAMS2OS
 {

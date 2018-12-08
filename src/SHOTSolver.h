@@ -10,22 +10,17 @@
 
 #pragma once
 
-#include "Enums.h"
-#include "Structs.h"
-#include "Environment.h"
+#include "Shared.h"
+
 #include "ModelingSystem/IModelingSystem.h"
 #include "ModelingSystem/ModelingSystemOS.h"
-#include "Model/Problem.h"
-#include "Output.h"
-#include "SHOTSettings.h"
+
 #include "SolutionStrategy/ISolutionStrategy.h"
 #include "SolutionStrategy/SolutionStrategySingleTree.h"
 #include "SolutionStrategy/SolutionStrategyMultiTree.h"
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
-#include "ProcessInfo.h"
-#include "boost/filesystem.hpp"
 #include "TaskHandler.h"
 #include "OSnl2OS.h"
 

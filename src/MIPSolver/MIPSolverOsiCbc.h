@@ -9,7 +9,6 @@
 */
 
 #pragma once
-#include "IMIPSolver.h"
 #include "MIPSolverBase.h"
 
 #include "CoinBuild.hpp"
@@ -26,33 +25,37 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     MIPSolverOsiCbc(EnvironmentPtr envPtr);
     virtual ~MIPSolverOsiCbc();
 
+    virtual bool initializeProblem();
+
     virtual void checkParameters();
 
-    virtual bool createLinearProblem(OptProblem *origProblem);
-    virtual bool createLinearProblem(ProblemPtr sourceProblem){};
+    //virtual bool createLinearProblem(OptProblem *origProblem);
+    //virtual bool createLinearProblem(ProblemPtr sourceProblem){};
 
-    virtual void addVariable(int index, std::string name, E_VariableType type, double lowerBound, double upperBound);
+    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound);
 
-    virtual void initializeObjective();
-    virtual void addLinearTermToObjective(double coefficient, int variableIndex);
-    virtual void addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex);
-    virtual void finalizeObjective(bool isMinimize, double constant = 0.0);
+    virtual bool initializeObjective();
+    virtual bool addLinearTermToObjective(double coefficient, int variableIndex);
+    virtual bool addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex);
+    virtual bool finalizeObjective(bool isMinimize, double constant = 0.0);
 
-    virtual void initializeConstraint();
-    virtual void addLinearTermToConstraint(double coefficient, int variableIndex);
-    virtual void addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex);
-    virtual void finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0);
+    virtual bool initializeConstraint();
+    virtual bool addLinearTermToConstraint(double coefficient, int variableIndex);
+    virtual bool addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex);
+    virtual bool finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0);
+
+    virtual bool finalizeProblem();
 
     virtual void initializeSolverSettings();
 
     virtual void writeProblemToFile(std::string filename);
     virtual void writePresolvedToFile(std::string filename);
 
-    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant)
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant)
     {
         return (addLinearConstraint(elements, constant, false));
     }
-    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan);
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan);
 
     virtual void createHyperplane(Hyperplane hyperplane)
     {
@@ -137,11 +140,6 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
         return (MIPSolverBase::getGeneratedHyperplanes());
     }
 
-    virtual void updateNonlinearObjectiveFromPrimalDualBounds()
-    {
-        return (MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds());
-    }
-
     virtual int getNumberOfExploredNodes();
 
     virtual int getNumberOfOpenNodes()
@@ -150,14 +148,15 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     }
 
   private:
-    OsiClpSolverInterface *osiInterface;
-    CbcModel *cbcModel;
-    CoinModel *coinModel;
-    int addedConstraints = 0;
+    std::unique_ptr<OsiClpSolverInterface> osiInterface;
+    std::unique_ptr<CbcModel> cbcModel;
+    std::unique_ptr<CoinModel> coinModel;
 
     long int solLimit;
     double cutOff /*= OSDBL_MAX*/;
 
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
+
+    std::vector<E_VariableType> variableTypes;
 };
 } // namespace SHOT

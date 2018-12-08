@@ -9,7 +9,6 @@
 */
 
 #include "NLPSolverCuttingPlaneMinimax.h"
-#include "../Tasks/TaskAddHyperplanes.h"
 
 namespace SHOT
 {
@@ -19,10 +18,10 @@ class MinimizationFunction
   private:
     VectorDouble firstPt;
     VectorDouble secondPt;
-    OptProblem *NLPProblem;
+    ProblemPtr NLPProblem;
 
   public:
-    MinimizationFunction(VectorDouble ptA, VectorDouble ptB, OptProblem *prob)
+    MinimizationFunction(VectorDouble ptA, VectorDouble ptB, ProblemPtr prob)
     {
         firstPt = ptA;
         secondPt = ptB;
@@ -39,13 +38,13 @@ class MinimizationFunction
             ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
         }
 
-        auto validNewPt = NLPProblem->getMostDeviatingConstraint(ptNew).value + ptNew.back();
+        auto maxDev = NLPProblem->getMaxNumericConstraintValue(ptNew, NLPProblem->nonlinearConstraints);
 
-        return (validNewPt);
+        return (maxDev.normalizedValue);
     }
 };
 
-NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr) : INLPSolver(envPtr)
+NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem) : INLPSolver(envPtr), originalProblem(problem)
 {
     auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
 
@@ -58,7 +57,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 #ifdef HAS_CPLEX
     if (solver == ES_MIPSolver::Cplex)
     {
-        LPSolver = new MIPSolverCplex(env);
+        LPSolver = std::make_unique<MIPSolverCplex>(env);
         env->output->outputInfo("Cplex selected as MIP solver for minimax solver.");
     }
 #endif
@@ -66,34 +65,36 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 #ifdef HAS_GUROBI
     if (solver == ES_MIPSolver::Gurobi)
     {
-        LPSolver = new MIPSolverGurobi(env);
+        LPSolver = std::make_unique<MIPSolverGurobi>(env);
         env->output->outputInfo("Gurobi selected as MIP solver for minimax solver.");
     }
 #endif
 
     if (solver == ES_MIPSolver::Cbc)
     {
-        LPSolver = new MIPSolverOsiCbc(env);
+        LPSolver = std::make_unique<MIPSolverOsiCbc>(env);
         env->output->outputInfo("Cbc selected as MIP solver for minimax solver.");
     }
 
-    NLPProblem = new OptProblemNLPMinimax(env);
+    env->output->outputInfo("Creating LP problem for minimax solver");
+    createProblem(LPSolver.get(), originalProblem);
+    env->output->outputInfo("LP problem for minimax solver created");
+
+    LPSolver->activateDiscreteVariables(false);
+    LPSolver->initializeSolverSettings();
 }
 
 NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax()
 {
-    delete NLPProblem;
-    delete LPSolver;
 }
 
-/*void NLPSolverCuttingPlaneMinimax::saveProblemModelToFile(std::string fileName)
- {
- NLPProblem->saveProblemModelToFile(fileName);
- }*/
+void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName)
+{
+}
 
 E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 {
-    int numVar = NLPProblem->getNumberOfVariables();
+    int numVar = originalProblem->properties.numberOfVariables;
 
     // Sets the maximal number of iterations
     int maxIter = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
@@ -168,6 +169,17 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         auto LPVarSol = LPSolver->getVariableSolution(0);
         LPObjVar = LPSolver->getObjectiveValue();
 
+        // Saves the LP solution to file if in debug mode
+        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << "/lpminimaxsolpt";
+            ss << i;
+            ss << ".txt";
+            UtilityFunctions::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
+        }
+
         if (isnan(LPObjVar))
         {
             statusCode = E_NLPSolutionStatus::Error;
@@ -185,7 +197,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         }
         else
         {
-            MinimizationFunction funct(LPVarSol, prevSol, NLPProblem);
+            MinimizationFunction funct(LPVarSol, prevSol, originalProblem);
 
             // Solves the minization problem wrt lambda in [0, 1]
 
@@ -204,6 +216,17 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // The difference between linesearch and LP objective values
             maxObjDiffAbs = abs(mu - LPObjVar);
             maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
+
+            // Saves the LP solution to file if in debug mode
+            if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+            {
+                std::stringstream ss;
+                ss << env->settings->getStringSetting("Debug.Path", "Output");
+                ss << "/lpminimaxlinesearchsolpt";
+                ss << i;
+                ss << ".txt";
+                UtilityFunctions::saveVariablePointVectorToFile(currSol, variableNames, ss.str());
+            }
         }
 
         env->report->outputIterationDetailMinimax((i + 1),
@@ -223,20 +246,96 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         }
 
         // Gets the most deviated constraints with a tolerance
-        auto tmpMostDevs = NLPProblem->getMostDeviatingConstraints(currSol, constrSelTol);
-        numHyperAdded = tmpMostDevs.size();
+        NumericConstraintValues constraintValues;
+        constraintValues.push_back(originalProblem->getMaxNumericConstraintValue(currSol, originalProblem->nonlinearConstraints));
 
-        numHyperTot = numHyperTot + numHyperAdded;
+        /*NumericConstraintValues constraintValues;
+        for (auto &C : originalProblem->nonlinearConstraints)
+        {
+            NumericConstraintValue constraintValue = calculateNumericValue(C, currSol);
+            if (constraintValue.error > constrSelTol)
+                constraintValues.push_back(constraintValue);
+            break;
+        }*/
 
+        //numHyperAdded = tmpMostDevs.size();
+
+        //numHyperTot = numHyperTot + constraintValues.size;
+
+        for (auto &NCV : constraintValues)
+        {
+            std::vector<PairIndexValue> elements;
+            double signFactor = 1.0;
+            double constant;
+
+            if (NCV.isFulfilledRHS && !NCV.isFulfilledLHS)
+            {
+                signFactor = 1.0;
+                constant = signFactor * (NCV.normalizedLHSValue - currSol.back());
+            }
+            else
+            {
+                signFactor = 1.0;
+                constant = signFactor * (NCV.normalizedRHSValue - currSol.back());
+            }
+
+            //std::cout << "Constant in: " << constant << std::endl;
+
+            auto gradient = NCV.constraint->calculateGradient(currSol);
+
+            for (auto &G : gradient)
+            {
+                PairIndexValue pair;
+                pair.index = G.first->index;
+                pair.value = signFactor * G.second;
+
+                elements.push_back(pair);
+
+                constant += -G.second * currSol.at(G.first->index);
+
+                //std::cout << "Constant " << G.first->index << " " << -G.second * currSol.at(G.first->index) << std::endl;
+
+                //env->output->outputInfo("     Gradient for variable " + G.first->name + " in: " + std::to_string(G.second));
+            }
+
+            // Adding the objective term
+            PairIndexValue pair;
+            pair.index = numVar;
+            pair.value = -1.0;
+
+            elements.push_back(pair);
+
+            constant += currSol.back();
+
+            // Adds the linear constraint
+            LPSolver->addLinearConstraint(elements, constant);
+            numHyperTot++;
+
+            if (mu >= 0 && env->settings->getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
+            {
+                auto tmpPoint = currSol;
+                tmpPoint.pop_back();
+
+                Hyperplane hyperplane;
+                hyperplane.sourceConstraint = NCV.constraint;
+                hyperplane.sourceConstraintIndex = NCV.constraint->index;
+                hyperplane.generatedPoint = tmpPoint;
+                hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
+
+                env->process->hyperplaneWaitingList.push_back(hyperplane);
+            }
+        }
+
+        /*
         for (int j = 0; j < numHyperAdded; j++)
         {
             std::vector<PairIndexValue> elements; // Contains the terms in the hyperplane
 
-            double constant = NLPProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).index, currSol);
+            //double constant = originalProblem->calculateConstraintFunctionValue(tmpMostDevs.at(j).index, currSol);
 
             // Calculates the gradient
-            auto nablag = NLPProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).index, currSol);
-            env->solutionStatistics.numberOfGradientEvaluations++;
+            auto nablag = originalProblem->calculateConstraintFunctionGradient(tmpMostDevs.at(j).index, currSol);
+            //env->solutionStatistics.numberOfGradientEvaluations++;
 
             for (int i = 0; i < nablag->number; i++)
             {
@@ -271,7 +370,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
                 env->process->hyperplaneWaitingList.push_back(hyperplane);
             }
-        }
+        }*/
 
         prevSol = currSol;
 
@@ -290,6 +389,28 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
     return (statusCode);
 }
 
+NumericConstraintValue NLPSolverCuttingPlaneMinimax::calculateNumericValue(NumericConstraintPtr constraint, const VectorDouble &point)
+{
+    double value = constraint->calculateFunctionValue(point) - point.back();
+
+    NumericConstraintValue constrValue;
+    constrValue.constraint = constraint->getPointer();
+    constrValue.functionValue = value;
+    constrValue.isFulfilledRHS = (value <= constraint->valueRHS);
+    constrValue.normalizedRHSValue = value - constraint->valueRHS;
+
+    constrValue.isFulfilledLHS = (value >= constraint->valueLHS);
+    constrValue.normalizedLHSValue = constraint->valueLHS - value;
+
+    constrValue.isFulfilled =
+        (constrValue.isFulfilledRHS && constrValue.isFulfilledLHS);
+
+    constrValue.normalizedValue = std::max(constrValue.normalizedRHSValue, constrValue.normalizedLHSValue);
+    constrValue.error = std::max(0.0, constrValue.normalizedValue);
+
+    return constrValue;
+}
+
 double NLPSolverCuttingPlaneMinimax::getSolution(int i)
 {
     return (solution.at(i));
@@ -297,14 +418,14 @@ double NLPSolverCuttingPlaneMinimax::getSolution(int i)
 
 VectorDouble NLPSolverCuttingPlaneMinimax::getSolution()
 {
-    auto tmpSol = solution;
+    /*auto tmpSol = solution;
 
     if (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
     {
         tmpSol.pop_back();
-    }
+    }*/
 
-    return (tmpSol);
+    return (solution);
 }
 
 double NLPSolverCuttingPlaneMinimax::getObjectiveValue()
@@ -312,7 +433,104 @@ double NLPSolverCuttingPlaneMinimax::getObjectiveValue()
     return (objectiveValue);
 }
 
-bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance *origInstance)
+bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, ProblemPtr sourceProblem)
+{
+    // Now creating the variables
+
+    bool variablesInitialized = true;
+
+    for (auto &V : sourceProblem->allVariables)
+    {
+        variablesInitialized = variablesInitialized && destination->addVariable(V->name, V->type, V->lowerBound, V->upperBound);
+
+        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        {
+            variableNames.push_back(V->name);
+        }
+    }
+
+    // Auxilliary objective variable for minimax problem
+    double objLowerBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
+    double objUpperBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
+
+    destination->hasAuxilliaryObjectiveVariable = true;
+    destination->auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
+
+    variablesInitialized = variablesInitialized && destination->addVariable("shot_mmobjvar", E_VariableType::Real, objLowerBound, objUpperBound);
+
+    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+    {
+        variableNames.push_back("shot_mmobjvar");
+    }
+
+    if (!variablesInitialized)
+        return false;
+
+    // Now creating the objective function
+
+    bool objectiveInitialized = true;
+
+    objectiveInitialized = objectiveInitialized && destination->initializeObjective();
+
+    objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(1.0, destination->auxilliaryObjectiveVariableIndex);
+
+    objectiveInitialized = objectiveInitialized && destination->finalizeObjective(true);
+
+    if (!objectiveInitialized)
+        return false;
+
+    // Now creating the constraints
+
+    bool constraintsInitialized = true;
+
+    for (auto &C : env->problem->linearConstraints)
+    {
+        constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
+
+        if (C->properties.hasLinearTerms)
+        {
+            for (auto &T : C->linearTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+            }
+        }
+
+        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+    }
+
+    for (auto &C : env->problem->quadraticConstraints)
+    {
+        constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
+
+        if (C->properties.hasLinearTerms)
+        {
+            for (auto &T : C->linearTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+            }
+        }
+
+        if (C->properties.hasQuadraticTerms)
+        {
+            for (auto &T : C->quadraticTerms.terms)
+            {
+                constraintsInitialized = constraintsInitialized && destination->addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+            }
+        }
+
+        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+    }
+
+    if (!constraintsInitialized)
+        return false;
+
+    bool problemFinalized = destination->finalizeProblem();
+
+    return (problemFinalized);
+}
+
+/*
+bool NLPSolverCuttingPlaneMinimax::createProblemInstance()
 {
     env->output->outputInfo("Creating NLP problem for minimax solver");
     dynamic_cast<OptProblemNLPMinimax *>(NLPProblem)->reformulate(origInstance);
@@ -325,7 +543,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblemInstance(OSInstance *origInstanc
     env->output->outputInfo("LP problem for minimax solver created");
 
     return (true);
-}
+}*/
 
 void NLPSolverCuttingPlaneMinimax::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
@@ -337,8 +555,7 @@ void NLPSolverCuttingPlaneMinimax::unfixVariables()
     LPSolver->unfixVariables();
 }
 
-void NLPSolverCuttingPlaneMinimax::setStartingPoint(VectorInteger variableIndexes,
-                                                    VectorDouble variableValues)
+void NLPSolverCuttingPlaneMinimax::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
 {
 }
 
@@ -352,14 +569,14 @@ int NLPSolverCuttingPlaneMinimax::getObjectiveFunctionVariableIndex()
     return (COIN_INT_MAX);
 }
 
-VectorDouble NLPSolverCuttingPlaneMinimax::getCurrentVariableLowerBounds()
+VectorDouble NLPSolverCuttingPlaneMinimax::getVariableLowerBounds()
 {
-    return (NLPProblem->getVariableLowerBounds());
+    return (originalProblem->getVariableLowerBounds());
 }
 
-VectorDouble NLPSolverCuttingPlaneMinimax::getCurrentVariableUpperBounds()
+VectorDouble NLPSolverCuttingPlaneMinimax::getVariableUpperBounds()
 {
-    return (NLPProblem->getVariableUpperBounds());
+    return (originalProblem->getVariableUpperBounds());
 }
 
 void NLPSolverCuttingPlaneMinimax::clearStartingPoint()

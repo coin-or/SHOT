@@ -183,10 +183,9 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
 
 void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
+    /*
     auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
     std::vector<PairIndexValue> elements;
-
-    auto varNames = env->model->originalProblem->getVariableNames();
 
     double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
                                                                                     hyperplane.generatedPoint);
@@ -247,7 +246,7 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
         currIter->totNumHyperplanes++;
     }
 
-    currIter->totNumHyperplanes = env->process->getPreviousIteration()->totNumHyperplanes + currIter->numHyperplanesAdded;
+    currIter->totNumHyperplanes = env->process->getPreviousIteration()->totNumHyperplanes + currIter->numHyperplanesAdded;*/
 }
 
 std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()
@@ -257,11 +256,10 @@ std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()
 
 void MIPSolverBase::presolveAndUpdateBounds()
 {
+    /*
     auto newBounds = this->presolveAndGetNewBounds();
 
-    auto numVar = env->model->originalProblem->getNumberOfVariables();
-
-    for (int i = 0; i < numVar; i++)
+    for (int i = 0; i < numberOfVariables; i++)
     {
         auto currBounds = this->getCurrentVariableBounds(i);
 
@@ -304,7 +302,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
             updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
             env->output->outputInfo("     Bounds updated also in MIP problem");
         }
-    }
+    }*/
 }
 
 void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
@@ -344,28 +342,6 @@ void MIPSolverBase::unfixVariables()
     }
 
     isVariablesFixed = false;
-}
-
-void MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
-{
-    if (!originalProblem->isObjectiveFunctionNonlinear())
-    {
-        return;
-    }
-
-    auto varIdx = env->model->originalProblem->getNonlinearObjectiveVariableIdx();
-
-    auto newLB = env->process->getDualBound();
-    auto newUB = env->process->getPrimalBound();
-
-    auto currBounds = this->getCurrentVariableBounds(varIdx);
-
-    if (newLB > currBounds.first || newUB < currBounds.second)
-    {
-        this->updateVariableBound(varIdx, newLB, newUB);
-        env->output->outputInfo(
-            "     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
-    }
 }
 
 void MIPSolverBase::createIntegerCut(VectorInteger binaryIndexes)

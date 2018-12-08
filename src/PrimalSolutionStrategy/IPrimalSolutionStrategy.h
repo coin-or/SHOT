@@ -9,15 +9,14 @@
 */
 
 #pragma once
-#include "../Environment.h"
-#include "../Structs.h"
+#include "../Shared.h"
 
 namespace SHOT
 {
 class IPrimalSolutionStrategy
 {
   public:
-    virtual ~IPrimalSolutionStrategy();
+    virtual ~IPrimalSolutionStrategy(){};
 
     virtual bool runStrategy() = 0;
 };

@@ -9,24 +9,73 @@
 */
 
 #pragma once
-#include "chrono"
-#include "Enums.h"
-#include "string"
+#include "Shared.h"
 
 class Timer
 {
   public:
-    Timer();
-    Timer(std::string timerName);
-    Timer(std::string timerName, std::string desc);
-    ~Timer();
+    Timer(){};
+
+    ~Timer(){};
+
+    Timer(std::string timerName)
+    {
+        restart();
+        isRunning = false;
+        description = "";
+        name = timerName;
+    }
+
+    Timer(std::string timerName, std::string desc)
+    {
+        restart();
+        isRunning = false;
+        description = desc;
+        name = timerName;
+    }
+
 
     std::chrono::time_point<std::chrono::high_resolution_clock> lastStart;
 
-    double elapsed();
-    void restart();
-    void stop();
-    void start();
+    inline double elapsed()
+    {
+        if (isRunning)
+        {
+            std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - lastStart;
+            double tmpTime = dur.count();
+            return (timeElapsed + tmpTime);
+        }
+        return (timeElapsed);
+    }
+
+    inline void restart()
+    {
+        isRunning = true;
+        timeElapsed = 0.0;
+        lastStart = std::chrono::high_resolution_clock::now();
+    }
+
+    inline void stop()
+    {
+        if (!isRunning)
+            return;
+
+        std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - lastStart;
+        double tmpTime = dur.count();
+        timeElapsed = timeElapsed + tmpTime;
+        isRunning = false;
+    }
+
+    inline void start()
+    {
+        if (isRunning)
+        {
+            return;
+        }
+
+        isRunning = true;
+        lastStart = std::chrono::high_resolution_clock::now();
+    }
 
     std::string description;
     std::string name;

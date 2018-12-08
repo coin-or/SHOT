@@ -19,8 +19,8 @@ namespace SHOT
 class NLPSolverGAMS : public NLPSolverBase
 {
   private:
-    gmoHandle_t gmo;
-    gevHandle_t gev;
+    gmoHandle_t modelingObject;
+    gevHandle_t modelingEnvironment;
 
     char nlpsolver[GMS_SSSIZE];
     char nlpsolveropt[GMS_SSSIZE];
@@ -29,7 +29,7 @@ class NLPSolverGAMS : public NLPSolverBase
     bool showlog;
 
   public:
-    NLPSolverGAMS(EnvironmentPtr envPtr);
+    NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject);
 
     virtual ~NLPSolverGAMS();
 
@@ -42,20 +42,22 @@ class NLPSolverGAMS : public NLPSolverBase
 
     void saveOptionsToFile(std::string fileName);
 
+    void saveProblemToFile(std::string fileName);
+
     VectorDouble getSolution();
     double getSolution(int i);
 
     virtual double getObjectiveValue();
 
-    int getObjectiveFunctionVariableIndex();
-    bool isObjectiveFunctionNonlinear();
+    /*int getObjectiveFunctionVariableIndex();
+    bool isObjectiveFunctionNonlinear();*/
 
   protected:
     E_NLPSolutionStatus solveProblemInstance();
     bool createProblemInstance(OSInstance *origInstance);
 
-    VectorDouble getCurrentVariableLowerBounds();
-    VectorDouble getCurrentVariableUpperBounds();
+    VectorDouble getVariableLowerBounds();
+    VectorDouble getVariableUpperBounds();
 
   private:
 };

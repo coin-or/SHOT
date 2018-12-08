@@ -9,10 +9,7 @@
 */
 
 #pragma once
-#include "Enums.h"
-#include "Structs.h"
-#include "Environment.h"
-#include "ProcessInfo.h"
+#include "Shared.h"
 
 namespace SHOT
 {

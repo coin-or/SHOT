@@ -10,21 +10,7 @@
 */
 
 #pragma once
-#include "ModelShared.h"
-#include "Variables.h"
-#include "Terms.h"
-#include "ObjectiveFunction.h"
-#include "NonlinearExpressions.h"
-#include "Constraints.h"
-
-#include "../Environment.h"
-#include "../Output.h"
-
-#include <vector>
-#include <string>
-#include <memory>
-
-#include <boost/optional.hpp>
+#include "../Shared.h"
 
 namespace SHOT
 {
@@ -189,6 +175,8 @@ class Problem : public std::enable_shared_from_this<Problem>
     virtual bool areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance);
 
     bool areVariableBoundsFulfilled(VectorDouble point, double tolerance);
+
+    void saveProblemToFile(std::string filename);
 
     friend std::ostream &operator<<(std::ostream &stream, const Problem &problem);
 };

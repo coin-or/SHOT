@@ -10,8 +10,6 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../UtilityFunctions.h"
 
 namespace SHOT
 {

@@ -9,23 +9,21 @@
 */
 
 #pragma once
-#include "OSInstance.h"
-#include "vector"
-#include "../OptProblems/OptProblemOriginal.h"
+#include "../Shared.h"
 
 namespace SHOT
 {
 class INLPSolver
 {
   public:
-    INLPSolver(EnvironmentPtr envPtr);
-    virtual ~INLPSolver();
+    INLPSolver(EnvironmentPtr envPtr) : env(envPtr){};
 
-    OptProblem *NLPProblem;
+    virtual ~INLPSolver(){};
+
+    //OptProblem *NLPProblem;
     EnvironmentPtr env;
 
-    virtual void setProblem(OSInstance *origInstance) = 0;
-    virtual void initializeProblem() = 0;
+    //virtual void initializeProblem() = 0;
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
     virtual void clearStartingPoint() = 0;
 
@@ -41,17 +39,16 @@ class INLPSolver
     virtual double getSolution(int i) = 0;
     virtual double getObjectiveValue() = 0;
 
-    virtual bool isObjectiveFunctionNonlinear() = 0;
-    virtual int getObjectiveFunctionVariableIndex() = 0;
+    /*virtual bool isObjectiveFunctionNonlinear() = 0;
+    virtual int getObjectiveFunctionVariableIndex() = 0;*/
 
     virtual VectorDouble getVariableLowerBounds() = 0;
     virtual VectorDouble getVariableUpperBounds() = 0;
 
   protected:
     virtual E_NLPSolutionStatus solveProblemInstance() = 0;
-    virtual bool createProblemInstance(OSInstance *origInstance) = 0;
 
-    virtual VectorDouble getCurrentVariableLowerBounds() = 0;
-    virtual VectorDouble getCurrentVariableUpperBounds() = 0;
+    //virtual VectorDouble getCurrentVariableLowerBounds() = 0;
+    //virtual VectorDouble getCurrentVariableUpperBounds() = 0;
 };
 } // namespace SHOT

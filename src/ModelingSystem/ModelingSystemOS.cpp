@@ -84,6 +84,8 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, con
 
 E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, OSInstance *instance)
 {
+    originalInstance = instance;
+
     try
     {
         problem->name = instance->getInstanceName();

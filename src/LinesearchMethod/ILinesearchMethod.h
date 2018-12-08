@@ -9,9 +9,7 @@
 */
 
 #pragma once
-#include "../Environment.h"
-#include "../Model/Problem.h"
-#include "../Model/Constraints.h"
+#include "../Shared.h"
 
 namespace SHOT
 {

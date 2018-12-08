@@ -10,11 +10,8 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
 
 #include "../MIPSolver/IMIPSolver.h"
-
-#include "../Model/ObjectiveFunction.h"
 
 namespace SHOT
 {

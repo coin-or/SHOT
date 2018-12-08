@@ -9,17 +9,8 @@
 */
 
 #pragma once
-#include "vector"
-#include "OSInstance.h"
+#include "../Shared.h"
 #include "IMIPSolver.h"
-#include "SHOTSettings.h"
-#include "../ProcessInfo.h"
-#include "../UtilityFunctions.h"
-#include "../Model/ModelShared.h"
-#include "../Model/Terms.h"
-#include "../Model/ObjectiveFunction.h"
-#include "../Model/Constraints.h"
-#include "../Model/Problem.h"
 
 namespace SHOT
 {
@@ -31,7 +22,15 @@ class MIPSolverBase
 
   protected:
     std::vector<GeneratedHyperplane> generatedHyperplanes;
-    EnvironmentPtr envPtr;
+
+    int numberOfVariables = 0;
+    int numberOfConstraints = 0;
+    bool isMinimizationProblem;
+    bool isProblemDiscrete = false;
+    std::vector<E_VariableType> variableTypes;
+    VectorDouble variableLowerBounds;
+    VectorDouble variableUpperBounds;
+    VectorString variableNames;
 
   public:
     ~MIPSolverBase();
@@ -62,10 +61,8 @@ class MIPSolverBase
     virtual void unfixVariables();
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
-    virtual void updateNonlinearObjectiveFromPrimalDualBounds();
-
-    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant) = 0;
-    virtual int addLinearConstraint(std::vector<PairIndexValue> elements, double constant, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan) = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
 
@@ -79,8 +76,8 @@ class MIPSolverBase
 
     std::vector<SolutionPoint> lastSolutions;
 
-    OptProblem *originalProblem;
-    ProblemPtr sourceProblem;
+    //OptProblem *originalProblem;
+    //ProblemPtr sourceProblem;
 
     EnvironmentPtr env;
 };

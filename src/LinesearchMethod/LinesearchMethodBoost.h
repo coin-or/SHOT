@@ -9,17 +9,14 @@
 */
 
 #pragma once
+#include "../Shared.h"
 #include "ILinesearchMethod.h"
-#include "SHOTSettings.h"
 #include "../Model.h"
 #include "../OptProblems/OptProblemOriginal.h"
-#include "../ProcessInfo.h"
-#include "../Environment.h"
 #include "../Model/Problem.h"
 #include "../Model/Constraints.h"
 
 #include "boost/math/tools/roots.hpp"
-#include <memory>
 
 namespace SHOT
 {

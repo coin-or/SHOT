@@ -9,12 +9,8 @@
 */
 
 #pragma once
-#include "../Enums.h"
-#include "../Structs.h"
-#include <iostream>
-#include <typeinfo>
+#include "../Shared.h"
 #include "TaskException.h"
-#include "../Environment.h"
 
 namespace SHOT
 {

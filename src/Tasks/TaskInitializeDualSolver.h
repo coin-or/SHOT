@@ -10,9 +10,6 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../UtilityFunctions.h"
-#include "../MIPSolver/IMIPSolver.h"
 
 #ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"

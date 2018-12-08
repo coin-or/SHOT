@@ -31,14 +31,14 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
     case (ES_PrimalNLPSolver::Ipopt):
     {
         env->process->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
-        NLPSolver = new NLPSolverIpoptRelaxed(env);
+        NLPSolver = new NLPSolverIpoptRelaxed(env, (std::dynamic_pointer_cast<ModelingSystemOS>(env->modelingSystem))->originalInstance);
         break;
     }
 #ifdef HAS_GAMS
     case (ES_PrimalNLPSolver::GAMS):
     {
         env->process->usedPrimalNLPSolver = ES_PrimalNLPSolver::GAMS;
-        NLPSolver = new NLPSolverGAMS(env);
+        NLPSolver = new NLPSolverGAMS(env, (std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem))->modelingObject);
         break;
     }
 #endif
@@ -48,8 +48,6 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
 
         throw std::logic_error("Unknown PrimalNLPSolver setting.");
     }
-
-    NLPSolver->setProblem(env->model->originalProblem->getProblemInstance());
 
     if (env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
     {
@@ -81,7 +79,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 {
     auto currIter = env->process->getCurrentIteration();
 
-    NLPSolver->initializeProblem();
+    //NLPSolver->initializeProblem();
 
     int numVars = env->model->originalProblem->getNumberOfVariables();
 
@@ -130,16 +128,13 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
         return (false);
     }
 
-    auto lbs = NLPSolver->getVariableLowerBounds();
-    auto ubs = NLPSolver->getVariableUpperBounds();
-
     for (int j = 0; j < testPts.size(); j++)
     {
         auto oldPrimalBound = env->process->getPrimalBound();
         double timeStart = env->process->getElapsedTime("Total");
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
-        int sizeOfVariableVector = NLPSolver->NLPProblem->getNumberOfVariables();
+        int sizeOfVariableVector = env->problem->properties.numberOfVariables;
 
         VectorInteger startingPointIndexes(sizeOfVariableVector);
         VectorDouble startingPointValues(sizeOfVariableVector);
@@ -166,11 +161,6 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
             for (int k = 0; k < realVariableIndexes.size(); k++)
             {
                 int currVarIndex = realVariableIndexes.at(k);
-
-                if (NLPSolver->isObjectiveFunctionNonlinear() && currVarIndex == NLPSolver->getObjectiveFunctionVariableIndex())
-                {
-                    continue;
-                }
 
                 auto tmpSolPt = testPts.at(j).point.at(currVarIndex);
 

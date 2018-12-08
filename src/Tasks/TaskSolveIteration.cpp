@@ -46,9 +46,19 @@ void TaskSolveIteration::run()
         }
     }
 
-    if (env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
+    if (env->dualSolver->hasAuxilliaryObjectiveVariable && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
-        env->dualSolver->updateNonlinearObjectiveFromPrimalDualBounds();
+        auto newLB = env->process->getDualBound();
+        auto newUB = env->process->getPrimalBound();
+
+        auto currBounds = env->dualSolver->getCurrentVariableBounds(env->dualSolver->auxilliaryObjectiveVariableIndex);
+
+        if (newLB > currBounds.first || newUB < currBounds.second)
+        {
+            env->dualSolver->updateVariableBound(env->dualSolver->auxilliaryObjectiveVariableIndex, newLB, newUB);
+            env->output->outputInfo(
+                "     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
+        }
     }
 
     if (env->dualSolver->getDiscreteVariableStatus() && env->process->primalSolutions.size() > 0)

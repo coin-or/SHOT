@@ -31,12 +31,15 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     try
     {
-        IpoptNLPSolver->osinstance = NLPProblem->getProblemInstance();
+
+        setIntegers(false);
+
+        IpoptNLPSolver->osinstance = osInstance;
 
         // Needed to fix bugs in OSInstance
-        std::string osil = env->model->getOSiLFromProblemInstance(NLPProblem->getProblemInstance());
+        /*std::string osil = env->model->getOSiLFromProblemInstance(osInstance);
         IpoptNLPSolver->osinstance = env->model->getProblemInstanceFromOSiL(osil);
-        IpoptNLPSolver->osinstance->getJacobianSparsityPattern();
+        IpoptNLPSolver->osinstance->getJacobianSparsityPattern();*/
         updateSettings();
 
         std::string solStatus;
@@ -131,6 +134,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     env->output->outputInfo(" Finished solution of Ipopt problem.");
 
+    setIntegers(true);
     return (status);
 }
 
@@ -156,8 +160,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
     if (startingPointSize == 0)
         return;
 
-    auto lbs = NLPProblem->getVariableLowerBounds();
-    auto ubs = NLPProblem->getVariableUpperBounds();
+    auto lbs = osInstance->getVariableLowerBounds();
+    auto ubs = osInstance->getVariableUpperBounds();
 
     env->output->outputInfo(" Adding starting points to Ipopt.");
 
@@ -166,14 +170,14 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         int currVarIndex = startingPointVariableIndexes.at(k);
         auto currPt = startingPointVariableValues.at(k);
 
-        auto currLB = lbs.at(currVarIndex);
-        auto currUB = ubs.at(currVarIndex);
+        auto currLB = lbs[currVarIndex];
+        auto currUB = ubs[currVarIndex];
 
         // Nonlinear objective function variable are not used in the NLP problem for Ipopt
-        if (NLPProblem->isObjectiveFunctionNonlinear() && currVarIndex == NLPProblem->getNonlinearObjectiveVariableIdx())
+        /*if (NLPProblem->isObjectiveFunctionNonlinear() && currVarIndex == NLPProblem->getNonlinearObjectiveVariableIdx())
         {
             continue;
-        }
+        }*/
 
         if (currPt > currUB)
         {
@@ -223,6 +227,7 @@ void NLPSolverIpoptBase::clearStartingPoint()
     setSolverSpecificInitialSettings();
 }
 
+/*
 bool NLPSolverIpoptBase::isObjectiveFunctionNonlinear()
 {
     return (NLPProblem->isObjectiveFunctionNonlinear());
@@ -231,22 +236,30 @@ bool NLPSolverIpoptBase::isObjectiveFunctionNonlinear()
 int NLPSolverIpoptBase::getObjectiveFunctionVariableIndex()
 {
     return (NLPProblem->getNonlinearObjectiveVariableIdx());
-}
+}*/
 
-VectorDouble NLPSolverIpoptBase::getCurrentVariableLowerBounds()
+VectorDouble NLPSolverIpoptBase::getVariableLowerBounds()
 {
-    return (NLPProblem->getVariableLowerBounds());
+    double *tmpArray = osInstance->getVariableLowerBounds();
+
+    VectorDouble tmpVector(tmpArray, tmpArray + osInstance->getVariableNumber());
+
+    return (tmpVector);
 }
 
-VectorDouble NLPSolverIpoptBase::getCurrentVariableUpperBounds()
+VectorDouble NLPSolverIpoptBase::getVariableUpperBounds()
 {
-    return (NLPProblem->getVariableUpperBounds());
+    double *tmpArray = osInstance->getVariableUpperBounds();
+
+    VectorDouble tmpVector(tmpArray, tmpArray + osInstance->getVariableNumber());
+
+    return (tmpVector);
 }
 
-NLPSolverIpoptBase::NLPSolverIpoptBase()
+/*NLPSolverIpoptBase::NLPSolverIpoptBase(EnvironmentPtr envPtr, OSInstance *instance)
 {
     IpoptNLPSolver = NULL;
-}
+}*
 
 NLPSolverIpoptBase::~NLPSolverIpoptBase()
 {
@@ -259,9 +272,16 @@ NLPSolverIpoptBase::~NLPSolverIpoptBase()
     delete osOption;
 }
 
+/*
+void NLPSolverIpoptBase::setProblem(OSInstance *instance)
+{
+    originalInstance = instance;
+    isProblemInitialized = false;
+}*/
+
 VectorDouble NLPSolverIpoptBase::getSolution()
 {
-    int numVar = NLPProblem->getNumberOfVariables();
+    int numVar = osInstance->getVariableNumber();
     VectorDouble tmpPoint(numVar);
 
     for (int i = 0; i < numVar; i++)
@@ -382,8 +402,8 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
     if (size == 0)
         return;
 
-    auto lbs = NLPProblem->getVariableLowerBounds();
-    auto ubs = NLPProblem->getVariableUpperBounds();
+    auto lbs = osInstance->getVariableLowerBounds();
+    auto ubs = osInstance->getVariableUpperBounds();
 
     if (lowerBoundsBeforeFix.size() > 0 || upperBoundsBeforeFix.size() > 0)
     {
@@ -399,8 +419,8 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         int currVarIndex = fixedVariableIndexes.at(k);
         auto currPt = fixedVariableValues.at(k);
 
-        auto currLB = lbs.at(currVarIndex);
-        auto currUB = ubs.at(currVarIndex);
+        auto currLB = lbs[currVarIndex];
+        auto currUB = ubs[currVarIndex];
 
         lowerBoundsBeforeFix.push_back(currLB);
         upperBoundsBeforeFix.push_back(currUB);
@@ -444,7 +464,17 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         env->output->outputInfo(
             "  Setting fixed value for variable " + std::to_string(currVarIndex) + ": " + UtilityFunctions::toString(currLB) + " <= " + UtilityFunctions::toString(currPt) + " <= " + UtilityFunctions::toString(currUB));
 
-        NLPProblem->fixVariable(currVarIndex, currPt);
+        if (currPt >= osInstance->instanceData->variables->var[currVarIndex]->lb && currPt <= osInstance->instanceData->variables->var[currVarIndex]->ub)
+        {
+            osInstance->instanceData->variables->var[currVarIndex]->lb = currPt;
+            osInstance->instanceData->variables->var[currVarIndex]->ub = currPt;
+            osInstance->bVariablesModified = true;
+        }
+        else
+        {
+            env->output->outputError(
+                "     Cannot fix variable value for variable with index " + std::to_string(currVarIndex) + ": not within bounds (" + UtilityFunctions::toString(osInstance->instanceData->variables->var[currVarIndex]->lb) + " < " + UtilityFunctions::toString(currPt) + " < " + UtilityFunctions::toString(osInstance->instanceData->variables->var[currVarIndex]->ub));
+        }
     }
     env->output->outputInfo(" All fixed variables defined.");
 }
@@ -459,8 +489,10 @@ void NLPSolverIpoptBase::unfixVariables()
         double newLB = lowerBoundsBeforeFix.at(k);
         double newUB = upperBoundsBeforeFix.at(k);
 
-        NLPProblem->setVariableLowerBound(currVarIndex, newLB);
-        NLPProblem->setVariableUpperBound(currVarIndex, newUB);
+        osInstance->instanceData->variables->var[currVarIndex]->lb = newLB;
+        osInstance->instanceData->variables->var[currVarIndex]->ub = newUB;
+        osInstance->bVariablesModified = true;
+
         env->output->outputInfo(
             "  Resetting initial bounds for variable " + std::to_string(currVarIndex) + " lb = " + UtilityFunctions::toString(newLB) + " ub = " + UtilityFunctions::toString(newUB));
     }
@@ -473,6 +505,23 @@ void NLPSolverIpoptBase::unfixVariables()
     setInitialSettings(); // Must initialize it again since the class contains fixed variable bounds and starting points
 
     env->output->outputInfo(" Reset of fixed variables in Ipopt completed.");
+}
+
+void NLPSolverIpoptBase::setIntegers(bool useDiscrete)
+{
+    for (int i = 0; i < osInstance->getVariableNumber(); i++)
+    {
+        if (useDiscrete)
+        {
+            osInstance->instanceData->variables->var[i]->type = originalVariableType[i];
+        }
+        else
+        {
+            osInstance->instanceData->variables->var[i]->type = 'C';
+        }
+    }
+
+    osInstance->bVariablesModified = true;
 }
 
 void NLPSolverIpoptBase::updateSettings()
@@ -489,5 +538,12 @@ void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
     ss << osolwriter->writeOSoL(osOption);
 
     UtilityFunctions::writeStringToFile(fileName, ss.str());
+}
+
+void NLPSolverIpoptBase::saveProblemToFile(std::string fileName)
+{
+    std::string problem = osInstance->printModel();
+
+    UtilityFunctions::writeStringToFile(fileName, problem);
 }
 } // namespace SHOT

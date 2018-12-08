@@ -10,8 +10,6 @@
 
 #include "SHOTSolver.h"
 
-#include <iostream>
-
 using namespace SHOT;
 
 bool ReadGAMSProblem(std::string filename);

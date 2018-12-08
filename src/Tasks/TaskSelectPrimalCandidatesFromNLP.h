@@ -10,7 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
+
 #include "../PrimalSolutionStrategy/PrimalSolutionStrategyFixedNLP.h"
 
 namespace SHOT
