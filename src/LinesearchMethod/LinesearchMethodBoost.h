@@ -11,8 +11,6 @@
 #pragma once
 #include "../Shared.h"
 #include "ILinesearchMethod.h"
-#include "../Model.h"
-#include "../OptProblems/OptProblemOriginal.h"
 #include "../Model/Problem.h"
 #include "../Model/Constraints.h"
 

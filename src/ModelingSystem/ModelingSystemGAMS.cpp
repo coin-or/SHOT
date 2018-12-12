@@ -511,18 +511,18 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
 
             case gmoequ_L:
-                lb = -std::numeric_limits<double>::infinity();
+                lb = SHOT_DBL_MIN;
                 ub = gmoGetRhsOne(modelingObject, i);
                 break;
 
             case gmoequ_G:
                 lb = gmoGetRhsOne(modelingObject, i);
-                ub = std::numeric_limits<double>::infinity();
+                ub = SHOT_DBL_MAX;
                 break;
 
             case gmoequ_N:
-                lb = -std::numeric_limits<double>::infinity();
-                ub = std::numeric_limits<double>::infinity();
+                lb = SHOT_DBL_MIN;
+                ub = SHOT_DBL_MAX;
                 break;
 
             default:

@@ -17,7 +17,15 @@ TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : Ta
 {
     env->process->startTimer("DualProblemsIntegerFixed");
 
-    discreteVariableIndexes = env->model->originalProblem->getDiscreteVariableIndices();
+    for (auto &V : env->problem->binaryVariables)
+    {
+        discreteVariableIndexes.push_back(V->index);
+    }
+
+    for (auto &V : env->problem->integerVariables)
+    {
+        discreteVariableIndexes.push_back(V->index);
+    }
 
     env->process->stopTimer("DualProblemsIntegerFixed");
 }
@@ -72,15 +80,13 @@ void TaskSolveFixedDualProblem::run()
         return;
     }
 
-    auto discreteIdxs = env->model->originalProblem->getDiscreteVariableIndices();
-
     auto currSolPt = prevIter->solutionPoints.at(0).point;
 
     bool isDifferent1 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter2->solutionPoints.at(0).point,
-                                                                      discreteIdxs);
+                                                                      discreteVariableIndexes);
 
     bool isDifferent2 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter3->solutionPoints.at(0).point,
-                                                                      discreteIdxs);
+                                                                      discreteVariableIndexes);
 
     if (isDifferent1 || isDifferent2)
     {
@@ -97,19 +103,17 @@ void TaskSolveFixedDualProblem::run()
 
     env->dualSolver->fixVariables(discreteVariableIndexes, fixValues);
 
-    int numVar = env->model->originalProblem->getNumberOfVariables();
+    bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
-
-    double prevObjVal = COIN_DBL_MAX;
+    double prevObjVal = SHOT_DBL_MAX;
 
     int iterLastObjUpdate = 0;
     int maxIter = env->settings->getIntSetting("FixedInteger.MaxIterations", "Dual");
     double objTol = env->settings->getDoubleSetting("FixedInteger.ObjectiveTolerance", "Dual");
     double constrTol = env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual");
 
-    bool isMIQP = (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-    bool isMIQCP = (env->model->originalProblem->getQuadraticConstraintIndexes().size() > 0);
+    bool isMIQP = env->reformulatedProblem->properties.isMIQPProblem;
+    bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
     bool isDiscrete = false;
 
     for (int k = 0; k < maxIter; k++)
@@ -161,16 +165,13 @@ void TaskSolveFixedDualProblem::run()
             auto varSol = env->dualSolver->getVariableSolution(0);
             auto objVal = env->dualSolver->getObjectiveValue(0);
 
-            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(varSol);
+            auto mostDevConstraint = env->reformulatedProblem->getMaxNumericConstraintValue(varSol, env->reformulatedProblem->nonlinearConstraints);
 
             VectorDouble externalPoint = varSol;
-            PairIndexValue errorExternal;
 
             if (env->process->interiorPts.size() > 0)
             {
                 VectorDouble internalPoint = env->process->interiorPts.at(0)->point;
-
-                auto tmpMostDevConstr2 = env->model->originalProblem->getMostDeviatingConstraint(internalPoint);
 
                 try
                 {
@@ -193,10 +194,11 @@ void TaskSolveFixedDualProblem::run()
                 }
             }
 
-            errorExternal = env->model->originalProblem->getMostDeviatingConstraint(externalPoint);
+            auto errorExternal = env->reformulatedProblem->getMaxNumericConstraintValue(externalPoint, env->reformulatedProblem->nonlinearConstraints);
 
             Hyperplane hyperplane;
-            hyperplane.sourceConstraintIndex = errorExternal.index;
+            hyperplane.sourceConstraint = errorExternal.constraint;
+            hyperplane.sourceConstraintIndex = errorExternal.constraint->index;
             hyperplane.generatedPoint = externalPoint;
             hyperplane.source = E_HyperplaneSource::LPFixedIntegers;
 
@@ -250,11 +252,11 @@ void TaskSolveFixedDualProblem::run()
                                                env->process->getAbsoluteObjectiveGap(),
                                                env->process->getRelativeObjectiveGap(),
                                                objVal,
-                                               mostDevConstr.index,
-                                               mostDevConstr.value,
+                                               mostDevConstraint.constraint->index,
+                                               mostDevConstraint.normalizedValue,
                                                E_IterationLineType::DualIntegerFixed);
 
-            if (mostDevConstr.value <= constrTol || k - iterLastObjUpdate > 10 || objVal > env->process->getPrimalBound())
+            if (mostDevConstraint.normalizedValue <= constrTol || k - iterLastObjUpdate > 10 || objVal > env->process->getPrimalBound())
             {
                 break;
             }

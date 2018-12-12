@@ -152,6 +152,21 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
     virtual int getNumberOfExploredNodes();
     virtual int getNumberOfOpenNodes();
 
+    virtual bool hasAuxilliaryObjectiveVariable()
+    {
+        return (MIPSolverBase::hasAuxilliaryObjectiveVariable());
+    }
+
+    virtual int getAuxilliaryObjectiveVariableIndex()
+    {
+        return (MIPSolverBase::getAuxilliaryObjectiveVariableIndex());
+    }
+
+    virtual void setAuxilliaryObjectiveVariableIndex(int index)
+    {
+        return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
+    }
+
     IloModel cplexModel;
     IloCplex cplexInstance;
 

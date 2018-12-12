@@ -17,12 +17,12 @@ namespace SHOT
 class Environment
 {
   public:
-    inline Environment() {};
-    inline ~Environment() {};
+    inline Environment(){};
+    inline ~Environment(){};
 
     ProcessPtr process;
     SettingsPtr settings;
-    ModelPtr model;
+    //ModelPtr model;
     ProblemPtr problem;
     ProblemPtr reformulatedProblem;
     ModelingSystemPtr modelingSystem;

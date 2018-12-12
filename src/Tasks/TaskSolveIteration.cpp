@@ -46,24 +46,30 @@ void TaskSolveIteration::run()
         }
     }
 
-    if (env->dualSolver->hasAuxilliaryObjectiveVariable && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
+    if (env->dualSolver->hasAuxilliaryObjectiveVariable() && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
         auto newLB = env->process->getDualBound();
         auto newUB = env->process->getPrimalBound();
 
-        auto currBounds = env->dualSolver->getCurrentVariableBounds(env->dualSolver->auxilliaryObjectiveVariableIndex);
+        auto currBounds = env->dualSolver->getCurrentVariableBounds(env->dualSolver->getAuxilliaryObjectiveVariableIndex());
 
         if (newLB > currBounds.first || newUB < currBounds.second)
         {
-            env->dualSolver->updateVariableBound(env->dualSolver->auxilliaryObjectiveVariableIndex, newLB, newUB);
-            env->output->outputInfo(
-                "     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
+            env->dualSolver->updateVariableBound(env->dualSolver->getAuxilliaryObjectiveVariableIndex(), newLB, newUB);
+            env->output->outputInfo("     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
         }
     }
 
     if (env->dualSolver->getDiscreteVariableStatus() && env->process->primalSolutions.size() > 0)
     {
-        env->dualSolver->addMIPStart(env->process->primalSolution);
+        auto tmpPrimal = env->process->primalSolution;
+
+        if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+        {
+            tmpPrimal.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(env->process->primalSolution));
+        }
+
+        env->dualSolver->addMIPStart(tmpPrimal);
     }
 
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))
@@ -139,25 +145,28 @@ void TaskSolveIteration::run()
                 UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
             }
 
-            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(sols.at(0).point);
-
-            currIter->maxDeviationConstraint = mostDevConstr.index;
-            currIter->maxDeviation = mostDevConstr.value;
-
-            if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+            if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
-                VectorDouble tmpMostDevValue;
-                VectorString tmpConstrIndex;
+                auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(sols.at(0).point, env->reformulatedProblem->nonlinearConstraints);
 
-                tmpMostDevValue.push_back(mostDevConstr.value);
-                tmpConstrIndex.push_back(std::to_string(mostDevConstr.index));
+                currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
+                currIter->maxDeviation = mostDevConstr.normalizedValue;
 
-                std::stringstream ss;
-                ss << env->settings->getStringSetting("Debug.Path", "Output");
-                ss << "/lpmostdevm";
-                ss << currIter->iterationNumber - 1;
-                ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+                if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+                {
+                    VectorDouble tmpMostDevValue;
+                    VectorString tmpConstrIndex;
+
+                    tmpMostDevValue.push_back(currIter->maxDeviation);
+                    tmpConstrIndex.push_back(std::to_string(currIter->maxDeviationConstraint));
+
+                    std::stringstream ss;
+                    ss << env->settings->getStringSetting("Debug.Path", "Output");
+                    ss << "/lpmostdevm";
+                    ss << currIter->iterationNumber - 1;
+                    ss << ".txt";
+                    UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+                }
             }
 
             double tmpDualObjBound = env->dualSolver->getDualObjectiveValue();
@@ -191,9 +200,13 @@ void TaskSolveIteration::run()
     // Update solution stats
     if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
-        if (env->model->originalProblem->isConstraintQuadratic(-1))
+        if (env->reformulatedProblem->properties.isMIQPProblem)
         {
             env->solutionStatistics.numberOfProblemsOptimalMIQP++;
+        }
+        else if (env->reformulatedProblem->properties.isMIQCQPProblem)
+        {
+            env->solutionStatistics.numberOfProblemsOptimalMIQCQP++;
         }
         else
         {
@@ -202,9 +215,13 @@ void TaskSolveIteration::run()
     }
     else if (currIter->type == E_IterationProblemType::Relaxed)
     {
-        if (env->model->originalProblem->isConstraintQuadratic(-1))
+        if (env->reformulatedProblem->properties.isMIQPProblem)
         {
             env->solutionStatistics.numberOfProblemsQP++;
+        }
+        else if (env->reformulatedProblem->properties.isMIQCQPProblem)
+        {
+            env->solutionStatistics.numberOfProblemsQCQP++;
         }
         else
         {
@@ -213,9 +230,14 @@ void TaskSolveIteration::run()
     }
     else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
-        if (env->model->originalProblem->isConstraintQuadratic(-1))
+
+        if (env->reformulatedProblem->properties.isMIQPProblem)
         {
             env->solutionStatistics.numberOfProblemsFeasibleMIQP++;
+        }
+        else if (env->reformulatedProblem->properties.isMIQCQPProblem)
+        {
+            env->solutionStatistics.numberOfProblemsFeasibleMIQCQP++;
         }
         else
         {

@@ -351,6 +351,7 @@ void displayVector(const std::vector<VectorString> &points)
     std::cout << str.str() << '\n';
 };
 
+/*
 bool isObjectiveGenerallyNonlinear(OSInstance *instance)
 {
     for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
@@ -422,7 +423,7 @@ bool areAllVariablesReal(OSInstance *instance)
         return (false);
 
     return (true);
-};
+};*/
 
 double L2Norm(const VectorDouble &ptA, const VectorDouble &ptB)
 {

@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
     if (resultFile.empty())
     {
         boost::filesystem::path resultPath(env->settings->getStringSetting("ResultPath", "Output"));
-        resultPath /= env->model->originalProblem->getProblemInstance()->getInstanceName();
+        resultPath /= env->problem->name;
         resultPath = resultPath.replace_extension(".osrl");
         env->output->outputSummary(" Results written to: " + resultPath.string());
 
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
     if (traceFile.empty())
     {
         boost::filesystem::path tracePath(env->settings->getStringSetting("ResultPath", "Output"));
-        tracePath /= env->model->originalProblem->getProblemInstance()->getInstanceName();
+        tracePath /= env->problem->name;
         tracePath = tracePath.replace_extension(".trc");
         env->output->outputSummary("                     " + tracePath.string());
 

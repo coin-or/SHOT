@@ -147,6 +147,21 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
         return (MIPSolverBase::getNumberOfOpenNodes());
     }
 
+    virtual bool hasAuxilliaryObjectiveVariable()
+    {
+        return (MIPSolverBase::hasAuxilliaryObjectiveVariable());
+    }
+
+    virtual int getAuxilliaryObjectiveVariableIndex()
+    {
+        return (MIPSolverBase::getAuxilliaryObjectiveVariableIndex());
+    }
+
+    virtual void setAuxilliaryObjectiveVariableIndex(int index)
+    {
+        return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
+    }
+
   private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;
     std::unique_ptr<CbcModel> cbcModel;

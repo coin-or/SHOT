@@ -13,6 +13,24 @@
 namespace SHOT
 {
 
+PairDouble ProcessInfo::getCorrectedObjectiveBounds()
+{
+    PairDouble bounds;
+
+    if (env->problem->objectiveFunction->properties.isMinimize)
+    {
+        bounds.first = currentObjectiveBounds.first;
+        bounds.second = currentObjectiveBounds.second;
+    }
+    else
+    {
+        bounds.first = currentObjectiveBounds.second;
+        bounds.second = currentObjectiveBounds.first;
+    }
+
+    return (bounds);
+}
+
 void ProcessInfo::addDualSolution(DualSolution solution)
 {
     if (dualSolutions.size() == 0)
@@ -95,16 +113,6 @@ void ProcessInfo::addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource 
         {pt, source, objVal, iter};
 
     primalFixedNLPCandidates.push_back(cand);
-}
-
-void ProcessInfo::setObjectiveUpdatedByLinesearch(bool updated)
-{
-    objectiveUpdatedByLinesearch = updated;
-}
-
-bool ProcessInfo::getObjectiveUpdatedByLinesearch()
-{
-    return (objectiveUpdatedByLinesearch);
 }
 
 void ProcessInfo::checkPrimalSolutionCandidates()
@@ -570,9 +578,8 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 ProcessInfo::ProcessInfo(EnvironmentPtr envPtr) : env(envPtr)
 {
-    createTimer("Total", "Total solution time");
-
-    objectiveUpdatedByLinesearch = false;
+    this->currentObjectiveBounds.first = -OSDBL_MAX;
+    this->currentObjectiveBounds.second = OSDBL_MAX;
 }
 
 ProcessInfo::~ProcessInfo()
@@ -1147,26 +1154,22 @@ Iteration *ProcessInfo::getPreviousIteration()
 
 double ProcessInfo::getPrimalBound()
 {
-    auto primalBound = env->model->currentObjectiveBounds.second;
-
-    return (primalBound);
+    return (this->currentObjectiveBounds.second);
 }
 
 void ProcessInfo::setPrimalBound(double value)
 {
-    env->model->currentObjectiveBounds.second = value;
+    this->currentObjectiveBounds.second = value;
 }
 
 double ProcessInfo::getDualBound()
 {
-    auto dualBound = env->model->currentObjectiveBounds.first;
-
-    return (dualBound);
+    return (this->currentObjectiveBounds.first);
 }
 
 void ProcessInfo::setDualBound(double value)
 {
-    env->model->currentObjectiveBounds.first = value;
+    this->currentObjectiveBounds.first = value;
 }
 
 double ProcessInfo::getAbsoluteObjectiveGap()

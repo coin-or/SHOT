@@ -40,7 +40,7 @@ class SHOTSolver
     std::unique_ptr<GAMS2OS> gms2os;
 #endif
 
-    std::unique_ptr<OSnl2OS> nl2os;
+    //std::unique_ptr<OSnl2OS> nl2os;
 
     void initializeSettings();
     void verifySettings();
@@ -63,7 +63,9 @@ class SHOTSolver
     bool setOptions(OSOption *osOptions);
 
     bool setProblem(std::string fileName);
-    bool setProblem(OSInstance *osInstance);
+    //bool setProblem(OSInstance *osInstance);
+
+    bool selectStrategy();
 
     bool solveProblem();
 

@@ -29,8 +29,8 @@ class Variable
     bool isNonlinear = false;
     FactorableFunctionPtr factorableFunctionVariable;
 
-    Variable() : lowerBound(-std::numeric_limits<double>::infinity()),
-                 upperBound(std::numeric_limits<double>::infinity()){};
+    Variable() : lowerBound(SHOT_DBL_MIN),
+                 upperBound(SHOT_DBL_MAX){};
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB) : name(variableName),
                                                                                                                index(variableIndex),
@@ -41,8 +41,8 @@ class Variable
     Variable(std::string variableName, int variableIndex, E_VariableType variableType) : name(variableName),
                                                                                          index(variableIndex),
                                                                                          type(variableType),
-                                                                                         lowerBound(-std::numeric_limits<double>::infinity()),
-                                                                                         upperBound(std::numeric_limits<double>::infinity()){};
+                                                                                         lowerBound(SHOT_DBL_MIN),
+                                                                                         upperBound(SHOT_DBL_MAX){};
 
     inline double calculate(const VectorDouble &point)
     {

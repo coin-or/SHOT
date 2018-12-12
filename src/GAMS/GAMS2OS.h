@@ -10,6 +10,7 @@
 
 #pragma once
 #include "../Shared.h"
+#include "../SharedOS.h"
 #include <cstdio>
 #include <cstdlib>
 #include <sys/stat.h> // for mkdir

@@ -13,7 +13,7 @@
 namespace SHOT
 {
 
-SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osInstance)
+SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
@@ -24,8 +24,8 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osIn
     env->process->createTimer("DualStrategy", " - dual strategy");
     env->process->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
     env->process->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    env->process->createTimer("DualCutGenerationRootSearch", "   - performing root search for cuts");
-    env->process->createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
+    env->process->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
+    env->process->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
 
     env->process->createTimer("PrimalStrategy", " - primal strategy");
     env->process->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
@@ -35,13 +35,13 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osIn
     TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    //TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
+    //env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
     TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformlateProb");
 
-    if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (env->model->originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || env->model->originalProblem->getNumberOfNonlinearConstraints() != 0))
+    if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         TaskBase *tFindIntPoint = new TaskFindInteriorPoint(env);
         env->tasks->addTask(tFindIntPoint, "FindIntPoint");
@@ -70,12 +70,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osIn
 
     TaskBase *tSolveIteration = new TaskSolveIteration(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
-
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
-    {
-        TaskBase *tUpdateNonlinearObjectiveSolution = new TaskSelectHyperplanePointsByObjectiveLinesearch(env);
-        env->tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
-    }
 
     TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
@@ -126,6 +120,12 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osIn
     {
         TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+    }
+
+    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    {
+        TaskBase *tSelectObjectiveHPPts = new TaskSelectHyperplanePointsByObjectiveLinesearch(env);
+        env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
     env->tasks->addTask(tAddHPs, "AddHPs");

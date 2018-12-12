@@ -78,7 +78,6 @@ bool SHOTSolverReadProblem(std::string filename)
     env->settings = SettingsPtr(new Settings(env->output));
     env->tasks = TaskHandlerPtr(new TaskHandler(env));
     env->report = ReportPtr(new Report(env));
-    env->model = ModelPtr(new Model(env));
     std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
     try
@@ -111,7 +110,6 @@ bool SHOTSolverTestOptions(bool useOSiL)
     env->settings = SettingsPtr(new Settings(env->output));
     env->tasks = TaskHandlerPtr(new TaskHandler(env));
     env->report = ReportPtr(new Report(env));
-    env->model = ModelPtr(new Model(env));
     std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
     std::string filename;

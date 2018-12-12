@@ -47,32 +47,27 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
             {
                 auto xNLP = env->process->interiorPts.at(j)->point;
 
-                auto varTypes = env->model->originalProblem->getVariableTypes();
-
-                VectorDouble xNLP2(xNLP.size());
-                for (int k = 0; k < env->model->originalProblem->getNumberOfVariables(); k++)
+                for (auto &V : env->problem->binaryVariables)
                 {
-                    if (varTypes.at(k) == 'I' || varTypes.at(k) == 'B')
-                    {
-                        xNLP2.at(k) = solPoints.at(i).point.at(k);
-                    }
-                    else
-                    {
-                        xNLP2.at(k) = xNLP.at(k);
-                    }
+                    xNLP.at(V->index) = solPoints.at(i).point.at(V->index);
                 }
 
-                auto maxDevNLP2 = env->model->originalProblem->getMostDeviatingAllConstraint(xNLP2);
-                auto maxDevMIP = env->model->originalProblem->getMostDeviatingAllConstraint(solPoints.at(i).point);
+                for (auto &V : env->problem->integerVariables)
+                {
+                    xNLP.at(V->index) = solPoints.at(i).point.at(V->index);
+                }
 
-                if (maxDevNLP2.value <= 0 && maxDevMIP.value > 0)
+                auto maxDevNLP2 = env->problem->getMaxNumericConstraintValue(xNLP, env->problem->numericConstraints);
+                auto maxDevMIP = env->problem->getMaxNumericConstraintValue(solPoints.at(i).point, env->problem->numericConstraints);
+
+                if (maxDevNLP2.normalizedValue <= 0 && maxDevMIP.normalizedValue > 0)
                 {
                     std::pair<VectorDouble, VectorDouble> xNewc;
 
                     try
                     {
                         env->process->startTimer("PrimalBoundStrategyRootSearch");
-                        xNewc = env->process->linesearchMethod->findZero(xNLP2, solPoints.at(i).point,
+                        xNewc = env->process->linesearchMethod->findZero(xNLP, solPoints.at(i).point,
                                                                          env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                                                                          env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
                                                                          0, env->reformulatedProblem->nonlinearConstraints);

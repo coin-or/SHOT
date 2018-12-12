@@ -13,11 +13,10 @@
 namespace SHOT
 {
 
-SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance *osInstance)
+SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->process->createTimer("ProblemInitialization", " - problem initialization");
     env->process->createTimer("ProblemReformulation", " - problem reformulation");
     env->process->createTimer("InteriorPointSearch", " - interior point search");
 
@@ -31,8 +30,8 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance
     TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    //TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
+    //env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
     TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformlateProb");

@@ -19,6 +19,9 @@
 #include "gmomcc.h"
 #endif
 
+#include "OSResult.h"
+#include "OSrLWriter.h"
+
 namespace SHOT
 {
 class Iteration;
@@ -45,6 +48,8 @@ class ProcessInfo
     std::vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
     std::vector<DualSolution> dualSolutionCandidates;
 
+    PairDouble currentObjectiveBounds;
+
     PairDouble getCorrectedObjectiveBounds();
 
     void addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter,
@@ -67,8 +72,6 @@ class ProcessInfo
 
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();
-    void setObjectiveUpdatedByLinesearch(bool updated);
-    bool getObjectiveUpdatedByLinesearch();
 
     VectorInteger itersSolvedAsECP;
 
@@ -116,8 +119,6 @@ class ProcessInfo
     ProcessInfo(EnvironmentPtr envPtr);
 
   private:
-    bool objectiveUpdatedByLinesearch;
-
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
     EnvironmentPtr env;

@@ -30,14 +30,14 @@ void TaskPrintIterationReport::run()
 
     bool hasSolution = true;
 
-    bool isMIQP = (env->model->originalProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic);
-    bool isMIQCP = (env->model->originalProblem->getQuadraticConstraintIndexes().size() > 0);
-    bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && env->model->originalProblem->isProblemDiscrete();
+    bool isMIQP = env->reformulatedProblem->properties.isMIQPProblem;
+    bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
+    bool isDiscrete = (currIter->type == E_IterationProblemType::MIP) && env->reformulatedProblem->properties.isDiscrete;
 
     if (isMIQCP && isDiscrete)
-        tmpType << "MIQCP";
+        tmpType << "MIQCQP";
     else if (isMIQCP)
-        tmpType << "QCP";
+        tmpType << "QCQP";
     else if (isMIQP && isDiscrete)
         tmpType << "MIQP";
     else if (isMIQP)

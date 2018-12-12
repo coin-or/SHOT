@@ -13,6 +13,12 @@
 
 namespace SHOT
 {
+const double SHOT_DBL_MIN = std::numeric_limits<double>::min();
+const double SHOT_DBL_MAX = std::numeric_limits<double>::max();
+const double SHOT_DBL_INF = std::numeric_limits<double>::infinity();
+const double SHOT_DBL_EPS = std::numeric_limits<double>::epsilon();
+const int    SHOT_INT_MAX = std::numeric_limits<int>::max();
+
 class ProcessInfo;
 class Settings;
 class Model;
@@ -22,7 +28,6 @@ class IMIPSolver;
 class Output;
 class Report;
 class TaskHandler;
-class OptProblemOriginal;
 
 class Constraint;
 class NumericConstraint;
@@ -34,7 +39,6 @@ typedef std::shared_ptr<Problem> ProblemPtr;
 typedef std::shared_ptr<IModelingSystem> ModelingSystemPtr;
 typedef std::shared_ptr<IMIPSolver> MIPSolverPtr;
 typedef std::shared_ptr<Output> OutputPtr;
-typedef std::shared_ptr<OptProblemOriginal> OriginalProblemPtr;
 typedef std::shared_ptr<Report> ReportPtr;
 typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
 
@@ -133,6 +137,7 @@ struct GeneratedHyperplane
     int removedIter;
 };
 
+/*
 struct ModelStatistics
 {
     E_ProblemType problemType = E_ProblemType::None;
@@ -159,7 +164,7 @@ struct ModelStatistics
     {
         return (objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear || objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
     };
-};
+}; */
 
 struct SolutionStatistics
 {

@@ -17,7 +17,7 @@ namespace SHOT
 class SolutionStrategyMIQCQP : public ISolutionStrategy
 {
   public:
-    SolutionStrategyMIQCQP(EnvironmentPtr envPtr, OSInstance *osInstance);
+    SolutionStrategyMIQCQP(EnvironmentPtr envPtr);
     virtual ~SolutionStrategyMIQCQP();
 
     virtual bool solveProblem();

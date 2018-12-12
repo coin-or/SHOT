@@ -10,8 +10,6 @@
 
 #include "TaskCheckConstraintTolerance.h"
 
-#include "../OptProblems/OptProblemOriginal.h"
-
 namespace SHOT
 {
 
@@ -23,52 +21,30 @@ TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() {}
 
 void TaskCheckConstraintTolerance::run()
 {
-    if (!isInitialized)
-    {
-        this->isObjectiveNonlinear = env->model->statistics.isObjectiveNonlinear();
-        this->nonlinearConstraintIndexes = env->model->originalProblem->getNonlinearConstraintIndexes();
-
-        if (this->isObjectiveNonlinear)
-        {
-            this->nonlinearObjectiveConstraintIndex = env->model->originalProblem->getNonlinearObjectiveConstraintIdx();
-
-            // Removes the nonlinear constraint index from the list
-            VectorInteger::iterator position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), -1);
-            if (position != this->nonlinearConstraintIndexes.end()) // means the element was not found
-                this->nonlinearConstraintIndexes.erase(position);
-
-            position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), this->nonlinearObjectiveConstraintIndex);
-            if (position != this->nonlinearConstraintIndexes.end()) // means the element was not found
-                this->nonlinearConstraintIndexes.erase(position);
-        }
-    }
-
     auto currIter = env->process->getCurrentIteration();
 
     if (currIter->solutionPoints.size() == 0)
         return;
 
-    auto solutionPoint = currIter->solutionPoints.at(0).point;
+    if (env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0 && env->reformulatedProblem->objectiveFunction->properties.classification <= E_ObjectiveFunctionClassification::Quadratic)
+        return;
+
+    bool objectiveAndConstraintsValid = false;
+    auto constraintTolerance = env->settings->getDoubleSetting("ConstraintTolerance", "Termination");
+
+    // Checks it the nonlinear objective is fulfilled
+    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic && env->reformulatedProblem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point) - currIter->objectiveValue > constraintTolerance)
+    {
+        return;
+    }
 
     // Checks if the nonlinear constraints are fulfilled to tolerance
-    if (this->nonlinearConstraintIndexes.size() > 0)
+    if (!env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point, env->settings->getDoubleSetting("ConstraintTolerance", "Termination")))
     {
-        auto maxDev = env->model->originalProblem->getMostDeviatingConstraint(solutionPoint, this->nonlinearConstraintIndexes).first;
-
-        if (maxDev.value >= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
-            return;
+        return;
     }
 
-    // Checks if objective constraint is fulfilled to tolerance
-    if (this->isObjectiveNonlinear)
-    {
-        double objDev = env->model->originalProblem->calculateConstraintFunctionValue(this->nonlinearObjectiveConstraintIndex, solutionPoint);
-
-        if (objDev >= env->settings->getDoubleSetting("ObjectiveConstraintTolerance", "Termination"))
-            return;
-    }
-
-    if (env->model->statistics.isDiscreteProblem)
+    if (env->problem->properties.isDiscrete)
     {
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
             currIter->type == E_IterationProblemType::MIP)

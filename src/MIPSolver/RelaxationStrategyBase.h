@@ -18,9 +18,8 @@ class RelaxationStrategyBase
 {
   public:
   protected:
-    bool isRelaxedSolutionEpsilonValid();
     bool isRelaxedSolutionInterior();
-    bool isCurrentToleranceReached();
+    bool isConstraintToleranceReached();
     bool isGapReached();
 
     EnvironmentPtr env;

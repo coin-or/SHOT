@@ -51,6 +51,8 @@ struct ObjectiveFunctionProperties
     bool hasQuadraticTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g for external functions
+
+    
 };
 
 class ObjectiveFunction

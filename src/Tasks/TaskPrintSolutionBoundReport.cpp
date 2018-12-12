@@ -30,7 +30,7 @@ void TaskPrintSolutionBoundReport::run()
     {
         double absGap = env->process->getAbsoluteObjectiveGap();
         double relGap = env->process->getRelativeObjectiveGap();
-        auto objBounds = env->model->getCorrectedObjectiveBounds();
+        auto objBounds = env->process->getCorrectedObjectiveBounds();
         double objLB = objBounds.first;
         double objUB = objBounds.second;
 

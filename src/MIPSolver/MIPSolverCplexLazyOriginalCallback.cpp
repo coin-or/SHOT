@@ -53,7 +53,7 @@ void HCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
 
-    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
     if ((env->process->primalSolutions.size() > 0) && ((isMinimization && this->getIncumbentObjValue() > env->process->getPrimalBound()) || (!isMinimization && this->getIncumbentObjValue() < env->process->getPrimalBound())))
     {
@@ -90,14 +90,17 @@ void HCallbackI::main() // Called at each node...
 
         tmpVals.end();
 
-        auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
-
         SolutionPoint tmpSolPt;
+
+        if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        {
+            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        }
 
         tmpSolPt.point = solution;
         tmpSolPt.objectiveValue = getObjValue();
         tmpSolPt.iterFound = 0;
-        tmpSolPt.maxDeviation = mostDevConstr;
         tmpSolPt.isRelaxedPoint = true;
 
         solutionPoints.at(0) = tmpSolPt;
@@ -140,7 +143,7 @@ void InfoCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
 
-    bool isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
     auto absObjGap = env->process->getAbsoluteObjectiveGap();
     auto relObjGap = env->process->getRelativeObjectiveGap();
@@ -179,7 +182,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
-    isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
+    isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
     cbCalls = 0;
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
@@ -195,7 +198,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
+    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
     }
@@ -249,16 +252,19 @@ void CtCallbackI::main()
 
     tmpVals.end();
 
-    auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
+    SolutionPoint tmpSolPt;
+
+    if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    {
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
+        tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+    }
 
     double tmpDualObjBound = this->getBestObjValue();
-
-    SolutionPoint tmpSolPt;
 
     tmpSolPt.point = solution;
     tmpSolPt.objectiveValue = getObjValue();
     tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-    tmpSolPt.maxDeviation = mostDevConstr;
 
     // Check if better dual bound
     if ((isMinimization && tmpDualObjBound > env->process->getDualBound()) || (!isMinimization && tmpDualObjBound < env->process->getDualBound()))
@@ -287,8 +293,14 @@ void CtCallbackI::main()
             }
 
             SolutionPoint tmpPt;
+
+            if (env->problem->properties.numberOfNonlinearConstraints > 0)
+            {
+                auto maxDev = env->problem->getMaxNumericConstraintValue(solution, env->problem->nonlinearConstraints);
+                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            }
+
             tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-            tmpPt.maxDeviation = env->model->originalProblem->getMostDeviatingConstraint(primalSolution);
             tmpPt.objectiveValue = this->getIncumbentObjValue();
             tmpPt.point = primalSolution;
 

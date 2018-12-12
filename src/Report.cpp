@@ -109,6 +109,10 @@ void Report::outputIterationDetail(int iterationNumber,
         {
             combCurrSol = "            inf.";
         }
+        else if (env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        {
+            combCurrSol = (boost::format("%|#12g| | %|+.1e|") % currentObjectiveValue % 0.0).str();
+        }
         else
         {
             combCurrSol = (boost::format("%|#12g| | %|+.1e| (%|i|)") % currentObjectiveValue % maxConstraintError % maxConstraintIndex).str();

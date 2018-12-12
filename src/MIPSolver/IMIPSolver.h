@@ -11,19 +11,17 @@
 #pragma once
 #include "../Shared.h"
 
-#include "../OptProblems/OptProblemOriginal.h"
+/*#include "../OptProblems/OptProblemOriginal.h"
 #include "../OptProblems/OptProblemOriginalLinearObjective.h"
 #include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
 #include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
+*/
 
 namespace SHOT
 {
 class IMIPSolver
 {
   public:
-    bool hasAuxilliaryObjectiveVariable = false;
-    int auxilliaryObjectiveVariableIndex;
-
     virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
 
@@ -101,6 +99,10 @@ class IMIPSolver
 
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;
+
+    virtual bool hasAuxilliaryObjectiveVariable() = 0;
+    virtual int getAuxilliaryObjectiveVariableIndex() = 0;
+    virtual void setAuxilliaryObjectiveVariableIndex(int index) = 0;
 
     virtual ~IMIPSolver(){};
 

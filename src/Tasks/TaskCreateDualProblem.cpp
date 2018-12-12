@@ -77,8 +77,10 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     if (sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
     {
         double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        destination->hasAuxilliaryObjectiveVariable = true;
-        destination->auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
+        //std::dynamic_pointer_cast<MIPSolverBase>(destination)->hasAuxilliaryObjectiveVariable = true;
+        //std::dynamic_pointer_cast<MIPSolverBase>(destination)->auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
+
+        destination->setAuxilliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
         variablesInitialized = variablesInitialized && destination->addVariable("shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
     }
@@ -92,22 +94,31 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     objectiveInitialized = objectiveInitialized && destination->initializeObjective();
 
-    // Linear terms
-    for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms.terms)
+    if (destination->hasAuxilliaryObjectiveVariable())
     {
-        objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
-    }
+        objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(1.0, destination->getAuxilliaryObjectiveVariableIndex());
 
-    // Quadratic terms
-    if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
+        objectiveInitialized = objectiveInitialized && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize);
+    }
+    else
     {
-        for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
+        // Linear terms
+        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms.terms)
         {
-            objectiveInitialized = objectiveInitialized && destination->addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+            objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
         }
-    }
 
-    objectiveInitialized = objectiveInitialized && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
+        // Quadratic terms
+        if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
+        {
+            for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
+            {
+                objectiveInitialized = objectiveInitialized && destination->addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+            }
+        }
+
+        objectiveInitialized = objectiveInitialized && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
+    }
 
     if (!objectiveInitialized)
         return false;
@@ -115,7 +126,6 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     // Now creating the constraints
 
     bool constraintsInitialized = true;
-
 
     for (auto &C : env->problem->linearConstraints)
     {
@@ -154,7 +164,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
         constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
-    
+
     if (!constraintsInitialized)
         return false;
 

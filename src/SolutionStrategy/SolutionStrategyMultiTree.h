@@ -11,14 +11,12 @@
 #pragma once
 #include "ISolutionStrategy.h"
 
-
-
 namespace SHOT
 {
 class SolutionStrategyMultiTree : public ISolutionStrategy
 {
   public:
-    SolutionStrategyMultiTree(EnvironmentPtr envPtr, OSInstance *osInstance);
+    SolutionStrategyMultiTree(EnvironmentPtr envPtr);
     virtual ~SolutionStrategyMultiTree();
 
     virtual bool solveProblem();

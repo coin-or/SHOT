@@ -33,11 +33,12 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &v
 void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString &variables, const std::string &fileName);
 void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &variables, const std::string &fileName);
 
+/*
 bool isObjectiveGenerallyNonlinear(OSInstance *instance);
 bool isObjectiveQuadratic(OSInstance *instance);
 bool areAllConstraintsLinear(OSInstance *instance);
 bool areAllConstraintsQuadratic(OSInstance *instance);
-bool areAllVariablesReal(OSInstance *instance);
+bool areAllVariablesReal(OSInstance *instance);*/
 
 void displayVector(const VectorDouble &point);
 void displayVector(const VectorDouble &point1, const VectorDouble &point2);

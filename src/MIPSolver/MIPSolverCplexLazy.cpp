@@ -22,7 +22,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, 
     cplexVars = vars;
     cplexInst = inst;
 
-    isMinimization = env->model->originalProblem->isTypeOfObjectiveMinimize();
+    isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
 
@@ -38,7 +38,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, 
 
     tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
 
-    if (env->model->originalProblem->isObjectiveFunctionNonlinear())
+    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
     }
@@ -87,10 +87,15 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             }
 
             SolutionPoint tmpPt;
+
+            if (env->problem->properties.numberOfNonlinearConstraints > 0)
+            {
+                auto maxDev = env->problem->getMaxNumericConstraintValue(primalSolution, env->problem->nonlinearConstraints);
+                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            }
+
             tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-            tmpPt.maxDeviation = env->model->originalProblem->getMostDeviatingConstraint(primalSolution);
-            tmpPt.objectiveValue = env->model->originalProblem->calculateOriginalObjectiveValue(
-                primalSolution);
+            tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
             tmpPt.point = primalSolution;
 
             env->process->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
@@ -125,14 +130,17 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
                 tmpVals.end();
 
-                auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
-
                 SolutionPoint tmpSolPt;
+
+                if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+                {
+                    auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
+                    tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                }
 
                 tmpSolPt.point = solution;
                 tmpSolPt.objectiveValue = context.getRelaxationObjective();
                 tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-                tmpSolPt.maxDeviation = mostDevConstr;
 
                 solutionPoints.at(0) = tmpSolPt;
 
@@ -178,31 +186,33 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
             tmpVals.end();
 
-            auto mostDevConstr = env->model->originalProblem->getMostDeviatingConstraint(solution);
-
-            //Remove??
-            if (mostDevConstr.value <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
-            {
-                return;
-            }
-
             SolutionPoint solutionCandidate;
+
+            if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+            {
+                auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
+
+                //Remove??
+                if (maxDev.normalizedValue <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+                {
+                    return;
+                }
+
+                solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            }
 
             solutionCandidate.point = solution;
             solutionCandidate.objectiveValue = context.getCandidateObjective();
             solutionCandidate.iterFound = env->process->getCurrentIteration()->iterationNumber;
-            solutionCandidate.maxDeviation = mostDevConstr;
 
             std::vector<SolutionPoint> candidatePoints(1);
             candidatePoints.at(0) = solutionCandidate;
 
             addLazyConstraint(candidatePoints, context);
 
-            currIter->maxDeviation = mostDevConstr.value;
-            currIter->maxDeviationConstraint = mostDevConstr.index;
-
+            currIter->maxDeviation = solutionCandidate.maxDeviation.value;
+            currIter->maxDeviationConstraint = solutionCandidate.maxDeviation.index;
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
-
             currIter->objectiveValue = context.getCandidateObjective();
 
             env->process->getCurrentIteration()->numberOfOpenNodes = cplexInst.getNnodesLeft();
@@ -517,7 +527,7 @@ int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
 
 void MIPSolverCplexLazy::setSolutionLimit(long limit)
 {
-        try
+    try
     {
         cplexInstance.setParam(IloCplex::IntSolLim, limit);
     }

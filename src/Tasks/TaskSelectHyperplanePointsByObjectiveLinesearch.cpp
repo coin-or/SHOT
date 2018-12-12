@@ -22,45 +22,59 @@ TaskSelectHyperplanePointsByObjectiveLinesearch::~TaskSelectHyperplanePointsByOb
 
 void TaskSelectHyperplanePointsByObjectiveLinesearch::run()
 {
-    env->process->startTimer("DualObjectiveLiftRootSearch");
+    env->process->startTimer("DualObjectiveRootSearch");
 
-    env->process->setObjectiveUpdatedByLinesearch(false);
+    //env->process->setObjectiveUpdatedByLinesearch(false);
 
-    auto currIter = env->process->getCurrentIteration();
+    auto prevIter = env->process->getPreviousIteration();
 
-    auto allSolutions = currIter->solutionPoints;
-
-    for (int i = 0; i < allSolutions.size(); i++)
+    for (int i = 0; i < prevIter->solutionPoints.size(); i++)
     {
-        if (allSolutions.at(i).maxDeviation.value < 0)
-            continue;
+        Hyperplane hyperplane;
+        hyperplane.isObjectiveHyperplane = true;
+        hyperplane.sourceConstraintIndex = -1;
+        hyperplane.generatedPoint = prevIter->solutionPoints.at(i).point;
+        hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
+        env->process->hyperplaneWaitingList.push_back(hyperplane);
 
-        auto oldObjVal = allSolutions.at(i).objectiveValue;
-        auto changed = updateObjectiveInPoint(allSolutions.at(i));
+        /*
+        auto oldObjVal = prevIter->solutionPoints.at(i).objectiveValue;
+        double objectiveLinearizationError = env->reformulatedProblem->objectiveFunction->calculateValue(prevIter->solutionPoints.at(i).point) - prevIter->solutionPoints.at(i).objectiveValue;
 
-        // Update the iteration solution as well (for i==0)
-        if (changed && i == 0 /*&& (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal*/)
+        double objectiveLB = prevIter->solutionPoints.at(i).objectiveValue;
+        double objectiveUB = (1 + std::min(0.01, 1 / abs(prevIter->solutionPoints.at(i).objectiveValue))) * objectiveLinearizationError;
+
+        try
         {
-            currIter->maxDeviation = allSolutions.at(i).maxDeviation.value;
-            currIter->maxDeviationConstraint = allSolutions.at(i).maxDeviation.index;
-            currIter->objectiveValue = allSolutions.at(0).objectiveValue;
+            auto xNewc = env->process->linesearchMethod->findZero(prevIter->solutionPoints.at(i).point, objectiveLB, objectiveUB,
+                                                                  env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                  env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
+                                                                  std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
 
-            env->process->setObjectiveUpdatedByLinesearch(true);
+            auto internalPoint = xNewc.first;
+            auto externalPoint = xNewc.second;
 
-            auto diffobj = abs(oldObjVal - allSolutions.at(i).objectiveValue);
+            double diffobj = abs(oldObjVal - xNewc.second);
 
-            // Change the status of the solution if it has been updated much
-            if (diffobj > env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
-            {
-                if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-                {
-                    currIter->solutionStatus = E_ProblemSolutionStatus::SolutionLimit;
-                }
-            }
+            Hyperplane hyperplane;
+            hyperplane.isObjectiveHyperplane = true;
+            hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
+            hyperplane.sourceConstraintIndex = -1;
+            hyperplane.generatedPoint = xNewc.second.point;
+
+            env->process->hyperplaneWaitingList.push_back(hyperplane);
+
+            env->output->outputAlways(
+                "     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(xNewc.second) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
         }
+        catch (std::exception &e)
+        {
+            env->output->outputWarning(
+                "     Cannot find solution with linesearch for updating nonlinear objective.");
+        }*/
     }
 
-    env->process->stopTimer("DualObjectiveLiftRootSearch");
+    env->process->stopTimer("DualObjectiveRootSearch");
 }
 
 std::string TaskSelectHyperplanePointsByObjectiveLinesearch::getType()
@@ -72,22 +86,24 @@ std::string TaskSelectHyperplanePointsByObjectiveLinesearch::getType()
 bool TaskSelectHyperplanePointsByObjectiveLinesearch::updateObjectiveInPoint(SolutionPoint &solution)
 {
     auto oldObjVal = solution.objectiveValue;
-    double objectiveLinearizationError = env->reformulatedProblem->objectiveFunction->calculateValue(solution.point) - solution.point.back();
+    //double objectiveLinearizationError = env->reformulatedProblem->objectiveFunction->calculateValue(solution.point) - solution.point.back();
 
     double objectiveLB = solution.objectiveValue;
-    double objectiveUB = objectiveLB + (1 + std::min(0.01, 1 / abs(solution.objectiveValue))) * objectiveLinearizationError;
+    double objectiveUB = (1 + std::min(0.01, 1 / abs(objectiveLB))) * env->reformulatedProblem->objectiveFunction->calculateValue(solution.point);
+
+    auto tmp = env->reformulatedProblem->objectiveFunction->calculateValue(solution.point);
 
     bool changed = false;
 
     try
     {
-        auto xNewc = env->process->linesearchMethod->findZero(solution.point, objectiveLB, objectiveUB,
+        /*auto xNewc = env->process->linesearchMethod->findZero(solution.point, objectiveLB, objectiveUB,
                                                               env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                                                               env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
                                                               std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
 
         double diffobj = abs(oldObjVal - xNewc.second);
-
+*/
         Hyperplane hyperplane;
         hyperplane.isObjectiveHyperplane = true;
         hyperplane.sourceConstraintIndex = -1;
@@ -95,8 +111,8 @@ bool TaskSelectHyperplanePointsByObjectiveLinesearch::updateObjectiveInPoint(Sol
         hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
         env->process->hyperplaneWaitingList.push_back(hyperplane);
 
-        env->output->outputInfo(
-            "     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(xNewc.second) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
+        //env->output->outputAlways(
+        //"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(xNewc.second) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
     }
     catch (std::exception &e)
     {

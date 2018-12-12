@@ -15,6 +15,13 @@ namespace SHOT
 
 TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
+    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+    {
+        for (auto &V : env->reformulatedProblem->allVariables)
+        {
+            variableNames.push_back(V->name);
+        }
+    }
 }
 
 TaskFindInteriorPoint::~TaskFindInteriorPoint()
@@ -101,37 +108,25 @@ void TaskFindInteriorPoint::run()
 
         tmpIP->point = NLPSolvers.at(i)->getSolution();
 
-        if (solver == ES_InteriorPointStrategy::IpoptRelaxed && tmpIP->point.size() < env->model->originalProblem->getNumberOfVariables())
-        {
-            tmpIP->point.push_back(
-                env->model->originalProblem->calculateOriginalObjectiveValue(tmpIP->point));
-        }
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        while (tmpIP->point.size() > env->model->originalProblem->getNumberOfVariables())
+        if (maxDev.normalizedValue > 0)
         {
-            tmpIP->point.pop_back();
-        }
-
-        auto maxDev = env->model->originalProblem->getMostDeviatingConstraint(tmpIP->point);
-        tmpIP->maxDevatingConstraint = maxDev;
-
-        if (maxDev.value > 0)
-        {
-            env->output->outputWarning("\n Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.value));
+            env->output->outputWarning("\n Maximum deviation in interior point is too large: " + UtilityFunctions::toString(maxDev.normalizedValue));
         }
         else
         {
-            env->output->outputSummary("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.value) + " found.");
+            env->output->outputSummary("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.normalizedValue) + " found.");
             env->process->interiorPts.push_back(tmpIP);
         }
 
-        foundNLPPoint = (foundNLPPoint || (maxDev.value <= 0));
+        foundNLPPoint = (foundNLPPoint || (maxDev.normalizedValue <= 0));
 
         if (env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
-            auto tmpVars = env->model->originalProblem->getVariableNames();
             std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/interiorpoint_" + std::to_string(i) + ".txt";
-            UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, env->problem->allVariables, filename);
+            UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
         }
 
         if (tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimax || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptRelaxed || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)

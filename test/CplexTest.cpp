@@ -57,7 +57,6 @@ bool CplexTest1(std::string filename)
     env->settings = SettingsPtr(new Settings(env->output));
     env->tasks = TaskHandlerPtr(new TaskHandler(env));
     env->report = ReportPtr(new Report(env));
-    env->model = ModelPtr(new Model(env));
     std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));

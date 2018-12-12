@@ -104,7 +104,9 @@ void TaskUpdateInteriorPoint::run()
         }
 
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = env->model->originalProblem->getMostDeviatingConstraint(tmpPrimalPoint);
+
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
         env->output->outputInfo("     Interior point replaced with primal solution point.");
 

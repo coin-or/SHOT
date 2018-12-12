@@ -27,5 +27,7 @@ class TaskFindInteriorPoint : public TaskBase
 
   private:
     std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
+
+    VectorString variableNames;
 };
 } // namespace SHOT

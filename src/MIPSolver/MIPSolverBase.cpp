@@ -52,7 +52,13 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
         auto tmpPt = getVariableSolution(i);
 
+        while (tmpPt.size() > env->reformulatedProblem->properties.numberOfVariables)
+        {
+            tmpPt.pop_back();
+        }
+
         tmpSolPt.point = tmpPt;
+
         tmpSolPt.objectiveValue = getObjectiveValue(i);
         tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
 
@@ -136,6 +142,12 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
     {
         constant = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
         gradient = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateGradient(hyperplane.generatedPoint);
+
+        PairIndexValue pair;
+        pair.index = auxilliaryObjectiveVariableIndex;
+        pair.value = -1.0;
+
+        elements.push_back(pair);
 
         env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size()) + " elements.");
     }

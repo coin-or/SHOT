@@ -11,7 +11,6 @@
 #pragma once
 #include "TaskBase.h"
 
-
 namespace SHOT
 {
 class TaskCheckConstraintTolerance : public TaskBase
@@ -26,11 +25,5 @@ class TaskCheckConstraintTolerance : public TaskBase
 
   private:
     std::string taskIDIfTrue;
-
-    bool isInitialized = false;
-    // Without the (possible) nonlinear objective constraint
-    VectorInteger nonlinearConstraintIndexes;
-    bool isObjectiveNonlinear;
-    int nonlinearObjectiveConstraintIndex;
 };
 } // namespace SHOT

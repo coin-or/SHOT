@@ -17,7 +17,7 @@ namespace SHOT
 class SolutionStrategyNLP : public ISolutionStrategy
 {
   public:
-    SolutionStrategyNLP(EnvironmentPtr envPtr, OSInstance *osInstance);
+    SolutionStrategyNLP(EnvironmentPtr envPtr);
     virtual ~SolutionStrategyNLP();
 
     virtual bool solveProblem();

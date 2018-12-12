@@ -75,8 +75,8 @@ std::ostream &operator<<(std::ostream &stream, const Constraint &constraint);
 class NumericConstraint : public Constraint, public std::enable_shared_from_this<NumericConstraint>
 {
   public:
-    double valueLHS = -std::numeric_limits<double>::infinity();
-    double valueRHS = std::numeric_limits<double>::infinity();
+    double valueLHS = SHOT_DBL_MIN;
+    double valueRHS = SHOT_DBL_MAX;
     double constant = 0.0;
 
     virtual double calculateFunctionValue(const VectorDouble &point) = 0;

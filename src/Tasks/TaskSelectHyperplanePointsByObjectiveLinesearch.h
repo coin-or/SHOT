@@ -11,8 +11,6 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../OptProblems/OptProblemOriginal.h"
-
 namespace SHOT
 {
 class TaskSelectHyperplanePointsByObjectiveLinesearch : public TaskBase

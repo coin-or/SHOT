@@ -10,6 +10,7 @@
 
 #pragma once
 #include "NLPSolverBase.h"
+#include "../SharedOS.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"
@@ -54,7 +55,7 @@ class NLPSolverGAMS : public NLPSolverBase
 
   protected:
     E_NLPSolutionStatus solveProblemInstance();
-    bool createProblemInstance(OSInstance *origInstance);
+    //bool createProblemInstance(OSInstance *origInstance);
 
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();

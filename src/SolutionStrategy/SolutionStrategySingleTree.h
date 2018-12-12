@@ -16,7 +16,7 @@ namespace SHOT
 class SolutionStrategySingleTree : public ISolutionStrategy
 {
   public:
-    SolutionStrategySingleTree(EnvironmentPtr envPtr, OSInstance *osInstance);
+    SolutionStrategySingleTree(EnvironmentPtr envPtr);
     virtual ~SolutionStrategySingleTree();
 
     virtual bool solveProblem();

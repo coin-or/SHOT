@@ -10,6 +10,7 @@
 
 #pragma once
 #include "NLPSolverBase.h"
+#include "../SharedOS.h"
 
 namespace SHOT
 {

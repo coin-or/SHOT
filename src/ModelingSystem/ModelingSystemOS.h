@@ -10,6 +10,7 @@
 
 #pragma once
 #include "IModelingSystem.h"
+#include "../SharedOS.h"
 
 namespace SHOT
 {

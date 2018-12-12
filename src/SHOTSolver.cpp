@@ -19,10 +19,15 @@ SHOTSolver::SHOTSolver()
 
     env->output = std::make_shared<Output>();
     env->process = std::make_shared<ProcessInfo>(env);
+
+    env->process->createTimer("Total", "Total solution time");
+    env->process->startTimer("Total");
+
+    env->process->createTimer("ProblemInitialization", " - problem initialization");
+
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
     env->report = std::make_shared<Report>(env);
-    env->model = std::make_shared<Model>(env);
     initializeSettings();
 }
 
@@ -33,11 +38,6 @@ SHOTSolver::SHOTSolver(EnvironmentPtr envPtr) : env(envPtr)
 
 SHOTSolver::~SHOTSolver()
 {
-    /*if (osilReader != NULL)
-    {
-        delete osilReader;
-        osilReader = NULL;
-    }*/
 }
 
 bool SHOTSolver::setOptions(std::string fileName)
@@ -133,7 +133,7 @@ bool SHOTSolver::setProblem(std::string fileName)
         return (false);
     }
 
-    OSInstance *tmpInstance;
+    //OSInstance *tmpInstance;
 
     boost::filesystem::path problemExtension = problemFile.extension();
     boost::filesystem::path problemPath = problemFile.parent_path();
@@ -156,12 +156,12 @@ bool SHOTSolver::setProblem(std::string fileName)
             env->problem = problem;
             env->reformulatedProblem = problem;
 
-            std::cout << problem << std::endl;
+            //std::cout << problem << std::endl;
 
-            std::string fileContents = UtilityFunctions::getFileAsString(fileName);
+            /*std::string fileContents = UtilityFunctions::getFileAsString(fileName);
 
             tmpInstance = env->model->getProblemInstanceFromOSiL(fileContents);
-
+*/
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
 
             if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
@@ -186,11 +186,11 @@ bool SHOTSolver::setProblem(std::string fileName)
             env->problem = problem;
             env->reformulatedProblem = problem;
 
-            nl2os = std::unique_ptr<OSnl2OS>(new OSnl2OS());
+            /*nl2os = std::unique_ptr<OSnl2OS>(new OSnl2OS());
             nl2os->readNl(fileName);
             nl2os->createOSObjects();
 
-            tmpInstance = nl2os->osinstance;
+            tmpInstance = nl2os->osinstance;*/
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
@@ -215,7 +215,7 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
             gms2os->readGms(fileName);
             gms2os->createOSObjects();
-            tmpInstance = gms2os->osinstance;
+            //tmpInstance = gms2os->osinstance;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -224,7 +224,7 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
             gms2os->readCntr(fileName);
             gms2os->createOSObjects();
-            tmpInstance = gms2os->osinstance;
+            //tmpInstance = gms2os->osinstance;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -236,7 +236,7 @@ bool SHOTSolver::setProblem(std::string fileName)
             return (false);
         }
 
-        tmpInstance->instanceHeader->source = fileName;
+        //tmpInstance->instanceHeader->source = fileName;
     }
     catch (const ErrorClass &eclass)
     {
@@ -250,7 +250,7 @@ bool SHOTSolver::setProblem(std::string fileName)
     //Removes path
     boost::filesystem::path problemName = problemFile.stem();
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
-    tmpInstance->setInstanceName(problemName.string());
+    //tmpInstance->setInstanceName(problemName.string());
 
     if (static_cast<ES_OutputDirectory>(env->settings->getIntSetting("OutputDirectory", "Output")) == ES_OutputDirectory::Program)
     {
@@ -272,11 +272,80 @@ bool SHOTSolver::setProblem(std::string fileName)
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))
         initializeDebugMode();
 
-    bool status = this->setProblem(tmpInstance);
+    bool status = this->selectStrategy();
 
-    return (status);
+    return (true);
 }
 
+bool SHOTSolver::selectStrategy()
+{
+    if (static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    {
+        if (env->problem->properties.isNLPProblem)
+        {
+            env->output->outputInfo(" Using NLP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
+
+            env->process->usedSolutionStrategy = E_SolutionStrategy::NLP;
+        }
+        else
+        {
+            solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
+            isProblemInitialized = true;
+        }
+
+        return (true);
+    }
+
+    bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
+    bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
+
+    if (useQuadraticObjective && env->problem->properties.isMIQPProblem)
+    //MIQP problem
+    {
+        env->output->outputInfo(" Using MIQP solution strategy.");
+        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+        env->process->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+    }
+    //MIQCQP problem
+    else if (useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
+    {
+        env->output->outputInfo(" Using MIQCQP solution strategy.");
+
+        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+        env->process->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+    }
+    else if (env->problem->properties.isNLPProblem)
+    {
+        env->output->outputInfo(" Using NLP solution strategy.");
+        solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
+        env->process->usedSolutionStrategy = E_SolutionStrategy::NLP;
+    }
+    else
+    {
+        switch (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")))
+        {
+        case (ES_TreeStrategy::SingleTree):
+            env->output->outputInfo(" Using single-tree solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
+            env->process->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
+            break;
+        case (ES_TreeStrategy::MultiTree):
+            env->output->outputInfo(" Using multi-tree solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
+            env->process->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+            break;
+        default:
+            break;
+        }
+    }
+
+    isProblemInitialized = true;
+
+    return (true);
+}
+
+/*
 bool SHOTSolver::setProblem(OSInstance *osInstance)
 {
     if (static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
@@ -294,7 +363,6 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
             isProblemInitialized = true;
         }
 
-        env->model->setStatistics();
         return (true);
     }
 
@@ -343,9 +411,8 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
     isProblemInitialized = true;
 
-    env->model->setStatistics();
     return (true);
-}
+}*/
 
 bool SHOTSolver::solveProblem()
 {

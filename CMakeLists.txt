@@ -18,6 +18,7 @@ option (HAS_CPLEX "Is Cplex available" ON)
 option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON)
 option (HAS_GUROBI "Is Gurobi available" OFF)
 option (HAS_GAMS "Is GAMS available" ON)
+option (HAS_OS "Is COIN-OR Optimization Services available" ON)
 
 # Sets the paths required. Edit these to suit your system:
 set(COINOS_DIR /opt/OS-2.10)
@@ -66,7 +67,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 # Adding source files
 file(GLOB_RECURSE SOURCES
 #  "${PROJECT_SOURCE_DIR}/src/Environment.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model.cpp"
+#  "${PROJECT_SOURCE_DIR}/src/Model.cpp"
 #  "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"
 #  "${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp"
 #  "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.cpp"
@@ -105,7 +106,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp"
  # "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptMinimax.cpp"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp"
-  "${PROJECT_SOURCE_DIR}/src/OptProblems/*.cpp"
+ # "${PROJECT_SOURCE_DIR}/src/OptProblems/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
@@ -117,7 +118,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Enums.h"
   "${PROJECT_SOURCE_DIR}/src/Structs.h"
   "${PROJECT_SOURCE_DIR}/src/Environment.h"
-  "${PROJECT_SOURCE_DIR}/src/Model.h"
+ # "${PROJECT_SOURCE_DIR}/src/Model.h"
   "${PROJECT_SOURCE_DIR}/src/Model/ModelShared.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
@@ -159,7 +160,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h"
  # "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptMinimax.h"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h"
-  "${PROJECT_SOURCE_DIR}/src/OptProblems/*.h"
+#  "${PROJECT_SOURCE_DIR}/src/OptProblems/*.h"
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"

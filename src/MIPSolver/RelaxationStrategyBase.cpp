@@ -13,18 +13,6 @@
 namespace SHOT
 {
 
-bool RelaxationStrategyBase::isRelaxedSolutionEpsilonValid()
-{
-    auto prevIter = env->process->getPreviousIteration();
-
-    if (prevIter->maxDeviation < env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
-    {
-        return true;
-    }
-
-    return false;
-}
-
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
     auto prevIter = env->process->getPreviousIteration();
@@ -37,16 +25,25 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
     return false;
 }
 
-bool RelaxationStrategyBase::isCurrentToleranceReached()
+bool RelaxationStrategyBase::isConstraintToleranceReached()
 {
     auto prevIter = env->process->getPreviousIteration();
 
-    if (prevIter->maxDeviation < env->settings->getDoubleSetting("Relaxation.TerminationTolerance", "Dual"))
+    double constraintTolerance = std::max(env->settings->getDoubleSetting("ConstraintTolerance", "Termination"),
+                                          env->settings->getDoubleSetting("Relaxation.TerminationTolerance", "Dual"));
+
+    if (prevIter->maxDeviation > constraintTolerance)
     {
-        return true;
+        return false;
     }
 
-    return false;
+    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    {
+        if (env->reformulatedProblem->objectiveFunction->calculateValue(prevIter->solutionPoints.at(0).point) - prevIter->objectiveValue > constraintTolerance)
+            return false;
+    }
+
+    return true;
 }
 
 bool RelaxationStrategyBase::isGapReached()

@@ -103,10 +103,11 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
         objective->add(copyNonlinearExpression(originalObjective->nonlinearExpression.get(), newProblem));
 
+        objective->direction = env->problem->objectiveFunction->direction;
         newProblem->add(objective);
-
     }
 
+    newProblem->objectiveFunction->constant = env->problem->objectiveFunction->constant;
     newProblem->objectiveFunction->updateProperties();
 
     // Copying constraints
@@ -124,6 +125,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             for (auto &T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.terms)
             {
                 auto variable = newProblem->getVariable(T->variable->index);
+
                 constraint->add(std::make_shared<LinearTerm>(T->coefficient, variable));
             }
 
@@ -137,6 +139,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->linearTerms.terms)
             {
                 auto variable = newProblem->getVariable(T->variable->index);
+
                 constraint->add(std::make_shared<LinearTerm>(T->coefficient, variable));
             }
 
@@ -153,12 +156,29 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         }
         case (E_ConstraintClassification::Nonlinear):
         {
+
+            double signfactor = 1.0;
+
+            if (valueLHS > SHOT_DBL_MIN && valueRHS == SHOT_DBL_MAX)
+            {
+                // Constraint is of type l <= g(x). Rewrite as -g(x) <= -l
+
+                signfactor = -1;
+                valueRHS = -valueLHS;
+                valueLHS = SHOT_DBL_MIN;
+            }
+            else if (valueLHS != SHOT_DBL_MIN && valueRHS != SHOT_DBL_MAX)
+            {
+                // Constraint is of type l <= g(x) <= u. Rewrite as -g(x) <= -l and g(x) <= u
+                // TODO
+            }
+
             NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
 
             for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->linearTerms.terms)
             {
                 auto variable = newProblem->getVariable(T->variable->index);
-                constraint->add(std::make_shared<LinearTerm>(T->coefficient, variable));
+                constraint->add(std::make_shared<LinearTerm>(signfactor * T->coefficient, variable));
             }
 
             for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.terms)
@@ -166,10 +186,18 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                 auto firstVariable = newProblem->getVariable(T->firstVariable->index);
                 auto secondVariable = newProblem->getVariable(T->secondVariable->index);
 
-                constraint->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
+                constraint->add(std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
             }
 
-            constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
+            if (signfactor == -1)
+            {
+                constraint->add(std::make_shared<ExpressionNegate>(
+                    copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem)));
+            }
+            else
+            {
+                constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
+            }
 
             newProblem->add(std::move(constraint));
             break;
@@ -182,8 +210,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     newProblem->finalize();
     env->reformulatedProblem = newProblem;
 
+    std::cout << env->reformulatedProblem << std::endl;
+
     env->process->stopTimer("ProblemReformulation");
-}
+} // namespace SHOT
 
 TaskReformulateProblem::~TaskReformulateProblem()
 {

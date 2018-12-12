@@ -20,6 +20,10 @@ class MIPSolverBase
     VectorInteger fixedVariableIndexes;
     std::vector<PairDouble> fixedVariableOriginalBounds;
 
+    bool auxilliaryObjectiveVariableDefined = false;
+    int auxilliaryObjectiveVariableIndex;
+
+
   protected:
     std::vector<GeneratedHyperplane> generatedHyperplanes;
 
@@ -69,6 +73,15 @@ class MIPSolverBase
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes();
 
+    virtual bool hasAuxilliaryObjectiveVariable() { return auxilliaryObjectiveVariableDefined; };
+    virtual int getAuxilliaryObjectiveVariableIndex() {return auxilliaryObjectiveVariableIndex;};
+
+    virtual void setAuxilliaryObjectiveVariableIndex(int index) 
+    {
+        auxilliaryObjectiveVariableIndex = index;
+        auxilliaryObjectiveVariableDefined = true;
+    };
+
     bool discreteVariablesActivated;
     bool cachedSolutionHasChanged;
 
@@ -76,9 +89,8 @@ class MIPSolverBase
 
     std::vector<SolutionPoint> lastSolutions;
 
-    //OptProblem *originalProblem;
-    //ProblemPtr sourceProblem;
-
     EnvironmentPtr env;
+
+
 };
 } // namespace SHOT

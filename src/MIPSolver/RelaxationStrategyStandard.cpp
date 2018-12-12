@@ -44,7 +44,7 @@ void RelaxationStrategyStandard::executeStrategy()
         return (this->setActive());
     }
 
-    if (isLPStepFinished() || isCurrentToleranceReached() || isGapReached() || isIterationLimitReached() || isTimeLimitReached() || isRelaxedSolutionEpsilonValid() || isObjectiveStagnant())
+    if (isLPStepFinished() || isConstraintToleranceReached() || isGapReached() || isIterationLimitReached() || isTimeLimitReached() || isObjectiveStagnant())
     {
         this->setInactive();
     }
