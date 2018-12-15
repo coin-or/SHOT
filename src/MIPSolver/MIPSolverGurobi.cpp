@@ -314,7 +314,7 @@ bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double 
             break;
         }
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when adding variable to model: ", e.getMessage());
         return (false);
@@ -335,7 +335,7 @@ bool MIPSolverGurobi::initializeObjective()
         objectiveQuadraticExpression = GRBQuadExpr(0);
         objectiveLinearExpression = GRBLinExpr(0);
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when initializing objective function: ", e.getMessage());
         return (false);
@@ -350,7 +350,7 @@ bool MIPSolverGurobi::addLinearTermToObjective(double coefficient, int variableI
     {
         objectiveLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when adding linear term to objective: ", e.getMessage());
         return (false);
@@ -365,7 +365,7 @@ bool MIPSolverGurobi::addQuadraticTermToObjective(double coefficient, int firstV
     {
         objectiveQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when adding quadratic term to objective: ", e.getMessage());
         return (false);
@@ -392,9 +392,8 @@ bool MIPSolverGurobi::finalizeObjective(bool isMinimize, double constant)
             isMinimizationProblem = false;
         }
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
-        objExpression.end();
         env->output->outputError("Gurobi exception caught when adding objective function to model: ", e.getMessage());
         return (false);
     }
@@ -409,9 +408,8 @@ bool MIPSolverGurobi::initializeConstraint()
         constraintQuadraticExpression = GRBQuadExpr(0);
         constraintLinearExpression = GRBLinExpr(0);
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
-        objExpression.end();
         env->output->outputError("Gurobi exception caught when initializing constraint: ", e.getMessage());
         return (false);
     }
@@ -425,7 +423,7 @@ bool MIPSolverGurobi::addLinearTermToConstraint(double coefficient, int variable
     {
         constraintLinearExpression += coefficient * gurobiModel->getVar(variableIndex);
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when adding linear term to constraint: ", e.getMessage());
         return (false);
@@ -440,7 +438,7 @@ bool MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int first
     {
         constraintQuadraticExpression += coefficient * gurobiModel->getVar(firstVariableIndex) * gurobiModel->getVar(secondVariableIndex);
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when adding quadratic term to constraint: ", e.getMessage());
         return (false);
@@ -456,7 +454,7 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
         if (constant != 0.0)
             constraintLinearExpression += constant;
 
-        if (constraintQuadraticExpression != 0.0)
+        if (constraintQuadraticExpression.size() == 0)
         {
             if (valueLHS == valueRHS)
             {
@@ -464,11 +462,19 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
             }
             else if (valueLHS < valueRHS)
             {
-                gurobiModel->addConstr(valueLHS <= constraintLinearExpression <= valueRHS, name);
+                if (valueLHS > SHOT_DBL_MIN)
+                    gurobiModel->addConstr(valueLHS <= constraintLinearExpression, name + "_a");
+
+                if (valueRHS < SHOT_DBL_MAX)
+                    gurobiModel->addConstr(constraintLinearExpression <= valueRHS, name + "_b");
             }
             else
             {
-                gurobiModel->addConstr(valueLHS >= constraintLinearExpression >= valueRHS, name);
+                if (valueLHS < SHOT_DBL_MAX)
+                    gurobiModel->addConstr(valueLHS >= constraintLinearExpression, name + "_a");
+
+                if (valueRHS > SHOT_DBL_MIN)
+                    gurobiModel->addConstr(constraintLinearExpression >= valueRHS, name + "_b");
             }
         }
         else
@@ -479,15 +485,24 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
             }
             else if (valueLHS < valueRHS)
             {
-                gurobiModel->addQConstr(valueLHS <= constraintLinearExpression + constraintQuadraticExpression <= valueRHS, name);
+                if (valueLHS > SHOT_DBL_MIN)
+                    gurobiModel->addQConstr(valueLHS <= constraintLinearExpression + constraintQuadraticExpression, name + "_a");
+
+                if (valueRHS < SHOT_DBL_MAX)
+                    gurobiModel->addQConstr(constraintLinearExpression + constraintQuadraticExpression <= valueRHS, name + "_b");
             }
             else
             {
-                gurobiModel->addQConstr(valueLHS >= constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name);
+
+                if (valueLHS < SHOT_DBL_MAX)
+                    gurobiModel->addQConstr(valueLHS >= constraintLinearExpression + constraintQuadraticExpression, name + "_a");
+
+                if (valueRHS > SHOT_DBL_MIN)
+                    gurobiModel->addQConstr(constraintLinearExpression + constraintQuadraticExpression >= valueRHS, name + "_b");
             }
         }
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when adding constraint to model: ", e.getMessage());
         return (false);
@@ -503,7 +518,7 @@ bool MIPSolverGurobi::finalizeProblem()
     {
         gurobiModel->update();
     }
-    catch (GrbException &e)
+    catch (GRBException &e)
     {
         env->output->outputError("Gurobi exception caught when finalizing model", e.getMessage());
         return (false);
@@ -1017,7 +1032,7 @@ void MIPSolverGurobi::checkParameters()
 
 std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
 {
-    return (variableLowerBounds, variableUpperBounds));
+    return (std::make_pair(variableLowerBounds, variableUpperBounds));
 }
 
 int MIPSolverGurobi::getNumberOfExploredNodes()

@@ -163,7 +163,7 @@ void GurobiCallback::callback()
                 }
 
                 tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
-                tmpPt.objectiveValue = env->problem->objectiveFunction->calculate(primalSolution);
+                tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
                 tmpPt.point = primalSolution;
 
                 env->process->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
@@ -194,7 +194,7 @@ void GurobiCallback::callback()
 
                 if (env->problem->properties.numberOfNonlinearConstraints > 0)
                 {
-                    auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(primalSolution, env->reformulatedProblem->nonlinearConstraints);
+                    auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
                     tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
                 }
 
@@ -240,6 +240,13 @@ void GurobiCallback::callback()
             if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
+
+                //Remove??
+                if (maxDev.normalizedValue <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+                {
+                    return;
+                }
+
                 solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
             }
 
@@ -252,8 +259,6 @@ void GurobiCallback::callback()
 
             addLazyConstraint(candidatePoints);
 
-            currIter->maxDeviation = mostDevConstr.value;
-            currIter->maxDeviationConstraint = mostDevConstr.index;
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
             currIter->objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
 
@@ -328,9 +333,19 @@ void GurobiCallback::callback()
 
                 VectorDouble primalSolution(numVar);
 
-                for (int i = 0; i < numVar; i++)
+                for (int i = 0; i < primalSol.size(); i++)
                 {
                     setSolution(vars[i], primalSol.at(i));
+                }
+
+                if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+                {
+                    setSolution(vars[numVar - 1], env->process->getPrimalBound());
+                }
+
+                if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+                {
+                    tmpVals.add(env->process->getPrimalBound());
                 }
 
                 lastUpdatedPrimal = primalBound;
@@ -436,25 +451,25 @@ GurobiCallback::GurobiCallback(GRBVar *xvars, EnvironmentPtr envPtr)
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
-        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(new TaskUpdateInteriorPoint(env));
+        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(std::make_shared<TaskUpdateInteriorPoint>(env));
 
-        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsESH>(new TaskSelectHyperplanePointsESH(env));
+        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsESH>(std::make_shared<TaskSelectHyperplanePointsESH>(env));
     }
     else
     {
-        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsECP>(new TaskSelectHyperplanePointsECP(env));
+        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsECP>(std::make_shared<TaskSelectHyperplanePointsECP>(env));
     }
 
-    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
+    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env));
 
     if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
+        taskSelectHPPtsByObjectiveLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env));
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch(env));
+        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(std::make_shared<TaskSelectPrimalCandidatesFromLinesearch>(env));
     }
 
     lastUpdatedPrimal = env->process->getPrimalBound();
@@ -494,10 +509,20 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
             tUpdateInteriorPoint->run();
 
             static_cast<TaskSelectHyperplanePointsESH *>(taskSelectHPPts.get())->run(candidatePoints);
+
+            if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+            {
+                taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+            }
         }
         else
         {
             static_cast<TaskSelectHyperplanePointsECP *>(taskSelectHPPts.get())->run(candidatePoints);
+
+            if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+            {
+                taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+            }
         }
 
         for (auto hp : env->process->hyperplaneWaitingList)

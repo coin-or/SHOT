@@ -37,7 +37,7 @@ class MIPSolverCallbackBase
 
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> tSelectPrimNLP;
     std::shared_ptr<TaskBase> taskSelectHPPts;
-    std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch> taskUpdateObjectiveByLinesearch;
+    std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch> taskSelectHPPtsByObjectiveLinesearch;
     std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch> taskSelectPrimalSolutionFromLinesearch;
     std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
 

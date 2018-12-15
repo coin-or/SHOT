@@ -26,10 +26,9 @@ void TaskCheckConstraintTolerance::run()
     if (currIter->solutionPoints.size() == 0)
         return;
 
-    if (env->reformulatedProblem->objectiveFunction->properties.classification <= E_ObjectiveFunctionClassification::Quadratic)
+    if (env->reformulatedProblem->properties.isMIQPProblem || env->reformulatedProblem->properties.isQPProblem)
         return;
 
-    bool objectiveAndConstraintsValid = false;
     auto constraintTolerance = env->settings->getDoubleSetting("ConstraintTolerance", "Termination");
 
     // Checks it the nonlinear objective is fulfilled

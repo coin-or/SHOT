@@ -159,8 +159,11 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &v
 
     for (int i = 0; i < solution.point.size(); i++)
     {
-        str << variables.at(i)->name;
-        str << "\t";
+        if (i < variables.size())
+            str << variables.at(i)->name;
+        else
+            str << '\t';
+        str << '\t';
         str << toStringFormat(solution.point.at(i), "%.8f", false);
         str << '\n';
     }

@@ -51,7 +51,7 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     {
         return (addLinearConstraint(elements, constant, false));
     }
-    virtual int addLinearConstraint(conststd::vector<PairIndexValue> &elements, double constant, bool isGreaterThan);
+    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan);
 
     virtual void createHyperplane(Hyperplane hyperplane)
     {

@@ -24,6 +24,8 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         throw new ErrorClass("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
     }
 
+    bool solverSelected = false;
+
     if (useLazyStrategy)
     {
 #ifdef HAS_CPLEX
@@ -32,34 +34,38 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #ifdef HAS_CPLEX_NEW_CALLBACK
             if (env->settings->getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
             {
-                env->dualSolver = MIPSolverPtr(new MIPSolverCplexLazy(env));
+                env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexLazy>(env));
                 env->process->usedMIPSolver = ES_MIPSolver::Cplex;
                 env->output->outputInfo("Cplex with lazy callbacks selected as MIP solver.");
+                solverSelected = true;
             }
             else
 #endif
             {
-                env->dualSolver = MIPSolverPtr(new MIPSolverCplexLazyOriginalCallback(env));
+                env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexLazyOriginalCallback>(env));
                 env->process->usedMIPSolver = ES_MIPSolver::Cplex;
                 env->output->outputInfo("Cplex with original lazy callbacks selected as MIP solver.");
+                solverSelected = true;
             }
         }
 #endif
 
 #ifdef HAS_GUROBI
-        if (solver == ES_MIPSolver::Gurobi)
+        else if (solver == ES_MIPSolver::Gurobi)
         {
-            env->dualSolver = MIPSolverPtr(new MIPSolverGurobiLazy(env));
+            env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobiLazy>(env));
             env->process->usedMIPSolver = ES_MIPSolver::Gurobi;
             env->output->outputInfo("Gurobi with lazy callbacks selected as MIP solver.");
+            solverSelected = true;
         }
 #endif
 
         if (solver == ES_MIPSolver::Cbc)
         {
-            env->dualSolver = MIPSolverPtr(new MIPSolverOsiCbc(env));
+            env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
             env->process->usedMIPSolver = ES_MIPSolver::Cbc;
             env->output->outputInfo("Cbc selected as MIP solver.");
+            solverSelected = true;
         }
     }
     else
@@ -68,26 +74,37 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #ifdef HAS_CPLEX
         if (solver == ES_MIPSolver::Cplex)
         {
-            env->dualSolver = MIPSolverPtr(new MIPSolverCplex(env));
+            env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverCplex>(env));
             env->process->usedMIPSolver = ES_MIPSolver::Cplex;
             env->output->outputInfo("Cplex selected as MIP solver.");
+            solverSelected = true;
         }
 #endif
 
 #ifdef HAS_GUROBI
         if (solver == ES_MIPSolver::Gurobi)
         {
-            env->dualSolver = MIPSolverPtr(new MIPSolverGurobi(env));
+            env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));
             env->process->usedMIPSolver = ES_MIPSolver::Gurobi;
             env->output->outputInfo("Gurobi selected as MIP solver.");
+            solverSelected = true;
         }
 #endif
         if (solver == ES_MIPSolver::Cbc)
         {
-            env->dualSolver = MIPSolverPtr(new MIPSolverOsiCbc(env));
+            env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
             env->process->usedMIPSolver = ES_MIPSolver::Cbc;
             env->output->outputInfo("Cbc selected as MIP solver.");
+            solverSelected = true;
         }
+    }
+
+    if (!solverSelected)
+    {
+        env->dualSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
+        env->process->usedMIPSolver = ES_MIPSolver::Cbc;
+        env->output->outputError("Cbc selected as MIP solver since no other solver is available.");
+        solverSelected = true;
     }
 
     env->process->stopTimer("DualStrategy");

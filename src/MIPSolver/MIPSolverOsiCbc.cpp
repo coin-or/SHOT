@@ -28,12 +28,22 @@ bool MIPSolverOsiCbc::initializeProblem()
 {
     discreteVariablesActivated = true;
 
+    if (env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    {
+        this->cutOff = SHOT_DBL_MAX;
+    }
+    else
+    {
+        this->cutOff = SHOT_DBL_MIN;
+    }
+
     osiInterface = std::make_unique<OsiClpSolverInterface>();
     coinModel = std::make_unique<CoinModel>();
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
 
+    checkParameters();
     return (true);
 }
 
@@ -201,6 +211,10 @@ bool MIPSolverOsiCbc::addVariable(std::string name, E_VariableType type, double 
             break;
 
         case E_VariableType::Integer:
+            isProblemDiscrete = true;
+            coinModel->setInteger(index);
+            break;
+
         case E_VariableType::Binary:
             isProblemDiscrete = true;
             coinModel->setInteger(index);
@@ -238,7 +252,7 @@ bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableI
 {
     try
     {
-        coinModel->setColObjective(coefficient, variableIndex);
+        coinModel->setColObjective(variableIndex, coefficient);
     }
     catch (std::exception &e)
     {
@@ -299,7 +313,6 @@ bool MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variable
         return (false);
     }
 
-    numberOfConstraints++;
     return (true);
 }
 
@@ -414,7 +427,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 
         for (int i = 0; i < numberOfVariables; i++)
         {
-            if (variableTypes.at(i) ==E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
+            if (variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setInteger(i);
             }
@@ -572,7 +585,7 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {
     std::vector<std::pair<std::string, double>> variableValues;
 
-    for (int i = 0; i < numberOfVariables; i++)
+    for (int i = 0; i < point.size(); i++)
     {
         std::pair<std::string, double> tmpPair;
 
@@ -583,6 +596,16 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
     }
     try
     {
+        if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+        {
+            std::pair<std::string, double> tmpPair;
+
+            tmpPair.first = variableNames.back();
+            tmpPair.second = env->process->getPrimalBound();
+
+            variableValues.push_back(tmpPair);
+        }
+
         MIPStarts.push_back(variableValues);
     }
     catch (std::exception &e)

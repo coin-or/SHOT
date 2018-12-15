@@ -13,6 +13,8 @@
 #include "MIPSolverGurobi.h"
 #include "MIPSolverCallbackBase.h"
 
+#include "gurobi_c++.h"
+
 namespace SHOT
 {
 class MIPSolverGurobiLazy : public MIPSolverGurobi

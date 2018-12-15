@@ -18,11 +18,9 @@ class TaskSelectHyperplanePointsByObjectiveLinesearch : public TaskBase
   public:
     TaskSelectHyperplanePointsByObjectiveLinesearch(EnvironmentPtr envPtr);
     virtual ~TaskSelectHyperplanePointsByObjectiveLinesearch();
+
     virtual void run();
+    virtual void run(std::vector<SolutionPoint> solPoints);
     virtual std::string getType();
-
-    bool updateObjectiveInPoint(SolutionPoint &solution);
-
-  private:
 };
 } // namespace SHOT

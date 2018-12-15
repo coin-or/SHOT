@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17 )
 # Sets the release types, e.g. Release, Debug
 set(CMAKE_BUILD_TYPE Debug)
 
-option (COMPILE_TESTS "Should the automated tests be compiled" ON)
+option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
@@ -22,7 +22,7 @@ option (HAS_OS "Is COIN-OR Optimization Services available" ON)
 
 # Sets the paths required. Edit these to suit your system:
 set(COINOS_DIR /opt/OS-2.10)
-set(GUROBI_DIR /opt/gurobi/gurobi801)
+set(GUROBI_DIR /opt/gurobi/gurobi810)
 set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /opt/gams/gams25.1.2)
 
@@ -243,7 +243,7 @@ endif (HAS_CPLEX)
 
 if (HAS_GUROBI)
   # Change the Gurobi library below to match the version on the system
-  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi80.so)
+  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
   target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
 endif (HAS_GUROBI)
 

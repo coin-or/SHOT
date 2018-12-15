@@ -70,6 +70,8 @@ bool MIPSolverCplex::initializeProblem()
 
     checkParameters();
     modelUpdated = false;
+
+    return (true);
 }
 
 /*
@@ -1044,9 +1046,14 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     int numVar = cplexVars.getSize();
 
-    for (int i = 0; i < numVar; i++)
+    for (int i = 0; i < point.size(); i++)
     {
         startVal.add(point.at(i));
+    }
+
+    if (this->hasAuxilliaryObjectiveVariable() && numVar == point.size() + 1)
+    {
+        startVal.add(env->process->getPrimalBound());
     }
 
     try

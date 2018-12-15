@@ -40,7 +40,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, 
 
     if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
+        taskSelectHPPtsByObjectiveLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -144,8 +144,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
 
                 solutionPoints.at(0) = tmpSolPt;
 
-                if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting(
-                        "CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+                if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
                 {
                     static_cast<TaskSelectHyperplanePointsESH *>(taskSelectHPPts.get())->run(solutionPoints);
                 }
@@ -154,9 +153,9 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
                     static_cast<TaskSelectHyperplanePointsECP *>(taskSelectHPPts.get())->run(solutionPoints);
                 }
 
-                if (env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+                if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
                 {
-                    taskUpdateObjectiveByLinesearch->updateObjectiveInPoint(solutionPoints.at(0));
+                    taskSelectHPPtsByObjectiveLinesearch->run(solutionPoints);
                 }
 
                 env->process->getCurrentIteration()->relaxedLazyHyperplanesAdded += (env->process->hyperplaneWaitingList.size() - waitingListSize);
@@ -192,12 +191,6 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             {
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(solution, env->reformulatedProblem->nonlinearConstraints);
 
-                //Remove??
-                if (maxDev.normalizedValue <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
-                {
-                    return;
-                }
-
                 solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
             }
 
@@ -221,6 +214,58 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             auto bounds = std::make_pair(env->process->getDualBound(), env->process->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
+            /*
+            auto constraintTolerance = env->settings->getDoubleSetting("ConstraintTolerance", "Termination");
+
+            bool auxilliaryObjectiveConstraintIsFulfilled = false;
+            bool quadraticConstraintAreFulfilled = false;
+            bool nonlinearConstraintAreFulfilled = false;
+
+            // Checks it the nonlinear objective is fulfilled
+            if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+            {
+                if (env->reformulatedProblem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point) - currIter->objectiveValue < constraintTolerance)
+                {
+                    auxilliaryObjectiveConstraintIsFulfilled = true;
+                }
+            }
+            else
+            {
+                auxilliaryObjectiveConstraintIsFulfilled = true;
+            }
+
+            // Checks it the quadratic constraints are fulfilled
+            if (env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
+            {
+                if (env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
+                {
+                    quadraticConstraintAreFulfilled = true;
+                }
+            }
+            else
+            {
+                quadraticConstraintAreFulfilled = true;
+            }
+
+            // Checks it the nonlinear constraints are fulfilled
+            if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+            {
+                if (env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
+                {
+                    nonlinearConstraintAreFulfilled = true;
+                }
+            }
+            else
+            {
+                nonlinearConstraintAreFulfilled = true;
+            }
+
+            if (auxilliaryObjectiveConstraintIsFulfilled && quadraticConstraintAreFulfilled && nonlinearConstraintAreFulfilled)
+            {
+                std::cout << "hej\n";
+                return;
+            }*/
+
             if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
                 taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
@@ -241,7 +286,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             {
                 bool addedIntegerCut = false;
 
-                for (auto ic : env->process->integerCutWaitingList)
+                for (auto &ic : env->process->integerCutWaitingList)
                 {
                     this->createIntegerCut(ic, context);
                     addedIntegerCut = true;
@@ -282,6 +327,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             for (int i = 0; i < primalSol.size(); i++)
             {
                 tmpVals.add(primalSol.at(i));
+            }
+
+            if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+            {
+                tmpVals.add(env->process->getPrimalBound());
             }
 
             context.postHeuristicSolution(cplexVars, tmpVals, primalBound,
@@ -396,8 +446,7 @@ void CplexCallback::createIntegerCut(VectorInteger binaryIndexes, const IloCplex
     expr.end();
 }
 
-void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints,
-                                      const IloCplex::Callback::Context &context)
+void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context &context)
 {
     try
     {
@@ -408,10 +457,20 @@ void CplexCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints
             tUpdateInteriorPoint->run();
 
             static_cast<TaskSelectHyperplanePointsESH *>(taskSelectHPPts.get())->run(candidatePoints);
+
+            if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+            {
+                taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+            }
         }
         else
         {
             static_cast<TaskSelectHyperplanePointsECP *>(taskSelectHPPts.get())->run(candidatePoints);
+
+            if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+            {
+                taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+            }
         }
 
         for (auto hp : env->process->hyperplaneWaitingList)
@@ -481,6 +540,8 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             //Extract the model if we have updated the constraints
             cplexInstance.extract(cplexModel);
         }
+
+        activateDiscreteVariables(true); // Otherwise we will get an error from CPLEX
 
         CplexCallback cCallback(env, cplexVars, cplexInstance);
         CPXLONG contextMask = 0;

@@ -200,7 +200,7 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
         if (maxDev.isFulfilledRHS && !maxDev.isFulfilledLHS)
         {
             signFactor = -1.0;
-            constant = signFactor * maxDev.normalizedLHSValue;
+            constant = maxDev.normalizedLHSValue;
         }
         else
         {
@@ -208,20 +208,28 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
         }
 
         gradient = hyperplane.sourceConstraint->calculateGradient(hyperplane.generatedPoint);
-        env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size()) + " elements. Constraint error: " + std::to_string(constant) + ".");
+        env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size()) + " elements.");
     }
 
     for (auto const &G : gradient)
     {
         PairIndexValue pair;
         pair.index = G.first->index;
-        pair.value = signFactor * G.second;
+        pair.value = G.second;
 
         elements.push_back(pair);
 
-        constant += -G.second * hyperplane.generatedPoint.at(G.first->index);
+        constant += (-G.second) * hyperplane.generatedPoint.at(G.first->index);
 
-        env->output->outputInfo("     Gradient for variable " + G.first->name + " in point " + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": " + std::to_string(G.second));
+        env->output->outputInfo("     Gradient for variable " + G.first->name + " in point " + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": " + std::to_string(signFactor * G.second));
+    }
+
+    if (signFactor != 1.0) // have a greater than constraint
+    {
+        for (auto &E : elements)
+            E.value = -1.0 * E.value;
+
+        constant = -1.0 * constant;
     }
 
     boost::optional<std::pair<std::vector<PairIndexValue>, double>> optional;

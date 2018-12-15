@@ -25,7 +25,7 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
 
         if (env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
         {
-            taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
+            taskSelectHPPtsByObjectiveLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
         }
     }
     else
@@ -66,7 +66,20 @@ void HCallbackI::main() // Called at each node...
             tmpVals.add(primalSol.at(i));
         }
 
-        setSolution(cplexVars, tmpVals);
+        if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+        {
+            tmpVals.add(env->process->getPrimalBound());
+        }
+
+        try
+        {
+            setSolution(cplexVars, tmpVals);
+        }
+        catch (IloException &e)
+        {
+            env->output->outputError("Error when setting primal solution as starting point in heuristic callback:",
+                                     e.getMessage());
+        }
 
         tmpVals.end();
     }
@@ -200,7 +213,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 
     if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskUpdateObjectiveByLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
+        taskSelectHPPtsByObjectiveLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -243,9 +256,11 @@ void CtCallbackI::main()
 
     this->getValues(tmpVals, cplexVars);
 
-    VectorDouble solution(tmpVals.getSize());
+    int size = (env->dualSolver->hasAuxilliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
-    for (int i = 0; i < tmpVals.getSize(); i++)
+    VectorDouble solution(size);
+
+    for (int i = 0; i < size; i++)
     {
         solution.at(i) = tmpVals[i];
     }
@@ -282,7 +297,6 @@ void CtCallbackI::main()
         if ((isMinimization && tmpPrimalObjBound < env->process->getPrimalBound()) || (!isMinimization && tmpPrimalObjBound > env->process->getPrimalBound()))
         {
             IloNumArray tmpPrimalVals(this->getEnv());
-
             this->getIncumbentValues(tmpPrimalVals, cplexVars);
 
             VectorDouble primalSolution(tmpPrimalVals.getSize());
@@ -291,7 +305,6 @@ void CtCallbackI::main()
             {
                 primalSolution.at(i) = tmpPrimalVals[i];
             }
-
             SolutionPoint tmpPt;
 
             if (env->problem->properties.numberOfNonlinearConstraints > 0)
@@ -303,9 +316,7 @@ void CtCallbackI::main()
             tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
             tmpPt.objectiveValue = this->getIncumbentObjValue();
             tmpPt.point = primalSolution;
-
             env->process->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
-
             tmpPrimalVals.end();
             primalSolution.clear();
         }
@@ -366,7 +377,7 @@ void CtCallbackI::main()
 
     if (env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
     {
-        taskUpdateObjectiveByLinesearch->updateObjectiveInPoint(candidatePoints.at(0));
+        taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
     }
 
     for (auto hp : env->process->hyperplaneWaitingList)

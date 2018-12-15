@@ -961,6 +961,33 @@ void SHOTSolver::verifySettings()
         env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
 #endif
     }
+
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
+    bool correctSolverDefined = false;
+#ifdef HAS_CPLEX
+    if (solver == ES_MIPSolver::Cplex)
+    {
+        correctSolverDefined = true;
+    }
+#endif
+
+#ifdef HAS_GUROBI
+    if (solver == ES_MIPSolver::Gurobi)
+    {
+        correctSolverDefined = true;
+    }
+#endif
+
+    if (solver == ES_MIPSolver::Cbc)
+    {
+        correctSolverDefined = true;
+    }
+
+    if (!correctSolverDefined)
+    {
+        env->output->outputError("SHOT has not been compiled with support selected MIP solver. Defaulting to Cbc.");
+        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+    }
 }
 
 void SHOTSolver::updateSetting(std::string name, std::string category, std::string value)
