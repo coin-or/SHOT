@@ -161,8 +161,8 @@ void GAMS2OS::createOSObjects()
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(gmo, 1);
     gmoObjStyleSet(gmo, gmoObjType_Fun);
-    gmoMinfSet(gmo, -OSDBL_MAX);
-    gmoPinfSet(gmo, OSDBL_MAX);
+    gmoMinfSet(gmo, SHOT_DBL_MIN);
+    gmoPinfSet(gmo, SHOT_DBL_MAX);
     gmoIndexBaseSet(gmo, 0);
     gmoUseQSet(gmo, 1);
 
@@ -300,18 +300,18 @@ void GAMS2OS::createOSObjects()
             break;
 
         case gmoequ_L:
-            lb = -OSDBL_MAX;
+            lb = SHOT_DBL_MIN;
             ub = gmoGetRhsOne(gmo, i);
             break;
 
         case gmoequ_G:
             lb = gmoGetRhsOne(gmo, i);
-            ub = OSDBL_MAX;
+            ub = SHOT_DBL_MAX;
             break;
 
         case gmoequ_N:
-            lb = -OSDBL_MAX;
-            ub = OSDBL_MAX;
+            lb = SHOT_DBL_MIN;
+            ub = SHOT_DBL_MAX;
             break;
 
         default:

@@ -27,8 +27,8 @@ Iteration::Iteration(EnvironmentPtr envPtr)
     else
         this->totNumHyperplanes = env->process->iterations.at(env->process->iterations.size() - 1).totNumHyperplanes;
 
-    this->maxDeviation = OSDBL_MAX;
-    this->boundaryDistance = OSDBL_MAX;
+    this->maxDeviation = SHOT_DBL_MAX;
+    this->boundaryDistance = SHOT_DBL_MAX;
 
     this->objectiveValue = NAN;
     this->MIPSolutionLimitUpdated = false;
@@ -78,7 +78,7 @@ bool Iteration::isMIP()
 
 SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 {
-    double tmpVal = -OSDBL_MAX;
+    double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
     for (int i = 0; i < solutionPoints.size(); i++)
@@ -95,7 +95,7 @@ SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 
 int Iteration::getSolutionPointWithSmallestDeviationIndex()
 {
-    double tmpVal = -OSDBL_MAX;
+    double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
     for (int i = 0; i < solutionPoints.size(); i++)

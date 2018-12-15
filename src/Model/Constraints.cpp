@@ -284,7 +284,9 @@ void NonlinearConstraint::updateFactorableFunction()
 double NonlinearConstraint::calculateFunctionValue(const VectorDouble &point)
 {
     double value = QuadraticConstraint::calculateFunctionValue(point);
-    value += nonlinearExpression->calculate(point);
+
+    if (this->properties.hasNonlinearExpression)
+        value += nonlinearExpression->calculate(point);
 
     return value;
 };
@@ -292,7 +294,9 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble &point)
 Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
 {
     Interval value = QuadraticConstraint::calculateFunctionValue(intervalVector);
-    value += nonlinearExpression->calculate(intervalVector);
+
+    if (this->properties.hasNonlinearExpression)
+        value += nonlinearExpression->calculate(intervalVector);
 
     return value;
 };

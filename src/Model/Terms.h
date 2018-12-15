@@ -71,6 +71,8 @@ class LinearTerms
   public:
     std::vector<LinearTermPtr> terms;
 
+    LinearTerms(){};
+
     void add(LinearTermPtr term)
     {
         terms.push_back(term);

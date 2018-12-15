@@ -95,16 +95,14 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
     {
         if (E.value != E.value) //Check for NaN
         {
-            env->output->outputError(
-                "     Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
             break;
         }
 
         if (isinf(E.value))
         {
-            env->output->outputError(
-                "     Warning: hyperplane not generated, inf found in linear terms!");
+            env->output->outputError("     Warning: hyperplane not generated, inf found in linear terms!");
             hyperplaneIsOk = false;
             break;
         }
@@ -112,7 +110,50 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     if (hyperplaneIsOk)
     {
+        std::string source = "";
+
+        switch (hyperplane.source)
+        {
+        case E_HyperplaneSource::MIPOptimalLinesearch:
+            source = "MIP linesearch";
+            break;
+        case E_HyperplaneSource::LPRelaxedLinesearch:
+            source = "LP linesearch";
+            break;
+        case E_HyperplaneSource::MIPOptimalSolutionPoint:
+            source = "MIP optimal solution";
+            break;
+        case E_HyperplaneSource::MIPSolutionPoolSolutionPoint:
+            source = "MIP solution pool";
+            break;
+        case E_HyperplaneSource::LPRelaxedSolutionPoint:
+            source = "LP solution";
+            break;
+        case E_HyperplaneSource::LPFixedIntegers:
+            source = "LP fixed integer";
+            break;
+        case E_HyperplaneSource::PrimalSolutionSearch:
+            source = "primal heuristic";
+            break;
+        case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
+            source = "primal heuristic (interior objective)";
+            break;
+        case E_HyperplaneSource::InteriorPointSearch:
+            source = "interior point search";
+            break;
+        case E_HyperplaneSource::MIPCallbackRelaxed:
+            source = "MIP callback relaxed";
+            break;
+        case E_HyperplaneSource::ObjectiveLinesearch:
+            source = "objective linesearch";
+            break;
+        default:
+            break;
+        }
+
         GeneratedHyperplane genHyperplane;
+
+        env->output->outputWarning("     Hyperplane generated from: " + source);
 
         int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second);
 
@@ -149,7 +190,7 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
 
         elements.push_back(pair);
 
-        env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size()) + " elements.");
+        env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size()) + " elements and constant " + std::to_string(constant));
     }
     else
     {

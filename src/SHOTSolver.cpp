@@ -133,8 +133,6 @@ bool SHOTSolver::setProblem(std::string fileName)
         return (false);
     }
 
-    //OSInstance *tmpInstance;
-
     boost::filesystem::path problemExtension = problemFile.extension();
     boost::filesystem::path problemPath = problemFile.parent_path();
 
@@ -147,21 +145,13 @@ bool SHOTSolver::setProblem(std::string fileName)
 
             if (modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::OSiL) != E_ProblemCreationStatus::NormalCompletion)
             {
-            }
-            else
-            {
+                return (false);
             }
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
             env->reformulatedProblem = problem;
 
-            //std::cout << problem << std::endl;
-
-            /*std::string fileContents = UtilityFunctions::getFileAsString(fileName);
-
-            tmpInstance = env->model->getProblemInstanceFromOSiL(fileContents);
-*/
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
 
             if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
@@ -186,12 +176,6 @@ bool SHOTSolver::setProblem(std::string fileName)
             env->problem = problem;
             env->reformulatedProblem = problem;
 
-            /*nl2os = std::unique_ptr<OSnl2OS>(new OSnl2OS());
-            nl2os->readNl(fileName);
-            nl2os->createOSObjects();
-
-            tmpInstance = nl2os->osinstance;*/
-
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
 #ifdef HAS_GAMS
@@ -215,7 +199,6 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
             gms2os->readGms(fileName);
             gms2os->createOSObjects();
-            //tmpInstance = gms2os->osinstance;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -224,7 +207,6 @@ bool SHOTSolver::setProblem(std::string fileName)
             gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
             gms2os->readCntr(fileName);
             gms2os->createOSObjects();
-            //tmpInstance = gms2os->osinstance;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -235,8 +217,6 @@ bool SHOTSolver::setProblem(std::string fileName)
 
             return (false);
         }
-
-        //tmpInstance->instanceHeader->source = fileName;
     }
     catch (const ErrorClass &eclass)
     {
@@ -250,7 +230,6 @@ bool SHOTSolver::setProblem(std::string fileName)
     //Removes path
     boost::filesystem::path problemName = problemFile.stem();
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
-    //tmpInstance->setInstanceName(problemName.string());
 
     if (static_cast<ES_OutputDirectory>(env->settings->getIntSetting("OutputDirectory", "Output")) == ES_OutputDirectory::Program)
     {
@@ -300,7 +279,7 @@ bool SHOTSolver::selectStrategy()
     bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
     bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
 
-    if (useQuadraticObjective && env->problem->properties.isMIQPProblem)
+    if ((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
     //MIQP problem
     {
         env->output->outputInfo(" Using MIQP solution strategy.");
@@ -315,6 +294,7 @@ bool SHOTSolver::selectStrategy()
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->process->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
+    //NLP problem
     else if (env->problem->properties.isNLPProblem)
     {
         env->output->outputInfo(" Using NLP solution strategy.");
@@ -416,6 +396,17 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
 
 bool SHOTSolver::solveProblem()
 {
+    if (env->problem->objectiveFunction->properties.isMinimize)
+    {
+        env->process->setDualBound(SHOT_DBL_MIN);
+        env->process->setPrimalBound(SHOT_DBL_MAX);
+    }
+    else
+    {
+        env->process->setDualBound(SHOT_DBL_MAX);
+        env->process->setPrimalBound(SHOT_DBL_MIN);
+    }
+
     bool result = solutionStrategy->solveProblem();
 
 #ifdef HAS_GAMS
@@ -490,25 +481,25 @@ void SHOTSolver::initializeSettings()
                                  "Tolerance when selecting the most constraint with largest deviation", 0.0, 1.0);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 2000,
-                                 "Iteration limit for minimax cutting plane solver", 1, OSINT_MAX);
+                                 "Iteration limit for minimax cutting plane solver", 1, SHOT_INT_MAX);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual", 1000,
-                                 "Iteration limit for minimization subsolver", 0, OSINT_MAX);
+                                 "Iteration limit for minimization subsolver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", true,
                                  "Reuse valid cutting planes in main dual model");
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual", 1.0,
-                                 "Absolute termination tolerance between LP and linesearch objective", 0.0, OSDBL_MAX);
+                                 "Absolute termination tolerance between LP and linesearch objective", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual", 1.0,
-                                 "Relative termination tolerance between LP and linesearch objective", 0.0, OSDBL_MAX);
+                                 "Relative termination tolerance between LP and linesearch objective", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -999999999999.0,
-                                 "Lower bound for minimax objective variable", -OSDBL_MAX, 0);
+                                 "Lower bound for minimax objective variable", SHOT_DBL_MIN, 0);
 
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
-                                 "Upper bound for minimax objective variable", -OSDBL_MAX, OSDBL_MAX);
+                                 "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     // Dual strategy settings: Interior point search strategy
 
@@ -539,18 +530,18 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("ESH.Linesearch.UniqueConstraints", "Dual", false, "Allow only one hyperplane per constraint per iteration");
 
     env->settings->createSetting("ESH.Linesearch.ConstraintTolerance", "Dual", 1e-8,
-                                 "Constraint tolerance for when not to add individual hyperplanes", 0, OSDBL_MAX);
+                                 "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
 
     // Dual strategy settings: Fixed integer (NLP) strategy
 
     env->settings->createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.0001,
-                                 "Constraint tolerance for fixed strategy", 0.0, OSDBL_MAX);
+                                 "Constraint tolerance for fixed strategy", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("FixedInteger.MaxIterations", "Dual", 20,
-                                 "Max LP iterations for fixed strategy", 0, OSINT_MAX);
+                                 "Max LP iterations for fixed strategy", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("FixedInteger.ObjectiveTolerance", "Dual", 0.001,
-                                 "Objective tolerance for fixed strategy", 0.0, OSDBL_MAX);
+                                 "Objective tolerance for fixed strategy", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("FixedInteger.Use", "Dual", false,
                                  "Solve a fixed LP problem if integer-values have not changes in several MIP iterations");
@@ -561,7 +552,7 @@ void SHOTSolver::initializeSettings()
                                  "Add hyperplane cuts to model only after optimal MIP solution");
 
     env->settings->createSetting("HyperplaneCuts.MaxPerIteration", "Dual", 200,
-                                 "Maximal number of hyperplanes to add per iteration", 0, OSINT_MAX);
+                                 "Maximal number of hyperplanes to add per iteration", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true,
                                  "Add integer cuts for infeasible integer-combinations for binary problems");
@@ -572,7 +563,7 @@ void SHOTSolver::initializeSettings()
     // Dual strategy settings: MIP solver
 
     env->settings->createSetting("MIP.CutOffTolerance", "Dual", 0.00001,
-                                 "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, OSDBL_MAX);
+                                 "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, SHOT_DBL_MAX);
 
     VectorString enumPresolve;
     enumPresolve.push_back("Never");
@@ -591,20 +582,20 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     env->settings->createSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual", 10000,
-                                 "Iterations without dual bound updates for forcing optimal MIP solution", 0, OSINT_MAX);
+                                 "Iterations without dual bound updates for forcing optimal MIP solution", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual", 1000.0,
-                                 "Time (s) without dual bound updates for forcing optimal MIP solution", 0, OSDBL_MAX);
+                                 "Time (s) without dual bound updates for forcing optimal MIP solution", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("MIP.SolutionLimit.IncreaseIterations", "Dual", 50,
-                                 "Max number of iterations between MIP solution limit increases", 0, OSINT_MAX);
+                                 "Max number of iterations between MIP solution limit increases", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("MIP.SolutionLimit.Initial", "Dual", 1, "Initial MIP solution limit", 1, OSINT_MAX);
+    env->settings->createSetting("MIP.SolutionLimit.Initial", "Dual", 1, "Initial MIP solution limit", 1, SHOT_INT_MAX);
 
     env->settings->createSetting("MIP.SolutionLimit.UpdateTolerance", "Dual", 0.001,
-                                 "The constraint tolerance for when to update MIP solution limit", 0, OSDBL_MAX);
+                                 "The constraint tolerance for when to update MIP solution limit", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("MIP.SolutionPool.Capacity", "Dual", 100, "The maximum number of solutions in the solution pool", 0, OSINT_MAX);
+    env->settings->createSetting("MIP.SolutionPool.Capacity", "Dual", 100, "The maximum number of solutions in the solution pool", 0, SHOT_INT_MAX);
 
     VectorString enumMIPSolver;
     enumMIPSolver.push_back("Cplex");
@@ -627,17 +618,17 @@ void SHOTSolver::initializeSettings()
     // Dual strategy settings: Relaxation strategies
 
     env->settings->createSetting("Relaxation.Frequency", "Dual", 0,
-                                 "The frequency to solve an LP problem: 0: Disable", 0, OSINT_MAX);
+                                 "The frequency to solve an LP problem: 0: Disable", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("Relaxation.IterationLimit", "Dual", 200, "The max number of relaxed LP problems to solve initially", 0, OSINT_MAX);
+    env->settings->createSetting("Relaxation.IterationLimit", "Dual", 200, "The max number of relaxed LP problems to solve initially", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Relaxation.MaxLazyConstraints", "Dual", 0,
-                                 "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, OSINT_MAX);
+                                 "Max number of lazy constraints to add in relaxed solutions in single-tree strategy", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("Relaxation.TerminationTolerance", "Dual", 0.5,
                                  "Time limit (s) when solving LP problems initially");
 
-    env->settings->createSetting("Relaxation.TimeLimit", "Dual", 30.0, "Time limit (s) when solving LP problems initially", 0, OSDBL_MAX);
+    env->settings->createSetting("Relaxation.TimeLimit", "Dual", 30.0, "Time limit (s) when solving LP problems initially", 0, SHOT_DBL_MAX);
 
     // Dual strategy settings: Main tree strategy
 
@@ -651,15 +642,15 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("TreeStrategy.Multi.Reinitialize", "Dual", false, "Reinitialize the dual model in the subsolver each iteration");
 
     // Optimization model settings
-    env->settings->createSetting("ContinuousVariable.EmptyLowerBound", "Model", -9999999999.0, "Lower bound for continuous variables without bounds", 0, OSDBL_MAX);
+    env->settings->createSetting("ContinuousVariable.EmptyLowerBound", "Model", -9999999999.0, "Lower bound for continuous variables without bounds", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.EmptyUpperBound", "Model", 9999999999.0, "Upper bound for continuous variables without bounds", 0, OSDBL_MAX);
+    env->settings->createSetting("ContinuousVariable.EmptyUpperBound", "Model", 9999999999.0, "Upper bound for continuous variables without bounds", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0, "Lower bound for integer variables without bounds", 0, OSDBL_MAX);
+    env->settings->createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0, "Lower bound for integer variables without bounds", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, OSDBL_MAX);
+    env->settings->createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, OSDBL_MAX);
+    env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
 
     // Logging and output settings
     VectorString enumLogLevel;
@@ -722,15 +713,15 @@ void SHOTSolver::initializeSettings()
                                  "Dynamically update the call frequency based on success");
 
     env->settings->createSetting("FixedInteger.Frequency.Iteration", "Primal", 10,
-                                 "Max number of iterations between calls", 0, OSINT_MAX);
+                                 "Max number of iterations between calls", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("FixedInteger.Frequency.Time", "Primal", 5.0,
-                                 "Max duration (s) between calls", 0, OSDBL_MAX);
+                                 "Max duration (s) between calls", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("FixedInteger.DualPointGap.Relative", "Primal", 0.001,
-                                 "If the objective gap between the MIP point and dual solution is less than this the fixed strategy is activated", 0, OSDBL_MAX);
+                                 "If the objective gap between the MIP point and dual solution is less than this the fixed strategy is activated", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, OSINT_MAX);
+    env->settings->createSetting("FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
 
     VectorString enumPrimalNLPSolver;
     enumPrimalNLPSolver.push_back("CuttingPlane");
@@ -753,7 +744,7 @@ void SHOTSolver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.clear();
 
     env->settings->createSetting("FixedInteger.TimeLimit", "Primal", 10.0,
-                                 "Time limit (s) per NLP problem", 0, OSDBL_MAX);
+                                 "Time limit (s) per NLP problem", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("FixedInteger.Use", "Primal", true,
                                  "Use the fixed integer primal strategy");
@@ -841,7 +832,7 @@ void SHOTSolver::initializeSettings()
     // Subsolver settings: Ipopt
 
     env->settings->createSetting("Ipopt.ConstraintViolationTolerance", "Subsolver", 1E-8,
-                                 "Constraint violation tolerance in Ipopt", -OSDBL_MAX, OSDBL_MAX);
+                                 "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     VectorString enumIPOptSolver;
     enumIPOptSolver.push_back("ma27");
@@ -862,10 +853,10 @@ void SHOTSolver::initializeSettings()
     // Subsolver settings: root searches
 
     env->settings->createSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver", 0.0,
-                                 "Epsilon constraint tolerance for root search", 0.0, OSDBL_MAX);
+                                 "Epsilon constraint tolerance for root search", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("Rootsearch.MaxIterations", "Subsolver", 100, "Maximal root search iterations",
-                                 0, OSINT_MAX);
+                                 0, SHOT_INT_MAX);
 
     VectorString enumLinesearchMethod;
     enumLinesearchMethod.push_back("BoostTOMS748");
@@ -876,33 +867,33 @@ void SHOTSolver::initializeSettings()
     enumLinesearchMethod.clear();
 
     env->settings->createSetting("Rootsearch.TerminationTolerance", "Subsolver", 1e-16,
-                                 "Epsilon lambda tolerance for root search", 0.0, OSDBL_MAX);
+                                 "Epsilon lambda tolerance for root search", 0.0, SHOT_DBL_MAX);
 
     // Subsolver settings: termination
 
     env->settings->createSetting("ConstraintTolerance", "Termination", 1e-8,
-                                 "Termination tolerance for nonlinear constraints", 0, OSDBL_MAX);
+                                 "Termination tolerance for nonlinear constraints", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("ObjectiveConstraintTolerance", "Termination", 1e-8,
-                                 "Termination tolerance for the nonlinear objective constraint", 0, OSDBL_MAX);
+                                 "Termination tolerance for the nonlinear objective constraint", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("IterationLimit", "Termination", 200000, "Iteration limit for main strategy", 1,
-                                 OSINT_MAX);
+                                 SHOT_INT_MAX);
 
     env->settings->createSetting("ObjectiveGap.Absolute", "Termination", 0.001,
-                                 "Absolute gap termination tolerance for objective function", 0, OSDBL_MAX);
+                                 "Absolute gap termination tolerance for objective function", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("ObjectiveGap.Relative", "Termination", 0.001,
-                                 "Relative gap termination tolerance for objective function", 0, OSDBL_MAX);
+                                 "Relative gap termination tolerance for objective function", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ObjectiveStagnation.IterationLimit", "Termination", OSINT_MAX,
-                                 "Max number of iterations without significant objective value improvement", 0, OSINT_MAX);
+    env->settings->createSetting("ObjectiveStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
+                                 "Max number of iterations without significant objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("ObjectiveStagnation.Tolerance", "Termination", 0.000001,
-                                 "Objective value improvement tolerance", 0.0, OSDBL_MAX);
+                                 "Objective value improvement tolerance", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0,
-                                 OSDBL_MAX);
+                                 SHOT_DBL_MAX);
 
     // Hidden settings for problem information
 

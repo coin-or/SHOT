@@ -10,14 +10,13 @@
 
 #include "NLPSolverGAMS.h"
 #include "../GAMS/GAMS2OS.h"
-#include "../OptProblems/OptProblemNLPRelaxed.h"
 
 namespace SHOT
 {
 
 NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject) : INLPSolver(envPtr), modelingObject(modelingObject), modelingEnvironment(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)
 {
-    (gevHandle_t) gmoEnvironment(modelingObject);
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(modelingObject);
     strcpy(nlpsolver, "conopt");
     *nlpsolveropt = '\0';
 
@@ -70,12 +69,12 @@ void NLPSolverGAMS::unfixVariables()
 
 void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
 {
-    throw std::logic_error("saveOptionsToFile() not implemented");
+    //throw std::logic_error("saveOptionsToFile() not implemented");
 }
 
 void NLPSolverGAMS::saveProblemToFile(std::string fileName)
 {
-    throw std::logic_error("saveProblemToFile() not implemented");
+    //throw std::logic_error("saveProblemToFile() not implemented");
 }
 
 VectorDouble NLPSolverGAMS::getSolution()
@@ -172,21 +171,15 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     }
 }
 
-/*bool NLPSolverGAMS::createProblemInstance(OSInstance *origInstance)
+/*
+bool NLPSolverGAMS::createProblemInstance(gmoHandle_t GAMSModelingObject)
 {
-    dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
-
-    //GAMSOSInstance *gamsosinstance = static_cast<GAMSOSInstance *>(origInstance);
-    // TODO cannot do dynamic_cast to check type
-    //	if( gamsosinstance == NULL )
-    //		return false;
-
-    gmo = env->process->GAMSModelingObject;
-    gev = (gevHandle_t)gmoEnvironment(gmo);
+    modelingObject = GAMSModelingObject;
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmoHandle_t GAMSModelingObject;);
 
     return true;
 }*/
-
+/*
 /*bool NLPSolverGAMS::isObjectiveFunctionNonlinear()
 {
     return (NLPProblem->isObjectiveFunctionNonlinear());

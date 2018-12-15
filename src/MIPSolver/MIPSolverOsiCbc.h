@@ -168,7 +168,7 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     std::unique_ptr<CoinModel> coinModel;
 
     long int solLimit;
-    double cutOff /*= OSDBL_MAX*/;
+    double cutOff;
 
     std::vector<std::vector<std::pair<std::string, double>>> MIPStarts;
 

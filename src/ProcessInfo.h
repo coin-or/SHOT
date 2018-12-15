@@ -48,9 +48,12 @@ class ProcessInfo
     std::vector<PrimalFixedNLPCandidate> primalFixedNLPCandidates;
     std::vector<DualSolution> dualSolutionCandidates;
 
-    PairDouble currentObjectiveBounds;
+    // Contains the objective bounds. The first is the lower and the second is the upper bound.
+    // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
+    // for maximization problems, the lower bound is the primal while the upper bound is the dual objective value
 
-    PairDouble getCorrectedObjectiveBounds();
+    double currentDualBound;
+    double currentPrimalBound;
 
     void addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter,
                                     PairIndexValue maxConstrDev);

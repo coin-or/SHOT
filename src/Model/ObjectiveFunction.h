@@ -51,8 +51,6 @@ struct ObjectiveFunctionProperties
     bool hasQuadraticTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g for external functions
-
-    
 };
 
 class ObjectiveFunction
@@ -93,16 +91,21 @@ class LinearObjectiveFunction : public ObjectiveFunction
   public:
     LinearObjectiveFunction()
     {
+        linearTerms = LinearTerms();
     }
 
     LinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
     {
+        linearTerms = LinearTerms();
+
         direction = objectiveDirection;
         updateProperties();
     }
 
     LinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms, double constValue)
     {
+        linearTerms = LinearTerms();
+
         direction = objectiveDirection;
         linearTerms = linTerms;
         constant = constValue;
@@ -136,16 +139,23 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
   public:
     QuadraticObjectiveFunction()
     {
+        linearTerms = LinearTerms();
+        quadraticTerms = QuadraticTerms();
     }
 
     QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
     {
+        linearTerms = LinearTerms();
+        quadraticTerms = QuadraticTerms();
+
         direction = objectiveDirection;
         updateProperties();
     }
 
     QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, QuadraticTerms quadTerms, double constValue)
     {
+        linearTerms = LinearTerms();
+
         direction = objectiveDirection;
         quadraticTerms = quadTerms;
         constant = constValue;
@@ -197,16 +207,26 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
   public:
     NonlinearObjectiveFunction()
     {
+        this->linearTerms = LinearTerms();
+        this->quadraticTerms = QuadraticTerms();
+        this->linearTerms.terms = std::vector<LinearTermPtr>();
+        this->quadraticTerms.terms = std::vector<QuadraticTermPtr>();
     }
 
     NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
     {
+        linearTerms = LinearTerms();
+        quadraticTerms = QuadraticTerms();
+
         direction = objectiveDirection;
         updateProperties();
     }
 
     NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, NonlinearExpressionPtr nonlinExpr, double constValue)
     {
+        linearTerms = LinearTerms();
+        quadraticTerms = QuadraticTerms();
+
         direction = objectiveDirection;
         nonlinearExpression = nonlinExpr;
         constant = constValue;
@@ -215,6 +235,8 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 
     NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms, NonlinearExpressionPtr nonlinExpr, double constValue)
     {
+        quadraticTerms = QuadraticTerms();
+
         direction = objectiveDirection;
         linearTerms = linTerms;
         nonlinearExpression = nonlinExpr;

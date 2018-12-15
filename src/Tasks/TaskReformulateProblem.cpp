@@ -17,6 +17,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 {
     env->process->startTimer("ProblemReformulation");
 
+    bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
+    bool useQuadraticObjective = useQuadraticConstraints || (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
+    bool quadraticObjectiveRegardedAsNonlinear = false;
+
     auto newProblem = std::make_shared<Problem>(env);
     newProblem->name = env->problem->name + " (reformulated)";
 
@@ -32,8 +36,16 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     newProblem->numericConstraints.reserve(env->problem->numericConstraints.size());
     newProblem->linearConstraints.reserve(env->problem->linearConstraints.size());
-    newProblem->quadraticConstraints.reserve(env->problem->quadraticConstraints.size());
-    newProblem->nonlinearConstraints.reserve(env->problem->nonlinearConstraints.size());
+
+    if (useQuadraticConstraints)
+    {
+        newProblem->quadraticConstraints.reserve(env->problem->quadraticConstraints.size());
+        newProblem->nonlinearConstraints.reserve(env->problem->nonlinearConstraints.size());
+    }
+    else
+    {
+        newProblem->nonlinearConstraints.reserve(env->problem->nonlinearConstraints.size() + env->problem->quadraticConstraints.size());
+    }
 
     newProblem->factorableFunctionVariables.reserve(env->problem->factorableFunctionVariables.size());
     newProblem->factorableFunctions.reserve(env->problem->factorableFunctions.size());
@@ -49,9 +61,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     if (env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Linear)
     {
         auto objective = std::make_shared<LinearObjectiveFunction>();
-        auto originalObjective = std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction);
 
-        for (auto &T : originalObjective->linearTerms.terms)
+        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms.terms)
         {
             auto variable = newProblem->getVariable(T->variable->index);
             objective->add(std::make_shared<LinearTerm>(T->coefficient, variable));
@@ -60,18 +71,17 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         objective->direction = env->problem->objectiveFunction->direction;
         newProblem->add(objective);
     }
-    else if (env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
+    else if (useQuadraticObjective && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
     {
         auto objective = std::make_shared<QuadraticObjectiveFunction>();
-        auto originalObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
-        for (auto &T : originalObjective->linearTerms.terms)
+        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms.terms)
         {
             auto variable = newProblem->getVariable(T->variable->index);
             objective->add(std::make_shared<LinearTerm>(T->coefficient, variable));
         }
 
-        for (auto &T : originalObjective->quadraticTerms.terms)
+        for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms.terms)
         {
             auto firstVariable = newProblem->getVariable(T->firstVariable->index);
             auto secondVariable = newProblem->getVariable(T->secondVariable->index);
@@ -82,18 +92,17 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         objective->direction = env->problem->objectiveFunction->direction;
         newProblem->add(objective);
     }
-    else if (env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
+    else if (!useQuadraticObjective || env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
     {
         auto objective = std::make_shared<NonlinearObjectiveFunction>();
-        auto originalObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
-        for (auto &T : originalObjective->linearTerms.terms)
+        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms.terms)
         {
             auto variable = newProblem->getVariable(T->variable->index);
             objective->add(std::make_shared<LinearTerm>(T->coefficient, variable));
         }
 
-        for (auto &T : originalObjective->quadraticTerms.terms)
+        for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms.terms)
         {
             auto firstVariable = newProblem->getVariable(T->firstVariable->index);
             auto secondVariable = newProblem->getVariable(T->secondVariable->index);
@@ -101,14 +110,20 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             objective->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
         }
 
-        objective->add(copyNonlinearExpression(originalObjective->nonlinearExpression.get(), newProblem));
+        if (env->problem->objectiveFunction->properties.hasNonlinearExpression)
+        {
+            objective->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->nonlinearExpression.get(), newProblem));
+        }
+        else
+        {
+            quadraticObjectiveRegardedAsNonlinear = true;
+        }
 
         objective->direction = env->problem->objectiveFunction->direction;
         newProblem->add(objective);
     }
 
     newProblem->objectiveFunction->constant = env->problem->objectiveFunction->constant;
-    newProblem->objectiveFunction->updateProperties();
 
     // Copying constraints
     for (auto &C : env->problem->numericConstraints)
@@ -116,9 +131,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
         double valueRHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueRHS;
 
-        switch (C->properties.classification)
-        {
-        case (E_ConstraintClassification::Linear):
+        if (C->properties.classification == E_ConstraintClassification::Linear)
         {
             LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
 
@@ -130,9 +143,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             }
 
             newProblem->add(std::move(constraint));
-            break;
         }
-        case (E_ConstraintClassification::Quadratic):
+        else if (useQuadraticConstraints && C->properties.classification == E_ConstraintClassification::Quadratic)
         {
             QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
 
@@ -152,11 +164,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             }
 
             newProblem->add(std::move(constraint));
-            break;
         }
-        case (E_ConstraintClassification::Nonlinear):
+        else if (!useQuadraticConstraints || C->properties.classification == E_ConstraintClassification::Nonlinear)
         {
-
             double signfactor = 1.0;
 
             if (valueLHS > SHOT_DBL_MIN && valueRHS == SHOT_DBL_MAX)
@@ -189,31 +199,45 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                 constraint->add(std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
             }
 
-            if (signfactor == -1)
+            if (C->properties.hasNonlinearExpression)
             {
-                constraint->add(std::make_shared<ExpressionNegate>(
-                    copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem)));
-            }
-            else
-            {
-                constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
+                if (signfactor == -1)
+                {
+                    constraint->add(std::make_shared<ExpressionNegate>(
+                        copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem)));
+                }
+                else
+                {
+                    constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
+                }
             }
 
             newProblem->add(std::move(constraint));
-            break;
         }
-        default:
+        else
+        {
             env->output->outputAlways("Could not copy constraint with index" + std::to_string(C->index));
         }
     }
 
     newProblem->finalize();
+
+    // Fixing that a quadratic objective changed into a nonlinear constraint is correctly identified
+    if (quadraticObjectiveRegardedAsNonlinear && newProblem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
+    {
+        newProblem->objectiveFunction->properties.classification = E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear;
+        newProblem->properties.isMIQPProblem = false;
+        newProblem->properties.isMINLPProblem = true;
+    }
+
     env->reformulatedProblem = newProblem;
+
+    std::cout << env->problem << std::endl;
 
     std::cout << env->reformulatedProblem << std::endl;
 
     env->process->stopTimer("ProblemReformulation");
-} // namespace SHOT
+}
 
 TaskReformulateProblem::~TaskReformulateProblem()
 {

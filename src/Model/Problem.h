@@ -142,6 +142,7 @@ class Problem : public std::enable_shared_from_this<Problem>
                                                                               std::vector<std::shared_ptr<T>> &activeConstraints);
 
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const QuadraticConstraints constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NumericConstraints constraintSelection);
 

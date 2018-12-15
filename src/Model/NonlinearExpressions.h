@@ -69,7 +69,11 @@ class NonlinearExpression
 
 inline std::ostream &operator<<(std::ostream &stream, NonlinearExpressionPtr expr)
 {
-    stream << *expr;
+    if (expr != NULL)
+    {
+        stream << *expr;
+    }
+
     return stream;
 };
 
@@ -141,7 +145,7 @@ class ExpressionVariable : public NonlinearExpression
         variable->isNonlinear = true;
     };
 
-    ExpressionVariable(VariablePtr variable): variable(variable)
+    ExpressionVariable(VariablePtr variable) : variable(variable)
     {
         variable->isNonlinear = true;
     };

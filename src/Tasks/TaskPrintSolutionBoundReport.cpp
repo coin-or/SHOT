@@ -30,9 +30,9 @@ void TaskPrintSolutionBoundReport::run()
     {
         double absGap = env->process->getAbsoluteObjectiveGap();
         double relGap = env->process->getRelativeObjectiveGap();
-        auto objBounds = env->process->getCorrectedObjectiveBounds();
-        double objLB = objBounds.first;
-        double objUB = objBounds.second;
+
+        double dualBound = env->process->getDualBound();
+        double primalBound = env->process->getPrimalBound();
 
         env->output->outputSummary(
             "                                                                                     ");
@@ -45,7 +45,7 @@ void TaskPrintSolutionBoundReport::run()
             "─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
-        auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % env->process->getElapsedTime("Total") % UtilityFunctions::toStringFormat(objLB, "%.3f", true) % UtilityFunctions::toStringFormat(objUB, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
+        auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % env->process->getElapsedTime("Total") % UtilityFunctions::toStringFormat(dualBound, "%.3f", true) % UtilityFunctions::toStringFormat(primalBound, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
         env->output->outputSummary(tmpLine.str());
 
         if (env->solutionStatistics.numberOfConstraintsRemovedInPresolve > 0 || env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)

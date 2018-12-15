@@ -53,7 +53,7 @@ void TaskExecuteSolutionLimitStrategy::run()
         env->dualSolver->setSolutionLimit(previousSolLimit);
     }
 
-    if (currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual") && env->process->getDualBound() > -OSDBL_MAX)
+    if (currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual") && env->process->getDualBound() > SHOT_DBL_MIN)
     {
         previousSolLimit = prevIter->usedMIPSolutionLimit;
         env->dualSolver->setSolutionLimit(2100000000);
@@ -62,7 +62,7 @@ void TaskExecuteSolutionLimitStrategy::run()
         env->output->outputInfo(
             "     Forced optimal iteration since too many iterations since last dual bound update");
     }
-    else if (env->process->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual") && env->process->getDualBound() > -OSDBL_MAX)
+    else if (env->process->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual") && env->process->getDualBound() > SHOT_DBL_MIN)
     {
         previousSolLimit = prevIter->usedMIPSolutionLimit;
         env->dualSolver->setSolutionLimit(2100000000);
@@ -71,7 +71,7 @@ void TaskExecuteSolutionLimitStrategy::run()
         env->output->outputAlways(
             "     Forced optimal iteration since too long time since last dual bound update");
     }
-    else if (env->process->getPrimalBound() < OSDBL_MAX && abs(prevIter->objectiveValue - env->process->getPrimalBound()) < 0.001)
+    else if (env->process->getPrimalBound() < SHOT_DBL_MAX && abs(prevIter->objectiveValue - env->process->getPrimalBound()) < 0.001)
     {
         previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
         env->dualSolver->setSolutionLimit(2100000000);

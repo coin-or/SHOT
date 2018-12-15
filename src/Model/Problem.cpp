@@ -88,7 +88,7 @@ void Problem::updateProperties()
     if (areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
 
-    if (isObjNonlinear)
+    if (objectiveFunction->properties.hasNonlinearExpression)
         properties.numberOfNonlinearExpressions++;
 
     if (areVarsDiscrete)
@@ -135,8 +135,11 @@ void Problem::updateFactorableFunctions()
 
     for (auto &C : nonlinearConstraints)
     {
-        C->updateFactorableFunction();
-        factorableFunctions.push_back(*C->factorableFunction.get());
+        if (C->properties.hasNonlinearExpression)
+        {
+            C->updateFactorableFunction();
+            factorableFunctions.push_back(*C->factorableFunction.get());
+        }
     }
 
     int objectiveFactorableFunctionIndex = -1;
@@ -150,12 +153,7 @@ void Problem::updateFactorableFunctions()
         objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
     }
 
-    int numberNonlinearExpressions = properties.numberOfNonlinearConstraints;
-
-    if (objectiveFunction->properties.hasNonlinearExpression)
-        numberNonlinearExpressions++;
-
-    auto jacobian = factorableFunctionsDAG->SFAD(numberNonlinearExpressions, &factorableFunctions[0], properties.numberOfNonlinearVariables, &factorableFunctionVariables[0]);
+    auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0], factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
     for (int i = 0; i < std::get<0>(jacobian); i++)
     {
@@ -527,6 +525,25 @@ NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, c
 };
 
 NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection)
+{
+    assert(constraintSelection.size() > 0);
+
+    auto value = constraintSelection[0]->calculateNumericValue(point);
+
+    for (int i = 1; i < constraintSelection.size(); i++)
+    {
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+
+        if (tmpValue.normalizedValue > value.normalizedValue)
+        {
+            value = tmpValue;
+        }
+    }
+
+    return value;
+}
+
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const QuadraticConstraints constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 

@@ -663,8 +663,7 @@ void MIPSolverCplex::initializeSolverSettings()
     }
     catch (IloException &e)
     {
-        env->output->outputError("Cplex error when initializing parameters for linear solver",
-                                 e.getMessage());
+        env->output->outputError("Cplex error when initializing parameters for linear solver", e.getMessage());
     }
 }
 
@@ -799,6 +798,10 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
         else if (status == IloCplex::CplexStatus::NodeLimFeas)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
+        }
+        else if (status == IloCplex::CplexStatus::NumBest)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
         }
         else if (status == IloCplex::CplexStatus::AbortTimeLim || status == IloCplex::CplexStatus::AbortDetTimeLim)
         {

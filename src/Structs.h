@@ -13,11 +13,11 @@
 
 namespace SHOT
 {
-const double SHOT_DBL_MIN = std::numeric_limits<double>::min();
+const double SHOT_DBL_MIN = std::numeric_limits<double>::lowest();
 const double SHOT_DBL_MAX = std::numeric_limits<double>::max();
 const double SHOT_DBL_INF = std::numeric_limits<double>::infinity();
 const double SHOT_DBL_EPS = std::numeric_limits<double>::epsilon();
-const int    SHOT_INT_MAX = std::numeric_limits<int>::max();
+const int SHOT_INT_MAX = std::numeric_limits<int>::max();
 
 class ProcessInfo;
 class Settings;
@@ -90,8 +90,9 @@ struct PrimalSolution
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraintNonlinear;
     PairIndexValue maxDevatingConstraintLinear;
+    PairIndexValue maxDevatingConstraintQuadratic;
+    PairIndexValue maxDevatingConstraintNonlinear;
     double maxIntegerToleranceError;       // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?

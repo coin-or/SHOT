@@ -13,24 +13,6 @@
 namespace SHOT
 {
 
-PairDouble ProcessInfo::getCorrectedObjectiveBounds()
-{
-    PairDouble bounds;
-
-    if (env->problem->objectiveFunction->properties.isMinimize)
-    {
-        bounds.first = currentObjectiveBounds.first;
-        bounds.second = currentObjectiveBounds.second;
-    }
-    else
-    {
-        bounds.first = currentObjectiveBounds.second;
-        bounds.second = currentObjectiveBounds.first;
-    }
-
-    return (bounds);
-}
-
 void ProcessInfo::addDualSolution(DualSolution solution)
 {
     if (dualSolutions.size() == 0)
@@ -241,9 +223,6 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     VectorDouble tmpPoint(primalSol.point);
     double tmpObjVal = primalSol.objValue;
 
-    bool isLinConstrFulfilled = false;
-    bool isNonLinConstrFulfilled = false;
-
     bool isVariableBoundsFulfilled = false;
 
     switch (primalSol.sourceType)
@@ -285,11 +264,9 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     primalSol.sourceDescription = sourceDesc;
 
-    // Recalculate if the objective is not provided
-    if (UtilityFunctions::isnan(primalSol.objValue))
-    {
-        env->problem->objectiveFunction->calculateValue(primalSol.point);
-    }
+    // Recalculate if the objective to be sure it is correct
+    primalSol.objValue = env->problem->objectiveFunction->calculateValue(primalSol.point);
+    tmpObjVal = primalSol.objValue;
 
     // Check that solution fulfills bounds, project back otherwise
     bool reCalculateObjective = false;
@@ -441,12 +418,17 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         return (false);
     }
 
-    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers || primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
+    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool ||
+                           primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers ||
+                           primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed ||
+                           primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback ||
+                           primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers ||
+                           primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
 
     if (acceptableType && env->settings->getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
         auto tmpLine = boost::format("       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
-        env->output->outputInfo(tmpLine.str());
+        env->output->outputWarning(tmpLine.str());
     }
     else
     {
@@ -457,27 +439,59 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto maxLinearConstraintValue = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->linearConstraints);
 
             mostDevLinearConstraints.index = maxLinearConstraintValue.constraint->index;
-            mostDevLinearConstraints.value = maxLinearConstraintValue.error;
+            mostDevLinearConstraints.value = maxLinearConstraintValue.normalizedValue;
 
             auto linTol = env->settings->getDoubleSetting("Tolerance.LinearConstraint", "Primal");
-            isLinConstrFulfilled = (maxLinearConstraintValue.error < linTol);
 
-            if (isLinConstrFulfilled)
+            if (maxLinearConstraintValue.error > linTol)
             {
-                auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") % linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
-                env->output->outputInfo(tmpLine.str());
+                auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
+                               linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
+                env->output->outputWarning(tmpLine.str());
+
+                return (false);
             }
             else
             {
-                auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") % linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
-                env->output->outputInfo(tmpLine.str());
-
-                return (false);
+                auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
+                               linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
+                env->output->outputWarning(tmpLine.str());
             }
         }
 
         primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
     }
+
+    PairIndexValue mostDevQuadraticConstraints;
+
+    if (env->problem->properties.numberOfQuadraticConstraints > 0)
+    {
+        auto maxQuadraticConstraintValue = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->quadraticConstraints);
+
+        mostDevQuadraticConstraints.index = maxQuadraticConstraintValue.constraint->index;
+        mostDevQuadraticConstraints.value = maxQuadraticConstraintValue.normalizedValue;
+
+        auto nonlinTol = env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
+
+        if (mostDevQuadraticConstraints.value > nonlinTol)
+        {
+            auto tmpLine = boost::format(
+                               "       Quadratic constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
+                           nonlinTol % mostDevQuadraticConstraints.value % maxQuadraticConstraintValue.constraint->name;
+            env->output->outputWarning(tmpLine.str());
+
+            return (false);
+        }
+        else
+        {
+            auto tmpLine = boost::format(
+                               "       Quadratic constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
+                           nonlinTol % mostDevQuadraticConstraints.value % maxQuadraticConstraintValue.constraint->name;
+            env->output->outputWarning(tmpLine.str());
+        }
+    }
+
+    primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
 
     PairIndexValue mostDevNonlinearConstraints;
 
@@ -486,17 +500,16 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
         auto maxNonlinearConstraintValue = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->nonlinearConstraints);
 
         mostDevNonlinearConstraints.index = maxNonlinearConstraintValue.constraint->index;
-        mostDevNonlinearConstraints.value = maxNonlinearConstraintValue.error;
+        mostDevNonlinearConstraints.value = maxNonlinearConstraintValue.normalizedValue;
 
         auto nonlinTol = env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
-        isNonLinConstrFulfilled = (mostDevNonlinearConstraints.value < nonlinTol);
 
-        if (!isNonLinConstrFulfilled)
+        if (mostDevNonlinearConstraints.value > nonlinTol)
         {
             auto tmpLine = boost::format(
                                "       Nonlinear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
                            nonlinTol % mostDevNonlinearConstraints.value % maxNonlinearConstraintValue.constraint->name;
-            env->output->outputInfo(tmpLine.str());
+            env->output->outputWarning(tmpLine.str());
 
             return (false);
         }
@@ -505,7 +518,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto tmpLine = boost::format(
                                "       Nonlinear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
                            nonlinTol % mostDevNonlinearConstraints.value % maxNonlinearConstraintValue.constraint->name;
-            env->output->outputInfo(tmpLine.str());
+            env->output->outputWarning(tmpLine.str());
         }
     }
 
@@ -514,7 +527,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     char HPobjadded = ' ';
 
     if (env->settings->getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") &&
-        env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
+        env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         auto objConstrVal = env->problem->objectiveFunction->calculateValue(tmpPoint);
 
@@ -538,7 +551,7 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
 
-    env->output->outputInfo(tmpLine.str());
+    env->output->outputWarning(tmpLine.str());
 
     primalSol.objValue = tmpObjVal;
     primalSol.point = tmpPoint;
@@ -578,8 +591,6 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
 ProcessInfo::ProcessInfo(EnvironmentPtr envPtr) : env(envPtr)
 {
-    this->currentObjectiveBounds.first = -OSDBL_MAX;
-    this->currentObjectiveBounds.second = OSDBL_MAX;
 }
 
 ProcessInfo::~ProcessInfo()
@@ -1154,22 +1165,22 @@ Iteration *ProcessInfo::getPreviousIteration()
 
 double ProcessInfo::getPrimalBound()
 {
-    return (this->currentObjectiveBounds.second);
+    return (this->currentPrimalBound);
 }
 
 void ProcessInfo::setPrimalBound(double value)
 {
-    this->currentObjectiveBounds.second = value;
+    this->currentPrimalBound = value;
 }
 
 double ProcessInfo::getDualBound()
 {
-    return (this->currentObjectiveBounds.first);
+    return (this->currentDualBound);
 }
 
 void ProcessInfo::setDualBound(double value)
 {
-    this->currentObjectiveBounds.first = value;
+    this->currentDualBound = value;
 }
 
 double ProcessInfo::getAbsoluteObjectiveGap()

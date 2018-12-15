@@ -112,8 +112,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     // Corresponds to the difference between the LP solution objective value and
     // the objective found in the linesearch minimization procedure
-    double maxObjDiffAbs = OSDBL_MAX;
-    double maxObjDiffRel = OSDBL_MAX;
+    double maxObjDiffAbs = SHOT_DBL_MAX;
+    double maxObjDiffRel = SHOT_DBL_MAX;
 
     double LPObjVar;
 

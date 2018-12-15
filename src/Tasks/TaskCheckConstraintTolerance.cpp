@@ -26,7 +26,7 @@ void TaskCheckConstraintTolerance::run()
     if (currIter->solutionPoints.size() == 0)
         return;
 
-    if (env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0 && env->reformulatedProblem->objectiveFunction->properties.classification <= E_ObjectiveFunctionClassification::Quadratic)
+    if (env->reformulatedProblem->objectiveFunction->properties.classification <= E_ObjectiveFunctionClassification::Quadratic)
         return;
 
     bool objectiveAndConstraintsValid = false;
@@ -34,6 +34,12 @@ void TaskCheckConstraintTolerance::run()
 
     // Checks it the nonlinear objective is fulfilled
     if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic && env->reformulatedProblem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point) - currIter->objectiveValue > constraintTolerance)
+    {
+        return;
+    }
+
+    // Checks if the quadratic constraints are fulfilled to tolerance
+    if (!env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point, env->settings->getDoubleSetting("ConstraintTolerance", "Termination")))
     {
         return;
     }

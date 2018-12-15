@@ -74,7 +74,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     }
 
     //Nonlinear objective variable
-    if (sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
+    if (sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
         //std::dynamic_pointer_cast<MIPSolverBase>(destination)->hasAuxilliaryObjectiveVariable = true;
@@ -127,7 +127,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     bool constraintsInitialized = true;
 
-    for (auto &C : env->problem->linearConstraints)
+    for (auto &C : sourceProblem->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
@@ -142,7 +142,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    for (auto &C : env->problem->quadraticConstraints)
+    for (auto &C : sourceProblem->quadraticConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 

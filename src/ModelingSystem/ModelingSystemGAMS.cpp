@@ -117,8 +117,8 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(modelingObject, 1);
     gmoObjStyleSet(modelingObject, gmoObjType_Fun);
-    gmoMinfSet(modelingObject, -OSDBL_MAX);
-    gmoPinfSet(modelingObject, OSDBL_MAX);
+    gmoMinfSet(modelingObject, SHOT_DBL_MIN);
+    gmoPinfSet(modelingObject, SHOT_DBL_MAX);
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
 

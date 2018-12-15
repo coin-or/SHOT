@@ -306,7 +306,10 @@ E_Curvature NonlinearObjectiveFunction::checkConvexity()
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble &point)
 {
     double value = QuadraticObjectiveFunction::calculateValue(point);
-    value += nonlinearExpression->calculate(point);
+
+    if (this->properties.hasNonlinearExpression)
+        value += nonlinearExpression->calculate(point);
+
     return value;
 };
 
@@ -314,7 +317,9 @@ Interval NonlinearObjectiveFunction::calculateValue(
     const IntervalVector &intervalVector)
 {
     Interval value = QuadraticObjectiveFunction::calculateValue(intervalVector);
-    value += nonlinearExpression->calculate(intervalVector);
+
+    if (this->properties.hasNonlinearExpression)
+        value += nonlinearExpression->calculate(intervalVector);
 
     return value;
 };

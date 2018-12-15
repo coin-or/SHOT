@@ -143,7 +143,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
 
 void Settings::createSetting(std::string name, std::string category, int value, std::string description)
 {
-    Settings::createSetting(name, category, value, description, -OSDBL_MAX, OSDBL_MAX, false);
+    Settings::createSetting(name, category, value, description, SHOT_DBL_MIN, SHOT_DBL_MAX, false);
 }
 
 void Settings::updateSetting(std::string name, std::string category, int value)
@@ -292,7 +292,7 @@ bool Settings::getBoolSetting(std::string name, std::string category)
 void Settings::createSetting(std::string name, std::string category, int value, std::string description,
                              VectorString enumDescriptions, bool isPrivate)
 {
-    createSetting(name, category, value, description, -OSDBL_MAX, OSDBL_MAX, isPrivate);
+    createSetting(name, category, value, description, SHOT_DBL_MIN, SHOT_DBL_MAX, isPrivate);
 
     for (int i = 0; i < enumDescriptions.size(); i++)
     {
@@ -366,13 +366,13 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
 
 void Settings::createSetting(std::string name, std::string category, double value, std::string description)
 {
-    Settings::createSetting(name, category, value, description, -OSDBL_MAX, OSDBL_MAX, false);
+    Settings::createSetting(name, category, value, description, SHOT_DBL_MIN, SHOT_DBL_MAX, false);
 }
 
 void Settings::createSetting(std::string name, std::string category, double value, std::string description,
                              double minVal, double maxVal)
 {
-    Settings::createSetting(name, category, value, description, -OSDBL_MAX, OSDBL_MAX, false);
+    Settings::createSetting(name, category, value, description, SHOT_DBL_MIN, SHOT_DBL_MAX, false);
 }
 
 void Settings::createSetting(std::string name, std::string category, double value, std::string description,
