@@ -208,7 +208,7 @@ void Problem::finalize()
 
 void Problem::add(Variables variables)
 {
-    for (auto V : variables)
+    for (auto &V : variables)
         add(V);
 }
 
@@ -313,7 +313,7 @@ void Problem::add(NonlinearObjectiveFunctionPtr objective)
 template <class T>
 void Problem::add(std::vector<T> elements)
 {
-    for (auto E : elements)
+    for (auto &E : elements)
     {
         add(E);
 
@@ -406,7 +406,7 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
     boost::optional<NumericConstraintValue> optional;
     double error = 0;
 
-    for (auto C : constraintSelection)
+    for (auto &C : constraintSelection)
     {
         auto constraintValue = C->calculateNumericValue(point);
 
@@ -438,7 +438,7 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
         optional;
     double error = -1;
 
-    for (auto C : constraintSelection)
+    for (auto &C : constraintSelection)
     {
         auto constraintValue = C->calculateNumericValue(point);
 
@@ -472,7 +472,7 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
         optional;
     double error = -1;
 
-    for (auto C : constraintSelection)
+    for (auto &C : constraintSelection)
     {
         auto constraintValue = C->calculateNumericValue(point);
 
@@ -562,15 +562,15 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     return value;
 }
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection, double correction)
 {
     assert(constraintSelection.size() > 0);
 
-    auto value = constraintSelection[0]->calculateNumericValue(point);
+    auto value = constraintSelection[0]->calculateNumericValue(point, correction);
 
     for (int i = 1; i < constraintSelection.size(); i++)
     {
-        auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
+        auto tmpValue = constraintSelection[i]->calculateNumericValue(point, correction);
 
         if (tmpValue.normalizedValue > value.normalizedValue)
         {
@@ -628,20 +628,20 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
 };
 
 template <typename T>
-NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection)
+NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection, double correction)
 {
     NumericConstraintValues constraintValues;
-    for (auto C : constraintSelection)
+    for (auto &C : constraintSelection)
     {
-        NumericConstraintValue constraintValue = C->calculateNumericValue(point);
-        if (constraintValue.error > tolerance)
+        NumericConstraintValue constraintValue = C->calculateNumericValue(point, correction);
+        if (constraintValue.normalizedValue > tolerance)
             constraintValues.push_back(constraintValue);
     }
 
     return constraintValues;
 };
 
-NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction)
+NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction, double correction)
 {
     if (fraction > 1)
         fraction = 1;
@@ -650,7 +650,7 @@ NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(cons
 
     int fractionNumbers = std::max(1, (int)ceil(fraction * this->nonlinearConstraints.size()));
 
-    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints);
+    auto values = getAllDeviatingConstraints(point, tolerance, this->nonlinearConstraints, correction);
 
     std::sort(values.begin(), values.end(), std::greater<NumericConstraintValue>());
 
@@ -709,7 +709,7 @@ bool Problem::areNumericConstraintsFulfilled(VectorDouble point, double toleranc
 
 bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance)
 {
-    for (auto V : integerVariables)
+    for (auto &V : integerVariables)
     {
         if (abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
             return false;
@@ -753,14 +753,14 @@ std::ostream &operator<<(std::ostream &stream, const Problem &problem)
     if (problem.numericConstraints.size() > 0)
         stream << "subject to:\n";
 
-    for (auto C : problem.numericConstraints)
+    for (auto &C : problem.numericConstraints)
     {
         stream << C << '\n';
     }
 
     stream << "variables:\n";
 
-    for (auto V : problem.allVariables)
+    for (auto &V : problem.allVariables)
     {
         stream << V << '\n';
     }

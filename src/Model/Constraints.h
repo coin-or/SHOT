@@ -84,7 +84,7 @@ class NumericConstraint : public Constraint, public std::enable_shared_from_this
 
     virtual SparseVariableVector calculateGradient(const VectorDouble &point) = 0;
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point);
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point, double correction = 0.0);
 
     virtual bool isFulfilled(const VectorDouble &point) override;
 
@@ -127,7 +127,7 @@ class LinearConstraint : public NumericConstraint
 
     virtual SparseVariableVector calculateGradient(const VectorDouble &point);
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override;
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point, double correction = 0.0) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
 
@@ -190,7 +190,7 @@ class QuadraticConstraint : public LinearConstraint
 
     virtual SparseVariableVector calculateGradient(const VectorDouble &point);
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override;
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point, double correction = 0.0) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
 
@@ -284,7 +284,7 @@ class NonlinearConstraint : public QuadraticConstraint
 
     virtual bool isFulfilled(const VectorDouble &point) override;
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point) override;
+    virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point, double correction = 0.0) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
 

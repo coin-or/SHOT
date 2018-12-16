@@ -36,9 +36,9 @@ std::ostream &operator<<(std::ostream &stream, ConstraintPtr constraint)
     return stream;
 }
 
-NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble &point, double correction)
 {
-    double value = calculateFunctionValue(point);
+    double value = calculateFunctionValue(point) - correction;
 
     NumericConstraintValue constrValue;
     constrValue.constraint = getPointer();
@@ -126,7 +126,7 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble &poi
     return gradient;
 };
 
-NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble &point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -232,7 +232,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &
     return gradient;
 };
 
-NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble &point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -349,7 +349,7 @@ bool NonlinearConstraint::isFulfilled(const VectorDouble &point)
     return NumericConstraint::isFulfilled(point);
 };
 
-NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble &point)
+NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble &point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 };

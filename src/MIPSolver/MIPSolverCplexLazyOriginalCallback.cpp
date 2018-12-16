@@ -334,8 +334,28 @@ void CtCallbackI::main()
 
     printIterationReport(candidatePoints.at(0), threadId);
 
-    if (env->process->isAbsoluteObjectiveGapToleranceMet() || env->process->isRelativeObjectiveGapToleranceMet() || checkIterationLimit())
+    if (env->process->isAbsoluteObjectiveGapToleranceMet())
     {
+        env->output->outputAlways("     Terminated by absolute objective gap tolerance in lazy callback");
+
+        solution.clear();
+        abort();
+        return;
+    }
+
+    if (env->process->isRelativeObjectiveGapToleranceMet())
+    {
+        env->output->outputAlways("     Terminated by relative objective gap tolerance in lazy callback");
+
+        solution.clear();
+        abort();
+        return;
+    }
+
+    if (checkIterationLimit())
+    {
+        env->output->outputAlways("     Terminated by iteration limit in lazy callback");
+
         solution.clear();
         abort();
         return;
@@ -356,8 +376,19 @@ void CtCallbackI::main()
 
         env->process->checkPrimalSolutionCandidates();
 
-        if (env->process->isAbsoluteObjectiveGapToleranceMet() || env->process->isRelativeObjectiveGapToleranceMet())
+        if (env->process->isAbsoluteObjectiveGapToleranceMet())
         {
+            env->output->outputAlways("     Terminated by absolute objective gap tolerance in lazy callback");
+
+            solution.clear();
+            abort();
+            return;
+        }
+
+        if (env->process->isRelativeObjectiveGapToleranceMet())
+        {
+            env->output->outputAlways("     Terminated by relative objective gap tolerance in lazy callback");
+
             solution.clear();
             abort();
             return;
@@ -401,8 +432,7 @@ void CtCallbackI::main()
 
         if (addedIntegerCut)
         {
-            env->output->outputInfo(
-                "     Added " + std::to_string(env->process->integerCutWaitingList.size()) + " integer cut(s).                                        ");
+            env->output->outputInfo("     Added " + std::to_string(env->process->integerCutWaitingList.size()) + " integer cut(s).                                        ");
         }
 
         env->process->integerCutWaitingList.clear();
@@ -427,8 +457,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     {
         if (E.value != E.value) //Check for NaN
         {
-            env->output->outputWarning(
-                "     Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
             break;
         }

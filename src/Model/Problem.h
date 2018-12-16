@@ -143,7 +143,7 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const QuadraticConstraints constraintSelection);
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection, double correction = 0.0);
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NumericConstraints constraintSelection);
 
     template <typename T>
@@ -154,9 +154,9 @@ class Problem : public std::enable_shared_from_this<Problem>
                                                         std::vector<NumericConstraint *> &activeConstraints);
 
     template <typename T>
-    NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection);
+    NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection, double correction = 0.0);
 
-    NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction);
+    NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction, double correction = 0.0);
 
     virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance);
 

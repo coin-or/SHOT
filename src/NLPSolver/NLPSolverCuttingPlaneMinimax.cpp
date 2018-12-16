@@ -30,7 +30,7 @@ class MinimizationFunction
 
     double operator()(const double x)
     {
-        int length = secondPt.size();
+        int length = firstPt.size();
         VectorDouble ptNew(length);
 
         for (int i = 0; i < length; i++)
@@ -40,7 +40,9 @@ class MinimizationFunction
 
         auto maxDev = NLPProblem->getMaxNumericConstraintValue(ptNew, NLPProblem->nonlinearConstraints);
 
-        return (maxDev.normalizedRHSValue);
+        //std::cout << maxDev.constraint->index << " " << maxDev.normalizedValue << " :" << x << '\n';
+
+        return (maxDev.normalizedValue);
     }
 };
 
@@ -100,7 +102,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
     int maxIter = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
     double termObjTolAbs = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
     double termObjTolRel = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
-    double constrSelTol = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionTolerance", "Dual");
+    double constrSelFactor = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
     boost::uintmax_t maxIterSubsolver = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
     int bitPrecision = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
@@ -201,14 +203,15 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
             // Solves the minization problem wrt lambda in [0, 1]
 
-            auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision,
-                                                                            maxIterSubsolverTmp);
+            auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision, maxIterSubsolverTmp);
 
             lambda = minimizationResult.first;
             mu = minimizationResult.second;
 
+            //std::cout << "lambda: " << lambda << " mu: " << mu << '\n';
+
             // Calculates the corresponding solution point
-            for (int i = 0; i < numVar; i++)
+            for (int i = 0; i < LPVarSol.size(); i++)
             {
                 currSol.at(i) = lambda * LPVarSol.at(i) + (1 - lambda) * prevSol.at(i);
             }
@@ -263,19 +266,20 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }*/
 
-        auto constraintValues = originalProblem->getFractionOfDeviatingNonlinearConstraints(currSol, SHOT_DBL_MIN, 0);
+        auto constraintValues = originalProblem->getFractionOfDeviatingNonlinearConstraints(currSol, SHOT_DBL_MIN, constrSelFactor, LPObjVar);
+        //NumericConstraintValues constraintValues;
+        //constraintValues.push_back(originalProblem->getMaxNumericConstraintValue(currSol, originalProblem->nonlinearConstraints));
 
-        //numHyperAdded = tmpMostDevs.size();
-
-        //numHyperTot = numHyperTot + constraintValues.size;
-
-        //UtilityFunctions::displayVector(currSol);
+        numHyperAdded = 0;
 
         for (auto &NCV : constraintValues)
         {
+            //std::cout << NCV.constraint->index << " : " << NCV.normalizedValue << '\n';
             std::vector<PairIndexValue> elements;
 
-            double constant = NCV.normalizedRHSValue;
+            double constant = NCV.normalizedValue;
+            //std::cout << std::setprecision(15);
+            //std::cout << "constant " << constant << "\n";
 
             auto gradient = NCV.constraint->calculateGradient(currSol);
 
@@ -287,7 +291,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
                 elements.push_back(pair);
 
-                constant -= G.second * currSol.at(G.first->index);
+                //std::cout << "gradient " << -G.first->index << ": " << G.second << "\n ";
+
+                constant = constant - G.second * currSol.at(G.first->index);
+                //std::cout << "constant " << -G.second * currSol.at(G.first->index) << "\n";
 
                 //std::cout << "Constant " << G.first->index << " " << -G.second * currSol.at(G.first->index) << std::endl;
 
@@ -304,8 +311,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             //constant += currSol.back();
 
             // Adds the linear constraint
+            //std::cout << "final constant " << constant << std::endl;
             LPSolver->addLinearConstraint(elements, constant);
             numHyperTot++;
+            numHyperAdded++;
 
             if (mu >= 0 && env->settings->getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
             {

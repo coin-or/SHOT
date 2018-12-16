@@ -45,6 +45,7 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const VectorString
     {
         str << variables.at(i);
         str << "\t";
+        str << std::setprecision(std::numeric_limits<double>::digits10);
         str << point.at(i);
         str << '\n';
     }
@@ -67,6 +68,7 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &v
     {
         str << variables.at(i)->name;
         str << "\t";
+        str << std::setprecision(std::numeric_limits<double>::digits10);
         str << point.at(i);
         str << '\n';
     }
@@ -110,11 +112,13 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString
     str << "Solution point: ";
     str << '\n';
 
+    str << std::setprecision(std::numeric_limits<double>::digits10);
+
     for (int i = 0; i < solution.point.size(); i++)
     {
         str << variables.at(i);
         str << "\t";
-        str << toStringFormat(solution.point.at(i), "%.8f", false);
+        str << solution.point.at(i);
         str << '\n';
     }
 
@@ -157,6 +161,8 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &v
     str << "Solution point: ";
     str << '\n';
 
+    str << std::setprecision(std::numeric_limits<double>::digits10);
+
     for (int i = 0; i < solution.point.size(); i++)
     {
         if (i < variables.size())
@@ -164,7 +170,7 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &v
         else
             str << '\t';
         str << '\t';
-        str << toStringFormat(solution.point.at(i), "%.8f", false);
+        str << solution.point.at(i);
         str << '\n';
     }
 
@@ -178,10 +184,13 @@ void displayVector(const VectorDouble &point)
     if (point.size() == 0)
         str << "vector is empty";
 
+    str << std::setprecision(std::numeric_limits<double>::digits10);
+
     for (int i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
+
         str << point.at(i);
         str << '\n';
     }
@@ -192,6 +201,8 @@ void displayVector(const VectorDouble &point)
 void displayVector(const VectorDouble &point1, const VectorDouble &point2)
 {
     std::stringstream str;
+
+    str << std::setprecision(std::numeric_limits<double>::digits10);
 
     if (point1.size() != point2.size())
         return;
@@ -213,6 +224,7 @@ void displayVector(const VectorDouble &point1, const VectorDouble &point2)
 void displayVector(const VectorDouble &point1, const VectorDouble &point2, const VectorDouble &point3)
 {
     std::stringstream str;
+    str << std::setprecision(std::numeric_limits<double>::digits10);
 
     if (point1.size() != point2.size())
         return;
@@ -237,6 +249,7 @@ void displayVector(const VectorDouble &point1, const VectorDouble &point2, const
 void displayDifferencesInVector(const VectorDouble &point1, const VectorDouble &point2, double tol)
 {
     std::stringstream str;
+    str << std::setprecision(std::numeric_limits<double>::digits10);
 
     if (point1.size() != point2.size())
         return;
@@ -297,6 +310,7 @@ void displayVector(const VectorString &point)
 void displayVector(const std::vector<VectorDouble> &points)
 {
     std::stringstream str;
+    str << std::setprecision(std::numeric_limits<double>::digits10);
 
     for (int i = 0; i < points.at(0).size(); i++)
     {
@@ -353,80 +367,6 @@ void displayVector(const std::vector<VectorString> &points)
 
     std::cout << str.str() << '\n';
 };
-
-/*
-bool isObjectiveGenerallyNonlinear(OSInstance *instance)
-{
-    for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
-    {
-        int tmpIndex = instance->instanceData->nonlinearExpressions->nl[i]->idx;
-        if (tmpIndex == -1)
-            return (true);
-    }
-    return (false);
-};
-
-bool isObjectiveQuadratic(OSInstance *instance)
-{
-    for (int i = 0; i < instance->getNumberOfQuadraticTerms(); i++)
-    {
-        int tmpIndex = instance->instanceData->quadraticCoefficients->qTerm[i]->idx;
-
-        if (tmpIndex == -1)
-            return (true);
-    }
-
-    return (false);
-};
-
-bool areAllConstraintsLinear(OSInstance *instance)
-{
-    int numNonlinearTreeIndexes = instance->getNumberOfNonlinearExpressionTreeIndexes();
-    int numQuadraticRowIndexes = instance->getNumberOfQuadraticRowIndexes();
-
-    for (int i = 0; i < numQuadraticRowIndexes; i++)
-    {
-        if (instance->getQuadraticRowIndexes()[i] != -1)
-            return (false);
-    }
-
-    if (numNonlinearTreeIndexes == 0)
-        return (true);
-
-    for (int i = 0; i < numNonlinearTreeIndexes; i++)
-    {
-        if (instance->getNonlinearExpressionTreeIndexes()[i] != -1)
-            return (false);
-    }
-
-    return (true);
-}
-
-bool areAllConstraintsQuadratic(OSInstance *instance)
-{
-    int numNonlinearTreeIndexes = instance->getNumberOfNonlinearExpressionTreeIndexes();
-
-    if (numNonlinearTreeIndexes != 0)
-        return (false);
-
-    int numQuadraticRowIndexes = instance->getNumberOfQuadraticRowIndexes();
-
-    // return false if there are no quadratic rows
-    if (numQuadraticRowIndexes == 0)
-        return false;
-
-    return (true);
-};
-
-bool areAllVariablesReal(OSInstance *instance)
-{
-    int numDiscreteVars = instance->getNumberOfBinaryVariables() + instance->getNumberOfIntegerVariables();
-
-    if (numDiscreteVars > 0)
-        return (false);
-
-    return (true);
-};*/
 
 double L2Norm(const VectorDouble &ptA, const VectorDouble &ptB)
 {

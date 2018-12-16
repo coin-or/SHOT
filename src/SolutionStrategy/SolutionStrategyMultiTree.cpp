@@ -41,7 +41,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     //env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
     TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
-    env->tasks->addTask(tReformulateProblem, "ReformlateProb");
+    env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
     if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {

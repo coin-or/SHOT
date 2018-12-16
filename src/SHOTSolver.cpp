@@ -471,15 +471,11 @@ void SHOTSolver::initializeSettings()
                                  enumHyperplanePointStrategy);
     enumHyperplanePointStrategy.clear();
 
-    env->settings->createSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0,
-                                 "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for",
-                                 0.0, 1.0);
-
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual", 8,
                                  "Required termination bit precision for minimization subsolver", 1, 64, true);
 
-    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionTolerance", "Dual", 0.05,
-                                 "Tolerance when selecting the most constraint with largest deviation", 0.0, 1.0);
+    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual", 0.5,
+                                 "The fraction of violated constraints to generate cutting planes for", 0.0, 1.0);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 2000,
                                  "Iteration limit for minimax cutting plane solver", 1, SHOT_INT_MAX);
@@ -501,6 +497,10 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
                                  "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    env->settings->createSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 0.5,
+                                 "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for",
+                                 0.0, 1.0);
 
     // Dual strategy settings: Interior point search strategy
 

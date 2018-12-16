@@ -101,7 +101,7 @@ struct NumericConstraintValue
     // Sorts in reverse order, i.e. so that larger errors are before smaller ones
     bool operator>(const NumericConstraintValue &otherValue) const
     {
-        return error > otherValue.error;
+        return normalizedValue > otherValue.normalizedValue;
     }
 };
 
