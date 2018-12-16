@@ -810,7 +810,7 @@ void MIPSolverOsiCbc::checkParameters()
 
     // Some features are not available in Cbc
     env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
-    env->settings->updateSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+    env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);

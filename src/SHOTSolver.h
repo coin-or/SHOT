@@ -40,8 +40,6 @@ class SHOTSolver
     std::unique_ptr<GAMS2OS> gms2os;
 #endif
 
-    //std::unique_ptr<OSnl2OS> nl2os;
-
     void initializeSettings();
     void verifySettings();
 

@@ -276,8 +276,9 @@ bool SHOTSolver::selectStrategy()
         return (true);
     }
 
-    bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
-    bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
+    auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model"));
+    bool useQuadraticConstraints = (quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained);
+    bool useQuadraticObjective = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
 
     if ((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
     //MIQP problem
@@ -606,15 +607,6 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("MIP.UpdateObjectiveBounds", "Dual", false, "Update nonlinear objective variable bounds to primal/dual bounds");
 
-    // Dual strategy settings: Quadratic function strategy
-
-    VectorString enumQPStrategy;
-    enumQPStrategy.push_back("All nonlinear");
-    enumQPStrategy.push_back("Use quadratic objective");
-    enumQPStrategy.push_back("Use quadratic constraints");
-    env->settings->createSetting("QuadraticStrategy", "Dual", static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective), "How to treat quadratic functions", enumQPStrategy);
-    enumQPStrategy.clear();
-
     // Dual strategy settings: Relaxation strategies
 
     env->settings->createSetting("Relaxation.Frequency", "Dual", 0,
@@ -651,6 +643,19 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9, "Upper bound for integer variables without bounds", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
+
+    // Reformulations to perform
+
+    env->settings->createSetting("Reformulation.Epigraph.Use", "Model", false, "Reformulates a nonlinear objective as an auxilliary constraint");
+
+    // Reformulations: Quadratic objective and constraints
+
+    VectorString enumQPStrategy;
+    enumQPStrategy.push_back("All nonlinear");
+    enumQPStrategy.push_back("Use quadratic objective");
+    enumQPStrategy.push_back("Use quadratic objective and constraints");
+    env->settings->createSetting("Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective), "How to treat quadratic functions", enumQPStrategy);
+    enumQPStrategy.clear();
 
     // Logging and output settings
     VectorString enumLogLevel;

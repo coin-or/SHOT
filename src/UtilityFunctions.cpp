@@ -65,7 +65,7 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &v
 
     for (int i = 0; i < point.size(); i++)
     {
-        str << variables.at(i);
+        str << variables.at(i)->name;
         str << "\t";
         str << point.at(i);
         str << '\n';

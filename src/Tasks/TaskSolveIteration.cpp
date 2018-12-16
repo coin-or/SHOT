@@ -124,7 +124,7 @@ void TaskSolveIteration::run()
                 ss << "/lpsolpt";
                 ss << currIter->iterationNumber - 1;
                 ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point, env->problem->allVariables, ss.str());
+                UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
             }
 
             currIter->objectiveValue = env->dualSolver->getObjectiveValue();
