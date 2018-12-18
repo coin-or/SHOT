@@ -20,10 +20,8 @@ class INLPSolver
 
     virtual ~INLPSolver(){};
 
-    //OptProblem *NLPProblem;
     EnvironmentPtr env;
 
-    //virtual void initializeProblem() = 0;
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
     virtual void clearStartingPoint() = 0;
 
@@ -39,16 +37,10 @@ class INLPSolver
     virtual double getSolution(int i) = 0;
     virtual double getObjectiveValue() = 0;
 
-    /*virtual bool isObjectiveFunctionNonlinear() = 0;
-    virtual int getObjectiveFunctionVariableIndex() = 0;*/
-
     virtual VectorDouble getVariableLowerBounds() = 0;
     virtual VectorDouble getVariableUpperBounds() = 0;
 
   protected:
     virtual E_NLPSolutionStatus solveProblemInstance() = 0;
-
-    //virtual VectorDouble getCurrentVariableLowerBounds() = 0;
-    //virtual VectorDouble getCurrentVariableUpperBounds() = 0;
 };
 } // namespace SHOT

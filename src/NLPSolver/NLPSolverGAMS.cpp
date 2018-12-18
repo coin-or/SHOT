@@ -32,7 +32,6 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject) 
 
 NLPSolverGAMS::~NLPSolverGAMS()
 {
-    //delete NLPProblem;
 }
 
 void NLPSolverGAMS::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
@@ -69,12 +68,10 @@ void NLPSolverGAMS::unfixVariables()
 
 void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
 {
-    //throw std::logic_error("saveOptionsToFile() not implemented");
 }
 
 void NLPSolverGAMS::saveProblemToFile(std::string fileName)
 {
-    //throw std::logic_error("saveProblemToFile() not implemented");
 }
 
 VectorDouble NLPSolverGAMS::getSolution()
@@ -119,7 +116,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
                       NULL, NULL, timelimit, iterlimit, 0, 0.0, 0.0, NULL, msg) != 0)
     {
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
-        //throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
+        throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
     }
 
     gmoAltBoundsSet(modelingObject, 0);
@@ -170,37 +167,6 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
         return E_NLPSolutionStatus::Error;
     }
 }
-
-/*
-bool NLPSolverGAMS::createProblemInstance(gmoHandle_t GAMSModelingObject)
-{
-    modelingObject = GAMSModelingObject;
-    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmoHandle_t GAMSModelingObject;);
-
-    return true;
-}*/
-/*
-/*bool NLPSolverGAMS::isObjectiveFunctionNonlinear()
-{
-    return (NLPProblem->isObjectiveFunctionNonlinear());
-}
-
-int NLPSolverGAMS::getObjectiveFunctionVariableIndex()
-{
-    return (NLPProblem->getNonlinearObjectiveVariableIdx());
-}*/
-
-#if 0
-VectorDouble NLPSolverGAMS::getCurrentVariableLowerBounds()
-{
-	return (NLPProblem->getVariableLowerBounds());
-}
-
-VectorDouble NLPSolverGAMS::getCurrentVariableUpperBounds()
-{
-	return (NLPProblem->getVariableUpperBounds());
-}
-#endif
 
 VectorDouble NLPSolverGAMS::getVariableLowerBounds()
 {

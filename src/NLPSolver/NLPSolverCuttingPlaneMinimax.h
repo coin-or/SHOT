@@ -14,13 +14,16 @@
 #include "../Tasks/TaskAddHyperplanes.h"
 
 #ifdef HAS_CPLEX
-#include "../MIPSolver/MIPSolverCplex.h"
-#endif
-#ifdef HAS_GUROBI
-#include "../MIPSolver/MIPSolverGurobi.h"
+#include "MIPSolver/MIPSolverCplex.h"
 #endif
 
-#include "../MIPSolver/MIPSolverOsiCbc.h"
+#ifdef HAS_GUROBI
+#include "MIPSolver/MIPSolverGurobi.h"
+#endif
+
+#ifdef HAS_OS
+#include "MIPSolver/MIPSolverOsiCbc.h"
+#endif
 
 namespace SHOT
 {
@@ -29,8 +32,6 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
   public:
     NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem);
     virtual ~NLPSolverCuttingPlaneMinimax();
-
-    //virtual void setProblem(ProblemPtr problem);
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();
@@ -45,14 +46,12 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 
   private:
     std::unique_ptr<IMIPSolver> LPSolver;
-    ProblemPtr originalProblem;
+    ProblemPtr sourceProblem;
     VectorString variableNames;
 
     virtual double getSolution(int i);
     virtual VectorDouble getSolution();
     virtual double getObjectiveValue();
-
-    //virtual bool createProblemInstance();
 
     virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
 
@@ -62,7 +61,6 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 
     virtual void saveOptionsToFile(std::string fileName);
 
-    virtual NumericConstraintValue calculateNumericValue(NumericConstraintPtr C, const VectorDouble &point);
     bool isProblemCreated;
 
     VectorDouble solution;

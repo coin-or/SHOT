@@ -29,20 +29,7 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, OSInstance *
 NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 {
     delete osolwriter;
-    //delete NLPProblem;
 }
-
-/*
-bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
-{
-    env->output->outputInfo("     Creating relaxed Ipopt problem.");
-
-    dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
-
-    env->output->outputInfo("     Ipopt relaxed NLP problem created.");
-
-    return (true);
-}*/
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {

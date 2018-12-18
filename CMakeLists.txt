@@ -53,6 +53,10 @@ if(HAS_GAMS)
   add_definitions(-DHAS_GAMS)
 endif()
 
+if(HAS_OS)
+  add_definitions(-DHAS_OS)
+endif()
+
 INCLUDE(FindPkgConfig)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")

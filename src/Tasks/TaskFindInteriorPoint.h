@@ -12,7 +12,6 @@
 #include "TaskBase.h"
 
 #include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
-//#include "../NLPSolver/NLPSolverIpoptMinimax.h"
 
 namespace SHOT
 {

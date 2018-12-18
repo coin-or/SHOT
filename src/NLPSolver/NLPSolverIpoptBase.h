@@ -49,10 +49,7 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     std::vector<char> originalVariableType;
 
   public:
-    //NLPSolverIpoptBase(EnvironmentPtr envPtr, OSInstance *instance);
     virtual ~NLPSolverIpoptBase(){};
-
-    //virtual void setProblem(OSInstance *instance);
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();
@@ -60,9 +57,6 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     virtual VectorDouble getSolution();
     virtual double getSolution(int i);
     virtual double getObjectiveValue();
-
-    //virtual bool isObjectiveFunctionNonlinear();
-    //virtual int getObjectiveFunctionVariableIndex();
 
     virtual void saveOptionsToFile(std::string fileName);
     virtual void saveProblemToFile(std::string fileName);

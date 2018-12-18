@@ -19,16 +19,7 @@ class NLPSolverBase : virtual public INLPSolver
   protected:
     NLPSolverBase();
 
-    //bool isProblemInitialized = false;
-
   public:
-    //virtual void setProblem(OSInstance *origInstance);
-    //virtual void initializeProblem();
     virtual E_NLPSolutionStatus solveProblem();
-
-    //virtual void saveProblemToFile(std::string fileName);
-
-    //virtual VectorDouble getCurrentVariableLowerBounds() = 0;
-    //virtual VectorDouble getCurrentVariableUpperBounds() = 0;
 };
 } // namespace SHOT

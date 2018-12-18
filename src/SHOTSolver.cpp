@@ -474,7 +474,7 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual", 8,
                                  "Required termination bit precision for minimization subsolver", 1, 64, true);
 
-    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual", 0.5,
+    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual", 0.25,
                                  "The fraction of violated constraints to generate cutting planes for", 0.0, 1.0);
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 2000,
@@ -498,10 +498,6 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
                                  "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 0.5,
-                                 "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for",
-                                 0.0, 1.0);
-
     // Dual strategy settings: Interior point search strategy
 
     VectorString enumNLPSolver;
@@ -511,7 +507,7 @@ void SHOTSolver::initializeSettings()
     enumNLPSolver.push_back("Ipopt minimax and relaxed");
 
     env->settings->createSetting("ESH.InteriorPoint.Solver", "Dual",
-                                 static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver);
+                                 static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver, true);
     enumNLPSolver.clear();
 
     VectorString enumAddPrimalPointAsInteriorPoint;
@@ -548,6 +544,10 @@ void SHOTSolver::initializeSettings()
                                  "Solve a fixed LP problem if integer-values have not changes in several MIP iterations");
 
     // Dual strategy settings: Hyperplane generation
+
+    env->settings->createSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 0.5,
+                                 "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for",
+                                 0.0, 1.0);
 
     env->settings->createSetting("HyperplaneCuts.Delay", "Dual", true,
                                  "Add hyperplane cuts to model only after optimal MIP solution");

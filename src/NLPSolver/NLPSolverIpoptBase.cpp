@@ -35,11 +35,6 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
         setIntegers(false);
 
         IpoptNLPSolver->osinstance = osInstance;
-
-        // Needed to fix bugs in OSInstance
-        /*std::string osil = env->model->getOSiLFromProblemInstance(osInstance);
-        IpoptNLPSolver->osinstance = env->model->getProblemInstanceFromOSiL(osil);
-        IpoptNLPSolver->osinstance->getJacobianSparsityPattern();*/
         updateSettings();
 
         std::string solStatus;
@@ -173,12 +168,6 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         auto currLB = lbs[currVarIndex];
         auto currUB = ubs[currVarIndex];
 
-        // Nonlinear objective function variable are not used in the NLP problem for Ipopt
-        /*if (NLPProblem->isObjectiveFunctionNonlinear() && currVarIndex == NLPProblem->getNonlinearObjectiveVariableIdx())
-        {
-            continue;
-        }*/
-
         if (currPt > currUB)
         {
             env->output->outputWarning(
@@ -227,17 +216,6 @@ void NLPSolverIpoptBase::clearStartingPoint()
     setSolverSpecificInitialSettings();
 }
 
-/*
-bool NLPSolverIpoptBase::isObjectiveFunctionNonlinear()
-{
-    return (NLPProblem->isObjectiveFunctionNonlinear());
-}
-
-int NLPSolverIpoptBase::getObjectiveFunctionVariableIndex()
-{
-    return (NLPProblem->getNonlinearObjectiveVariableIdx());
-}*/
-
 VectorDouble NLPSolverIpoptBase::getVariableLowerBounds()
 {
     double *tmpArray = osInstance->getVariableLowerBounds();
@@ -255,29 +233,6 @@ VectorDouble NLPSolverIpoptBase::getVariableUpperBounds()
 
     return (tmpVector);
 }
-
-/*NLPSolverIpoptBase::NLPSolverIpoptBase(EnvironmentPtr envPtr, OSInstance *instance)
-{
-    IpoptNLPSolver = NULL;
-}*
-
-NLPSolverIpoptBase::~NLPSolverIpoptBase()
-{
-    if (IpoptNLPSolver != NULL)
-    {
-        delete IpoptNLPSolver;
-        IpoptNLPSolver = NULL;
-    }
-
-    delete osOption;
-}
-
-/*
-void NLPSolverIpoptBase::setProblem(OSInstance *instance)
-{
-    originalInstance = instance;
-    isProblemInitialized = false;
-}*/
 
 VectorDouble NLPSolverIpoptBase::getSolution()
 {

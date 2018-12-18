@@ -22,8 +22,6 @@ class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
     virtual VectorDouble getSolution();
 
   protected:
-    //bool createProblemInstance(OSInstance *origInstance);
-
     virtual void setSolverSpecificInitialSettings();
 
   private:

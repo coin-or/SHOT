@@ -10,7 +10,6 @@
 
 #pragma once
 #include "NLPSolverBase.h"
-#include "../SharedOS.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"
@@ -50,12 +49,8 @@ class NLPSolverGAMS : public NLPSolverBase
 
     virtual double getObjectiveValue();
 
-    /*int getObjectiveFunctionVariableIndex();
-    bool isObjectiveFunctionNonlinear();*/
-
   protected:
     E_NLPSolutionStatus solveProblemInstance();
-    //bool createProblemInstance(OSInstance *origInstance);
 
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();

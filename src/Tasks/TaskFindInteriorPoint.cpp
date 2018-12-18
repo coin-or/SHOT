@@ -41,40 +41,10 @@ void TaskFindInteriorPoint::run()
 
     if (solver == ES_InteriorPointStrategy::CuttingPlaneMiniMax)
     {
-        NLPSolvers.emplace_back(new NLPSolverCuttingPlaneMinimax(env, env->reformulatedProblem));
-
-        //NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
+        NLPSolvers.emplace_back(std::make_unique<NLPSolverCuttingPlaneMinimax>(env, env->reformulatedProblem));
 
         env->output->outputDebug("Cutting plane minimax selected as NLP solver.");
     }
-    /*else if (solver == ES_InteriorPointStrategy::IpoptMinimax)
-    {
-        NLPSolvers.emplace_back(new NLPSolverIpoptMinimax(env));
-
-        NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
-
-        env->output->outputDebug("Ipopt minimax selected as NLP solver.");
-    }
-    else if (solver == ES_InteriorPointStrategy::IpoptRelaxed)
-    {
-        NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed(env), std::dynamic_pointer_cast<ModelingSystemOS>(env->modelingSystem)->originalInstance);
-
-        //NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
-
-        env->output->outputDebug("Ipopt relaxed selected as NLP solver.");
-    }*/
-    /*else if (solver == ES_InteriorPointStrategy::IpoptMinimaxAndRelaxed)
-    {
-        NLPSolvers.emplace_back(new NLPSolverIpoptMinimax(env));
-
-        NLPSolvers[0]->setProblem(env->model->originalProblem->getProblemInstance());
-
-        NLPSolvers.emplace_back(new NLPSolverIpoptRelaxed(env));
-
-        NLPSolvers[1]->setProblem(env->model->originalProblem->getProblemInstance());
-
-        env->output->outputDebug("Ipopt minimax and relaxed selected as NLP solver.");
-    }*/
     else
     {
         return;
