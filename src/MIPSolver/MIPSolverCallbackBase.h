@@ -15,7 +15,6 @@
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
 #include "../Tasks/TaskSelectHyperplanePointsECP.h"
 #include "../Tasks/TaskUpdateInteriorPoint.h"
-#include "../Report.h"
 
 namespace SHOT
 {

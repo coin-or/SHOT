@@ -529,22 +529,18 @@ bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if (env->settings->getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") &&
         env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        auto objConstrVal = env->problem->objectiveFunction->calculateValue(tmpPoint);
+        Hyperplane hyperplane;
+        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
+        hyperplane.isObjectiveHyperplane = true;
+        hyperplane.sourceConstraintIndex = -1;
+        hyperplane.generatedPoint = tmpPoint;
+        hyperplane.objectiveFunctionValue = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
 
-        if (objConstrVal < 0)
-        {
-            Hyperplane hyperplane;
-            hyperplane.sourceConstraintIndex = -1;
-            hyperplane.generatedPoint = tmpPoint;
-            hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
-            hyperplane.isObjectiveHyperplane = true;
+        this->hyperplaneWaitingList.push_back(hyperplane);
 
-            this->hyperplaneWaitingList.push_back(hyperplane);
+        auto tmpLine = boost::format("     Primal objective cut added.");
 
-            auto tmpLine = boost::format("     Primal objective cut added.");
-
-            env->output->outputWarning(tmpLine.str());
-        }
+        env->output->outputWarning(tmpLine.str());
     }
 
     this->setPrimalBound(tmpObjVal);

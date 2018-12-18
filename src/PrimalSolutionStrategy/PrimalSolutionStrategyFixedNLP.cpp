@@ -137,6 +137,27 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
         int sizeOfVariableVector = env->problem->properties.numberOfVariables;
 
+        if (env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal"))
+        {
+            for (auto &V : env->reformulatedProblem->allVariables)
+            {
+                if (V->index > sizeOfVariableVector)
+                    continue;
+
+                if (V->hasUpperBoundBeenTightened)
+                {
+                    std::cout << "updated UB in NLP\n";
+                    NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
+                }
+
+                if (V->hasLowerBoundBeenTightened)
+                {
+                    std::cout << "updated LB in NLP\n";
+                    NLPSolver->updateVariableLowerBound(V->index, V->upperBound);
+                }
+            }
+        }
+
         VectorInteger startingPointIndexes(sizeOfVariableVector);
         VectorDouble startingPointValues(sizeOfVariableVector);
 

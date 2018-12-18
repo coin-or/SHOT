@@ -56,235 +56,6 @@ bool MIPSolverGurobi::initializeProblem()
     return (true);
 }
 
-/*
-bool MIPSolverGurobi::createLinearProblem(OptProblem *origProblem)
-{
-    originalProblem = origProblem;
-
-    try
-    {
-        auto numVar = origProblem->getNumberOfVariables();
-        auto tmpLBs = origProblem->getVariableLowerBounds();
-        auto tmpUBs = origProblem->getVariableUpperBounds();
-        auto tmpNames = origProblem->getVariableNames();
-        auto tmpTypes = origProblem->getVariableTypes();
-
-        int numCon = origProblem->getNumberOfConstraints();
-        if (origProblem->isObjectiveFunctionNonlinear())
-            numCon--;
-
-        for (int i = 0; i < numVar; i++)
-        {
-            if (tmpTypes.at(i) == 'C')
-            {
-                auto tmpLB = tmpLBs.at(i);
-                auto tmpUB = tmpUBs.at(i);
-
-                GRBVar tmpVar = gurobiModel->addVar(tmpLB, tmpUB, 0.0, GRB_CONTINUOUS, tmpNames.at(i));
-            }
-            else if (tmpTypes.at(i) == 'I')
-            {
-                auto tmpLB = tmpLBs.at(i);
-                auto tmpUB = tmpUBs.at(i);
-
-                GRBVar tmpVar = gurobiModel->addVar(tmpLB, tmpUB, 0.0, GRB_INTEGER, tmpNames.at(i));
-            }
-            else if (tmpTypes.at(i) == 'B')
-            {
-                GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_BINARY, tmpNames.at(i));
-            }
-            else if (tmpTypes.at(i) == 'D')
-            {
-                GRBVar tmpVar = gurobiModel->addVar(tmpLBs.at(i), tmpUBs.at(i), 0.0, GRB_SEMICONT, tmpNames.at(i));
-            }
-            else
-            {
-                env->output->outputWarning(
-                    "Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
-            }
-        }
-
-        gurobiModel->update();
-
-        auto tmpObjPairs = origProblem->getObjectiveFunctionVarCoeffPairs();
-
-        gurobiModel->set(GRB_DoubleAttr_ObjCon, origProblem->getObjectiveConstant());
-
-        if (origProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic)
-        {
-            GRBLinExpr *expr = new GRBLinExpr(0);
-
-            for (int i = 0; i < tmpObjPairs.size(); i++)
-            {
-                *expr += +(tmpObjPairs.at(i).second) * (gurobiModel->getVar(tmpObjPairs.at(i).first));
-            }
-
-            double objConstant = origProblem->getObjectiveConstant();
-            if (objConstant != 0.0)
-                *expr += objConstant;
-
-            gurobiModel->setObjective(*expr);
-
-            delete expr;
-        }
-        else
-        {
-            GRBQuadExpr *expr = new GRBQuadExpr(0);
-
-            for (int i = 0; i < tmpObjPairs.size(); i++)
-            {
-                *expr += (tmpObjPairs.at(i).second) * (gurobiModel->getVar(tmpObjPairs.at(i).first));
-            }
-
-            auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
-
-            for (auto T : quadTerms)
-            {
-                *expr += (T->coef * gurobiModel->getVar(T->idxOne) * gurobiModel->getVar(T->idxTwo));
-            }
-
-            double objConstant = origProblem->getObjectiveConstant();
-            if (objConstant != 0.0)
-                *expr += objConstant;
-
-            gurobiModel->setObjective(*expr);
-
-            delete expr;
-        }
-
-        gurobiModel->update();
-
-        if (origProblem->isTypeOfObjectiveMinimize())
-        {
-            gurobiModel->set(GRB_IntAttr_ModelSense, 1);
-        }
-        else
-        {
-            gurobiModel->set(GRB_IntAttr_ModelSense, -1);
-        }
-
-        gurobiModel->update();
-
-        // Now creating the constraints
-
-        int row_nonz = 0;
-        int obj_nonz = 0;
-        int varIdx = 0;
-
-        SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
-            origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
-
-        auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
-        auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
-        auto constrLBs = origProblem->getProblemInstance()->getConstraintLowerBounds();
-        auto constrUBs = origProblem->getProblemInstance()->getConstraintUpperBounds();
-
-        for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
-        {
-            // Only use constraints that don't contain a nonlinear part (may include a quadratic part)
-            if (!origProblem->isConstraintNonlinear(rowIdx))
-            {
-                auto quadTerms = origProblem->getQuadraticTermsInConstraint(rowIdx);
-
-                if (quadTerms.size() == 0)
-                {
-                    GRBLinExpr *expr = new GRBLinExpr(0);
-                    *expr += origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
-
-                    if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
-                    {
-                        row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
-
-                        for (int j = 0; j < row_nonz; j++)
-                        {
-                            double val =
-                                m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-                            varIdx =
-                                m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-                            auto variable = gurobiModel->getVar(varIdx);
-
-                            *expr += val * variable;
-                        }
-                    }
-                    if (constrTypes[rowIdx] == 'L')
-                    {
-                        gurobiModel->addConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
-                    }
-                    else if (constrTypes[rowIdx] == 'G')
-                    {
-                        gurobiModel->addConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
-                    }
-                    else if (constrTypes[rowIdx] == 'E')
-                    {
-                        gurobiModel->addConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
-                    }
-                    else
-                    {
-                    }
-
-                    delete expr;
-                }
-                else
-                {
-                    GRBQuadExpr *expr = new GRBQuadExpr(0);
-                    *expr += origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
-
-                    if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
-                    {
-                        row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
-
-                        for (int j = 0; j < row_nonz; j++)
-                        {
-                            double val =
-                                m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-                            varIdx =
-                                m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-                            auto variable = gurobiModel->getVar(varIdx);
-
-                            *expr += val * variable;
-                        }
-                    }
-
-                    for (auto T : quadTerms)
-                    {
-                        *expr += (T->coef * gurobiModel->getVar(T->idxOne) * gurobiModel->getVar(T->idxTwo));
-                    }
-
-                    if (constrTypes[rowIdx] == 'L')
-                    {
-                        gurobiModel->addQConstr(*expr <= constrUBs[rowIdx], constrNames[rowIdx]);
-                    }
-                    else if (constrTypes[rowIdx] == 'G')
-                    {
-                        gurobiModel->addQConstr(*expr >= constrLBs[rowIdx], constrNames[rowIdx]);
-                    }
-                    else if (constrTypes[rowIdx] == 'E')
-                    {
-                        gurobiModel->addQConstr(*expr == constrUBs[rowIdx], constrNames[rowIdx]);
-                    }
-                    else
-                    {
-                    }
-
-                    delete expr;
-                }
-            }
-        }
-
-        gurobiModel->update();
-    }
-    catch (GRBException &e)
-    {
-        {
-            env->output->outputError("Error when creating linear problem:", e.getMessage());
-        }
-
-        return (false);
-    }
-
-    return (true);
-}*/
-
 bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
     try
@@ -955,6 +726,40 @@ void MIPSolverGurobi::updateVariableBound(int varIndex, double lowerBound, doubl
         GRBVar tmpVar = gurobiModel->getVar(varIndex);
 
         tmpVar.set(GRB_DoubleAttr_LB, lowerBound);
+        tmpVar.set(GRB_DoubleAttr_UB, upperBound);
+
+        gurobiModel->update();
+    }
+    catch (GRBException &e)
+    {
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+    }
+}
+
+void MIPSolverGurobi::updateVariableLowerBound(int varIndex, double lowerBound)
+{
+    try
+    {
+        GRBVar tmpVar = gurobiModel->getVar(varIndex);
+
+        tmpVar.set(GRB_DoubleAttr_LB, lowerBound);
+
+        gurobiModel->update();
+    }
+    catch (GRBException &e)
+    {
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+    }
+}
+
+void MIPSolverGurobi::updateVariableUpperBound(int varIndex, double upperBound)
+{
+    try
+    {
+        GRBVar tmpVar = gurobiModel->getVar(varIndex);
+
         tmpVar.set(GRB_DoubleAttr_UB, upperBound);
 
         gurobiModel->update();

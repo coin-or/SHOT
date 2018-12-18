@@ -47,155 +47,6 @@ bool MIPSolverOsiCbc::initializeProblem()
     return (true);
 }
 
-/*
-bool MIPSolverOsiCbc::createLinearProblem(OptProblem *origProblem)
-{
-    originalProblem = origProblem;
-
-    if (originalProblem->isTypeOfObjectiveMinimize())
-    {
-        this->cutOff = DBL_MAX;
-    }
-    else
-    {
-        this->cutOff = -DBL_MAX;
-    }
-
-    coinModel = new CoinModel();
-
-    auto numVar = origProblem->getNumberOfVariables();
-    auto tmpLBs = origProblem->getVariableLowerBounds();
-    auto tmpUBs = origProblem->getVariableUpperBounds();
-    auto tmpNames = origProblem->getVariableNames();
-    auto tmpTypes = origProblem->getVariableTypes();
-
-    int numCon = origProblem->getNumberOfConstraints();
-    if (origProblem->isObjectiveFunctionNonlinear())
-        numCon--; // Only want the number of original constraints and not the objective function
-
-    // Now creating the variables
-    for (int i = 0; i < numVar; i++)
-    {
-        coinModel->setColumnBounds(i, tmpLBs.at(i), tmpUBs.at(i));
-        coinModel->setColName(i, tmpNames.at(i).c_str());
-
-        if (tmpTypes.at(i) == 'C')
-        {
-        }
-        else if (tmpTypes.at(i) == 'I' || tmpTypes.at(i) == 'B')
-        {
-            coinModel->setInteger(i);
-        }
-        else if (tmpTypes.at(i) == 'D')
-        {
-            coinModel->setInteger(i);
-        }
-        else
-        {
-            env->output->outputWarning(
-                "Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
-        }
-    }
-
-    // Now creating the objective function
-
-    auto tmpObjPairs = origProblem->getObjectiveFunctionVarCoeffPairs();
-
-    for (int i = 0; i < tmpObjPairs.size(); i++)
-    {
-        coinModel->setColObjective(tmpObjPairs.at(i).first, tmpObjPairs.at(i).second);
-    }
-
-
-    double objConstant = origProblem->getObjectiveConstant();
-    coinModel->setObjectiveOffset(objConstant);
-
-    if (origProblem->isTypeOfObjectiveMinimize())
-    {
-        coinModel->setOptimizationDirection(1.0);
-    }
-    else
-    {
-        coinModel->setOptimizationDirection(-1.0);
-    }
-
-    // Now creating the constraints
-
-    int row_nonz = 0;
-    int obj_nonz = 0;
-    int varIdx = 0;
-
-    SparseMatrix *m_linearConstraintCoefficientsInRowMajor = origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
-
-    auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
-    auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
-    auto constrLBs = origProblem->getProblemInstance()->getConstraintLowerBounds();
-    auto constrUBs = origProblem->getProblemInstance()->getConstraintUpperBounds();
-
-    int corr = 0;
-
-    for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
-    {
-        // Only use constraints that don't contain a nonlinear part (may include a quadratic part)
-        if (!origProblem->isConstraintNonlinear(rowIdx))
-        {
-            if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
-            {
-                row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
-
-                for (int j = 0; j < row_nonz; j++)
-                {
-                    double val =
-                        m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-                    varIdx =
-                        m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-
-                    coinModel->setElement(rowIdx - corr, varIdx, val);
-                }
-            }
-
-            double rowConstant = origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
-
-            coinModel->setRowName(rowIdx - corr, constrNames[rowIdx].c_str());
-
-            // Add the constraint
-            if (constrTypes[rowIdx] == 'L')
-            {
-                coinModel->setRowUpper(rowIdx - corr, constrUBs[rowIdx] - rowConstant);
-            }
-            else if (constrTypes[rowIdx] == 'G')
-            {
-                coinModel->setRowLower(rowIdx - corr, constrLBs[rowIdx] - rowConstant);
-            }
-            else if (constrTypes[rowIdx] == 'E')
-            {
-                coinModel->setRowBounds(rowIdx - corr, constrLBs[rowIdx] - rowConstant, constrUBs[rowIdx] - rowConstant);
-            }
-            else
-            {
-            }
-        }
-        else
-        {
-            corr++;
-        }
-    }
-
-    osiInterface->loadFromCoinModel(*coinModel);
-    cbcModel = new CbcModel(*osiInterface);
-    CbcMain0(*cbcModel);
-
-    if (!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
-    {
-        cbcModel->setLogLevel(0);
-        osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
-    }
-
-    setSolutionLimit(1);
-
-    return (true);
-}*/
-
 bool MIPSolverOsiCbc::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
     int index = numberOfVariables;
@@ -742,6 +593,32 @@ void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, doubl
     try
     {
         osiInterface->setColBounds(varIndex, lowerBound, upperBound);
+    }
+    catch (std::exception &e)
+    {
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc", e.what());
+    }
+}
+
+void MIPSolverOsiCbc::updateVariableLowerBound(int varIndex, double lowerBound)
+{
+    try
+    {
+        osiInterface->setColLower(varIndex, lowerBound);
+    }
+    catch (std::exception &e)
+    {
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex) + " in Cbc", e.what());
+    }
+}
+
+void MIPSolverOsiCbc::updateVariableUpperBound(int varIndex, double upperBound)
+{
+    try
+    {
+        osiInterface->setColUpper(varIndex, upperBound);
     }
     catch (std::exception &e)
     {

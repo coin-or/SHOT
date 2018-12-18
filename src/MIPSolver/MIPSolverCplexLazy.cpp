@@ -214,58 +214,6 @@ void CplexCallback::invoke(const IloCplex::Callback::Context &context)
             auto bounds = std::make_pair(env->process->getDualBound(), env->process->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
-            /*
-            auto constraintTolerance = env->settings->getDoubleSetting("ConstraintTolerance", "Termination");
-
-            bool auxilliaryObjectiveConstraintIsFulfilled = false;
-            bool quadraticConstraintAreFulfilled = false;
-            bool nonlinearConstraintAreFulfilled = false;
-
-            // Checks it the nonlinear objective is fulfilled
-            if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
-            {
-                if (env->reformulatedProblem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point) - currIter->objectiveValue < constraintTolerance)
-                {
-                    auxilliaryObjectiveConstraintIsFulfilled = true;
-                }
-            }
-            else
-            {
-                auxilliaryObjectiveConstraintIsFulfilled = true;
-            }
-
-            // Checks it the quadratic constraints are fulfilled
-            if (env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
-            {
-                if (env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
-                {
-                    quadraticConstraintAreFulfilled = true;
-                }
-            }
-            else
-            {
-                quadraticConstraintAreFulfilled = true;
-            }
-
-            // Checks it the nonlinear constraints are fulfilled
-            if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
-            {
-                if (env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
-                {
-                    nonlinearConstraintAreFulfilled = true;
-                }
-            }
-            else
-            {
-                nonlinearConstraintAreFulfilled = true;
-            }
-
-            if (auxilliaryObjectiveConstraintIsFulfilled && quadraticConstraintAreFulfilled && nonlinearConstraintAreFulfilled)
-            {
-                std::cout << "hej\n";
-                return;
-            }*/
-
             if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
                 taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
@@ -554,7 +502,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             cplexInstance.use(&cCallback, contextMask);
 
         // This fixes a bug in CPLEX
-        //cplexEnv.setNormalizer(false);
+        cplexEnv.setNormalizer(false);
 
         cplexInstance.solve();
 

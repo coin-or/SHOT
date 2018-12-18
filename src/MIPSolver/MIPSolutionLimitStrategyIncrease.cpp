@@ -34,7 +34,6 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
     if (!currIter->isMIP())
     {
         lastIterSolLimIncreased = currIter->iterationNumber;
-        //lastIterOptimal = prevIter->iterationNumber;
         return (false);
     }
 

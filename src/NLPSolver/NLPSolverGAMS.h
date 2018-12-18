@@ -49,6 +49,9 @@ class NLPSolverGAMS : public NLPSolverBase
 
     virtual double getObjectiveValue();
 
+    virtual void updateVariableLowerBound(int variableIndex, double bound);
+    virtual void updateVariableUpperBound(int variableIndex, double bound);
+
   protected:
     E_NLPSolutionStatus solveProblemInstance();
 

@@ -25,6 +25,8 @@ class Variable
 
     double upperBound;
     double lowerBound;
+    bool hasUpperBoundBeenTightened = false;
+    bool hasLowerBoundBeenTightened = false;
 
     bool isNonlinear = false;
     FactorableFunctionPtr factorableFunctionVariable;

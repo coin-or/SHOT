@@ -479,6 +479,18 @@ void NLPSolverIpoptBase::setIntegers(bool useDiscrete)
     osInstance->bVariablesModified = true;
 }
 
+void NLPSolverIpoptBase::updateVariableLowerBound(int variableIndex, double bound)
+{
+    osInstance->instanceData->variables->var[variableIndex]->lb = bound;
+    osInstance->bVariablesModified = true;
+}
+
+void NLPSolverIpoptBase::updateVariableUpperBound(int variableIndex, double bound)
+{
+    osInstance->instanceData->variables->var[variableIndex]->ub = bound;
+    osInstance->bVariablesModified = true;
+}
+
 void NLPSolverIpoptBase::updateSettings()
 {
     IpoptNLPSolver->osoption = osOption;

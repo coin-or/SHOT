@@ -17,64 +17,10 @@ NLPSolverBase::NLPSolverBase()
 {
 }
 
-/*
-void NLPSolverBase::initializeProblem()
-{
-    if (!isProblemInitialized)
-    {
-        createProblemInstance();
-
-        isProblemInitialized = true;
-    }
-}*/
-
-/*void NLPSolverBase::saveProblemToFile(std::string fileName)
-{
-
-    NLPProblem->saveProblemModelToFile(fileName);
-}*/
-
 E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
-    /*if (!isProblemInitialized)
-        initializeProblem();*/
-    /*
-    if (env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal")) // Does not seem to work with Ipopt...
-    {
-        auto numVar = env->model->originalProblem->getNumberOfVariables();
-
-        for (int i = 0; i < numVar; i++)
-        {
-            if (env->model->originalProblem->hasVariableBoundsBeenTightened(i))
-            {
-                NLPProblem->setVariableLowerBound(i,
-                                                  env->model->originalProblem->getVariableLowerBound(i));
-                NLPProblem->setVariableUpperBound(i,
-                                                  env->model->originalProblem->getVariableUpperBound(i));
-                NLPProblem->setVariableBoundsAsTightened(i);
-            }
-        }
-    }*/
-
     auto solStatus = solveProblemInstance();
 
     return (solStatus);
 }
-
-// VectorDouble NLPSolverBase::getVariableLowerBounds()
-// {
-
-//     /*if (!isProblemInitialized)
-//         initializeProblem();*/
-
-//     return (getCurrentVariableLowerBounds());
-// }
-
-// VectorDouble NLPSolverBase::getVariableUpperBounds()
-// {
-//     /*if (!isProblemInitialized)
-//         initializeProblem();*/
-
-//     return (getCurrentVariableUpperBounds());
-// }
 } // namespace SHOT

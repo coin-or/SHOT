@@ -87,6 +87,9 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
+    virtual void updateVariableLowerBound(int varIndex, double lowerBound);
+    virtual void updateVariableUpperBound(int varIndex, double upperBound);
+
     virtual PairDouble getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()

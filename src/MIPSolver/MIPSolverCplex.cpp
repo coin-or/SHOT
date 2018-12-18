@@ -74,304 +74,6 @@ bool MIPSolverCplex::initializeProblem()
     return (true);
 }
 
-/*
-bool MIPSolverCplex::createLinearProblem(OptProblem *origProblem)
-{
-    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
-    {
-        initializeProblem();
-    }
-
-    originalProblem = origProblem;
-
-    auto numVar = origProblem->getNumberOfVariables();
-    auto tmpLBs = origProblem->getVariableLowerBounds();
-    auto tmpUBs = origProblem->getVariableUpperBounds();
-    auto tmpNames = origProblem->getVariableNames();
-    auto tmpTypes = origProblem->getVariableTypes();
-
-    int numCon = origProblem->getNumberOfConstraints();
-    if (origProblem->isObjectiveFunctionNonlinear())
-        numCon--; // Only want the number of original constraints and not the objective function
-
-    // Now creating the variables
-    for (int i = 0; i < numVar; i++)
-    {
-        if (tmpTypes.at(i) == 'C')
-        {
-            cplexVars.add(IloNumVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOFLOAT, tmpNames.at(i).c_str()));
-        }
-        else if (tmpTypes.at(i) == 'I')
-        {
-            cplexVars.add(IloNumVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOINT, tmpNames.at(i).c_str()));
-        }
-        else if (tmpTypes.at(i) == 'B')
-        {
-            cplexVars.add(IloNumVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOBOOL, tmpNames.at(i).c_str()));
-        }
-        else if (tmpTypes.at(i) == 'D')
-        {
-            cplexVars.add(IloSemiContVar(cplexEnv, tmpLBs.at(i), tmpUBs.at(i), ILOFLOAT, tmpNames.at(i).c_str()));
-        }
-        else
-        {
-            env->output->outputWarning(
-                "Error variable type " + std::to_string(tmpTypes.at(i)) + " for " + tmpNames.at(i));
-        }
-    }
-
-    cplexModel.add(cplexVars);
-
-    // Now creating the objective function
-
-    IloExpr objExpr(cplexEnv);
-
-    auto tmpObjPairs = origProblem->getObjectiveFunctionVarCoeffPairs();
-
-    for (int i = 0; i < tmpObjPairs.size(); i++)
-    {
-        objExpr += tmpObjPairs.at(i).second * cplexVars[tmpObjPairs.at(i).first];
-    }
-
-    // Add quadratic terms in the objective if they exist
-    if (origProblem->getObjectiveFunctionType() == E_ObjectiveFunctionType::Quadratic)
-    {
-        auto quadTerms = origProblem->getQuadraticTermsInConstraint(-1);
-
-        for (auto T : quadTerms)
-        {
-            objExpr += T->coef * cplexVars[T->idxOne] * cplexVars[T->idxTwo];
-        }
-    }
-
-    double objConstant = origProblem->getObjectiveConstant();
-    if (objConstant != 0.0)
-        objExpr += objConstant;
-
-    if (origProblem->isTypeOfObjectiveMinimize())
-    {
-        cplexModel.add(IloMinimize(cplexEnv, objExpr));
-    }
-    else
-    {
-        cplexModel.add(IloMaximize(cplexEnv, objExpr));
-    }
-
-    objExpr.end();
-
-    // Now creating the constraints
-
-    int row_nonz = 0;
-    int obj_nonz = 0;
-    int varIdx = 0;
-
-    SparseMatrix *m_linearConstraintCoefficientsInRowMajor =
-        origProblem->getProblemInstance()->getLinearConstraintCoefficientsInRowMajor();
-
-    auto constrTypes = origProblem->getProblemInstance()->getConstraintTypes();
-    auto constrNames = origProblem->getProblemInstance()->getConstraintNames();
-    auto constrLBs = origProblem->getProblemInstance()->getConstraintLowerBounds();
-    auto constrUBs = origProblem->getProblemInstance()->getConstraintUpperBounds();
-
-    for (int rowIdx = 0; rowIdx < numCon; rowIdx++)
-    {
-        // Only use constraints that don't contain a nonlinear part (may include a quadratic part)
-        if (!origProblem->isConstraintNonlinear(rowIdx))
-        {
-            IloExpr expr(cplexEnv);
-
-            if (origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients != NULL && origProblem->getProblemInstance()->instanceData->linearConstraintCoefficients->numberOfValues > 0)
-            {
-                row_nonz = m_linearConstraintCoefficientsInRowMajor->starts[rowIdx + 1] - m_linearConstraintCoefficientsInRowMajor->starts[rowIdx];
-
-                for (int j = 0; j < row_nonz; j++)
-                {
-                    double val =
-                        m_linearConstraintCoefficientsInRowMajor->values[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-                    varIdx =
-                        m_linearConstraintCoefficientsInRowMajor->indexes[m_linearConstraintCoefficientsInRowMajor->starts[rowIdx] + j];
-
-                    expr += val * cplexVars[varIdx];
-                }
-            }
-
-            // Add quadratic terms if they exist and have been defined as quadratic and not nonlinear
-            auto quadTerms = origProblem->getQuadraticTermsInConstraint(rowIdx);
-
-            for (auto T : quadTerms)
-            {
-                expr += T->coef * cplexVars[T->idxOne] * cplexVars[T->idxTwo];
-            }
-
-            expr += origProblem->getProblemInstance()->instanceData->constraints->con[rowIdx]->constant;
-
-            // Add the constraint
-            if (constrTypes[rowIdx] == 'L')
-            {
-                IloRange tmpRange = IloRange(cplexEnv, -IloInfinity, expr, constrUBs[rowIdx],
-                                             constrNames[rowIdx].c_str());
-                cplexConstrs.add(tmpRange);
-            }
-            else if (constrTypes[rowIdx] == 'G')
-            {
-                IloRange tmpRange = IloRange(cplexEnv, constrLBs[rowIdx], expr, IloInfinity,
-                                             constrNames[rowIdx].c_str());
-                cplexConstrs.add(tmpRange);
-            }
-            else if (constrTypes[rowIdx] == 'E')
-            {
-                IloRange tmpRange = IloRange(cplexEnv, constrLBs[rowIdx], expr, constrUBs[rowIdx],
-                                             constrNames[rowIdx].c_str());
-                cplexConstrs.add(tmpRange);
-            }
-            else
-            {
-            }
-
-            expr.end();
-        }
-    }
-
-    cplexModel.add(cplexConstrs);
-
-    try
-    {
-        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
-        {
-            int setSolLimit;
-            bool discreteVariablesActivated = getDiscreteVariableStatus();
-
-            if (env->process->iterations.size() > 0)
-            {
-                setSolLimit = env->process->getCurrentIteration()->usedMIPSolutionLimit;
-                discreteVariablesActivated = env->process->getCurrentIteration()->isMIP();
-            }
-            else
-            {
-                setSolLimit = env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
-            }
-
-            cplexInstance = IloCplex(cplexModel);
-            setSolutionLimit(setSolLimit);
-
-            if (!discreteVariablesActivated)
-            {
-                activateDiscreteVariables(false);
-            }
-        }
-        else
-        {
-            cplexInstance = IloCplex(cplexModel);
-        }
-    }
-    catch (IloException &e)
-    {
-        env->output->outputError("Cplex exception caught when creating model", e.getMessage());
-        return (false);
-    }
-
-    return (true);
-}*/
-
-/*bool MIPSolverCplex::createLinearProblem(ProblemPtr sourceProblem)
-{
-    //MIPSolverBase::sourceProblem = sourceProblem;
-
-    /*if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
-    {
-        initializeProblem();
-    }*/
-
-// Now creating the variables
-/*
-    bool variablesInitialized = true;
-
-    for (auto &V : sourceProblem->allVariables)
-    {
-        variablesInitialized = variablesInitialized && addVariable(V->index, V->name.c_str(), V->type, V->lowerBound, V->upperBound);
-    }
-
-    //Nonlinear objective variable
-    if (sourceProblem->objectiveFunction->properties.hasNonlinearExpression)
-    {
-        double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
-
-        variablesInitialized = variablesInitialized && addVariable(auxilliaryObjectiveVariableIndex, "shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
-    }
-
-    if (!variablesInitialized)
-        return false;
-
-    // Now creating the objective function
-
-    bool objectiveInitialized = true;
-
-    objectiveInitialized = objectiveInitialized && initializeObjective();
-
-    // Linear terms
-    for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms.terms)
-    {
-        objectiveInitialized = objectiveInitialized && addLinearTermToObjective(T->coefficient, T->variable->index);
-    }
-
-    // Quadratic terms
-    if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
-    {
-        for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
-        {
-            objectiveInitialized = objectiveInitialized && addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
-        }
-    }
-
-    objectiveInitialized = objectiveInitialized && finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
-
-    if (!objectiveInitialized)
-        return false;
-
-    // Now creating the constraints
-
-    bool constraintsInitialized = true;
-
-    for (auto &C : env->problem->numericConstraints)
-    {
-        constraintsInitialized = constraintsInitialized && initializeConstraint();
-
-        switch (C->properties.classification)
-        {
-        case E_ConstraintClassification::Linear:
-
-            for (auto &T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.terms)
-            {
-                constraintsInitialized = constraintsInitialized && addLinearTermToConstraint(T->coefficient, T->variable->index);
-            }
-
-        case E_ConstraintClassification::Quadratic:
-        case E_ConstraintClassification::Nonlinear:
-
-            for (auto &T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.terms)
-            {
-                constraintsInitialized = constraintsInitialized && addLinearTermToConstraint(T->coefficient, T->variable->index);
-            }
-
-            for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.terms)
-            {
-                constraintsInitialized = constraintsInitialized && addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
-            }
-
-        default:
-            break;
-        }
-
-        constraintsInitialized = constraintsInitialized && finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
-    }
-
-    if (!constraintsInitialized)
-        return false;
-
-    return (true);
-}*/
-
 bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
     try
@@ -1118,6 +820,34 @@ void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double
     try
     {
         cplexVars[varIndex].setBounds(lowerBound, upperBound);
+        modelUpdated = true;
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+    }
+}
+
+void MIPSolverCplex::updateVariableLowerBound(int varIndex, double lowerBound)
+{
+    try
+    {
+        cplexVars[varIndex].setLB(lowerBound);
+        modelUpdated = true;
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError(
+            "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
+    }
+}
+
+void MIPSolverCplex::updateVariableUpperBound(int varIndex, double upperBound)
+{
+    try
+    {
+        cplexVars[varIndex].setUB(upperBound);
         modelUpdated = true;
     }
     catch (IloException &e)

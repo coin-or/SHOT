@@ -29,54 +29,59 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
 {
     env->process->startTimer("DualObjectiveRootSearch");
 
-    //env->process->setObjectiveUpdatedByLinesearch(false);
+    bool useRootsearch = false;
 
-    //auto prevIter = env->process->getPreviousIteration();
-
-    for (int i = 0; i < sourcePoints.size(); i++)
+    if (useRootsearch)
     {
-        Hyperplane hyperplane;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = sourcePoints.at(i).point;
-        hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
-        env->process->hyperplaneWaitingList.push_back(hyperplane);
-
-        /*
-        auto oldObjVal = prevIter->solutionPoints.at(i).objectiveValue;
-        double objectiveLinearizationError = env->reformulatedProblem->objectiveFunction->calculateValue(prevIter->solutionPoints.at(i).point) - prevIter->solutionPoints.at(i).objectiveValue;
-
-        double objectiveLB = prevIter->solutionPoints.at(i).objectiveValue;
-        double objectiveUB = (1 + std::min(0.01, 1 / abs(prevIter->solutionPoints.at(i).objectiveValue))) * objectiveLinearizationError;
-
-        try
+        for (auto &SOLPT : sourcePoints)
         {
-            auto xNewc = env->process->linesearchMethod->findZero(prevIter->solutionPoints.at(i).point, objectiveLB, objectiveUB,
-                                                                  env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                  env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
-                                                                  std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
+            double oldObjVal = SOLPT.objectiveValue;
+            double objectiveLinearizationError = std::abs(env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point) - SOLPT.objectiveValue);
 
-            auto internalPoint = xNewc.first;
-            auto externalPoint = xNewc.second;
+            double objectiveLB = SOLPT.objectiveValue;
+            double objectiveUB = (1 + std::min(0.01, 1 / abs(SOLPT.objectiveValue))) * objectiveLinearizationError;
 
-            double diffobj = abs(oldObjVal - xNewc.second);
+            if (objectiveLinearizationError == 0)
+                continue;
 
+            try
+            {
+                auto rootBound = env->process->linesearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
+                                                                          env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                          env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
+                                                                          std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
+
+                double diffobj = abs(oldObjVal - rootBound.second);
+
+                Hyperplane hyperplane;
+                hyperplane.isObjectiveHyperplane = true;
+                hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
+                hyperplane.sourceConstraintIndex = -1;
+                hyperplane.generatedPoint = SOLPT.point;
+                hyperplane.objectiveFunctionValue = rootBound.second;
+
+                env->process->hyperplaneWaitingList.push_back(hyperplane);
+            }
+            catch (std::exception &e)
+            {
+                env->output->outputAlways("     Cannot find solution with root search for generating objective supporting hyperplane:");
+                env->output->outputAlways(e.what());
+            }
+        }
+    }
+    else
+    {
+        for (auto &SOLPT : sourcePoints)
+        {
             Hyperplane hyperplane;
             hyperplane.isObjectiveHyperplane = true;
-            hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
             hyperplane.sourceConstraintIndex = -1;
-            hyperplane.generatedPoint = xNewc.second.point;
+            hyperplane.generatedPoint = SOLPT.point;
+            hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
+            hyperplane.objectiveFunctionValue = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
 
             env->process->hyperplaneWaitingList.push_back(hyperplane);
-
-            env->output->outputAlways(
-                "     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(xNewc.second) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
         }
-        catch (std::exception &e)
-        {
-            env->output->outputWarning(
-                "     Cannot find solution with linesearch for updating nonlinear objective.");
-        }*/
     }
 
     env->process->stopTimer("DualObjectiveRootSearch");
@@ -87,44 +92,4 @@ std::string TaskSelectHyperplanePointsByObjectiveLinesearch::getType()
     std::string type = typeid(this).name();
     return (type);
 }
-
-// bool TaskSelectHyperplanePointsByObjectiveLinesearch::updateObjectiveInPoint(SolutionPoint &solution)
-// {
-//     auto oldObjVal = solution.objectiveValue;
-//     //double objectiveLinearizationError = env->reformulatedProblem->objectiveFunction->calculateValue(solution.point) - solution.point.back();
-
-//     double objectiveLB = solution.objectiveValue;
-//     double objectiveUB = (1 + std::min(0.01, 1 / abs(objectiveLB))) * env->reformulatedProblem->objectiveFunction->calculateValue(solution.point);
-
-//     auto tmp = env->reformulatedProblem->objectiveFunction->calculateValue(solution.point);
-
-//     bool changed = false;
-
-//     try
-//     {
-//         /*auto xNewc = env->process->linesearchMethod->findZero(solution.point, objectiveLB, objectiveUB,
-//                                                               env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-//                                                               env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
-//                                                               std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
-
-//         double diffobj = abs(oldObjVal - xNewc.second);
-// */
-//         Hyperplane hyperplane;
-//         hyperplane.isObjectiveHyperplane = true;
-//         hyperplane.sourceConstraintIndex = -1;
-//         hyperplane.generatedPoint = solution.point;
-//         hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
-//         env->process->hyperplaneWaitingList.push_back(hyperplane);
-
-//         //env->output->outputAlways(
-//         //"     Obj. for sol. # 0 upd. by l.s. " + UtilityFunctions::toString(oldObjVal) + " -> " + UtilityFunctions::toString(xNewc.second) + " (diff:" + UtilityFunctions::toString(diffobj) + ")  #");
-//     }
-//     catch (std::exception &e)
-//     {
-//         env->output->outputWarning(
-//             "     Cannot find solution with linesearch for updating nonlinear objective.");
-//     }
-
-//     return (changed);
-// }
 } // namespace SHOT

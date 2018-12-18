@@ -122,6 +122,7 @@ struct Hyperplane
     NumericConstraintPtr sourceConstraint;
     int sourceConstraintIndex; //TODO remove
     VectorDouble generatedPoint;
+    double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
     bool isObjectiveHyperplane = false;
 };

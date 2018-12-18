@@ -43,6 +43,9 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     virtual VectorDouble getVariableLowerBounds();
     virtual VectorDouble getVariableUpperBounds();
 
+    virtual void updateVariableLowerBound(int variableIndex, double bound);
+    virtual void updateVariableUpperBound(int variableIndex, double bound);
+
     VectorDouble lowerBoundsBeforeFix;
     VectorDouble upperBoundsBeforeFix;
 

@@ -181,7 +181,8 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
 
     if (hyperplane.isObjectiveHyperplane)
     {
-        constant = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
+        //constant = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
+        constant = hyperplane.objectiveFunctionValue;
         gradient = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateGradient(hyperplane.generatedPoint);
 
         PairIndexValue pair;
@@ -317,7 +318,7 @@ std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()
 
 void MIPSolverBase::presolveAndUpdateBounds()
 {
-    /*
+
     auto newBounds = this->presolveAndGetNewBounds();
 
     for (int i = 0; i < numberOfVariables; i++)
@@ -334,26 +335,26 @@ void MIPSolverBase::presolveAndUpdateBounds()
 
         if (newLB)
         {
-            env->model->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-            env->output->outputInfo(
+            env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
+            env->output->outputAlways(
                 "     Lower bound for variable (" + std::to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.first) + " to " + UtilityFunctions::toString(newBounds.first.at(i)));
 
-            if (!originalProblem->hasVariableBoundsBeenTightened(i))
+            if (!env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened)
             {
-                env->model->originalProblem->setVariableBoundsAsTightened(i);
+                env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened = true;
                 env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
         if (newUB)
         {
-            env->model->originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-            env->output->outputInfo(
+            env->reformulatedProblem->getVariable(i)->upperBound = newBounds.second.at(i);
+            env->output->outputAlways(
                 "     Upper bound for variable (" + std::to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.second) + " to " + UtilityFunctions::toString(newBounds.second.at(i)));
 
-            if (!originalProblem->hasVariableBoundsBeenTightened(i))
+            if (!env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened)
             {
-                env->model->originalProblem->setVariableBoundsAsTightened(i);
+                env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened = true;
                 env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
@@ -363,7 +364,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
             updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
             env->output->outputInfo("     Bounds updated also in MIP problem");
         }
-    }*/
+    }
 }
 
 void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)

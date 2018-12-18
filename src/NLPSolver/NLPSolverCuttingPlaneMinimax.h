@@ -42,6 +42,9 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
     virtual VectorDouble getVariableLowerBounds();
     virtual VectorDouble getVariableUpperBounds();
 
+    virtual void updateVariableLowerBound(int variableIndex, double bound);
+    virtual void updateVariableUpperBound(int variableIndex, double bound);
+
     virtual void saveProblemToFile(std::string fileName);
 
   private:

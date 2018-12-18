@@ -241,7 +241,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                                                   maxObjDiffAbs,
                                                   maxObjDiffRel);
 
-        if (mu <= 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
+        if (mu < 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
         {
             statusCode = E_NLPSolutionStatus::Optimal;
             break;
@@ -455,6 +455,16 @@ VectorDouble NLPSolverCuttingPlaneMinimax::getVariableLowerBounds()
 VectorDouble NLPSolverCuttingPlaneMinimax::getVariableUpperBounds()
 {
     return (sourceProblem->getVariableUpperBounds());
+}
+
+void NLPSolverCuttingPlaneMinimax::updateVariableLowerBound(int variableIndex, double bound)
+{
+    LPSolver->updateVariableLowerBound(variableIndex, bound);
+}
+
+void NLPSolverCuttingPlaneMinimax::updateVariableUpperBound(int variableIndex, double bound)
+{
+    LPSolver->updateVariableUpperBound(variableIndex, bound);
 }
 
 void NLPSolverCuttingPlaneMinimax::clearStartingPoint()

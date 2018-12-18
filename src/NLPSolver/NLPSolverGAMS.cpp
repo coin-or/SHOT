@@ -189,4 +189,16 @@ VectorDouble NLPSolverGAMS::getVariableUpperBounds()
 
     return ub;
 }
+
+void NLPSolverGAMS::updateVariableLowerBound(int variableIndex, double bound)
+{
+    gmoSetAltVarLowerOne(modelingObject, variableIndex, bound);
+}
+
+void NLPSolverGAMS::updateVariableUpperBound(int variableIndex, double bound)
+{
+    gmoSetAltVarUpperOne(modelingObject, variableIndex, bound);
+}
+
+void updateVariableUpperBound(double bound);
 } // namespace SHOT

@@ -11,12 +11,6 @@
 #pragma once
 #include "../Shared.h"
 
-/*#include "../OptProblems/OptProblemOriginal.h"
-#include "../OptProblems/OptProblemOriginalLinearObjective.h"
-#include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
-#include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
-*/
-
 namespace SHOT
 {
 class IMIPSolver
@@ -24,9 +18,6 @@ class IMIPSolver
   public:
     virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
-
-    //virtual bool createLinearProblem(OptProblem *origProblem) = 0;
-    //virtual bool createLinearProblem(ProblemPtr sourceProblem) = 0;
 
     virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound) = 0;
 
@@ -80,6 +71,8 @@ class IMIPSolver
     virtual void unfixVariables() = 0;
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
+    virtual void updateVariableLowerBound(int varIndex, double lowerBound) = 0;
+    virtual void updateVariableUpperBound(int varIndex, double upperBound) = 0;
 
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 

@@ -29,9 +29,6 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
 
     virtual void checkParameters();
 
-    //virtual bool createLinearProblem(OptProblem *origProblem);
-    //virtual bool createLinearProblem(ProblemPtr sourceProblem){};
-
     virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound);
 
     virtual bool initializeObjective();
@@ -91,6 +88,9 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     }
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
+    virtual void updateVariableLowerBound(int varIndex, double lowerBound);
+    virtual void updateVariableUpperBound(int varIndex, double upperBound);
+
     virtual PairDouble getCurrentVariableBounds(int varIndex);
 
     virtual void presolveAndUpdateBounds()

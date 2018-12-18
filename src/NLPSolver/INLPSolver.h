@@ -40,6 +40,9 @@ class INLPSolver
     virtual VectorDouble getVariableLowerBounds() = 0;
     virtual VectorDouble getVariableUpperBounds() = 0;
 
+    virtual void updateVariableLowerBound(int variableIndex, double bound) = 0;
+    virtual void updateVariableUpperBound(int variableIndex, double bound) = 0;
+
   protected:
     virtual E_NLPSolutionStatus solveProblemInstance() = 0;
 };
