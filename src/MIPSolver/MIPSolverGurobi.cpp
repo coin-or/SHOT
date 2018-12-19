@@ -837,6 +837,9 @@ void MIPSolverGurobi::checkParameters()
 
 std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
 {
+    GRBModel m = gurobiModel->presolve();
+    m.printStats();
+
     return (std::make_pair(variableLowerBounds, variableUpperBounds));
 }
 

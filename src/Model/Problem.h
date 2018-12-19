@@ -126,19 +126,19 @@ class Problem : public std::enable_shared_from_this<Problem>
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
 
-    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
 
-    boost::optional<NumericConstraintValue> getMostDeviatingNonlinearConstraint(const VectorDouble &point);
-
-    template <typename T>
-    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection);
+    std::optional<NumericConstraintValue> getMostDeviatingNonlinearConstraint(const VectorDouble &point);
 
     template <typename T>
-    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection);
+
+    template <typename T>
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
                                                                               std::vector<T *> &activeConstraints);
 
     template <typename T>
-    boost::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
                                                                               std::vector<std::shared_ptr<T>> &activeConstraints);
 
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection);

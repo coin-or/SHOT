@@ -330,7 +330,7 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
         return;
     }
 
-    auto tmpPair = optionalHyperplanes.get();
+    auto tmpPair = optionalHyperplanes.value();
 
     bool hyperplaneIsOk = true;
 

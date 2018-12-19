@@ -83,7 +83,7 @@ class IMIPSolver
     virtual void createIntegerCut(VectorInteger binaryIndexes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
-    virtual boost::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
+    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;

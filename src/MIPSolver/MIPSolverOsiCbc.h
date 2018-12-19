@@ -69,7 +69,7 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
         MIPSolverBase::createInteriorHyperplane(hyperplane);
     }
 
-    virtual boost::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(
+    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(
         Hyperplane hyperplane)
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));

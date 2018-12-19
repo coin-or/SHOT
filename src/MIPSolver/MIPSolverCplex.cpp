@@ -360,6 +360,9 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::NumericalEmphasis, env->settings->getIntSetting("Cplex.NumericalEmphasis", "Subsolver"));
         cplexInstance.setParam(IloCplex::MemoryEmphasis, env->settings->getIntSetting("Cplex.MemoryEmphasis", "Subsolver"));
 
+        // Sets whether CPLEX allows nonconvex quadratic functions
+        cplexInstance.setParam(IloCplex::Param::OptimalityTarget, env->settings->getIntSetting("Cplex.OptimalityTarget", "Subsolver"));
+
         // Options for using swap file
         cplexInstance.setParam(IloCplex::WorkDir, env->settings->getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
         cplexInstance.setParam(IloCplex::WorkMem, env->settings->getDoubleSetting("Cplex.WorkMem", "Subsolver"));
@@ -1004,7 +1007,7 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
         return;
     }
 
-    auto tmpPair = optional.get();
+    auto tmpPair = optional.value();
 
     //auto tmpPair = createHyperplaneTerms(hyperplane);
     bool hyperplaneIsOk = true;

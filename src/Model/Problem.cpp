@@ -390,20 +390,20 @@ void Problem::setVariableBounds(int variableIndex, double lowerBound, double upp
     variablesUpdated = true;
 };
 
-boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point)
 {
     return (this->getMostDeviatingNumericConstraint(point, numericConstraints));
 };
 
-boost::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearConstraint(const VectorDouble &point)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearConstraint(const VectorDouble &point)
 {
     return (this->getMostDeviatingNumericConstraint(point, nonlinearConstraints));
 };
 
 template <typename T>
-boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection)
 {
-    boost::optional<NumericConstraintValue> optional;
+    std::optional<NumericConstraintValue> optional;
     double error = 0;
 
     for (auto &C : constraintSelection)
@@ -429,13 +429,12 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
 };
 
 template <typename T>
-boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
                                                                                    std::vector<T *> &activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
-    boost::optional<NumericConstraintValue>
-        optional;
+    std::optional<NumericConstraintValue> optional;
     double error = -1;
 
     for (auto &C : constraintSelection)
@@ -463,13 +462,12 @@ boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstrai
 };
 
 template <typename T>
-boost::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
                                                                                    std::vector<std::shared_ptr<T>> &activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
-    boost::optional<NumericConstraintValue>
-        optional;
+    std::optional<NumericConstraintValue> optional;
     double error = -1;
 
     for (auto &C : constraintSelection)

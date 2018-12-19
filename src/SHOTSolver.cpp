@@ -784,6 +784,8 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
                                  "Whether to add lazy constraints generated in relaxed points as local or global");
 
+    env->settings->createSetting("Cplex.OptimalityTarget", "Subsolver", 0, "Specifies how CPLEX treats nonconvex quadratics", 0, 3);
+
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
     env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 0,

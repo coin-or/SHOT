@@ -44,7 +44,7 @@ class MIPSolverBase
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane);
 
-    boost::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane);
+    std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane);
 
     virtual bool getDiscreteVariableStatus();
     virtual std::vector<SolutionPoint> getAllVariableSolutions();

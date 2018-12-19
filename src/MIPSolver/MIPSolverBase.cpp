@@ -87,7 +87,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         return;
     }
 
-    auto tmpPair = optional.get();
+    auto tmpPair = optional.value();
 
     bool hyperplaneIsOk = true;
 
@@ -172,7 +172,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
     }
 }
 
-boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
+std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
 {
     std::vector<PairIndexValue> elements;
     double constant = 0.0;
@@ -233,7 +233,7 @@ boost::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::c
         constant = -1.0 * constant;
     }
 
-    boost::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
+    std::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
 
     if (elements.size() > 0)
         optional = std::make_pair(elements, constant);
@@ -318,10 +318,9 @@ std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()
 
 void MIPSolverBase::presolveAndUpdateBounds()
 {
-
     auto newBounds = this->presolveAndGetNewBounds();
 
-    for (int i = 0; i < numberOfVariables; i++)
+    for (int i = 0; i < env->reformulatedProblem->properties.numberOfVariables; i++)
     {
         auto currBounds = this->getCurrentVariableBounds(i);
 

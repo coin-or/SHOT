@@ -170,6 +170,12 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tAddICs, "AddICs");
     }
 
+    if (static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
+    {
+        TaskBase *tPresolve = new TaskPresolve(env);
+        env->tasks->addTask(tPresolve, "Presolve2");
+    }
+
     TaskBase *tGoto = new TaskGoto(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
 

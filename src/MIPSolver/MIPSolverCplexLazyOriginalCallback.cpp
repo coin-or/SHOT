@@ -450,7 +450,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         return;
     }
 
-    auto tmpPair = optional.get();
+    auto tmpPair = optional.value();
 
     bool hyperplaneIsOk = true;
     for (auto E : tmpPair.first)
@@ -505,7 +505,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         currIter->totNumHyperplanes++;
     }
 
-    optional.get().first.clear();
+    optional.value().first.clear();
 }
 
 void CtCallbackI::createIntegerCut(VectorInteger binaryIndexes)

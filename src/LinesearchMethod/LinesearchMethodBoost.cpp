@@ -277,19 +277,11 @@ std::pair<double, double> LinesearchMethodBoost::findZero(const VectorDouble &pt
 
     if (ptNew2 < ptNew)
     {
-        // TODO: check that this is not needed
-        /*env->process->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
-                                                 env->process->getCurrentIteration()->iterationNumber);*/
-
         std::pair<double, double> tmpPair(ptNew2, ptNew);
         return (tmpPair);
     }
     else
     {
-        // TODO: check that this is not needed
-        /*env->process->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
-                                                 env->process->getCurrentIteration()->iterationNumber);*/
-
         std::pair<double, double> tmpPair(ptNew, ptNew2);
         return (tmpPair);
     }

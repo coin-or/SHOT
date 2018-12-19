@@ -26,6 +26,7 @@
 #include <math.h>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <ostream>
 #include <sstream>
 #include <stdio.h>
@@ -44,7 +45,6 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include "boost/math/tools/minima.hpp"
-#include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
