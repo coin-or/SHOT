@@ -216,22 +216,22 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
     {
         PairIndexValue pair;
         pair.index = G.first->index;
-        pair.value = G.second;
+        pair.value = signFactor * G.second;
 
         elements.push_back(pair);
 
-        constant += (-G.second) * hyperplane.generatedPoint.at(G.first->index);
+        constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(G.first->index);
 
         env->output->outputInfo("     Gradient for variable " + G.first->name + " in point " + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": " + std::to_string(signFactor * G.second));
     }
-
+    /*
     if (signFactor != 1.0) // have a greater than constraint
     {
         for (auto &E : elements)
             E.value = -1.0 * E.value;
 
         constant = -1.0 * constant;
-    }
+    }*/
 
     std::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
 

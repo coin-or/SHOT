@@ -367,6 +367,8 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::WorkDir, env->settings->getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
         cplexInstance.setParam(IloCplex::WorkMem, env->settings->getDoubleSetting("Cplex.WorkMem", "Subsolver"));
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getIntSetting("Cplex.NodeFileInd", "Subsolver"));
+
+        cplexInstance.setParam(IloCplex::FeasOptMode, 1);
     }
     catch (IloException &e)
     {
@@ -554,6 +556,79 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         cplexInstance.solve();
 
         MIPSolutionStatus = getSolutionStatus();
+
+        if (cplexInstance.getStatus() == IloAlgorithm::Infeasible || cplexInstance.getStatus() == IloAlgorithm::InfeasibleOrUnbounded)
+        {
+            //std::cout << "*** Model is infeasible ***" << std::endl;
+
+            IloNumArray lb(cplexEnv);
+            IloNumArray ub(cplexEnv);
+
+            int rows = cplexConstrs.getSize();
+            int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
+
+            /*for (int i = 0; i < rows; i++)
+            {
+                lb.add((double)i);
+            }*/
+
+            lb.add(numOrigConstraints, 0.0);
+            ub.add(numOrigConstraints, 0.0);
+            //lb.add(rows - numOrigConstraints, 1.0);
+            //ub.add(rows - numOrigConstraints, 1.0);
+
+            for (int i = numOrigConstraints; i < rows; i++)
+            {
+                lb.add((double)i * i);
+            }
+
+            //std::cout << lb << std::endl;
+            //std::cout << ub << std::endl;
+
+            //std::cout << cplexConstrs << std::endl;
+
+            if (cplexInstance.feasOpt(cplexConstrs, lb))
+            {
+                IloNumArray infeas(cplexEnv);
+                IloNumArray vals(cplexEnv);
+
+                cplexInstance.getInfeasibilities(infeas, cplexConstrs);
+                /*std::cout << "*** Suggested bound changes = " << infeas << std::endl;
+                std::cout << "*** Feasible objective value would be = "
+                          << cplexInstance.getObjValue() << std::endl;
+                std::cout << "Solution status    = " << cplexInstance.getStatus() << std::endl;
+                std::cout << "Solution obj value = " << cplexInstance.getObjValue() << std::endl;
+                cplexInstance.getValues(vals, cplexVars);
+                std::cout << "Values             = " << vals << std::endl;
+                std::cout << std::endl;*/
+
+                /*IloNumArray slacks(cplexEnv);
+                cplexInstance.getSlacks(slacks, cplexConstrs);
+                std::cout << "slacks: " << slacks << std::endl;*/
+
+                for (int i = numOrigConstraints - 1; i < infeas.getSize(); i++)
+                {
+                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.1 * infeas[i]);
+                }
+
+                std::cout << "modified constraints\n";
+
+                cplexInstance.extract(cplexModel);
+                //writeProblemToFile("test.lp");
+
+                cplexInstance.solve();
+
+                //cplexInstance.getValues(vals, cplexVars);
+                //std::cout << "Values             = " << vals << std::endl;
+
+                MIPSolutionStatus = getSolutionStatus();
+            }
+            else
+            {
+                std::cout << "*** Could not repair the infeasibility" << std::endl;
+                throw(-1);
+            }
+        }
     }
     catch (IloException &e)
     {
