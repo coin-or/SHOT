@@ -13,9 +13,12 @@
 
 namespace SHOT
 {
+
 class IMIPSolver
 {
   public:
+    virtual ~IMIPSolver(){};
+
     virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
 
@@ -40,6 +43,11 @@ class IMIPSolver
 
     virtual void activateDiscreteVariables(bool activate) = 0;
     virtual bool getDiscreteVariableStatus() = 0;
+
+    virtual E_IterationProblemType getCurrentProblemType() = 0;
+
+    virtual void executeRelaxationStrategy() = 0;
+
     virtual E_ProblemSolutionStatus solveProblem() = 0;
     virtual E_ProblemSolutionStatus getSolutionStatus() = 0;
     virtual double getObjectiveValue() = 0;
@@ -96,8 +104,6 @@ class IMIPSolver
     virtual bool hasAuxilliaryObjectiveVariable() = 0;
     virtual int getAuxilliaryObjectiveVariableIndex() = 0;
     virtual void setAuxilliaryObjectiveVariableIndex(int index) = 0;
-
-    virtual ~IMIPSolver(){};
 
   protected:
 };

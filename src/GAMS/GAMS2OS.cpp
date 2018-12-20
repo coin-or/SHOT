@@ -170,8 +170,6 @@ void GAMS2OS::createOSObjects()
     delete osinstance;
     osinstance = new OSInstance();
 
-    env->process->GAMSModelingObject = gmo;
-
     gmoNameInput(gmo, buffer);
     osinstance->setInstanceName(buffer);
 

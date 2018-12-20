@@ -16,6 +16,7 @@ namespace SHOT
 RelaxationStrategyStandard::RelaxationStrategyStandard(EnvironmentPtr envPtr)
 {
     env = envPtr;
+    setInitial();
 }
 
 RelaxationStrategyStandard::~RelaxationStrategyStandard()
@@ -56,7 +57,7 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-    if (env->dualSolver->getDiscreteVariableStatus())
+    if (env->dualSolver->getDiscreteVariableStatus() && env->process->iterations.size() > 0)
     {
         env->process->stopTimer("DualProblemsDiscrete");
         env->process->startTimer("DualProblemsRelaxed");
@@ -91,6 +92,11 @@ E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 
 bool RelaxationStrategyStandard::isIterationLimitReached()
 {
+    if (env->process->iterations.size() < 2)
+    {
+        return false;
+    }
+
     auto prevIter = env->process->getPreviousIteration();
 
     if (prevIter->iterationNumber < env->settings->getIntSetting("Relaxation.IterationLimit", "Dual"))
@@ -119,6 +125,11 @@ bool RelaxationStrategyStandard::isLPStepFinished()
 bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
     int numSteps = 10;
+
+    if (env->process->iterations.size() < 2)
+    {
+        return false;
+    }
 
     auto prevIter = env->process->getPreviousIteration();
 

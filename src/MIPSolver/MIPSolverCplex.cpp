@@ -21,6 +21,7 @@ MIPSolverCplex::MIPSolverCplex()
 MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
 {
     env = envPtr;
+
     initializeProblem();
 }
 

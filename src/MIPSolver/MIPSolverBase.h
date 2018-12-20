@@ -12,6 +12,10 @@
 #include "../Shared.h"
 #include "IMIPSolver.h"
 
+#include "IRelaxationStrategy.h"
+#include "RelaxationStrategyStandard.h"
+#include "RelaxationStrategyNone.h"
+
 namespace SHOT
 {
 class MIPSolverBase
@@ -22,7 +26,6 @@ class MIPSolverBase
 
     bool auxilliaryObjectiveVariableDefined = false;
     int auxilliaryObjectiveVariableIndex;
-
 
   protected:
     std::vector<GeneratedHyperplane> generatedHyperplanes;
@@ -47,6 +50,10 @@ class MIPSolverBase
     std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane);
 
     virtual bool getDiscreteVariableStatus();
+
+    virtual E_IterationProblemType getCurrentProblemType();
+    virtual void executeRelaxationStrategy();
+
     virtual std::vector<SolutionPoint> getAllVariableSolutions();
     virtual int getNumberOfSolutions() = 0;
     virtual VectorDouble getVariableSolution(int i) = 0;
@@ -74,9 +81,9 @@ class MIPSolverBase
     virtual int getNumberOfOpenNodes();
 
     virtual bool hasAuxilliaryObjectiveVariable() { return auxilliaryObjectiveVariableDefined; };
-    virtual int getAuxilliaryObjectiveVariableIndex() {return auxilliaryObjectiveVariableIndex;};
+    virtual int getAuxilliaryObjectiveVariableIndex() { return auxilliaryObjectiveVariableIndex; };
 
-    virtual void setAuxilliaryObjectiveVariableIndex(int index) 
+    virtual void setAuxilliaryObjectiveVariableIndex(int index)
     {
         auxilliaryObjectiveVariableIndex = index;
         auxilliaryObjectiveVariableDefined = true;
@@ -89,8 +96,8 @@ class MIPSolverBase
 
     std::vector<SolutionPoint> lastSolutions;
 
+    std::unique_ptr<IRelaxationStrategy> relaxationStrategy;
+
     EnvironmentPtr env;
-
-
 };
 } // namespace SHOT

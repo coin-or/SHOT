@@ -9,9 +9,10 @@
 */
 
 #include "TaskInitializeIteration.h"
-namespace SHOT{
+namespace SHOT
+{
 
-TaskInitializeIteration::TaskInitializeIteration(EnvironmentPtr envPtr): TaskBase(envPtr)
+TaskInitializeIteration::TaskInitializeIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
 }
 
@@ -22,6 +23,7 @@ TaskInitializeIteration::~TaskInitializeIteration()
 void TaskInitializeIteration::run()
 {
     env->process->createIteration();
+    env->process->getCurrentIteration()->type = env->dualSolver->getCurrentProblemType();
 }
 
 std::string TaskInitializeIteration::getType()
@@ -29,4 +31,4 @@ std::string TaskInitializeIteration::getType()
     std::string type = typeid(this).name();
     return (type);
 }
-}
+} // namespace SHOT

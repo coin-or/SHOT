@@ -15,6 +15,11 @@ namespace SHOT
 
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
+    if (env->process->iterations.size() < 2)
+    {
+        return false;
+    }
+
     auto prevIter = env->process->getPreviousIteration();
 
     if (prevIter->maxDeviation < 0)
@@ -27,6 +32,11 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 
 bool RelaxationStrategyBase::isConstraintToleranceReached()
 {
+    if (env->process->iterations.size() < 2)
+    {
+        return false;
+    }
+
     auto prevIter = env->process->getPreviousIteration();
 
     double constraintTolerance = std::max(env->settings->getDoubleSetting("ConstraintTolerance", "Termination"),
@@ -48,6 +58,11 @@ bool RelaxationStrategyBase::isConstraintToleranceReached()
 
 bool RelaxationStrategyBase::isGapReached()
 {
+    if (env->process->iterations.size() < 2)
+    {
+        return false;
+    }
+
     auto prevIter = env->process->getPreviousIteration();
 
     if (env->process->getAbsoluteObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))

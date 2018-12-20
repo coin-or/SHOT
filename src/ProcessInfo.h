@@ -12,12 +12,7 @@
 #include "Shared.h"
 #include "SHOTConfig.h"
 
-#include "MIPSolver/IRelaxationStrategy.h"
 #include "LinesearchMethod/ILinesearchMethod.h"
-
-#ifdef HAS_GAMS
-#include "gmomcc.h"
-#endif
 
 #include "OSResult.h"
 #include "OSrLWriter.h"
@@ -26,14 +21,11 @@ namespace SHOT
 {
 class Iteration;
 
-class IRelaxationStrategy;
-
 class ProcessInfo
 {
   public:
     std::unique_ptr<OSResult> osResult;
 
-    std::shared_ptr<IRelaxationStrategy> relaxationStrategy;
     std::shared_ptr<ILinesearchMethod> linesearchMethod;
 
     void initializeResults(int numObj, int numVar, int numConstr);
@@ -112,10 +104,6 @@ class ProcessInfo
     std::vector<VectorInteger> integerCutWaitingList;
 
     std::vector<Timer> timers;
-
-#ifdef HAS_GAMS
-    gmoHandle_t GAMSModelingObject;
-#endif
 
     ~ProcessInfo();
 

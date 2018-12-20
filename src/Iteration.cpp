@@ -36,32 +36,6 @@ Iteration::Iteration(EnvironmentPtr envPtr)
 
     currentObjectiveBounds.first = env->process->getDualBound();
     currentObjectiveBounds.second = env->process->getPrimalBound();
-
-    if (env->process->relaxationStrategy)
-    {
-        this->type = env->process->relaxationStrategy->getProblemType();
-    }
-    else
-    {
-        switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
-        {
-        case (E_SolutionStrategy::MIQCQP):
-            this->type = E_IterationProblemType::MIP;
-            break;
-        case (E_SolutionStrategy::MIQP):
-            this->type = E_IterationProblemType::MIP;
-            break;
-        case (E_SolutionStrategy::NLP):
-            this->type = E_IterationProblemType::Relaxed;
-            break;
-        case (E_SolutionStrategy::SingleTree):
-            this->type = E_IterationProblemType::MIP;
-            break;
-        default:
-            this->type = E_IterationProblemType::MIP;
-            break;
-        }
-    }
 }
 
 Iteration::~Iteration()

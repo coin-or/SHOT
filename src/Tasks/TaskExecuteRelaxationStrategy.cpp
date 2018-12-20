@@ -17,12 +17,6 @@ TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envP
 {
     env->process->startTimer("DualStrategy");
 
-    relaxationStrategy = std::dynamic_pointer_cast<IRelaxationStrategy>(std::make_shared<RelaxationStrategyStandard>(env));
-
-    env->process->relaxationStrategy = relaxationStrategy;
-
-    isInitialized = false;
-
     env->process->stopTimer("DualStrategy");
 }
 
@@ -33,15 +27,8 @@ TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
 void TaskExecuteRelaxationStrategy::run()
 {
     env->process->startTimer("DualStrategy");
-    if (!isInitialized)
-    {
-        relaxationStrategy->setInitial();
-        isInitialized = true;
-    }
-    else
-    {
-        relaxationStrategy->executeStrategy();
-    }
+
+    env->dualSolver->executeRelaxationStrategy();
 
     env->process->stopTimer("DualStrategy");
 }

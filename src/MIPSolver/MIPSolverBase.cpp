@@ -36,6 +36,39 @@ bool MIPSolverBase::getDiscreteVariableStatus()
     }
 }
 
+E_IterationProblemType MIPSolverBase::getCurrentProblemType()
+{
+    if (this->relaxationStrategy)
+    {
+        return (E_IterationProblemType::None);
+    }
+    else
+    {
+        switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
+        {
+        case (E_SolutionStrategy::MIQCQP):
+            return (E_IterationProblemType::MIP);
+        case (E_SolutionStrategy::MIQP):
+            return (E_IterationProblemType::MIP);
+        case (E_SolutionStrategy::NLP):
+            return (E_IterationProblemType::Relaxed);
+        case (E_SolutionStrategy::SingleTree):
+            return (E_IterationProblemType::MIP);
+        }
+    }
+    return (E_IterationProblemType::MIP);
+}
+
+void MIPSolverBase::executeRelaxationStrategy()
+{
+    if (!this->relaxationStrategy)
+    {
+        relaxationStrategy = std::make_unique<RelaxationStrategyStandard>(env);
+    }
+
+    MIPSolverBase::relaxationStrategy->executeStrategy();
+}
+
 std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 {
     if (cachedSolutionHasChanged == false)

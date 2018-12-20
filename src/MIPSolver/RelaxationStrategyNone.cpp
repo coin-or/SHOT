@@ -16,6 +16,8 @@ namespace SHOT
 RelaxationStrategyNone::RelaxationStrategyNone(EnvironmentPtr envPtr)
 {
     env = envPtr;
+
+    setInitial();
 }
 
 RelaxationStrategyNone::~RelaxationStrategyNone()

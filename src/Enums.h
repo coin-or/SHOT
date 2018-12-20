@@ -63,7 +63,8 @@ enum class E_IterationLineType
 enum class E_IterationProblemType
 {
     MIP,
-    Relaxed
+    Relaxed,
+    None
 };
 
 enum class E_PrimalNLPSource

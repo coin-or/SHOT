@@ -106,6 +106,16 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
         return (MIPSolverBase::getDiscreteVariableStatus());
     }
 
+    virtual E_IterationProblemType getCurrentProblemType()
+    {
+        return (MIPSolverBase::getCurrentProblemType());
+    }
+
+    virtual void executeRelaxationStrategy()
+    {
+        MIPSolverBase::executeRelaxationStrategy();
+    }
+
     virtual E_ProblemSolutionStatus solveProblem();
     virtual E_ProblemSolutionStatus getSolutionStatus();
     virtual int getNumberOfSolutions();
