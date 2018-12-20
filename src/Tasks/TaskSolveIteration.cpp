@@ -23,53 +23,53 @@ TaskSolveIteration::~TaskSolveIteration()
 
 void TaskSolveIteration::run()
 {
-    env->process->startTimer("DualStrategy");
-    auto currIter = env->process->getCurrentIteration();
+    env->timing->startTimer("DualStrategy");
+    auto currIter = env->results->getCurrentIteration();
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
     // Sets the iteration time limit
-    auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->process->getElapsedTime("Total");
-    env->dualSolver->setTimeLimit(timeLim);
+    auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if (env->process->primalSolutions.size() > 0)
+    if (env->results->primalSolutions.size() > 0)
     {
         if (isMinimization)
         {
-            env->dualSolver->setCutOff(
-                env->process->getPrimalBound() + env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
+            env->dualSolver->MIPSolver->setCutOff(
+                env->results->getPrimalBound() + env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
         }
         else
         {
-            env->dualSolver->setCutOff(
-                env->process->getPrimalBound() - env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
+            env->dualSolver->MIPSolver->setCutOff(
+                env->results->getPrimalBound() - env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
         }
     }
 
-    if (env->dualSolver->hasAuxilliaryObjectiveVariable() && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
+    if (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable() && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
-        auto newLB = env->process->getDualBound();
-        auto newUB = env->process->getPrimalBound();
+        auto newLB = env->results->getDualBound();
+        auto newUB = env->results->getPrimalBound();
 
-        auto currBounds = env->dualSolver->getCurrentVariableBounds(env->dualSolver->getAuxilliaryObjectiveVariableIndex());
+        auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex());
 
         if (newLB > currBounds.first || newUB < currBounds.second)
         {
-            env->dualSolver->updateVariableBound(env->dualSolver->getAuxilliaryObjectiveVariableIndex(), newLB, newUB);
+            env->dualSolver->MIPSolver->updateVariableBound(env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex(), newLB, newUB);
             env->output->outputInfo("     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
         }
     }
 
-    if (env->dualSolver->getDiscreteVariableStatus() && env->process->primalSolutions.size() > 0)
+    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->primalSolutions.size() > 0)
     {
-        auto tmpPrimal = env->process->primalSolution;
+        auto tmpPrimal = env->results->primalSolution;
 
-        if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+        if (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
         {
-            tmpPrimal.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(env->process->primalSolution));
+            tmpPrimal.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(env->results->primalSolution));
         }
 
-        env->dualSolver->addMIPStart(tmpPrimal);
+        env->dualSolver->MIPSolver->addMIPStart(tmpPrimal);
     }
 
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))
@@ -79,21 +79,21 @@ void TaskSolveIteration::run()
         ss << "/lp";
         ss << currIter->iterationNumber - 1;
         ss << ".lp";
-        env->dualSolver->writeProblemToFile(ss.str());
+        env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
     }
 
     env->output->outputInfo("     Solving dual problem.");
-    auto solStatus = env->dualSolver->solveProblem();
+    auto solStatus = env->dualSolver->MIPSolver->solveProblem();
     env->output->outputInfo("     Dual problem solved.");
 
     // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
     if (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree)
     {
-        currIter = env->process->getCurrentIteration();
+        currIter = env->results->getCurrentIteration();
     }
     else // Must update the node stats if multi-tree strategy (otherwise it is done in the callbacks)
     {
-        currIter->numberOfExploredNodes = env->dualSolver->getNumberOfExploredNodes();
+        currIter->numberOfExploredNodes = env->dualSolver->MIPSolver->getNumberOfExploredNodes();
         env->solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
         env->solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
         //std::cout << "Nodes: " << env->solutionStatistics.numberOfExploredNodes << std::endl;
@@ -112,7 +112,7 @@ void TaskSolveIteration::run()
     }
     else
     {
-        auto sols = env->dualSolver->getAllVariableSolutions();
+        auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
         currIter->solutionPoints = sols;
 
         if (sols.size() > 0)
@@ -127,14 +127,14 @@ void TaskSolveIteration::run()
                 UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
             }
 
-            currIter->objectiveValue = env->dualSolver->getObjectiveValue();
+            currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
 
             if (env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
                 VectorDouble tmpObjValue;
                 VectorString tmpObjName;
 
-                tmpObjValue.push_back(env->dualSolver->getObjectiveValue());
+                tmpObjValue.push_back(env->dualSolver->MIPSolver->getObjectiveValue());
                 tmpObjName.push_back("objective");
 
                 std::stringstream ss;
@@ -169,20 +169,20 @@ void TaskSolveIteration::run()
                 }
             }
 
-            double tmpDualObjBound = env->dualSolver->getDualObjectiveValue();
+            double tmpDualObjBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
             if (currIter->isMIP())
             {
                 DualSolution sol =
                     {sols.at(0).point, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
                      currIter->iterationNumber};
-                env->process->addDualSolutionCandidate(sol);
+                env->dualSolver->addDualSolutionCandidate(sol);
 
                 if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
                     DualSolution sol =
                         {sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal, currIter->objectiveValue,
                          currIter->iterationNumber};
-                    env->process->addDualSolutionCandidate(sol);
+                    env->dualSolver->addDualSolutionCandidate(sol);
                 }
             }
             else
@@ -190,12 +190,12 @@ void TaskSolveIteration::run()
                 DualSolution sol =
                     {sols.at(0).point, E_DualSolutionSource::LPSolution, tmpDualObjBound,
                      currIter->iterationNumber};
-                env->process->addDualSolutionCandidate(sol);
+                env->dualSolver->addDualSolutionCandidate(sol);
             }
         }
     }
 
-    currIter->usedMIPSolutionLimit = env->dualSolver->getSolutionLimit();
+    currIter->usedMIPSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
 
     // Update solution stats
     if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
@@ -245,7 +245,7 @@ void TaskSolveIteration::run()
         }
     }
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskSolveIteration::getType()

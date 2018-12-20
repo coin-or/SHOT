@@ -14,6 +14,8 @@
 
 #include "../MIPSolver/IMIPSolver.h"
 
+#include "../LinesearchMethod/ILinesearchMethod.h"
+
 namespace SHOT
 {
 class TaskSolveFixedDualProblem : public TaskBase

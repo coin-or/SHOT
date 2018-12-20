@@ -13,6 +13,8 @@
 
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 
+#include "../MIPSolver/IMIPSolver.h"
+
 #ifdef HAS_GAMS
 #include "../NLPSolver/NLPSolverGAMS.h"
 #include "../ModelingSystem/ModelingSystemGAMS.h"
@@ -35,7 +37,7 @@ class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
 
   protected:
   private:
-    INLPSolver *NLPSolver;
+    std::shared_ptr<INLPSolver> NLPSolver;
 
     VectorInteger discreteVariableIndexes;
     std::vector<VectorDouble> testedPoints;

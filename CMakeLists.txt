@@ -81,7 +81,9 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
-  "${PROJECT_SOURCE_DIR}/src/ProcessInfo.cpp"
+  "${PROJECT_SOURCE_DIR}/src/DualSolver.cpp"
+  "${PROJECT_SOURCE_DIR}/src/PrimalSolver.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Results.cpp"
   "${PROJECT_SOURCE_DIR}/src/SHOTSolver.cpp"
   "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
  # "${PROJECT_SOURCE_DIR}/src/Timer.cpp"
@@ -133,11 +135,14 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Model/ModelHelperFunctions.h"
   "${PROJECT_SOURCE_DIR}/src/Report.h"
   "${PROJECT_SOURCE_DIR}/src/Iteration.h"
+  "${PROJECT_SOURCE_DIR}/src/Timing.h"
+  "${PROJECT_SOURCE_DIR}/src/Timer.h"
   "${PROJECT_SOURCE_DIR}/src/Output.h"
-  "${PROJECT_SOURCE_DIR}/src/ProcessInfo.h"
+  "${PROJECT_SOURCE_DIR}/src/DualSolver.h"
+  "${PROJECT_SOURCE_DIR}/src/PrimalSolver.h"
+  "${PROJECT_SOURCE_DIR}/src/Results.h"
   "${PROJECT_SOURCE_DIR}/src/SHOTSolver.h"
   "${PROJECT_SOURCE_DIR}/src/TaskHandler.h"
-  "${PROJECT_SOURCE_DIR}/src/Timer.h"
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"  
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h" 
@@ -204,8 +209,8 @@ if (HAS_GAMS)
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.h")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/GAMS/GAMS2OS.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GAMS2OS.h")
+#  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/GAMS/GAMS2OS.cpp")
+#  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GAMS2OS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GamsNLinstr.h")
 endif (HAS_GAMS)
 

@@ -12,6 +12,7 @@
 #include "TaskBase.h"
 
 #include "TaskSelectHyperplanePointsECP.h"
+#include "../LinesearchMethod/ILinesearchMethod.h"
 
 namespace SHOT
 {

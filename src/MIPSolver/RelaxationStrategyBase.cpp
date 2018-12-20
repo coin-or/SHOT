@@ -15,12 +15,12 @@ namespace SHOT
 
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
-    if (env->process->iterations.size() < 2)
+    if (env->results->iterations.size() < 2)
     {
         return false;
     }
 
-    auto prevIter = env->process->getPreviousIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
     if (prevIter->maxDeviation < 0)
     {
@@ -32,12 +32,12 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 
 bool RelaxationStrategyBase::isConstraintToleranceReached()
 {
-    if (env->process->iterations.size() < 2)
+    if (env->results->iterations.size() < 2)
     {
         return false;
     }
 
-    auto prevIter = env->process->getPreviousIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
     double constraintTolerance = std::max(env->settings->getDoubleSetting("ConstraintTolerance", "Termination"),
                                           env->settings->getDoubleSetting("Relaxation.TerminationTolerance", "Dual"));
@@ -58,19 +58,19 @@ bool RelaxationStrategyBase::isConstraintToleranceReached()
 
 bool RelaxationStrategyBase::isGapReached()
 {
-    if (env->process->iterations.size() < 2)
+    if (env->results->iterations.size() < 2)
     {
         return false;
     }
 
-    auto prevIter = env->process->getPreviousIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
-    if (env->process->getAbsoluteObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+    if (env->results->getAbsoluteObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
     {
         return true;
     }
 
-    if (env->process->getRelativeObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+    if (env->results->getRelativeObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
     {
         return true;
     }

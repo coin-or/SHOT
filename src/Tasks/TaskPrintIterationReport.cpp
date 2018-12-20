@@ -24,7 +24,7 @@ TaskPrintIterationReport::~TaskPrintIterationReport()
 
 void TaskPrintIterationReport::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     std::stringstream tmpType;
 
@@ -97,13 +97,13 @@ void TaskPrintIterationReport::run()
 
     env->report->outputIterationDetail(currIter->iterationNumber,
                                        tmpType.str(),
-                                       env->process->getElapsedTime("Total"),
+                                       env->timing->getElapsedTime("Total"),
                                        currIter->numHyperplanesAdded,
                                        currIter->totNumHyperplanes,
-                                       env->process->getDualBound(),
-                                       env->process->getPrimalBound(),
-                                       env->process->getAbsoluteObjectiveGap(),
-                                       env->process->getRelativeObjectiveGap(),
+                                       env->results->getDualBound(),
+                                       env->results->getPrimalBound(),
+                                       env->results->getAbsoluteObjectiveGap(),
+                                       env->results->getRelativeObjectiveGap(),
                                        currIter->objectiveValue,
                                        currIter->maxDeviationConstraint,
                                        currIter->maxDeviation,

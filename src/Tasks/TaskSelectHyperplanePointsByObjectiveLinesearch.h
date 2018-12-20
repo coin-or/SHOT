@@ -10,6 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
+#include "../LinesearchMethod/ILinesearchMethod.h"
 
 namespace SHOT
 {

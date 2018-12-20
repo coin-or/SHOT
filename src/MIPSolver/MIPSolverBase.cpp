@@ -44,7 +44,7 @@ E_IterationProblemType MIPSolverBase::getCurrentProblemType()
     }
     else
     {
-        switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
+        switch (static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
         {
         case (E_SolutionStrategy::MIQCQP):
             return (E_IterationProblemType::MIP);
@@ -93,7 +93,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
         tmpSolPt.point = tmpPt;
 
         tmpSolPt.objectiveValue = getObjectiveValue(i);
-        tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
+        tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
         if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
@@ -111,7 +111,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
 void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
-    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto optional = createHyperplaneTerms(hyperplane);
 
@@ -279,7 +279,7 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
 void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
 {
     /*
-    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
     std::vector<PairIndexValue> elements;
 
     double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
@@ -341,7 +341,7 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
         currIter->totNumHyperplanes++;
     }
 
-    currIter->totNumHyperplanes = env->process->getPreviousIteration()->totNumHyperplanes + currIter->numHyperplanesAdded;*/
+    currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes + currIter->numHyperplanesAdded;*/
 }
 
 std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()

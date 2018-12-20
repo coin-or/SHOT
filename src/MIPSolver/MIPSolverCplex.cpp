@@ -287,10 +287,10 @@ bool MIPSolverCplex::finalizeProblem()
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
 
-            if (env->process->iterations.size() > 0)
+            if (env->results->iterations.size() > 0)
             {
-                setSolLimit = env->process->getCurrentIteration()->usedMIPSolutionLimit;
-                discreteVariablesActivated = env->process->getCurrentIteration()->isMIP();
+                setSolLimit = env->results->getCurrentIteration()->usedMIPSolutionLimit;
+                discreteVariablesActivated = env->results->getCurrentIteration()->isMIP();
             }
             else
             {
@@ -339,7 +339,7 @@ void MIPSolverCplex::initializeSolverSettings()
 
         if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
-            if (env->process->iterations.size() == 0)
+            if (env->results->iterations.size() == 0)
                 cplexInstance.setParam(IloCplex::IntSolLim, env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
         }
         else
@@ -834,7 +834,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     if (this->hasAuxilliaryObjectiveVariable() && numVar == point.size() + 1)
     {
-        startVal.add(env->process->getPrimalBound());
+        startVal.add(env->results->getPrimalBound());
     }
 
     try
@@ -1074,7 +1074,7 @@ void MIPSolverCplex::checkParameters()
 void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
                                       std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
-    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto optional = createHyperplaneTerms(hyperplane);
 

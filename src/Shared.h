@@ -54,7 +54,6 @@
 
 #include "Enums.h"
 #include "Structs.h"
-#include "Timer.h"
 
 #include "Environment.h"
 #include "Output.h"
@@ -63,9 +62,12 @@
 #include "ModelShared.h"
 #include "UtilityFunctions.h"
 
-#include "ProcessInfo.h"
-#include "Iteration.h"
 #include "Report.h"
+#include "Timing.h"
+#include "Results.h"
+#include "Iteration.h"
+#include "PrimalSolver.h"
+#include "DualSolver.h"
 
 #include "Model/Variables.h"
 #include "Model/Terms.h"
@@ -73,3 +75,5 @@
 #include "Model/ObjectiveFunction.h"
 #include "Model/Constraints.h"
 #include "Model/Problem.h"
+
+#include "MIPSolver/IMIPSolver.h"

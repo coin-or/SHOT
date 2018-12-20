@@ -16,16 +16,16 @@ namespace SHOT
 Iteration::Iteration(EnvironmentPtr envPtr)
 {
     env = envPtr;
-    this->iterationNumber = env->process->iterations.size() + 1;
+    this->iterationNumber = env->results->iterations.size() + 1;
 
     this->numHyperplanesAdded = 0;
 
-    if (env->process->iterations.size() == 0)
+    if (env->results->iterations.size() == 0)
         this->totNumHyperplanes = 0;
     else if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
         this->totNumHyperplanes = 0;
     else
-        this->totNumHyperplanes = env->process->iterations.at(env->process->iterations.size() - 1).totNumHyperplanes;
+        this->totNumHyperplanes = env->results->iterations.at(env->results->iterations.size() - 1)->totNumHyperplanes;
 
     this->maxDeviation = SHOT_DBL_MAX;
     this->boundaryDistance = SHOT_DBL_MAX;
@@ -34,8 +34,8 @@ Iteration::Iteration(EnvironmentPtr envPtr)
     this->MIPSolutionLimitUpdated = false;
     this->solutionStatus = E_ProblemSolutionStatus::None;
 
-    currentObjectiveBounds.first = env->process->getDualBound();
-    currentObjectiveBounds.second = env->process->getPrimalBound();
+    currentObjectiveBounds.first = env->results->getDualBound();
+    currentObjectiveBounds.second = env->results->getPrimalBound();
 }
 
 Iteration::~Iteration()

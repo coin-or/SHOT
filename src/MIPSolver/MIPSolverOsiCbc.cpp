@@ -450,12 +450,12 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
     }
     try
     {
-        if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+        if (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
         {
             std::pair<std::string, double> tmpPair;
 
             tmpPair.first = variableNames.back();
-            tmpPair.second = env->process->getPrimalBound();
+            tmpPair.second = env->results->getPrimalBound();
 
             variableValues.push_back(tmpPair);
         }

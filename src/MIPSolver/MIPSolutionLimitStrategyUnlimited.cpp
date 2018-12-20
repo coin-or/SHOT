@@ -29,12 +29,12 @@ bool MIPSolutionLimitStrategyUnlimited::updateLimit()
 
 int MIPSolutionLimitStrategyUnlimited::getNewLimit()
 {
-    return env->dualSolver->getSolutionLimit();
+    return env->dualSolver->MIPSolver->getSolutionLimit();
 }
 
 int MIPSolutionLimitStrategyUnlimited::getInitialLimit()
 {
-    auto tmpVal = env->dualSolver->getSolutionLimit();
+    auto tmpVal = env->dualSolver->MIPSolver->getSolutionLimit();
     return tmpVal;
 }
 } // namespace SHOT

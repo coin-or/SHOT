@@ -18,16 +18,20 @@ SHOTSolver::SHOTSolver()
     env = std::make_shared<Environment>();
 
     env->output = std::make_shared<Output>();
-    env->process = std::make_shared<ProcessInfo>(env);
+    env->results = std::make_shared<Results>(env);
+    env->timing = std::make_shared<Timing>(env);
 
-    env->process->createTimer("Total", "Total solution time");
-    env->process->startTimer("Total");
+    env->timing->createTimer("Total", "Total solution time");
+    env->timing->startTimer("Total");
 
-    env->process->createTimer("ProblemInitialization", " - problem initialization");
+    env->timing->createTimer("ProblemInitialization", " - problem initialization");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
     env->report = std::make_shared<Report>(env);
+
+    env->dualSolver = std::make_shared<DualSolver>(env);
+    env->primalSolver = std::make_shared<PrimalSolver>(env);
     initializeSettings();
 }
 
@@ -196,17 +200,24 @@ bool SHOTSolver::setProblem(std::string fileName)
             env->problem = problem;
             env->reformulatedProblem = problem;
 
-            gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
-            gms2os->readGms(fileName);
-            gms2os->createOSObjects();
-
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
         else if (problemExtension == ".dat")
         {
-            gms2os = std::unique_ptr<GAMS2OS>(new GAMS2OS(env));
-            gms2os->readCntr(fileName);
-            gms2os->createOSObjects();
+            auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+            SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+            if (modelingSystem->createProblem(problem, fileName, E_GAMSInputSource::GAMSModel) != E_ProblemCreationStatus::NormalCompletion)
+            {
+                std::cout << "Error while reading problem";
+            }
+            else
+            {
+            }
+
+            env->modelingSystem = modelingSystem;
+            env->problem = problem;
+            env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -265,7 +276,7 @@ bool SHOTSolver::selectStrategy()
             env->output->outputInfo(" Using NLP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
 
-            env->process->usedSolutionStrategy = E_SolutionStrategy::NLP;
+            env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
         }
         else
         {
@@ -285,7 +296,7 @@ bool SHOTSolver::selectStrategy()
     {
         env->output->outputInfo(" Using MIQP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->process->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     //MIQCQP problem
     else if (useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
@@ -293,14 +304,14 @@ bool SHOTSolver::selectStrategy()
         env->output->outputInfo(" Using MIQCQP solution strategy.");
 
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->process->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
     //NLP problem
     else if (env->problem->properties.isNLPProblem)
     {
         env->output->outputInfo(" Using NLP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
-        env->process->usedSolutionStrategy = E_SolutionStrategy::NLP;
+        env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
     }
     else
     {
@@ -309,12 +320,12 @@ bool SHOTSolver::selectStrategy()
         case (ES_TreeStrategy::SingleTree):
             env->output->outputInfo(" Using single-tree solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
-            env->process->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
+            env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
             break;
         case (ES_TreeStrategy::MultiTree):
             env->output->outputInfo(" Using multi-tree solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
-            env->process->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
             break;
         default:
             break;
@@ -336,7 +347,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
             env->output->outputInfo(" Using NLP solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(env, osInstance));
 
-            env->process->usedSolutionStrategy = E_SolutionStrategy::NLP;
+            env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
         }
         else
         {
@@ -355,7 +366,7 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
     {
         env->output->outputInfo(" Using MIQP solution strategy.");
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(env, osInstance));
-        env->process->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     //MIQCQP problem
     else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
@@ -363,13 +374,13 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
         env->output->outputInfo(" Using MIQCQP solution strategy.");
 
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(env, osInstance));
-        env->process->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
     else if (UtilityFunctions::areAllVariablesReal(osInstance))
     {
         env->output->outputInfo(" Using NLP solution strategy.");
         solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(env, osInstance));
-        env->process->usedSolutionStrategy = E_SolutionStrategy::NLP;
+        env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
     }
     else
     {
@@ -378,12 +389,12 @@ bool SHOTSolver::setProblem(OSInstance *osInstance)
         case (ES_TreeStrategy::SingleTree):
             env->output->outputInfo(" Using single-tree solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategySingleTree(env, osInstance));
-            env->process->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
+            env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
             break;
         case (ES_TreeStrategy::MultiTree):
             env->output->outputInfo(" Using multi-tree solution strategy.");
             solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMultiTree(env, osInstance));
-            env->process->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
             break;
         default:
             break;
@@ -399,23 +410,24 @@ bool SHOTSolver::solveProblem()
 {
     if (env->problem->objectiveFunction->properties.isMinimize)
     {
-        env->process->setDualBound(SHOT_DBL_MIN);
-        env->process->setPrimalBound(SHOT_DBL_MAX);
+        env->results->setDualBound(SHOT_DBL_MIN);
+        env->results->setPrimalBound(SHOT_DBL_MAX);
     }
     else
     {
-        env->process->setDualBound(SHOT_DBL_MAX);
-        env->process->setPrimalBound(SHOT_DBL_MIN);
+        env->results->setDualBound(SHOT_DBL_MAX);
+        env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
     bool result = solutionStrategy->solveProblem();
 
+    /*
 #ifdef HAS_GAMS
     if (result && gms2os != NULL)
     {
         gms2os->writeResult();
     }
-#endif
+#endif*/
 
     if (result)
         isProblemSolved = true;
@@ -425,7 +437,7 @@ bool SHOTSolver::solveProblem()
 
 std::string SHOTSolver::getOSrL()
 {
-    return (env->process->getOSrl());
+    return (env->results->getOSrl());
 }
 
 std::string SHOTSolver::getOSoL()
@@ -446,7 +458,7 @@ std::string SHOTSolver::getGAMSOptFile()
 
 std::string SHOTSolver::getTraceResult()
 {
-    return (env->process->getTraceResult());
+    return (env->results->getTraceResult());
 }
 
 void SHOTSolver::initializeSettings()
@@ -961,10 +973,29 @@ void SHOTSolver::initializeDebugMode()
 
 void SHOTSolver::verifySettings()
 {
+    if (env->settings->getIntSetting("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::GAMS))
+    {
+        if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::Ipopt)
+        {
+            env->output->outputError("Changing to GAMS NLP solver since problem is given in GAMS format.");
+            env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
+        }
+    }
+
+    if (env->settings->getIntSetting("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL) ||
+        env->settings->getIntSetting("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
+    {
+        if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::Ipopt)
+        {
+            env->output->outputError("Using Ipopt as NLP solver since problem is given in OSiL or Ampl format.");
+            env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
+        }
+    }
+
     if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
     {
 #ifndef HAS_GAMS
-        env->output->outputError("SHOT has not been compiled with support for GAMS NLP solvers. Switching to Ipopt");
+        env->output->outputError("SHOT has not been compiled with support for GAMS NLP solvers.");
         env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
 #endif
     }
@@ -1019,34 +1050,34 @@ void SHOTSolver::updateSetting(std::string name, std::string category, double va
 
 double SHOTSolver::getDualBound()
 {
-    return (env->process->getDualBound());
+    return (env->results->getDualBound());
 }
 
 double SHOTSolver::getPrimalBound()
 {
-    return (env->process->getPrimalBound());
+    return (env->results->getPrimalBound());
 }
 
 double SHOTSolver::getAbsoluteObjectiveGap()
 {
-    return (env->process->getAbsoluteObjectiveGap());
+    return (env->results->getAbsoluteObjectiveGap());
 }
 
 double SHOTSolver::getRelativeObjectiveGap()
 {
-    return (env->process->getRelativeObjectiveGap());
+    return (env->results->getRelativeObjectiveGap());
 }
 
 int SHOTSolver::getNumberOfPrimalSolutions()
 {
-    return (env->process->primalSolutions.size() > 0);
+    return (env->results->primalSolutions.size() > 0);
 }
 
 PrimalSolution SHOTSolver::getPrimalSolution()
 {
-    if (isProblemSolved && env->process->primalSolutions.size() > 0)
+    if (isProblemSolved && env->results->primalSolutions.size() > 0)
     {
-        PrimalSolution primalSol = env->process->primalSolutions.at(0);
+        PrimalSolution primalSol = env->results->primalSolutions.at(0);
         return (primalSol);
     }
 
@@ -1056,11 +1087,11 @@ PrimalSolution SHOTSolver::getPrimalSolution()
 
 std::vector<PrimalSolution> SHOTSolver::getPrimalSolutions()
 {
-    return (env->process->primalSolutions);
+    return (env->results->primalSolutions);
 }
 
 E_TerminationReason SHOTSolver::getTerminationReason()
 {
-    return (env->process->terminationReason);
+    return (env->results->terminationReason);
 }
 } // namespace SHOT

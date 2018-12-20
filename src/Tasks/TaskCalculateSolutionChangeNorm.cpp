@@ -23,27 +23,27 @@ TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm()
 
 void TaskCalculateSolutionChangeNorm::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     currIter->boundaryDistance = SHOT_DBL_MAX;
 
-    if (env->process->iterations.size() < 3)
+    if (env->results->iterations.size() < 3)
     {
         return;
     }
 
-    if (env->process->getCurrentIteration()->hyperplanePoints.size() == 0 || env->process->getCurrentIteration()->isMIP())
+    if (env->results->getCurrentIteration()->hyperplanePoints.size() == 0 || env->results->getCurrentIteration()->isMIP())
     {
         return;
     }
 
-    auto currIterSol = env->process->getCurrentIteration()->hyperplanePoints.at(0);
+    auto currIterSol = env->results->getCurrentIteration()->hyperplanePoints.at(0);
 
-    for (int i = env->process->iterations.size() - 2; i >= 1; i--)
+    for (int i = env->results->iterations.size() - 2; i >= 1; i--)
     {
-        if (env->process->iterations.size() > 0 && !env->process->iterations.at(i).isMIP())
+        if (env->results->iterations.size() > 0 && !env->results->iterations.at(i)->isMIP())
         {
-            auto prevIterSol = env->process->iterations.at(i).hyperplanePoints.at(0);
+            auto prevIterSol = env->results->iterations.at(i)->hyperplanePoints.at(0);
 
             double distance = 0;
 

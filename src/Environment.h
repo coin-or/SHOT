@@ -14,22 +14,27 @@
 namespace SHOT
 {
 
+class ILinesearchMethod;
+
 class Environment
 {
   public:
     inline Environment(){};
     inline ~Environment(){};
 
-    ProcessPtr process;
+    ResultsPtr results;
     SettingsPtr settings;
-    //ModelPtr model;
     ProblemPtr problem;
     ProblemPtr reformulatedProblem;
     ModelingSystemPtr modelingSystem;
-    MIPSolverPtr dualSolver;
+    DualSolverPtr dualSolver;
+    PrimalSolverPtr primalSolver;
     OutputPtr output;
     ReportPtr report;
     TaskHandlerPtr tasks;
+    TimingPtr timing;
+
+    std::shared_ptr<ILinesearchMethod> rootsearchMethod;
 
     SolutionStatistics solutionStatistics;
 

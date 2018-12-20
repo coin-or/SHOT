@@ -31,7 +31,7 @@ void RelaxationStrategyNone::setInitial()
 
 void RelaxationStrategyNone::executeStrategy()
 {
-    env->process->getCurrentIteration()->type = E_IterationProblemType::MIP;
+    env->results->getCurrentIteration()->type = E_IterationProblemType::MIP;
 }
 
 void RelaxationStrategyNone::setActive()
@@ -44,7 +44,7 @@ void RelaxationStrategyNone::setInactive()
 
 E_IterationProblemType RelaxationStrategyNone::getProblemType()
 {
-    if (env->dualSolver->getDiscreteVariableStatus())
+    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus())
         return E_IterationProblemType::MIP;
     else
         return E_IterationProblemType::Relaxed;

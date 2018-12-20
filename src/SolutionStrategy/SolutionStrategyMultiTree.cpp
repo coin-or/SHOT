@@ -1,4 +1,4 @@
-/**
+/** - env->timing->createTimer
    The Supporting Hyperplane Optimization Toolkit (SHOT).
 
    @author Andreas Lundell, Åbo Akademi University
@@ -17,20 +17,20 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->process->createTimer("ProblemInitialization", " - problem initialization");
-    env->process->createTimer("ProblemReformulation", " - problem reformulation");
-    env->process->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("ProblemInitialization", " - problem initialization");
+    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
+    env->timing->createTimer("InteriorPointSearch", " - interior point search");
 
-    env->process->createTimer("DualStrategy", " - dual strategy");
-    env->process->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
-    env->process->createTimer("DualProblemsIntegerFixed", "   - solving integer-fixed problems");
-    env->process->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    env->process->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
-    env->process->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
+    env->timing->createTimer("DualStrategy", " - dual strategy");
+    env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
+    env->timing->createTimer("DualProblemsIntegerFixed", "   - solving integer-fixed problems");
+    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    env->timing->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
+    env->timing->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
 
-    env->process->createTimer("PrimalStrategy", " - primal strategy");
-    env->process->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
-    env->process->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
+    env->timing->createTimer("PrimalStrategy", " - primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
+    env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
 
     TaskBase *tFinalizeSolution = new TaskSequential(env);
 

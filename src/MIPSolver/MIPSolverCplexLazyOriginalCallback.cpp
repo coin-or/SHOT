@@ -17,7 +17,7 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
 {
     env = envPtr;
 
-    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
+    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
@@ -51,13 +51,13 @@ IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArra
 // This callback injects the best known primal solution into all threads.
 void HCallbackI::main() // Called at each node...
 {
-    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
+    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    if ((env->process->primalSolutions.size() > 0) && ((isMinimization && this->getIncumbentObjValue() > env->process->getPrimalBound()) || (!isMinimization && this->getIncumbentObjValue() < env->process->getPrimalBound())))
+    if ((env->results->primalSolutions.size() > 0) && ((isMinimization && this->getIncumbentObjValue() > env->results->getPrimalBound()) || (!isMinimization && this->getIncumbentObjValue() < env->results->getPrimalBound())))
     {
-        auto primalSol = env->process->primalSolution;
+        auto primalSol = env->results->primalSolution;
 
         IloNumArray tmpVals(this->getEnv());
 
@@ -66,9 +66,9 @@ void HCallbackI::main() // Called at each node...
             tmpVals.add(primalSol.at(i));
         }
 
-        if (env->dualSolver->hasAuxilliaryObjectiveVariable())
+        if (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
         {
-            tmpVals.add(env->process->getPrimalBound());
+            tmpVals.add(env->results->getPrimalBound());
         }
 
         try
@@ -84,9 +84,9 @@ void HCallbackI::main() // Called at each node...
         tmpVals.end();
     }
 
-    if (env->process->getCurrentIteration()->relaxedLazyHyperplanesAdded < env->settings->getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
+    if (env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded < env->settings->getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
     {
-        int waitingListSize = env->process->hyperplaneWaitingList.size();
+        int waitingListSize = env->dualSolver->MIPSolver->hyperplaneWaitingList.size();
 
         std::vector<SolutionPoint> solutionPoints(1);
 
@@ -127,7 +127,7 @@ void HCallbackI::main() // Called at each node...
             static_cast<TaskSelectHyperplanePointsECP *>(taskSelectHPPts.get())->run(solutionPoints);
         }
 
-        env->process->getCurrentIteration()->relaxedLazyHyperplanesAdded += (env->process->hyperplaneWaitingList.size() - waitingListSize);
+        env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded += (env->dualSolver->MIPSolver->hyperplaneWaitingList.size() - waitingListSize);
     }
 
     return;
@@ -154,14 +154,14 @@ IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarA
 
 void InfoCallbackI::main() // Called at each node...
 {
-    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
+    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    auto absObjGap = env->process->getAbsoluteObjectiveGap();
-    auto relObjGap = env->process->getRelativeObjectiveGap();
+    auto absObjGap = env->results->getAbsoluteObjectiveGap();
+    auto relObjGap = env->results->getRelativeObjectiveGap();
 
-    if (env->process->isRelativeObjectiveGapToleranceMet())
+    if (env->results->isRelativeObjectiveGapToleranceMet())
     {
         env->output->outputAlways(
             "     Terminated by relative objective gap tolerance in info callback: " + UtilityFunctions::toString(relObjGap) + " < " + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination")));
@@ -169,7 +169,7 @@ void InfoCallbackI::main() // Called at each node...
         this->abort();
         return;
     }
-    else if (env->process->isAbsoluteObjectiveGapToleranceMet())
+    else if (env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         env->output->outputAlways(
             "     Terminated by absolute objective gap tolerance in info callback: " + UtilityFunctions::toString(absObjGap) + " < " + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination")));
@@ -192,7 +192,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 {
     env = envPtr;
 
-    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
+    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
@@ -238,17 +238,17 @@ IloCplex::Callback CtCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArr
 
 void CtCallbackI::main()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (currIter->isSolved)
     {
-        env->process->createIteration();
-        currIter = env->process->getCurrentIteration();
+        env->results->createIteration();
+        currIter = env->results->getCurrentIteration();
     }
 
     currIter->isSolved = true;
 
-    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver.get()))->callbackMutex2);
+    std::lock_guard<std::mutex> lock((static_cast<MIPSolverCplexLazyOriginalCallback *>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     this->cbCalls++;
 
@@ -256,7 +256,7 @@ void CtCallbackI::main()
 
     this->getValues(tmpVals, cplexVars);
 
-    int size = (env->dualSolver->hasAuxilliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+    int size = (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
     VectorDouble solution(size);
 
@@ -279,14 +279,14 @@ void CtCallbackI::main()
 
     tmpSolPt.point = solution;
     tmpSolPt.objectiveValue = getObjValue();
-    tmpSolPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
+    tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
     // Check if better dual bound
-    if ((isMinimization && tmpDualObjBound > env->process->getDualBound()) || (!isMinimization && tmpDualObjBound < env->process->getDualBound()))
+    if ((isMinimization && tmpDualObjBound > env->results->getDualBound()) || (!isMinimization && tmpDualObjBound < env->results->getDualBound()))
     {
         DualSolution sol =
-            {solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, env->process->getCurrentIteration()->iterationNumber};
-        env->process->addDualSolutionCandidate(sol);
+            {solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound, env->results->getCurrentIteration()->iterationNumber};
+        env->dualSolver->addDualSolutionCandidate(sol);
     }
 
     // Check if better primal solution
@@ -294,7 +294,7 @@ void CtCallbackI::main()
     {
         double tmpPrimalObjBound = this->getIncumbentObjValue();
 
-        if ((isMinimization && tmpPrimalObjBound < env->process->getPrimalBound()) || (!isMinimization && tmpPrimalObjBound > env->process->getPrimalBound()))
+        if ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound()) || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound()))
         {
             IloNumArray tmpPrimalVals(this->getEnv());
             this->getIncumbentValues(tmpPrimalVals, cplexVars);
@@ -313,10 +313,10 @@ void CtCallbackI::main()
                 tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
             }
 
-            tmpPt.iterFound = env->process->getCurrentIteration()->iterationNumber;
+            tmpPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
             tmpPt.objectiveValue = this->getIncumbentObjValue();
             tmpPt.point = primalSolution;
-            env->process->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
+            env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
             tmpPrimalVals.end();
             primalSolution.clear();
         }
@@ -328,13 +328,13 @@ void CtCallbackI::main()
 
     auto threadId = std::to_string(this->getMyThreadNum());
 
-    env->process->getCurrentIteration()->numberOfOpenNodes = this->getNremainingNodes();
+    env->results->getCurrentIteration()->numberOfOpenNodes = this->getNremainingNodes();
 
     env->solutionStatistics.numberOfExploredNodes = std::max((int)this->getNnodes(), env->solutionStatistics.numberOfExploredNodes);
 
     printIterationReport(candidatePoints.at(0), threadId);
 
-    if (env->process->isAbsoluteObjectiveGapToleranceMet())
+    if (env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         env->output->outputAlways("     Terminated by absolute objective gap tolerance in lazy callback");
 
@@ -343,7 +343,7 @@ void CtCallbackI::main()
         return;
     }
 
-    if (env->process->isRelativeObjectiveGapToleranceMet())
+    if (env->results->isRelativeObjectiveGapToleranceMet())
     {
         env->output->outputAlways("     Terminated by relative objective gap tolerance in lazy callback");
 
@@ -368,15 +368,15 @@ void CtCallbackI::main()
 
     if (checkFixedNLPStrategy(tmpSolPt))
     {
-        env->process->addPrimalFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution,
-                                                 this->getObjValue(), env->process->getCurrentIteration()->iterationNumber,
-                                                 tmpSolPt.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution,
+                                                this->getObjValue(), env->results->getCurrentIteration()->iterationNumber,
+                                                tmpSolPt.maxDeviation);
 
         tSelectPrimNLP.get()->run();
 
-        env->process->checkPrimalSolutionCandidates();
+        env->primalSolver->checkPrimalSolutionCandidates();
 
-        if (env->process->isAbsoluteObjectiveGapToleranceMet())
+        if (env->results->isAbsoluteObjectiveGapToleranceMet())
         {
             env->output->outputAlways("     Terminated by absolute objective gap tolerance in lazy callback");
 
@@ -385,7 +385,7 @@ void CtCallbackI::main()
             return;
         }
 
-        if (env->process->isRelativeObjectiveGapToleranceMet())
+        if (env->results->isRelativeObjectiveGapToleranceMet())
         {
             env->output->outputAlways("     Terminated by relative objective gap tolerance in lazy callback");
 
@@ -411,20 +411,20 @@ void CtCallbackI::main()
         taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
     }
 
-    for (auto hp : env->process->hyperplaneWaitingList)
+    for (auto hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
     {
         this->createHyperplane(hp);
 
         this->lastNumAddedHyperplanes++;
     }
 
-    env->process->hyperplaneWaitingList.clear();
+    env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
 
     if (env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
         bool addedIntegerCut = false;
 
-        for (auto ic : env->process->integerCutWaitingList)
+        for (auto ic : env->dualSolver->MIPSolver->integerCutWaitingList)
         {
             this->createIntegerCut(ic);
             addedIntegerCut = true;
@@ -432,10 +432,10 @@ void CtCallbackI::main()
 
         if (addedIntegerCut)
         {
-            env->output->outputInfo("     Added " + std::to_string(env->process->integerCutWaitingList.size()) + " integer cut(s).                                        ");
+            env->output->outputInfo("     Added " + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size()) + " integer cut(s).                                        ");
         }
 
-        env->process->integerCutWaitingList.clear();
+        env->dualSolver->MIPSolver->integerCutWaitingList.clear();
     }
 
     candidatePoints.clear();
@@ -444,7 +444,7 @@ void CtCallbackI::main()
 
 void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
-    auto optional = env->dualSolver->createHyperplaneTerms(hyperplane);
+    auto optional = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
     if (!optional)
     {
         return;
@@ -463,7 +463,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         }
     }
 
-    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     if (hyperplaneIsOk)
     {
@@ -499,7 +499,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 		genHyperplane.isLazy = false;
 		genHyperplane.isRemoved = false;*/
 
-        //env->dualSolver->generatedHyperplanes.push_back(genHyperplane);
+        //env->dualSolver->MIPSolver->generatedHyperplanes.push_back(genHyperplane);
 
         currIter->numHyperplanesAdded++;
         currIter->totNumHyperplanes++;

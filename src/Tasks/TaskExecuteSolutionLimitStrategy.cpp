@@ -15,17 +15,17 @@ namespace SHOT
 
 TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
     isInitialized = false;
     temporaryOptLimitUsed = false;
 
     solutionLimitStrategy = new MIPSolutionLimitStrategyIncrease(env);
     auto initLim = solutionLimitStrategy->getInitialLimit();
-    env->dualSolver->setSolutionLimit(initLim);
+    env->dualSolver->MIPSolver->setSolutionLimit(initLim);
     previousSolLimit = initLim;
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy()
@@ -35,14 +35,14 @@ TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy()
 
 void TaskExecuteSolutionLimitStrategy::run()
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
     if (!isInitialized)
     {
         isInitialized = true;
     }
 
-    auto currIter = env->process->getCurrentIteration();
-    auto prevIter = env->process->getPreviousIteration();
+    auto currIter = env->results->getCurrentIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
     //previousSolLimit = prevIter->usedMIPSolutionLimit;
     //std::cout << "prev solution limit" << previousSolLimit << " at iteration " << currIter->iterationNumber << std::endl;
@@ -50,31 +50,31 @@ void TaskExecuteSolutionLimitStrategy::run()
     if (temporaryOptLimitUsed)
     {
         temporaryOptLimitUsed = false;
-        env->dualSolver->setSolutionLimit(previousSolLimit);
+        env->dualSolver->MIPSolver->setSolutionLimit(previousSolLimit);
     }
 
-    if (currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual") && env->process->getDualBound() > SHOT_DBL_MIN)
+    if (currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual") && env->results->getDualBound() > SHOT_DBL_MIN)
     {
         previousSolLimit = prevIter->usedMIPSolutionLimit;
-        env->dualSolver->setSolutionLimit(2100000000);
+        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
         temporaryOptLimitUsed = true;
         currIter->MIPSolutionLimitUpdated = true;
         env->output->outputInfo(
             "     Forced optimal iteration since too many iterations since last dual bound update");
     }
-    else if (env->process->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual") && env->process->getDualBound() > SHOT_DBL_MIN)
+    else if (env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual") && env->results->getDualBound() > SHOT_DBL_MIN)
     {
         previousSolLimit = prevIter->usedMIPSolutionLimit;
-        env->dualSolver->setSolutionLimit(2100000000);
+        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
         temporaryOptLimitUsed = true;
         currIter->MIPSolutionLimitUpdated = true;
         env->output->outputAlways(
             "     Forced optimal iteration since too long time since last dual bound update");
     }
-    else if (env->process->getPrimalBound() < SHOT_DBL_MAX && abs(prevIter->objectiveValue - env->process->getPrimalBound()) < 0.001)
+    else if (env->results->getPrimalBound() < SHOT_DBL_MAX && abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
     {
         previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
-        env->dualSolver->setSolutionLimit(2100000000);
+        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
         temporaryOptLimitUsed = true;
         currIter->MIPSolutionLimitUpdated = true;
         env->output->outputInfo(
@@ -88,14 +88,14 @@ void TaskExecuteSolutionLimitStrategy::run()
         {
             int newLimit = solutionLimitStrategy->getNewLimit();
 
-            if (newLimit != env->process->getPreviousIteration()->usedMIPSolutionLimit)
+            if (newLimit != env->results->getPreviousIteration()->usedMIPSolutionLimit)
             {
-                env->dualSolver->setSolutionLimit(newLimit);
+                env->dualSolver->MIPSolver->setSolutionLimit(newLimit);
             }
         }
     }
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskExecuteSolutionLimitStrategy::getType()

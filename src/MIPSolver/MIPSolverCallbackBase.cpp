@@ -15,7 +15,7 @@ namespace SHOT
 
 bool MIPSolverCallbackBase::checkIterationLimit()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination"))
     {
@@ -32,15 +32,15 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         return (false);
     }
 
-    env->process->startTimer("PrimalStrategy");
-    env->process->startTimer("PrimalBoundStrategyNLP");
+    env->timing->startTimer("PrimalStrategy");
+    env->timing->startTimer("PrimalBoundStrategyNLP");
 
     bool callNLPSolver = false;
 
     auto userSettingStrategy = env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal");
     auto userSetting = env->settings->getIntSetting("FixedInteger.Source", "Primal");
 
-    auto dualBound = env->process->getDualBound();
+    auto dualBound = env->results->getDualBound();
 
     if (abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound)) < env->settings->getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
     {
@@ -58,7 +58,7 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
-        else if (env->process->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+        else if (env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
         {
             env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -71,15 +71,15 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
     }
 
-    env->process->stopTimer("PrimalBoundStrategyNLP");
-    env->process->stopTimer("PrimalStrategy");
+    env->timing->stopTimer("PrimalBoundStrategyNLP");
+    env->timing->stopTimer("PrimalStrategy");
 
     return (callNLPSolver);
 }
 
 void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId)
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     std::stringstream tmpType;
     if (threadId != "")
@@ -93,13 +93,13 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
 
     env->report->outputIterationDetail(currIter->iterationNumber,
                                        tmpType.str(),
-                                       env->process->getElapsedTime("Total"),
+                                       env->timing->getElapsedTime("Total"),
                                        this->lastNumAddedHyperplanes,
                                        currIter->totNumHyperplanes,
-                                       env->process->getDualBound(),
-                                       env->process->getPrimalBound(),
-                                       env->process->getAbsoluteObjectiveGap(),
-                                       env->process->getRelativeObjectiveGap(),
+                                       env->results->getDualBound(),
+                                       env->results->getPrimalBound(),
+                                       env->results->getAbsoluteObjectiveGap(),
+                                       env->results->getRelativeObjectiveGap(),
                                        solution.objectiveValue,
                                        solution.maxDeviation.index,
                                        solution.maxDeviation.value,

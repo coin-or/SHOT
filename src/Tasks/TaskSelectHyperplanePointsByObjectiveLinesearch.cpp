@@ -22,12 +22,12 @@ TaskSelectHyperplanePointsByObjectiveLinesearch::~TaskSelectHyperplanePointsByOb
 
 void TaskSelectHyperplanePointsByObjectiveLinesearch::run()
 {
-    this->run(env->process->getPreviousIteration()->solutionPoints);
+    this->run(env->results->getPreviousIteration()->solutionPoints);
 }
 
 void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPoint> sourcePoints)
 {
-    env->process->startTimer("DualObjectiveRootSearch");
+    env->timing->startTimer("DualObjectiveRootSearch");
 
     bool useRootsearch = false;
 
@@ -46,10 +46,10 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
 
             try
             {
-                auto rootBound = env->process->linesearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
-                                                                          env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                          env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
-                                                                          std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
+                auto rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
+                                                                 env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                 env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
+                                                                 std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction).get());
 
                 double diffobj = abs(oldObjVal - rootBound.second);
 
@@ -60,7 +60,7 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
                 hyperplane.generatedPoint = SOLPT.point;
                 hyperplane.objectiveFunctionValue = rootBound.second;
 
-                env->process->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
             }
             catch (std::exception &e)
             {
@@ -80,11 +80,11 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
             hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
             hyperplane.objectiveFunctionValue = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
 
-            env->process->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
         }
     }
 
-    env->process->stopTimer("DualObjectiveRootSearch");
+    env->timing->stopTimer("DualObjectiveRootSearch");
 }
 
 std::string TaskSelectHyperplanePointsByObjectiveLinesearch::getType()

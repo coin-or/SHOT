@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
     bool defaultOptionsGenerated = false;
 
-    solver->getEnvironment()->process->startTimer("Total");
+    solver->getEnvironment()->timing->startTimer("Total");
 
     boost::filesystem::path resultFile, optionsFile, traceFile;
 

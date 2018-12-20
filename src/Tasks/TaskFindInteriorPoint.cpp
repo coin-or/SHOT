@@ -31,7 +31,7 @@ TaskFindInteriorPoint::~TaskFindInteriorPoint()
 
 void TaskFindInteriorPoint::run()
 {
-    env->process->startTimer("InteriorPointSearch");
+    env->timing->startTimer("InteriorPointSearch");
 
     env->report->outputInteriorPointPreReport();
 
@@ -88,7 +88,7 @@ void TaskFindInteriorPoint::run()
         else
         {
             env->output->outputSummary("\n Valid interior point with constraint deviation " + UtilityFunctions::toString(maxDev.normalizedValue) + " found.");
-            env->process->interiorPts.push_back(tmpIP);
+            env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
         }
 
         foundNLPPoint = (foundNLPPoint || (maxDev.normalizedValue <= 0));
@@ -108,16 +108,16 @@ void TaskFindInteriorPoint::run()
     if (!foundNLPPoint)
     {
         env->output->outputError("\n No interior point found!                            ");
-        env->process->stopTimer("InteriorPointSearch");
+        env->timing->stopTimer("InteriorPointSearch");
 
         return;
     }
 
     env->output->outputDebug("     Finished solving NLP problem.");
 
-    env->solutionStatistics.numberOfOriginalInteriorPoints = env->process->interiorPts.size();
+    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->MIPSolver->interiorPts.size();
 
-    env->process->stopTimer("InteriorPointSearch");
+    env->timing->stopTimer("InteriorPointSearch");
 }
 
 std::string TaskFindInteriorPoint::getType()

@@ -23,11 +23,11 @@ TaskCheckTimeLimit::~TaskCheckTimeLimit()
 
 void TaskCheckTimeLimit::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
-    if (env->process->getElapsedTime("Total") >= env->settings->getDoubleSetting("TimeLimit", "Termination"))
+    if (env->timing->getElapsedTime("Total") >= env->settings->getDoubleSetting("TimeLimit", "Termination"))
     {
-        env->process->terminationReason = E_TerminationReason::TimeLimit;
+        env->results->terminationReason = E_TerminationReason::TimeLimit;
         env->tasks->setNextTask(taskIDIfTrue);
     }
 }

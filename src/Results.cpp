@@ -8,12 +8,12 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "ProcessInfo.h"
+#include "Results.h"
 
 namespace SHOT
 {
 
-void ProcessInfo::addDualSolution(DualSolution solution)
+void Results::addDualSolution(DualSolution solution)
 {
     if (dualSolutions.size() == 0)
     {
@@ -25,174 +25,60 @@ void ProcessInfo::addDualSolution(DualSolution solution)
     }
 }
 
-void ProcessInfo::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
+void Results::addPrimalSolution(PrimalSolution solution)
 {
-    PrimalSolution sol;
 
-    sol.point = pt;
-    sol.sourceType = source;
-    sol.objValue = env->problem->objectiveFunction->calculateValue(pt);
-    sol.iterFound = iter;
-
-    if (env->problem->properties.numberOfNonlinearConstraints > 0)
+    if (env->settings->getIntSetting("SaveNumberOfSolutions", "Output") > 1)
     {
-        auto maxDevNonlinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->nonlinearConstraints);
-        sol.maxDevatingConstraintNonlinear = PairIndexValue(maxDevNonlinear.constraint->index, maxDevNonlinear.normalizedValue);
+        env->results->primalSolutions.insert(env->results->primalSolutions.begin(), solution);
     }
-
-    if (env->problem->properties.numberOfLinearConstraints > 0)
+    else
     {
-        auto maxDevLinear = env->problem->getMaxNumericConstraintValue(pt, env->problem->linearConstraints);
-        sol.maxDevatingConstraintLinear = PairIndexValue(maxDevLinear.constraint->index, maxDevLinear.normalizedValue);
-    }
-
-    primalSolutionCandidates.push_back(sol);
-
-    this->checkPrimalSolutionCandidates();
-}
-
-void ProcessInfo::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter)
-{
-    for (auto PT : pts)
-    {
-        addPrimalSolutionCandidate(PT, source, iter);
-    }
-}
-
-void ProcessInfo::addDualSolutionCandidate(DualSolution solution)
-{
-    dualSolutionCandidates.push_back(solution);
-
-    this->checkDualSolutionCandidates();
-}
-
-void ProcessInfo::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
-{
-    PrimalSolution sol;
-
-    sol.point = pt.point;
-    sol.sourceType = source;
-    sol.objValue = pt.objectiveValue;
-    sol.iterFound = pt.iterFound;
-
-    primalSolutionCandidates.push_back(sol);
-
-    this->checkPrimalSolutionCandidates();
-}
-
-void ProcessInfo::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source)
-{
-    for (auto pt : pts)
-    {
-        addPrimalSolutionCandidate(pt, source);
-    }
-}
-
-void ProcessInfo::addPrimalFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter,
-                                             PairIndexValue maxConstrDev)
-{
-    PrimalFixedNLPCandidate cand =
-        {pt, source, objVal, iter};
-
-    primalFixedNLPCandidates.push_back(cand);
-}
-
-void ProcessInfo::checkPrimalSolutionCandidates()
-{
-    this->startTimer("PrimalStrategy");
-
-    for (auto cand : this->primalSolutionCandidates)
-    {
-        this->checkPrimalSolutionPoint(cand);
-    }
-
-    this->primalSolutionCandidates.clear();
-
-    this->stopTimer("PrimalStrategy");
-}
-
-void ProcessInfo::checkDualSolutionCandidates()
-{
-    double currDualBound = this->getDualBound();
-    double currPrimalBound = this->getPrimalBound();
-
-    double gapRelTolerance = env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination");
-    double gapAbsTolerance = env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination");
-
-    for (auto C : this->dualSolutionCandidates)
-    {
-        bool updateDual = false;
-
-        if (env->problem->objectiveFunction->properties.isMinimize)
+        if (env->results->primalSolutions.size() == 0)
         {
-            if (C.objValue < currPrimalBound * (1 + gapRelTolerance) && C.objValue > currPrimalBound)
-            {
-                C.objValue = currPrimalBound;
-                updateDual = true;
-            }
-            else if (C.objValue > currDualBound && (C.objValue <= currPrimalBound))
-            {
-                updateDual = true;
-            }
+            env->results->primalSolutions.push_back(solution);
         }
         else
         {
-            if (C.objValue > currPrimalBound * (1 + gapRelTolerance) && C.objValue < currPrimalBound)
-            {
-                C.objValue = currPrimalBound;
-                updateDual = true;
-            }
-            else if (C.objValue < currDualBound && (C.objValue >= currPrimalBound))
-            {
-                updateDual = true;
-            }
-        }
-
-        if (updateDual)
-        {
-            // New dual solution
-            this->setDualBound(C.objValue);
-            currDualBound = C.objValue;
-            env->solutionStatistics.iterationLastDualBoundUpdate = this->getCurrentIteration()->iterationNumber;
-            env->solutionStatistics.iterationLastDualBoundUpdate = this->getElapsedTime("Total");
-
-            if (C.sourceType == E_DualSolutionSource::MIPSolutionOptimal ||
-                C.sourceType == E_DualSolutionSource::LPSolution ||
-                C.sourceType == E_DualSolutionSource::MIPSolverBound)
-            {
-                this->addDualSolution(C);
-            }
-
-            std::string sourceDesc;
-
-            switch (C.sourceType)
-            {
-            case E_DualSolutionSource::LPSolution:
-                sourceDesc = "LP solution";
-                break;
-            case E_DualSolutionSource::MIPSolutionOptimal:
-                sourceDesc = "MIP solution";
-                break;
-            case E_DualSolutionSource::ObjectiveConstraint:
-                sourceDesc = "Obj. constr. linesearch";
-                break;
-            case E_DualSolutionSource::MIPSolverBound:
-                sourceDesc = "MIP solver bound";
-                break;
-            default:
-                break;
-            }
-
-            auto tmpLine = boost::format("     New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
-
-            env->output->outputDebug(tmpLine.str());
+            env->results->primalSolutions.at(0) = solution;
         }
     }
 
-    this->dualSolutionCandidates.clear();
+    env->results->primalSolution = solution.point;
+    env->results->setPrimalBound(solution.objValue);
+
+    // Write the new primal point to a file
+    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+    {
+        std::stringstream fileName;
+        fileName << env->settings->getStringSetting("Debug.Path", "Output");
+        fileName << "/primalpoint";
+        fileName << env->results->primalSolutions.size();
+        fileName << ".txt";
+
+        UtilityFunctions::savePrimalSolutionToFile(solution, env->problem->allVariables, fileName.str());
+    }
+
+    // Add primal objective cut
+    if (env->settings->getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") &&
+        env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    {
+        Hyperplane hyperplane;
+        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
+        hyperplane.isObjectiveHyperplane = true;
+        hyperplane.sourceConstraintIndex = -1;
+        hyperplane.generatedPoint = solution.point;
+        hyperplane.objectiveFunctionValue = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
+
+        env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+
+        auto tmpLine = boost::format("     Primal objective cut added.");
+
+        env->output->outputWarning(tmpLine.str());
+    }
 }
 
-bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
+bool Results::isRelativeObjectiveGapToleranceMet()
 {
     if (this->getRelativeObjectiveGap() <= env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
     {
@@ -204,7 +90,7 @@ bool ProcessInfo::isRelativeObjectiveGapToleranceMet()
     }
 }
 
-bool ProcessInfo::isAbsoluteObjectiveGapToleranceMet()
+bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
     if (this->getAbsoluteObjectiveGap() <= env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
     {
@@ -216,460 +102,19 @@ bool ProcessInfo::isAbsoluteObjectiveGapToleranceMet()
     }
 }
 
-bool ProcessInfo::checkPrimalSolutionPoint(PrimalSolution primalSol)
-{
-    std::string sourceDesc;
-
-    VectorDouble tmpPoint(primalSol.point);
-    double tmpObjVal = primalSol.objValue;
-
-    bool isVariableBoundsFulfilled = false;
-
-    switch (primalSol.sourceType)
-    {
-    case E_PrimalSolutionSource::Linesearch:
-        sourceDesc = "line search";
-        break;
-    case E_PrimalSolutionSource::LinesearchFixedIntegers:
-        sourceDesc = "line search fixed";
-        break;
-    case E_PrimalSolutionSource::NLPFixedIntegers:
-        sourceDesc = "NLP fixed";
-        break;
-    case E_PrimalSolutionSource::NLPRelaxed:
-        sourceDesc = "NLP relaxed";
-        break;
-    case E_PrimalSolutionSource::MIPSolutionPool:
-        sourceDesc = "MILP sol. pool";
-        break;
-    case E_PrimalSolutionSource::ObjectiveConstraint:
-        sourceDesc = "obj. constr.";
-        break;
-    case E_PrimalSolutionSource::LPFixedIntegers:
-        sourceDesc = "LP fixed";
-        break;
-    case E_PrimalSolutionSource::LazyConstraintCallback:
-        sourceDesc = "lazy constraint callback";
-        break;
-    case E_PrimalSolutionSource::HeuristicCallback:
-        sourceDesc = "heuristic constraint callback";
-        break;
-    case E_PrimalSolutionSource::IncumbentCallback:
-        sourceDesc = "incumbent constraint callback";
-        break;
-    default:
-        sourceDesc = "other";
-        break;
-    }
-
-    primalSol.sourceDescription = sourceDesc;
-
-    // Recalculate if the objective to be sure it is correct
-    primalSol.objValue = env->problem->objectiveFunction->calculateValue(primalSol.point);
-    tmpObjVal = primalSol.objValue;
-
-    // Check that solution fulfills bounds, project back otherwise
-    bool reCalculateObjective = false;
-
-    for (auto &V : env->problem->realVariables)
-    {
-        auto value = V->calculate(tmpPoint);
-
-        if (value > V->upperBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->upperBound;
-        }
-        else if (value < V->lowerBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = V->lowerBound;
-        }
-    }
-
-    for (auto &V : env->problem->integerVariables)
-    {
-        auto value = V->calculate(tmpPoint);
-
-        if (value > V->upperBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = round(V->upperBound - 0.5);
-        }
-        else if (value < V->lowerBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = round(V->lowerBound + 0.5);
-        }
-    }
-
-    for (auto &V : env->problem->binaryVariables)
-    {
-        auto value = V->calculate(tmpPoint);
-
-        if (value > V->upperBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = 1.0;
-        }
-        else if (value < V->lowerBound)
-        {
-            isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->index) = 0.0;
-        }
-    }
-
-    if (!isVariableBoundsFulfilled)
-    {
-        reCalculateObjective = true;
-        auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
-        env->output->outputWarning(tmpLine.str());
-        primalSol.boundProjectionPerformed = true;
-    }
-    else
-    {
-        auto tmpLine = boost::format("       All variable bounds fulfilled.");
-        env->output->outputWarning(tmpLine.str());
-        primalSol.boundProjectionPerformed = false;
-    }
-
-    // Check that it fulfills integer constraints, round otherwise
-    if (env->problem->properties.numberOfDiscreteVariables > 0)
-    {
-        auto integerTol = env->settings->getDoubleSetting("Tolerance.Integer", "Primal");
-
-        bool isRounded = false;
-
-        VectorDouble ptRounded(tmpPoint);
-
-        double maxIntegerError = 0.0;
-
-        for (auto &V : env->problem->integerVariables)
-        {
-            auto value = V->calculate(tmpPoint);
-            int index = V->index;
-
-            double rounded = UtilityFunctions::round(value);
-            double error = std::abs(rounded - value);
-
-            maxIntegerError = std::max(maxIntegerError, error);
-
-            if (error > integerTol)
-            {
-                ptRounded.at(index) = rounded;
-                isRounded = true;
-            }
-        }
-
-        for (auto &V : env->problem->binaryVariables)
-        {
-            auto value = V->calculate(tmpPoint);
-            int index = V->index;
-
-            double rounded = UtilityFunctions::round(value);
-            double error = std::abs(rounded - value);
-
-            maxIntegerError = std::max(maxIntegerError, error);
-
-            if (error > integerTol)
-            {
-                ptRounded.at(index) = rounded;
-                isRounded = true;
-            }
-        }
-
-        if (isRounded)
-        {
-            reCalculateObjective = true;
-            tmpPoint = ptRounded;
-
-            auto tmpLine = boost::format("       Discrete variables were not fulfilled to tolerance %1%. Rounding performed...") % integerTol;
-            env->output->outputWarning(tmpLine.str());
-        }
-        else
-        {
-            auto tmpLine = boost::format("       All discrete variables are fulfilled to tolerance %1%.") % integerTol;
-            env->output->outputWarning(tmpLine.str());
-        }
-
-        primalSol.integerRoundingPerformed = isRounded;
-        primalSol.maxIntegerToleranceError = maxIntegerError;
-    }
-
-    // Recalculate the objective if rounding or projection has been performed
-    if (reCalculateObjective)
-    {
-        tmpObjVal = env->problem->objectiveFunction->calculateValue(tmpPoint);
-    }
-
-    // Check if primal bound is worse than current
-    if ((env->problem->objectiveFunction->properties.isMinimize && tmpObjVal < this->getPrimalBound()) ||
-        (!env->problem->objectiveFunction->properties.isMinimize && tmpObjVal > this->getPrimalBound()))
-    {
-        auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
-        env->output->outputWarning(tmpLine.str());
-    }
-    else
-    {
-        auto tmpLine = boost::format("     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).") %
-                       tmpObjVal % sourceDesc % this->getPrimalBound();
-        env->output->outputWarning(tmpLine.str());
-
-        return (false);
-    }
-
-    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool ||
-                           primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers ||
-                           primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed ||
-                           primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback ||
-                           primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers ||
-                           primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
-
-    if (acceptableType && env->settings->getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
-    {
-        auto tmpLine = boost::format("       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
-        env->output->outputWarning(tmpLine.str());
-    }
-    else
-    {
-        PairIndexValue mostDevLinearConstraints;
-
-        if (env->problem->properties.numberOfLinearConstraints > 0)
-        {
-            auto maxLinearConstraintValue = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->linearConstraints);
-
-            mostDevLinearConstraints.index = maxLinearConstraintValue.constraint->index;
-            mostDevLinearConstraints.value = maxLinearConstraintValue.normalizedValue;
-
-            auto linTol = env->settings->getDoubleSetting("Tolerance.LinearConstraint", "Primal");
-
-            if (maxLinearConstraintValue.error > linTol)
-            {
-                auto tmpLine = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
-                               linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
-                env->output->outputWarning(tmpLine.str());
-
-                return (false);
-            }
-            else
-            {
-                auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
-                               linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
-                env->output->outputWarning(tmpLine.str());
-            }
-        }
-
-        primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
-    }
-
-    PairIndexValue mostDevQuadraticConstraints;
-
-    if (env->problem->properties.numberOfQuadraticConstraints > 0)
-    {
-        auto maxQuadraticConstraintValue = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->quadraticConstraints);
-
-        mostDevQuadraticConstraints.index = maxQuadraticConstraintValue.constraint->index;
-        mostDevQuadraticConstraints.value = maxQuadraticConstraintValue.normalizedValue;
-
-        auto nonlinTol = env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
-
-        if (mostDevQuadraticConstraints.value > nonlinTol)
-        {
-            auto tmpLine = boost::format(
-                               "       Quadratic constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
-                           nonlinTol % mostDevQuadraticConstraints.value % maxQuadraticConstraintValue.constraint->name;
-            env->output->outputWarning(tmpLine.str());
-
-            return (false);
-        }
-        else
-        {
-            auto tmpLine = boost::format(
-                               "       Quadratic constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
-                           nonlinTol % mostDevQuadraticConstraints.value % maxQuadraticConstraintValue.constraint->name;
-            env->output->outputWarning(tmpLine.str());
-        }
-    }
-
-    primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
-
-    PairIndexValue mostDevNonlinearConstraints;
-
-    if (env->problem->properties.numberOfNonlinearConstraints > 0)
-    {
-        auto maxNonlinearConstraintValue = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->nonlinearConstraints);
-
-        mostDevNonlinearConstraints.index = maxNonlinearConstraintValue.constraint->index;
-        mostDevNonlinearConstraints.value = maxNonlinearConstraintValue.normalizedValue;
-
-        auto nonlinTol = env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal");
-
-        if (mostDevNonlinearConstraints.value > nonlinTol)
-        {
-            auto tmpLine = boost::format(
-                               "       Nonlinear constraints are not fulfilled. Most deviating %3%: %2% > %1%.") %
-                           nonlinTol % mostDevNonlinearConstraints.value % maxNonlinearConstraintValue.constraint->name;
-            env->output->outputWarning(tmpLine.str());
-
-            return (false);
-        }
-        else
-        {
-            auto tmpLine = boost::format(
-                               "       Nonlinear constraints are fulfilled. Most deviating %3%: %2% < %1%.") %
-                           nonlinTol % mostDevNonlinearConstraints.value % maxNonlinearConstraintValue.constraint->name;
-            env->output->outputWarning(tmpLine.str());
-        }
-    }
-
-    primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
-
-    char HPobjadded = ' ';
-
-    if (env->settings->getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") &&
-        env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
-    {
-        Hyperplane hyperplane;
-        hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;
-        hyperplane.isObjectiveHyperplane = true;
-        hyperplane.sourceConstraintIndex = -1;
-        hyperplane.generatedPoint = tmpPoint;
-        hyperplane.objectiveFunctionValue = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
-
-        this->hyperplaneWaitingList.push_back(hyperplane);
-
-        auto tmpLine = boost::format("     Primal objective cut added.");
-
-        env->output->outputWarning(tmpLine.str());
-    }
-
-    this->setPrimalBound(tmpObjVal);
-
-    auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
-
-    env->output->outputWarning(tmpLine.str());
-
-    primalSol.objValue = tmpObjVal;
-    primalSol.point = tmpPoint;
-
-    if (env->settings->getIntSetting("SaveNumberOfSolutions", "Output") > 1)
-    {
-        this->primalSolutions.insert(this->primalSolutions.begin(), primalSol);
-    }
-    else
-    {
-        if (this->primalSolutions.size() == 0)
-        {
-            this->primalSolutions.push_back(primalSol);
-        }
-        else
-        {
-            this->primalSolutions.at(0) = primalSol;
-        }
-    }
-
-    this->primalSolution = tmpPoint;
-
-    // Write the new primal point to a file
-    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
-    {
-        std::stringstream fileName;
-        fileName << env->settings->getStringSetting("Debug.Path", "Output");
-        fileName << "/primalpoint";
-        fileName << this->primalSolutions.size();
-        fileName << ".txt";
-
-        UtilityFunctions::savePrimalSolutionToFile(primalSol, env->problem->allVariables, fileName.str());
-    }
-
-    return (true);
-}
-
-ProcessInfo::ProcessInfo(EnvironmentPtr envPtr) : env(envPtr)
+Results::Results(EnvironmentPtr envPtr) : env(envPtr)
 {
 }
 
-ProcessInfo::~ProcessInfo()
+Results::~Results()
 {
-    timers.clear();
     iterations.clear();
-
     primalSolution.clear();
-    iterations.clear();
     primalSolutions.clear();
     dualSolutions.clear();
-
-    primalSolutionCandidates.clear();
-    primalFixedNLPCandidates.clear();
-    dualSolutionCandidates.clear();
 }
 
-void ProcessInfo::createTimer(std::string name, std::string description)
-{
-    timers.push_back(Timer(name, description));
-}
-
-void ProcessInfo::startTimer(std::string name)
-{
-    auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-        return (T.name == name);
-    });
-
-    if (timer == timers.end())
-    {
-        env->output->outputError("Timer with name  \"" + name + "\" not found!");
-        return;
-    }
-
-    timer->start();
-}
-
-void ProcessInfo::restartTimer(std::string name)
-{
-    auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-        return (T.name == name);
-    });
-
-    if (timer == timers.end())
-    {
-        env->output->outputError("Timer with name  \"" + name + "\" not found!");
-        return;
-    }
-
-    timer->restart();
-}
-
-void ProcessInfo::stopTimer(std::string name)
-{
-    auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-        return (T.name == name);
-    });
-
-    if (timer == timers.end())
-    {
-        env->output->outputError("Timer with name  \"" + name + "\" not found!");
-        return;
-    }
-
-    timer->stop();
-}
-
-double ProcessInfo::getElapsedTime(std::string name)
-{
-    auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-        return (T.name == name);
-    });
-
-    if (timer == timers.end())
-    {
-        env->output->outputError("Timer with name  \"" + name + "\" not found!");
-        return (0.0);
-    }
-
-    return (timer->elapsed());
-}
-
-void ProcessInfo::initializeResults(int numObj, int numVar, int numConstr)
+void Results::initializeResults(int numObj, int numVar, int numConstr)
 {
     osResult = std::unique_ptr<OSResult>(new OSResult());
     osResult->setObjectiveNumber(numObj);
@@ -677,7 +122,7 @@ void ProcessInfo::initializeResults(int numObj, int numVar, int numConstr)
     osResult->setConstraintNumber(numConstr);
 }
 
-std::string ProcessInfo::getOSrl()
+std::string Results::getOSrl()
 {
     int numConstr = osResult->getConstraintNumber();
 
@@ -889,7 +334,7 @@ std::string ProcessInfo::getOSrl()
                                            "The relative optimality gap", 0, NULL);
     }
 
-    for (auto T : timers)
+    for (auto T : env->timing->timers)
     {
         osResult->addTimingInformation(T.name, "SHOT", "second", T.description, T.elapsed());
     }
@@ -960,12 +405,12 @@ std::string ProcessInfo::getOSrl()
     return (ossXML.str());
 }
 
-std::string ProcessInfo::getTraceResult()
+std::string Results::getTraceResult()
 {
     std::stringstream ss;
     ss << env->problem->name << ",";
 
-    switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
+    switch (static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
     {
     case (E_SolutionStrategy::MIQP):
         ss << "MINLP";
@@ -985,7 +430,7 @@ std::string ProcessInfo::getTraceResult()
     ss << "SHOT"
        << ",";
 
-    switch (static_cast<ES_PrimalNLPSolver>(env->process->usedPrimalNLPSolver))
+    switch (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver))
     {
     case (ES_PrimalNLPSolver::None):
         ss << "NONE";
@@ -1006,7 +451,7 @@ std::string ProcessInfo::getTraceResult()
 
     ss << ",";
 
-    switch (static_cast<ES_MIPSolver>(env->process->usedMIPSolver))
+    switch (static_cast<ES_MIPSolver>(env->results->usedMIPSolver))
     {
     case (ES_MIPSolver::Cplex):
         ss << "CPLEX";
@@ -1128,7 +573,7 @@ std::string ProcessInfo::getTraceResult()
     ;
     ss << this->getDualBound() << ",";
     ;
-    ss << this->getElapsedTime("Total") << ",";
+    ss << env->timing->getElapsedTime("Total") << ",";
     ss << env->solutionStatistics.numberOfIterations << ",";
     ss << "0"
        << ",";
@@ -1139,54 +584,52 @@ std::string ProcessInfo::getTraceResult()
     return (ss.str());
 }
 
-void ProcessInfo::createIteration()
+void Results::createIteration()
 {
-    Iteration iter(env);
-
-    iterations.push_back(iter);
+    iterations.push_back(std::make_shared<Iteration>(env));
 }
 
-Iteration *ProcessInfo::getCurrentIteration()
+IterationPtr Results::getCurrentIteration()
 {
-    return (&iterations.back());
+    return (iterations.back());
 }
 
-Iteration *ProcessInfo::getPreviousIteration()
+IterationPtr Results::getPreviousIteration()
 {
     if (iterations.size() > 1)
-        return (&(iterations[iterations.size() - 2]));
+        return (iterations[iterations.size() - 2]);
     else
         throw ErrorClass("Only one iteration!");
 }
 
-double ProcessInfo::getPrimalBound()
+double Results::getPrimalBound()
 {
     return (this->currentPrimalBound);
 }
 
-void ProcessInfo::setPrimalBound(double value)
+void Results::setPrimalBound(double value)
 {
     this->currentPrimalBound = value;
 }
 
-double ProcessInfo::getDualBound()
+double Results::getDualBound()
 {
     return (this->currentDualBound);
 }
 
-void ProcessInfo::setDualBound(double value)
+void Results::setDualBound(double value)
 {
     this->currentDualBound = value;
 }
 
-double ProcessInfo::getAbsoluteObjectiveGap()
+double Results::getAbsoluteObjectiveGap()
 {
     double gap = abs(getDualBound() - getPrimalBound());
 
     return (gap);
 }
 
-double ProcessInfo::getRelativeObjectiveGap()
+double Results::getRelativeObjectiveGap()
 {
     double gap = abs(getDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
 

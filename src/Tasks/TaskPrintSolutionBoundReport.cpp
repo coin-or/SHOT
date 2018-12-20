@@ -24,15 +24,15 @@ TaskPrintSolutionBoundReport::~TaskPrintSolutionBoundReport()
 
 void TaskPrintSolutionBoundReport::run()
 {
-    double currElapsedTime = env->process->getElapsedTime("Total");
+    double currElapsedTime = env->timing->getElapsedTime("Total");
 
     if (itersSinceLastPrintout > 20 || currElapsedTime - timeLastPrintout > 10.0)
     {
-        double absGap = env->process->getAbsoluteObjectiveGap();
-        double relGap = env->process->getRelativeObjectiveGap();
+        double absGap = env->results->getAbsoluteObjectiveGap();
+        double relGap = env->results->getRelativeObjectiveGap();
 
-        double dualBound = env->process->getDualBound();
-        double primalBound = env->process->getPrimalBound();
+        double dualBound = env->results->getDualBound();
+        double primalBound = env->results->getPrimalBound();
 
         env->output->outputSummary(
             "                                                                                     ");
@@ -45,7 +45,7 @@ void TaskPrintSolutionBoundReport::run()
             "─────────────────────────────────────────────────────────────────────────────────────");
 #endif
 
-        auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % env->process->getElapsedTime("Total") % UtilityFunctions::toStringFormat(dualBound, "%.3f", true) % UtilityFunctions::toStringFormat(primalBound, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
+        auto tmpLine = boost::format(" At %1% s the obj. bound is %|24t|[%2%, %3%] %|46t|with abs/rel gap %4% / %5%") % env->timing->getElapsedTime("Total") % UtilityFunctions::toStringFormat(dualBound, "%.3f", true) % UtilityFunctions::toStringFormat(primalBound, "%.3f", true) % UtilityFunctions::toStringFormat(absGap, "%.4f", true) % UtilityFunctions::toStringFormat(relGap, "%.4f", true);
         env->output->outputSummary(tmpLine.str());
 
         if (env->solutionStatistics.numberOfConstraintsRemovedInPresolve > 0 || env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve > 0)
@@ -54,10 +54,10 @@ void TaskPrintSolutionBoundReport::run()
             env->output->outputSummary(tmpLine.str());
         }
 
-        if (env->process->interiorPts.size() > 1)
+        if (env->dualSolver->MIPSolver->interiorPts.size() > 1)
         {
             env->output->outputSummary(
-                " Number of interior points: " + std::to_string(env->process->interiorPts.size()));
+                " Number of interior points: " + std::to_string(env->dualSolver->MIPSolver->interiorPts.size()));
         }
 
         if (env->solutionStatistics.numberOfIntegerCuts > 0)

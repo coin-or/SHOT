@@ -215,16 +215,16 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
 
     if (!validNewPt) // ptNew Outside feasible region
     {
-        env->process->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
-                                                 env->process->getCurrentIteration()->iterationNumber);
+        env->primalSolver->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
+                                                 env->results->getCurrentIteration()->iterationNumber);
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew2, ptNew);
         return (tmpPair);
     }
     else
     {
-        env->process->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
-                                                 env->process->getCurrentIteration()->iterationNumber);
+        env->primalSolver->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
+                                                 env->results->getCurrentIteration()->iterationNumber);
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew, ptNew2);
         return (tmpPair);

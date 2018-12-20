@@ -53,7 +53,7 @@ bool CplexTest1(std::string filename)
 
     EnvironmentPtr env(new Environment);
     env->output = OutputPtr(new Output());
-    env->process = ProcessPtr(new ProcessInfo(env));
+    env->results = ResultsPtr(new Results(env));
     env->settings = SettingsPtr(new Settings(env->output));
     env->tasks = TaskHandlerPtr(new TaskHandler(env));
     env->report = ReportPtr(new Report(env));

@@ -105,6 +105,13 @@ class IMIPSolver
     virtual int getAuxilliaryObjectiveVariableIndex() = 0;
     virtual void setAuxilliaryObjectiveVariableIndex(int index) = 0;
 
+    std::vector<VectorInteger> integerCutWaitingList;
+    std::vector<Hyperplane> addedHyperplanes;
+
+    std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
+
+    std::vector<Hyperplane> hyperplaneWaitingList;
+
   protected:
 };
 } // namespace SHOT

@@ -23,7 +23,7 @@ TaskCheckObjectiveStagnation::~TaskCheckObjectiveStagnation()
 
 void TaskCheckObjectiveStagnation::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (!currIter->isMIP())
     {
@@ -43,7 +43,7 @@ void TaskCheckObjectiveStagnation::run()
     }
 
     if (std::abs(
-            (currIter->objectiveValue - env->process->iterations[env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate - 1].objectiveValue)) > env->settings->getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
+            (currIter->objectiveValue - env->results->iterations[env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate - 1]->objectiveValue)) > env->settings->getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
     {
         env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate = currIter->iterationNumber;
         env->solutionStatistics.numberOfIterationsWithStagnationMIP = 0;
@@ -53,7 +53,7 @@ void TaskCheckObjectiveStagnation::run()
 
     if (env->solutionStatistics.numberOfIterationsWithStagnationMIP >= env->settings->getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
     {
-        env->process->terminationReason = E_TerminationReason::ObjectiveStagnation;
+        env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
         env->tasks->setNextTask(taskIDIfTrue);
     }
 

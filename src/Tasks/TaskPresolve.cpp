@@ -15,11 +15,11 @@ namespace SHOT
 
 TaskPresolve::TaskPresolve(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
     isPresolved = false;
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 TaskPresolve::~TaskPresolve()
@@ -28,49 +28,49 @@ TaskPresolve::~TaskPresolve()
 
 void TaskPresolve::run()
 {
-    env->process->startTimer("DualStrategy");
-    auto currIter = env->process->getCurrentIteration();
+    env->timing->startTimer("DualStrategy");
+    auto currIter = env->results->getCurrentIteration();
 
     auto strategy = static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual"));
 
     if (!currIter->isMIP())
     {
-        env->process->stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
         return;
     }
 
     if (strategy == ES_MIPPresolveStrategy::Never)
     {
-        env->process->stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
         return;
     }
     else if (strategy == ES_MIPPresolveStrategy::Once && isPresolved == true)
     {
-        env->process->stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
         return;
     }
 
     // Sets the iteration time limit
-    auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->process->getElapsedTime("Total");
-    env->dualSolver->setTimeLimit(timeLim);
+    auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if (env->process->primalSolutions.size() > 0)
+    if (env->results->primalSolutions.size() > 0)
     {
-        env->dualSolver->setCutOff(env->process->getPrimalBound());
+        env->dualSolver->MIPSolver->setCutOff(env->results->getPrimalBound());
     }
 
-    if (env->dualSolver->getDiscreteVariableStatus() && env->process->primalSolutions.size() > 0)
+    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->primalSolutions.size() > 0)
     {
-        env->dualSolver->addMIPStart(env->process->primalSolution);
+        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
     }
 
     if (env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal") || env->settings->getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
     {
-        env->dualSolver->presolveAndUpdateBounds();
+        env->dualSolver->MIPSolver->presolveAndUpdateBounds();
         isPresolved = true;
     }
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskPresolve::getType()

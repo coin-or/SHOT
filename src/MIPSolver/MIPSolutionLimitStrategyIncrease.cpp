@@ -28,8 +28,8 @@ MIPSolutionLimitStrategyIncrease::~MIPSolutionLimitStrategyIncrease()
 
 bool MIPSolutionLimitStrategyIncrease::updateLimit()
 {
-    auto currIter = env->process->getCurrentIteration();
-    auto prevIter = env->process->getPreviousIteration();
+    auto currIter = env->results->getCurrentIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
     if (!currIter->isMIP())
     {
@@ -77,11 +77,11 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
 int MIPSolutionLimitStrategyIncrease::getNewLimit()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     int newLimit;
 
-    newLimit = env->dualSolver->getSolutionLimit() + 1;
+    newLimit = env->dualSolver->MIPSolver->getSolutionLimit() + 1;
     lastIterSolLimIncreased = currIter->iterationNumber;
 
     return (newLimit);

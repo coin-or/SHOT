@@ -23,37 +23,37 @@ TaskCheckIterationError::~TaskCheckIterationError()
 
 void TaskCheckIterationError::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
     {
-        env->process->terminationReason = E_TerminationReason::Error;
+        env->results->terminationReason = E_TerminationReason::Error;
         env->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
-        env->process->terminationReason = E_TerminationReason::InfeasibleProblem;
+        env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
     {
-        env->process->terminationReason = E_TerminationReason::InfeasibleProblem;
+        env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        env->process->terminationReason = E_TerminationReason::UnboundedProblem;
+        env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
     {
-        env->process->terminationReason = E_TerminationReason::NumericIssues;
+        env->results->terminationReason = E_TerminationReason::NumericIssues;
         env->tasks->setNextTask(taskIDIfTrue);
     }
     else if (currIter->solutionStatus == E_ProblemSolutionStatus::None &&
-             env->process->primalSolutions.size() > 0)
+             env->results->primalSolutions.size() > 0)
     {
-        env->process->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
+        env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
     }
 }

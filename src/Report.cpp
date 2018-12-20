@@ -51,7 +51,7 @@ void Report::outputIterationDetail(int iterationNumber,
             printLine = true;
         }
 
-        if (iterationsWithoutPrintoutCounter > 100 || env->process->getElapsedTime("Total") - lastIterationOutputTimeStamp > 2)
+        if (iterationsWithoutPrintoutCounter > 100 || env->timing->getElapsedTime("Total") - lastIterationOutputTimeStamp > 2)
         {
             printLine = true;
         }
@@ -90,7 +90,7 @@ void Report::outputIterationDetail(int iterationNumber,
 
         iterationsWithoutPrintoutCounter = 0;
         iterationPrintoutsSinceLastHeader++;
-        lastIterationOutputTimeStamp = env->process->getElapsedTime("Total");
+        lastIterationOutputTimeStamp = env->timing->getElapsedTime("Total");
 
         std::string combDualCuts = "";
 
@@ -126,18 +126,18 @@ void Report::outputIterationDetail(int iterationNumber,
 
         nodes << "        Explored nodes: ";
 
-        if (env->process->getCurrentIteration()->numberOfExploredNodes > 0)
+        if (env->results->getCurrentIteration()->numberOfExploredNodes > 0)
         {
-            nodes << " +" << env->process->getCurrentIteration()->numberOfExploredNodes
+            nodes << " +" << env->results->getCurrentIteration()->numberOfExploredNodes
                   << " = ";
         }
 
         nodes
             << env->solutionStatistics.numberOfExploredNodes << ".";
 
-        if (env->process->getCurrentIteration()->numberOfOpenNodes > 0)
+        if (env->results->getCurrentIteration()->numberOfOpenNodes > 0)
         {
-            nodes << " Open nodes: " << env->process->getCurrentIteration()->numberOfOpenNodes << ".";
+            nodes << " Open nodes: " << env->results->getCurrentIteration()->numberOfOpenNodes << ".";
         }
 
         nodes << "\r\n";
@@ -361,7 +361,7 @@ void Report::outputOptionsReport()
         }
     }
 
-    switch (static_cast<E_SolutionStrategy>(env->process->usedSolutionStrategy))
+    switch (static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
     {
     case (E_SolutionStrategy::SingleTree):
         report << " Dual strategy:              Single-tree\r\n";
@@ -391,7 +391,7 @@ void Report::outputOptionsReport()
 
     report << " Primal NLP solver:          ";
 
-    switch (static_cast<ES_PrimalNLPSolver>(env->process->usedPrimalNLPSolver))
+    switch (static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver))
     {
     case (ES_PrimalNLPSolver::None):
         report << "none";
@@ -543,9 +543,9 @@ void Report::outputSolutionReport()
     report << "╶ Solution report ────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
 
-    auto terminationReason = env->process->terminationReason;
+    auto terminationReason = env->results->terminationReason;
 
-    bool primalSolutionFound = (env->process->primalSolutions.size() > 0);
+    bool primalSolutionFound = (env->results->primalSolutions.size() > 0);
 
     if (terminationReason == E_TerminationReason::AbsoluteGap ||
         terminationReason == E_TerminationReason::RelativeGap)
@@ -603,83 +603,83 @@ void Report::outputSolutionReport()
     report << "\r\n";
 
     report << " Objective bound [dual, primal]:                 ";
-    report << "[" << UtilityFunctions::toStringFormat(env->process->getDualBound(), "%g") << ", ";
-    report << UtilityFunctions::toStringFormat(env->process->getPrimalBound(), "%g") << "]\r\n";
+    report << "[" << UtilityFunctions::toStringFormat(env->results->getDualBound(), "%g") << ", ";
+    report << UtilityFunctions::toStringFormat(env->results->getPrimalBound(), "%g") << "]\r\n";
     report << " Objective gap absolute / relative:              ";
-    report << "" << UtilityFunctions::toStringFormat(env->process->getAbsoluteObjectiveGap(), "%g") << " / ";
-    report << UtilityFunctions::toStringFormat(env->process->getRelativeObjectiveGap(), "%g") << "\r\n";
+    report << "" << UtilityFunctions::toStringFormat(env->results->getAbsoluteObjectiveGap(), "%g") << " / ";
+    report << UtilityFunctions::toStringFormat(env->results->getRelativeObjectiveGap(), "%g") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
     std::stringstream unfulfilled;
 
-    if (env->process->isAbsoluteObjectiveGapToleranceMet())
+    if (env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         fulfilled << "  - absolute objective gap tolerance             ";
-        fulfilled << env->process->getAbsoluteObjectiveGap() << " <= ";
+        fulfilled << env->results->getAbsoluteObjectiveGap() << " <= ";
         fulfilled << env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - absolute objective gap tolerance             ";
-        unfulfilled << env->process->getAbsoluteObjectiveGap() << " > ";
+        unfulfilled << env->results->getAbsoluteObjectiveGap() << " > ";
         unfulfilled << env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
 
-    if (env->process->isRelativeObjectiveGapToleranceMet())
+    if (env->results->isRelativeObjectiveGapToleranceMet())
     {
         fulfilled << "  - relative objective gap tolerance             ";
-        fulfilled << env->process->getRelativeObjectiveGap() << " <= ";
+        fulfilled << env->results->getRelativeObjectiveGap() << " <= ";
         fulfilled << env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - relative objective gap tolerance             ";
-        unfulfilled << env->process->getRelativeObjectiveGap() << " > ";
+        unfulfilled << env->results->getRelativeObjectiveGap() << " > ";
         unfulfilled << env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 
     if (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")) != ES_TreeStrategy::SingleTree)
     {
-        if (env->process->getCurrentIteration()->maxDeviation <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+        if (env->results->getCurrentIteration()->maxDeviation <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
         {
             fulfilled << "  - maximal constraint tolerance                 ";
-            fulfilled << env->process->getCurrentIteration()->maxDeviation << " <= ";
+            fulfilled << env->results->getCurrentIteration()->maxDeviation << " <= ";
             fulfilled << env->settings->getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
         }
         else
         {
             unfulfilled << "  - maximal constraint tolerance                 ";
-            unfulfilled << env->process->getCurrentIteration()->maxDeviation << " > ";
+            unfulfilled << env->results->getCurrentIteration()->maxDeviation << " > ";
             unfulfilled << env->settings->getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
         }
     }
 
     int iterLim = env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination");
 
-    if (env->process->getCurrentIteration()->iterationNumber > iterLim)
+    if (env->results->getCurrentIteration()->iterationNumber > iterLim)
     {
         fulfilled << "  - iteration limit                              ";
-        fulfilled << env->process->getCurrentIteration()->iterationNumber << " > ";
+        fulfilled << env->results->getCurrentIteration()->iterationNumber << " > ";
         fulfilled << iterLim << "\r\n";
     }
     else
     {
         unfulfilled << "  - iteration limit                              ";
-        unfulfilled << env->process->getCurrentIteration()->iterationNumber << " <= ";
+        unfulfilled << env->results->getCurrentIteration()->iterationNumber << " <= ";
         unfulfilled << iterLim << "\r\n";
     }
 
-    if (env->process->getElapsedTime("Total") > env->settings->getDoubleSetting("TimeLimit", "Termination"))
+    if (env->timing->getElapsedTime("Total") > env->settings->getDoubleSetting("TimeLimit", "Termination"))
     {
         fulfilled << "  - solution time limit (s)                      ";
-        fulfilled << env->process->getElapsedTime("Total") << " > ";
+        fulfilled << env->timing->getElapsedTime("Total") << " > ";
         fulfilled << env->settings->getDoubleSetting("TimeLimit", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - solution time limit (s)                      ";
-        unfulfilled << env->process->getElapsedTime("Total") << " <= ";
+        unfulfilled << env->timing->getElapsedTime("Total") << " <= ";
         unfulfilled << env->settings->getDoubleSetting("TimeLimit", "Termination") << "\r\n";
     }
 
@@ -767,7 +767,7 @@ void Report::outputSolutionReport()
 
     report << "\r\n";
 
-    for (auto T : env->process->timers)
+    for (auto T : env->timing->timers)
     {
         T.stop();
         auto elapsed = T.elapsed();

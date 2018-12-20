@@ -40,7 +40,7 @@ void RelaxationStrategyStandard::setInitial()
 void RelaxationStrategyStandard::executeStrategy()
 {
     int iterInterval = env->settings->getIntSetting("Relaxation.Frequency", "Dual");
-    if (iterInterval != 0 && env->process->getCurrentIteration()->iterationNumber % iterInterval == 0)
+    if (iterInterval != 0 && env->results->getCurrentIteration()->iterationNumber % iterInterval == 0)
     {
         return (this->setActive());
     }
@@ -57,25 +57,25 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-    if (env->dualSolver->getDiscreteVariableStatus() && env->process->iterations.size() > 0)
+    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->iterations.size() > 0)
     {
-        env->process->stopTimer("DualProblemsDiscrete");
-        env->process->startTimer("DualProblemsRelaxed");
-        env->dualSolver->activateDiscreteVariables(false);
+        env->timing->stopTimer("DualProblemsDiscrete");
+        env->timing->startTimer("DualProblemsRelaxed");
+        env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
-        env->process->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
+        env->results->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
     }
 }
 
 void RelaxationStrategyStandard::setInactive()
 {
-    if (!env->dualSolver->getDiscreteVariableStatus())
+    if (!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
     {
-        env->process->stopTimer("DualProblemsRelaxed");
-        env->process->startTimer("DualProblemsDiscrete");
-        env->dualSolver->activateDiscreteVariables(true);
+        env->timing->stopTimer("DualProblemsRelaxed");
+        env->timing->startTimer("DualProblemsDiscrete");
+        env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
-        env->process->getCurrentIteration()->type = E_IterationProblemType::MIP;
+        env->results->getCurrentIteration()->type = E_IterationProblemType::MIP;
 
         LPFinished = true;
     }
@@ -83,7 +83,7 @@ void RelaxationStrategyStandard::setInactive()
 
 E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 {
-    if (env->dualSolver->getDiscreteVariableStatus())
+    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus())
 
         return (E_IterationProblemType::MIP);
     else
@@ -92,12 +92,12 @@ E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 
 bool RelaxationStrategyStandard::isIterationLimitReached()
 {
-    if (env->process->iterations.size() < 2)
+    if (env->results->iterations.size() < 2)
     {
         return false;
     }
 
-    auto prevIter = env->process->getPreviousIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
     if (prevIter->iterationNumber < env->settings->getIntSetting("Relaxation.IterationLimit", "Dual"))
     {
@@ -109,7 +109,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-    if (env->process->getElapsedTime("DualProblemsRelaxed") < env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual"))
+    if (env->timing->getElapsedTime("DualProblemsRelaxed") < env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual"))
     {
         return (false);
     }
@@ -126,17 +126,17 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
     int numSteps = 10;
 
-    if (env->process->iterations.size() < 2)
+    if (env->results->iterations.size() < 2)
     {
         return false;
     }
 
-    auto prevIter = env->process->getPreviousIteration();
+    auto prevIter = env->results->getPreviousIteration();
 
     if (prevIter->iterationNumber < numSteps)
         return (false);
 
-    auto prevIter2 = &env->process->iterations[prevIter->iterationNumber - numSteps];
+    auto prevIter2 = env->results->iterations[prevIter->iterationNumber - numSteps];
 
     //TODO: should be substituted with parameter
     if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001)

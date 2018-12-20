@@ -9,7 +9,6 @@
 */
 
 #include "NLPSolverGAMS.h"
-#include "../GAMS/GAMS2OS.h"
 
 namespace SHOT
 {

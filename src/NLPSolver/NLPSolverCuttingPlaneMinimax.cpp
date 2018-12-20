@@ -233,7 +233,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         env->report->outputIterationDetailMinimax((i + 1),
                                                   "LP",
-                                                  env->process->getElapsedTime("Total"),
+                                                  env->timing->getElapsedTime("Total"),
                                                   numHyperAdded,
                                                   numHyperTot,
                                                   LPObjVar,
@@ -293,7 +293,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 hyperplane.generatedPoint = tmpPoint;
                 hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
 
-                env->process->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
             }
         }
 

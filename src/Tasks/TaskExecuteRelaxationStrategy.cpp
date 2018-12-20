@@ -15,9 +15,9 @@ namespace SHOT
 
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
@@ -26,11 +26,11 @@ TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()
 
 void TaskExecuteRelaxationStrategy::run()
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
-    env->dualSolver->executeRelaxationStrategy();
+    env->dualSolver->MIPSolver->executeRelaxationStrategy();
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 std::string TaskExecuteRelaxationStrategy::getType()
 {

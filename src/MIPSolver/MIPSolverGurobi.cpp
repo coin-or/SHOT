@@ -869,7 +869,7 @@ void GurobiInfoCallback::callback()
     {
         if (where == GRB_CB_MIP)
         {
-            auto currIter = env->process->getCurrentIteration();
+            auto currIter = env->results->getCurrentIteration();
             currIter->numberOfExploredNodes = (int)getDoubleInfo(GRB_CB_MIP_NODCNT);
             currIter->numberOfOpenNodes = (int)getDoubleInfo(GRB_CB_MIP_NODLFT);
         }

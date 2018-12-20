@@ -23,11 +23,11 @@ TaskCheckIterationLimit::~TaskCheckIterationLimit()
 
 void TaskCheckIterationLimit::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination"))
     {
-        env->process->terminationReason = E_TerminationReason::IterationLimit;
+        env->results->terminationReason = E_TerminationReason::IterationLimit;
         env->tasks->setNextTask(taskIDIfTrue);
     }
 }

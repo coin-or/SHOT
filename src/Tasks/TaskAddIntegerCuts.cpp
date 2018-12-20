@@ -23,19 +23,19 @@ TaskAddIntegerCuts::~TaskAddIntegerCuts()
 
 void TaskAddIntegerCuts::run()
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
-    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    if (env->process->integerCutWaitingList.size() == 0)
+    if (env->dualSolver->MIPSolver->integerCutWaitingList.size() == 0)
         return;
 
     if (!currIter->isMIP() || !env->settings->getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated)
     {
 
-        for (int j = 0; j < env->process->integerCutWaitingList.size(); j++)
+        for (int j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
         {
-            auto tmpBinaryCombination = env->process->integerCutWaitingList.at(j);
+            auto tmpBinaryCombination = env->dualSolver->MIPSolver->integerCutWaitingList.at(j);
             int numOnes = tmpBinaryCombination.size();
 
             std::vector<PairIndexValue> elements;
@@ -49,17 +49,17 @@ void TaskAddIntegerCuts::run()
                 elements.push_back(pair);
             }
 
-            env->dualSolver->addLinearConstraint(elements, -(numOnes - 1.0));
+            env->dualSolver->MIPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
             env->solutionStatistics.numberOfIntegerCuts++;
         }
 
         env->output->outputInfo(
-            "     Added " + std::to_string(env->process->integerCutWaitingList.size()) + " integer cut(s).                                        ");
+            "     Added " + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size()) + " integer cut(s).                                        ");
 
-        env->process->integerCutWaitingList.clear();
+        env->dualSolver->MIPSolver->integerCutWaitingList.clear();
     }
 
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskAddIntegerCuts::getType()

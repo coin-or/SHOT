@@ -19,7 +19,7 @@ const double SHOT_DBL_INF = std::numeric_limits<double>::infinity();
 const double SHOT_DBL_EPS = std::numeric_limits<double>::epsilon();
 const int SHOT_INT_MAX = std::numeric_limits<int>::max();
 
-class ProcessInfo;
+class Results;
 class Settings;
 class Model;
 class Problem;
@@ -28,11 +28,15 @@ class IMIPSolver;
 class Output;
 class Report;
 class TaskHandler;
+class Timing;
+class Iteration;
+class DualSolver;
+class PrimalSolver;
 
 class Constraint;
 class NumericConstraint;
 
-typedef std::shared_ptr<ProcessInfo> ProcessPtr;
+typedef std::shared_ptr<Results> ResultsPtr;
 typedef std::shared_ptr<Settings> SettingsPtr;
 typedef std::shared_ptr<Model> ModelPtr;
 typedef std::shared_ptr<Problem> ProblemPtr;
@@ -41,6 +45,10 @@ typedef std::shared_ptr<IMIPSolver> MIPSolverPtr;
 typedef std::shared_ptr<Output> OutputPtr;
 typedef std::shared_ptr<Report> ReportPtr;
 typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
+typedef std::shared_ptr<Timing> TimingPtr;
+typedef std::shared_ptr<DualSolver> DualSolverPtr;
+typedef std::shared_ptr<PrimalSolver> PrimalSolverPtr;
+typedef std::shared_ptr<Iteration> IterationPtr;
 
 typedef std::shared_ptr<Constraint> ConstraintPtr;
 typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;

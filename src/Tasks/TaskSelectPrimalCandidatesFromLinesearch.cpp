@@ -23,7 +23,7 @@ TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesea
 
 void TaskSelectPrimalCandidatesFromLinesearch::run()
 {
-    this->run(env->process->getCurrentIteration()->solutionPoints);
+    this->run(env->results->getCurrentIteration()->solutionPoints);
 }
 
 std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
@@ -34,18 +34,18 @@ std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
 
 void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> solPoints)
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->isMIP() && env->process->getRelativeObjectiveGap() > 1e-10 || env->process->usedSolutionStrategy == E_SolutionStrategy::NLP)
+    if (currIter->isMIP() && env->results->getRelativeObjectiveGap() > 1e-10 || env->results->usedSolutionStrategy == E_SolutionStrategy::NLP)
     {
-        env->process->startTimer("PrimalStrategy");
-        env->process->startTimer("PrimalBoundStrategyRootSearch");
+        env->timing->startTimer("PrimalStrategy");
+        env->timing->startTimer("PrimalBoundStrategyRootSearch");
 
         for (int i = 0; i < solPoints.size(); i++)
         {
-            for (int j = 0; j < env->process->interiorPts.size(); j++)
+            for (int j = 0; j < env->dualSolver->MIPSolver->interiorPts.size(); j++)
             {
-                auto xNLP = env->process->interiorPts.at(j)->point;
+                auto xNLP = env->dualSolver->MIPSolver->interiorPts.at(j)->point;
 
                 for (auto &V : env->problem->binaryVariables)
                 {
@@ -66,17 +66,17 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
 
                     try
                     {
-                        env->process->startTimer("PrimalBoundStrategyRootSearch");
-                        xNewc = env->process->linesearchMethod->findZero(xNLP, solPoints.at(i).point,
-                                                                         env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                         env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                                                                         0, env->reformulatedProblem->nonlinearConstraints);
+                        env->timing->startTimer("PrimalBoundStrategyRootSearch");
+                        xNewc = env->rootsearchMethod->findZero(xNLP, solPoints.at(i).point,
+                                                                env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                                                                env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+                                                                0, env->reformulatedProblem->nonlinearConstraints);
 
-                        env->process->stopTimer("PrimalBoundStrategyRootSearch");
+                        env->timing->stopTimer("PrimalBoundStrategyRootSearch");
 
-                        env->process->addPrimalSolutionCandidate(xNewc.first,
-                                                                 E_PrimalSolutionSource::Linesearch,
-                                                                 env->process->getCurrentIteration()->iterationNumber);
+                        env->primalSolver->addPrimalSolutionCandidate(xNewc.first,
+                                                                      E_PrimalSolutionSource::Linesearch,
+                                                                      env->results->getCurrentIteration()->iterationNumber);
                     }
                     catch (std::exception &e)
                     {
@@ -85,8 +85,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
                 }
             }
 
-            env->process->stopTimer("PrimalStrategy");
-            env->process->stopTimer("PrimalBoundStrategyRootSearch");
+            env->timing->stopTimer("PrimalStrategy");
+            env->timing->stopTimer("PrimalBoundStrategyRootSearch");
         }
     }
 }

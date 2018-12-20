@@ -22,8 +22,8 @@ TaskInitializeIteration::~TaskInitializeIteration()
 
 void TaskInitializeIteration::run()
 {
-    env->process->createIteration();
-    env->process->getCurrentIteration()->type = env->dualSolver->getCurrentProblemType();
+    env->results->createIteration();
+    env->results->getCurrentIteration()->type = env->dualSolver->MIPSolver->getCurrentProblemType();
 }
 
 std::string TaskInitializeIteration::getType()

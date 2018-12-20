@@ -10,7 +10,7 @@
 
 #pragma once
 #include <SHOTSettings.h>
-#include "../ProcessInfo.h"
+#include "../Results.h"
 #include "IMIPSolver.h"
 
 namespace SHOT

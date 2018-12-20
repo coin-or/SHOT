@@ -17,7 +17,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 {
     env->output->outputInfo(" Starting solution of Ipopt problem.");
 
-    auto timeLimit = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->process->getElapsedTime("Total");
+    auto timeLimit = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
 
     E_NLPSolutionStatus status;
 

@@ -17,13 +17,13 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->process->createTimer("ProblemReformulation", " - problem reformulation");
-    env->process->createTimer("InteriorPointSearch", " - interior point search");
+    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
+    env->timing->createTimer("InteriorPointSearch", " - interior point search");
 
-    env->process->createTimer("DualStrategy", " - dual strategy");
-    env->process->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    env->timing->createTimer("DualStrategy", " - dual strategy");
+    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
 
-    env->process->createTimer("PrimalStrategy", " - primal strategy");
+    env->timing->createTimer("PrimalStrategy", " - primal strategy");
 
     TaskBase *tFinalizeSolution = new TaskSequential(env);
 

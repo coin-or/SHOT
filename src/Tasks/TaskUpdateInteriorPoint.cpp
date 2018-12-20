@@ -24,36 +24,36 @@ TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint()
 void TaskUpdateInteriorPoint::run()
 {
     // If we do not yet have a valid primal solution we can't do anything
-    if (env->process->primalSolutions.size() == 0)
+    if (env->results->primalSolutions.size() == 0)
         return;
 
-    env->process->startTimer("InteriorPointSearch");
+    env->timing->startTimer("InteriorPointSearch");
 
-    auto maxDevPrimal = env->process->primalSolutions.at(0).maxDevatingConstraintNonlinear;
-    auto tmpPrimalPoint = env->process->primalSolutions.at(0).point;
+    auto maxDevPrimal = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
+    auto tmpPrimalPoint = env->results->primalSolutions.at(0).point;
 
     // If we do not have an interior point, but uses the ESH dual strategy, update with primal solution
-    if (env->process->interiorPts.size() == 0 && maxDevPrimal.value < 0)
+    if (env->dualSolver->MIPSolver->interiorPts.size() == 0 && maxDevPrimal.value < 0)
     {
         std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
-        tmpIP->point = env->process->primalSolutions.at(0).point;
-        tmpIP->maxDevatingConstraint = env->process->primalSolutions.at(0).maxDevatingConstraintNonlinear;
+        tmpIP->point = env->results->primalSolutions.at(0).point;
+        tmpIP->maxDevatingConstraint = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
 
         env->output->outputInfo("     Interior point replaced with primal solution point since no interior point was previously available.");
 
-        env->process->interiorPts.push_back(tmpIP);
+        env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
 
-        env->process->stopTimer("InteriorPointSearch");
+        env->timing->stopTimer("InteriorPointSearch");
         return;
     }
-    else if (env->process->interiorPts.size() == 0)
+    else if (env->dualSolver->MIPSolver->interiorPts.size() == 0)
     {
-        env->process->stopTimer("InteriorPointSearch");
+        env->timing->stopTimer("InteriorPointSearch");
         return;
     }
 
     // Add the new point if it is deeper within the feasible region
-    if (maxDevPrimal.value < env->process->interiorPts.at(0)->maxDevatingConstraint.value)
+    if (maxDevPrimal.value < env->dualSolver->MIPSolver->interiorPts.at(0)->maxDevatingConstraint.value)
     {
         std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
         tmpIP->point = tmpPrimalPoint;
@@ -61,7 +61,7 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputInfo("     Interior point replaced with primal solution point due to constraint deviation.");
 
-        env->process->interiorPts.back() = tmpIP;
+        env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
     else if (env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && maxDevPrimal.value < 0)
     {
@@ -72,13 +72,13 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputInfo("     Primal solution point used as additional interior point.");
 
-        if (env->process->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
+        if (env->dualSolver->MIPSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
-            env->process->interiorPts.push_back(tmpIP);
+            env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
         }
         else
         {
-            env->process->interiorPts.back() = tmpIP;
+            env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
         }
     }
     else if (env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && maxDevPrimal.value < 0)
@@ -91,7 +91,7 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputInfo("     Interior point replaced with primal solution point.");
 
-        env->process->interiorPts.back() = tmpIP;
+        env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
     else if (env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && maxDevPrimal.value < 0)
     {
@@ -100,7 +100,7 @@ void TaskUpdateInteriorPoint::run()
         // Find a new point in the midpoint between the original and new
         for (int i = 0; i < tmpPrimalPoint.size(); i++)
         {
-            tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->process->interiorPts.at(0)->point.at(i));
+            tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->MIPSolver->interiorPts.at(0)->point.at(i));
         }
 
         tmpIP->point = tmpPrimalPoint;
@@ -110,10 +110,10 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputInfo("     Interior point replaced with primal solution point.");
 
-        env->process->interiorPts.back() = tmpIP;
+        env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
 
-    env->process->stopTimer("InteriorPointSearch");
+    env->timing->stopTimer("InteriorPointSearch");
 }
 
 std::string TaskUpdateInteriorPoint::getType()

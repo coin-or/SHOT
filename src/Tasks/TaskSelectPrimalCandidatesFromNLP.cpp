@@ -15,13 +15,13 @@ namespace SHOT
 
 TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("PrimalStrategy");
-    env->process->startTimer("PrimalBoundStrategyNLP");
+    env->timing->startTimer("PrimalStrategy");
+    env->timing->startTimer("PrimalBoundStrategyNLP");
 
     primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP(env);
 
-    env->process->stopTimer("PrimalBoundStrategyNLP");
-    env->process->stopTimer("PrimalStrategy");
+    env->timing->stopTimer("PrimalBoundStrategyNLP");
+    env->timing->stopTimer("PrimalStrategy");
 }
 
 TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
@@ -31,17 +31,17 @@ TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->isMIP() && env->process->getRelativeObjectiveGap() > 1e-10)
+    if (currIter->isMIP() && env->results->getRelativeObjectiveGap() > 1e-10)
     {
-        env->process->startTimer("PrimalStrategy");
-        env->process->startTimer("PrimalBoundStrategyNLP");
+        env->timing->startTimer("PrimalStrategy");
+        env->timing->startTimer("PrimalBoundStrategyNLP");
 
         primalStrategyFixedNLP->runStrategy();
 
-        env->process->stopTimer("PrimalBoundStrategyNLP");
-        env->process->stopTimer("PrimalStrategy");
+        env->timing->stopTimer("PrimalBoundStrategyNLP");
+        env->timing->stopTimer("PrimalStrategy");
     }
 }
 

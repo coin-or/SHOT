@@ -22,11 +22,9 @@
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
 #include "TaskHandler.h"
-#include "OSnl2OS.h"
 
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
-#include "GAMS/GAMS2OS.h"
 #endif
 
 namespace SHOT
@@ -35,10 +33,6 @@ class SHOTSolver
 {
   private:
     std::unique_ptr<ISolutionStrategy> solutionStrategy;
-
-#ifdef HAS_GAMS
-    std::unique_ptr<GAMS2OS> gms2os;
-#endif
 
     void initializeSettings();
     void verifySettings();
@@ -61,7 +55,6 @@ class SHOTSolver
     bool setOptions(OSOption *osOptions);
 
     bool setProblem(std::string fileName);
-    //bool setProblem(OSInstance *osInstance);
 
     bool selectStrategy();
 

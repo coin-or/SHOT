@@ -23,15 +23,15 @@ TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolut
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->isMIP() || env->process->usedSolutionStrategy == E_SolutionStrategy::NLP)
+    if (currIter->isMIP() || env->results->usedSolutionStrategy == E_SolutionStrategy::NLP)
     {
-        env->process->startTimer("PrimalStrategy");
-        auto allSolutions = env->process->getCurrentIteration()->solutionPoints;
-        env->process->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
+        env->timing->startTimer("PrimalStrategy");
+        auto allSolutions = env->results->getCurrentIteration()->solutionPoints;
+        env->primalSolver->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
-        env->process->stopTimer("PrimalStrategy");
+        env->timing->stopTimer("PrimalStrategy");
     }
 }
 

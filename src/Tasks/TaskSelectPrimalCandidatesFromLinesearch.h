@@ -13,6 +13,8 @@
 
 #include "../MIPSolver/IMIPSolver.h"
 
+#include "../LinesearchMethod/ILinesearchMethod.h"
+
 namespace SHOT
 {
 class TaskSelectPrimalCandidatesFromLinesearch : public TaskBase

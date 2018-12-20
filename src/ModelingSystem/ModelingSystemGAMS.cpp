@@ -122,7 +122,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
 
-    //env->process->GAMSModelingObject = gmo;
+    //env->results->GAMSModelingObject = gmo;
 
     try
     {

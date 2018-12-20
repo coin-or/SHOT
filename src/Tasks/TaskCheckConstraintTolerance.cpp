@@ -21,7 +21,7 @@ TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() {}
 
 void TaskCheckConstraintTolerance::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (currIter->solutionPoints.size() == 0)
         return;
@@ -54,7 +54,7 @@ void TaskCheckConstraintTolerance::run()
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
             currIter->type == E_IterationProblemType::MIP)
         {
-            env->process->terminationReason = E_TerminationReason::ConstraintTolerance;
+            env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);
         }
     }
@@ -62,7 +62,7 @@ void TaskCheckConstraintTolerance::run()
     {
         if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
         {
-            env->process->terminationReason = E_TerminationReason::ConstraintTolerance;
+            env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);
         }
     }

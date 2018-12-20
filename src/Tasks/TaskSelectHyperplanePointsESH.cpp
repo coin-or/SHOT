@@ -15,8 +15,8 @@ namespace SHOT
 
 TaskSelectHyperplanePointsESH::TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("DualCutGenerationRootSearch");
-    env->process->stopTimer("DualCutGenerationRootSearch");
+    env->timing->startTimer("DualCutGenerationRootSearch");
+    env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskSelectHyperplanePointsESH::~TaskSelectHyperplanePointsESH()
@@ -29,14 +29,14 @@ TaskSelectHyperplanePointsESH::~TaskSelectHyperplanePointsESH()
 
 void TaskSelectHyperplanePointsESH::run()
 {
-    this->run(env->process->getPreviousIteration()->solutionPoints);
+    this->run(env->results->getPreviousIteration()->solutionPoints);
 }
 
 void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 {
-    env->process->startTimer("DualCutGenerationRootSearch");
+    env->timing->startTimer("DualCutGenerationRootSearch");
 
-    if (env->process->interiorPts.size() == 0)
+    if (env->dualSolver->MIPSolver->interiorPts.size() == 0)
     {
         if (!hyperplaneSolutionPointStrategyInitialized)
         {
@@ -47,12 +47,12 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         env->output->outputWarning("     Adding cutting plane since no interior point is known.");
         tSelectHPPts->run(solPoints);
 
-        env->process->stopTimer("DualCutGenerationRootSearch");
+        env->timing->stopTimer("DualCutGenerationRootSearch");
         return;
     }
 
     int addedHyperplanes = 0;
-    auto currIter = env->process->getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto constraintSelectionFactor = env->settings->getDoubleSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
     bool useUniqueConstraints = env->settings->getBoolSetting("ESH.Linesearch.UniqueConstraints", "Dual");
@@ -79,11 +79,11 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         for (auto &NCV : numericConstraintValues)
         {
-            for (int j = 0; j < env->process->interiorPts.size(); j++)
+            for (int j = 0; j < env->dualSolver->MIPSolver->interiorPts.size(); j++)
             {
                 if (addedHyperplanes >= maxHyperplanesPerIter)
                 {
-                    env->process->stopTimer("DualCutGenerationRootSearch");
+                    env->timing->stopTimer("DualCutGenerationRootSearch");
                     return;
                 }
 
@@ -117,21 +117,21 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                 try
                 {
-                    env->process->startTimer("DualCutGenerationRootSearch");
-                    auto xNewc = env->process->linesearchMethod->findZero(env->process->interiorPts.at(j)->point,
-                                                                          solPoints.at(i).point,
-                                                                          rootMaxIter,
-                                                                          rootTerminationTolerance,
-                                                                          rootActiveConstraintTolerance,
-                                                                          currentConstraint);
+                    env->timing->startTimer("DualCutGenerationRootSearch");
+                    auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
+                                                                 solPoints.at(i).point,
+                                                                 rootMaxIter,
+                                                                 rootTerminationTolerance,
+                                                                 rootActiveConstraintTolerance,
+                                                                 currentConstraint);
 
-                    env->process->stopTimer("DualCutGenerationRootSearch");
+                    env->timing->stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;
                     externalPoint = xNewc.second;
                 }
                 catch (std::exception &e)
                 {
-                    env->process->stopTimer("DualCutGenerationRootSearch");
+                    env->timing->stopTimer("DualCutGenerationRootSearch");
                     externalPoint = solPoints.at(i).point;
 
                     env->output->outputWarning(
@@ -164,7 +164,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                         hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
                     }
 
-                    env->process->hyperplaneWaitingList.push_back(hyperplane);
+                    env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
                     addedHyperplanes++;
 
                     hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
@@ -187,7 +187,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         env->output->outputInfo("     All nonlinear constraints fulfilled, so no constraint cuts added.");
     }
 
-    env->process->stopTimer("DualCutGenerationRootSearch");
+    env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
 std::string TaskSelectHyperplanePointsESH::getType()

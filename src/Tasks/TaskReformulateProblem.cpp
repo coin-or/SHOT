@@ -15,7 +15,7 @@ namespace SHOT
 
 TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("ProblemReformulation");
+    env->timing->startTimer("ProblemReformulation");
 
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model"));
 
@@ -297,7 +297,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     std::cout << env->reformulatedProblem << std::endl;
 
-    env->process->stopTimer("ProblemReformulation");
+    env->timing->stopTimer("ProblemReformulation");
 }
 
 TaskReformulateProblem::~TaskReformulateProblem()

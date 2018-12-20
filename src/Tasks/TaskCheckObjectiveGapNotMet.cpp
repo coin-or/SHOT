@@ -23,16 +23,16 @@ TaskCheckObjectiveGapNotMet::~TaskCheckObjectiveGapNotMet()
 
 void TaskCheckObjectiveGapNotMet::run()
 {
-    auto currIter = env->process->getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     if (currIter->type != E_IterationProblemType::MIP)
         return;
 
-    if (env->process->primalSolutions.size() > 0 &&
-        !env->process->isRelativeObjectiveGapToleranceMet() &&
-        !env->process->isAbsoluteObjectiveGapToleranceMet())
+    if (env->results->primalSolutions.size() > 0 &&
+        !env->results->isRelativeObjectiveGapToleranceMet() &&
+        !env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->process->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
+        env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
     }
 }

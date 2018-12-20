@@ -15,11 +15,11 @@ namespace SHOT
 
 TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("DualCutGenerationRootSearch");
+    env->timing->startTimer("DualCutGenerationRootSearch");
 
-    env->process->linesearchMethod = std::dynamic_pointer_cast<ILinesearchMethod>(std::make_shared<LinesearchMethodBoost>(env));
+    env->rootsearchMethod = std::dynamic_pointer_cast<ILinesearchMethod>(std::make_shared<LinesearchMethodBoost>(env));
 
-    env->process->stopTimer("DualCutGenerationRootSearch");
+    env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
 TaskInitializeLinesearch::~TaskInitializeLinesearch()

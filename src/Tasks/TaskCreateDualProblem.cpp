@@ -14,23 +14,23 @@ namespace SHOT
 
 TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->process->startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
     env->output->outputDebug("Creating dual problem");
 
-    createProblem(env->dualSolver, env->reformulatedProblem);
+    createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
-    env->dualSolver->finalizeProblem();
+    env->dualSolver->MIPSolver->finalizeProblem();
 
-    env->dualSolver->initializeSolverSettings();
+    env->dualSolver->MIPSolver->initializeSolverSettings();
 
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
-        env->dualSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+        env->dualSolver->MIPSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
     }
 
     env->output->outputDebug("Dual problem created");
-    env->process->stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 TaskCreateDualProblem::~TaskCreateDualProblem()
@@ -42,23 +42,23 @@ void TaskCreateDualProblem::run()
     // Only run this task after intialization if we want to rebuild the tree in the multi-tree strategy
     if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
-        env->process->startTimer("DualStrategy");
+        env->timing->startTimer("DualStrategy");
 
         env->output->outputDebug("Creating dual problem");
 
-        createProblem(env->dualSolver, env->reformulatedProblem);
+        createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
-        env->dualSolver->finalizeProblem();
+        env->dualSolver->MIPSolver->finalizeProblem();
 
-        env->dualSolver->initializeSolverSettings();
+        env->dualSolver->MIPSolver->initializeSolverSettings();
 
         if (env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
-            env->dualSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+            env->dualSolver->MIPSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
         }
 
         env->output->outputDebug("Dual problem created");
-        env->process->stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
     }
 }
 
