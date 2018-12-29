@@ -1197,4 +1197,19 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
     return stack[0];
 #undef debugout
 }
+
+void ModelingSystemGAMS::simplifyNonlinearExpressions(ProblemPtr problem)
+{
+    if (problem->objectiveFunction->properties.hasNonlinearExpression)
+    {
+        auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(problem->objectiveFunction);
+        objective->nonlinearExpression = simplify(objective->nonlinearExpression);
+    }
+
+    for (auto &C : problem->nonlinearConstraints)
+    {
+        C->nonlinearExpression = simplify(C->nonlinearExpression);
+    }
+}
+
 } // Namespace SHOT

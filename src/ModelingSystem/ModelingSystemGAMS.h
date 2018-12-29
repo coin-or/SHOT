@@ -69,6 +69,8 @@ class ModelingSystemGAMS : public IModelingSystem
     bool copyLinearTerms(ProblemPtr destination);
     bool copyQuadraticTerms(ProblemPtr destination);
     bool copyNonlinearExpressions(ProblemPtr destination);
+
+    void simplifyNonlinearExpressions(ProblemPtr problem);
     //NonlinearExpressionPtr convertOSNonlinearNode(const ProblemPtr &destination);
 
     static void applyOperation(std::vector<NonlinearExpressionPtr> &stack, NonlinearExpressionPtr op, int nargs);

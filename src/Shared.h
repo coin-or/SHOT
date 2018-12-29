@@ -76,4 +76,6 @@
 #include "Model/Constraints.h"
 #include "Model/Problem.h"
 
+#include "Model/Simplifications.h"
+
 #include "MIPSolver/IMIPSolver.h"
