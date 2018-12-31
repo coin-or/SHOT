@@ -16,7 +16,8 @@ namespace SHOT
 enum class E_AuxilliaryVariableType
 {
     None,
-    NonlinearObjectiveFunction // From epigraph formulation of (nonlinear) objective function
+    NonlinearObjectiveFunction,            // From epigraph formulation of (nonlinear) objective function
+    NonlinearObjectiveFunctionPartitioning // From reformulating nonlinear terms in objective as constrain
 };
 
 enum class E_DualSolutionSource

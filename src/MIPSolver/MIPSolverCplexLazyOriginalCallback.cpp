@@ -66,9 +66,10 @@ void HCallbackI::main() // Called at each node...
             tmpVals.add(primalSol.at(i));
         }
 
-        if (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
+        for (auto &V : env->reformulatedProblem->auxilliaryVariables)
         {
-            tmpVals.add(env->results->getPrimalBound());
+            tmpVals.add(V->calculateValue(primalSol));
+            //std::cout << "calculated value for auxilliary variable " << V->name << " " << V->calculateValue(primalSol) << '\n';
         }
 
         try

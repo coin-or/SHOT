@@ -240,6 +240,41 @@ void Problem::add(VariablePtr variable)
     env->output->outputDebug("Added variable to problem: " + variable->name);
 };
 
+void Problem::add(AuxilliaryVariables variables)
+{
+    for (auto &V : variables)
+        add(V);
+}
+
+void Problem::add(AuxilliaryVariablePtr variable)
+{
+    allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
+    auxilliaryVariables.push_back(variable);
+
+    switch (variable->type)
+    {
+    case (E_VariableType::Real):
+        realVariables.push_back(variable);
+        break;
+    case (E_VariableType::Binary):
+        binaryVariables.push_back(variable);
+        break;
+    case (E_VariableType::Integer):
+        integerVariables.push_back(variable);
+        break;
+    case (E_VariableType::Semicontinuous):
+        semicontinuousVariables.push_back(variable);
+        break;
+    default:
+        break;
+    }
+
+    variable->takeOwnership(shared_from_this());
+    variablesUpdated = false;
+
+    env->output->outputDebug("Added variable to problem: " + variable->name);
+};
+
 void Problem::add(LinearConstraintPtr constraint)
 {
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
@@ -430,7 +465,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 
 template <typename T>
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                                   std::vector<T *> &activeConstraints)
+                                                                                 std::vector<T *> &activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
@@ -463,7 +498,7 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 
 template <typename T>
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                                   std::vector<std::shared_ptr<T>> &activeConstraints)
+                                                                                 std::vector<std::shared_ptr<T>> &activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 

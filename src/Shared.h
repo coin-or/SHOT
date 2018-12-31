@@ -72,6 +72,7 @@
 #include "Model/Variables.h"
 #include "Model/Terms.h"
 #include "Model/NonlinearExpressions.h"
+#include "Model/AuxilliaryVariables.h"
 #include "Model/ObjectiveFunction.h"
 #include "Model/Constraints.h"
 #include "Model/Problem.h"

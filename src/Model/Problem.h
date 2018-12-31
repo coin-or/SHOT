@@ -62,8 +62,6 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     void updateVariables();
 
-    void updateProperties();
-
     void updateFactorableFunctions();
 
   public:
@@ -81,6 +79,8 @@ class Problem : public std::enable_shared_from_this<Problem>
     Variables semicontinuousVariables;
     Variables nonlinearVariables;
 
+    AuxilliaryVariables auxilliaryVariables;
+
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
 
@@ -95,10 +95,16 @@ class Problem : public std::enable_shared_from_this<Problem>
     std::vector<FactorableFunction> factorableFunctionVariables;
     std::vector<FactorableFunction> factorableFunctions;
 
+    void updateProperties();
+
+    // This also updates the problem properties
     void finalize();
 
     void add(VariablePtr variable);
     void add(Variables variables);
+
+    void add(AuxilliaryVariablePtr variable);
+    void add(AuxilliaryVariables variables);
 
     void add(LinearConstraintPtr constraint);
     void add(QuadraticConstraintPtr constraint);
@@ -135,11 +141,11 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                              std::vector<T *> &activeConstraints);
+                                                                            std::vector<T *> &activeConstraints);
 
     template <typename T>
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                              std::vector<std::shared_ptr<T>> &activeConstraints);
+                                                                            std::vector<std::shared_ptr<T>> &activeConstraints);
 
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection);
     NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const QuadraticConstraints constraintSelection);
@@ -180,11 +186,6 @@ class Problem : public std::enable_shared_from_this<Problem>
     void saveProblemToFile(std::string filename);
 
     friend std::ostream &operator<<(std::ostream &stream, const Problem &problem);
-};
-
-class ReformulatedProblem : public Problem
-{
-    AuxilliaryVariables auxilliaryVariables;
 };
 
 inline std::ostream &operator<<(std::ostream &stream, ProblemPtr problem)

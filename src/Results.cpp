@@ -61,7 +61,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
     // Add primal objective cut
     if (env->settings->getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual") &&
-        env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+        env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         Hyperplane hyperplane;
         hyperplane.source = E_HyperplaneSource::PrimalSolutionSearchInteriorObjective;

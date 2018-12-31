@@ -31,6 +31,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         additionalNumberOfNonlinearConstraints = 1;
     }
 
+    int auxVarCounter = 0;
+    int auxConstrCounter = 0;
+
     auto newProblem = std::make_shared<Problem>(env);
     newProblem->name = env->problem->name + " (reformulated)";
 
@@ -72,6 +75,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     {
         double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
         double valueRHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueRHS;
+        double constant = std::dynamic_pointer_cast<NumericConstraint>(C)->constant;
 
         if (C->properties.classification == E_ConstraintClassification::Linear)
         {
@@ -84,6 +88,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                 constraint->add(std::make_shared<LinearTerm>(T->coefficient, variable));
             }
 
+            constraint->constant = constant;
             newProblem->add(std::move(constraint));
         }
         else if (useQuadraticConstraints && C->properties.classification == E_ConstraintClassification::Quadratic)
@@ -105,6 +110,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                 constraint->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
             }
 
+            constraint->constant = constant;
             newProblem->add(std::move(constraint));
         }
         else if (!useQuadraticConstraints || C->properties.classification == E_ConstraintClassification::Nonlinear)
@@ -125,36 +131,145 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                 // TODO
             }
 
-            NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+            NumericConstraintPtr constraint;
 
-            for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->linearTerms.terms)
+            if (C->properties.hasNonlinearExpression && std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression->getType() != E_NonlinearExpressionTypes::Sum)
+            {
+                constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+            }
+            else
+            {
+                constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+            }
+
+            for (auto &T : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.terms)
             {
                 auto variable = newProblem->getVariable(T->variable->index);
-                constraint->add(std::make_shared<LinearTerm>(signfactor * T->coefficient, variable));
+                std::dynamic_pointer_cast<LinearConstraint>(constraint)->add(std::make_shared<LinearTerm>(signfactor * T->coefficient, variable));
             }
 
-            for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.terms)
+            if (C->properties.hasQuadraticTerms)
             {
-                auto firstVariable = newProblem->getVariable(T->firstVariable->index);
-                auto secondVariable = newProblem->getVariable(T->secondVariable->index);
+                for (auto &T : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.terms)
+                {
+                    auto firstVariable = newProblem->getVariable(T->firstVariable->index);
+                    auto secondVariable = newProblem->getVariable(T->secondVariable->index);
 
-                constraint->add(std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
+                    auto auxVariable = std::make_shared<AuxilliaryVariable>("shot_aux_" + std::to_string(auxVarCounter), newProblem->allVariables.size(), E_VariableType::Real, -100000000.0, 100000000.0);
+
+                    std::dynamic_pointer_cast<LinearConstraint>(constraint)->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+
+                    auto auxConstraint = std::make_shared<NonlinearConstraint>(newProblem->numericConstraints.size(), "shot_auxconstr_" + std::to_string(auxConstrCounter), SHOT_DBL_MIN, 0.0);
+                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+
+                    if (signfactor == -1)
+                    {
+                        auxConstraint->add(std::make_shared<QuadraticTerm>(-1.0, firstVariable, secondVariable));
+                        auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, firstVariable, secondVariable));
+                    }
+                    else
+                    {
+                        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+                        auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0 * T->coefficient, firstVariable, secondVariable));
+                    }
+
+                    if (firstVariable == secondVariable && signfactor * T->coefficient > 0.0)
+                    {
+                        auxVariable->lowerBound = T->coefficient * firstVariable->lowerBound * firstVariable->lowerBound;
+                    }
+
+                    newProblem->add(std::move(auxVariable));
+                    newProblem->add(std::move(auxConstraint));
+                    auxVarCounter++;
+                    auxConstrCounter++;
+                }
             }
 
-            if (C->properties.hasNonlinearExpression)
+            if (C->properties.hasNonlinearExpression && std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
             {
+                auto sum = std::dynamic_pointer_cast<ExpressionSum>(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression);
+
+                for (auto &T : sum->children.expressions)
+                {
+                    auto auxVariable = std::make_shared<AuxilliaryVariable>("shot_aux_" + std::to_string(auxVarCounter), newProblem->allVariables.size(), E_VariableType::Real, -9999999999.0, 9999999999.0);
+
+                    std::dynamic_pointer_cast<LinearConstraint>(constraint)->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+
+                    auto auxConstraint = std::make_shared<NonlinearConstraint>(newProblem->numericConstraints.size(), "shot_auxconstr_" + std::to_string(auxConstrCounter), SHOT_DBL_MIN, 0.0);
+
+                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+
+                    if (signfactor == -1)
+                    {
+                        auxConstraint->add(std::make_shared<ExpressionNegate>(copyNonlinearExpression(T.get(), newProblem)));
+                    }
+                    else
+                    {
+                        auxConstraint->add(copyNonlinearExpression(T.get(), newProblem));
+                    }
+
+                    auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
+
+                    /*if (auxVariable->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square)
+                    {
+                        auto child = std::dynamic_pointer_cast<ExpressionSquare>(auxVariable->nonlinearExpression)->child;
+
+                        if (child->getType() == E_NonlinearExpressionTypes::Variable)
+                        {
+                            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(child);
+                            auxVariable->lowerBound = variable->variable->lowerBound * variable->variable->lowerBound;
+                            auxVariable->upperBound = variable->variable->upperBound * variable->variable->upperBound;
+                        }
+                        else
+                        {
+                            auxVariable->lowerBound = 0.0;
+                        }
+                    }
+                    else if (auxVariable->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot)
+                    {
+                        auxVariable->lowerBound = 0.0;
+                    }
+                    else if (auxVariable->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Negate)
+                    {
+                        auto child = std::dynamic_pointer_cast<ExpressionNegate>(auxVariable->nonlinearExpression)->child;
+
+                        if (child->getType() == E_NonlinearExpressionTypes::Square)
+                        {
+                            auxVariable->upperBound = 0.0;
+                        }
+                        else if (child->getType() == E_NonlinearExpressionTypes::SquareRoot)
+                        {
+                            auxVariable->upperBound = 0.0;
+                        }
+                    }*/
+
+                    newProblem->add(std::move(auxVariable));
+                    newProblem->add(std::move(auxConstraint));
+                    auxVarCounter++;
+                    auxConstrCounter++;
+                }
+            }
+
+            constraint->constant = signfactor * constant;
+
+            if (C->properties.hasNonlinearExpression && std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression->getType() != E_NonlinearExpressionTypes::Sum)
+            {
+
                 if (signfactor == -1)
                 {
-                    constraint->add(std::make_shared<ExpressionNegate>(
-                        copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem)));
+                    std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(std::make_shared<ExpressionNegate>(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem)));
                 }
                 else
                 {
-                    constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
+                    std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), newProblem));
                 }
-            }
 
-            newProblem->add(std::move(constraint));
+                newProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
+            }
+            else
+            {
+                newProblem->add(std::move(std::dynamic_pointer_cast<LinearConstraint>(constraint)));
+            }
         }
         else
         {
@@ -185,8 +300,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         objective->direction = E_ObjectiveFunctionDirection::Minimize;
         objective->constant = 0.0;
         double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        auto objectiveVariable = std::make_shared<Variable>("shot_objvar", newProblem->allVariables.size(), E_VariableType::Real, -objVarBound, objVarBound);
-        objective->add(std::make_shared<LinearTerm>(1.0, objectiveVariable));
+        auto objectiveVariable = std::make_shared<AuxilliaryVariable>("shot_objvar", newProblem->allVariables.size(), E_VariableType::Real, -objVarBound, objVarBound);
+        objective->add(std::make_shared<LinearTerm>(1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
 
         // Adding the auxilliary objective constraint
         double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
@@ -198,7 +313,12 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             constraint->add(std::make_shared<LinearTerm>(T->coefficient, variable));
         }
 
-        constraint->add(std::make_shared<LinearTerm>(-1.0, objectiveVariable));
+        for (auto &T : constraint->linearTerms.terms)
+        {
+            objectiveVariable->linearTerms.add(T);
+        }
+
+        constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
 
         for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms.terms)
         {
@@ -206,6 +326,11 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             auto secondVariable = newProblem->getVariable(T->secondVariable->index);
 
             constraint->add(std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
+        }
+
+        for (auto &T : constraint->quadraticTerms.terms)
+        {
+            objectiveVariable->quadraticTerms.add(T);
         }
 
         if (env->problem->objectiveFunction->properties.hasNonlinearExpression)
@@ -219,6 +344,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             {
                 constraint->add(copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->nonlinearExpression.get(), newProblem));
             }
+
+            objectiveVariable->nonlinearExpression = constraint->nonlinearExpression;
         }
 
         newProblem->add(std::move(objectiveVariable));
@@ -251,6 +378,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     else if (env->problem->objectiveFunction->properties.hasNonlinearExpression)
     {
         double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
+        double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
         ObjectiveFunctionPtr objective;
 
         if (env->problem->objectiveFunction->properties.hasQuadraticTerms)
@@ -276,19 +404,17 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
             std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)->add(std::make_shared<LinearTerm>(T->coefficient, variable));
         }
 
-        auto tmp = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->nonlinearExpression->getType();
-
         if (std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
-            int auxVarCounter = 0;
             auto sum = std::dynamic_pointer_cast<ExpressionSum>(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->nonlinearExpression);
 
             for (auto &T : sum->children.expressions)
             {
-                auto auxVariable = std::make_shared<Variable>("shot_aux_" + auxVarCounter, newProblem->allVariables.size(), E_VariableType::Real);
+                auto auxVariable = std::make_shared<AuxilliaryVariable>("shot_aux_" + std::to_string(auxVarCounter), newProblem->allVariables.size(), E_VariableType::Real, -objVarBound, objVarBound);
+
                 std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)->add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
-                auto constraint = std::make_shared<NonlinearConstraint>(newProblem->numericConstraints.size(), "shot_auxconstr_" + auxVarCounter, SHOT_DBL_MIN, -1.0 * signfactor * env->problem->objectiveFunction->constant);
+                auto constraint = std::make_shared<NonlinearConstraint>(newProblem->numericConstraints.size(), "shot_auxconstr_" + std::to_string(auxVarCounter), SHOT_DBL_MIN, 0.0);
 
                 constraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
 
@@ -301,17 +427,17 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
                     constraint->add(copyNonlinearExpression(T.get(), newProblem));
                 }
 
+                auxVariable->nonlinearExpression = constraint->nonlinearExpression;
+
                 newProblem->add(std::move(auxVariable));
                 newProblem->add(std::move(constraint));
+                auxVarCounter++;
             }
-
-            newProblem->add(std::move(objective));
         }
 
+        objective->constant = env->problem->objectiveFunction->constant;
         objective->direction = env->problem->objectiveFunction->direction;
-        newProblem->add(objective);
-
-        newProblem->objectiveFunction->constant = env->problem->objectiveFunction->constant;
+        newProblem->add(std::move(objective));
     }
     else if (!useQuadraticObjective || env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Nonlinear)
     {
