@@ -13,6 +13,15 @@
 
 namespace SHOT
 {
+struct Reformulation
+{
+    LinearConstraints linearConstraints;
+    QuadraticConstraints quadraticConstraints;
+    NonlinearConstraint nonlinearConstraint;
+
+    AuxilliaryVariables reformulationVariables;
+};
+
 class TaskReformulateProblem : public TaskBase
 {
   public:
@@ -23,6 +32,32 @@ class TaskReformulateProblem : public TaskBase
     virtual std::string getType();
 
   private:
+    bool useQuadraticConstraints = false;
+    bool useQuadraticObjective = true;
+    bool quadraticObjectiveRegardedAsNonlinear = false;
+
+    void reformulateObjectiveFunction();
+    void reformulateConstraint(NumericConstraintPtr constraint);
+
     NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression *expression, const ProblemPtr destination);
+
+    template <class T>
+    void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
+    void copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
+    void copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
+    void copyQuadraticTermsToObjectiveFunction(QuadraticTerms terms, T destination, bool reversedSigns = false);
+
+    LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
+
+    int auxVariableCounter = 0;
+    int auxConstraintCounter = 0;
+
+    ProblemPtr reformulatedProblem;
 };
 } // namespace SHOT

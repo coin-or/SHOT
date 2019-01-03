@@ -658,7 +658,10 @@ void SHOTSolver::initializeSettings()
 
     // Reformulations to perform
 
-    env->settings->createSetting("Reformulation.Epigraph.Use", "Model", false, "Reformulates a nonlinear objective as an auxilliary constraint");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false, "Reformulates a nonlinear objective as an auxilliary constraint");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearSums", "Model", false, "Partition nonlinear sums as auxilliary constraints");
+    env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearSums", "Model", false, "Partition nonlinear sums as auxilliary constraints");
+    env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticSums", "Model", false, "Partition quadratic terms as auxilliary constraints");
 
     // Reformulations: Quadratic objective and constraints
 
@@ -723,7 +726,7 @@ void SHOTSolver::initializeSettings()
                                  "When should the fixed strategy be used", enumPrimalNLPStrategy);
     enumPrimalNLPStrategy.clear();
 
-    env->settings->createSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true,
+    env->settings->createSetting("FixedInteger.CreateInfeasibilityCut", "Primal", false,
                                  "Create a cut from an infeasible solution point");
 
     env->settings->createSetting("FixedInteger.Frequency.Dynamic", "Primal", true,

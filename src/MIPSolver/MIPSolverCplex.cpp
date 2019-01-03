@@ -837,6 +837,11 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
         startVal.add(env->results->getPrimalBound());
     }
 
+    for (auto &V : env->reformulatedProblem->auxilliaryVariables)
+    {
+        startVal.add(V->calculate(point));
+    }
+
     try
     {
         cplexInstance.addMIPStart(cplexVars, startVal);

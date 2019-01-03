@@ -38,7 +38,7 @@ bool MIPSolverBase::getDiscreteVariableStatus()
 
 E_IterationProblemType MIPSolverBase::getCurrentProblemType()
 {
-    if (this->relaxationStrategy)
+    if (this->relaxationStrategy.get() == nullptr)
     {
         return (E_IterationProblemType::None);
     }

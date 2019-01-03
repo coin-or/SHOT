@@ -49,6 +49,10 @@ struct ObjectiveFunctionProperties
     bool hasLinearTerms = false;
     bool hasSignomialTerms = false;
     bool hasQuadraticTerms = false;
+    bool hasBinaryBilinearTerms = false;
+    bool hasNonBinaryBilinearTerms = false;
+    bool hasBinarySquareTerms = false;
+    bool hasNonBinarySquareTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g for external functions
 };

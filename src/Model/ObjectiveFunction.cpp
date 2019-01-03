@@ -170,6 +170,32 @@ void QuadraticObjectiveFunction::updateProperties()
 
         if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart))
             properties.classification = E_ObjectiveFunctionClassification::Quadratic;
+
+        for (auto const &T : quadraticTerms.terms)
+        {
+            if (T->isBilinear)
+            {
+                if (T->isBinary)
+                {
+                    properties.hasBinaryBilinearTerms = true;
+                }
+                else
+                {
+                    properties.hasNonBinaryBilinearTerms = true;
+                }
+            }
+            else
+            {
+                if (T->isBinary)
+                {
+                    properties.hasBinarySquareTerms = true;
+                }
+                else
+                {
+                    properties.hasNonBinarySquareTerms = true;
+                }
+            }
+        }
     }
 
     LinearObjectiveFunction::updateProperties();

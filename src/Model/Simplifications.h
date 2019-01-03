@@ -363,11 +363,37 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTimes
     auto firstChild = simplify(expression->firstChild);
     auto secondChild = simplify(expression->secondChild);
 
-    auto product = std::make_shared<ExpressionProduct>();
-    product->children.add(firstChild);
-    product->children.add(secondChild);
+    auto tmp = secondChild->getType();
 
-    return product;
+    if (firstChild->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        if (secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double constant = std::dynamic_pointer_cast<ExpressionConstant>(firstChild)->constant * std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
+            return std::make_shared<ExpressionConstant>(constant);
+        }
+        else
+        {
+            auto product = std::make_shared<ExpressionProduct>();
+            product->children.add(firstChild);
+            product->children.add(secondChild);
+            return product;
+        }
+    }
+    else if (secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        auto product = std::make_shared<ExpressionProduct>();
+        product->children.add(secondChild);
+        product->children.add(firstChild);
+        return product;
+    }
+    else
+    {
+        auto product = std::make_shared<ExpressionProduct>();
+        product->children.add(firstChild);
+        product->children.add(secondChild);
+        return product;
+    }
 }
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionDivide> expression)
@@ -449,8 +475,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProduct> expression)
 {
-    auto product = std::make_shared<ExpressionProduct>();
-    double constant = 1;
+    double constant = 1.0;
+
+    NonlinearExpressions children;
 
     for (auto &C : expression->children.expressions)
     {
@@ -468,24 +495,43 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
         {
             for (auto &CC : std::dynamic_pointer_cast<ExpressionProduct>(C)->children.expressions)
             {
-                product->children.add(CC);
+                if (CC->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    constant *= std::dynamic_pointer_cast<ExpressionConstant>(CC)->constant;
+
+                    if (constant == 0.0)
+                        return (std::make_shared<ExpressionConstant>(0.0));
+                }
+                else
+                {
+                    children.add(CC);
+                }
             }
         }
         else
         {
-            product->children.add(C);
+            children.add(C);
         }
     }
 
-    product->children.add(std::make_shared<ExpressionConstant>(constant));
+    auto product = std::make_shared<ExpressionProduct>();
+
+    if (constant != 1.0)
+        product->children.add(std::make_shared<ExpressionConstant>(constant));
+
+    for (auto &C : children.expressions)
+    {
+        product->children.add(C);
+    }
 
     return (product);
 }
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> expression)
 {
-    auto sum = std::make_shared<ExpressionSum>();
     double constant = 0.0;
+
+    NonlinearExpressions children;
 
     for (auto &C : expression->children.expressions)
     {
@@ -500,17 +546,31 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
         {
             for (auto &CC : std::dynamic_pointer_cast<ExpressionSum>(C)->children.expressions)
             {
-                sum->children.add(CC);
+                if (CC->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    constant += std::dynamic_pointer_cast<ExpressionConstant>(CC)->constant;
+                }
+                else
+                {
+                    children.add(CC);
+                }
             }
         }
         else
         {
-            sum->children.add(C);
+            children.add(C);
         }
     }
 
+    auto sum = std::make_shared<ExpressionSum>();
+
     if (constant != 0.0)
         sum->children.add(std::make_shared<ExpressionConstant>(constant));
+
+    for (auto &C : children.expressions)
+    {
+        sum->children.add(C);
+    }
 
     return (sum);
 }

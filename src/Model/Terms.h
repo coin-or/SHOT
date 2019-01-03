@@ -78,6 +78,14 @@ class LinearTerms
         terms.push_back(term);
     }
 
+    void add(LinearTerms linearTerms)
+    {
+        for (auto &T : linearTerms.terms)
+        {
+            terms.push_back(T);
+        }
+    }
+
     double calculate(const VectorDouble &point)
     {
         double value = 0.0;
@@ -130,10 +138,30 @@ class QuadraticTerm
     double coefficient;
     VariablePtr firstVariable;
     VariablePtr secondVariable;
+
+    bool isBilinear = false;
+    bool isSquare = false;
+    bool isBinary = false;
+
     std::weak_ptr<Problem> ownerProblem;
 
     QuadraticTerm(){};
-    QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2){};
+    QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2) : coefficient(coeff), firstVariable(variable1), secondVariable(variable2)
+    {
+        if (firstVariable != secondVariable)
+        {
+            isBilinear = true;
+        }
+        else
+        {
+            isSquare = true;
+        }
+
+        if (firstVariable->type == E_VariableType::Binary && secondVariable->type == E_VariableType::Binary)
+        {
+            isBinary = true;
+        }
+    };
 
     inline double calculate(const VectorDouble &point)
     {
@@ -179,6 +207,14 @@ class QuadraticTerms
     {
         terms.push_back(term);
     };
+
+    void add(QuadraticTerms quadraticTerms)
+    {
+        for (auto &T : quadraticTerms.terms)
+        {
+            terms.push_back(T);
+        }
+    }
 
     inline double calculate(const VectorDouble &point)
     {
