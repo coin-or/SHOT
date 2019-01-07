@@ -73,7 +73,6 @@ bool SHOTSolver::setOptions(std::string fileName)
             {
                 fileContents = UtilityFunctions::getFileAsString(fileName);
                 env->settings->readSettingsFromGAMSOptFormat(fileContents);
-                verifySettings();
             }
             catch (std::exception &e)
             {
@@ -154,6 +153,7 @@ bool SHOTSolver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
+
             env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
@@ -228,6 +228,18 @@ bool SHOTSolver::setProblem(std::string fileName)
 
             return (false);
         }
+
+        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        {
+            std::stringstream problemFilename;
+            problemFilename << env->settings->getStringSetting("Debug.Path", "Output");
+            problemFilename << "/originalproblem.txt";
+
+            std::stringstream problemText;
+            problemText << env->reformulatedProblem;
+
+            UtilityFunctions::writeStringToFile(problemFilename.str(), problemText.str());
+        }
     }
     catch (const ErrorClass &eclass)
     {
@@ -260,9 +272,23 @@ bool SHOTSolver::setProblem(std::string fileName)
     }
 
     if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+    {
         initializeDebugMode();
 
+        std::stringstream filename;
+        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << "/originalproblem";
+        filename << ".txt";
+
+        std::stringstream problem;
+        problem << env->problem;
+
+        UtilityFunctions::writeStringToFile(filename.str(), problem.str());
+    }
+
     bool status = this->selectStrategy();
+
+    verifySettings();
 
     return (true);
 }
@@ -659,9 +685,10 @@ void SHOTSolver::initializeSettings()
     // Reformulations to perform
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false, "Reformulates a nonlinear objective as an auxilliary constraint");
-    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearSums", "Model", false, "Partition nonlinear sums as auxilliary constraints");
-    env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearSums", "Model", false, "Partition nonlinear sums as auxilliary constraints");
-    env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticSums", "Model", false, "Partition quadratic terms as auxilliary constraints");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", false, "Partition nonlinear terms as auxilliary constraints");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false, "Partition quadratic terms as auxilliary constraints");
+    env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false, "Partition nonlinear terms as auxilliary constraints");
+    env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false, "Partition quadratic terms as auxilliary constraints");
 
     // Reformulations: Quadratic objective and constraints
 

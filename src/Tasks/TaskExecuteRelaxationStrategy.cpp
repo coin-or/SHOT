@@ -15,9 +15,6 @@ namespace SHOT
 
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    env->timing->startTimer("DualStrategy");
-
-    env->timing->stopTimer("DualStrategy");
 }
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy()

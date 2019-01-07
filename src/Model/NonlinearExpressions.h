@@ -1109,6 +1109,59 @@ class ExpressionProduct : public ExpressionGeneral
     {
         return E_NonlinearExpressionTypes::Product;
     }
+
+    inline bool isQuadraticTerm()
+    {
+        int powerSum = 0;
+
+        for (auto &C : children.expressions)
+        {
+            if (C->getType() == E_NonlinearExpressionTypes::Square)
+            {
+                auto square = std::dynamic_pointer_cast<ExpressionSquare>(C);
+
+                if (square->child->getType() != E_NonlinearExpressionTypes::Variable)
+                    return (false);
+
+                powerSum += 2;
+            }
+            else if (C->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+                powerSum++;
+            }
+            else if (C->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+            }
+            else
+            {
+                return (false);
+            }
+
+            if (powerSum > 2)
+                return (false);
+        }
+
+        return (powerSum == 2 ? true : false);
+    }
+
+    inline bool isMonomialTerm()
+    {
+        for (auto &C : children.expressions)
+        {
+            if (C->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+            }
+            else if (C->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+            }
+            else
+            {
+                return (false);
+            }
+        }
+
+        return (true);
+    }
 };
 
 // End general operations

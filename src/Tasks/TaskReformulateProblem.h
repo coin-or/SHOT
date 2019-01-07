@@ -35,6 +35,8 @@ class TaskReformulateProblem : public TaskBase
     bool useQuadraticConstraints = false;
     bool useQuadraticObjective = true;
     bool quadraticObjectiveRegardedAsNonlinear = false;
+    bool PartitionQuadraticTermsInObjective = false;
+    bool PartitionQuadraticTermsInConstraint = false;
 
     void reformulateObjectiveFunction();
     void reformulateConstraint(NumericConstraintPtr constraint);
@@ -54,6 +56,11 @@ class TaskReformulateProblem : public TaskBase
     void copyQuadraticTermsToObjectiveFunction(QuadraticTerms terms, T destination, bool reversedSigns = false);
 
     LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
+
+    LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
+
+    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(const QuadraticTerms &quadraticTerms, bool reversedSigns, bool partitionNonBinaryTerms);
+    std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(const MonomialTerms &monomialTerms, bool reversedSigns);
 
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;

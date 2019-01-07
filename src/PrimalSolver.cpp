@@ -285,14 +285,14 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         return (false);
     }
 
-    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool ||
+    /*bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool ||
                            primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers ||
                            primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed ||
                            primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback ||
                            primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers ||
-                           primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
+                           primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);*/
 
-    if (acceptableType && env->settings->getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
+    if (/*acceptableType && */ env->settings->getBoolSetting("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
         auto tmpLine = boost::format("       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
         env->output->outputWarning(tmpLine.str());

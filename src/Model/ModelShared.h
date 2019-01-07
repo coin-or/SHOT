@@ -47,6 +47,10 @@ class QuadraticTerm;
 typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
 class QuadraticTerms;
 
+class MonomialTerm;
+typedef std::shared_ptr<MonomialTerm> MonomialTermPtr;
+class MonomialTerms;
+
 class NonlinearExpression;
 typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
 

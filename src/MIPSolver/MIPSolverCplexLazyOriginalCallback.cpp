@@ -68,8 +68,8 @@ void HCallbackI::main() // Called at each node...
 
         for (auto &V : env->reformulatedProblem->auxilliaryVariables)
         {
-            tmpVals.add(V->calculateValue(primalSol));
             //std::cout << "calculated value for auxilliary variable " << V->name << " " << V->calculateValue(primalSol) << '\n';
+            tmpVals.add(V->calculateValue(primalSol));
         }
 
         try

@@ -124,6 +124,7 @@ void Results::initializeResults(int numObj, int numVar, int numConstr)
 
 std::string Results::getOSrl()
 {
+    return "";
     int numConstr = osResult->getConstraintNumber();
 
     int numVar = osResult->getVariableNumber();

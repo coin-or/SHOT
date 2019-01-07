@@ -29,7 +29,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionVaria
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegate> expression)
 {
-    bool isCancelled = true;
+    bool isCancelled = false;
     auto child = expression->child;
 
     while (child->getType() == E_NonlinearExpressionTypes::Negate)
@@ -38,7 +38,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegat
         isCancelled = !isCancelled;
     }
 
-    if (!isCancelled) // Negations cancel themselves out
+    if (isCancelled) // Negations cancel themselves out
     {
         return (std::dynamic_pointer_cast<NonlinearExpression>(simplify(child)));
     }
@@ -57,6 +57,15 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegat
                     // Negations cancel out
                     T = std::dynamic_pointer_cast<ExpressionNegate>(T)->child;
                 }
+                else if (T->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    std::dynamic_pointer_cast<ExpressionConstant>(T)->constant *= -1;
+                }
+                else if (T->getType() == E_NonlinearExpressionTypes::Product)
+                {
+                    std::dynamic_pointer_cast<ExpressionProduct>(T)->children.add(std::make_shared<ExpressionConstant>(-1.0));
+                    T = simplify(T);
+                }
                 else
                 {
                     T = std::make_shared<ExpressionNegate>(T);
@@ -65,10 +74,22 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegat
 
             return (std::dynamic_pointer_cast<NonlinearExpression>(sum));
         }
+        else if (expression->child->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            std::dynamic_pointer_cast<ExpressionConstant>(expression->child)->constant *= -1;
+            return (expression->child);
+        }
+        else if (expression->child->getType() == E_NonlinearExpressionTypes::Product)
+        {
+            auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression->child);
+
+            product->children.add(std::make_shared<ExpressionConstant>(-1.0));
+            return (simplify(expression->child));
+        }
 
         return expression;
     }
-}
+} // namespace SHOT
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionInvert> expression)
 {
@@ -458,9 +479,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
     if (firstChildIsConstant && firstChildConstant == 1.0)
         return (std::make_shared<ExpressionConstant>(1.0));
 
+    if (firstChildIsConstant && firstChildConstant == 0.0)
+        return (std::make_shared<ExpressionConstant>(0.0));
+
     if (secondChildIsConstant)
     {
-        if (secondChildConstant == 1.0)
+        if (secondChildConstant == 0.0)
+            return (std::make_shared<ExpressionConstant>(1.0));
+        else if (secondChildConstant == 1.0)
             return (firstChild);
         else if (secondChildConstant == 2.0)
             return (std::make_shared<ExpressionSquare>(firstChild));

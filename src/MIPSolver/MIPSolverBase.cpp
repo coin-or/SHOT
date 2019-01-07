@@ -26,7 +26,7 @@ double MIPSolverBase::getObjectiveValue()
 
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
-    if (env->problem->properties.numberOfDiscreteVariables == 0)
+    if (env->reformulatedProblem->properties.numberOfDiscreteVariables == 0)
     {
         return (false);
     }
@@ -38,30 +38,15 @@ bool MIPSolverBase::getDiscreteVariableStatus()
 
 E_IterationProblemType MIPSolverBase::getCurrentProblemType()
 {
-    if (this->relaxationStrategy.get() == nullptr)
-    {
-        return (E_IterationProblemType::None);
-    }
+    if (getDiscreteVariableStatus())
+        return (E_IterationProblemType::MIP);
     else
-    {
-        switch (static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
-        {
-        case (E_SolutionStrategy::MIQCQP):
-            return (E_IterationProblemType::MIP);
-        case (E_SolutionStrategy::MIQP):
-            return (E_IterationProblemType::MIP);
-        case (E_SolutionStrategy::NLP):
-            return (E_IterationProblemType::Relaxed);
-        case (E_SolutionStrategy::SingleTree):
-            return (E_IterationProblemType::MIP);
-        }
-    }
-    return (E_IterationProblemType::MIP);
+        return (E_IterationProblemType::Relaxed);
 }
 
 void MIPSolverBase::executeRelaxationStrategy()
 {
-    if (!this->relaxationStrategy)
+    if (this->relaxationStrategy.get() == nullptr)
     {
         relaxationStrategy = std::make_unique<RelaxationStrategyStandard>(env);
     }
@@ -368,7 +353,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
         if (newLB)
         {
             env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
-            env->output->outputAlways(
+            env->output->outputInfo(
                 "     Lower bound for variable (" + std::to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.first) + " to " + UtilityFunctions::toString(newBounds.first.at(i)));
 
             if (!env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened)

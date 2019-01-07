@@ -269,6 +269,148 @@ inline std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
     return stream;
 };
 
+class MonomialTerm
+{
+  public:
+    double coefficient;
+    Variables variables;
+
+    bool isBilinear = false;
+    bool isSquare = false;
+    bool isBinary = false;
+
+    std::weak_ptr<Problem> ownerProblem;
+
+    MonomialTerm(){};
+    MonomialTerm(double coeff, Variables variables) : coefficient(coeff), variables(variables)
+    {
+        isBinary = true;
+
+        for (auto &V : variables)
+        {
+            if (V->type != E_VariableType::Binary)
+            {
+                isBinary = false;
+                break;
+            }
+        }
+    };
+
+    inline double calculate(const VectorDouble &point)
+    {
+        double value = coefficient;
+
+        for (auto &V : variables)
+        {
+            value *= V->calculate(point);
+        }
+
+        return value;
+    };
+
+    inline Interval calculate(const IntervalVector &intervalVector)
+    {
+        Interval value(coefficient);
+
+        for (auto &V : variables)
+        {
+            value *= V->calculate(intervalVector);
+        }
+
+        return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        ownerProblem = owner;
+    }
+};
+
+inline std::ostream &operator<<(std::ostream &stream, MonomialTermPtr term)
+{
+    stream << term->coefficient;
+
+    for (auto &V : term->variables)
+    {
+        stream << '*' << V->name;
+    }
+
+    return stream;
+};
+
+class MonomialTerms
+{
+  public:
+    std::vector<MonomialTermPtr> terms;
+
+    MonomialTerms(){};
+
+    inline void add(MonomialTermPtr term)
+    {
+        terms.push_back(term);
+    };
+
+    void add(MonomialTerms monomialTerms)
+    {
+        for (auto &T : monomialTerms.terms)
+        {
+            terms.push_back(T);
+        }
+    }
+
+    inline double calculate(const VectorDouble &point)
+    {
+        double value = 0.0;
+        for (auto T : terms)
+        {
+            value += T->calculate(point);
+        }
+
+        return value;
+    };
+
+    inline Interval calculate(const IntervalVector &intervalVector)
+    {
+        Interval value = Interval(0.0, 0.0);
+        for (auto T : terms)
+        {
+            value += T->calculate(intervalVector);
+        }
+
+        return value;
+    }
+
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        for (auto T : terms)
+        {
+            T->takeOwnership(owner);
+        }
+    }
+};
+
+inline std::ostream &operator<<(std::ostream &stream, MonomialTerms monomialTerms)
+{
+    if (monomialTerms.terms.size() == 0)
+        return stream;
+
+    if (monomialTerms.terms.at(0)->coefficient > 0)
+    {
+        stream << " +" << monomialTerms.terms.at(0);
+    }
+    else
+    {
+        stream << ' ' << monomialTerms.terms.at(0);
+    }
+
+    for (int i = 1; i < monomialTerms.terms.size(); i++)
+    {
+        stream << " +" << monomialTerms.terms.at(i);
+    }
+
+    return stream;
+};
+
 /*
 class SignomialElement
 {
