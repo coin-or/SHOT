@@ -46,7 +46,7 @@ SHOTSolver::~SHOTSolver()
 
 bool SHOTSolver::setOptions(std::string fileName)
 {
-    std::unique_ptr<OSoLReader> osolreader(new OSoLReader());
+    auto osolreader = std::make_unique<OSoLReader>();
 
     try
     {
@@ -286,9 +286,9 @@ bool SHOTSolver::setProblem(std::string fileName)
         UtilityFunctions::writeStringToFile(filename.str(), problem.str());
     }
 
-    bool status = this->selectStrategy();
-
     verifySettings();
+
+    bool status = this->selectStrategy();
 
     return (true);
 }
@@ -363,75 +363,6 @@ bool SHOTSolver::selectStrategy()
     return (true);
 }
 
-/*
-bool SHOTSolver::setProblem(OSInstance *osInstance)
-{
-    if (static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
-    {
-        if (UtilityFunctions::areAllVariablesReal(osInstance))
-        {
-            env->output->outputInfo(" Using NLP solution strategy.");
-            solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(env, osInstance));
-
-            env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
-        }
-        else
-        {
-            solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMultiTree(env, osInstance));
-            isProblemInitialized = true;
-        }
-
-        return (true);
-    }
-
-    bool useQuadraticObjective = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticObjective;
-    bool useQuadraticConstraints = (static_cast<ES_QuadraticProblemStrategy>(env->settings->getIntSetting("QuadraticStrategy", "Dual"))) == ES_QuadraticProblemStrategy::QuadraticallyConstrained;
-
-    if (useQuadraticObjective && UtilityFunctions::isObjectiveQuadratic(osInstance) && UtilityFunctions::areAllConstraintsLinear(osInstance))
-    //MIQP problem
-    {
-        env->output->outputInfo(" Using MIQP solution strategy.");
-        solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(env, osInstance));
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
-    }
-    //MIQCQP problem
-    else if (useQuadraticConstraints && UtilityFunctions::areAllConstraintsQuadratic(osInstance))
-    {
-        env->output->outputInfo(" Using MIQCQP solution strategy.");
-
-        solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMIQCQP(env, osInstance));
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
-    }
-    else if (UtilityFunctions::areAllVariablesReal(osInstance))
-    {
-        env->output->outputInfo(" Using NLP solution strategy.");
-        solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyNLP(env, osInstance));
-        env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
-    }
-    else
-    {
-        switch (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")))
-        {
-        case (ES_TreeStrategy::SingleTree):
-            env->output->outputInfo(" Using single-tree solution strategy.");
-            solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategySingleTree(env, osInstance));
-            env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
-            break;
-        case (ES_TreeStrategy::MultiTree):
-            env->output->outputInfo(" Using multi-tree solution strategy.");
-            solutionStrategy = std::unique_ptr<ISolutionStrategy>(new SolutionStrategyMultiTree(env, osInstance));
-            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
-            break;
-        default:
-            break;
-        }
-    }
-
-    isProblemInitialized = true;
-
-    return (true);
-}*/
-
 bool SHOTSolver::solveProblem()
 {
     if (env->problem->objectiveFunction->properties.isMinimize)
@@ -446,14 +377,6 @@ bool SHOTSolver::solveProblem()
     }
 
     bool result = solutionStrategy->solveProblem();
-
-    /*
-#ifdef HAS_GAMS
-    if (result && gms2os != NULL)
-    {
-        gms2os->writeResult();
-    }
-#endif*/
 
     if (result)
         isProblemSolved = true;
@@ -682,16 +605,27 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
 
-    // Reformulations to perform
-
-    env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false, "Reformulates a nonlinear objective as an auxilliary constraint");
-    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", false, "Partition nonlinear terms as auxilliary constraints");
-    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false, "Partition quadratic terms as auxilliary constraints");
+    // Reformulations for constraints
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false, "Partition nonlinear terms as auxilliary constraints");
+
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false, "Partition quadratic terms as auxilliary constraints");
 
-    // Reformulations: Quadratic objective and constraints
+    // Reformulations for binary monomials
+    VectorString enumBinaryMonomialReformulation;
+    enumBinaryMonomialReformulation.push_back("None");
+    enumBinaryMonomialReformulation.push_back("Simple");
+    enumBinaryMonomialReformulation.push_back("Costa and Liberti");
+    env->settings->createSetting("Reformulation.Monomials.Formulation", "Model", static_cast<int>(ES_ReformulationBinaryMonomials::Simple), "How to reformulate binary monomials", enumBinaryMonomialReformulation);
+    enumBinaryMonomialReformulation.clear();
 
+    // Reformulations for objective functions
+    env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false, "Reformulates a nonlinear objective as an auxilliary constraint");
+
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", false, "Partition nonlinear terms as auxilliary constraints");
+
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false, "Partition quadratic terms as auxilliary constraints");
+
+    // Reformulations for quadratic objective and constraints
     VectorString enumQPStrategy;
     enumQPStrategy.push_back("All nonlinear");
     enumQPStrategy.push_back("Use quadratic objective");

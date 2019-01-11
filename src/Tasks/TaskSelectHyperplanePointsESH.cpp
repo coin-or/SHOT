@@ -21,10 +21,6 @@ TaskSelectHyperplanePointsESH::TaskSelectHyperplanePointsESH(EnvironmentPtr envP
 
 TaskSelectHyperplanePointsESH::~TaskSelectHyperplanePointsESH()
 {
-    if (hyperplaneSolutionPointStrategyInitialized)
-    {
-        delete tSelectHPPts;
-    }
 }
 
 void TaskSelectHyperplanePointsESH::run()
@@ -40,7 +36,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     {
         if (!hyperplaneSolutionPointStrategyInitialized)
         {
-            tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
+            tSelectHPPts = std::make_unique<TaskSelectHyperplanePointsECP>(env);
             hyperplaneSolutionPointStrategyInitialized = true;
         }
 

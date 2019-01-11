@@ -43,30 +43,20 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, con
     boost::filesystem::path problemFile(filename);
     boost::filesystem::path problemPath = problemFile.parent_path();
 
-    OSInstance *instance;
+    std::shared_ptr<OSInstance> instance;
 
     try
     {
         if (type == E_OSInputFileFormat::OSiL)
         {
-            instance = readInstanceFromOSiLFile(filename);
+            instance = std::shared_ptr<OSInstance>(readInstanceFromOSiLFile(filename));
 
-            //TODO: needed??
-            //env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
-
-            /*
-                TODO: this should be moved elsewhere
-                if (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")) == ES_PrimalNLPSolver::GAMS)
-                {
-                    env->output->outputError("Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
-                    env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
-                }*/
+            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
         else if (type == E_OSInputFileFormat::Ampl)
         {
-            instance = readInstanceFromAmplFile(filename);
+            instance = std::shared_ptr<OSInstance>(readInstanceFromAmplFile(filename));
 
-            //TODO: needed??
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
     }
@@ -82,7 +72,7 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, con
     return (status);
 }
 
-E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, OSInstance *instance)
+E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, std::shared_ptr<OSInstance> instance)
 {
     originalInstance = instance;
 
@@ -90,22 +80,22 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, OSI
     {
         problem->name = instance->getInstanceName();
 
-        if (!copyVariables(instance, problem))
+        if (!copyVariables(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInVariables);
 
-        if (!copyObjectiveFunction(instance, problem))
+        if (!copyObjectiveFunction(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInObjective);
 
-        if (!copyConstraints(instance, problem))
+        if (!copyConstraints(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyLinearTerms(instance, problem))
+        if (!copyLinearTerms(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyQuadraticTerms(instance, problem))
+        if (!copyQuadraticTerms(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyNonlinearExpressions(instance, problem))
+        if (!copyNonlinearExpressions(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
         problem->finalize();
@@ -126,7 +116,7 @@ void ModelingSystemOS::finalizeSolution()
 
 OSInstance *ModelingSystemOS::readInstanceFromOSiL(const std::string &text)
 {
-    auto osilReader = std::shared_ptr<OSiLReader>(new OSiLReader());
+    auto osilReader = std::make_shared<OSiLReader>();
     OSInstance *instance = osilReader->readOSiL(text);
 
     osilReaders.push_back(osilReader); // To be able to properly deleting them without destroying the OSInstance object
@@ -143,7 +133,7 @@ OSInstance *ModelingSystemOS::readInstanceFromOSiLFile(const std::string &filena
 
 OSInstance *ModelingSystemOS::readInstanceFromAmplFile(const std::string &filename)
 {
-    nl2os = std::shared_ptr<OSnl2OS>(new OSnl2OS());
+    nl2os = std::make_shared<OSnl2OS>();
 
     try
     {
@@ -618,11 +608,11 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode *node, 
         return std::make_shared<ExpressionCos>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
 
     case OS_MIN:
-        throw new OperationNotImplementedException("min");
+        throw OperationNotImplementedException("min");
         break;
 
     case OS_MAX:
-        throw new OperationNotImplementedException("max");
+        throw OperationNotImplementedException("max");
         break;
 
     case OS_NUMBER:
@@ -644,7 +634,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode *node, 
         return std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(varnode->coef), std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
     }
     default:
-        throw new OperationNotImplementedException(node->getTokenName());
+        throw OperationNotImplementedException(node->getTokenName());
         break;
     }
 

@@ -49,7 +49,7 @@ class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
     VectorDouble originalLBs;
     VectorDouble originalUBs;
 
-    TaskBase *taskSelectHPPts;
+    std::shared_ptr<TaskBase> taskSelectHPPts;
 
     int originalIterFrequency;
     double originalTimeFrequency;

@@ -1110,6 +1110,42 @@ class ExpressionProduct : public ExpressionGeneral
         return E_NonlinearExpressionTypes::Product;
     }
 
+    inline bool isLinearTerm()
+    {
+        assert(children.expressions.size() > 0);
+
+        if (children.expressions.size() > 2)
+            return (false);
+
+        if (children.expressions.size() == 1)
+        {
+            if (children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        // Have two children
+
+        if (children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant &&
+            children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            return (true);
+        }
+
+        if (children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable &&
+            children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            return (true);
+        }
+
+        return (false);
+    }
+
     inline bool isQuadraticTerm()
     {
         int powerSum = 0;

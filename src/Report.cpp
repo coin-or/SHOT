@@ -455,6 +455,8 @@ void Report::outputProblemInstanceReport()
 {
     std::stringstream report;
 
+    bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
+
     report << "\r\n";
     report << "╶ Problem instance ───────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
     report << "\r\n";
@@ -462,75 +464,207 @@ void Report::outputProblemInstanceReport()
     std::string problemFile = env->settings->getStringSetting("ProblemFile", "Input");
 
     report << " Problem read from file:     " << problemFile;
+    report << "\r\n\r\n";
+
+    if (isReformulated)
+    {
+        report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "" % "Original" % "Reformulated").str() << "\r\n";
+    }
+    else
+    {
+        report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "" % "Original" % "").str() << "\r\n";
+    }
+
     report << "\r\n";
 
-    report << " Objective function type:    ";
+    std::string problemClassificationOrig;
+    std::string problemClassificationRef = "";
+
+    if (env->problem->properties.isLPProblem)
+        problemClassificationOrig = "LP";
+    else if (env->problem->properties.isMILPProblem)
+        problemClassificationOrig = "MILP";
+    else if (env->problem->properties.isQPProblem)
+        problemClassificationOrig = "QP";
+    else if (env->problem->properties.isQCQPProblem)
+        problemClassificationOrig = "QCQP";
+    else if (env->problem->properties.isMIQPProblem)
+        problemClassificationOrig = "MIQP";
+    else if (env->problem->properties.isMIQCQPProblem)
+        problemClassificationOrig = "MIQCQP";
+    else if (env->problem->properties.isNLPProblem)
+        problemClassificationOrig = "NLP";
+    else if (env->problem->properties.isMINLPProblem)
+        problemClassificationOrig = "MINLP";
+
+    if (isReformulated)
+    {
+
+        if (env->reformulatedProblem->properties.isLPProblem)
+            problemClassificationRef = "LP";
+        else if (env->reformulatedProblem->properties.isMILPProblem)
+            problemClassificationRef = "MILP";
+        else if (env->reformulatedProblem->properties.isQPProblem)
+            problemClassificationRef = "QP";
+        else if (env->reformulatedProblem->properties.isQCQPProblem)
+            problemClassificationRef = "QCQP";
+        else if (env->reformulatedProblem->properties.isMIQPProblem)
+            problemClassificationRef = "MIQP";
+        else if (env->reformulatedProblem->properties.isMIQCQPProblem)
+            problemClassificationRef = "MIQCQP";
+        else if (env->reformulatedProblem->properties.isNLPProblem)
+            problemClassificationRef = "NLP";
+        else if (env->reformulatedProblem->properties.isMINLPProblem)
+            problemClassificationRef = "MINLP";
+    }
+
+    report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Problem classification:" % problemClassificationOrig % problemClassificationRef).str() << "\r\n";
+
+    std::string objectiveClassificationOrig;
+    std::string objectiveClassificationRef = "";
 
     switch (static_cast<E_ObjectiveFunctionClassification>(env->problem->objectiveFunction->properties.classification))
     {
     case (E_ObjectiveFunctionClassification::Linear):
-        report << "linear";
+        objectiveClassificationOrig = "linear";
         break;
 
     case (E_ObjectiveFunctionClassification::Quadratic):
-        report << "quadratic";
+        objectiveClassificationOrig = "quadratic";
         break;
 
     case (E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear):
-        report << "quadratic but considered as nonlinear";
+        objectiveClassificationOrig = "quadratic but considered as nonlinear";
         break;
 
     case (E_ObjectiveFunctionClassification::Signomial):
-        report << "signomial";
+        objectiveClassificationOrig = "signomial";
         break;
 
     case (E_ObjectiveFunctionClassification::Nonlinear):
-        report << "nonlinear";
+        objectiveClassificationOrig = "nonlinear";
         break;
 
     case (E_ObjectiveFunctionClassification::GeneralizedSignomial):
-        report << "generalized signomial";
+        objectiveClassificationOrig = "generalized signomial";
         break;
 
     case (E_ObjectiveFunctionClassification::Nonalgebraic):
-        report << "nonalgebraic";
+        objectiveClassificationOrig = "nonalgebraic";
         break;
 
     default:
-        report << "unknown";
+        objectiveClassificationOrig = "unknown";
         break;
     }
 
-    report << "\r\n";
-    report << "\r\n";
-
-    report << " Number of constraints:      " << env->problem->properties.numberOfNumericConstraints << "\r\n";
-
-    if (env->problem->properties.numberOfLinearConstraints > 0)
-        report << "  - linear:                  " << env->problem->properties.numberOfLinearConstraints << "\r\n";
-    if (env->problem->properties.numberOfNonlinearConstraints > 0)
-        report << "  - nonlinear:               " << env->problem->properties.numberOfNonlinearConstraints << "\r\n";
-    if (env->problem->properties.numberOfQuadraticConstraints > 0)
+    if (isReformulated)
     {
-        report << "  - quadratic:               " << env->problem->properties.numberOfQuadraticConstraints;
+        switch (static_cast<E_ObjectiveFunctionClassification>(env->reformulatedProblem->objectiveFunction->properties.classification))
+        {
+        case (E_ObjectiveFunctionClassification::Linear):
+            objectiveClassificationRef = "linear";
+            break;
 
-        //if (env->problem->properties->quadraticTermsReformulatedAsNonlinear)
-        //report << " (considered as nonlinear)\r\n";
-        //else
-        report << "\r\n";
+        case (E_ObjectiveFunctionClassification::Quadratic):
+            objectiveClassificationRef = "quadratic";
+            break;
+
+        case (E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear):
+            objectiveClassificationRef = "quadratic but considered as nonlinear";
+            break;
+
+        case (E_ObjectiveFunctionClassification::Signomial):
+            objectiveClassificationRef = "signomial";
+            break;
+
+        case (E_ObjectiveFunctionClassification::Nonlinear):
+            objectiveClassificationRef = "nonlinear";
+            break;
+
+        case (E_ObjectiveFunctionClassification::GeneralizedSignomial):
+            objectiveClassificationRef = "generalized signomial";
+            break;
+
+        case (E_ObjectiveFunctionClassification::Nonalgebraic):
+            objectiveClassificationRef = "nonalgebraic";
+            break;
+
+        default:
+            objectiveClassificationRef = "unknown";
+            break;
+        }
+    }
+
+    report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Objective function type:" % objectiveClassificationOrig % objectiveClassificationRef).str() << "\r\n";
+
+    report << "\r\n";
+
+    if (isReformulated)
+    {
+        if (env->problem->properties.numberOfNumericConstraints > 0 || env->reformulatedProblem->properties.numberOfNumericConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of constraints:" % env->problem->properties.numberOfNumericConstraints % env->reformulatedProblem->properties.numberOfNumericConstraints).str() << "\r\n";
+
+        if (env->problem->properties.numberOfLinearConstraints > 0 || env->reformulatedProblem->properties.numberOfLinearConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - linear:" % env->problem->properties.numberOfLinearConstraints % env->reformulatedProblem->properties.numberOfLinearConstraints).str() << "\r\n";
+
+        if (env->problem->properties.numberOfQuadraticConstraints > 0 || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - quadratic:" % env->problem->properties.numberOfQuadraticConstraints % env->reformulatedProblem->properties.numberOfQuadraticConstraints).str() << "\r\n";
+
+        if (env->problem->properties.numberOfNonlinearConstraints > 0 || env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - nonlinear:" % env->problem->properties.numberOfNonlinearConstraints % env->reformulatedProblem->properties.numberOfNonlinearConstraints).str() << "\r\n";
+    }
+    else
+    {
+        if (env->problem->properties.numberOfNumericConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of constraints:" % env->problem->properties.numberOfNumericConstraints % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfLinearConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - linear:" % env->problem->properties.numberOfLinearConstraints % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfQuadraticConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - quadratic:" % env->problem->properties.numberOfQuadraticConstraints % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfNonlinearConstraints > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - nonlinear:" % env->problem->properties.numberOfNonlinearConstraints % "").str() << "\r\n";
     }
 
     report << "\r\n";
 
-    report << " Number of variables:        " << env->problem->properties.numberOfVariables << "\r\n";
-    if (env->problem->properties.numberOfRealVariables > 0)
-        report << "  - real:                    " << env->problem->properties.numberOfRealVariables << "\r\n";
-    if (env->problem->properties.numberOfBinaryVariables > 0)
-        report << "  - binary:                  " << env->problem->properties.numberOfBinaryVariables << "\r\n";
-    if (env->problem->properties.numberOfIntegerVariables > 0)
-        report << "  - integer:                 " << env->problem->properties.numberOfIntegerVariables << "\r\n";
-    if (env->problem->properties.numberOfSemicontinuousVariables > 0)
-        report << "  - semicontinuous:          " << env->problem->properties.numberOfSemicontinuousVariables << "\r\n";
+    if (isReformulated)
+    {
+        if (env->problem->properties.numberOfVariables > 0 || env->reformulatedProblem->properties.numberOfVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of variables:" % env->problem->properties.numberOfVariables % env->reformulatedProblem->properties.numberOfVariables).str() << "\r\n";
+
+        if (env->problem->properties.numberOfRealVariables > 0 || env->reformulatedProblem->properties.numberOfRealVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - real:" % env->problem->properties.numberOfRealVariables % env->reformulatedProblem->properties.numberOfRealVariables).str() << "\r\n";
+
+        if (env->problem->properties.numberOfBinaryVariables > 0 || env->reformulatedProblem->properties.numberOfBinaryVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - binary:" % env->problem->properties.numberOfBinaryVariables % env->reformulatedProblem->properties.numberOfBinaryVariables).str() << "\r\n";
+
+        if (env->problem->properties.numberOfIntegerVariables > 0 || env->reformulatedProblem->properties.numberOfIntegerVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - integer:" % env->problem->properties.numberOfIntegerVariables % env->reformulatedProblem->properties.numberOfIntegerVariables).str() << "\r\n";
+
+        if (env->problem->properties.numberOfSemicontinuousVariables > 0 || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - semicontinuous:" % env->problem->properties.numberOfSemicontinuousVariables % env->reformulatedProblem->properties.numberOfSemicontinuousVariables).str() << "\r\n";
+    }
+    else
+    {
+        if (env->problem->properties.numberOfVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of variables:" % env->problem->properties.numberOfVariables % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfRealVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - real:" % env->problem->properties.numberOfRealVariables % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfBinaryVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - binary:" % env->problem->properties.numberOfBinaryVariables % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfIntegerVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - integer:" % env->problem->properties.numberOfIntegerVariables % "").str() << "\r\n";
+
+        if (env->problem->properties.numberOfSemicontinuousVariables > 0)
+            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - semicontinuous:" % env->problem->properties.numberOfSemicontinuousVariables % "").str() << "\r\n";
+    }
 
     env->output->outputSummary(report.str());
 }

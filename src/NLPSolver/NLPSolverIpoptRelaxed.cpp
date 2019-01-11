@@ -13,10 +13,10 @@
 namespace SHOT
 {
 
-NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, OSInstance *instance) : INLPSolver(envPtr)
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, std::shared_ptr<OSInstance> instance) : INLPSolver(envPtr)
 {
     osInstance = instance;
-    osolwriter = new OSoLWriter();
+    osolwriter = std::make_unique<OSoLWriter>();
 
     for (int i = 0; i < osInstance->getVariableNumber(); i++)
     {
@@ -28,7 +28,6 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, OSInstance *
 
 NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
 {
-    delete osolwriter;
 }
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()

@@ -20,7 +20,7 @@ TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPt
     isInitialized = false;
     temporaryOptLimitUsed = false;
 
-    solutionLimitStrategy = new MIPSolutionLimitStrategyIncrease(env);
+    solutionLimitStrategy = std::make_unique<MIPSolutionLimitStrategyIncrease>(env);
     auto initLim = solutionLimitStrategy->getInitialLimit();
     env->dualSolver->MIPSolver->setSolutionLimit(initLim);
     previousSolLimit = initLim;
@@ -30,7 +30,6 @@ TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPt
 
 TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy()
 {
-    delete solutionLimitStrategy;
 }
 
 void TaskExecuteSolutionLimitStrategy::run()
@@ -43,9 +42,6 @@ void TaskExecuteSolutionLimitStrategy::run()
 
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
-
-    //previousSolLimit = prevIter->usedMIPSolutionLimit;
-    //std::cout << "prev solution limit" << previousSolLimit << " at iteration " << currIter->iterationNumber << std::endl;
 
     if (temporaryOptLimitUsed)
     {

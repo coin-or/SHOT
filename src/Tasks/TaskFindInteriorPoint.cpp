@@ -72,7 +72,7 @@ void TaskFindInteriorPoint::run()
     {
         auto solutionStatus = NLPSolvers.at(i)->solveProblem();
 
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
 
         tmpIP->NLPSolver = static_cast<ES_InteriorPointStrategy>(env->settings->getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
 

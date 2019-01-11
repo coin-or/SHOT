@@ -432,7 +432,10 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
         break;
 
     case gmoorder_Q:
-        objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
+        if (env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model") >= static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective))
+            objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
+        else
+            objectiveFunction = std::make_shared<NonlinearObjectiveFunction>();
         break;
 
     case gmoorder_NL:
@@ -1206,12 +1209,36 @@ void ModelingSystemGAMS::simplifyNonlinearExpressions(ProblemPtr problem)
     if (problem->objectiveFunction->properties.hasNonlinearExpression)
     {
         auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(problem->objectiveFunction);
-        objective->nonlinearExpression = simplify(objective->nonlinearExpression);
+
+        auto nonlinearExpression = simplify(objective->nonlinearExpression);
+        //std::cout << "simplified expression :" << *nonlinearExpression << '\n';
+
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant] = extractTermsAndConstant(nonlinearExpression);
+
+        if (tmpLinearTerms.terms.size() > 0)
+            objective->add(tmpLinearTerms);
+
+        if (tmpQuadraticTerms.terms.size() > 0)
+            objective->add(tmpQuadraticTerms);
+
+        if (tmpNonlinearExpression != nullptr)
+            objective->nonlinearExpression = simplify(tmpNonlinearExpression);
     }
 
     for (auto &C : problem->nonlinearConstraints)
     {
-        C->nonlinearExpression = simplify(C->nonlinearExpression);
+        auto nonlinearExpression = simplify(C->nonlinearExpression);
+
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant] = extractTermsAndConstant(nonlinearExpression);
+
+        if (tmpLinearTerms.terms.size() > 0)
+            C->add(tmpLinearTerms);
+
+        if (tmpQuadraticTerms.terms.size() > 0)
+            C->add(tmpQuadraticTerms);
+
+        if (tmpNonlinearExpression != nullptr)
+            C->nonlinearExpression = simplify(tmpNonlinearExpression);
     }
 
     for (auto &C : problem->nonlinearConstraints)
@@ -1280,7 +1307,7 @@ void ModelingSystemGAMS::simplifyNonlinearExpressions(ProblemPtr problem)
                 else if (T->getType() == E_NonlinearExpressionTypes::Product && T->getNumberOfChildren() == 3)
                 {
                     auto product = std::dynamic_pointer_cast<ExpressionProduct>(T);
-                    Variables variables(3);
+                    Variables variables;
                     double constant = 0.0;
                     int numVariables = 0;
                     int numConstants = 0;
@@ -1325,6 +1352,6 @@ void ModelingSystemGAMS::simplifyNonlinearExpressions(ProblemPtr problem)
     {
         C->nonlinearExpression = simplify(C->nonlinearExpression);
     }
-} // namespace SHOT
+}
 
 } // Namespace SHOT

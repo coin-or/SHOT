@@ -171,8 +171,8 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
         return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
     }
 
-    GRBEnv *gurobiEnv;
-    GRBModel *gurobiModel;
+    std::unique_ptr<GRBEnv> gurobiEnv;
+    std::unique_ptr<GRBModel> gurobiModel;
     GRBLinExpr objectiveLinearExpression;
     GRBQuadExpr objectiveQuadraticExpression;
     GRBLinExpr constraintLinearExpression;

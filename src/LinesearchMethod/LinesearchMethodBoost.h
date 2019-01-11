@@ -97,8 +97,8 @@ class LinesearchMethodBoost : public ILinesearchMethod
                                                const NonlinearObjectiveFunction *objectiveFunction);
 
   private:
-    Test *test;
-    TestObjective *testObjective;
+    std::unique_ptr<Test> test;
+    std::unique_ptr<TestObjective> testObjective;
     EnvironmentPtr env;
 };
 } // namespace SHOT

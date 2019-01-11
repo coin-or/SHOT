@@ -21,20 +21,14 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     E_NLPSolutionStatus status;
 
-    if (IpoptNLPSolver != NULL)
-    {
-        delete IpoptNLPSolver;
-        IpoptNLPSolver = NULL;
-    }
-
-    IpoptNLPSolver = new IpoptSolver();
+    IpoptNLPSolver = std::make_unique<IpoptSolver>();
 
     try
     {
 
         setIntegers(false);
 
-        IpoptNLPSolver->osinstance = osInstance;
+        IpoptNLPSolver->osinstance = osInstance.get();
         updateSettings();
 
         std::string solStatus;
@@ -106,23 +100,11 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     }
     catch (std::exception &e)
     {
-        if (IpoptNLPSolver != NULL)
-        {
-            delete IpoptNLPSolver;
-            IpoptNLPSolver = NULL;
-        }
-
         env->output->outputError(" Error when solving relaxed problem with Ipopt!", e.what());
         status = E_NLPSolutionStatus::Error;
     }
     catch (...)
     {
-        if (IpoptNLPSolver != NULL)
-        {
-            delete IpoptNLPSolver;
-            IpoptNLPSolver = NULL;
-        }
-
         env->output->outputError(" Unspecified error when solving relaxed problem with Ipopt!");
         status = E_NLPSolutionStatus::Error;
     }
@@ -249,7 +231,7 @@ VectorDouble NLPSolverIpoptBase::getSolution()
 
 void NLPSolverIpoptBase::setInitialSettings()
 {
-    osOption = new OSOption();
+    osOption = std::make_unique<OSOption>();
 
     std::string IpoptSolver = "";
 
@@ -493,8 +475,8 @@ void NLPSolverIpoptBase::updateVariableUpperBound(int variableIndex, double boun
 
 void NLPSolverIpoptBase::updateSettings()
 {
-    IpoptNLPSolver->osoption = osOption;
-    IpoptNLPSolver->osol = osolwriter->writeOSoL(osOption);
+    IpoptNLPSolver->osoption = osOption.get();
+    IpoptNLPSolver->osol = osolwriter->writeOSoL(osOption.get());
 }
 
 void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
@@ -502,7 +484,7 @@ void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
     osolwriter->m_bWhiteSpace = false;
 
     std::stringstream ss;
-    ss << osolwriter->writeOSoL(osOption);
+    ss << osolwriter->writeOSoL(osOption.get());
 
     UtilityFunctions::writeStringToFile(fileName, ss.str());
 }

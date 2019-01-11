@@ -44,19 +44,9 @@ void Problem::updateProperties()
 {
     objectiveFunction->updateProperties();
 
-    for (auto &C : linearConstraints)
+    for (auto &C : numericConstraints)
     {
-        C->properties.classification = E_ConstraintClassification::Linear;
-    }
-
-    for (auto &C : quadraticConstraints)
-    {
-        C->properties.classification = E_ConstraintClassification::Quadratic;
-    }
-
-    for (auto &C : nonlinearConstraints)
-    {
-        C->properties.classification = E_ConstraintClassification::Nonlinear;
+        C->updateProperties();
     }
 
     if (!variablesUpdated)
@@ -75,12 +65,29 @@ void Problem::updateProperties()
 
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
-    properties.numberOfQuadraticConstraints = quadraticConstraints.size();
-    properties.numberOfNonlinearConstraints = nonlinearConstraints.size();
-    properties.numberOfNonlinearExpressions = nonlinearConstraints.size();
 
-    bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic);
-    bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic);
+    bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasNonlinearExpression));
+    bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic && objectiveFunction->properties.hasQuadraticTerms);
+
+    int numQuadraticConstraints = 0;
+    int numNonlinearConstraints = 0;
+
+    for (auto &C : quadraticConstraints)
+    {
+        if (C->properties.hasQuadraticTerms)
+            numQuadraticConstraints++;
+    }
+
+    for (auto &C : nonlinearConstraints)
+    {
+        if (C->properties.hasNonlinearExpression)
+            numNonlinearConstraints++;
+    }
+
+    properties.numberOfQuadraticConstraints = numQuadraticConstraints;
+    properties.numberOfNonlinearConstraints = numNonlinearConstraints;
+    properties.numberOfNonlinearExpressions = numNonlinearConstraints + (isObjNonlinear ? 1 : 0);
+
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
     bool areVarsDiscrete = (properties.numberOfDiscreteVariables > 0);
@@ -96,26 +103,98 @@ void Problem::updateProperties()
         properties.isDiscrete = true;
 
         if (areConstrsNonlinear || isObjNonlinear)
+        {
             properties.isMINLPProblem = true;
+            properties.isNLPProblem = false;
+            properties.isMIQPProblem = false;
+            properties.isQPProblem = false;
+            properties.isMIQCQPProblem = false;
+            properties.isQCQPProblem = false;
+            properties.isMILPProblem = false;
+            properties.isLPProblem = false;
+        }
         else if (areConstrsQuadratic)
+        {
+            properties.isMINLPProblem = false;
+            properties.isNLPProblem = false;
+            properties.isMIQPProblem = false;
+            properties.isQPProblem = false;
             properties.isMIQCQPProblem = true;
+            properties.isQCQPProblem = false;
+            properties.isMILPProblem = false;
+            properties.isLPProblem = false;
+        }
         else if (isObjQuadratic)
+        {
+            properties.isMINLPProblem = false;
+            properties.isNLPProblem = false;
             properties.isMIQPProblem = true;
+            properties.isQPProblem = false;
+            properties.isMIQCQPProblem = false;
+            properties.isQCQPProblem = false;
+            properties.isMILPProblem = false;
+            properties.isLPProblem = false;
+        }
         else
+        {
+            properties.isMINLPProblem = false;
+            properties.isNLPProblem = false;
+            properties.isMIQPProblem = false;
+            properties.isQPProblem = false;
+            properties.isMIQCQPProblem = false;
+            properties.isQCQPProblem = false;
             properties.isMILPProblem = true;
+            properties.isLPProblem = false;
+        }
     }
     else
     {
         properties.isDiscrete = false;
 
         if (areConstrsNonlinear || isObjNonlinear)
+        {
+            properties.isMINLPProblem = false;
             properties.isNLPProblem = true;
+            properties.isMIQPProblem = false;
+            properties.isQPProblem = false;
+            properties.isMIQCQPProblem = false;
+            properties.isQCQPProblem = false;
+            properties.isMILPProblem = false;
+            properties.isLPProblem = false;
+        }
         else if (areConstrsQuadratic)
+        {
+            properties.isMINLPProblem = false;
+            properties.isNLPProblem = false;
+            properties.isMIQPProblem = false;
+            properties.isQPProblem = false;
+            properties.isMIQCQPProblem = false;
             properties.isQCQPProblem = true;
+            properties.isMILPProblem = false;
+            properties.isLPProblem = false;
+        }
         else if (isObjQuadratic)
+        {
+            properties.isMINLPProblem = false;
+            properties.isNLPProblem = false;
+            properties.isMIQPProblem = false;
             properties.isQPProblem = true;
+            properties.isMIQCQPProblem = false;
+            properties.isQCQPProblem = false;
+            properties.isMILPProblem = false;
+            properties.isLPProblem = false;
+        }
         else
+        {
+            properties.isMINLPProblem = false;
+            properties.isNLPProblem = false;
+            properties.isMIQPProblem = false;
+            properties.isQPProblem = false;
+            properties.isMIQCQPProblem = false;
+            properties.isQCQPProblem = false;
+            properties.isMILPProblem = false;
             properties.isLPProblem = true;
+        }
     }
 
     properties.isValid = true;
@@ -360,7 +439,7 @@ VariablePtr Problem::getVariable(int variableIndex)
 {
     if (variableIndex > allVariables.size())
     {
-        throw new VariableNotFoundException(" with index " + std::to_string(variableIndex));
+        throw VariableNotFoundException(" with index " + std::to_string(variableIndex));
     }
 
     return allVariables.at(variableIndex);
@@ -370,7 +449,7 @@ ConstraintPtr Problem::getConstraint(int constraintIndex)
 {
     if (constraintIndex > numericConstraints.size())
     {
-        throw new ConstraintNotFoundException(" with index " + std::to_string(constraintIndex));
+        throw ConstraintNotFoundException(" with index " + std::to_string(constraintIndex));
     }
 
     return numericConstraints.at(constraintIndex);

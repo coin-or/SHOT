@@ -18,7 +18,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
 
-    primalStrategyFixedNLP = new PrimalSolutionStrategyFixedNLP(env);
+    primalStrategyFixedNLP = std::make_unique<PrimalSolutionStrategyFixedNLP>(env);
 
     env->timing->stopTimer("PrimalBoundStrategyNLP");
     env->timing->stopTimer("PrimalStrategy");
@@ -26,7 +26,6 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
 TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP()
 {
-    delete primalStrategyFixedNLP;
 }
 
 void TaskSelectPrimalCandidatesFromNLP::run()

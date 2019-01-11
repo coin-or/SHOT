@@ -69,13 +69,16 @@ void LinearObjectiveFunction::add(LinearTermPtr term)
 
 void LinearObjectiveFunction::updateProperties()
 {
-    if (linearTerms.terms.size() > 0)
+    if (linearTerms.terms.size() == 0)
+    {
+        properties.hasLinearTerms = false;
+    }
+    else
     {
         properties.hasLinearTerms = true;
     }
 
-    if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart || properties.hasQuadraticTerms))
-        properties.classification = E_ObjectiveFunctionClassification::Linear;
+    properties.classification = E_ObjectiveFunctionClassification::Linear;
 
     ObjectiveFunction::updateProperties();
 };
@@ -164,12 +167,12 @@ void QuadraticObjectiveFunction::add(QuadraticTermPtr term)
 
 void QuadraticObjectiveFunction::updateProperties()
 {
+    LinearObjectiveFunction::updateProperties();
+
     if (quadraticTerms.terms.size() > 0)
     {
         properties.hasQuadraticTerms = true;
-
-        if (!(properties.hasNonlinearExpression || properties.hasSignomialTerms || properties.hasNonalgebraicPart))
-            properties.classification = E_ObjectiveFunctionClassification::Quadratic;
+        properties.classification = E_ObjectiveFunctionClassification::Quadratic;
 
         for (auto const &T : quadraticTerms.terms)
         {
@@ -197,8 +200,10 @@ void QuadraticObjectiveFunction::updateProperties()
             }
         }
     }
-
-    LinearObjectiveFunction::updateProperties();
+    else
+    {
+        properties.hasQuadraticTerms = false;
+    }
 };
 
 E_Curvature QuadraticObjectiveFunction::checkConvexity()
@@ -286,7 +291,7 @@ void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
     if (nonlinearExpression.get() != nullptr)
     {
         auto tmpExpr = nonlinearExpression;
-        auto nonlinearExpression(new ExpressionPlus(tmpExpr, expression));
+        auto nonlinearExpression(std::make_shared<ExpressionPlus>(tmpExpr, expression));
     }
     else
     {
@@ -303,25 +308,17 @@ void NonlinearObjectiveFunction::updateFactorableFunction()
 
 void NonlinearObjectiveFunction::updateProperties()
 {
+    QuadraticObjectiveFunction::updateProperties();
+
     if (nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
-
-        if (properties.hasNonalgebraicPart)
-        {
-            properties.classification = E_ObjectiveFunctionClassification::Nonalgebraic;
-        }
-        else if (properties.hasSignomialTerms)
-        {
-            properties.classification = E_ObjectiveFunctionClassification::GeneralizedSignomial;
-        }
-        else
-        {
-            properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
-        }
+        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
     }
-
-    QuadraticObjectiveFunction::updateProperties();
+    else
+    {
+        properties.hasNonlinearExpression = false;
+    }
 }
 
 E_Curvature NonlinearObjectiveFunction::checkConvexity()

@@ -28,7 +28,7 @@ class TaskExecuteSolutionLimitStrategy : public TaskBase
     virtual std::string getType();
 
   private:
-    IMIPSolutionLimitStrategy *solutionLimitStrategy;
+    std::unique_ptr<IMIPSolutionLimitStrategy> solutionLimitStrategy;
 
     bool isInitialized;
     bool temporaryOptLimitUsed;

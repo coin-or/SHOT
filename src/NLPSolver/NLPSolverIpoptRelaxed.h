@@ -16,7 +16,7 @@ namespace SHOT
 class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
   public:
-    NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, OSInstance *instance);
+    NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, std::shared_ptr<OSInstance> instance);
     virtual ~NLPSolverIpoptRelaxed();
 
     virtual VectorDouble getSolution();

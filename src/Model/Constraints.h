@@ -67,6 +67,8 @@ class Constraint
     void takeOwnership(ProblemPtr owner);
 
     virtual std::ostream &print(std::ostream &) const = 0;
+
+    virtual void updateProperties() = 0;
 };
 
 std::ostream &operator<<(std::ostream &stream, ConstraintPtr constraint);
@@ -89,6 +91,8 @@ class NumericConstraint : public Constraint, public std::enable_shared_from_this
     virtual bool isFulfilled(const VectorDouble &point) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
+
+    virtual void updateProperties() = 0;
 };
 
 class LinearConstraint : public NumericConstraint
@@ -131,6 +135,8 @@ class LinearConstraint : public NumericConstraint
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
 
+    virtual void updateProperties() override;
+
     std::ostream &print(std::ostream &stream) const override;
 };
 
@@ -144,7 +150,7 @@ class QuadraticConstraint : public LinearConstraint
   public:
     QuadraticTerms quadraticTerms;
 
-    QuadraticConstraint(){};
+    QuadraticConstraint() : LinearConstraint(){};
 
     QuadraticConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
     {
@@ -193,6 +199,8 @@ class QuadraticConstraint : public LinearConstraint
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point, double correction = 0.0) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
+
+    virtual void updateProperties() override;
 
     std::ostream &print(std::ostream &stream) const override;
 };
@@ -287,6 +295,8 @@ class NonlinearConstraint : public QuadraticConstraint
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble &point, double correction = 0.0) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
+
+    virtual void updateProperties() override;
 
     std::ostream &print(std::ostream &stream) const override;
 };

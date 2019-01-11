@@ -476,14 +476,14 @@ struct SortPred
 
 std::string Settings::getSettingsInOSolFormat()
 {
-    OSoLWriter *osolwriter = new OSoLWriter();
+    auto osolwriter = std::make_unique<OSoLWriter>();
     osolwriter->m_bWhiteSpace = false;
 
     boost::property_tree::ptree pt;
     boost::property_tree::xml_writer_settings<std::string> settings(' ', 1);
 
     std::stringstream ss;
-    ss << osolwriter->writeOSoL(getSettingsAsOSOption());
+    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
 
@@ -493,23 +493,19 @@ std::string Settings::getSettingsInOSolFormat()
     std::ostringstream oss;
     write_xml(oss, pt, settings);
 
-    delete osolwriter;
-
     return (oss.str());
 }
 
 std::string Settings::getSettingsAsString()
 {
-    OSoLWriter *osolwriter = new OSoLWriter();
+    std::unique_ptr<OSoLWriter> osolwriter;
     osolwriter->m_bWhiteSpace = false;
 
     boost::property_tree::ptree pt;
 
     std::stringstream ss;
 
-    auto osOption = getSettingsAsOSOption();
-    ss << osolwriter->writeOSoL(osOption);
-    delete osOption;
+    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
 
@@ -530,23 +526,19 @@ std::string Settings::getSettingsAsString()
         oss << child.second.get<std::string>("<xmlattr>.value", "");
     }
 
-    delete osolwriter;
-
     return (oss.str());
 }
 
 std::string Settings::getUpdatedSettingsAsString()
 {
-    OSoLWriter *osolwriter = new OSoLWriter();
+    auto osolwriter = std::make_unique<OSoLWriter>();
     osolwriter->m_bWhiteSpace = false;
 
     boost::property_tree::ptree pt;
 
     std::stringstream ss;
 
-    auto osOption = getSettingsAsOSOption();
-    ss << osolwriter->writeOSoL(osOption);
-    delete osOption;
+    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
 
@@ -574,16 +566,14 @@ std::string Settings::getUpdatedSettingsAsString()
         oss << "  " << category << "." << name << " = " << value << std::endl;
     }
 
-    delete osolwriter;
-
     return (oss.str());
 }
 
-OSOption *Settings::getSettingsAsOSOption()
+std::unique_ptr<OSOption> Settings::getSettingsAsOSOption()
 {
     output->outputDebug("Starting conversion of settings to OSOption object.");
 
-    OSOption *options = new OSOption();
+    auto options = std::make_unique<OSOption>();
 
     for (SettingsIter iterator = _settings.begin(); iterator != _settings.end(); iterator++)
     {
@@ -643,13 +633,13 @@ std::string Settings::getSettingsInGAMSOptFormat()
 
 std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
 {
-    OSoLWriter *osolwriter = new OSoLWriter();
+    auto osolwriter = std::make_unique<OSoLWriter>();
     osolwriter->m_bWhiteSpace = false;
 
     boost::property_tree::ptree pt;
 
     std::stringstream ss;
-    ss << osolwriter->writeOSoL(getSettingsAsOSOption());
+    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
 
     read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
 
@@ -698,21 +688,15 @@ std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
         oss << std::endl;
     }
 
-    delete osolwriter;
-
     return (oss.str());
 }
 
 void Settings::readSettingsFromOSoL(std::string osol)
 {
-
     output->outputInfo("Starting conversion of settings from OSoL.");
 
-    OSoLReader *osolreader = new OSoLReader();
-
+    auto osolreader = std::make_unique<OSoLReader>();
     readSettingsFromOSOption(osolreader->readOSoL(osol));
-
-    delete osolreader;
 }
 
 void Settings::readSettingsFromGAMSOptFormat(std::string options)

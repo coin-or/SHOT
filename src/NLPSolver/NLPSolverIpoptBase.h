@@ -18,10 +18,10 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 {
   private:
   protected:
-    OSInstance *osInstance;
-    OSOption *osOption;
-    IpoptSolver *IpoptNLPSolver = NULL;
-    OSoLWriter *osolwriter;
+    std::shared_ptr<OSInstance> osInstance;
+    std::unique_ptr<OSOption> osOption;
+    std::unique_ptr<IpoptSolver> IpoptNLPSolver;
+    std::unique_ptr<OSoLWriter> osolwriter;
 
     VectorInteger fixedVariableIndexes;
     VectorDouble fixedVariableValues;

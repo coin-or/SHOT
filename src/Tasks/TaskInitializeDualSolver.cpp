@@ -21,7 +21,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
     if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
         env->output->outputError("Error in solver definition. Check option 'Dual.MIP.Solver'.");
-        throw new ErrorClass("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
+        throw ErrorClass("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
     }
 
     bool solverSelected = false;

@@ -238,6 +238,19 @@ enum class ES_MIPSolver
     None
 };
 
+enum class ES_MIPPresolveStrategy
+{
+    Never,
+    Once,
+    EveryIteration
+};
+
+enum class ES_OutputDirectory
+{
+    Problem,
+    Program
+};
+
 enum class ES_PrimalNLPFixedPoint
 {
     AllSolutions,
@@ -255,24 +268,18 @@ enum class ES_PrimalNLPSolver
     None
 };
 
-enum class ES_MIPPresolveStrategy
-{
-    Never,
-    Once,
-    EveryIteration
-};
-
-enum class ES_OutputDirectory
-{
-    Problem,
-    Program
-};
-
 enum class ES_PrimalNLPStrategy
 {
     AlwaysUse,
     IterationOrTime,
     IterationOrTimeAndAllFeasibleSolutions
+};
+
+enum class ES_ReformulationBinaryMonomials
+{
+    None,
+    Simple,
+    CostaLiberti
 };
 
 enum class ES_QuadraticProblemStrategy

@@ -35,7 +35,7 @@ void TaskUpdateInteriorPoint::run()
     // If we do not have an interior point, but uses the ESH dual strategy, update with primal solution
     if (env->dualSolver->MIPSolver->interiorPts.size() == 0 && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
         tmpIP->point = env->results->primalSolutions.at(0).point;
         tmpIP->maxDevatingConstraint = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
 
@@ -55,7 +55,7 @@ void TaskUpdateInteriorPoint::run()
     // Add the new point if it is deeper within the feasible region
     if (maxDevPrimal.value < env->dualSolver->MIPSolver->interiorPts.at(0)->maxDevatingConstraint.value)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
@@ -65,7 +65,7 @@ void TaskUpdateInteriorPoint::run()
     }
     else if (env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
 
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
@@ -83,7 +83,7 @@ void TaskUpdateInteriorPoint::run()
     }
     else if (env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
 
         // Add the new point only
         tmpIP->point = tmpPrimalPoint;
@@ -95,7 +95,7 @@ void TaskUpdateInteriorPoint::run()
     }
     else if (env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
 
         // Find a new point in the midpoint between the original and new
         for (int i = 0; i < tmpPrimalPoint.size(); i++)

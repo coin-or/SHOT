@@ -28,24 +28,24 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray &vars, 
 
     if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
     {
-        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(new TaskUpdateInteriorPoint(env));
-        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsESH>(new TaskSelectHyperplanePointsESH(env));
+        tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
+        taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
     }
     else
     {
-        taskSelectHPPts = std::shared_ptr<TaskSelectHyperplanePointsECP>(new TaskSelectHyperplanePointsECP(env));
+        taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
     }
 
-    tSelectPrimNLP = std::shared_ptr<TaskSelectPrimalCandidatesFromNLP>(new TaskSelectPrimalCandidatesFromNLP(env));
+    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
 
     if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskSelectHPPtsByObjectiveLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(new TaskSelectHyperplanePointsByObjectiveLinesearch(env));
+        taskSelectHPPtsByObjectiveLinesearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
     }
 
     if (env->settings->getBoolSetting("Linesearch.Use", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(new TaskSelectPrimalCandidatesFromLinesearch(env));
+        taskSelectPrimalSolutionFromLinesearch = std::make_shared<TaskSelectPrimalCandidatesFromLinesearch>(env);
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();

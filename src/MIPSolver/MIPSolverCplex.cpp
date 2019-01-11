@@ -844,7 +844,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     try
     {
-        cplexInstance.addMIPStart(cplexVars, startVal);
+        //cplexInstance.addMIPStart(cplexVars, startVal);
     }
     catch (IloException &e)
     {

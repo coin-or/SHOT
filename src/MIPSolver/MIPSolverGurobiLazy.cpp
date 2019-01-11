@@ -20,8 +20,8 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
 
     try
     {
-        gurobiEnv = new GRBEnv();
-        gurobiModel = new GRBModel(*gurobiEnv);
+        gurobiEnv = std::make_unique<GRBEnv>();
+        gurobiModel = std::make_unique<GRBModel>(gurobiEnv.get());
     }
     catch (GRBException &e)
     {

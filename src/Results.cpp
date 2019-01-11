@@ -116,7 +116,7 @@ Results::~Results()
 
 void Results::initializeResults(int numObj, int numVar, int numConstr)
 {
-    osResult = std::unique_ptr<OSResult>(new OSResult());
+    osResult = std::make_unique<OSResult>();
     osResult->setObjectiveNumber(numObj);
     osResult->setVariableNumber(numVar);
     osResult->setConstraintNumber(numConstr);

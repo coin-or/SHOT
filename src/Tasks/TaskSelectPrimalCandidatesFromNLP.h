@@ -24,6 +24,6 @@ class TaskSelectPrimalCandidatesFromNLP : public TaskBase
     virtual std::string getType();
 
   private:
-    PrimalSolutionStrategyFixedNLP *primalStrategyFixedNLP;
+    std::unique_ptr<PrimalSolutionStrategyFixedNLP> primalStrategyFixedNLP;
 };
 } // namespace SHOT

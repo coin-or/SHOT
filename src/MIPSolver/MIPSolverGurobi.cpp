@@ -30,8 +30,6 @@ MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
 
 MIPSolverGurobi::~MIPSolverGurobi()
 {
-    delete gurobiModel;
-    delete gurobiEnv;
 }
 
 bool MIPSolverGurobi::initializeProblem()
@@ -40,8 +38,8 @@ bool MIPSolverGurobi::initializeProblem()
 
     try
     {
-        gurobiEnv = new GRBEnv();
-        gurobiModel = new GRBModel(*gurobiEnv);
+        gurobiEnv = std::make_unique<GRBEnv>();
+        gurobiModel = std::make_unique<GRBModel>(gurobiEnv.get());
     }
     catch (GRBException &e)
     {
@@ -338,24 +336,22 @@ int MIPSolverGurobi::addLinearConstraint(const std::vector<PairIndexValue> &elem
 {
     try
     {
-        GRBLinExpr *expr = new GRBLinExpr(0.0);
+        auto expr = std::make_unique<GRBLinExpr>(0.0);
 
         for (int i = 0; i < elements.size(); i++)
         {
             auto variable = gurobiModel->getVar(elements.at(i).index);
-            *expr = *expr + elements.at(i).value * variable;
+            expr.get() = expr.get() + elements.at(i).value * variable;
         }
 
         if (isGreaterThan)
         {
-            gurobiModel->addConstr(-constant >= *expr, "");
+            gurobiModel->addConstr(-constant >= expr.get(), "");
         }
         else
         {
-            gurobiModel->addConstr(*expr <= -constant, "");
+            gurobiModel->addConstr(expr.get() <= -constant, "");
         }
-
-        delete expr;
 
         gurobiModel->update();
     }

@@ -28,7 +28,7 @@ class TaskSelectHyperplanePointsESH : public TaskBase
     virtual std::string getType();
 
   private:
-    TaskSelectHyperplanePointsECP *tSelectHPPts;
+    std::unique_ptr<TaskSelectHyperplanePointsECP> tSelectHPPts;
     bool hyperplaneSolutionPointStrategyInitialized = false;
     std::vector<Constraint *> nonlinearConstraints;
 };

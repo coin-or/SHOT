@@ -95,15 +95,13 @@ double TestObjective::operator()(const double x)
 
 LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr)
 {
-    test = new Test(env);
-    testObjective = new TestObjective(env);
+    test = std::make_unique<Test>(env);
+    testObjective = std::make_unique <TestObjective>(env);
 }
 
 LinesearchMethodBoost::~LinesearchMethodBoost()
 {
     activeConstraints.clear();
-    delete test;
-    delete testObjective;
 }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const VectorDouble &ptA, const VectorDouble &ptB,
@@ -216,7 +214,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
     if (!validNewPt) // ptNew Outside feasible region
     {
         env->primalSolver->addPrimalSolutionCandidate(ptNew2, E_PrimalSolutionSource::Linesearch,
-                                                 env->results->getCurrentIteration()->iterationNumber);
+                                                      env->results->getCurrentIteration()->iterationNumber);
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew2, ptNew);
         return (tmpPair);
@@ -224,7 +222,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
     else
     {
         env->primalSolver->addPrimalSolutionCandidate(ptNew, E_PrimalSolutionSource::Linesearch,
-                                                 env->results->getCurrentIteration()->iterationNumber);
+                                                      env->results->getCurrentIteration()->iterationNumber);
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew, ptNew2);
         return (tmpPair);

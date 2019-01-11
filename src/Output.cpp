@@ -14,7 +14,7 @@ namespace SHOT
 {
 Output::Output()
 {
-    osOutput = std::unique_ptr<OSOutput>(new OSOutput());
+    osOutput = std::make_unique<OSOutput>();
 
     // Adds a file output
     osOutput->AddChannel("shotlogfile");

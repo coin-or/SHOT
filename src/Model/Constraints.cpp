@@ -83,7 +83,7 @@ void LinearConstraint::add(LinearTerms terms)
 
 void LinearConstraint::add(LinearTermPtr term)
 {
-    linearTerms.terms.push_back(term);
+    linearTerms.add(term);
     properties.hasLinearTerms = true;
 };
 
@@ -134,6 +134,20 @@ NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDoubl
 std::shared_ptr<NumericConstraint> LinearConstraint::getPointer()
 {
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
+};
+
+void LinearConstraint::updateProperties()
+{
+    if (linearTerms.terms.size() > 0)
+    {
+        properties.hasLinearTerms = true;
+        properties.classification = E_ConstraintClassification::Linear;
+    }
+    else
+    {
+        properties.hasLinearTerms = false;
+        properties.classification = E_ConstraintClassification::Linear;
+    }
 };
 
 void QuadraticConstraint::add(LinearTerms terms)
@@ -240,6 +254,21 @@ NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDo
 std::shared_ptr<NumericConstraint> QuadraticConstraint::getPointer()
 {
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
+};
+
+void QuadraticConstraint::updateProperties()
+{
+    LinearConstraint::updateProperties();
+
+    if (quadraticTerms.terms.size() > 0)
+    {
+        properties.hasQuadraticTerms = true;
+        properties.classification = E_ConstraintClassification::Quadratic;
+    }
+    else
+    {
+        properties.hasQuadraticTerms = false;
+    }
 };
 
 void NonlinearConstraint::add(LinearTerms terms)
@@ -359,6 +388,21 @@ std::shared_ptr<NumericConstraint> NonlinearConstraint::getPointer()
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
 };
 
+void NonlinearConstraint::updateProperties()
+{
+    QuadraticConstraint::updateProperties();
+
+    if (nonlinearExpression != nullptr)
+    {
+        properties.hasNonlinearExpression = true;
+        properties.classification = E_ConstraintClassification::Nonlinear;
+    }
+    else
+    {
+        properties.hasNonlinearExpression = false;
+    }
+};
+
 std::ostream &operator<<(std::ostream &stream, NumericConstraintPtr constraint)
 {
     stream << *constraint;
@@ -373,7 +417,7 @@ std::ostream &operator<<(std::ostream &stream, LinearConstraintPtr constraint)
 
 std::ostream &LinearConstraint::print(std::ostream &stream) const
 {
-    if (valueLHS > SHOT_DBL_MIN)
+    if (valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
     if (linearTerms.terms.size() > 0)
@@ -385,7 +429,9 @@ std::ostream &LinearConstraint::print(std::ostream &stream) const
     if (constant < 0)
         stream << constant;
 
-    if (valueRHS < SHOT_DBL_MAX)
+    if (valueLHS == valueRHS)
+        stream << " = " << valueRHS;
+    else if (valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;

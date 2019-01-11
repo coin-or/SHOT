@@ -47,19 +47,23 @@ inline std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
 {
     if (term->coefficient == 1.0)
     {
-        stream << '+';
+        stream << " +";
     }
     else if (term->coefficient == -1.0)
     {
-        stream << '-';
+        stream << " -";
+    }
+    else if (term->coefficient == 0.0)
+    {
+        stream << " +0.0*";
     }
     else if (term->coefficient > 0)
     {
-        stream << '+' << term->coefficient << '*';
+        stream << " +" << term->coefficient << '*';
     }
     else
     {
-        stream << term->coefficient << '*';
+        stream << " " << term->coefficient << '*';
     }
 
     stream << term->variable->name;

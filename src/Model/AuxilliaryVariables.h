@@ -21,8 +21,10 @@ class AuxilliaryVariable : public Variable
     bool isAuxilliary = true;
 
     // These are used to calculate the value of the variable
+    double constant;
     LinearTerms linearTerms;
     QuadraticTerms quadraticTerms;
+    MonomialTerms monomialTerms;
     NonlinearExpressionPtr nonlinearExpression;
 
     AuxilliaryVariable()
@@ -51,8 +53,11 @@ class AuxilliaryVariable : public Variable
 
     inline double calculateValue(VectorDouble point)
     {
-        double value = linearTerms.calculate(point);
+        double value = constant;
+
+        value += linearTerms.calculate(point);
         value += quadraticTerms.calculate(point);
+        value += monomialTerms.calculate(point);
 
         if (nonlinearExpression)
             value += nonlinearExpression->calculate(point);

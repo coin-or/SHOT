@@ -22,12 +22,6 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
 
     switch (static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")))
     {
-    /*case (ES_PrimalNLPSolver::CuttingPlane):
-    {
-        env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::CuttingPlane;
-        NLPSolver = new NLPSolverCuttingPlaneRelaxed(env);
-        break;
-    }*/
     case (ES_PrimalNLPSolver::Ipopt):
     {
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
@@ -44,7 +38,7 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
 #endif
     default:
         env->output->outputError("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
-        throw new ErrorClass("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
+        throw ErrorClass("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
 
         throw std::logic_error("Unknown PrimalNLPSolver setting.");
     }
@@ -53,11 +47,11 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
     {
         if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsESH(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
         }
         else
         {
-            taskSelectHPPts = new TaskSelectHyperplanePointsECP(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
         }
     }
 
@@ -77,8 +71,6 @@ PrimalSolutionStrategyFixedNLP::PrimalSolutionStrategyFixedNLP(EnvironmentPtr en
 
 PrimalSolutionStrategyFixedNLP::~PrimalSolutionStrategyFixedNLP()
 {
-    delete taskSelectHPPts;
-
     discreteVariableIndexes.clear();
     testedPoints.clear();
     fixPoint.clear();
@@ -245,9 +237,9 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
                 if (interval > 0.1 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
-
-                env->primalSolver->addPrimalSolutionCandidate(variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
             }
+
+            env->primalSolver->addPrimalSolutionCandidate(variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 
             if (env->problem->properties.numberOfNonlinearConstraints > 0)
             {
@@ -311,11 +303,11 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
 
                 if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
                 {
-                    static_cast<TaskSelectHyperplanePointsESH *>(taskSelectHPPts)->run(solutionPoints);
+                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
                 }
                 else
                 {
-                    static_cast<TaskSelectHyperplanePointsECP *>(taskSelectHPPts)->run(solutionPoints);
+                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
                 }
             }
 

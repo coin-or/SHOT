@@ -39,12 +39,12 @@ class ModelingSystemOS : public IModelingSystem
     E_ProblemCreationStatus createProblem(ProblemPtr &problem, const std::string &filename, const E_OSInputFileFormat &fileformat);
 
     // Create the optimization problem from an OSInstance
-    E_ProblemCreationStatus createProblem(ProblemPtr &problem, OSInstance *instance);
+    E_ProblemCreationStatus createProblem(ProblemPtr &problem, std::shared_ptr<OSInstance> instance);
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution();
 
-    OSInstance *originalInstance;
+    std::shared_ptr<OSInstance> originalInstance;
 
   private:
     OSInstance *readInstanceFromOSiL(const std::string &text);

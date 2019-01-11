@@ -77,19 +77,32 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionNegat
         else if (expression->child->getType() == E_NonlinearExpressionTypes::Constant)
         {
             std::dynamic_pointer_cast<ExpressionConstant>(expression->child)->constant *= -1;
+
             return (expression->child);
+        }
+        else if (expression->child->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(expression->child)->variable;
+
+            auto product = std::make_shared<ExpressionProduct>();
+
+            product->children.add(std::make_shared<ExpressionConstant>(-1.0));
+            product->children.add(std::make_shared<ExpressionVariable>(variable));
+
+            return (product);
         }
         else if (expression->child->getType() == E_NonlinearExpressionTypes::Product)
         {
             auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression->child);
 
             product->children.add(std::make_shared<ExpressionConstant>(-1.0));
+
             return (simplify(expression->child));
         }
 
         return expression;
     }
-} // namespace SHOT
+}
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionInvert> expression)
 {
@@ -386,35 +399,39 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTimes
 
     auto tmp = secondChild->getType();
 
-    if (firstChild->getType() == E_NonlinearExpressionTypes::Constant)
+    if (firstChild->getType() == E_NonlinearExpressionTypes::Constant && secondChild->getType() == E_NonlinearExpressionTypes::Constant)
     {
-        if (secondChild->getType() == E_NonlinearExpressionTypes::Constant)
-        {
-            double constant = std::dynamic_pointer_cast<ExpressionConstant>(firstChild)->constant * std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
-            return std::make_shared<ExpressionConstant>(constant);
-        }
-        else
-        {
-            auto product = std::make_shared<ExpressionProduct>();
-            product->children.add(firstChild);
-            product->children.add(secondChild);
-            return product;
-        }
+        double constant = std::dynamic_pointer_cast<ExpressionConstant>(firstChild)->constant * std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
+        return std::make_shared<ExpressionConstant>(constant);
     }
-    else if (secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+
+    auto product = std::make_shared<ExpressionProduct>();
+
+    if (firstChild->getType() == E_NonlinearExpressionTypes::Product)
     {
-        auto product = std::make_shared<ExpressionProduct>();
-        product->children.add(secondChild);
-        product->children.add(firstChild);
-        return product;
+        for (auto &C : std::dynamic_pointer_cast<ExpressionProduct>(firstChild)->children.expressions)
+        {
+            product->children.add(C);
+        }
     }
     else
     {
-        auto product = std::make_shared<ExpressionProduct>();
         product->children.add(firstChild);
-        product->children.add(secondChild);
-        return product;
     }
+
+    if (secondChild->getType() == E_NonlinearExpressionTypes::Product)
+    {
+        for (auto &C : std::dynamic_pointer_cast<ExpressionProduct>(secondChild)->children.expressions)
+        {
+            product->children.add(C);
+        }
+    }
+    else
+    {
+        product->children.add(secondChild);
+    }
+
+    return simplify(product);
 }
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionDivide> expression)
@@ -593,6 +610,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     if (constant != 0.0)
         sum->children.add(std::make_shared<ExpressionConstant>(constant));
 
+    if (children.expressions.size() == 0) // Everything has been simplified away
+        return (std::make_shared<ExpressionConstant>(0.0));
+
     for (auto &C : children.expressions)
     {
         sum->children.add(C);
@@ -651,5 +671,221 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
     }
 
     return (expression);
+}
+
+inline std::optional<LinearTermPtr> convertProductToLinearTerm(std::shared_ptr<ExpressionProduct> product)
+{
+    std::optional<LinearTermPtr> resultingLinearTerm;
+
+    if (product->getNumberOfChildren() == 0)
+        return resultingLinearTerm;
+
+    if (!product->isLinearTerm())
+        return resultingLinearTerm;
+
+    // Now know we have a linear term
+
+    if (product->getNumberOfChildren() == 1)
+    {
+        resultingLinearTerm = std::make_shared<LinearTerm>(1.0, std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(0))->variable);
+    }
+    else if (product->children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant &&
+             product->children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
+    {
+        auto variable = std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(1))->variable;
+        double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.expressions.at(0))->constant;
+
+        resultingLinearTerm = std::make_shared<LinearTerm>(constant, variable);
+    }
+    else if (product->children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable &&
+             product->children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        auto variable = std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(0))->variable;
+        double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.expressions.at(1))->constant;
+
+        resultingLinearTerm = std::make_shared<LinearTerm>(constant, variable);
+    }
+
+    return resultingLinearTerm;
+}
+
+inline std::optional<QuadraticTermPtr> convertProductToQuadraticTerm(std::shared_ptr<ExpressionProduct> product)
+{
+    std::optional<QuadraticTermPtr> resultingQuadraticTerm;
+
+    if (product->getNumberOfChildren() == 0)
+        return resultingQuadraticTerm;
+
+    if (!product->isQuadraticTerm())
+        return resultingQuadraticTerm;
+
+    // Now know we have a quadratic term
+
+    double coefficient = 1.0;
+    VariablePtr firstVariable;
+    VariablePtr secondVariable;
+
+    for (auto &C : product->children.expressions)
+    {
+        if (C->getType() == E_NonlinearExpressionTypes::Square)
+        {
+            auto square = std::dynamic_pointer_cast<ExpressionSquare>(C);
+
+            firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(square->child)->variable;
+            secondVariable = firstVariable;
+        }
+        else if (C->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            if (!firstVariable)
+                firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(C)->variable;
+            else
+                secondVariable = std::dynamic_pointer_cast<ExpressionVariable>(C)->variable;
+        }
+        else if (C->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            coefficient = coefficient * std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+        }
+        else
+        {
+            return (resultingQuadraticTerm);
+        }
+    }
+
+    resultingQuadraticTerm = std::make_shared<QuadraticTerm>(coefficient, firstVariable, secondVariable);
+
+    return resultingQuadraticTerm;
+}
+
+inline std::optional<MonomialTermPtr> convertProductToMonomialTerm(std::shared_ptr<ExpressionProduct> product)
+{
+    std::optional<MonomialTermPtr> resultingMonomialTerm;
+
+    if (product->getNumberOfChildren() == 0 || !product->isMonomialTerm())
+    {
+        return resultingMonomialTerm;
+    }
+
+    double coefficient = 1.0;
+    Variables variables;
+
+    for (auto &C : product->children.expressions)
+    {
+        if (C->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            variables.push_back(std::dynamic_pointer_cast<ExpressionVariable>(C)->variable);
+        }
+        else if (C->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            coefficient = coefficient * std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+        }
+        else
+        {
+            // Returns the unassigned optional argument since the term is not monomial
+            return resultingMonomialTerm;
+        }
+    }
+
+    resultingMonomialTerm = std::make_shared<MonomialTerm>(coefficient, variables);
+
+    return resultingMonomialTerm;
+}
+
+inline std::tuple<LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double> extractTermsAndConstant(NonlinearExpressionPtr expression)
+{
+    double constant = 0.0;
+    LinearTerms linearTerms;
+    QuadraticTerms quadraticTerms;
+    NonlinearExpressionPtr nonlinearExpression;
+
+    //std::cout << "extract: " << *expression << '\n';
+
+    if (expression->getType() == E_NonlinearExpressionTypes::Constant)
+    {
+        constant += std::dynamic_pointer_cast<ExpressionConstant>(expression)->constant;
+
+        nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+    }
+    else if (expression->getType() == E_NonlinearExpressionTypes::Variable)
+    {
+        auto variable = std::dynamic_pointer_cast<ExpressionVariable>(expression);
+        linearTerms.add(std::make_shared<LinearTerm>(1.0, variable->variable));
+
+        nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+    }
+    else if (expression->getType() == E_NonlinearExpressionTypes::Product)
+    {
+        auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression);
+
+        if (product->isQuadraticTerm())
+        {
+            auto optional = convertProductToQuadraticTerm(product);
+
+            if (optional)
+            {
+                quadraticTerms.add(optional.value());
+
+                //std::cout << "product converted to quadratic term: " << optional.value() << std::endl;
+
+                nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+            }
+        }
+        else if (product->isLinearTerm())
+        {
+            auto optional = convertProductToLinearTerm(product);
+
+            if (optional)
+            {
+                linearTerms.add(optional.value());
+
+                //std::cout << "product converted to linear term: " << optional.value() << std::endl;
+
+                nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+            }
+        }
+        else
+        {
+            nonlinearExpression = expression;
+
+            //std::cout << "no extraction from product: " << *nonlinearExpression << std::endl;
+        }
+    }
+    else if (expression->getType() == E_NonlinearExpressionTypes::Sum)
+    {
+        for (auto &C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children.expressions)
+        {
+            //std::cout << "extracting from term in sum: " << *C << std::endl;
+            auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant] = extractTermsAndConstant(C);
+
+            //if (tmpNonlinearExpression != nullptr)
+            //    std::cout << "extracting results: " << *tmpNonlinearExpression << std::endl;
+            linearTerms.add(tmpLinearTerms);
+            quadraticTerms.add(tmpQuadraticTerms);
+            constant += tmpConstant;
+
+            if (tmpNonlinearExpression == nullptr) // the nonlinear expression has been fully extracted
+            {
+                C = std::make_shared<ExpressionConstant>(0.0);
+            }
+            else
+            {
+                C = tmpNonlinearExpression;
+            }
+        }
+
+        nonlinearExpression = expression;
+    }
+    else
+    {
+        nonlinearExpression = expression;
+
+        //std::cout << "no extraction from: " << *nonlinearExpression << std::endl;
+    }
+
+    //if (nonlinearExpression != nullptr)
+    //    std::cout << "final extracting results nonlinear: " << *nonlinearExpression << std::endl;
+
+    //std::cout << "number of terms: " << linearTerms.terms.size() << ", " << quadraticTerms.terms.size() << std::endl;
+
+    return std::make_tuple(linearTerms, quadraticTerms, nonlinearExpression, constant);
 }
 } // namespace SHOT
