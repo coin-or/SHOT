@@ -17,8 +17,6 @@ MIPSolverOsiCbc::MIPSolverOsiCbc(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    relaxationStrategy = std::make_unique<RelaxationStrategyStandard>(env);
-
     initializeProblem();
     checkParameters();
 }

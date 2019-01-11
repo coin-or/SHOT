@@ -38,32 +38,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     reformulatedProblem = std::make_shared<Problem>(env);
     reformulatedProblem->name = env->problem->name + " (reformulated)";
 
-    /*
-    reformulatedProblem->allVariables.reserve(env->problem->allVariables.size());
-    reformulatedProblem->realVariables.reserve(env->problem->realVariables.size());
-    reformulatedProblem->binaryVariables.reserve(env->problem->binaryVariables.size());
-    reformulatedProblem->integerVariables.reserve(env->problem->integerVariables.size());
-    reformulatedProblem->semicontinuousVariables.reserve(env->problem->semicontinuousVariables.size());
-    reformulatedProblem->nonlinearVariables.reserve(env->problem->nonlinearVariables.size());
-*/
     reformulatedProblem->variableLowerBounds = env->problem->variableLowerBounds;
     reformulatedProblem->variableUpperBounds = env->problem->variableUpperBounds;
-
-    //reformulatedProblem->numericConstraints.reserve(env->problem->numericConstraints.size());
-    //reformulatedProblem->linearConstraints.reserve(env->problem->linearConstraints.size());
-
-    if (useQuadraticConstraints)
-    {
-        //reformulatedProblem->quadraticConstraints.reserve(env->problem->quadraticConstraints.size());
-        //reformulatedProblem->nonlinearConstraints.reserve(env->problem->nonlinearConstraints.size() + additionalNumberOfNonlinearConstraints);
-    }
-    else
-    {
-        //reformulatedProblem->nonlinearConstraints.reserve(env->problem->nonlinearConstraints.size() + env->problem->quadraticConstraints.size() + additionalNumberOfNonlinearConstraints);
-    }
-
-    //reformulatedProblem->factorableFunctionVariables.reserve(env->problem->factorableFunctionVariables.size());
-    //reformulatedProblem->factorableFunctions.reserve(env->problem->factorableFunctions.size());
 
     // Copying variables
     for (auto &V : env->problem->allVariables)
@@ -72,11 +48,13 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         reformulatedProblem->add(std::move(variable));
     }
 
+    // Reformulating constraints
     for (auto &C : env->problem->numericConstraints)
     {
         reformulateConstraint(C);
     }
 
+    // Reformulating objective function
     reformulateObjectiveFunction();
 
     reformulatedProblem->finalize();

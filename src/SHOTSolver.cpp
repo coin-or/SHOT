@@ -570,6 +570,8 @@ void SHOTSolver::initializeSettings()
 
     // Dual strategy settings: Relaxation strategies
 
+    env->settings->createSetting("Relaxation.Use", "Dual", true, "Initially solve continous dual relaxations");
+
     env->settings->createSetting("Relaxation.Frequency", "Dual", 0,
                                  "The frequency to solve an LP problem: 0: Disable", 0, SHOT_INT_MAX);
 

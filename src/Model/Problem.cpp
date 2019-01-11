@@ -90,7 +90,8 @@ void Problem::updateProperties()
 
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
-    bool areVarsDiscrete = (properties.numberOfDiscreteVariables > 0);
+
+    properties.isDiscrete = (properties.numberOfDiscreteVariables > 0);
 
     if (areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
@@ -98,10 +99,8 @@ void Problem::updateProperties()
     if (objectiveFunction->properties.hasNonlinearExpression)
         properties.numberOfNonlinearExpressions++;
 
-    if (areVarsDiscrete)
+    if (properties.isDiscrete)
     {
-        properties.isDiscrete = true;
-
         if (areConstrsNonlinear || isObjNonlinear)
         {
             properties.isMINLPProblem = true;

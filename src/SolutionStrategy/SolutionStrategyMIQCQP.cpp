@@ -30,9 +30,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    //TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    //env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
-
     TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 

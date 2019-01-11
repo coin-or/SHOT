@@ -61,8 +61,11 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     TaskBase *tAddHPs = new TaskAddHyperplanes(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
-    env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+    if (env->settings->getBoolSetting("Relaxation.Use", "Dual"))
+    {
+        TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+        env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
+    }
 
     if (static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
     {
@@ -139,7 +142,11 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
+    if (env->settings->getBoolSetting("Relaxation.Use", "Dual"))
+    {
+        TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+        env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
+    }
 
     env->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 

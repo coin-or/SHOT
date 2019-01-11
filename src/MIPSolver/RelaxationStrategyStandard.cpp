@@ -27,7 +27,7 @@ void RelaxationStrategyStandard::setInitial()
 {
     LPFinished = false;
 
-    if (env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") > 0 && env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
+    if (env->settings->getBoolSetting("Relaxation.Use", "Dual") && env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") > 0 && env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
     {
         this->setActive();
     }
@@ -45,7 +45,27 @@ void RelaxationStrategyStandard::executeStrategy()
         return (this->setActive());
     }
 
-    if (isLPStepFinished() || isConstraintToleranceReached() || isGapReached() || isIterationLimitReached() || isTimeLimitReached() || isObjectiveStagnant())
+    if (isLPStepFinished())
+    {
+        this->setInactive();
+    }
+    else if (isConstraintToleranceReached())
+    {
+        this->setInactive();
+    }
+    else if (isGapReached())
+    {
+        this->setInactive();
+    }
+    else if (isIterationLimitReached())
+    {
+        this->setInactive();
+    }
+    else if (isTimeLimitReached())
+    {
+        this->setInactive();
+    }
+    else if (isObjectiveStagnant())
     {
         this->setInactive();
     }

@@ -46,7 +46,7 @@ E_IterationProblemType MIPSolverBase::getCurrentProblemType()
 
 void MIPSolverBase::executeRelaxationStrategy()
 {
-    if (this->relaxationStrategy.get() == nullptr)
+    if (this->relaxationStrategy == nullptr || this->relaxationStrategy.get() == nullptr)
     {
         relaxationStrategy = std::make_unique<RelaxationStrategyStandard>(env);
     }
