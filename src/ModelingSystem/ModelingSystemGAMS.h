@@ -59,19 +59,12 @@ class ModelingSystemGAMS : public IModelingSystem
 
     void clearGAMSObjects();
 
-    /*OSInstance *readInstanceFromOSiL(const std::string &text);
-    OSInstance *readInstanceFromOSiLFile(const std::string &filename);
-    OSInstance *readInstanceFromAmplFile(const std::string &filename);*/
-
     bool copyVariables(ProblemPtr destination);
     bool copyObjectiveFunction(ProblemPtr destination);
     bool copyConstraints(ProblemPtr destination);
     bool copyLinearTerms(ProblemPtr destination);
     bool copyQuadraticTerms(ProblemPtr destination);
     bool copyNonlinearExpressions(ProblemPtr destination);
-
-    void simplifyNonlinearExpressions(ProblemPtr problem);
-    //NonlinearExpressionPtr convertOSNonlinearNode(const ProblemPtr &destination);
 
     static void applyOperation(std::vector<NonlinearExpressionPtr> &stack, NonlinearExpressionPtr op, int nargs);
 

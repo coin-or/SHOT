@@ -888,4 +888,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double> e
 
     return std::make_tuple(linearTerms, quadraticTerms, nonlinearExpression, constant);
 }
+
+void simplifyNonlinearExpressions(ProblemPtr problem);
+
 } // namespace SHOT

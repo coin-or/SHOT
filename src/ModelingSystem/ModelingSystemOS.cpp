@@ -98,6 +98,9 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, std
         if (!copyNonlinearExpressions(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
+        problem->updateProperties();
+        simplifyNonlinearExpressions(problem);
+
         problem->finalize();
     }
     catch (std::exception &e)
