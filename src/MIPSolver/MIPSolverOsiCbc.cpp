@@ -433,6 +433,10 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     }
 }
 
+void MIPSolverOsiCbc::setCutOffAsConstraint(double cutOff)
+{
+}
+
 void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {
     std::vector<std::pair<std::string, double>> variableValues;

@@ -186,6 +186,9 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     TaskBase *tGoto = new TaskGoto(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
 
+    TaskBase *tAddObjectiveCut = new TaskAddObjectiveCutFromPrimal(env, "InitIter");
+    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tAddObjectiveCut);
+
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 

@@ -148,6 +148,8 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 
     virtual void setCutOff(double cutOff);
 
+    virtual void setCutOffAsConstraint(double cutOff);
+
     virtual void addMIPStart(VectorDouble point);
     virtual void deleteMIPStarts();
 
@@ -185,6 +187,7 @@ class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 
     IloNumVarArray cplexVars;
     IloRangeArray cplexConstrs;
+    IloExpr cplexObjectiveExpression;
     std::vector<IloConversion> cplexVarConvers;
 
     IloExpr objExpression;

@@ -525,7 +525,7 @@ void SHOTSolver::initializeSettings()
     // Dual strategy settings: MIP solver
 
     env->settings->createSetting("MIP.CutOffTolerance", "Dual", 0.00001,
-                                 "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", 0.0, SHOT_DBL_MAX);
+                                 "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     VectorString enumPresolve;
     enumPresolve.push_back("Never");

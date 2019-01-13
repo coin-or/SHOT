@@ -179,12 +179,14 @@ bool MIPSolverCplex::finalizeObjective(bool isMinimize, double constant)
 
         if (isMinimize)
         {
-            cplexModel.add(IloMinimize(cplexEnv, objExpression));
+            cplexObjectiveExpression = objExpression;
+            cplexModel.add(IloMinimize(cplexEnv, cplexObjectiveExpression));
             isMinimizationProblem = true;
         }
         else
         {
-            cplexModel.add(IloMaximize(cplexEnv, objExpression));
+            cplexObjectiveExpression = objExpression;
+            cplexModel.add(IloMaximize(cplexEnv, cplexObjectiveExpression));
             isMinimizationProblem = false;
         }
     }
@@ -580,6 +582,12 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
             for (int i = numOrigConstraints; i < rows; i++)
             {
+                if (i == cutOffConstraintIndex)
+                {
+                    lb.add(0.0);
+                    continue;
+                }
+
                 lb.add((double)i * i);
             }
 
@@ -612,7 +620,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
                     cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.1 * infeas[i]);
                 }
 
-                std::cout << "modified constraints\n";
+                env->output->outputAlways("        Number of constraints modified: " + std::to_string(infeas.getSize()));
 
                 cplexInstance.extract(cplexModel);
                 //writeProblemToFile("test.lp");
@@ -626,8 +634,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             }
             else
             {
-                std::cout << "*** Could not repair the infeasibility" << std::endl;
-                throw(-1);
+                env->output->outputAlways("        Could not repair the infeasiblity");
             }
         }
     }
@@ -805,19 +812,74 @@ void MIPSolverCplex::setCutOff(double cutOff)
         {
             cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
 
-            env->output->outputInfo(
+            env->output->outputAlways(
                 "     Setting cutoff value to " + std::to_string(cutOff + cutOffTol) + " for minimization.");
         }
         else
         {
             cplexInstance.setParam(IloCplex::CutLo, cutOff - cutOffTol);
-            env->output->outputInfo(
+            env->output->outputAlways(
                 "     Setting cutoff value to " + std::to_string(cutOff - cutOffTol) + " for maximization.");
         }
     }
     catch (IloException &e)
     {
         env->output->outputError("Error when setting cut off value", e.getMessage());
+    }
+}
+
+void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
+{
+    try
+    {
+        if (!cutOffConstraintDefined)
+        {
+            if (env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+            {
+                IloRange tmpRange(cplexEnv, cutOff, cplexObjectiveExpression);
+                cplexConstrs.add(tmpRange);
+                cplexModel.add(tmpRange);
+
+                env->output->outputAlways(
+                    "     Setting cutoff constraint to " + std::to_string(cutOff) + " for maximization.");
+            }
+            else
+            {
+                IloRange tmpRange(cplexEnv, -IloInfinity, cplexObjectiveExpression, cutOff);
+                cplexConstrs.add(tmpRange);
+                cplexModel.add(tmpRange);
+
+                env->output->outputAlways(
+                    "     Setting cutoff constraint to " + std::to_string(cutOff) + " for minimization.");
+            }
+
+            cutOffConstraintIndex = cplexConstrs.getSize() - 1;
+
+            modelUpdated = true;
+
+            cutOffConstraintDefined = true;
+        }
+        else
+        {
+            if (env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+            {
+                cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
+                env->output->outputAlways(
+                    "     Setting cutoff constraint value to " + std::to_string(cutOff) + " for maximization.");
+            }
+            else
+            {
+                cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
+                env->output->outputAlways(
+                    "     Setting cutoff constraint to " + std::to_string(cutOff) + " for minimization.");
+            }
+
+            modelUpdated = true;
+        }
+    }
+    catch (IloException &e)
+    {
+        env->output->outputError("Error when setting cut off value through constraint", e.getMessage());
     }
 }
 

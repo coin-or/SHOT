@@ -70,6 +70,7 @@ class IMIPSolver
     virtual void setTimeLimit(double seconds) = 0;
 
     virtual void setCutOff(double cutOff) = 0;
+    virtual void setCutOffAsConstraint(double cutOff) = 0;
 
     virtual void addMIPStart(VectorDouble point) = 0;
     virtual void deleteMIPStarts() = 0;

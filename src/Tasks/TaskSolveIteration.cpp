@@ -32,6 +32,7 @@ void TaskSolveIteration::run()
     auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
+    /*
     if (env->results->primalSolutions.size() > 0)
     {
         if (isMinimization)
@@ -44,7 +45,7 @@ void TaskSolveIteration::run()
             env->dualSolver->MIPSolver->setCutOff(
                 env->results->getPrimalBound() - env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
         }
-    }
+    }*/
 
     if (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable() && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {

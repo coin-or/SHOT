@@ -138,6 +138,7 @@ class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
     virtual void setTimeLimit(double seconds);
 
     virtual void setCutOff(double cutOff);
+    virtual void setCutOffAsConstraint(double cutOff);
 
     virtual void addMIPStart(VectorDouble point);
     virtual void deleteMIPStarts();

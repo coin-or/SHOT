@@ -605,6 +605,10 @@ void MIPSolverGurobi::setCutOff(double cutOff)
     }
 }
 
+void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
+{
+}
+
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
     int numVar = gurobiModel->get(GRB_IntAttr_NumVars);

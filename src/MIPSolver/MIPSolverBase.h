@@ -39,6 +39,9 @@ class MIPSolverBase
     VectorDouble variableUpperBounds;
     VectorString variableNames;
 
+    bool cutOffConstraintDefined = false;
+    int cutOffConstraintIndex;
+
   public:
     ~MIPSolverBase();
 
@@ -48,6 +51,8 @@ class MIPSolverBase
     virtual void createInteriorHyperplane(Hyperplane hyperplane);
 
     std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane);
+
+    virtual void setCutOffAsConstraint(double cutOff) = 0;
 
     virtual bool getDiscreteVariableStatus();
 
