@@ -242,14 +242,6 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
 
         env->output->outputInfo("     Gradient for variable " + G.first->name + " in point " + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": " + std::to_string(signFactor * G.second));
     }
-    /*
-    if (signFactor != 1.0) // have a greater than constraint
-    {
-        for (auto &E : elements)
-            E.value = -1.0 * E.value;
-
-        constant = -1.0 * constant;
-    }*/
 
     std::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
 

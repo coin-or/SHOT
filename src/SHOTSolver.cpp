@@ -607,6 +607,9 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0, "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
 
+    // Reformulations for bilinears
+    env->settings->createSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", false, "Add convex envelopes (subject to original bounds) to bilinear terms");
+
     // Reformulations for constraints
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false, "Partition nonlinear terms as auxilliary constraints");
 

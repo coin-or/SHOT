@@ -371,7 +371,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble &
     }
 
     return gradient;
-}; // namespace SHOT
+};
 
 bool NonlinearConstraint::isFulfilled(const VectorDouble &point)
 {
