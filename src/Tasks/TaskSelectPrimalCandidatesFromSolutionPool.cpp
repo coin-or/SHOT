@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,19 +13,18 @@
 namespace SHOT
 {
 
-TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
 }
 
-TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolutionPool()
-{
-}
+TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolutionPool() {}
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->isMIP() || env->results->usedSolutionStrategy == E_SolutionStrategy::NLP)
+    if(currIter->isMIP() || env->results->usedSolutionStrategy == E_SolutionStrategy::NLP)
     {
         env->timing->startTimer("PrimalStrategy");
         auto allSolutions = env->results->getCurrentIteration()->solutionPoints;

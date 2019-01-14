@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -12,13 +12,14 @@
 namespace SHOT
 {
 
-TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool useLazyStrategy) : TaskBase(envPtr)
+TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool useLazyStrategy)
+    : TaskBase(envPtr)
 {
     auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
 
     env->timing->startTimer("DualStrategy");
 
-    if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
+    if(solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
         env->output->outputError("Error in solver definition. Check option 'Dual.MIP.Solver'.");
         throw ErrorClass("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
@@ -26,13 +27,13 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 
     bool solverSelected = false;
 
-    if (useLazyStrategy)
+    if(useLazyStrategy)
     {
 #ifdef HAS_CPLEX
-        if (solver == ES_MIPSolver::Cplex)
+        if(solver == ES_MIPSolver::Cplex)
         {
 #ifdef HAS_CPLEX_NEW_CALLBACK
-            if (env->settings->getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
+            if(env->settings->getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
             {
                 env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexLazy>(env));
                 env->results->usedMIPSolver = ES_MIPSolver::Cplex;
@@ -51,7 +52,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
 
 #ifdef HAS_GUROBI
-        else if (solver == ES_MIPSolver::Gurobi)
+        else if(solver == ES_MIPSolver::Gurobi)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobiLazy>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
@@ -60,7 +61,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         }
 #endif
 
-        if (solver == ES_MIPSolver::Cbc)
+        if(solver == ES_MIPSolver::Cbc)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Cbc;
@@ -72,7 +73,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
     {
 
 #ifdef HAS_CPLEX
-        if (solver == ES_MIPSolver::Cplex)
+        if(solver == ES_MIPSolver::Cplex)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplex>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Cplex;
@@ -82,7 +83,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
 
 #ifdef HAS_GUROBI
-        if (solver == ES_MIPSolver::Gurobi)
+        if(solver == ES_MIPSolver::Gurobi)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
@@ -90,7 +91,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             solverSelected = true;
         }
 #endif
-        if (solver == ES_MIPSolver::Cbc)
+        if(solver == ES_MIPSolver::Cbc)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Cbc;
@@ -99,7 +100,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         }
     }
 
-    if (!solverSelected)
+    if(!solverSelected)
     {
         env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
         env->results->usedMIPSolver = ES_MIPSolver::Cbc;
@@ -110,13 +111,9 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskInitializeDualSolver::~TaskInitializeDualSolver()
-{
-}
+TaskInitializeDualSolver::~TaskInitializeDualSolver() {}
 
-void TaskInitializeDualSolver::run()
-{
-}
+void TaskInitializeDualSolver::run() {}
 std::string TaskInitializeDualSolver::getType()
 {
     std::string type = typeid(this).name();

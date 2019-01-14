@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,19 +13,20 @@
 namespace SHOT
 {
 
-TaskCheckIterationLimit::TaskCheckIterationLimit(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckIterationLimit::TaskCheckIterationLimit(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr)
+    , taskIDIfTrue(taskIDTrue)
 {
 }
 
-TaskCheckIterationLimit::~TaskCheckIterationLimit()
-{
-}
+TaskCheckIterationLimit::~TaskCheckIterationLimit() {}
 
 void TaskCheckIterationLimit::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") + env->settings->getIntSetting("IterationLimit", "Termination"))
+    if(currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual")
+            + env->settings->getIntSetting("IterationLimit", "Termination"))
     {
         env->results->terminationReason = E_TerminationReason::IterationLimit;
         env->tasks->setNextTask(taskIDIfTrue);

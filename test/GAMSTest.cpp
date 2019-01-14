@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,7 +15,7 @@ using namespace SHOT;
 bool ReadGAMSProblem(std::string filename);
 bool SolveGAMSProblem(std::string filename);
 
-int GAMSTest(int argc, char *argv[])
+int GAMSTest(int argc, char* argv[])
 {
     osoutput->AddChannel("shotlogfile");
 
@@ -23,9 +23,9 @@ int GAMSTest(int argc, char *argv[])
 
     int choice = defaultchoice;
 
-    if (argc > 1)
+    if(argc > 1)
     {
-        if (sscanf(argv[1], "%d", &choice) != 1)
+        if(sscanf(argv[1], "%d", &choice) != 1)
         {
             printf("Couldn't parse that input as a number\n");
             return -1;
@@ -34,7 +34,7 @@ int GAMSTest(int argc, char *argv[])
 
     bool passed = true;
 
-    switch (choice)
+    switch(choice)
     {
     case 1:
         std::cout << "Starting test to read GMS files:" << std::endl;
@@ -50,7 +50,7 @@ int GAMSTest(int argc, char *argv[])
         std::cout << "Test #" << choice << " does not exist!\n";
     }
 
-    if (passed)
+    if(passed)
         return 0;
     else
         return -1;
@@ -71,7 +71,7 @@ bool ReadGAMSProblem(std::string filename)
 
     try
     {
-        if (solver->setProblem(filename))
+        if(solver->setProblem(filename))
         {
             passed = true;
         }
@@ -80,7 +80,7 @@ bool ReadGAMSProblem(std::string filename)
             passed = false;
         }
     }
-    catch (ErrorClass &e)
+    catch(ErrorClass& e)
     {
         std::cout << "Error: " << e.errormsg << std::endl;
         return false;
@@ -101,11 +101,11 @@ bool SolveGAMSProblem(std::string filename)
     env->report = ReportPtr(new Report(env));
     std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
 
-    //solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+    // solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
 
     try
     {
-        if (solver->setProblem(filename))
+        if(solver->setProblem(filename))
         {
             passed = true;
         }
@@ -114,7 +114,7 @@ bool SolveGAMSProblem(std::string filename)
             passed = false;
         }
     }
-    catch (ErrorClass &e)
+    catch(ErrorClass& e)
     {
         std::cout << "Error: " << e.errormsg << std::endl;
         return false;
@@ -123,22 +123,21 @@ bool SolveGAMSProblem(std::string filename)
     solver->solveProblem();
     std::string osrl = solver->getOSrL();
     std::string trace = solver->getTraceResult();
-    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    if(!UtilityFunctions::writeStringToFile("result.osrl", osrl))
     {
         std::cout << "Could not write results to OSrL file." << std::endl;
         passed = false;
     }
 
-    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    if(!UtilityFunctions::writeStringToFile("trace.trc", trace))
     {
         std::cout << "Could not write results to trace file." << std::endl;
         passed = false;
     }
 
-    if (solver->getNumberOfPrimalSolutions() > 0)
+    if(solver->getNumberOfPrimalSolutions() > 0)
     {
-        std::cout << std::endl
-                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
+        std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {

@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -17,7 +17,7 @@ namespace SHOT
 {
 class IMIPSolutionLimitStrategy
 {
-  public:
+public:
     virtual ~IMIPSolutionLimitStrategy(){};
 
     virtual bool updateLimit() = 0;
@@ -28,6 +28,6 @@ class IMIPSolutionLimitStrategy
 
     EnvironmentPtr env;
 
-  protected:
+protected:
 };
 } // namespace SHOT

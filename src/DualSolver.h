@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,16 +16,10 @@ namespace SHOT
 
 class DualSolver
 {
-  public:
-    DualSolver(EnvironmentPtr envPtr)
-    {
-        env = envPtr;
-    }
+public:
+    DualSolver(EnvironmentPtr envPtr) { env = envPtr; }
 
-    ~DualSolver()
-    {
-        dualSolutionCandidates.clear();
-    }
+    ~DualSolver() { dualSolutionCandidates.clear(); }
 
     MIPSolverPtr MIPSolver;
     std::vector<DualSolution> dualSolutionCandidates;
@@ -33,7 +27,7 @@ class DualSolver
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
 
-  private:
+private:
     EnvironmentPtr env;
 };
 

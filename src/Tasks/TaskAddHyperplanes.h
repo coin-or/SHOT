@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -17,7 +17,7 @@ namespace SHOT
 {
 class TaskAddHyperplanes : public TaskBase
 {
-  public:
+public:
     TaskAddHyperplanes(EnvironmentPtr envPtr);
     virtual ~TaskAddHyperplanes();
 
@@ -25,7 +25,7 @@ class TaskAddHyperplanes : public TaskBase
 
     virtual std::string getType();
 
-  private:
+private:
     int itersWithoutAddedHPs;
 };
 } // namespace SHOT

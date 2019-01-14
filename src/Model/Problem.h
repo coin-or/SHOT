@@ -4,8 +4,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -36,9 +36,9 @@ struct ProblemProperties
 
     int numberOfVariables = 0;
     int numberOfRealVariables = 0;
-    int numberOfDiscreteVariables = 0; //Binary and integer variables
+    int numberOfDiscreteVariables = 0; // Binary and integer variables
     int numberOfBinaryVariables = 0;
-    int numberOfIntegerVariables = 0; //Not including binary variables
+    int numberOfIntegerVariables = 0; // Not including binary variables
     int numberOfSemicontinuousVariables = 0;
     int numberOfNonlinearVariables = 0;
 
@@ -46,7 +46,7 @@ struct ProblemProperties
     int numberOfLinearConstraints = 0;
     int numberOfQuadraticConstraints = 0;
     int numberOfNonlinearConstraints = 0;
-    int numberOfNonlinearExpressions = 0; //This includes a possible nonlinear objective
+    int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
 
     std::string name = "";
     std::string description = "";
@@ -54,7 +54,7 @@ struct ProblemProperties
 
 class Problem : public std::enable_shared_from_this<Problem>
 {
-  private:
+private:
     EnvironmentPtr env;
     bool variablesUpdated = false;
     bool constraintsUpdated = false;
@@ -64,7 +64,7 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     void updateFactorableFunctions();
 
-  public:
+public:
     Problem(EnvironmentPtr env);
 
     virtual ~Problem();
@@ -115,8 +115,7 @@ class Problem : public std::enable_shared_from_this<Problem>
     void add(QuadraticObjectiveFunctionPtr objective);
     void add(NonlinearObjectiveFunctionPtr objective);
 
-    template <class T>
-    void add(std::vector<T> elements);
+    template <class T> void add(std::vector<T> elements);
 
     VariablePtr getVariable(int variableIndex);
     ConstraintPtr getConstraint(int constraintIndex);
@@ -132,44 +131,51 @@ class Problem : public std::enable_shared_from_this<Problem>
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
 
-    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point);
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point);
 
-    std::optional<NumericConstraintValue> getMostDeviatingNonlinearConstraint(const VectorDouble &point);
-
-    template <typename T>
-    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection);
+    std::optional<NumericConstraintValue> getMostDeviatingNonlinearConstraint(const VectorDouble& point);
 
     template <typename T>
-    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                            std::vector<T *> &activeConstraints);
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(
+        const VectorDouble& point, std::vector<T> constraintSelection);
 
     template <typename T>
-    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                            std::vector<std::shared_ptr<T>> &activeConstraints);
-
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection);
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const QuadraticConstraints constraintSelection);
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection, double correction = 0.0);
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const NumericConstraints constraintSelection);
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point,
+        std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints);
 
     template <typename T>
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<T *> &constraintSelection,
-                                                        std::vector<T *> &activeConstraints);
+    std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point,
+        std::vector<std::shared_ptr<T>> constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints);
 
-    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<NumericConstraint *> &constraintSelection,
-                                                        std::vector<NumericConstraint *> &activeConstraints);
+    NumericConstraintValue getMaxNumericConstraintValue(
+        const VectorDouble& point, const LinearConstraints constraintSelection);
+    NumericConstraintValue getMaxNumericConstraintValue(
+        const VectorDouble& point, const QuadraticConstraints constraintSelection);
+    NumericConstraintValue getMaxNumericConstraintValue(
+        const VectorDouble& point, const NonlinearConstraints constraintSelection, double correction = 0.0);
+    NumericConstraintValue getMaxNumericConstraintValue(
+        const VectorDouble& point, const NumericConstraints constraintSelection);
 
     template <typename T>
-    NumericConstraintValues getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection, double correction = 0.0);
+    NumericConstraintValue getMaxNumericConstraintValue(
+        const VectorDouble& point, const std::vector<T*>& constraintSelection, std::vector<T*>& activeConstraints);
 
-    NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction, double correction = 0.0);
+    NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble& point,
+        const std::vector<NumericConstraint*>& constraintSelection, std::vector<NumericConstraint*>& activeConstraints);
 
-    virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance);
+    template <typename T>
+    NumericConstraintValues getAllDeviatingConstraints(
+        const VectorDouble& point, double tolerance, std::vector<T> constraintSelection, double correction = 0.0);
 
-    virtual NumericConstraintValues getAllDeviatingLinearConstraints(const VectorDouble &point, double tolerance);
-    virtual NumericConstraintValues getAllDeviatingQuadraticConstraints(const VectorDouble &point, double tolerance);
+    NumericConstraintValues getFractionOfDeviatingNonlinearConstraints(
+        const VectorDouble& point, double tolerance, double fraction, double correction = 0.0);
 
-    virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance);
+    virtual NumericConstraintValues getAllDeviatingNumericConstraints(const VectorDouble& point, double tolerance);
+
+    virtual NumericConstraintValues getAllDeviatingLinearConstraints(const VectorDouble& point, double tolerance);
+    virtual NumericConstraintValues getAllDeviatingQuadraticConstraints(const VectorDouble& point, double tolerance);
+
+    virtual NumericConstraintValues getAllDeviatingNonlinearConstraints(const VectorDouble& point, double tolerance);
 
     virtual bool areLinearConstraintsFulfilled(VectorDouble point, double tolerance);
 
@@ -185,22 +191,22 @@ class Problem : public std::enable_shared_from_this<Problem>
 
     void saveProblemToFile(std::string filename);
 
-    friend std::ostream &operator<<(std::ostream &stream, const Problem &problem);
+    friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 };
 
-inline std::ostream &operator<<(std::ostream &stream, ProblemPtr problem)
+inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)
 {
     stream << *problem;
     return stream;
 };
 
-inline std::ostream &operator<<(std::ostream &stream, FactorableFunctionGraphPtr graph)
+inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionGraphPtr graph)
 {
     stream << *graph;
     return stream;
 };
 
-inline std::ostream &operator<<(std::ostream &stream, FactorableFunctionPtr function)
+inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionPtr function)
 {
     stream << *function;
     return stream;

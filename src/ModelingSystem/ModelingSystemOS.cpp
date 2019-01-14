@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,27 +13,22 @@
 namespace SHOT
 {
 
-ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envPtr)
+ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr)
+    : IModelingSystem(envPtr)
 {
     std::shared_ptr<OSiLWriter> osilWriter();
 }
 
-ModelingSystemOS::~ModelingSystemOS()
-{
-    osilReaders.clear();
-}
+ModelingSystemOS::~ModelingSystemOS() { osilReaders.clear(); }
 
-void ModelingSystemOS::augmentSettings(SettingsPtr settings)
-{
-}
+void ModelingSystemOS::augmentSettings(SettingsPtr settings) {}
 
-void ModelingSystemOS::updateSettings(SettingsPtr settings)
-{
-}
+void ModelingSystemOS::updateSettings(SettingsPtr settings) {}
 
-E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, const std::string &filename, const E_OSInputFileFormat &type)
+E_ProblemCreationStatus ModelingSystemOS::createProblem(
+    ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& type)
 {
-    if (false && !boost::filesystem::exists(filename))
+    if(false && !boost::filesystem::exists(filename))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
@@ -47,20 +42,20 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, con
 
     try
     {
-        if (type == E_OSInputFileFormat::OSiL)
+        if(type == E_OSInputFileFormat::OSiL)
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromOSiLFile(filename));
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
-        else if (type == E_OSInputFileFormat::Ampl)
+        else if(type == E_OSInputFileFormat::Ampl)
         {
             instance = std::shared_ptr<OSInstance>(readInstanceFromAmplFile(filename));
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
     }
-    catch (const ErrorClass &eclass)
+    catch(const ErrorClass& eclass)
     {
         env->output->outputError("Error when reading problem from \"" + filename + "\"", eclass.errormsg);
 
@@ -72,7 +67,7 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, con
     return (status);
 }
 
-E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, std::shared_ptr<OSInstance> instance)
+E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr& problem, std::shared_ptr<OSInstance> instance)
 {
     originalInstance = instance;
 
@@ -80,22 +75,22 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, std
     {
         problem->name = instance->getInstanceName();
 
-        if (!copyVariables(instance.get(), problem))
+        if(!copyVariables(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInVariables);
 
-        if (!copyObjectiveFunction(instance.get(), problem))
+        if(!copyObjectiveFunction(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInObjective);
 
-        if (!copyConstraints(instance.get(), problem))
+        if(!copyConstraints(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyLinearTerms(instance.get(), problem))
+        if(!copyLinearTerms(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyQuadraticTerms(instance.get(), problem))
+        if(!copyQuadraticTerms(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyNonlinearExpressions(instance.get(), problem))
+        if(!copyNonlinearExpressions(instance.get(), problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
         problem->updateProperties();
@@ -103,7 +98,7 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, std
 
         problem->finalize();
     }
-    catch (std::exception &e)
+    catch(std::exception& e)
     {
         env->output->outputError("Error when creating problem from OSInstance object.");
 
@@ -113,42 +108,40 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr &problem, std
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 
-void ModelingSystemOS::finalizeSolution()
-{
-}
+void ModelingSystemOS::finalizeSolution() {}
 
-OSInstance *ModelingSystemOS::readInstanceFromOSiL(const std::string &text)
+OSInstance* ModelingSystemOS::readInstanceFromOSiL(const std::string& text)
 {
     auto osilReader = std::make_shared<OSiLReader>();
-    OSInstance *instance = osilReader->readOSiL(text);
+    OSInstance* instance = osilReader->readOSiL(text);
 
     osilReaders.push_back(osilReader); // To be able to properly deleting them without destroying the OSInstance object
 
     return instance;
 }
 
-OSInstance *ModelingSystemOS::readInstanceFromOSiLFile(const std::string &filename)
+OSInstance* ModelingSystemOS::readInstanceFromOSiLFile(const std::string& filename)
 {
     std::string fileContents = UtilityFunctions::getFileAsString(filename);
 
     return (readInstanceFromOSiL(fileContents));
 }
 
-OSInstance *ModelingSystemOS::readInstanceFromAmplFile(const std::string &filename)
+OSInstance* ModelingSystemOS::readInstanceFromAmplFile(const std::string& filename)
 {
     nl2os = std::make_shared<OSnl2OS>();
 
     try
     {
-        if (nl2os->readNl(filename))
+        if(nl2os->readNl(filename))
         {
             nl2os->createOSObjects();
-            OSInstance *instance = nl2os->osinstance;
+            OSInstance* instance = nl2os->osinstance;
 
             return instance;
         }
     }
-    catch (const std::exception &e)
+    catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
     }
@@ -156,11 +149,11 @@ OSInstance *ModelingSystemOS::readInstanceFromAmplFile(const std::string &filena
     return (nullptr);
 }
 
-bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
+bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy variables between OSInstance and SHOT problem objects.");
 
-    if (source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
+    if(source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
     {
         double minLBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
         double maxUBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
@@ -169,27 +162,29 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
 
         int numVariables = source->getVariableNumber();
 
-        for (int i = 0; i < numVariables; i++)
+        for(int i = 0; i < numVariables; i++)
         {
             E_VariableType variableType;
 
             double variableLB = source->instanceData->variables->var[i]->lb;
             double variableUB = source->instanceData->variables->var[i]->ub;
 
-            switch (source->instanceData->variables->var[i]->type)
+            switch(source->instanceData->variables->var[i]->type)
             {
             case 'C':
                 variableType = E_VariableType::Real;
 
-                if (variableLB < minLBCont)
+                if(variableLB < minLBCont)
                 {
-                    //env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " + std::to_string(variableLBs[i]) + " to " + std::to_string(minLBCont));
+                    // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableLBs[i]) + " to " + std::to_string(minLBCont));
                     variableLB = minLBCont;
                 }
 
-                if (variableUB > maxUBCont)
+                if(variableUB > maxUBCont)
                 {
-                    //env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " + std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBCont));
+                    // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBCont));
                     variableUB = maxUBCont;
                 }
 
@@ -198,15 +193,17 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
             case 'B':
                 variableType = E_VariableType::Binary;
 
-                if (variableLB < 0.0)
+                if(variableLB < 0.0)
                 {
-                    //env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " + std::to_string(variableLBs[i]) + " to " + std::to_string(0.0));
+                    // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableLBs[i]) + " to " + std::to_string(0.0));
                     variableLB = 0.0;
                 }
 
-                if (variableUB > 1.0)
+                if(variableUB > 1.0)
                 {
-                    //env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " + std::to_string(variableUBs[i]) + " to " + std::to_string(1.0));
+                    // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableUBs[i]) + " to " + std::to_string(1.0));
                     variableUB = 1.0;
                 }
 
@@ -215,15 +212,17 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
             case 'I':
                 variableType = E_VariableType::Integer;
 
-                if (variableLB < minLBInt)
+                if(variableLB < minLBInt)
                 {
-                    //env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " + std::to_string(variableLBs[i]) + " to " + std::to_string(minLBInt));
+                    // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableLBs[i]) + " to " + std::to_string(minLBInt));
                     variableLB = minLBInt;
                 }
 
-                if (variableUB > maxUBInt)
+                if(variableUB > maxUBInt)
                 {
-                    //env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " + std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBInt));
+                    // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBInt));
                     variableUB = maxUBInt;
                 }
 
@@ -232,15 +231,17 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
             case 'D':
                 variableType = E_VariableType::Semicontinuous;
 
-                if (variableLB < 0.0)
+                if(variableLB < 0.0)
                 {
-                    //env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " + std::to_string(variableLBs[i]) + " to " + std::to_string(0.0));
+                    // env->output->outputDebug("Corrected lower bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableLBs[i]) + " to " + std::to_string(0.0));
                     variableLB = 0.0;
                 }
 
-                if (variableUB > maxUBCont)
+                if(variableUB > maxUBCont)
                 {
-                    //env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " + std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBCont));
+                    // env->output->outputDebug("Corrected upper bound for variable " + variableNames[i] + " from " +
+                    // std::to_string(variableUBs[i]) + " to " + std::to_string(maxUBCont));
                     variableUB = maxUBCont;
                 }
 
@@ -251,7 +252,8 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
                 break;
             }
 
-            auto variable = std::make_shared<SHOT::Variable>(source->instanceData->variables->var[i]->name, i, variableType, variableLB, variableUB);
+            auto variable = std::make_shared<SHOT::Variable>(
+                source->instanceData->variables->var[i]->name, i, variableType, variableLB, variableUB);
             destination->add(variable);
         }
     }
@@ -266,21 +268,21 @@ bool ModelingSystemOS::copyVariables(OSInstance *source, ProblemPtr destination)
     return (true);
 }
 
-bool ModelingSystemOS::copyObjectiveFunction(OSInstance *source, ProblemPtr destination)
+bool ModelingSystemOS::copyObjectiveFunction(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy objective function between OSInstance and SHOT problem objects.");
 
     ObjectiveFunctionPtr objectiveFunction;
 
-    if (source->instanceData->objectives != NULL)
+    if(source->instanceData->objectives != NULL)
     {
         std::string objectiveDirection = source->getObjectiveMaxOrMins()[0];
 
-        if (isObjectiveGenerallyNonlinear(source))
+        if(isObjectiveGenerallyNonlinear(source))
         {
             objectiveFunction = std::make_shared<NonlinearObjectiveFunction>();
         }
-        else if (isObjectiveQuadratic(source))
+        else if(isObjectiveQuadratic(source))
         {
             objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
         }
@@ -289,7 +291,7 @@ bool ModelingSystemOS::copyObjectiveFunction(OSInstance *source, ProblemPtr dest
             objectiveFunction = std::make_shared<LinearObjectiveFunction>();
         }
 
-        if (objectiveDirection == "min")
+        if(objectiveDirection == "min")
         {
             objectiveFunction->direction = E_ObjectiveFunctionDirection::Minimize;
             objectiveFunction->constant = source->getObjectiveConstants()[0];
@@ -304,7 +306,7 @@ bool ModelingSystemOS::copyObjectiveFunction(OSInstance *source, ProblemPtr dest
 
         int numberLinearTerms = source->instanceData->objectives->obj[0]->numberOfObjCoef;
 
-        for (int i = 0; i < numberLinearTerms; i++)
+        for(int i = 0; i < numberLinearTerms; i++)
         {
             double coefficient = source->instanceData->objectives->obj[0]->coef[i]->value;
             int variableIndex = source->instanceData->objectives->obj[0]->coef[i]->idx;
@@ -312,9 +314,10 @@ bool ModelingSystemOS::copyObjectiveFunction(OSInstance *source, ProblemPtr dest
             try
             {
                 VariablePtr variable = destination->getVariable(variableIndex);
-                (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))->add(std::move(std::make_shared<LinearTerm>(coefficient, variable)));
+                (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))
+                    ->add(std::move(std::make_shared<LinearTerm>(coefficient, variable)));
             }
-            catch (const VariableNotFoundException &e)
+            catch(const VariableNotFoundException& e)
             {
                 return (false);
             }
@@ -333,36 +336,42 @@ bool ModelingSystemOS::copyObjectiveFunction(OSInstance *source, ProblemPtr dest
     return (true);
 }
 
-bool ModelingSystemOS::copyConstraints(OSInstance *source, ProblemPtr destination)
+bool ModelingSystemOS::copyConstraints(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy constraints between OSInstance and SHOT problem objects.");
 
-    if (source->instanceData->constraints != NULL)
+    if(source->instanceData->constraints != NULL)
     {
         int numberOfConstraints = source->getConstraintNumber();
         auto classification = getConstraintClassifications(source);
 
-        for (int i = 0; i < numberOfConstraints; i++)
+        for(int i = 0; i < numberOfConstraints; i++)
         {
-            switch (classification[i])
+            switch(classification[i])
             {
-            case (E_ConstraintClassification::Linear):
+            case(E_ConstraintClassification::Linear):
             {
-                LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(i, source->instanceData->constraints->con[i]->name, source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
+                LinearConstraintPtr constraint
+                    = std::make_shared<LinearConstraint>(i, source->instanceData->constraints->con[i]->name,
+                        source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
                 constraint->constant = source->instanceData->constraints->con[i]->constant;
                 destination->add(std::move(constraint));
                 break;
             }
-            case (E_ConstraintClassification::Quadratic):
+            case(E_ConstraintClassification::Quadratic):
             {
-                QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(i, source->instanceData->constraints->con[i]->name, source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
+                QuadraticConstraintPtr constraint
+                    = std::make_shared<QuadraticConstraint>(i, source->instanceData->constraints->con[i]->name,
+                        source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
                 constraint->constant = source->instanceData->constraints->con[i]->constant;
                 destination->add(std::move(constraint));
                 break;
             }
-            case (E_ConstraintClassification::Nonlinear):
+            case(E_ConstraintClassification::Nonlinear):
             {
-                NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(i, source->instanceData->constraints->con[i]->name, source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
+                NonlinearConstraintPtr constraint
+                    = std::make_shared<NonlinearConstraint>(i, source->instanceData->constraints->con[i]->name,
+                        source->instanceData->constraints->con[i]->lb, source->instanceData->constraints->con[i]->ub);
                 constraint->constant = source->instanceData->constraints->con[i]->constant;
                 destination->add(std::move(constraint));
                 break;
@@ -383,45 +392,50 @@ bool ModelingSystemOS::copyConstraints(OSInstance *source, ProblemPtr destinatio
     return (true);
 }
 
-bool ModelingSystemOS::copyLinearTerms(OSInstance *source, ProblemPtr destination)
+bool ModelingSystemOS::copyLinearTerms(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy linear terms between OSInstance and SHOT problem objects.");
 
-    if (source->instanceData->linearConstraintCoefficients != NULL && source->instanceData->linearConstraintCoefficients->numberOfValues > 0)
+    if(source->instanceData->linearConstraintCoefficients != NULL
+        && source->instanceData->linearConstraintCoefficients->numberOfValues > 0)
     {
         int variableIndex = 0;
         int constraintIndex = 0;
         int numConstraints = source->getConstraintNumber();
 
-        SparseMatrix *linearConstraintCoefficients = source->getLinearConstraintCoefficientsInRowMajor();
+        SparseMatrix* linearConstraintCoefficients = source->getLinearConstraintCoefficientsInRowMajor();
 
-        for (int constraintIndex = 0; constraintIndex < numConstraints; constraintIndex++)
+        for(int constraintIndex = 0; constraintIndex < numConstraints; constraintIndex++)
         {
-            int numConstraintElements = linearConstraintCoefficients->starts[constraintIndex + 1] - linearConstraintCoefficients->starts[constraintIndex];
+            int numConstraintElements = linearConstraintCoefficients->starts[constraintIndex + 1]
+                - linearConstraintCoefficients->starts[constraintIndex];
 
             try
             {
-                LinearConstraintPtr constraint = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(constraintIndex));
+                LinearConstraintPtr constraint
+                    = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(constraintIndex));
 
-                for (int j = 0; j < numConstraintElements; j++)
+                for(int j = 0; j < numConstraintElements; j++)
                 {
-                    double coefficient = linearConstraintCoefficients->values[linearConstraintCoefficients->starts[constraintIndex] + j];
-                    variableIndex = linearConstraintCoefficients->indexes[linearConstraintCoefficients->starts[constraintIndex] + j];
+                    double coefficient = linearConstraintCoefficients
+                                             ->values[linearConstraintCoefficients->starts[constraintIndex] + j];
+                    variableIndex = linearConstraintCoefficients
+                                        ->indexes[linearConstraintCoefficients->starts[constraintIndex] + j];
 
                     constraint->add(std::make_shared<LinearTerm>(coefficient, destination->getVariable(variableIndex)));
                 }
             }
-            catch (const VariableNotFoundException &e)
+            catch(const VariableNotFoundException& e)
             {
                 return (false);
             }
-            catch (const ConstraintNotFoundException &e)
+            catch(const ConstraintNotFoundException& e)
             {
                 return (false);
             }
         }
 
-        //delete linearConstraintCoefficients;
+        // delete linearConstraintCoefficients;
     }
     else
     {
@@ -433,15 +447,15 @@ bool ModelingSystemOS::copyLinearTerms(OSInstance *source, ProblemPtr destinatio
     return (true);
 }
 
-bool ModelingSystemOS::copyQuadraticTerms(OSInstance *source, ProblemPtr destination)
+bool ModelingSystemOS::copyQuadraticTerms(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy quadratic terms between OSInstance and SHOT problem objects.");
 
-    if (source->instanceData->quadraticCoefficients != NULL)
+    if(source->instanceData->quadraticCoefficients != NULL)
     {
         int numQuadraticTerms = source->getNumberOfQuadraticTerms();
 
-        for (int i = 0; i < numQuadraticTerms; i++)
+        for(int i = 0; i < numQuadraticTerms; i++)
         {
             auto term = source->instanceData->quadraticCoefficients->qTerm[i];
 
@@ -450,21 +464,23 @@ bool ModelingSystemOS::copyQuadraticTerms(OSInstance *source, ProblemPtr destina
                 VariablePtr firstVariable = destination->getVariable(term->idxOne);
                 VariablePtr secondVariable = destination->getVariable(term->idxTwo);
 
-                if (term->idx == -1)
+                if(term->idx == -1)
                 {
-                    (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))->add(std::make_shared<QuadraticTerm>(term->coef, firstVariable, secondVariable));
+                    (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))
+                        ->add(std::make_shared<QuadraticTerm>(term->coef, firstVariable, secondVariable));
                 }
                 else
                 {
-                    auto constraint = std::static_pointer_cast<QuadraticConstraint>(destination->getConstraint(term->idx));
+                    auto constraint
+                        = std::static_pointer_cast<QuadraticConstraint>(destination->getConstraint(term->idx));
                     constraint->add(std::make_shared<QuadraticTerm>(term->coef, firstVariable, secondVariable));
                 }
             }
-            catch (const VariableNotFoundException &e)
+            catch(const VariableNotFoundException& e)
             {
                 return (false);
             }
-            catch (const ConstraintNotFoundException &e)
+            catch(const ConstraintNotFoundException& e)
             {
                 return (false);
             }
@@ -480,38 +496,41 @@ bool ModelingSystemOS::copyQuadraticTerms(OSInstance *source, ProblemPtr destina
     return (true);
 }
 
-bool ModelingSystemOS::copyNonlinearExpressions(OSInstance *source, ProblemPtr destination)
+bool ModelingSystemOS::copyNonlinearExpressions(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy nonlinear expressions between OSInstance and SHOT problem objects.");
 
-    if (source->instanceData->nonlinearExpressions != NULL)
+    if(source->instanceData->nonlinearExpressions != NULL)
     {
         int numNonlinearExpressions = source->getNumberOfNonlinearExpressions();
 
-        for (int i = 0; i < numNonlinearExpressions; i++)
+        for(int i = 0; i < numNonlinearExpressions; i++)
         {
             auto sourceNode = source->instanceData->nonlinearExpressions->nl[i];
 
             try
             {
-                NonlinearExpressionPtr destinationExpression = convertOSNonlinearNode(sourceNode->osExpressionTree->m_treeRoot, destination);
+                NonlinearExpressionPtr destinationExpression
+                    = convertOSNonlinearNode(sourceNode->osExpressionTree->m_treeRoot, destination);
 
-                if (sourceNode->idx == -1)
+                if(sourceNode->idx == -1)
                 {
-                    auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction);
+                    auto objective
+                        = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction);
                     objective->add(std::move(destinationExpression));
                 }
                 else
                 {
-                    auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(destination->getConstraint(sourceNode->idx));
+                    auto constraint
+                        = std::dynamic_pointer_cast<NonlinearConstraint>(destination->getConstraint(sourceNode->idx));
                     constraint->add(std::move(destinationExpression));
                 }
             }
-            catch (const ConstraintNotFoundException &e)
+            catch(const ConstraintNotFoundException& e)
             {
                 return (false);
             }
-            catch (const OperationNotImplementedException &e)
+            catch(const OperationNotImplementedException& e)
             {
                 return (false);
             }
@@ -528,87 +547,92 @@ bool ModelingSystemOS::copyNonlinearExpressions(OSInstance *source, ProblemPtr d
 } // namespace SHOT
 
 // Modified from Optimization Services file OSCouenneSolver.cpp
-NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode *node, const ProblemPtr &destination)
+NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, const ProblemPtr& destination)
 {
     unsigned int i;
     std::ostringstream outStr;
 
-    switch (node->inodeInt)
+    switch(node->inodeInt)
     {
     case OS_PLUS:
-        return std::make_shared<ExpressionPlus>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination),
-                                                convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[1]), destination));
+        return std::make_shared<ExpressionPlus>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_SUM:
-        switch (node->inumberOfChildren)
+        switch(node->inumberOfChildren)
         {
         case 0:
             return std::make_shared<ExpressionConstant>(0.);
         case 1:
-            return convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination);
+            return convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination);
         default:
             NonlinearExpressions terms;
-            for (i = 0; i < node->inumberOfChildren; i++)
-                terms.expressions.push_back(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[i]), destination));
+            for(i = 0; i < node->inumberOfChildren; i++)
+                terms.expressions.push_back(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[i]), destination));
             return std::make_shared<ExpressionSum>(terms);
         }
 
     case OS_MINUS:
-        return std::make_shared<ExpressionMinus>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination),
-                                                 convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[1]), destination));
+        return std::make_shared<ExpressionMinus>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_NEGATE:
-        return std::make_shared<ExpressionNegate>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionNegate>(
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_TIMES:
-        return std::make_shared<ExpressionTimes>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination),
-                                                 convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[1]), destination));
+        return std::make_shared<ExpressionTimes>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_DIVIDE:
-        return std::make_shared<ExpressionDivide>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination),
-                                                  convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[1]), destination));
+        return std::make_shared<ExpressionDivide>(
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_POWER:
-        return std::make_shared<ExpressionPower>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination),
-                                                 convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[1]), destination));
+        return std::make_shared<ExpressionPower>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_PRODUCT:
-        switch (node->inumberOfChildren)
+        switch(node->inumberOfChildren)
         {
         case 0:
             return std::make_shared<ExpressionConstant>(0.);
         case 1:
-            return convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination);
+            return convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination);
         case 2:
-            return std::make_shared<ExpressionTimes>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination),
-                                                     convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[1]), destination));
+            return std::make_shared<ExpressionTimes>(
+                convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+                convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
         default:
             NonlinearExpressions factors;
-            for (i = 0; i < node->inumberOfChildren; i++)
-                factors.expressions.push_back(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[i]), destination));
+            for(i = 0; i < node->inumberOfChildren; i++)
+                factors.expressions.push_back(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[i]), destination));
             return std::make_shared<ExpressionProduct>(factors);
         }
 
     case OS_ABS:
-        return std::make_shared<ExpressionAbs>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionAbs>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_SQUARE:
-        return std::make_shared<ExpressionSquare>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionSquare>(
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_SQRT:
-        return std::make_shared<ExpressionSquareRoot>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionSquareRoot>(
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_LN:
-        return std::make_shared<ExpressionLog>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionLog>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_EXP:
-        return std::make_shared<ExpressionExp>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionExp>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_SIN:
-        return std::make_shared<ExpressionSin>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionSin>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_COS:
-        return std::make_shared<ExpressionCos>(convertOSNonlinearNode(((OSnLNode *)node->m_mChildren[0]), destination));
+        return std::make_shared<ExpressionCos>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_MIN:
         throw OperationNotImplementedException("min");
@@ -619,22 +643,24 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode *node, 
         break;
 
     case OS_NUMBER:
-        return std::make_shared<ExpressionConstant>(((OSnLNodeNumber *)node)->value);
+        return std::make_shared<ExpressionConstant>(((OSnLNodeNumber*)node)->value);
 
     case OS_PI:
         return std::make_shared<ExpressionConstant>(3.14159265);
 
     case OS_VARIABLE:
     {
-        OSnLNodeVariable *varnode = (OSnLNodeVariable *)node;
-        if (varnode->coef == 0.)
+        OSnLNodeVariable* varnode = (OSnLNodeVariable*)node;
+        if(varnode->coef == 0.)
             return std::make_shared<ExpressionConstant>(0.);
-        if (varnode->coef == 1.)
+        if(varnode->coef == 1.)
             return std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx));
-        if (varnode->coef == -1.)
-            return std::make_shared<ExpressionNegate>(std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
+        if(varnode->coef == -1.)
+            return std::make_shared<ExpressionNegate>(
+                std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
 
-        return std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(varnode->coef), std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
+        return std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(varnode->coef),
+            std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
     }
     default:
         throw OperationNotImplementedException(node->getTokenName());
@@ -644,52 +670,52 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode *node, 
     return nullptr;
 }
 
-bool ModelingSystemOS::isObjectiveGenerallyNonlinear(OSInstance *instance)
+bool ModelingSystemOS::isObjectiveGenerallyNonlinear(OSInstance* instance)
 {
-    for (int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
+    for(int i = 0; i < instance->getNumberOfNonlinearExpressions(); i++)
     {
         int tmpIndex = instance->instanceData->nonlinearExpressions->nl[i]->idx;
-        if (tmpIndex == -1)
+        if(tmpIndex == -1)
             return (true);
     }
     return (false);
 };
 
-bool ModelingSystemOS::isObjectiveQuadratic(OSInstance *instance)
+bool ModelingSystemOS::isObjectiveQuadratic(OSInstance* instance)
 {
-    for (int i = 0; i < instance->getNumberOfQuadraticTerms(); i++)
+    for(int i = 0; i < instance->getNumberOfQuadraticTerms(); i++)
     {
         int tmpIndex = instance->instanceData->quadraticCoefficients->qTerm[i]->idx;
 
-        if (tmpIndex == -1)
+        if(tmpIndex == -1)
             return (true);
     }
 
     return (false);
 };
 
-std::vector<E_ConstraintClassification> ModelingSystemOS::getConstraintClassifications(OSInstance *instance)
+std::vector<E_ConstraintClassification> ModelingSystemOS::getConstraintClassifications(OSInstance* instance)
 {
     int numConstraints = instance->getConstraintNumber();
     std::vector<E_ConstraintClassification> classifications(numConstraints, E_ConstraintClassification::Linear);
 
     int numQuadraticTerms = instance->getNumberOfQuadraticTerms();
 
-    for (int i = 0; i < numQuadraticTerms; i++)
+    for(int i = 0; i < numQuadraticTerms; i++)
     {
         int constraintIndex = instance->instanceData->quadraticCoefficients->qTerm[i]->idx;
 
-        if (constraintIndex >= 0)
+        if(constraintIndex >= 0)
             classifications[constraintIndex] = E_ConstraintClassification::Quadratic;
     }
 
     int numNonlinearExpressions = instance->getNumberOfNonlinearExpressions();
 
-    for (int i = 0; i < numNonlinearExpressions; i++)
+    for(int i = 0; i < numNonlinearExpressions; i++)
     {
         int constraintIndex = instance->instanceData->nonlinearExpressions->nl[i]->idx;
 
-        if (constraintIndex >= 0)
+        if(constraintIndex >= 0)
             classifications[constraintIndex] = E_ConstraintClassification::Nonlinear;
     }
 

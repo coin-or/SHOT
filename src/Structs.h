@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -66,9 +66,11 @@ struct PairIndexValue
     int index;
     double value;
 
-  public:
+public:
     PairIndexValue(){};
-    PairIndexValue(int index, double value) : index(index), value(value){};
+    PairIndexValue(int index, double value)
+        : index(index)
+        , value(value){};
 };
 
 struct PairCoordinateValue
@@ -103,10 +105,10 @@ struct PrimalSolution
     PairIndexValue maxDevatingConstraintLinear;
     PairIndexValue maxDevatingConstraintQuadratic;
     PairIndexValue maxDevatingConstraintNonlinear;
-    double maxIntegerToleranceError;       // The maximum integer error before rounding
+    double maxIntegerToleranceError; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?
-    bool displayed = false;                // Has the primal solution been displayed on console?
+    bool displayed = false; // Has the primal solution been displayed on console?
 };
 
 struct PrimalFixedNLPCandidate
@@ -130,7 +132,7 @@ struct DualSolution
 struct Hyperplane
 {
     NumericConstraintPtr sourceConstraint;
-    int sourceConstraintIndex; //TODO remove
+    int sourceConstraintIndex; // TODO remove
     VectorDouble generatedPoint;
     double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
@@ -174,7 +176,8 @@ struct ModelStatistics
 
     bool isObjectiveNonlinear()
     {
-        return (objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear || objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
+        return (objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear || objectiveFunctionType ==
+E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
     };
 }; */
 
@@ -222,20 +225,11 @@ struct SolutionStatistics
 
     int getNumberOfTotalDualProblems()
     {
-        return (numberOfProblemsLP +
-                numberOfProblemsQP +
-                numberOfProblemsFeasibleMILP +
-                numberOfProblemsOptimalMILP +
-                numberOfProblemsFeasibleMIQP +
-                numberOfProblemsOptimalMIQP +
-                numberOfProblemsOptimalMIQCQP +
-                numberOfProblemsFeasibleMIQCQP);
+        return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsFeasibleMILP + numberOfProblemsOptimalMILP
+            + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP + numberOfProblemsOptimalMIQCQP
+            + numberOfProblemsFeasibleMIQCQP);
     };
 
-    int getNumberOfTotalNLPProblems()
-    {
-        return (numberOfProblemsNLPInteriorPointSearch +
-                numberOfProblemsFixedNLP);
-    };
+    int getNumberOfTotalNLPProblems() { return (numberOfProblemsNLPInteriorPointSearch + numberOfProblemsFixedNLP); };
 };
 }; // namespace SHOT

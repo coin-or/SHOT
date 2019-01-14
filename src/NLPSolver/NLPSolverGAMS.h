@@ -3,8 +3,8 @@
 
    @author Stefan Vigerske, GAMS Development Corp.
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -18,7 +18,7 @@ namespace SHOT
 {
 class NLPSolverGAMS : public NLPSolverBase
 {
-  private:
+private:
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
 
@@ -28,7 +28,7 @@ class NLPSolverGAMS : public NLPSolverBase
     int iterlimit;
     bool showlog;
 
-  public:
+public:
     NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject);
 
     virtual ~NLPSolverGAMS();
@@ -52,12 +52,12 @@ class NLPSolverGAMS : public NLPSolverBase
     virtual void updateVariableLowerBound(int variableIndex, double bound);
     virtual void updateVariableUpperBound(int variableIndex, double bound);
 
-  protected:
+protected:
     E_NLPSolutionStatus solveProblemInstance();
 
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();
 
-  private:
+private:
 };
 } // namespace SHOT

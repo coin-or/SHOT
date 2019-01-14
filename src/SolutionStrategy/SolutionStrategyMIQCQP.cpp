@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -25,60 +25,58 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     env->timing->createTimer("PrimalStrategy", " - primal strategy");
 
-    TaskBase *tFinalizeSolution = new TaskSequential(env);
+    TaskBase* tFinalizeSolution = new TaskSequential(env);
 
-    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, false);
+    TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
+    TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
-    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(env);
+    TaskBase* tCreateDualProblem = new TaskCreateDualProblem(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase *tInitializeIteration = new TaskInitializeIteration(env);
+    TaskBase* tInitializeIteration = new TaskInitializeIteration(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase *tSolveIteration = new TaskSolveIteration(env);
+    TaskBase* tSolveIteration = new TaskSolveIteration(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
+    TaskBase* tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    TaskBase *tPrintIterReport = new TaskPrintIterationReport(env);
+    TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
+    TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
+    TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase *tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
+    TaskBase* tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
+    TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase *tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
+    TaskBase* tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
+    TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
-SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP()
-{
-}
+SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP() {}
 
 bool SolutionStrategyMIQCQP::solveProblem()
 {
-    TaskBase *nextTask;
+    TaskBase* nextTask;
 
-    while (env->tasks->getNextTask(nextTask))
+    while(env->tasks->getNextTask(nextTask))
     {
         env->output->outputInfo("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
@@ -88,7 +86,5 @@ bool SolutionStrategyMIQCQP::solveProblem()
     return (true);
 }
 
-void SolutionStrategyMIQCQP::initializeStrategy()
-{
-}
+void SolutionStrategyMIQCQP::initializeStrategy() {}
 } // namespace SHOT

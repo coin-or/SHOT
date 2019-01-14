@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,15 +15,15 @@ namespace SHOT
 {
 class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
-  public:
+public:
     NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, std::shared_ptr<OSInstance> instance);
     virtual ~NLPSolverIpoptRelaxed();
 
     virtual VectorDouble getSolution();
 
-  protected:
+protected:
     virtual void setSolverSpecificInitialSettings();
 
-  private:
+private:
 };
 } // namespace SHOT

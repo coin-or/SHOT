@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -28,8 +28,9 @@ enum class E_ProblemCreationStatus
 
 class IModelingSystem
 {
-  public:
-    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr){};
+public:
+    IModelingSystem(EnvironmentPtr envPtr)
+        : env(envPtr){};
     virtual ~IModelingSystem(){};
 
     // Adds modeling system specific settings
@@ -41,7 +42,7 @@ class IModelingSystem
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution() = 0;
 
-  protected:
+protected:
     EnvironmentPtr env;
 };
 } // namespace SHOT

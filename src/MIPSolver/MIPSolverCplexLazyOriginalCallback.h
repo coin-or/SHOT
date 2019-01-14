@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -24,7 +24,7 @@ namespace SHOT
 {
 class MIPSolverCplexLazyOriginalCallback : public MIPSolverCplex
 {
-  public:
+public:
     MIPSolverCplexLazyOriginalCallback(EnvironmentPtr envPtr);
     virtual ~MIPSolverCplexLazyOriginalCallback();
 
@@ -40,19 +40,19 @@ class MIPSolverCplexLazyOriginalCallback : public MIPSolverCplex
 
     std::mutex callbackMutex2;
 
-  private:
+private:
     IloRangeArray cplexLazyConstrs;
 
-  protected:
+protected:
 };
 
 class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallbackBase
 {
     IloNumVarArray cplexVars;
 
-  private:
-  public:
-    IloCplex::CallbackI *duplicateCallback() const;
+private:
+public:
+    IloCplex::CallbackI* duplicateCallback() const;
     HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main();
 
@@ -63,9 +63,9 @@ class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbac
 {
     IloNumVarArray cplexVars;
 
-  private:
-  public:
-    IloCplex::CallbackI *duplicateCallback() const;
+private:
+public:
+    IloCplex::CallbackI* duplicateCallback() const;
     InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main();
 
@@ -76,14 +76,14 @@ class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCa
 {
     IloNumVarArray cplexVars;
 
-    MIPSolverCplexLazyOriginalCallback *cplexSolver;
+    MIPSolverCplexLazyOriginalCallback* cplexSolver;
 
     void createHyperplane(Hyperplane hyperplane);
 
     void createIntegerCut(VectorInteger binaryIndexes);
 
-  public:
-    IloCplex::CallbackI *duplicateCallback() const;
+public:
+    IloCplex::CallbackI* duplicateCallback() const;
 
     CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
     void main();

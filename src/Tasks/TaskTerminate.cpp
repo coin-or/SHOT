@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,17 +13,14 @@
 namespace SHOT
 {
 
-TaskTerminate::TaskTerminate(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskTerminate::TaskTerminate(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
 }
 
-TaskTerminate::~TaskTerminate()
-{
-}
+TaskTerminate::~TaskTerminate() {}
 
-void TaskTerminate::run()
-{
-}
+void TaskTerminate::run() {}
 
 std::string TaskTerminate::getType()
 {

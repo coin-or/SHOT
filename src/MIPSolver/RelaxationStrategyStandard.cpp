@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -19,15 +19,15 @@ RelaxationStrategyStandard::RelaxationStrategyStandard(EnvironmentPtr envPtr)
     setInitial();
 }
 
-RelaxationStrategyStandard::~RelaxationStrategyStandard()
-{
-}
+RelaxationStrategyStandard::~RelaxationStrategyStandard() {}
 
 void RelaxationStrategyStandard::setInitial()
 {
     LPFinished = false;
 
-    if (env->settings->getBoolSetting("Relaxation.Use", "Dual") && env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") > 0 && env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
+    if(env->settings->getBoolSetting("Relaxation.Use", "Dual")
+        && env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") > 0
+        && env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
     {
         this->setActive();
     }
@@ -40,32 +40,32 @@ void RelaxationStrategyStandard::setInitial()
 void RelaxationStrategyStandard::executeStrategy()
 {
     int iterInterval = env->settings->getIntSetting("Relaxation.Frequency", "Dual");
-    if (iterInterval != 0 && env->results->getCurrentIteration()->iterationNumber % iterInterval == 0)
+    if(iterInterval != 0 && env->results->getCurrentIteration()->iterationNumber % iterInterval == 0)
     {
         return (this->setActive());
     }
 
-    if (isLPStepFinished())
+    if(isLPStepFinished())
     {
         this->setInactive();
     }
-    else if (isConstraintToleranceReached())
+    else if(isConstraintToleranceReached())
     {
         this->setInactive();
     }
-    else if (isGapReached())
+    else if(isGapReached())
     {
         this->setInactive();
     }
-    else if (isIterationLimitReached())
+    else if(isIterationLimitReached())
     {
         this->setInactive();
     }
-    else if (isTimeLimitReached())
+    else if(isTimeLimitReached())
     {
         this->setInactive();
     }
-    else if (isObjectiveStagnant())
+    else if(isObjectiveStagnant())
     {
         this->setInactive();
     }
@@ -77,7 +77,7 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->iterations.size() > 0)
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->iterations.size() > 0)
     {
         env->timing->stopTimer("DualProblemsDiscrete");
         env->timing->startTimer("DualProblemsRelaxed");
@@ -89,7 +89,7 @@ void RelaxationStrategyStandard::setActive()
 
 void RelaxationStrategyStandard::setInactive()
 {
-    if (!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
+    if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
     {
         env->timing->stopTimer("DualProblemsRelaxed");
         env->timing->startTimer("DualProblemsDiscrete");
@@ -103,7 +103,7 @@ void RelaxationStrategyStandard::setInactive()
 
 E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 {
-    if (env->dualSolver->MIPSolver->getDiscreteVariableStatus())
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus())
 
         return (E_IterationProblemType::MIP);
     else
@@ -112,14 +112,14 @@ E_IterationProblemType RelaxationStrategyStandard::getProblemType()
 
 bool RelaxationStrategyStandard::isIterationLimitReached()
 {
-    if (env->results->iterations.size() < 2)
+    if(env->results->iterations.size() < 2)
     {
         return false;
     }
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if (prevIter->iterationNumber < env->settings->getIntSetting("Relaxation.IterationLimit", "Dual"))
+    if(prevIter->iterationNumber < env->settings->getIntSetting("Relaxation.IterationLimit", "Dual"))
     {
         return (false);
     }
@@ -129,7 +129,8 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-    if (env->timing->getElapsedTime("DualProblemsRelaxed") < env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual"))
+    if(env->timing->getElapsedTime("DualProblemsRelaxed")
+        < env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual"))
     {
         return (false);
     }
@@ -137,29 +138,26 @@ bool RelaxationStrategyStandard::isTimeLimitReached()
     return (true);
 }
 
-bool RelaxationStrategyStandard::isLPStepFinished()
-{
-    return (LPFinished);
-}
+bool RelaxationStrategyStandard::isLPStepFinished() { return (LPFinished); }
 
 bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
     int numSteps = 10;
 
-    if (env->results->iterations.size() < 2)
+    if(env->results->iterations.size() < 2)
     {
         return false;
     }
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if (prevIter->iterationNumber < numSteps)
+    if(prevIter->iterationNumber < numSteps)
         return (false);
 
     auto prevIter2 = env->results->iterations[prevIter->iterationNumber - numSteps];
 
-    //TODO: should be substituted with parameter
-    if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001)
+    // TODO: should be substituted with parameter
+    if(std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001)
         return (true);
 
     return (false);

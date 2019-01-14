@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,45 +13,44 @@
 namespace SHOT
 {
 
-TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr)
+    , taskIDIfTrue(taskIDTrue)
 {
 }
 
-TaskCheckIterationError::~TaskCheckIterationError()
-{
-}
+TaskCheckIterationError::~TaskCheckIterationError() {}
 
 void TaskCheckIterationError::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
+    if(currIter->solutionStatus == E_ProblemSolutionStatus::Error)
     {
         env->results->terminationReason = E_TerminationReason::Error;
         env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
     {
         env->results->terminationReason = E_TerminationReason::NumericIssues;
         env->tasks->setNextTask(taskIDIfTrue);
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::None &&
-             env->results->primalSolutions.size() > 0)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::None && env->results->primalSolutions.size() > 0)
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);

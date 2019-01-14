@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -21,10 +21,7 @@ Output::Output()
     osOutput->AddChannel("stdout");
 }
 
-Output::~Output()
-{
-    outputAlways("output deleted");
-}
+Output::~Output() { outputAlways("output deleted"); }
 
 void Output::outputAlways(std::string message)
 {
@@ -79,9 +76,7 @@ void Output::outputDetailedTrace(std::string message)
 void Output::setLogLevels(int consoleLogLevel, int fileLogLevel)
 {
     // Sets the correct log levels
-    osOutput->SetPrintLevel("stdout",
-                            (ENUM_OUTPUT_LEVEL)(consoleLogLevel));
-    osOutput->SetPrintLevel("shotlogfile",
-                            (ENUM_OUTPUT_LEVEL)(fileLogLevel));
+    osOutput->SetPrintLevel("stdout", (ENUM_OUTPUT_LEVEL)(consoleLogLevel));
+    osOutput->SetPrintLevel("shotlogfile", (ENUM_OUTPUT_LEVEL)(fileLogLevel));
 }
 } // namespace SHOT

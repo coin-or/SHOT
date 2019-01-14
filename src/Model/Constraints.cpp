@@ -13,16 +13,13 @@
 namespace SHOT
 {
 
-void Constraint::takeOwnership(ProblemPtr owner)
-{
-    ownerProblem = owner;
-}
+void Constraint::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
-std::ostream &operator<<(std::ostream &stream, const Constraint &constraint)
+std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
     stream << "[" << constraint.index << "]";
 
-    if (constraint.name != "")
+    if(constraint.name != "")
         stream << ' ' << constraint.name;
 
     stream << ":\t";
@@ -30,13 +27,13 @@ std::ostream &operator<<(std::ostream &stream, const Constraint &constraint)
     return constraint.print(stream); // polymorphic print via reference
 }
 
-std::ostream &operator<<(std::ostream &stream, ConstraintPtr constraint)
+std::ostream& operator<<(std::ostream& stream, ConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
 }
 
-NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble &point, double correction)
+NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     double value = calculateFunctionValue(point) - correction;
 
@@ -49,8 +46,7 @@ NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDoub
     constrValue.isFulfilledLHS = (value >= valueLHS);
     constrValue.normalizedLHSValue = valueLHS - value;
 
-    constrValue.isFulfilled =
-        (constrValue.isFulfilledRHS && constrValue.isFulfilledLHS);
+    constrValue.isFulfilled = (constrValue.isFulfilledRHS && constrValue.isFulfilledLHS);
 
     constrValue.normalizedValue = std::max(constrValue.normalizedRHSValue, constrValue.normalizedLHSValue);
     constrValue.error = std::max(0.0, constrValue.normalizedValue);
@@ -58,7 +54,7 @@ NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDoub
     return constrValue;
 }
 
-bool NumericConstraint::isFulfilled(const VectorDouble &point)
+bool NumericConstraint::isFulfilled(const VectorDouble& point)
 {
     auto constraintValue = calculateNumericValue(point);
 
@@ -67,14 +63,14 @@ bool NumericConstraint::isFulfilled(const VectorDouble &point)
 
 void LinearConstraint::add(LinearTerms terms)
 {
-    if (linearTerms.size() == 0)
+    if(linearTerms.size() == 0)
     {
         linearTerms = terms;
         properties.hasLinearTerms = true;
     }
     else
     {
-        for (auto T : terms)
+        for(auto T : terms)
         {
             add(T);
         }
@@ -87,33 +83,30 @@ void LinearConstraint::add(LinearTermPtr term)
     properties.hasLinearTerms = true;
 };
 
-double LinearConstraint::calculateFunctionValue(const VectorDouble &point)
+double LinearConstraint::calculateFunctionValue(const VectorDouble& point)
 {
     double value = linearTerms.calculate(point);
     value += constant;
     return value;
 };
 
-Interval LinearConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
+Interval LinearConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = linearTerms.calculate(intervalVector);
     value += Interval(constant);
     return value;
 };
 
-bool LinearConstraint::isFulfilled(const VectorDouble &point)
-{
-    return NumericConstraint::isFulfilled(point);
-};
+bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
-SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble &point)
+SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point)
 {
     SparseVariableVector gradient;
 
-    for (auto T : linearTerms)
+    for(auto T : linearTerms)
     {
         auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
-        if (!element.second)
+        if(!element.second)
         {
             // Element already exists for the variable
 
@@ -126,7 +119,7 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble &poi
     return gradient;
 };
 
-NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble &point, double correction)
+NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -138,7 +131,7 @@ std::shared_ptr<NumericConstraint> LinearConstraint::getPointer()
 
 void LinearConstraint::updateProperties()
 {
-    if (linearTerms.size() > 0)
+    if(linearTerms.size() > 0)
     {
         properties.hasLinearTerms = true;
         properties.classification = E_ConstraintClassification::Linear;
@@ -150,26 +143,20 @@ void LinearConstraint::updateProperties()
     }
 };
 
-void QuadraticConstraint::add(LinearTerms terms)
-{
-    LinearConstraint::add(terms);
-};
+void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
 
-void QuadraticConstraint::add(LinearTermPtr term)
-{
-    LinearConstraint::add(term);
-};
+void QuadraticConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); };
 
 void QuadraticConstraint::add(QuadraticTerms terms)
 {
-    if (quadraticTerms.size() == 0)
+    if(quadraticTerms.size() == 0)
     {
         quadraticTerms = terms;
         properties.hasQuadraticTerms = true;
     }
     else
     {
-        for (auto T : terms)
+        for(auto T : terms)
         {
             add(T);
         }
@@ -182,7 +169,7 @@ void QuadraticConstraint::add(QuadraticTermPtr term)
     properties.hasQuadraticTerms = true;
 };
 
-double QuadraticConstraint::calculateFunctionValue(const VectorDouble &point)
+double QuadraticConstraint::calculateFunctionValue(const VectorDouble& point)
 {
     double value = LinearConstraint::calculateFunctionValue(point);
     value += quadraticTerms.calculate(point);
@@ -190,30 +177,27 @@ double QuadraticConstraint::calculateFunctionValue(const VectorDouble &point)
     return value;
 };
 
-Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
+Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = LinearConstraint::calculateFunctionValue(intervalVector);
     value += quadraticTerms.calculate(intervalVector);
     return value;
 };
 
-bool QuadraticConstraint::isFulfilled(const VectorDouble &point)
-{
-    return NumericConstraint::isFulfilled(point);
-};
+bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
-SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &point)
+SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point)
 {
     SparseVariableVector gradient = LinearConstraint::calculateGradient(point);
 
-    for (auto T : quadraticTerms)
+    for(auto T : quadraticTerms)
     {
-        if (T->firstVariable == T->secondVariable) // variable squared
+        if(T->firstVariable == T->secondVariable) // variable squared
         {
             auto value = 2 * T->coefficient * point[T->firstVariable->index];
             auto element = gradient.insert(std::make_pair(T->firstVariable, value));
 
-            if (!element.second)
+            if(!element.second)
             {
                 // Element already exists for the variable
                 element.first->second += value;
@@ -224,7 +208,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &
             auto value = T->coefficient * point[T->secondVariable->index];
             auto element = gradient.insert(std::make_pair(T->firstVariable, value));
 
-            if (!element.second)
+            if(!element.second)
             {
                 // Element already exists for the variable
                 element.first->second += value;
@@ -233,7 +217,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &
             value = T->coefficient * point[T->firstVariable->index];
             element = gradient.insert(std::make_pair(T->secondVariable, value));
 
-            if (!element.second)
+            if(!element.second)
             {
                 // Element already exists for the variable
                 element.first->second += value;
@@ -246,7 +230,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &
     return gradient;
 };
 
-NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble &point, double correction)
+NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -260,7 +244,7 @@ void QuadraticConstraint::updateProperties()
 {
     LinearConstraint::updateProperties();
 
-    if (quadraticTerms.size() > 0)
+    if(quadraticTerms.size() > 0)
     {
         properties.hasQuadraticTerms = true;
         properties.classification = E_ConstraintClassification::Quadratic;
@@ -271,29 +255,17 @@ void QuadraticConstraint::updateProperties()
     }
 };
 
-void NonlinearConstraint::add(LinearTerms terms)
-{
-    LinearConstraint::add(terms);
-};
+void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
 
-void NonlinearConstraint::add(LinearTermPtr term)
-{
-    LinearConstraint::add(term);
-};
+void NonlinearConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); };
 
-void NonlinearConstraint::add(QuadraticTerms terms)
-{
-    QuadraticConstraint::add(terms);
-};
+void NonlinearConstraint::add(QuadraticTerms terms) { QuadraticConstraint::add(terms); };
 
-void NonlinearConstraint::add(QuadraticTermPtr term)
-{
-    QuadraticConstraint::add(term);
-};
+void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(term); };
 
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
-    if (nonlinearExpression.get() != nullptr)
+    if(nonlinearExpression.get() != nullptr)
     {
         nonlinearExpression = std::make_shared<ExpressionPlus>(nonlinearExpression, expression);
     }
@@ -310,53 +282,55 @@ void NonlinearConstraint::updateFactorableFunction()
     factorableFunction = std::make_shared<FactorableFunction>(nonlinearExpression->getFactorableFunction());
 };
 
-double NonlinearConstraint::calculateFunctionValue(const VectorDouble &point)
+double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
 {
     double value = QuadraticConstraint::calculateFunctionValue(point);
 
-    if (this->properties.hasNonlinearExpression)
+    if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(point);
 
     return value;
 };
 
-Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector &intervalVector)
+Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = QuadraticConstraint::calculateFunctionValue(intervalVector);
 
-    if (this->properties.hasNonlinearExpression)
+    if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(intervalVector);
 
     return value;
 };
 
-SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble &point)
+SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point)
 {
     SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point);
 
     try
     {
-        for (auto E : symbolicSparseJacobian)
+        for(auto E : symbolicSparseJacobian)
         {
             double value[1];
 
-            if (auto sharedOwnerProblem = ownerProblem.lock())
+            if(auto sharedOwnerProblem = ownerProblem.lock())
             {
                 // Collecting the values corresponding to nonlinear variables from the point
                 VectorDouble newPoint;
                 newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
 
-                for (auto &V : sharedOwnerProblem->nonlinearVariables)
+                for(auto& V : sharedOwnerProblem->nonlinearVariables)
                 {
                     newPoint.push_back(point.at(V->index));
                 }
 
-                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value, sharedOwnerProblem->factorableFunctionVariables.size(), &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
+                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value,
+                    sharedOwnerProblem->factorableFunctionVariables.size(),
+                    &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
             }
 
             auto element = gradient.insert(std::make_pair(E.first, value[0]));
 
-            if (!element.second)
+            if(!element.second)
             {
                 // Element already exists for the variable
                 element.first->second += value[0];
@@ -365,7 +339,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble &
 
         UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
     }
-    catch (mc::FFGraph::Exceptions &e)
+    catch(mc::FFGraph::Exceptions& e)
     {
         std::cout << "Error when evaluating gradient: " << e.what();
     }
@@ -373,12 +347,9 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble &
     return gradient;
 };
 
-bool NonlinearConstraint::isFulfilled(const VectorDouble &point)
-{
-    return NumericConstraint::isFulfilled(point);
-};
+bool NonlinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
-NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble &point, double correction)
+NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 };
@@ -392,7 +363,7 @@ void NonlinearConstraint::updateProperties()
 {
     QuadraticConstraint::updateProperties();
 
-    if (nonlinearExpression != nullptr)
+    if(nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
         properties.classification = E_ConstraintClassification::Nonlinear;
@@ -403,96 +374,95 @@ void NonlinearConstraint::updateProperties()
     }
 };
 
-std::ostream &operator<<(std::ostream &stream, NumericConstraintPtr constraint)
+std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
 };
 
-std::ostream &operator<<(std::ostream &stream, LinearConstraintPtr constraint)
+std::ostream& operator<<(std::ostream& stream, LinearConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
 };
 
-std::ostream &LinearConstraint::print(std::ostream &stream) const
+std::ostream& LinearConstraint::print(std::ostream& stream) const
 {
-    if (valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
+    if(valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
-    if (linearTerms.size() > 0)
+    if(linearTerms.size() > 0)
         stream << linearTerms;
 
-    if (constant > 0)
+    if(constant > 0)
         stream << '+' << constant;
 
-    if (constant < 0)
+    if(constant < 0)
         stream << constant;
 
-    if (valueLHS == valueRHS)
+    if(valueLHS == valueRHS)
         stream << " = " << valueRHS;
-    else if (valueRHS < SHOT_DBL_MAX)
+    else if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;
 };
 
-std::ostream &operator<<(std::ostream &stream,
-                         QuadraticConstraintPtr constraint)
+std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
 };
 
-std::ostream &QuadraticConstraint::print(std::ostream &stream) const
+std::ostream& QuadraticConstraint::print(std::ostream& stream) const
 {
-    if (valueLHS > SHOT_DBL_MIN)
+    if(valueLHS > SHOT_DBL_MIN)
         stream << valueLHS << " <= ";
 
-    if (linearTerms.size() > 0)
+    if(linearTerms.size() > 0)
         stream << linearTerms;
 
-    if (quadraticTerms.size() > 0)
+    if(quadraticTerms.size() > 0)
         stream << " +" << quadraticTerms;
 
-    if (constant > 0)
+    if(constant > 0)
         stream << '+' << constant;
 
-    if (constant < 0)
+    if(constant < 0)
         stream << constant;
 
-    if (valueRHS < SHOT_DBL_MAX)
+    if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;
 };
 
-std::ostream &operator<<(std::ostream &stream, NonlinearConstraintPtr constraint)
+std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
 };
 
-std::ostream &NonlinearConstraint::print(std::ostream &stream) const
+std::ostream& NonlinearConstraint::print(std::ostream& stream) const
 {
-    if (valueLHS > SHOT_DBL_MIN)
+    if(valueLHS > SHOT_DBL_MIN)
         stream << valueLHS << " <= ";
 
-    if (linearTerms.size() > 0)
+    if(linearTerms.size() > 0)
         stream << linearTerms;
 
-    if (quadraticTerms.size() > 0)
+    if(quadraticTerms.size() > 0)
         stream << " +" << quadraticTerms;
 
     stream << " +" << nonlinearExpression;
 
-    if (constant > 0)
+    if(constant > 0)
         stream << '+' << constant;
 
-    if (constant < 0)
+    if(constant < 0)
         stream << constant;
 
-    if (valueRHS < SHOT_DBL_MAX)
+    if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;

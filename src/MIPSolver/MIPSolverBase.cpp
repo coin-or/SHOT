@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-MIPSolverBase::~MIPSolverBase()
-{
-    lastSolutions.clear();
-}
+MIPSolverBase::~MIPSolverBase() { lastSolutions.clear(); }
 
 double MIPSolverBase::getObjectiveValue()
 {
@@ -26,7 +23,7 @@ double MIPSolverBase::getObjectiveValue()
 
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
-    if (env->reformulatedProblem->properties.numberOfDiscreteVariables == 0)
+    if(env->reformulatedProblem->properties.numberOfDiscreteVariables == 0)
     {
         return (false);
     }
@@ -38,7 +35,7 @@ bool MIPSolverBase::getDiscreteVariableStatus()
 
 E_IterationProblemType MIPSolverBase::getCurrentProblemType()
 {
-    if (getDiscreteVariableStatus())
+    if(getDiscreteVariableStatus())
         return (E_IterationProblemType::MIP);
     else
         return (E_IterationProblemType::Relaxed);
@@ -46,7 +43,7 @@ E_IterationProblemType MIPSolverBase::getCurrentProblemType()
 
 void MIPSolverBase::executeRelaxationStrategy()
 {
-    if (this->relaxationStrategy == nullptr || this->relaxationStrategy.get() == nullptr)
+    if(this->relaxationStrategy == nullptr || this->relaxationStrategy.get() == nullptr)
     {
         relaxationStrategy = std::make_unique<RelaxationStrategyStandard>(env);
     }
@@ -56,7 +53,7 @@ void MIPSolverBase::executeRelaxationStrategy()
 
 std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 {
-    if (cachedSolutionHasChanged == false)
+    if(cachedSolutionHasChanged == false)
         return (lastSolutions);
 
     int numSol = getNumberOfSolutions();
@@ -64,13 +61,13 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
     int numVar = env->reformulatedProblem->properties.numberOfVariables;
     std::vector<SolutionPoint> lastSolutions(numSol);
 
-    for (int i = 0; i < numSol; i++)
+    for(int i = 0; i < numSol; i++)
     {
         SolutionPoint tmpSolPt;
 
         auto tmpPt = getVariableSolution(i);
 
-        while (tmpPt.size() > env->reformulatedProblem->properties.numberOfVariables)
+        while(tmpPt.size() > env->reformulatedProblem->properties.numberOfVariables)
         {
             tmpPt.pop_back();
         }
@@ -80,9 +77,10 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
         tmpSolPt.objectiveValue = getObjectiveValue(i);
         tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-        if (env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
-            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(tmpPt, env->reformulatedProblem->nonlinearConstraints);
+            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+                tmpPt, env->reformulatedProblem->nonlinearConstraints);
             tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
         }
 
@@ -100,7 +98,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     auto optional = createHyperplaneTerms(hyperplane);
 
-    if (!optional)
+    if(!optional)
     {
         return;
     }
@@ -109,16 +107,16 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     bool hyperplaneIsOk = true;
 
-    for (auto E : tmpPair.first)
+    for(auto E : tmpPair.first)
     {
-        if (E.value != E.value) //Check for NaN
+        if(E.value != E.value) // Check for NaN
         {
             env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
             break;
         }
 
-        if (isinf(E.value))
+        if(isinf(E.value))
         {
             env->output->outputError("     Warning: hyperplane not generated, inf found in linear terms!");
             hyperplaneIsOk = false;
@@ -126,11 +124,11 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         }
     }
 
-    if (hyperplaneIsOk)
+    if(hyperplaneIsOk)
     {
         std::string source = "";
 
-        switch (hyperplane.source)
+        switch(hyperplane.source)
         {
         case E_HyperplaneSource::MIPOptimalLinesearch:
             source = "MIP linesearch";
@@ -190,18 +188,21 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
     }
 }
 
-std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
+std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(
+    Hyperplane hyperplane)
 {
     std::vector<PairIndexValue> elements;
     double constant = 0.0;
     SparseVariableVector gradient;
     double signFactor = 1.0; // Will be -1.0 for greater than constraints
 
-    if (hyperplane.isObjectiveHyperplane)
+    if(hyperplane.isObjectiveHyperplane)
     {
-        //constant = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
+        // constant =
+        // std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
         constant = hyperplane.objectiveFunctionValue;
-        gradient = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateGradient(hyperplane.generatedPoint);
+        gradient = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                       ->calculateGradient(hyperplane.generatedPoint);
 
         PairIndexValue pair;
         pair.index = auxilliaryObjectiveVariableIndex;
@@ -209,14 +210,15 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
 
         elements.push_back(pair);
 
-        env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size()) + " elements and constant " + std::to_string(constant));
+        env->output->outputInfo("     HP point generated for objective function with " + std::to_string(gradient.size())
+            + " elements and constant " + std::to_string(constant));
     }
     else
     {
         assert(hyperplane.sourceConstraint);
         auto maxDev = hyperplane.sourceConstraint->calculateNumericValue(hyperplane.generatedPoint);
 
-        if (maxDev.isFulfilledRHS && !maxDev.isFulfilledLHS)
+        if(maxDev.isFulfilledRHS && !maxDev.isFulfilledLHS)
         {
             signFactor = -1.0;
             constant = maxDev.normalizedLHSValue;
@@ -227,10 +229,12 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
         }
 
         gradient = hyperplane.sourceConstraint->calculateGradient(hyperplane.generatedPoint);
-        env->output->outputInfo("     HP point generated for constraint index " + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size()) + " elements.");
+        env->output->outputInfo("     HP point generated for constraint index "
+            + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size())
+            + " elements.");
     }
 
-    for (auto const &G : gradient)
+    for(auto const& G : gradient)
     {
         PairIndexValue pair;
         pair.index = G.first->index;
@@ -240,12 +244,14 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
 
         constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(G.first->index);
 
-        env->output->outputInfo("     Gradient for variable " + G.first->name + " in point " + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": " + std::to_string(signFactor * G.second));
+        env->output->outputInfo("     Gradient for variable " + G.first->name + " in point "
+            + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": "
+            + std::to_string(signFactor * G.second));
     }
 
     std::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
 
-    if (elements.size() > 0)
+    if(elements.size() > 0)
         optional = std::make_pair(elements, constant);
 
     elements.clear();
@@ -318,57 +324,57 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
         currIter->totNumHyperplanes++;
     }
 
-    currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes + currIter->numHyperplanesAdded;*/
+    currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes +
+    currIter->numHyperplanesAdded;*/
 }
 
-std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()
-{
-    return (&generatedHyperplanes);
-}
+std::vector<GeneratedHyperplane>* MIPSolverBase::getGeneratedHyperplanes() { return (&generatedHyperplanes); }
 
 void MIPSolverBase::presolveAndUpdateBounds()
 {
     auto newBounds = this->presolveAndGetNewBounds();
 
-    for (int i = 0; i < env->reformulatedProblem->properties.numberOfVariables; i++)
+    for(int i = 0; i < env->reformulatedProblem->properties.numberOfVariables; i++)
     {
         auto currBounds = this->getCurrentVariableBounds(i);
 
         bool newLB = false;
         bool newUB = false;
 
-        if (newBounds.first.at(i) > currBounds.first)
+        if(newBounds.first.at(i) > currBounds.first)
             newLB = true;
-        if (newBounds.second.at(i) > currBounds.second)
+        if(newBounds.second.at(i) > currBounds.second)
             newUB = true;
 
-        if (newLB)
+        if(newLB)
         {
             env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
-            env->output->outputInfo(
-                "     Lower bound for variable (" + std::to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.first) + " to " + UtilityFunctions::toString(newBounds.first.at(i)));
+            env->output->outputInfo("     Lower bound for variable (" + std::to_string(i) + ") updated from "
+                + UtilityFunctions::toString(currBounds.first) + " to "
+                + UtilityFunctions::toString(newBounds.first.at(i)));
 
-            if (!env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened)
+            if(!env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened)
             {
                 env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened = true;
                 env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
-        if (newUB)
+        if(newUB)
         {
             env->reformulatedProblem->getVariable(i)->upperBound = newBounds.second.at(i);
-            env->output->outputAlways(
-                "     Upper bound for variable (" + std::to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.second) + " to " + UtilityFunctions::toString(newBounds.second.at(i)));
+            env->output->outputAlways("     Upper bound for variable (" + std::to_string(i) + ") updated from "
+                + UtilityFunctions::toString(currBounds.second) + " to "
+                + UtilityFunctions::toString(newBounds.second.at(i)));
 
-            if (!env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened)
+            if(!env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened)
             {
                 env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened = true;
                 env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
-        if (env->settings->getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
+        if(env->settings->getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
         {
             updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
             env->output->outputInfo("     Bounds updated also in MIP problem");
@@ -378,21 +384,21 @@ void MIPSolverBase::presolveAndUpdateBounds()
 
 void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-    if (isVariablesFixed)
+    if(isVariablesFixed)
     {
         unfixVariables();
     }
 
     int size = variableIndexes.size();
 
-    if (size == 0)
+    if(size == 0)
         return;
 
     std::vector<PairDouble> originalBounds(size);
 
     activateDiscreteVariables(false);
 
-    for (int i = 0; i < size; i++)
+    for(int i = 0; i < size; i++)
     {
         originalBounds.at(i) = this->getCurrentVariableBounds(variableIndexes.at(i));
         this->fixVariable(variableIndexes.at(i), variableValues.at(i));
@@ -406,10 +412,10 @@ void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void MIPSolverBase::unfixVariables()
 {
-    for (int i = 0; i < fixedVariableIndexes.size(); i++)
+    for(int i = 0; i < fixedVariableIndexes.size(); i++)
     {
         updateVariableBound(fixedVariableIndexes.at(i), fixedVariableOriginalBounds.at(i).first,
-                            fixedVariableOriginalBounds.at(i).second);
+            fixedVariableOriginalBounds.at(i).second);
     }
 
     isVariablesFixed = false;
@@ -419,7 +425,7 @@ void MIPSolverBase::createIntegerCut(VectorInteger binaryIndexes)
 {
     std::vector<PairIndexValue> elements;
 
-    for (int i = 0; i < binaryIndexes.size(); i++)
+    for(int i = 0; i < binaryIndexes.size(); i++)
     {
         PairIndexValue pair;
         pair.index = binaryIndexes.at(i);
@@ -432,8 +438,5 @@ void MIPSolverBase::createIntegerCut(VectorInteger binaryIndexes)
     env->solutionStatistics.numberOfIntegerCuts++;
 }
 
-int MIPSolverBase::getNumberOfOpenNodes()
-{
-    return (env->solutionStatistics.numberOfOpenNodes);
-}
+int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
 } // namespace SHOT

@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,8 +15,9 @@ namespace SHOT
 {
 class INLPSolver
 {
-  public:
-    INLPSolver(EnvironmentPtr envPtr) : env(envPtr){};
+public:
+    INLPSolver(EnvironmentPtr envPtr)
+        : env(envPtr){};
 
     virtual ~INLPSolver(){};
 
@@ -43,7 +44,7 @@ class INLPSolver
     virtual void updateVariableLowerBound(int variableIndex, double bound) = 0;
     virtual void updateVariableUpperBound(int variableIndex, double bound) = 0;
 
-  protected:
+protected:
     virtual E_NLPSolutionStatus solveProblemInstance() = 0;
 };
 } // namespace SHOT

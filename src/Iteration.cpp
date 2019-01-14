@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -20,9 +20,9 @@ Iteration::Iteration(EnvironmentPtr envPtr)
 
     this->numHyperplanesAdded = 0;
 
-    if (env->results->iterations.size() == 0)
+    if(env->results->iterations.size() == 0)
         this->totNumHyperplanes = 0;
-    else if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    else if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
         this->totNumHyperplanes = 0;
     else
         this->totNumHyperplanes = env->results->iterations.at(env->results->iterations.size() - 1)->totNumHyperplanes;
@@ -45,19 +45,16 @@ Iteration::~Iteration()
     hyperplanePoints.clear();
 }
 
-bool Iteration::isMIP()
-{
-    return (this->type == E_IterationProblemType::MIP);
-}
+bool Iteration::isMIP() { return (this->type == E_IterationProblemType::MIP); }
 
 SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 {
     double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
-    for (int i = 0; i < solutionPoints.size(); i++)
+    for(int i = 0; i < solutionPoints.size(); i++)
     {
-        if (solutionPoints.at(i).maxDeviation.value > tmpVal)
+        if(solutionPoints.at(i).maxDeviation.value > tmpVal)
         {
             tmpIdx = i;
             tmpVal = solutionPoints.at(i).maxDeviation.value;
@@ -72,9 +69,9 @@ int Iteration::getSolutionPointWithSmallestDeviationIndex()
     double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
-    for (int i = 0; i < solutionPoints.size(); i++)
+    for(int i = 0; i < solutionPoints.size(); i++)
     {
-        if (solutionPoints.at(i).maxDeviation.value > tmpVal)
+        if(solutionPoints.at(i).maxDeviation.value > tmpVal)
         {
             tmpIdx = i;
             tmpVal = solutionPoints.at(i).maxDeviation.value;

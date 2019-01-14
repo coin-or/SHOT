@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,15 +15,16 @@ namespace SHOT
 {
 class TaskException : public std::exception
 {
-  public:
-    TaskException(EnvironmentPtr envPtr, std::string msg) : message(msg)
+public:
+    TaskException(EnvironmentPtr envPtr, std::string msg)
+        : message(msg)
     {
     }
     TaskException();
 
-    const char *what() const throw()
+    const char* what() const throw()
     {
-        if (message == "")
+        if(message == "")
             return "Unspecified task exception occurred!";
         else
         {
@@ -35,18 +36,19 @@ class TaskException : public std::exception
         }
     }
 
-  private:
+private:
     std::string message;
 };
 
 class TaskExceptionFunctionNotDefined : public std::exception
 {
-  public:
-    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task) : taskName(task)
+public:
+    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task)
+        : taskName(task)
     {
     }
 
-    const char *what() const throw()
+    const char* what() const throw()
     {
         std::stringstream message;
         message << "Exception: task function in ";
@@ -56,18 +58,19 @@ class TaskExceptionFunctionNotDefined : public std::exception
         return (message.str().c_str());
     }
 
-  private:
+private:
     std::string taskName;
 };
 
 class TaskExceptionNotFound : public std::exception
 {
-  public:
-    TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task) : taskID(task)
+public:
+    TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task)
+        : taskID(task)
     {
     }
 
-    const char *what() const throw()
+    const char* what() const throw()
     {
         std::stringstream message;
         message << "Exception: task with ID ";
@@ -77,7 +80,7 @@ class TaskExceptionNotFound : public std::exception
         return (message.str().c_str());
     }
 
-  private:
+private:
     std::string taskID;
 };
 } // namespace SHOT

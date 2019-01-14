@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,11 +16,8 @@ namespace SHOT
 
 class PrimalSolver
 {
-  public:
-    PrimalSolver(EnvironmentPtr envPtr)
-    {
-        env = envPtr;
-    }
+public:
+    PrimalSolver(EnvironmentPtr envPtr) { env = envPtr; }
 
     ~PrimalSolver()
     {
@@ -38,16 +35,17 @@ class PrimalSolver
 
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
-    inline void addFixedNLPCandidate(VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
+    inline void addFixedNLPCandidate(
+        VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
     {
-        PrimalFixedNLPCandidate cand = {pt, source, objVal, iter};
+        PrimalFixedNLPCandidate cand = { pt, source, objVal, iter };
         fixedPrimalNLPCandidates.push_back(cand);
     }
 
     std::vector<PrimalSolution> primalSolutionCandidates;
     std::vector<PrimalFixedNLPCandidate> fixedPrimalNLPCandidates;
 
-  private:
+private:
     EnvironmentPtr env;
 };
 

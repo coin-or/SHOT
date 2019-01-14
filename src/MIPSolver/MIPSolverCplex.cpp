@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -39,7 +39,7 @@ bool MIPSolverCplex::initializeProblem()
 {
     discreteVariablesActivated = true;
 
-    if (alreadyInitialized)
+    if(alreadyInitialized)
     {
         cplexVarConvers.clear();
         cplexModel.end();
@@ -60,7 +60,7 @@ bool MIPSolverCplex::initializeProblem()
         cplexVars = IloNumVarArray(cplexEnv);
         cplexConstrs = IloRangeArray(cplexEnv);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when initializing model", e.getMessage());
         return (false);
@@ -79,7 +79,7 @@ bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double l
 {
     try
     {
-        switch (type)
+        switch(type)
         {
         case E_VariableType::Real:
         {
@@ -111,7 +111,7 @@ bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double l
         }
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when adding variable to model: ", e.getMessage());
         return (false);
@@ -131,7 +131,7 @@ bool MIPSolverCplex::initializeObjective()
     {
         objExpression = IloExpr(cplexEnv);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when initializing objective function: ", e.getMessage());
         return (false);
@@ -146,7 +146,7 @@ bool MIPSolverCplex::addLinearTermToObjective(double coefficient, int variableIn
     {
         objExpression += coefficient * cplexVars[variableIndex];
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when adding linear term to objective: ", e.getMessage());
         return (false);
@@ -161,7 +161,7 @@ bool MIPSolverCplex::addQuadraticTermToObjective(double coefficient, int firstVa
     {
         objExpression += coefficient * cplexVars[firstVariableIndex] * cplexVars[secondVariableIndex];
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when adding quadratic term to objective: ", e.getMessage());
         return (false);
@@ -174,10 +174,10 @@ bool MIPSolverCplex::finalizeObjective(bool isMinimize, double constant)
 {
     try
     {
-        if (constant != 0.0)
+        if(constant != 0.0)
             objExpression += constant;
 
-        if (isMinimize)
+        if(isMinimize)
         {
             cplexObjectiveExpression = objExpression;
             cplexModel.add(IloMinimize(cplexEnv, cplexObjectiveExpression));
@@ -190,7 +190,7 @@ bool MIPSolverCplex::finalizeObjective(bool isMinimize, double constant)
             isMinimizationProblem = false;
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         objExpression.end();
         env->output->outputError("Cplex exception caught when adding objective function to model: ", e.getMessage());
@@ -207,7 +207,7 @@ bool MIPSolverCplex::initializeConstraint()
     {
         constrExpression = IloExpr(cplexEnv);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         objExpression.end();
         env->output->outputError("Cplex exception caught when initializing constraint: ", e.getMessage());
@@ -223,7 +223,7 @@ bool MIPSolverCplex::addLinearTermToConstraint(double coefficient, int variableI
     {
         constrExpression += coefficient * cplexVars[variableIndex];
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when adding linear term to constraint: ", e.getMessage());
         return (false);
@@ -238,7 +238,7 @@ bool MIPSolverCplex::addQuadraticTermToConstraint(double coefficient, int firstV
     {
         constrExpression += coefficient * cplexVars[firstVariableIndex] * cplexVars[secondVariableIndex];
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when adding quadratic term to constraint: ", e.getMessage());
         return (false);
@@ -251,10 +251,10 @@ bool MIPSolverCplex::finalizeConstraint(std::string name, double valueLHS, doubl
 {
     try
     {
-        if (constant != 0.0)
+        if(constant != 0.0)
             constrExpression += constant;
 
-        if (valueLHS <= valueRHS)
+        if(valueLHS <= valueRHS)
         {
             IloRange tmpRange = IloRange(cplexEnv, valueLHS, constrExpression, valueRHS, name.c_str());
             cplexConstrs.add(tmpRange);
@@ -267,7 +267,7 @@ bool MIPSolverCplex::finalizeConstraint(std::string name, double valueLHS, doubl
             cplexModel.add(tmpRange);
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         constrExpression.end();
         env->output->outputError("Cplex exception caught when adding constraint to model: ", e.getMessage());
@@ -284,12 +284,12 @@ bool MIPSolverCplex::finalizeProblem()
 {
     try
     {
-        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
 
-            if (env->results->iterations.size() > 0)
+            if(env->results->iterations.size() > 0)
             {
                 setSolLimit = env->results->getCurrentIteration()->usedMIPSolutionLimit;
                 discreteVariablesActivated = env->results->getCurrentIteration()->isMIP();
@@ -302,7 +302,7 @@ bool MIPSolverCplex::finalizeProblem()
             cplexInstance = IloCplex(cplexModel);
             setSolutionLimit(setSolLimit);
 
-            if (!discreteVariablesActivated)
+            if(!discreteVariablesActivated)
             {
                 activateDiscreteVariables(false);
             }
@@ -312,7 +312,7 @@ bool MIPSolverCplex::finalizeProblem()
             cplexInstance = IloCplex(cplexModel);
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex exception caught when finalizing model", e.getMessage());
         return (false);
@@ -326,33 +326,41 @@ void MIPSolverCplex::initializeSolverSettings()
     try
     {
         // Disable Cplex output
-        if (!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
         {
             cplexInstance.setOut(cplexEnv.getNullStream());
 
-            if (env->settings->getIntSetting("Console.LogLevel", "Output") <= static_cast<int>(ENUM_OUTPUT_LEVEL_summary))
+            if(env->settings->getIntSetting("Console.LogLevel", "Output")
+                <= static_cast<int>(ENUM_OUTPUT_LEVEL_summary))
             {
                 cplexInstance.setWarning(cplexEnv.getNullStream());
             }
         }
 
-        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap, env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
-        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap, env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
+        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::MIPGap,
+            env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
+        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap,
+            env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
 
-        if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
-            if (env->results->iterations.size() == 0)
-                cplexInstance.setParam(IloCplex::IntSolLim, env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
+            if(env->results->iterations.size() == 0)
+                cplexInstance.setParam(
+                    IloCplex::IntSolLim, env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
         }
         else
         {
             cplexInstance.setParam(IloCplex::IntSolLim, 21000000);
         }
 
-        cplexInstance.setParam(IloCplex::SolnPoolIntensity, env->settings->getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
-        cplexInstance.setParam(IloCplex::SolnPoolReplace, env->settings->getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
-        cplexInstance.setParam(IloCplex::SolnPoolGap, env->settings->getDoubleSetting("Cplex.SolnPoolGap", "Subsolver"));
-        cplexInstance.setParam(IloCplex::SolnPoolCapacity, env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
+        cplexInstance.setParam(IloCplex::SolnPoolIntensity,
+            env->settings->getIntSetting("Cplex.SolnPoolIntensity", "Subsolver")); // Don't use 3 with heuristics
+        cplexInstance.setParam(
+            IloCplex::SolnPoolReplace, env->settings->getIntSetting("Cplex.SolnPoolReplace", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::SolnPoolGap, env->settings->getDoubleSetting("Cplex.SolnPoolGap", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::SolnPoolCapacity, env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
 
         cplexInstance.setParam(IloCplex::Probe, env->settings->getIntSetting("Cplex.Probe", "Subsolver"));
         cplexInstance.setParam(IloCplex::MIPEmphasis, env->settings->getIntSetting("Cplex.MIPEmphasis", "Subsolver"));
@@ -360,37 +368,42 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::ParallelMode, env->settings->getIntSetting("Cplex.ParallelMode", "Subsolver"));
         cplexInstance.setParam(IloCplex::Threads, env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"));
 
-        cplexInstance.setParam(IloCplex::NumericalEmphasis, env->settings->getIntSetting("Cplex.NumericalEmphasis", "Subsolver"));
-        cplexInstance.setParam(IloCplex::MemoryEmphasis, env->settings->getIntSetting("Cplex.MemoryEmphasis", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::NumericalEmphasis, env->settings->getIntSetting("Cplex.NumericalEmphasis", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::MemoryEmphasis, env->settings->getIntSetting("Cplex.MemoryEmphasis", "Subsolver"));
 
         // Sets whether CPLEX allows nonconvex quadratic functions
-        cplexInstance.setParam(IloCplex::Param::OptimalityTarget, env->settings->getIntSetting("Cplex.OptimalityTarget", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::Param::OptimalityTarget, env->settings->getIntSetting("Cplex.OptimalityTarget", "Subsolver"));
 
         // Options for using swap file
-        cplexInstance.setParam(IloCplex::WorkDir, env->settings->getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
+        cplexInstance.setParam(
+            IloCplex::WorkDir, env->settings->getStringSetting("Cplex.WorkDir", "Subsolver").c_str());
         cplexInstance.setParam(IloCplex::WorkMem, env->settings->getDoubleSetting("Cplex.WorkMem", "Subsolver"));
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getIntSetting("Cplex.NodeFileInd", "Subsolver"));
 
         cplexInstance.setParam(IloCplex::FeasOptMode, 1);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Cplex error when initializing parameters for linear solver", e.getMessage());
     }
 }
 
-int MIPSolverCplex::addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan)
+int MIPSolverCplex::addLinearConstraint(
+    const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
 {
     try
     {
         IloExpr expr(cplexEnv);
 
-        for (int i = 0; i < elements.size(); i++)
+        for(int i = 0; i < elements.size(); i++)
         {
             expr += elements.at(i).value * cplexVars[elements.at(i).index];
         }
 
-        if (isGreaterThan)
+        if(isGreaterThan)
         {
             IloRange tmpRange(cplexEnv, -constant, expr);
             cplexConstrs.add(tmpRange);
@@ -407,7 +420,7 @@ int MIPSolverCplex::addLinearConstraint(const std::vector<PairIndexValue> &eleme
 
         expr.end();
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when adding linear constraint", e.getMessage());
 
@@ -421,25 +434,25 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
     try
     {
-        for (int i = 0; i < cplexVarConvers.size(); i++)
+        for(int i = 0; i < cplexVarConvers.size(); i++)
         {
             cplexVarConvers.at(i).end();
         }
 
         cplexVarConvers.clear();
 
-        if (activate)
+        if(activate)
         {
-            for (int i = 0; i < numberOfVariables; i++)
+            for(int i = 0; i < numberOfVariables; i++)
             {
-                if (variableTypes.at(i) == E_VariableType::Integer)
+                if(variableTypes.at(i) == E_VariableType::Integer)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOINT);
                     cplexModel.add(tmpConv);
                     cplexVarConvers.push_back(tmpConv);
                 }
-                else if (variableTypes.at(i) == E_VariableType::Binary)
+                else if(variableTypes.at(i) == E_VariableType::Binary)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOBOOL);
@@ -452,9 +465,9 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         }
         else
         {
-            for (int i = 0; i < numberOfVariables; i++)
+            for(int i = 0; i < numberOfVariables; i++)
             {
-                if (variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
+                if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
                 {
                     auto tmpVar = cplexVars[i];
                     auto tmpConv = IloConversion(cplexEnv, tmpVar, ILOFLOAT);
@@ -466,11 +479,10 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
             discreteVariablesActivated = false;
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
-        if (activate)
-            env->output->outputError("Error when activating discrete variables",
-                                     e.getMessage());
+        if(activate)
+            env->output->outputError("Error when activating discrete variables", e.getMessage());
     }
 }
 
@@ -482,11 +494,11 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
     {
         auto status = cplexInstance.getCplexStatus();
 
-        if (status == IloCplex::CplexStatus::Optimal || status == IloCplex::CplexStatus::OptimalTol)
+        if(status == IloCplex::CplexStatus::Optimal || status == IloCplex::CplexStatus::OptimalTol)
         {
             auto statusInstance = cplexInstance.getStatus();
 
-            if (statusInstance == IloAlgorithm::Status::Optimal)
+            if(statusInstance == IloAlgorithm::Status::Optimal)
             {
                 MIPSolutionStatus = E_ProblemSolutionStatus::Optimal;
             }
@@ -495,35 +507,35 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
                 MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
             }
         }
-        else if (status == IloCplex::CplexStatus::Infeasible)
+        else if(status == IloCplex::CplexStatus::Infeasible)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
         }
-        else if (status == IloCplex::CplexStatus::InfOrUnbd)
+        else if(status == IloCplex::CplexStatus::InfOrUnbd)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
         }
-        else if (status == IloCplex::CplexStatus::Unbounded)
+        else if(status == IloCplex::CplexStatus::Unbounded)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
         }
-        else if (status == IloCplex::CplexStatus::NodeLimFeas)
+        else if(status == IloCplex::CplexStatus::NodeLimFeas)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
         }
-        else if (status == IloCplex::CplexStatus::NumBest)
+        else if(status == IloCplex::CplexStatus::NumBest)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
         }
-        else if (status == IloCplex::CplexStatus::AbortTimeLim || status == IloCplex::CplexStatus::AbortDetTimeLim)
+        else if(status == IloCplex::CplexStatus::AbortTimeLim || status == IloCplex::CplexStatus::AbortDetTimeLim)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::TimeLimit;
         }
-        else if (status == IloCplex::CplexStatus::SolLim)
+        else if(status == IloCplex::CplexStatus::SolLim)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
         }
-        else if (status == IloCplex::CplexStatus::AbortUser)
+        else if(status == IloCplex::CplexStatus::AbortUser)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
         }
@@ -533,7 +545,7 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
             MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when obtaining solution status", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
@@ -549,7 +561,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
     try
     {
-        if (modelUpdated)
+        if(modelUpdated)
         {
             cplexInstance.extract(cplexModel);
 
@@ -560,9 +572,10 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
         MIPSolutionStatus = getSolutionStatus();
 
-        if (cplexInstance.getStatus() == IloAlgorithm::Infeasible || cplexInstance.getStatus() == IloAlgorithm::InfeasibleOrUnbounded)
+        if(cplexInstance.getStatus() == IloAlgorithm::Infeasible
+            || cplexInstance.getStatus() == IloAlgorithm::InfeasibleOrUnbounded)
         {
-            //std::cout << "*** Model is infeasible ***" << std::endl;
+            // std::cout << "*** Model is infeasible ***" << std::endl;
 
             IloNumArray lb(cplexEnv);
             IloNumArray ub(cplexEnv);
@@ -577,12 +590,12 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
             lb.add(numOrigConstraints, 0.0);
             ub.add(numOrigConstraints, 0.0);
-            //lb.add(rows - numOrigConstraints, 1.0);
-            //ub.add(rows - numOrigConstraints, 1.0);
+            // lb.add(rows - numOrigConstraints, 1.0);
+            // ub.add(rows - numOrigConstraints, 1.0);
 
-            for (int i = numOrigConstraints; i < rows; i++)
+            for(int i = numOrigConstraints; i < rows; i++)
             {
-                if (i == cutOffConstraintIndex)
+                if(i == cutOffConstraintIndex)
                 {
                     lb.add(0.0);
                     continue;
@@ -591,12 +604,12 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
                 lb.add((double)i * i);
             }
 
-            //std::cout << lb << std::endl;
-            //std::cout << ub << std::endl;
+            // std::cout << lb << std::endl;
+            // std::cout << ub << std::endl;
 
-            //std::cout << cplexConstrs << std::endl;
+            // std::cout << cplexConstrs << std::endl;
 
-            if (cplexInstance.feasOpt(cplexConstrs, lb))
+            if(cplexInstance.feasOpt(cplexConstrs, lb))
             {
                 IloNumArray infeas(cplexEnv);
                 IloNumArray vals(cplexEnv);
@@ -615,20 +628,21 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
                 cplexInstance.getSlacks(slacks, cplexConstrs);
                 std::cout << "slacks: " << slacks << std::endl;*/
 
-                for (int i = numOrigConstraints - 1; i < infeas.getSize(); i++)
+                for(int i = numOrigConstraints - 1; i < infeas.getSize(); i++)
                 {
                     cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.1 * infeas[i]);
                 }
 
-                env->output->outputAlways("        Number of constraints modified: " + std::to_string(infeas.getSize()));
+                env->output->outputAlways(
+                    "        Number of constraints modified: " + std::to_string(infeas.getSize()));
 
                 cplexInstance.extract(cplexModel);
-                //writeProblemToFile("test.lp");
+                // writeProblemToFile("test.lp");
 
                 cplexInstance.solve();
 
-                //cplexInstance.getValues(vals, cplexVars);
-                //std::cout << "Values             = " << vals << std::endl;
+                // cplexInstance.getValues(vals, cplexVars);
+                // std::cout << "Values             = " << vals << std::endl;
 
                 MIPSolutionStatus = getSolutionStatus();
             }
@@ -638,7 +652,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             }
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
@@ -656,7 +670,7 @@ int MIPSolverCplex::increaseSolutionLimit(int increment)
         cplexInstance.setParam(IloCplex::IntSolLim, cplexInstance.getParam(cplexInstance.IntSolLim) + increment);
         sollim = cplexInstance.getParam(cplexInstance.IntSolLim);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when increasing solution limit", e.getMessage());
     }
@@ -670,7 +684,7 @@ void MIPSolverCplex::setSolutionLimit(long limit)
     {
         cplexInstance.setParam(IloCplex::IntSolLim, limit);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when setting solution limit", e.getMessage());
     }
@@ -684,7 +698,7 @@ int MIPSolverCplex::getSolutionLimit()
     {
         solLim = cplexInstance.getParam(cplexInstance.IntSolLim);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when obtaining solution limit", e.getMessage());
     }
@@ -702,7 +716,7 @@ VectorDouble MIPSolverCplex::getVariableSolution(int solIdx)
 
     try
     {
-        if (isMIP)
+        if(isMIP)
         {
             cplexInstance.getValues(cplexVars, tmpSolsCplex, solIdx);
         }
@@ -711,15 +725,14 @@ VectorDouble MIPSolverCplex::getVariableSolution(int solIdx)
             cplexInstance.getValues(cplexVars, tmpSolsCplex);
         }
 
-        for (int i = 0; i < numVar; i++)
+        for(int i = 0; i < numVar; i++)
         {
             solution.at(i) = tmpSolsCplex[i];
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
-        env->output->outputError("Error when reading solution with index " + std::to_string(solIdx),
-                                 e.getMessage());
+        env->output->outputError("Error when reading solution with index " + std::to_string(solIdx), e.getMessage());
     }
 
     tmpSolsCplex.end();
@@ -733,7 +746,7 @@ int MIPSolverCplex::getNumberOfSolutions()
 
     try
     {
-        if (isProblemDiscrete && isMIP)
+        if(isProblemDiscrete && isMIP)
         {
             numSols = cplexInstance.getSolnPoolNsolns();
         }
@@ -742,7 +755,7 @@ int MIPSolverCplex::getNumberOfSolutions()
             numSols = 1;
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when obtaining number of solutions", e.getMessage());
     }
@@ -756,7 +769,7 @@ double MIPSolverCplex::getObjectiveValue(int solIdx)
 
     double objVal = NAN;
 
-    if (!isMIP && solIdx > 0) // LP problems only have one solution!
+    if(!isMIP && solIdx > 0) // LP problems only have one solution!
     {
         env->output->outputError(
             "Cannot obtain solution with index " + std::to_string(solIdx) + " since the problem is LP/QP!");
@@ -765,7 +778,7 @@ double MIPSolverCplex::getObjectiveValue(int solIdx)
 
     try
     {
-        if (isMIP)
+        if(isMIP)
         {
             objVal = cplexInstance.getObjValue(solIdx);
         }
@@ -774,7 +787,7 @@ double MIPSolverCplex::getObjectiveValue(int solIdx)
             objVal = cplexInstance.getObjValue();
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError(
             "Error when obtaining objective value for solution index " + std::to_string(solIdx), e.getMessage());
@@ -787,7 +800,7 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if (seconds > 0)
+        if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::TiLim, seconds);
         }
@@ -796,7 +809,7 @@ void MIPSolverCplex::setTimeLimit(double seconds)
             cplexInstance.setParam(IloCplex::TiLim, 0.01);
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when setting time limit", e.getMessage());
     }
@@ -808,7 +821,7 @@ void MIPSolverCplex::setCutOff(double cutOff)
 
     try
     {
-        if (isMinimizationProblem)
+        if(isMinimizationProblem)
         {
             cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
 
@@ -822,7 +835,7 @@ void MIPSolverCplex::setCutOff(double cutOff)
                 "     Setting cutoff value to " + std::to_string(cutOff - cutOffTol) + " for maximization.");
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when setting cut off value", e.getMessage());
     }
@@ -832,9 +845,9 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 {
     try
     {
-        if (!cutOffConstraintDefined)
+        if(!cutOffConstraintDefined)
         {
-            if (env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 IloRange tmpRange(cplexEnv, cutOff, cplexObjectiveExpression);
                 cplexConstrs.add(tmpRange);
@@ -861,7 +874,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
         }
         else
         {
-            if (env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
                 env->output->outputAlways(
@@ -877,7 +890,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             modelUpdated = true;
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when setting cut off value through constraint", e.getMessage());
     }
@@ -889,26 +902,26 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     int numVar = cplexVars.getSize();
 
-    for (int i = 0; i < point.size(); i++)
+    for(int i = 0; i < point.size(); i++)
     {
         startVal.add(point.at(i));
     }
 
-    if (this->hasAuxilliaryObjectiveVariable() && numVar == point.size() + 1)
+    if(this->hasAuxilliaryObjectiveVariable() && numVar == point.size() + 1)
     {
         startVal.add(env->results->getPrimalBound());
     }
 
-    for (auto &V : env->reformulatedProblem->auxilliaryVariables)
+    for(auto& V : env->reformulatedProblem->auxilliaryVariables)
     {
         startVal.add(V->calculate(point));
     }
 
     try
     {
-        //cplexInstance.addMIPStart(cplexVars, startVal);
+        // cplexInstance.addMIPStart(cplexVars, startVal);
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when adding MIP starting point", e.getMessage());
     }
@@ -922,13 +935,13 @@ void MIPSolverCplex::deleteMIPStarts()
 {
     int numStarts = cplexInstance.getNMIPStarts();
 
-    if (numStarts > 0)
+    if(numStarts > 0)
     {
         try
         {
             cplexInstance.deleteMIPStarts(0, numStarts);
         }
-        catch (IloException &e)
+        catch(IloException& e)
         {
             env->output->outputError("Error when deleting MIP starting points", e.getMessage());
         }
@@ -941,25 +954,22 @@ void MIPSolverCplex::writeProblemToFile(std::string filename)
 {
     try
     {
-        if (modelUpdated)
+        if(modelUpdated)
         {
-            //Extract the model if we have updated the constraints
+            // Extract the model if we have updated the constraints
             cplexInstance.extract(cplexModel);
             modelUpdated = false;
         }
 
         cplexInstance.exportModel(filename.c_str());
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when saving model to file", e.getMessage());
     }
 }
 
-void MIPSolverCplex::fixVariable(int varIndex, double value)
-{
-    updateVariableBound(varIndex, value, value);
-}
+void MIPSolverCplex::fixVariable(int varIndex, double value) { updateVariableBound(varIndex, value, value); }
 
 void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double upperBound)
 {
@@ -968,7 +978,7 @@ void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double
         cplexVars[varIndex].setBounds(lowerBound, upperBound);
         modelUpdated = true;
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError(
             "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
@@ -982,7 +992,7 @@ void MIPSolverCplex::updateVariableLowerBound(int varIndex, double lowerBound)
         cplexVars[varIndex].setLB(lowerBound);
         modelUpdated = true;
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError(
             "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
@@ -996,7 +1006,7 @@ void MIPSolverCplex::updateVariableUpperBound(int varIndex, double upperBound)
         cplexVars[varIndex].setUB(upperBound);
         modelUpdated = true;
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError(
             "Error when updating variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
@@ -1012,7 +1022,7 @@ PairDouble MIPSolverCplex::getCurrentVariableBounds(int varIndex)
         tmpBounds.first = cplexVars[varIndex].getLB();
         tmpBounds.second = cplexVars[varIndex].getUB();
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError(
             "Error when obtaining variable bounds for variable index" + std::to_string(varIndex), e.getMessage());
@@ -1020,14 +1030,8 @@ PairDouble MIPSolverCplex::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverCplex::supportsQuadraticObjective()
-{
-    return (true);
-}
-bool MIPSolverCplex::supportsQuadraticConstraints()
-{
-    return (true);
-}
+bool MIPSolverCplex::supportsQuadraticObjective() { return (true); }
+bool MIPSolverCplex::supportsQuadraticConstraints() { return (true); }
 
 double MIPSolverCplex::getDualObjectiveValue()
 {
@@ -1037,7 +1041,7 @@ double MIPSolverCplex::getDualObjectiveValue()
 
     try
     {
-        if (isMIP)
+        if(isMIP)
         {
             objVal = cplexInstance.getBestObjValue();
         }
@@ -1046,7 +1050,7 @@ double MIPSolverCplex::getDualObjectiveValue()
             objVal = cplexInstance.getObjValue();
         }
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when obtaining dual objective value", e.getMessage());
     }
@@ -1073,19 +1077,19 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
         newLBs.reserve(numberOfVariables);
         newUBs.reserve(numberOfVariables);
 
-        for (int i = 0; i < numberOfVariables; i++)
+        for(int i = 0; i < numberOfVariables; i++)
         {
             newLBs.push_back(redlbs[i]);
             newUBs.push_back(redubs[i]);
         }
 
-        if (env->settings->getBoolSetting("MIP.Presolve.RemoveRedundantConstraints", "Dual"))
+        if(env->settings->getBoolSetting("MIP.Presolve.RemoveRedundantConstraints", "Dual"))
         {
             int numconstr = 0;
 
-            for (int j = 0; j < cplexConstrs.getSize(); j++)
+            for(int j = 0; j < cplexConstrs.getSize(); j++)
             {
-                if (redund[j] == true)
+                if(redund[j] == true)
                 {
                     cplexModel.remove(cplexConstrs[j]);
                     cplexConstrs[j].asConstraint().removeFromAll();
@@ -1095,7 +1099,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
                 }
             }
 
-            if (isUpdated)
+            if(isUpdated)
             {
                 cplexInstance.extract(cplexModel);
                 env->output->outputInfo(
@@ -1110,7 +1114,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
 
         return (std::make_pair(newLBs, newUBs));
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         redlbs.end();
         redubs.end();
@@ -1126,38 +1130,36 @@ void MIPSolverCplex::writePresolvedToFile(std::string filename)
 {
     try
     {
-        //Not implemented
+        // Not implemented
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when saving presolved model to file", e.getMessage());
     }
 }
 
-void MIPSolverCplex::checkParameters()
-{
-}
+void MIPSolverCplex::checkParameters() {}
 
-void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
-                                      std::function<IloConstraint(IloRange)> addConstraintFunction)
+void MIPSolverCplex::createHyperplane(
+    Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto optional = createHyperplaneTerms(hyperplane);
 
-    if (!optional)
+    if(!optional)
     {
         return;
     }
 
     auto tmpPair = optional.value();
 
-    //auto tmpPair = createHyperplaneTerms(hyperplane);
+    // auto tmpPair = createHyperplaneTerms(hyperplane);
     bool hyperplaneIsOk = true;
 
-    for (auto E : tmpPair.first)
+    for(auto E : tmpPair.first)
     {
-        if (E.value != E.value) //Check for NaN
+        if(E.value != E.value) // Check for NaN
         {
             env->output->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
             hyperplaneIsOk = false;
@@ -1165,13 +1167,13 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
         }
     }
 
-    if (hyperplaneIsOk)
+    if(hyperplaneIsOk)
     {
         GeneratedHyperplane genHyperplane;
 
         IloExpr expr(cplexEnv);
 
-        for (int i = 0; i < tmpPair.first.size(); i++)
+        for(int i = 0; i < tmpPair.first.size(); i++)
         {
             expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).index];
         }
@@ -1198,12 +1200,12 @@ void MIPSolverCplex::createHyperplane(Hyperplane hyperplane,
     }
 }
 
-void MIPSolverCplex::createIntegerCut(VectorInteger binaryIndexes,
-                                      std::function<IloConstraint(IloRange)> addConstraintFunction)
+void MIPSolverCplex::createIntegerCut(
+    VectorInteger binaryIndexes, std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
     IloExpr expr(cplexEnv);
 
-    for (int i = 0; i < binaryIndexes.size(); i++)
+    for(int i = 0; i < binaryIndexes.size(); i++)
     {
         expr += 1.0 * cplexVars[binaryIndexes.at(i)];
     }
@@ -1222,7 +1224,7 @@ int MIPSolverCplex::getNumberOfExploredNodes()
     {
         return (cplexInstance.getNnodes());
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when getting number of explored nodes", e.getMessage());
         return 0;
@@ -1239,7 +1241,7 @@ int MIPSolverCplex::getNumberOfOpenNodes()
 
         return (cplexInstance.getNnodesLeft());
     }
-    catch (IloException &e)
+    catch(IloException& e)
     {
         env->output->outputError("Error when getting number of open nodes", e.getMessage());
         return 0;

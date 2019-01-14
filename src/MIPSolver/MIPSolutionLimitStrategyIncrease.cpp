@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -22,29 +22,31 @@ MIPSolutionLimitStrategyIncrease::MIPSolutionLimitStrategyIncrease(EnvironmentPt
     lastIterOptimal = 1;
 }
 
-MIPSolutionLimitStrategyIncrease::~MIPSolutionLimitStrategyIncrease()
-{
-}
+MIPSolutionLimitStrategyIncrease::~MIPSolutionLimitStrategyIncrease() {}
 
 bool MIPSolutionLimitStrategyIncrease::updateLimit()
 {
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
 
-    if (!currIter->isMIP())
+    if(!currIter->isMIP())
     {
         lastIterSolLimIncreased = currIter->iterationNumber;
         return (false);
     }
 
-    if (prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+    if(prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
         lastIterOptimal = prevIter->iterationNumber;
         return (false);
     }
 
     // Solution limit has not been updated in the maximal number of iterations
-    if (prevIter->isMIP() && (currIter->iterationNumber - lastIterSolLimIncreased > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual") && currIter->iterationNumber - lastIterOptimal > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
+    if(prevIter->isMIP()
+        && (currIter->iterationNumber - lastIterSolLimIncreased
+                   > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")
+               && currIter->iterationNumber - lastIterOptimal
+                   > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
     {
         env->output->outputInfo("     Force solution limit update.");
         return (true);
@@ -52,21 +54,23 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
     bool useObjectiveLinesearchUpdate = true;
 
-    if (prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
+    if(prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
     {
         return (false);
     }
 
-    if (prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
+    if(prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
     {
 
-        if (prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
+        if(prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
             return (true);
 
-        if (prevIter->maxDeviation < env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+        if(prevIter->maxDeviation < env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
             return (true);
 
-        if (prevIter->maxDeviationConstraint == -1 && prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual") * std::max(1.0, abs(prevIter->objectiveValue)))
+        if(prevIter->maxDeviationConstraint == -1
+            && prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
+                    * std::max(1.0, abs(prevIter->objectiveValue)))
         {
             return (true);
         }

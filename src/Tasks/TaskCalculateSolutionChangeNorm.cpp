@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,13 +13,12 @@
 namespace SHOT
 {
 
-TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
 }
 
-TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm()
-{
-}
+TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm() {}
 
 void TaskCalculateSolutionChangeNorm::run()
 {
@@ -27,34 +26,35 @@ void TaskCalculateSolutionChangeNorm::run()
 
     currIter->boundaryDistance = SHOT_DBL_MAX;
 
-    if (env->results->iterations.size() < 3)
+    if(env->results->iterations.size() < 3)
     {
         return;
     }
 
-    if (env->results->getCurrentIteration()->hyperplanePoints.size() == 0 || env->results->getCurrentIteration()->isMIP())
+    if(env->results->getCurrentIteration()->hyperplanePoints.size() == 0
+        || env->results->getCurrentIteration()->isMIP())
     {
         return;
     }
 
     auto currIterSol = env->results->getCurrentIteration()->hyperplanePoints.at(0);
 
-    for (int i = env->results->iterations.size() - 2; i >= 1; i--)
+    for(int i = env->results->iterations.size() - 2; i >= 1; i--)
     {
-        if (env->results->iterations.size() > 0 && !env->results->iterations.at(i)->isMIP())
+        if(env->results->iterations.size() > 0 && !env->results->iterations.at(i)->isMIP())
         {
             auto prevIterSol = env->results->iterations.at(i)->hyperplanePoints.at(0);
 
             double distance = 0;
 
-            for (int j = 0; j < currIterSol.size(); j++)
+            for(int j = 0; j < currIterSol.size(); j++)
             {
                 distance = distance + (currIterSol.at(j) - prevIterSol.at(j)) * (currIterSol.at(j) - prevIterSol.at(j));
             }
 
             distance = sqrt(distance + 0.001);
 
-            if (OSIsnan(distance)) // Checks for INF, do not remove!
+            if(OSIsnan(distance)) // Checks for INF, do not remove!
             {
                 currIter->boundaryDistance = SHOT_DBL_MAX;
             }

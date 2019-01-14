@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -20,33 +20,34 @@ MIPSolutionLimitStrategyAdaptive::MIPSolutionLimitStrategyAdaptive(EnvironmentPt
     numSolLimIncremented = 1;
 }
 
-MIPSolutionLimitStrategyAdaptive::~MIPSolutionLimitStrategyAdaptive()
-{
-}
+MIPSolutionLimitStrategyAdaptive::~MIPSolutionLimitStrategyAdaptive() {}
 
 bool MIPSolutionLimitStrategyAdaptive::updateLimit()
 {
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
 
-    if (!currIter->isMIP())
+    if(!currIter->isMIP())
     {
         return false;
     }
 
-    if (prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+    if(prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
         return false;
     }
 
     // Solution limit has not been updated in the maximal number of iterations
-    if (prevIter->isMIP() && currIter->iterationNumber - lastIterSolLimIncreased > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual"))
+    if(prevIter->isMIP()
+        && currIter->iterationNumber - lastIterSolLimIncreased
+            > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual"))
     {
         return true;
     }
 
     // We have a feasible MIP solution to the original problem, but not proven optimal by MIP solver
-    if (prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
+    if(prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
+        && prevIter->maxDeviation < prevIter->usedConstraintTolerance)
     {
         return true;
     }

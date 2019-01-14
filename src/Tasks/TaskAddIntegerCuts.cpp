@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,13 +13,12 @@
 namespace SHOT
 {
 
-TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
 }
 
-TaskAddIntegerCuts::~TaskAddIntegerCuts()
-{
-}
+TaskAddIntegerCuts::~TaskAddIntegerCuts() {}
 
 void TaskAddIntegerCuts::run()
 {
@@ -27,20 +26,21 @@ void TaskAddIntegerCuts::run()
 
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    if (env->dualSolver->MIPSolver->integerCutWaitingList.size() == 0)
+    if(env->dualSolver->MIPSolver->integerCutWaitingList.size() == 0)
         return;
 
-    if (!currIter->isMIP() || !env->settings->getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated)
+    if(!currIter->isMIP() || !env->settings->getBoolSetting("HyperplaneCuts.Delay", "Dual")
+        || !currIter->MIPSolutionLimitUpdated)
     {
 
-        for (int j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
+        for(int j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
         {
             auto tmpBinaryCombination = env->dualSolver->MIPSolver->integerCutWaitingList.at(j);
             int numOnes = tmpBinaryCombination.size();
 
             std::vector<PairIndexValue> elements;
 
-            for (int i = 0; i < numOnes; i++)
+            for(int i = 0; i < numOnes; i++)
             {
                 PairIndexValue pair;
                 pair.index = tmpBinaryCombination.at(i);
@@ -53,8 +53,8 @@ void TaskAddIntegerCuts::run()
             env->solutionStatistics.numberOfIntegerCuts++;
         }
 
-        env->output->outputInfo(
-            "     Added " + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size()) + " integer cut(s).                                        ");
+        env->output->outputInfo("     Added " + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
+            + " integer cut(s).                                        ");
 
         env->dualSolver->MIPSolver->integerCutWaitingList.clear();
     }

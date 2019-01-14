@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -24,14 +24,14 @@ struct Reformulation
 
 class TaskReformulateProblem : public TaskBase
 {
-  public:
+public:
     TaskReformulateProblem(EnvironmentPtr envPtr);
     virtual ~TaskReformulateProblem();
 
     void run();
     virtual std::string getType();
 
-  private:
+private:
     bool useQuadraticConstraints = false;
     bool useQuadraticObjective = true;
     bool quadraticObjectiveRegardedAsNonlinear = false;
@@ -41,10 +41,9 @@ class TaskReformulateProblem : public TaskBase
     void reformulateObjectiveFunction();
     void reformulateConstraint(NumericConstraintPtr constraint);
 
-    NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression *expression, const ProblemPtr destination);
+    NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
 
-    template <class T>
-    void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
+    template <class T> void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
 
     template <class T>
     void copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns = false);
@@ -59,8 +58,10 @@ class TaskReformulateProblem : public TaskBase
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
-    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(const QuadraticTerms &quadraticTerms, bool reversedSigns, bool partitionNonBinaryTerms);
-    std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(const MonomialTerms &monomialTerms, bool reversedSigns);
+    std::tuple<LinearTerms, QuadraticTerms> reformulateAndPartitionQuadraticSum(
+        const QuadraticTerms& quadraticTerms, bool reversedSigns, bool partitionNonBinaryTerms);
+    std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
+        const MonomialTerms& monomialTerms, bool reversedSigns);
 
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;

@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,8 +16,8 @@ namespace SHOT
 {
 class NLPSolverIpoptBase : virtual public INLPSolver
 {
-  private:
-  protected:
+private:
+protected:
     std::shared_ptr<OSInstance> osInstance;
     std::unique_ptr<OSOption> osOption;
     std::unique_ptr<IpoptSolver> IpoptNLPSolver;
@@ -51,7 +51,7 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 
     std::vector<char> originalVariableType;
 
-  public:
+public:
     virtual ~NLPSolverIpoptBase(){};
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);

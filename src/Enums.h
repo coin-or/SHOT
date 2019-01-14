@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,10 +16,11 @@ namespace SHOT
 enum class E_AuxilliaryVariableType
 {
     None,
-    NonlinearObjectiveFunction,       // From epigraph formulation of (nonlinear) objective function
-    NonlinearExpressionPartitioning,  // From reformulating nonlinear terms as constraints
-    BinaryBilinear,                   // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
-    BinaryContinuousOrIntegerBilinear // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or integer
+    NonlinearObjectiveFunction, // From epigraph formulation of (nonlinear) objective function
+    NonlinearExpressionPartitioning, // From reformulating nonlinear terms as constraints
+    BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
+    BinaryContinuousOrIntegerBilinear // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or
+                                      // integer
 };
 
 enum class E_DualSolutionSource

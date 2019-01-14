@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,17 +13,17 @@
 namespace SHOT
 {
 
-TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr)
+    , taskIDIfTrue(taskIDTrue)
 {
 }
 
-TaskCheckRelativeGap::~TaskCheckRelativeGap()
-{
-}
+TaskCheckRelativeGap::~TaskCheckRelativeGap() {}
 
 void TaskCheckRelativeGap::run()
 {
-    if (env->results->isRelativeObjectiveGapToleranceMet())
+    if(env->results->isRelativeObjectiveGapToleranceMet())
     {
         env->results->terminationReason = E_TerminationReason::RelativeGap;
         env->tasks->setNextTask(taskIDIfTrue);

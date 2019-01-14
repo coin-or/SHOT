@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,15 +16,15 @@ using namespace SHOT;
 bool SHOTSolverReadProblem(std::string filename);
 bool SHOTSolverTestOptions(bool useOSiL);
 
-int SHOTSolverTest(int argc, char *argv[])
+int SHOTSolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
 
     int choice = defaultchoice;
 
-    if (argc > 1)
+    if(argc > 1)
     {
-        if (sscanf(argv[1], "%d", &choice) != 1)
+        if(sscanf(argv[1], "%d", &choice) != 1)
         {
             printf("Couldn't parse that input as a number\n");
             return -1;
@@ -33,7 +33,7 @@ int SHOTSolverTest(int argc, char *argv[])
 
     bool passed = true;
 
-    switch (choice)
+    switch(choice)
     {
     case 1:
         std::cout << "Starting test to read OSiL files:" << std::endl;
@@ -61,7 +61,7 @@ int SHOTSolverTest(int argc, char *argv[])
         break;
     }
 
-    if (passed)
+    if(passed)
         return 0;
     else
         return -1;
@@ -82,7 +82,7 @@ bool SHOTSolverReadProblem(std::string filename)
 
     try
     {
-        if (solver->setProblem(filename))
+        if(solver->setProblem(filename))
         {
             passed = true;
         }
@@ -91,7 +91,7 @@ bool SHOTSolverReadProblem(std::string filename)
             passed = false;
         }
     }
-    catch (ErrorClass &e)
+    catch(ErrorClass& e)
     {
         std::cout << "Error: " << e.errormsg << std::endl;
         return false;
@@ -114,7 +114,7 @@ bool SHOTSolverTestOptions(bool useOSiL)
 
     std::string filename;
 
-    if (useOSiL)
+    if(useOSiL)
     {
         filename = "options.xml";
     }
@@ -123,33 +123,33 @@ bool SHOTSolverTestOptions(bool useOSiL)
         filename = "options.opt";
     }
 
-    if (boost::filesystem::exists(filename))
+    if(boost::filesystem::exists(filename))
         std::remove(filename.c_str());
 
     try
     {
-        if (useOSiL)
+        if(useOSiL)
         {
-            if (!UtilityFunctions::writeStringToFile(filename, solver->getOSoL()))
+            if(!UtilityFunctions::writeStringToFile(filename, solver->getOSoL()))
             {
                 passed = false;
             }
         }
         else
         {
-            if (!UtilityFunctions::writeStringToFile(filename, solver->getGAMSOptFile()))
+            if(!UtilityFunctions::writeStringToFile(filename, solver->getGAMSOptFile()))
             {
                 passed = false;
             }
         }
 
-        if (passed && !solver->setOptions(filename))
+        if(passed && !solver->setOptions(filename))
         {
             std::cout << "Could not read OSoL file." << std::endl;
             passed = false;
         }
     }
-    catch (ErrorClass &e)
+    catch(ErrorClass& e)
     {
         std::cout << "Error: " << e.errormsg << std::endl;
         passed = false;

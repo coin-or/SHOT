@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,12 +15,12 @@ namespace SHOT
 
 class MinimizationFunction
 {
-  private:
+private:
     VectorDouble firstPt;
     VectorDouble secondPt;
     ProblemPtr NLPProblem;
 
-  public:
+public:
     MinimizationFunction(VectorDouble ptA, VectorDouble ptB, ProblemPtr prob)
     {
         firstPt = ptA;
@@ -33,7 +33,7 @@ class MinimizationFunction
         int length = firstPt.size();
         VectorDouble ptNew(length);
 
-        for (int i = 0; i < length; i++)
+        for(int i = 0; i < length; i++)
         {
             ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
         }
@@ -44,18 +44,22 @@ class MinimizationFunction
     }
 };
 
-NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem) : INLPSolver(envPtr), sourceProblem(problem)
+NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem)
+    : INLPSolver(envPtr)
+    , sourceProblem(problem)
 {
     auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
 
-    if (solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
+    if(solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
-        env->output->outputError("Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
-        throw ErrorClass("Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+        env->output->outputError(
+            "Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+        throw ErrorClass(
+            "Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
     }
 
 #ifdef HAS_CPLEX
-    if (solver == ES_MIPSolver::Cplex)
+    if(solver == ES_MIPSolver::Cplex)
     {
         LPSolver = std::make_unique<MIPSolverCplex>(env);
         env->output->outputInfo("Cplex selected as MIP solver for minimax solver.");
@@ -63,7 +67,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 #endif
 
 #ifdef HAS_GUROBI
-    if (solver == ES_MIPSolver::Gurobi)
+    if(solver == ES_MIPSolver::Gurobi)
     {
         LPSolver = std::make_unique<MIPSolverGurobi>(env);
         env->output->outputInfo("Gurobi selected as MIP solver for minimax solver.");
@@ -71,7 +75,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 #endif
 
 #ifdef HAS_OS
-    if (solver == ES_MIPSolver::Cbc)
+    if(solver == ES_MIPSolver::Cbc)
     {
         LPSolver = std::make_unique<MIPSolverOsiCbc>(env);
         env->output->outputInfo("Cbc selected as MIP solver for minimax solver.");
@@ -86,13 +90,9 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     LPSolver->initializeSolverSettings();
 }
 
-NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax()
-{
-}
+NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax() {}
 
-void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName)
-{
-}
+void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName) {}
 
 E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 {
@@ -100,17 +100,21 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     // Sets the maximal number of iterations
     int maxIter = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
-    double termObjTolAbs = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
-    double termObjTolRel = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
-    double constrSelFactor = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
-    boost::uintmax_t maxIterSubsolver = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
+    double termObjTolAbs
+        = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
+    double termObjTolRel
+        = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
+    double constrSelFactor
+        = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
+    boost::uintmax_t maxIterSubsolver
+        = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
     int bitPrecision = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
     // currSol is the current LP solution, and prevSol the previous one
     VectorDouble currSol, prevSol;
 
     double lambda; // Variable in the linesearch minimization
-    double mu;     // Objective value for the linesearch minimization value
+    double mu; // Objective value for the linesearch minimization value
 
     // Corresponds to the difference between the LP solution objective value and
     // the objective found in the linesearch minimization procedure
@@ -123,12 +127,12 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     int numHyperAdded = 0;
     int numHyperTot = 0;
-    for (int i = 0; i <= maxIter; i++)
+    for(int i = 0; i <= maxIter; i++)
     {
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 
         // Saves the LP problem to file if in debug mode
-        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
             std::stringstream ss;
             ss << env->settings->getStringSetting("Debug.Path", "Output");
@@ -142,26 +146,26 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         auto solStatus = LPSolver->solveProblem();
         env->solutionStatistics.numberOfProblemsMinimaxLP++;
 
-        if (solStatus == E_ProblemSolutionStatus::Infeasible)
+        if(solStatus == E_ProblemSolutionStatus::Infeasible)
         {
             statusCode = E_NLPSolutionStatus::Infeasible;
             break;
         }
-        else if (solStatus == E_ProblemSolutionStatus::Error)
+        else if(solStatus == E_ProblemSolutionStatus::Error)
         {
             statusCode = E_NLPSolutionStatus::Error;
             break;
         }
-        else if (solStatus == E_ProblemSolutionStatus::Unbounded)
+        else if(solStatus == E_ProblemSolutionStatus::Unbounded)
         {
             statusCode = E_NLPSolutionStatus::Unbounded;
             break;
         }
-        else if (solStatus == E_ProblemSolutionStatus::TimeLimit)
+        else if(solStatus == E_ProblemSolutionStatus::TimeLimit)
         {
             statusCode = E_NLPSolutionStatus::TimeLimit;
         }
-        else if (solStatus == E_ProblemSolutionStatus::IterationLimit)
+        else if(solStatus == E_ProblemSolutionStatus::IterationLimit)
         {
             statusCode = E_NLPSolutionStatus::IterationLimit;
         }
@@ -174,7 +178,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         LPObjVar = LPSolver->getObjectiveValue();
 
         // Saves the LP solution to file if in debug mode
-        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
             std::stringstream ss;
             ss << env->settings->getStringSetting("Debug.Path", "Output");
@@ -184,7 +188,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             UtilityFunctions::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
         }
 
-        if (isnan(LPObjVar))
+        if(isnan(LPObjVar))
         {
             statusCode = E_NLPSolutionStatus::Error;
             continue;
@@ -192,7 +196,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         numHyperAdded = 0;
 
-        if (i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
+        if(i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
         {
             currSol = LPVarSol;
             lambda = -1; // For reporting purposes only
@@ -204,13 +208,14 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             MinimizationFunction funct(LPVarSol, prevSol, sourceProblem);
 
             // Solves the minization problem wrt lambda in [0, 1]
-            auto minimizationResult = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision, maxIterSubsolverTmp);
+            auto minimizationResult
+                = boost::math::tools::brent_find_minima(funct, 0.0, 1.0, bitPrecision, maxIterSubsolverTmp);
 
             lambda = minimizationResult.first; // The value for the line search parameter
-            mu = minimizationResult.second;    // The objective value
+            mu = minimizationResult.second; // The objective value
 
             // Calculates the corresponding solution point
-            for (int i = 0; i < LPVarSol.size(); i++)
+            for(int i = 0; i < LPVarSol.size(); i++)
             {
                 currSol.at(i) = lambda * LPVarSol.at(i) + (1 - lambda) * prevSol.at(i);
             }
@@ -220,7 +225,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
 
             // Saves the LP solution to file if in debug mode
-            if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
                 std::stringstream ss;
                 ss << env->settings->getStringSetting("Debug.Path", "Output");
@@ -231,26 +236,20 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             }
         }
 
-        env->report->outputIterationDetailMinimax((i + 1),
-                                                  "LP",
-                                                  env->timing->getElapsedTime("Total"),
-                                                  numHyperAdded,
-                                                  numHyperTot,
-                                                  LPObjVar,
-                                                  mu,
-                                                  maxObjDiffAbs,
-                                                  maxObjDiffRel);
+        env->report->outputIterationDetailMinimax((i + 1), "LP", env->timing->getElapsedTime("Total"), numHyperAdded,
+            numHyperTot, LPObjVar, mu, maxObjDiffAbs, maxObjDiffRel);
 
-        if (mu < 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
+        if(mu < 0 && (maxObjDiffAbs < termObjTolAbs || maxObjDiffRel < termObjTolRel))
         {
             statusCode = E_NLPSolutionStatus::Optimal;
             break;
         }
 
         // Gets the most deviated constraints
-        auto constraintValues = sourceProblem->getFractionOfDeviatingNonlinearConstraints(currSol, SHOT_DBL_MIN, constrSelFactor, LPObjVar);
+        auto constraintValues = sourceProblem->getFractionOfDeviatingNonlinearConstraints(
+            currSol, SHOT_DBL_MIN, constrSelFactor, LPObjVar);
 
-        for (auto &NCV : constraintValues)
+        for(auto& NCV : constraintValues)
         {
             // Contains the coefficient and variable index for the terms in the generated cut
             std::vector<PairIndexValue> elements;
@@ -258,7 +257,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             double constant = NCV.normalizedValue;
             auto gradient = NCV.constraint->calculateGradient(currSol);
 
-            for (auto &G : gradient)
+            for(auto& G : gradient)
             {
                 PairIndexValue pair;
                 pair.index = G.first->index;
@@ -282,7 +281,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             numHyperTot++;
             numHyperAdded++;
 
-            if (mu >= 0 && env->settings->getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
+            if(mu >= 0 && env->settings->getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
             {
                 auto tmpPoint = currSol;
                 tmpPoint.pop_back();
@@ -299,7 +298,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         prevSol = currSol;
 
-        if (i == maxIter - 1)
+        if(i == maxIter - 1)
         {
             statusCode = E_NLPSolutionStatus::IterationLimit;
             break;
@@ -315,32 +314,24 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
     return (statusCode);
 }
 
-double NLPSolverCuttingPlaneMinimax::getSolution(int i)
-{
-    return (solution.at(i));
-}
+double NLPSolverCuttingPlaneMinimax::getSolution(int i) { return (solution.at(i)); }
 
-VectorDouble NLPSolverCuttingPlaneMinimax::getSolution()
-{
-    return (solution);
-}
+VectorDouble NLPSolverCuttingPlaneMinimax::getSolution() { return (solution); }
 
-double NLPSolverCuttingPlaneMinimax::getObjectiveValue()
-{
-    return (objectiveValue);
-}
+double NLPSolverCuttingPlaneMinimax::getObjectiveValue() { return (objectiveValue); }
 
 // Creates the minimax problem in the LP solver
-bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, ProblemPtr sourceProblem)
+bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, ProblemPtr sourceProblem)
 {
     // Now creating the variables
     bool variablesInitialized = true;
 
-    for (auto &V : sourceProblem->allVariables)
+    for(auto& V : sourceProblem->allVariables)
     {
-        variablesInitialized = variablesInitialized && destination->addVariable(V->name, V->type, V->lowerBound, V->upperBound);
+        variablesInitialized
+            = variablesInitialized && destination->addVariable(V->name, V->type, V->lowerBound, V->upperBound);
 
-        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
             variableNames.push_back(V->name);
         }
@@ -350,14 +341,15 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, Proble
     double objLowerBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
     double objUpperBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
-    variablesInitialized = variablesInitialized && destination->addVariable("shot_mmobjvar", E_VariableType::Real, -1e+10 + 1, objUpperBound);
+    variablesInitialized = variablesInitialized
+        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, -1e+10 + 1, objUpperBound);
 
-    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
         variableNames.push_back("shot_mmobjvar");
     }
 
-    if (!variablesInitialized)
+    if(!variablesInitialized)
         return false;
 
     // Now creating the objective function
@@ -366,56 +358,63 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, Proble
 
     objectiveInitialized = objectiveInitialized && destination->initializeObjective();
 
-    objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(1.0, sourceProblem->properties.numberOfVariables);
+    objectiveInitialized = objectiveInitialized
+        && destination->addLinearTermToObjective(1.0, sourceProblem->properties.numberOfVariables);
 
     objectiveInitialized = objectiveInitialized && destination->finalizeObjective(true);
 
-    if (!objectiveInitialized)
+    if(!objectiveInitialized)
         return false;
 
     // Now creating the constraints
 
     bool constraintsInitialized = true;
 
-    for (auto &C : env->problem->linearConstraints)
+    for(auto& C : env->problem->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
-        if (C->properties.hasLinearTerms)
+        if(C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms)
+            for(auto& T : C->linearTerms)
             {
-                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                constraintsInitialized = constraintsInitialized
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
         }
 
-        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+        constraintsInitialized
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    for (auto &C : env->problem->quadraticConstraints)
+    for(auto& C : env->problem->quadraticConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
-        if (C->properties.hasLinearTerms)
+        if(C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms)
+            for(auto& T : C->linearTerms)
             {
-                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                constraintsInitialized = constraintsInitialized
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
         }
 
-        if (C->properties.hasQuadraticTerms)
+        if(C->properties.hasQuadraticTerms)
         {
-            for (auto &T : C->quadraticTerms)
+            for(auto& T : C->quadraticTerms)
             {
-                constraintsInitialized = constraintsInitialized && destination->addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                constraintsInitialized = constraintsInitialized
+                    && destination->addQuadraticTermToConstraint(
+                           T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }
         }
 
-        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+        constraintsInitialized
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    if (!constraintsInitialized)
+    if(!constraintsInitialized)
         return false;
 
     bool problemFinalized = destination->finalizeProblem();
@@ -428,24 +427,13 @@ void NLPSolverCuttingPlaneMinimax::fixVariables(VectorInteger variableIndexes, V
     LPSolver->fixVariables(variableIndexes, variableValues);
 }
 
-void NLPSolverCuttingPlaneMinimax::unfixVariables()
-{
-    LPSolver->unfixVariables();
-}
+void NLPSolverCuttingPlaneMinimax::unfixVariables() { LPSolver->unfixVariables(); }
 
-void NLPSolverCuttingPlaneMinimax::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
-{
-}
+void NLPSolverCuttingPlaneMinimax::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) {}
 
-bool NLPSolverCuttingPlaneMinimax::isObjectiveFunctionNonlinear()
-{
-    return (false);
-}
+bool NLPSolverCuttingPlaneMinimax::isObjectiveFunctionNonlinear() { return (false); }
 
-int NLPSolverCuttingPlaneMinimax::getObjectiveFunctionVariableIndex()
-{
-    return (SHOT_INT_MAX);
-}
+int NLPSolverCuttingPlaneMinimax::getObjectiveFunctionVariableIndex() { return (SHOT_INT_MAX); }
 
 VectorDouble NLPSolverCuttingPlaneMinimax::getVariableLowerBounds()
 {
@@ -467,11 +455,7 @@ void NLPSolverCuttingPlaneMinimax::updateVariableUpperBound(int variableIndex, d
     LPSolver->updateVariableUpperBound(variableIndex, bound);
 }
 
-void NLPSolverCuttingPlaneMinimax::clearStartingPoint()
-{
-}
+void NLPSolverCuttingPlaneMinimax::clearStartingPoint() {}
 
-void NLPSolverCuttingPlaneMinimax::saveOptionsToFile(std::string fileName)
-{
-}
+void NLPSolverCuttingPlaneMinimax::saveOptionsToFile(std::string fileName) {}
 } // namespace SHOT

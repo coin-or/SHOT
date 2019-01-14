@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,7 +13,8 @@
 namespace SHOT
 {
 
-TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
     env->timing->startTimer("DualCutGenerationRootSearch");
 
@@ -22,13 +23,9 @@ TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : Task
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskInitializeLinesearch::~TaskInitializeLinesearch()
-{
-}
+TaskInitializeLinesearch::~TaskInitializeLinesearch() {}
 
-void TaskInitializeLinesearch::run()
-{
-}
+void TaskInitializeLinesearch::run() {}
 
 std::string TaskInitializeLinesearch::getType()
 {

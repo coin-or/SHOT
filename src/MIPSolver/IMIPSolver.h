@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,7 +16,7 @@ namespace SHOT
 
 class IMIPSolver
 {
-  public:
+public:
     virtual ~IMIPSolver(){};
 
     virtual bool initializeProblem() = 0;
@@ -64,8 +64,9 @@ class IMIPSolver
     virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant) = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
+        = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
 
@@ -92,12 +93,13 @@ class IMIPSolver
     virtual void createIntegerCut(VectorInteger binaryIndexes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
-    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
+    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane)
+        = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;
 
-    virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes() = 0;
+    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes() = 0;
 
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;
@@ -113,6 +115,6 @@ class IMIPSolver
 
     std::vector<Hyperplane> hyperplaneWaitingList;
 
-  protected:
+protected:
 };
 } // namespace SHOT

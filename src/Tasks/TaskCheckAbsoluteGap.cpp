@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,17 +13,17 @@
 namespace SHOT
 {
 
-TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr)
+    , taskIDIfTrue(taskIDTrue)
 {
 }
 
-TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap()
-{
-}
+TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap() {}
 
 void TaskCheckAbsoluteGap::run()
 {
-    if (env->results->isAbsoluteObjectiveGapToleranceMet())
+    if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         env->results->terminationReason = E_TerminationReason::AbsoluteGap;
         env->tasks->setNextTask(taskIDIfTrue);

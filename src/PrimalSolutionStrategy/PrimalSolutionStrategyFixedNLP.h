@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -29,14 +29,14 @@ namespace SHOT
 {
 class PrimalSolutionStrategyFixedNLP : public PrimalSolutionStrategyBase
 {
-  public:
+public:
     PrimalSolutionStrategyFixedNLP(EnvironmentPtr envPtr);
     virtual ~PrimalSolutionStrategyFixedNLP();
 
     virtual bool runStrategy();
 
-  protected:
-  private:
+protected:
+private:
     std::shared_ptr<INLPSolver> NLPSolver;
 
     VectorInteger discreteVariableIndexes;

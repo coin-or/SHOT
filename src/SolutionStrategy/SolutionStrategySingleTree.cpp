@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -31,108 +31,114 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
     env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
 
-    TaskBase *tFinalizeSolution = new TaskSequential(env);
+    TaskBase* tFinalizeSolution = new TaskSequential(env);
 
-    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(env, true);
+    TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, true);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    //TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    //env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    // TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
+    // env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
 
-    TaskBase *tReformulateProblem = new TaskReformulateProblem(env);
+    TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
-    if (env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    if(env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
+        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase *tFindIntPoint = new TaskFindInteriorPoint(env);
+        TaskBase* tFindIntPoint = new TaskFindInteriorPoint(env);
         env->tasks->addTask(tFindIntPoint, "FindIntPoint");
     }
 
-    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(env);
+    TaskBase* tCreateDualProblem = new TaskCreateDualProblem(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch(env);
+    TaskBase* tInitializeLinesearch = new TaskInitializeLinesearch(env);
     env->tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
 
-    TaskBase *tInitializeIteration = new TaskInitializeIteration(env);
+    TaskBase* tInitializeIteration = new TaskInitializeIteration(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase *tAddHPs = new TaskAddHyperplanes(env);
+    TaskBase* tAddHPs = new TaskAddHyperplanes(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    if (env->settings->getBoolSetting("Relaxation.Use", "Dual"))
+    if(env->settings->getBoolSetting("Relaxation.Use", "Dual"))
     {
-        TaskBase *tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+        TaskBase* tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
     }
 
-    if (static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
+    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual"))
+        != ES_MIPPresolveStrategy::Never)
     {
-        TaskBase *tPresolve = new TaskPresolve(env);
+        TaskBase* tPresolve = new TaskPresolve(env);
         env->tasks->addTask(tPresolve, "Presolve");
     }
 
-    TaskBase *tSolveIteration = new TaskSolveIteration(env);
+    TaskBase* tSolveIteration = new TaskSolveIteration(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
+    TaskBase* tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    TaskBase *tPrintIterReport = new TaskPrintIterationReport(env);
+    TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
+    TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase *tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
+    TaskBase* tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
+    TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
+    TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
+    TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    //TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet(env, "FinalizeSolution");
-    //env->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
+    // TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet(env, "FinalizeSolution");
+    // env->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
 
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    if (static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+        == ES_HyperplaneCutStrategy::ESH)
     {
-        TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
+        TaskBase* tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
         env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
-        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsESH(env);
+        TaskBase* tSelectHPPts = new TaskSelectHyperplanePointsESH(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
     else
     {
-        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
+        TaskBase* tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
 
-    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    if(env->reformulatedProblem->objectiveFunction->properties.classification
+        > E_ObjectiveFunctionClassification::Quadratic)
     {
-        TaskBase *tSelectObjectiveHPPts = new TaskSelectHyperplanePointsByObjectiveLinesearch(env);
+        TaskBase* tSelectObjectiveHPPts = new TaskSelectHyperplanePointsByObjectiveLinesearch(env);
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    TaskBase *tGoto = new TaskGoto(env, "AddHPs");
+    TaskBase* tGoto = new TaskGoto(env, "AddHPs");
     env->tasks->addTask(tGoto, "Goto");
 
-    if (env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal") && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0 && env->reformulatedProblem->properties.numberOfDiscreteVariables > 0)
+    if(env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal")
+        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0
+        && env->reformulatedProblem->properties.numberOfDiscreteVariables > 0)
     {
-        TaskBase *tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
+        TaskBase* tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
-        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
-        TaskBase *tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
+        TaskBase* tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
         env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-        //dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+        // dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 
         env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
@@ -141,15 +147,13 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
-SolutionStrategySingleTree::~SolutionStrategySingleTree()
-{
-}
+SolutionStrategySingleTree::~SolutionStrategySingleTree() {}
 
 bool SolutionStrategySingleTree::solveProblem()
 {
-    TaskBase *nextTask;
+    TaskBase* nextTask;
 
-    while (env->tasks->getNextTask(nextTask))
+    while(env->tasks->getNextTask(nextTask))
     {
         env->output->outputInfo("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
@@ -159,7 +163,5 @@ bool SolutionStrategySingleTree::solveProblem()
     return (true);
 }
 
-void SolutionStrategySingleTree::initializeStrategy()
-{
-}
+void SolutionStrategySingleTree::initializeStrategy() {}
 } // namespace SHOT

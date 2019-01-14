@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -22,17 +22,17 @@ TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 
 TaskHandler::~TaskHandler()
 {
-    for (auto task : allTasks)
+    for(auto task : allTasks)
     {
         delete task;
     }
 }
 
-void TaskHandler::addTask(TaskBase *task, std::string taskID)
+void TaskHandler::addTask(TaskBase* task, std::string taskID)
 {
     taskIDMap.push_back(std::make_pair(taskID, task));
 
-    if (nextTask == taskIDMap.end())
+    if(nextTask == taskIDMap.end())
     {
         nextTask = taskIDMap.begin();
     }
@@ -40,13 +40,13 @@ void TaskHandler::addTask(TaskBase *task, std::string taskID)
     // Checks if this task has been added previously, otherwise adds it to the list of all tasks
     bool found = (std::find(allTasks.begin(), allTasks.end(), task) != allTasks.end());
 
-    if (!found)
+    if(!found)
         allTasks.push_back(task);
 }
 
-bool TaskHandler::getNextTask(TaskBase *&task)
+bool TaskHandler::getNextTask(TaskBase*& task)
 {
-    if (nextTask == taskIDMap.end())
+    if(nextTask == taskIDMap.end())
         return (false);
 
     task = (nextTask->second);
@@ -59,9 +59,9 @@ void TaskHandler::setNextTask(std::string taskID)
 {
     bool isFound = false;
 
-    for (std::list<std::pair<std::string, TaskBase *>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(std::list<std::pair<std::string, TaskBase*>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
     {
-        if (it->first == taskID)
+        if(it->first == taskID)
         {
             nextTask = it;
             isFound = true;
@@ -69,7 +69,7 @@ void TaskHandler::setNextTask(std::string taskID)
         }
     }
 
-    if (!isFound)
+    if(!isFound)
     {
         // Cannot find the specified task
         TaskExceptionNotFound e(env, taskID);
@@ -83,11 +83,11 @@ void TaskHandler::clearTasks()
     nextTask == taskIDMap.end();
 }
 
-TaskBase *TaskHandler::getTask(std::string taskID)
+TaskBase* TaskHandler::getTask(std::string taskID)
 {
-    for (std::list<std::pair<std::string, TaskBase *>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(std::list<std::pair<std::string, TaskBase*>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
     {
-        if (it->first == taskID)
+        if(it->first == taskID)
         {
             return (it->second);
         }

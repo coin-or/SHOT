@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -60,10 +60,8 @@ struct ObjectiveFunctionProperties
 class ObjectiveFunction
 {
 
-  public:
-    ~ObjectiveFunction()
-    {
-    }
+public:
+    ~ObjectiveFunction() {}
 
     ObjectiveFunctionProperties properties;
 
@@ -78,25 +76,22 @@ class ObjectiveFunction
 
     virtual void updateProperties();
 
-    virtual double calculateValue(const VectorDouble &point) = 0;
-    virtual Interval calculateValue(const IntervalVector &intervalVector) = 0;
+    virtual double calculateValue(const VectorDouble& point) = 0;
+    virtual Interval calculateValue(const IntervalVector& intervalVector) = 0;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble &point) = 0;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point) = 0;
 
-    virtual std::ostream &print(std::ostream &) const = 0;
+    virtual std::ostream& print(std::ostream&) const = 0;
 };
 
 typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;
 
-std::ostream &operator<<(std::ostream &stream, ObjectiveFunctionPtr objective);
+std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective);
 
 class LinearObjectiveFunction : public ObjectiveFunction
 {
-  public:
-    LinearObjectiveFunction()
-    {
-        linearTerms = LinearTerms();
-    }
+public:
+    LinearObjectiveFunction() { linearTerms = LinearTerms(); }
 
     LinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
     {
@@ -128,19 +123,19 @@ class LinearObjectiveFunction : public ObjectiveFunction
 
     virtual E_Curvature checkConvexity() override;
 
-    virtual double calculateValue(const VectorDouble &point) override;
-    virtual Interval calculateValue(const IntervalVector &intervalVector) override;
+    virtual double calculateValue(const VectorDouble& point) override;
+    virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble &point) override;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point) override;
 
-    std::ostream &print(std::ostream &stream) const override;
+    std::ostream& print(std::ostream& stream) const override;
 };
 
 typedef std::shared_ptr<LinearObjectiveFunction> LinearObjectiveFunctionPtr;
 
 class QuadraticObjectiveFunction : public LinearObjectiveFunction
 {
-  public:
+public:
     QuadraticObjectiveFunction()
     {
         linearTerms = LinearTerms();
@@ -156,7 +151,8 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
         updateProperties();
     }
 
-    QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, QuadraticTerms quadTerms, double constValue)
+    QuadraticObjectiveFunction(
+        E_ObjectiveFunctionDirection objectiveDirection, QuadraticTerms quadTerms, double constValue)
     {
         linearTerms = LinearTerms();
 
@@ -166,7 +162,8 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
         updateProperties();
     }
 
-    QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms, QuadraticTerms quadTerms, double constValue)
+    QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms,
+        QuadraticTerms quadTerms, double constValue)
     {
         direction = objectiveDirection;
         linearTerms = linTerms;
@@ -179,15 +176,9 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
 
     QuadraticTerms quadraticTerms;
 
-    void add(LinearTerms terms)
-    {
-        LinearObjectiveFunction::add(terms);
-    }
+    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
 
-    void add(LinearTermPtr term)
-    {
-        LinearObjectiveFunction::add(term);
-    }
+    void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
     void add(QuadraticTerms terms);
     void add(QuadraticTermPtr term);
@@ -196,19 +187,19 @@ class QuadraticObjectiveFunction : public LinearObjectiveFunction
 
     virtual E_Curvature checkConvexity() override;
 
-    virtual double calculateValue(const VectorDouble &point) override;
-    virtual Interval calculateValue(const IntervalVector &intervalVector) override;
+    virtual double calculateValue(const VectorDouble& point) override;
+    virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble &point) override;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point) override;
 
-    std::ostream &print(std::ostream &stream) const override;
+    std::ostream& print(std::ostream& stream) const override;
 };
 
 typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPtr;
 
 class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 {
-  public:
+public:
     NonlinearObjectiveFunction()
     {
         this->linearTerms = LinearTerms();
@@ -224,7 +215,8 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
         updateProperties();
     }
 
-    NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, NonlinearExpressionPtr nonlinExpr, double constValue)
+    NonlinearObjectiveFunction(
+        E_ObjectiveFunctionDirection objectiveDirection, NonlinearExpressionPtr nonlinExpr, double constValue)
     {
         linearTerms = LinearTerms();
         quadraticTerms = QuadraticTerms();
@@ -235,7 +227,8 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
         updateProperties();
     }
 
-    NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms, NonlinearExpressionPtr nonlinExpr, double constValue)
+    NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms,
+        NonlinearExpressionPtr nonlinExpr, double constValue)
     {
         quadraticTerms = QuadraticTerms();
 
@@ -246,7 +239,8 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
         updateProperties();
     }
 
-    NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms, QuadraticTerms quadTerms, NonlinearExpressionPtr nonlinExpr, double constValue)
+    NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms,
+        QuadraticTerms quadTerms, NonlinearExpressionPtr nonlinExpr, double constValue)
     {
         direction = objectiveDirection;
         linearTerms = linTerms;
@@ -264,25 +258,13 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 
     int factorableFunctionIndex;
 
-    void add(LinearTerms terms)
-    {
-        LinearObjectiveFunction::add(terms);
-    }
+    void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
 
-    void add(LinearTermPtr term)
-    {
-        LinearObjectiveFunction::add(term);
-    }
+    void add(LinearTermPtr term) { LinearObjectiveFunction::add(term); }
 
-    void add(QuadraticTerms terms)
-    {
-        QuadraticObjectiveFunction::add(terms);
-    }
+    void add(QuadraticTerms terms) { QuadraticObjectiveFunction::add(terms); }
 
-    void add(QuadraticTermPtr term)
-    {
-        QuadraticObjectiveFunction::add(term);
-    }
+    void add(QuadraticTermPtr term) { QuadraticObjectiveFunction::add(term); }
 
     void add(NonlinearExpressionPtr expression);
 
@@ -292,14 +274,14 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 
     virtual E_Curvature checkConvexity() override;
 
-    virtual double calculateValue(const VectorDouble &point) override;
-    virtual Interval calculateValue(const IntervalVector &intervalVector) override;
+    virtual double calculateValue(const VectorDouble& point) override;
+    virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble &point) override;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point) override;
 
-    std::ostream &print(std::ostream &stream) const override;
+    std::ostream& print(std::ostream& stream) const override;
 };
 
-std::ostream &operator<<(std::ostream &stream, NonlinearObjectiveFunctionPtr objective);
+std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective);
 
 } // namespace SHOT

@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -17,31 +17,20 @@ namespace SHOT
 
 class Timing
 {
-  public:
-    inline Timing(EnvironmentPtr envPtr)
-    {
-        env = envPtr;
-    };
+public:
+    inline Timing(EnvironmentPtr envPtr) { env = envPtr; };
 
-    inline ~Timing()
-    {
-        timers.clear();
-    }
+    inline ~Timing() { timers.clear(); }
 
-    inline void createTimer(std::string name, std::string description)
-    {
-        timers.push_back(Timer(name, description));
-    }
+    inline void createTimer(std::string name, std::string description) { timers.push_back(Timer(name, description)); }
 
     inline void startTimer(std::string name)
     {
-        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-            return (T.name == name);
-        });
+        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const& T) { return (T.name == name); });
 
-        if (timer == timers.end())
+        if(timer == timers.end())
         {
-            //env->output->outputError("Timer with name  \"" + name + "\" not found!");
+            // env->output->outputError("Timer with name  \"" + name + "\" not found!");
             return;
         }
 
@@ -50,13 +39,11 @@ class Timing
 
     inline void stopTimer(std::string name)
     {
-        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-            return (T.name == name);
-        });
+        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const& T) { return (T.name == name); });
 
-        if (timer == timers.end())
+        if(timer == timers.end())
         {
-            //env->output->outputError("Timer with name  \"" + name + "\" not found!");
+            // env->output->outputError("Timer with name  \"" + name + "\" not found!");
             return;
         }
 
@@ -65,13 +52,11 @@ class Timing
 
     inline void restartTimer(std::string name)
     {
-        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-            return (T.name == name);
-        });
+        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const& T) { return (T.name == name); });
 
-        if (timer == timers.end())
+        if(timer == timers.end())
         {
-            //env->output->outputError("Timer with name  \"" + name + "\" not found!");
+            // env->output->outputError("Timer with name  \"" + name + "\" not found!");
             return;
         }
 
@@ -80,13 +65,11 @@ class Timing
 
     inline double getElapsedTime(std::string name)
     {
-        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const &T) {
-            return (T.name == name);
-        });
+        auto timer = std::find_if(timers.begin(), timers.end(), [name](Timer const& T) { return (T.name == name); });
 
-        if (timer == timers.end())
+        if(timer == timers.end())
         {
-            //env->output->outputError("Timer with name  \"" + name + "\" not found!");
+            // env->output->outputError("Timer with name  \"" + name + "\" not found!");
             return (0.0);
         }
 
@@ -95,7 +78,7 @@ class Timing
 
     std::vector<Timer> timers;
 
-  private:
+private:
     EnvironmentPtr env;
 };
 

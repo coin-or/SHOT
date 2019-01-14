@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -12,7 +12,8 @@
 namespace SHOT
 {
 
-TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
     env->timing->startTimer("DualStrategy");
 
@@ -24,23 +25,22 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 
     env->dualSolver->MIPSolver->initializeSolverSettings();
 
-    if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
     {
-        env->dualSolver->MIPSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+        env->dualSolver->MIPSolver->writeProblemToFile(
+            env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
     }
 
     env->output->outputDebug("Dual problem created");
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskCreateDualProblem::~TaskCreateDualProblem()
-{
-}
+TaskCreateDualProblem::~TaskCreateDualProblem() {}
 
 void TaskCreateDualProblem::run()
 {
     // Only run this task after intialization if we want to rebuild the tree in the multi-tree strategy
-    if (env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
         env->timing->startTimer("DualStrategy");
 
@@ -52,9 +52,10 @@ void TaskCreateDualProblem::run()
 
         env->dualSolver->MIPSolver->initializeSolverSettings();
 
-        if (env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
-            env->dualSolver->MIPSolver->writeProblemToFile(env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+            env->dualSolver->MIPSolver->writeProblemToFile(
+                env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
         }
 
         env->output->outputDebug("Dual problem created");
@@ -68,24 +69,27 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     bool variablesInitialized = true;
 
-    for (auto &V : sourceProblem->allVariables)
+    for(auto& V : sourceProblem->allVariables)
     {
-        variablesInitialized = variablesInitialized && destination->addVariable(V->name.c_str(), V->type, V->lowerBound, V->upperBound);
+        variablesInitialized
+            = variablesInitialized && destination->addVariable(V->name.c_str(), V->type, V->lowerBound, V->upperBound);
     }
 
-    //Nonlinear objective variable
-    if (sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    // Nonlinear objective variable
+    if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        //std::dynamic_pointer_cast<MIPSolverBase>(destination)->hasAuxilliaryObjectiveVariable = true;
-        //std::dynamic_pointer_cast<MIPSolverBase>(destination)->auxilliaryObjectiveVariableIndex = sourceProblem->properties.numberOfVariables;
+        // std::dynamic_pointer_cast<MIPSolverBase>(destination)->hasAuxilliaryObjectiveVariable = true;
+        // std::dynamic_pointer_cast<MIPSolverBase>(destination)->auxilliaryObjectiveVariableIndex =
+        // sourceProblem->properties.numberOfVariables;
 
         destination->setAuxilliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
-        variablesInitialized = variablesInitialized && destination->addVariable("shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
+        variablesInitialized = variablesInitialized
+            && destination->addVariable("shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
     }
 
-    if (!variablesInitialized)
+    if(!variablesInitialized)
         return false;
 
     // Now creating the objective function
@@ -94,78 +98,92 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     objectiveInitialized = objectiveInitialized && destination->initializeObjective();
 
-    if (destination->hasAuxilliaryObjectiveVariable())
+    if(destination->hasAuxilliaryObjectiveVariable())
     {
-        objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(1.0, destination->getAuxilliaryObjectiveVariableIndex());
+        objectiveInitialized = objectiveInitialized
+            && destination->addLinearTermToObjective(1.0, destination->getAuxilliaryObjectiveVariableIndex());
 
-        objectiveInitialized = objectiveInitialized && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize);
+        objectiveInitialized = objectiveInitialized
+            && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize);
     }
     else
     {
         // Linear terms
-        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms)
+        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms)
         {
-            objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
+            objectiveInitialized
+                = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
         }
 
         // Quadratic terms
-        if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
+        if(sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
         {
-            for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms)
+            for(auto& T :
+                std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms)
             {
-                objectiveInitialized = objectiveInitialized && destination->addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                objectiveInitialized = objectiveInitialized
+                    && destination->addQuadraticTermToObjective(
+                           T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }
         }
 
-        objectiveInitialized = objectiveInitialized && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
+        objectiveInitialized = objectiveInitialized
+            && destination->finalizeObjective(
+                   sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
     }
 
-    if (!objectiveInitialized)
+    if(!objectiveInitialized)
         return false;
 
     // Now creating the constraints
 
     bool constraintsInitialized = true;
 
-    for (auto &C : sourceProblem->linearConstraints)
+    for(auto& C : sourceProblem->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
-        if (C->properties.hasLinearTerms)
+        if(C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms)
+            for(auto& T : C->linearTerms)
             {
-                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                constraintsInitialized = constraintsInitialized
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
         }
 
-        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+        constraintsInitialized
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    for (auto &C : sourceProblem->quadraticConstraints)
+    for(auto& C : sourceProblem->quadraticConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
-        if (C->properties.hasLinearTerms)
+        if(C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms)
+            for(auto& T : C->linearTerms)
             {
-                constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                constraintsInitialized = constraintsInitialized
+                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
         }
 
-        if (C->properties.hasQuadraticTerms)
+        if(C->properties.hasQuadraticTerms)
         {
-            for (auto &T : C->quadraticTerms)
+            for(auto& T : C->quadraticTerms)
             {
-                constraintsInitialized = constraintsInitialized && destination->addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                constraintsInitialized = constraintsInitialized
+                    && destination->addQuadraticTermToConstraint(
+                           T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }
         }
 
-        constraintsInitialized = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+        constraintsInitialized
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    if (!constraintsInitialized)
+    if(!constraintsInitialized)
         return false;
 
     bool problemFinalized = destination->finalizeProblem();

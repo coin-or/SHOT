@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,14 +15,14 @@ namespace SHOT
 
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
-    if (env->results->iterations.size() < 2)
+    if(env->results->iterations.size() < 2)
     {
         return false;
     }
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if (prevIter->maxDeviation < 0)
+    if(prevIter->maxDeviation < 0)
     {
         return true;
     }
@@ -32,7 +32,7 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 
 bool RelaxationStrategyBase::isConstraintToleranceReached()
 {
-    if (env->results->iterations.size() < 2)
+    if(env->results->iterations.size() < 2)
     {
         return false;
     }
@@ -40,16 +40,19 @@ bool RelaxationStrategyBase::isConstraintToleranceReached()
     auto prevIter = env->results->getPreviousIteration();
 
     double constraintTolerance = std::max(env->settings->getDoubleSetting("ConstraintTolerance", "Termination"),
-                                          env->settings->getDoubleSetting("Relaxation.TerminationTolerance", "Dual"));
+        env->settings->getDoubleSetting("Relaxation.TerminationTolerance", "Dual"));
 
-    if (prevIter->maxDeviation > constraintTolerance)
+    if(prevIter->maxDeviation > constraintTolerance)
     {
         return false;
     }
 
-    if (env->reformulatedProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    if(env->reformulatedProblem->objectiveFunction->properties.classification
+        > E_ObjectiveFunctionClassification::Quadratic)
     {
-        if (env->reformulatedProblem->objectiveFunction->calculateValue(prevIter->solutionPoints.at(0).point) - prevIter->objectiveValue > constraintTolerance)
+        if(env->reformulatedProblem->objectiveFunction->calculateValue(prevIter->solutionPoints.at(0).point)
+                - prevIter->objectiveValue
+            > constraintTolerance)
             return false;
     }
 
@@ -58,19 +61,21 @@ bool RelaxationStrategyBase::isConstraintToleranceReached()
 
 bool RelaxationStrategyBase::isGapReached()
 {
-    if (env->results->iterations.size() < 2)
+    if(env->results->iterations.size() < 2)
     {
         return false;
     }
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if (env->results->getAbsoluteObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+    if(env->results->getAbsoluteObjectiveGap()
+        < 2 * env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
     {
         return true;
     }
 
-    if (env->results->getRelativeObjectiveGap() < 2 * env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+    if(env->results->getRelativeObjectiveGap()
+        < 2 * env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
     {
         return true;
     }

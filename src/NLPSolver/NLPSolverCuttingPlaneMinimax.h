@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -29,7 +29,7 @@ namespace SHOT
 {
 class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 {
-  public:
+public:
     NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem);
     virtual ~NLPSolverCuttingPlaneMinimax();
 
@@ -47,7 +47,7 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 
     virtual void saveProblemToFile(std::string fileName);
 
-  private:
+private:
     std::unique_ptr<IMIPSolver> LPSolver;
     ProblemPtr sourceProblem;
     VectorString variableNames;
@@ -69,6 +69,6 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
     VectorDouble solution;
     double objectiveValue = NAN;
 
-    bool createProblem(IMIPSolver *destinationProblem, ProblemPtr sourceProblem);
+    bool createProblem(IMIPSolver* destinationProblem, ProblemPtr sourceProblem);
 };
 } // namespace SHOT

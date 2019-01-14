@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,13 +16,13 @@ namespace SHOT
 {
 class TaskInitializeIteration : public TaskBase
 {
-  public:
+public:
     TaskInitializeIteration(EnvironmentPtr envPtr);
     virtual ~TaskInitializeIteration();
 
     void run();
     virtual std::string getType();
 
-  private:
+private:
 };
 } // namespace SHOT

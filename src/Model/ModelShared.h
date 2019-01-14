@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -77,7 +77,7 @@ typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
 class ExpressionVariable;
 typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
 
-//typedef std::vector<PairCoordinateValue> SparseMatrix;
+// typedef std::vector<PairCoordinateValue> SparseMatrix;
 
 typedef mc::FFGraph FactorableFunctionGraph;
 typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
@@ -93,17 +93,17 @@ struct NumericConstraintValue
     NumericConstraintPtr constraint;
 
     // Considering a constraint L <= f(x) <= U:
-    double functionValue;      // This is the function value of f(x)
-    bool isFulfilledLHS;       // Is L <= f(x)?
+    double functionValue; // This is the function value of f(x)
+    bool isFulfilledLHS; // Is L <= f(x)?
     double normalizedLHSValue; // This is the value of L - f(x)
-    bool isFulfilledRHS;       // Is f(x) <= U
+    bool isFulfilledRHS; // Is f(x) <= U
     double normalizedRHSValue; // This is the value of f(x) - U
-    bool isFulfilled;          // Is L <= f(x) <= U?
-    double error;              // max(0, max(L - f(x), f(x) - U)
-    double normalizedValue;    // max(L - f(x), f(x)-U)
+    bool isFulfilled; // Is L <= f(x) <= U?
+    double error; // max(0, max(L - f(x), f(x) - U)
+    double normalizedValue; // max(L - f(x), f(x)-U)
 
     // Sorts in reverse order, i.e. so that larger errors are before smaller ones
-    bool operator>(const NumericConstraintValue &otherValue) const
+    bool operator>(const NumericConstraintValue& otherValue) const
     {
         return normalizedValue > otherValue.normalizedValue;
     }
@@ -115,15 +115,16 @@ typedef std::vector<NumericConstraintValue> NumericConstraintValues;
 
 class VariableNotFoundException : public std::exception
 {
-  private:
+private:
     std::string errorMessage;
 
-  public:
-    VariableNotFoundException(std::string message) : errorMessage(message)
+public:
+    VariableNotFoundException(std::string message)
+        : errorMessage(message)
     {
     }
 
-    inline const char *what() const throw()
+    inline const char* what() const throw()
     {
         std::stringstream message;
         message << "Could not find variable ";
@@ -135,15 +136,16 @@ class VariableNotFoundException : public std::exception
 
 class ConstraintNotFoundException : public std::exception
 {
-  private:
+private:
     std::string errorMessage;
 
-  public:
-    ConstraintNotFoundException(std::string message) : errorMessage(message)
+public:
+    ConstraintNotFoundException(std::string message)
+        : errorMessage(message)
     {
     }
 
-    inline const char *what() const throw()
+    inline const char* what() const throw()
     {
         std::stringstream message;
         message << "Could not find constraint ";
@@ -155,15 +157,16 @@ class ConstraintNotFoundException : public std::exception
 
 class OperationNotImplementedException : public std::exception
 {
-  private:
+private:
     std::string errorMessage;
 
-  public:
-    OperationNotImplementedException(std::string message) : errorMessage(message)
+public:
+    OperationNotImplementedException(std::string message)
+        : errorMessage(message)
     {
     }
 
-    inline const char *what() const throw()
+    inline const char* what() const throw()
     {
         std::stringstream message;
         message << "The following operation is not implemented: ";

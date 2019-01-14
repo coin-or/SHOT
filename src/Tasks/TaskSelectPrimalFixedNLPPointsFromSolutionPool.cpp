@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,13 +13,12 @@
 namespace SHOT
 {
 
-TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
 }
 
-TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsFromSolutionPool()
-{
-}
+TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsFromSolutionPool() {}
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {
@@ -29,17 +28,17 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     bool callNLPSolver = false;
     bool useFeasibleSolutionExtra = false;
 
-    if (!currIter->isMIP())
+    if(!currIter->isMIP())
     {
         return;
     }
 
-    if (allSolutions.size() == 0)
+    if(allSolutions.size() == 0)
     {
         return;
     }
 
-    if (currIter->MIPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
+    if(currIter->MIPSolutionLimitUpdated && currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
@@ -53,25 +52,29 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
     auto dualBound = env->results->getDualBound();
 
-    if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
-        abs(allSolutions.at(0).objectiveValue - env->results->getDualBound()) / ((1e-10) + abs(dualBound)) < env->settings->getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
+    if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+        && abs(allSolutions.at(0).objectiveValue - env->results->getDualBound()) / ((1e-10) + abs(dualBound))
+            < env->settings->getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;
         useFeasibleSolutionExtra = true;
     }
-    else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
+    else if(userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
     {
         callNLPSolver = true;
     }
-    else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
+    else if(userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime)
+        || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
-        if (env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+        if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
+            >= env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
         {
             env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
-        else if (env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+        else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
+            > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
         {
             env->output->outputInfo(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
@@ -79,80 +82,78 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         }
     }
 
-    if (useFeasibleSolutionExtra)
+    if(useFeasibleSolutionExtra)
     {
         auto tmpSol = allSolutions.at(0);
-        env->primalSolver->addFixedNLPCandidate(tmpSol.point,
-                                                E_PrimalNLPSource::FirstSolutionNewDualBound, tmpSol.objectiveValue, tmpSol.iterFound,
-                                                tmpSol.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolutionNewDualBound,
+            tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
     }
-    else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))
+    else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::SmallestDeviationSolution))
     {
         auto tmpSol = currIter->getSolutionPointWithSmallestDeviation();
-        env->primalSolver->addFixedNLPCandidate(tmpSol.point,
-                                                E_PrimalNLPSource::SmallestDeviationSolution, tmpSol.objectiveValue, tmpSol.iterFound,
-                                                tmpSol.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::SmallestDeviationSolution,
+            tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
     }
-    else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::FirstSolution))
+    else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::FirstSolution))
     {
         auto tmpSol = allSolutions.at(0);
-        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
-                                                tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
+            tmpSol.iterFound, tmpSol.maxDeviation);
     }
-    else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions))
+    else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::FirstAndFeasibleSolutions))
     {
         auto tmpSol = allSolutions.at(0);
-        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
-                                                tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
+            tmpSol.iterFound, tmpSol.maxDeviation);
 
         auto smallestDevSolIdx = currIter->getSolutionPointWithSmallestDeviationIndex();
 
-        if (smallestDevSolIdx != 0)
+        if(smallestDevSolIdx != 0)
         {
             tmpSol = allSolutions.at(smallestDevSolIdx);
             env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
-                                                    tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+                tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
         }
     }
-    else if (callNLPSolver && userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
+    else if(callNLPSolver
+        && userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
         auto tmpSol = allSolutions.at(0);
 
-        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
-                                                tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
+            tmpSol.iterFound, tmpSol.maxDeviation);
 
-        for (int i = 1; i < allSolutions.size(); i++)
+        for(int i = 1; i < allSolutions.size(); i++)
         {
             auto tmpSol = allSolutions.at(i);
 
-            if (tmpSol.maxDeviation.value <= env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal"))
+            if(tmpSol.maxDeviation.value <= env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
-                                                        tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+                    tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
             }
         }
     }
-    else if (callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::AllSolutions))
+    else if(callNLPSolver && userSetting == static_cast<int>(ES_PrimalNLPFixedPoint::AllSolutions))
     {
         auto tmpSol = allSolutions.at(0);
 
-        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution,
-                                                tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+        env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
+            tmpSol.iterFound, tmpSol.maxDeviation);
 
-        for (int i = 1; i < allSolutions.size(); i++)
+        for(int i = 1; i < allSolutions.size(); i++)
         {
             tmpSol = allSolutions.at(i);
 
-            if (tmpSol.maxDeviation.value <= env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal"))
+            if(tmpSol.maxDeviation.value <= env->settings->getDoubleSetting("Tolerance.NonlinearConstraint", "Primal"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
-                                                        tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
+                    tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
             }
             else
             {
-                env->primalSolver->addFixedNLPCandidate(tmpSol.point,
-                                                   E_PrimalNLPSource::InfeasibleSolution, tmpSol.objectiveValue, tmpSol.iterFound,
-                                                   tmpSol.maxDeviation);
+                env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::InfeasibleSolution,
+                    tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
             }
         }
     }

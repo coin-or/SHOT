@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -20,11 +20,11 @@ namespace SHOT
 {
 class Test
 {
-  private:
+private:
     EnvironmentPtr env;
 
-  public:
-    Problem *problem;
+public:
+    Problem* problem;
 
     VectorDouble firstPt;
     VectorDouble secondPt;
@@ -35,20 +35,20 @@ class Test
     Test(EnvironmentPtr envPtr);
     ~Test();
 
-    void setActiveConstraints(const std::vector<NumericConstraint *> &constraints);
-    std::vector<NumericConstraint *> getActiveConstraints();
+    void setActiveConstraints(const std::vector<NumericConstraint*>& constraints);
+    std::vector<NumericConstraint*> getActiveConstraints();
     void clearActiveConstraints();
-    void addActiveConstraint(NumericConstraint *constraint);
+    void addActiveConstraint(NumericConstraint* constraint);
 
     double operator()(const double x);
 };
 
 class TestObjective
 {
-  private:
+private:
     EnvironmentPtr env;
 
-  public:
+public:
     VectorDouble solutionPoint;
     double cachedObjectiveValue;
 
@@ -63,40 +63,31 @@ class TestObjective
 
 class TerminationCondition
 {
-  private:
+private:
     double tol;
 
-  public:
-    TerminationCondition(double tolerance)
-    {
-        tol = tolerance;
-    }
+public:
+    TerminationCondition(double tolerance) { tol = tolerance; }
 
-    bool operator()(double min, double max)
-    {
-        return (abs(min - max) <= tol);
-    }
+    bool operator()(double min, double max) { return (abs(min - max) <= tol); }
 };
 
 class LinesearchMethodBoost : public ILinesearchMethod
 {
-  public:
+public:
     LinesearchMethodBoost(EnvironmentPtr envPtr);
     virtual ~LinesearchMethodBoost();
 
-    virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
-                                                           int Nmax, double lambdaTol, double constrTol,
-                                                           const NonlinearConstraints constraints);
+    virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
+        double lambdaTol, double constrTol, const NonlinearConstraints constraints);
 
-    std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble &ptA, const VectorDouble &ptB,
-                                                   int Nmax, double lambdaTol, double constrTol,
-                                                   const std::vector<NumericConstraint *> constraints);
+    std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
+        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints);
 
-    virtual std::pair<double, double> findZero(const VectorDouble &pt, double objectiveLB, double objectiveUB,
-                                               int Nmax, double lambdaTol, double constrTol,
-                                               const NonlinearObjectiveFunction *objectiveFunction);
+    virtual std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
+        double lambdaTol, double constrTol, const NonlinearObjectiveFunction* objectiveFunction);
 
-  private:
+private:
     std::unique_ptr<Test> test;
     std::unique_ptr<TestObjective> testObjective;
     EnvironmentPtr env;

@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,16 +13,17 @@
 namespace SHOT
 {
 
-TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
     env->timing->startTimer("DualProblemsIntegerFixed");
 
-    for (auto &V : env->problem->binaryVariables)
+    for(auto& V : env->problem->binaryVariables)
     {
         discreteVariableIndexes.push_back(V->index);
     }
 
-    for (auto &V : env->problem->integerVariables)
+    for(auto& V : env->problem->integerVariables)
     {
         discreteVariableIndexes.push_back(V->index);
     }
@@ -30,28 +31,26 @@ TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : Ta
     env->timing->stopTimer("DualProblemsIntegerFixed");
 }
 
-TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem()
-{
-}
+TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem() {}
 
 void TaskSolveFixedDualProblem::run()
 {
     env->timing->startTimer("DualProblemsIntegerFixed");
-    auto currIter = env->results->getCurrentIteration(); //The one not solved yet
+    auto currIter = env->results->getCurrentIteration(); // The one not solved yet
 
-    if (currIter->MIPSolutionLimitUpdated)
+    if(currIter->MIPSolutionLimitUpdated)
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    if (currIter->iterationNumber < 5)
+    if(currIter->iterationNumber < 5)
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    if (currIter->maxDeviation <= env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
+    if(currIter->maxDeviation <= env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
@@ -59,7 +58,7 @@ void TaskSolveFixedDualProblem::run()
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if (prevIter->iterationNumber < 4)
+    if(prevIter->iterationNumber < 4)
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
@@ -68,13 +67,13 @@ void TaskSolveFixedDualProblem::run()
     auto prevIter2 = env->results->iterations.at(prevIter->iterationNumber - 2);
     auto prevIter3 = env->results->iterations.at(prevIter->iterationNumber - 3);
 
-    if (!prevIter->isMIP() && !prevIter2->isMIP() && !prevIter3->isMIP())
+    if(!prevIter->isMIP() && !prevIter2->isMIP() && !prevIter3->isMIP())
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
     }
 
-    if (currIter->numHyperplanesAdded == 0)
+    if(currIter->numHyperplanesAdded == 0)
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
@@ -82,11 +81,13 @@ void TaskSolveFixedDualProblem::run()
 
     auto currSolPt = prevIter->solutionPoints.at(0).point;
 
-    bool isDifferent1 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter2->solutionPoints.at(0).point, discreteVariableIndexes);
+    bool isDifferent1 = UtilityFunctions::isDifferentSelectedElements(
+        currSolPt, prevIter2->solutionPoints.at(0).point, discreteVariableIndexes);
 
-    bool isDifferent2 = UtilityFunctions::isDifferentSelectedElements(currSolPt, prevIter3->solutionPoints.at(0).point, discreteVariableIndexes);
+    bool isDifferent2 = UtilityFunctions::isDifferentSelectedElements(
+        currSolPt, prevIter3->solutionPoints.at(0).point, discreteVariableIndexes);
 
-    if (isDifferent1 || isDifferent2)
+    if(isDifferent1 || isDifferent2)
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
@@ -94,7 +95,7 @@ void TaskSolveFixedDualProblem::run()
 
     VectorDouble fixValues(discreteVariableIndexes.size());
 
-    for (int i = 0; i < discreteVariableIndexes.size(); i++)
+    for(int i = 0; i < discreteVariableIndexes.size(); i++)
     {
         fixValues.at(i) = currSolPt.at(discreteVariableIndexes.at(i));
     }
@@ -114,16 +115,16 @@ void TaskSolveFixedDualProblem::run()
     bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
     bool isDiscrete = false;
 
-    for (int k = 0; k < maxIter; k++)
+    for(int k = 0; k < maxIter; k++)
     {
         std::stringstream tmpType;
 
-        if (isMIQCP)
+        if(isMIQCP)
         {
             tmpType << "QCP-FIX";
             env->solutionStatistics.numberOfProblemsQCQP++;
         }
-        else if (isMIQP)
+        else if(isMIQP)
         {
             tmpType << "QP-FIX";
             env->solutionStatistics.numberOfProblemsQP++;
@@ -137,24 +138,15 @@ void TaskSolveFixedDualProblem::run()
         totalIters++;
         auto solStatus = env->dualSolver->MIPSolver->solveProblem();
 
-        if (solStatus != E_ProblemSolutionStatus::Optimal)
+        if(solStatus != E_ProblemSolutionStatus::Optimal)
         {
 
             tmpType << "-I";
 
-            env->report->outputIterationDetail(totalIters,
-                                               tmpType.str(),
-                                               env->timing->getElapsedTime("Total"),
-                                               1,
-                                               currIter->totNumHyperplanes,
-                                               env->results->getDualBound(),
-                                               env->results->getPrimalBound(),
-                                               env->results->getAbsoluteObjectiveGap(),
-                                               env->results->getRelativeObjectiveGap(),
-                                               NAN,
-                                               NAN,
-                                               NAN,
-                                               E_IterationLineType::DualIntegerFixed);
+            env->report->outputIterationDetail(totalIters, tmpType.str(), env->timing->getElapsedTime("Total"), 1,
+                currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), NAN, NAN, NAN,
+                E_IterationLineType::DualIntegerFixed);
 
             break;
         }
@@ -163,27 +155,28 @@ void TaskSolveFixedDualProblem::run()
             auto varSol = env->dualSolver->MIPSolver->getVariableSolution(0);
             auto objVal = env->dualSolver->MIPSolver->getObjectiveValue(0);
 
-            auto mostDevConstraint = env->reformulatedProblem->getMaxNumericConstraintValue(varSol, env->reformulatedProblem->nonlinearConstraints);
+            auto mostDevConstraint = env->reformulatedProblem->getMaxNumericConstraintValue(
+                varSol, env->reformulatedProblem->nonlinearConstraints);
 
             VectorDouble externalPoint = varSol;
 
-            if (env->dualSolver->MIPSolver->interiorPts.size() > 0)
+            if(env->dualSolver->MIPSolver->interiorPts.size() > 0)
             {
                 VectorDouble internalPoint = env->dualSolver->MIPSolver->interiorPts.at(0)->point;
 
                 try
                 {
                     auto xNewc = env->rootsearchMethod->findZero(internalPoint, externalPoint,
-                                                                 env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                                                                 env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                                                                 env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
-                                                                 env->reformulatedProblem->nonlinearConstraints);
+                        env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
+                        env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
+                        env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
+                        env->reformulatedProblem->nonlinearConstraints);
 
                     env->timing->stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;
                     externalPoint = xNewc.second;
                 }
-                catch (std::exception &e)
+                catch(std::exception& e)
                 {
 
                     env->output->outputWarning(
@@ -192,7 +185,8 @@ void TaskSolveFixedDualProblem::run()
                 }
             }
 
-            auto errorExternal = env->reformulatedProblem->getMaxNumericConstraintValue(externalPoint, env->reformulatedProblem->nonlinearConstraints);
+            auto errorExternal = env->reformulatedProblem->getMaxNumericConstraintValue(
+                externalPoint, env->reformulatedProblem->nonlinearConstraints);
 
             Hyperplane hyperplane;
             hyperplane.sourceConstraint = errorExternal.constraint;
@@ -204,62 +198,55 @@ void TaskSolveFixedDualProblem::run()
 
             bool hasSolution = true;
 
-            if (varSol.size() == 0)
+            if(varSol.size() == 0)
                 hasSolution = false;
 
-            if (solStatus == E_ProblemSolutionStatus::Error)
+            if(solStatus == E_ProblemSolutionStatus::Error)
             {
                 tmpType << "-E";
                 hasSolution = false;
             }
-            else if (solStatus == E_ProblemSolutionStatus::Feasible)
+            else if(solStatus == E_ProblemSolutionStatus::Feasible)
             {
                 tmpType << "-F";
             }
-            else if (solStatus == E_ProblemSolutionStatus::Infeasible)
+            else if(solStatus == E_ProblemSolutionStatus::Infeasible)
             {
                 tmpType << "-I";
                 hasSolution = false;
             }
-            else if (solStatus == E_ProblemSolutionStatus::IterationLimit)
+            else if(solStatus == E_ProblemSolutionStatus::IterationLimit)
             {
                 tmpType << "-I";
             }
-            else if (solStatus == E_ProblemSolutionStatus::Optimal)
+            else if(solStatus == E_ProblemSolutionStatus::Optimal)
             {
                 tmpType << "-O";
             }
-            else if (solStatus == E_ProblemSolutionStatus::TimeLimit)
+            else if(solStatus == E_ProblemSolutionStatus::TimeLimit)
             {
                 tmpType << "-TL";
                 hasSolution = false;
             }
-            else if (solStatus == E_ProblemSolutionStatus::Unbounded)
+            else if(solStatus == E_ProblemSolutionStatus::Unbounded)
             {
                 tmpType << "-U";
                 hasSolution = false;
             }
 
-            env->report->outputIterationDetail(totalIters,
-                                               tmpType.str(),
-                                               env->timing->getElapsedTime("Total"),
-                                               1,
-                                               currIter->totNumHyperplanes,
-                                               env->results->getDualBound(),
-                                               env->results->getPrimalBound(),
-                                               env->results->getAbsoluteObjectiveGap(),
-                                               env->results->getRelativeObjectiveGap(),
-                                               objVal,
-                                               mostDevConstraint.constraint->index,
-                                               mostDevConstraint.normalizedValue,
-                                               E_IterationLineType::DualIntegerFixed);
+            env->report->outputIterationDetail(totalIters, tmpType.str(), env->timing->getElapsedTime("Total"), 1,
+                currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), objVal,
+                mostDevConstraint.constraint->index, mostDevConstraint.normalizedValue,
+                E_IterationLineType::DualIntegerFixed);
 
-            if (mostDevConstraint.normalizedValue <= constrTol || k - iterLastObjUpdate > 10 || objVal > env->results->getPrimalBound())
+            if(mostDevConstraint.normalizedValue <= constrTol || k - iterLastObjUpdate > 10
+                || objVal > env->results->getPrimalBound())
             {
                 break;
             }
 
-            if (abs(prevObjVal - objVal) > prevObjVal * objTol)
+            if(abs(prevObjVal - objVal) > prevObjVal * objTol)
             {
                 iterLastObjUpdate = k;
                 prevObjVal = objVal;

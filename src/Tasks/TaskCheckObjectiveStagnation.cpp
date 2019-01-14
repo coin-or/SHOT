@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,45 +13,49 @@
 namespace SHOT
 {
 
-TaskCheckObjectiveStagnation::TaskCheckObjectiveStagnation(EnvironmentPtr envPtr, std::string taskIDTrue) : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+TaskCheckObjectiveStagnation::TaskCheckObjectiveStagnation(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr)
+    , taskIDIfTrue(taskIDTrue)
 {
 }
 
-TaskCheckObjectiveStagnation::~TaskCheckObjectiveStagnation()
-{
-}
+TaskCheckObjectiveStagnation::~TaskCheckObjectiveStagnation() {}
 
 void TaskCheckObjectiveStagnation::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if (!currIter->isMIP())
+    if(!currIter->isMIP())
     {
         return;
     }
 
-    if (env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP <= env->settings->getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
+    if(env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
+        <= env->settings->getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
     {
         return;
     }
 
-    if (env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate == 0) // First MIP solution
-    {
-        env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate = currIter->iterationNumber;
-        env->solutionStatistics.numberOfIterationsWithStagnationMIP = 0;
-        return;
-    }
-
-    if (std::abs(
-            (currIter->objectiveValue - env->results->iterations[env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate - 1]->objectiveValue)) > env->settings->getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
+    if(env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate == 0) // First MIP solution
     {
         env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate = currIter->iterationNumber;
         env->solutionStatistics.numberOfIterationsWithStagnationMIP = 0;
+        return;
+    }
+
+    if(std::abs((currIter->objectiveValue
+           - env->results->iterations[env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate - 1]
+                 ->objectiveValue))
+        > env->settings->getDoubleSetting("ObjectiveStagnation.Tolerance", "Termination"))
+    {
+        env->solutionStatistics.numberOfIterationsWithSignificantObjectiveUpdate = currIter->iterationNumber;
+        env->solutionStatistics.numberOfIterationsWithStagnationMIP = 0;
 
         return;
     }
 
-    if (env->solutionStatistics.numberOfIterationsWithStagnationMIP >= env->settings->getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
+    if(env->solutionStatistics.numberOfIterationsWithStagnationMIP
+        >= env->settings->getIntSetting("ObjectiveStagnation.IterationLimit", "Termination"))
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
         env->tasks->setNextTask(taskIDIfTrue);

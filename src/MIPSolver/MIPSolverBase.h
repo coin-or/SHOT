@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -20,14 +20,14 @@ namespace SHOT
 {
 class MIPSolverBase
 {
-  private:
+private:
     VectorInteger fixedVariableIndexes;
     std::vector<PairDouble> fixedVariableOriginalBounds;
 
     bool auxilliaryObjectiveVariableDefined = false;
     int auxilliaryObjectiveVariableIndex;
 
-  protected:
+protected:
     std::vector<GeneratedHyperplane> generatedHyperplanes;
 
     int numberOfVariables = 0;
@@ -42,7 +42,7 @@ class MIPSolverBase
     bool cutOffConstraintDefined = false;
     int cutOffConstraintIndex;
 
-  public:
+public:
     ~MIPSolverBase();
 
     virtual void createHyperplane(Hyperplane hyperplane);
@@ -68,7 +68,7 @@ class MIPSolverBase
     virtual void presolveAndUpdateBounds();
     virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
-    virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes();
+    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes();
 
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 
@@ -77,8 +77,9 @@ class MIPSolverBase
     virtual void unfixVariables();
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
-    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant) = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue> &elements, double constant, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
+        = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
 

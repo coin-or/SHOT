@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,7 +15,7 @@
 namespace SHOT
 {
 
-//typedef std::shared_ptr<OSInstance> OSInstance *;
+// typedef std::shared_ptr<OSInstance> OSInstance *;
 
 enum class E_OSInputFileFormat
 {
@@ -25,7 +25,7 @@ enum class E_OSInputFileFormat
 
 class ModelingSystemOS : public IModelingSystem
 {
-  public:
+public:
     ModelingSystemOS(EnvironmentPtr envPtr);
     virtual ~ModelingSystemOS();
 
@@ -36,45 +36,46 @@ class ModelingSystemOS : public IModelingSystem
     virtual void updateSettings(SettingsPtr settings);
 
     // Create the optimization problem by filename in either OSiL or Ampl format
-    E_ProblemCreationStatus createProblem(ProblemPtr &problem, const std::string &filename, const E_OSInputFileFormat &fileformat);
+    E_ProblemCreationStatus createProblem(
+        ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& fileformat);
 
     // Create the optimization problem from an OSInstance
-    E_ProblemCreationStatus createProblem(ProblemPtr &problem, std::shared_ptr<OSInstance> instance);
+    E_ProblemCreationStatus createProblem(ProblemPtr& problem, std::shared_ptr<OSInstance> instance);
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution();
 
     std::shared_ptr<OSInstance> originalInstance;
 
-  private:
-    OSInstance *readInstanceFromOSiL(const std::string &text);
-    OSInstance *readInstanceFromOSiLFile(const std::string &filename);
-    OSInstance *readInstanceFromAmplFile(const std::string &filename);
+private:
+    OSInstance* readInstanceFromOSiL(const std::string& text);
+    OSInstance* readInstanceFromOSiLFile(const std::string& filename);
+    OSInstance* readInstanceFromAmplFile(const std::string& filename);
 
-    bool copyVariables(OSInstance *source, ProblemPtr destination);
-    bool copyObjectiveFunction(OSInstance *source, ProblemPtr destination);
-    bool copyConstraints(OSInstance *source, ProblemPtr destination);
-    bool copyLinearTerms(OSInstance *source, ProblemPtr destination);
-    bool copyQuadraticTerms(OSInstance *source, ProblemPtr destination);
-    bool copyNonlinearExpressions(OSInstance *source, ProblemPtr destination);
-    NonlinearExpressionPtr convertOSNonlinearNode(OSnLNode *node, const ProblemPtr &destination);
+    bool copyVariables(OSInstance* source, ProblemPtr destination);
+    bool copyObjectiveFunction(OSInstance* source, ProblemPtr destination);
+    bool copyConstraints(OSInstance* source, ProblemPtr destination);
+    bool copyLinearTerms(OSInstance* source, ProblemPtr destination);
+    bool copyQuadraticTerms(OSInstance* source, ProblemPtr destination);
+    bool copyNonlinearExpressions(OSInstance* source, ProblemPtr destination);
+    NonlinearExpressionPtr convertOSNonlinearNode(OSnLNode* node, const ProblemPtr& destination);
 
-    bool isObjectiveGenerallyNonlinear(OSInstance *instance);
-    bool isObjectiveQuadratic(OSInstance *instance);
+    bool isObjectiveGenerallyNonlinear(OSInstance* instance);
+    bool isObjectiveQuadratic(OSInstance* instance);
 
     std::vector<std::shared_ptr<OSiLReader>> osilReaders;
     std::shared_ptr<OSiLWriter> osilWriter;
     std::shared_ptr<OSnl2OS> nl2os;
 
-    //bool areAllConstraintsLinear(OSInstance* instance);
-    //bool areAllConstraintsQuadratic(OSInstance* instance);
-    //bool areAllVariablesReal(OSInstance* instance);
+    // bool areAllConstraintsLinear(OSInstance* instance);
+    // bool areAllConstraintsQuadratic(OSInstance* instance);
+    // bool areAllVariablesReal(OSInstance* instance);
 
-    //bool isConstraintNonlinear(OSInstance* instance);
-    //bool isConstraintQuadratic(OSInstance* instance);
+    // bool isConstraintNonlinear(OSInstance* instance);
+    // bool isConstraintQuadratic(OSInstance* instance);
 
     // Determines whether all individual constraints are linear, quadratic or nonlinear
-    std::vector<E_ConstraintClassification> getConstraintClassifications(OSInstance *instance);
+    std::vector<E_ConstraintClassification> getConstraintClassifications(OSInstance* instance);
 };
 
 typedef std::shared_ptr<ModelingSystemOS> ModelingSystemOSPtr;

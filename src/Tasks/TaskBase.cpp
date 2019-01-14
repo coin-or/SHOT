@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -14,33 +14,20 @@
 namespace SHOT
 {
 
-TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr)
+TaskBase::TaskBase(EnvironmentPtr envPtr)
+    : env(envPtr)
 {
 }
 
-bool TaskBase::isActive()
-{
-    return (m_isActive);
-}
+bool TaskBase::isActive() { return (m_isActive); }
 
-void TaskBase::activate()
-{
-    m_isActive = true;
-}
+void TaskBase::activate() { m_isActive = true; }
 
-void TaskBase::deactivate()
-{
-    m_isActive = false;
-}
+void TaskBase::deactivate() { m_isActive = false; }
 
-void TaskBase::initialize()
-{
-}
+void TaskBase::initialize() {}
 
-void TaskBase::run()
-{
-    std::cout << "What?!" << std::endl;
-}
+void TaskBase::run() { std::cout << "What?!" << std::endl; }
 
 std::string TaskBase::getType()
 {

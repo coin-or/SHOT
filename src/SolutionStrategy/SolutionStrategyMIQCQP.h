@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,13 +16,13 @@ namespace SHOT
 {
 class SolutionStrategyMIQCQP : public ISolutionStrategy
 {
-  public:
+public:
     SolutionStrategyMIQCQP(EnvironmentPtr envPtr);
     virtual ~SolutionStrategyMIQCQP();
 
     virtual bool solveProblem();
     virtual void initializeStrategy();
 
-  protected:
+protected:
 };
 } // namespace SHOT

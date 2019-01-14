@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -16,12 +16,11 @@
 #define HAVE_STDIO_H 1
 #include "OSOutput.h"
 
-
 namespace SHOT
 {
 class Output
 {
-  public:
+public:
     Output();
     virtual ~Output();
 
@@ -37,7 +36,7 @@ class Output
 
     void setLogLevels(int consoleLogLevel, int fileLogLevel);
 
-  private:
+private:
     std::unique_ptr<OSOutput> osOutput;
 };
 }

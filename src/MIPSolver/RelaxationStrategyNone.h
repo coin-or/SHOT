@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,7 +15,7 @@ namespace SHOT
 {
 class RelaxationStrategyNone : public IRelaxationStrategy, public RelaxationStrategyBase
 {
-  public:
+public:
     RelaxationStrategyNone(EnvironmentPtr envPtr);
     virtual ~RelaxationStrategyNone();
 
@@ -29,7 +29,7 @@ class RelaxationStrategyNone : public IRelaxationStrategy, public RelaxationStra
 
     virtual E_IterationProblemType getProblemType();
 
-  private:
+private:
 };
 
 } // namespace SHOT

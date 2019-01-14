@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -31,7 +31,7 @@ namespace SHOT
 {
 class SHOTSolver
 {
-  private:
+private:
     std::unique_ptr<ISolutionStrategy> solutionStrategy;
 
     void initializeSettings();
@@ -44,7 +44,7 @@ class SHOTSolver
 
     EnvironmentPtr env;
 
-  public:
+public:
     SHOTSolver();
     SHOTSolver(EnvironmentPtr environment);
     ~SHOTSolver();
@@ -52,7 +52,7 @@ class SHOTSolver
     inline EnvironmentPtr getEnvironment() { return env; };
 
     bool setOptions(std::string fileName);
-    bool setOptions(OSOption *osOptions);
+    bool setOptions(OSOption* osOptions);
 
     bool setProblem(std::string fileName);
 

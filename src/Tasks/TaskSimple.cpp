@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,27 +13,24 @@
 namespace SHOT
 {
 
-TaskSimple::TaskSimple(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskSimple::TaskSimple(EnvironmentPtr envPtr)
+    : TaskBase(envPtr)
 {
 }
 
-TaskSimple::TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction) : TaskBase(envPtr)
+TaskSimple::TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction)
+    : TaskBase(envPtr)
 {
     task = taskFunction;
 }
 
-TaskSimple::~TaskSimple()
-{
-}
+TaskSimple::~TaskSimple() {}
 
-void TaskSimple::setFunction(std::function<bool()> taskFunction)
-{
-    task = taskFunction;
-}
+void TaskSimple::setFunction(std::function<bool()> taskFunction) { task = taskFunction; }
 
 void TaskSimple::run()
 {
-    if (task != nullptr)
+    if(task != nullptr)
     {
         task();
     }

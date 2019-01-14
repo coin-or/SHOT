@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -17,7 +17,7 @@ namespace SHOT
 {
 class MIPSolverGurobiLazy : public MIPSolverGurobi
 {
-  public:
+public:
     MIPSolverGurobiLazy(EnvironmentPtr envPtr);
     virtual ~MIPSolverGurobiLazy();
 
@@ -31,19 +31,19 @@ class MIPSolverGurobiLazy : public MIPSolverGurobi
 
     E_ProblemSolutionStatus solveProblem();
 
-  private:
+private:
 };
 
 class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
 {
-  public:
-    GRBVar *vars;
-    GurobiCallback(GRBVar *xvars, EnvironmentPtr envPtr);
+public:
+    GRBVar* vars;
+    GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr);
 
-  protected:
+protected:
     void callback();
 
-  private:
+private:
     int numVar = 0;
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;

@@ -22,26 +22,26 @@ extern "C"
     /** GAMS nonlinear expressions opcodes */
     typedef enum
     {
-        nlNoOp = 0,    /* no operation */
-        nlPushV = 1,   /* push variable */
-        nlPushI = 2,   /* push immediate (constant) */
-        nlStore = 3,   /* store row */
-        nlAdd = 4,     /* add */
-        nlAddV = 5,    /* add variable */
-        nlAddI = 6,    /* add immediate */
-        nlSub = 7,     /* minus */
-        nlSubV = 8,    /* subtract variable */
-        nlSubI = 9,    /* subtract immediate */
-        nlMul = 10,    /* multiply */
-        nlMulV = 11,   /* multiply variable */
-        nlMulI = 12,   /* multiply immediate */
-        nlDiv = 13,    /* divide */
-        nlDivV = 14,   /* divide variable */
-        nlDivI = 15,   /* divide immediate */
-        nlUMin = 16,   /* unary minus */
-        nlUMinV = 17,  /* unary minus variable */
+        nlNoOp = 0, /* no operation */
+        nlPushV = 1, /* push variable */
+        nlPushI = 2, /* push immediate (constant) */
+        nlStore = 3, /* store row */
+        nlAdd = 4, /* add */
+        nlAddV = 5, /* add variable */
+        nlAddI = 6, /* add immediate */
+        nlSub = 7, /* minus */
+        nlSubV = 8, /* subtract variable */
+        nlSubI = 9, /* subtract immediate */
+        nlMul = 10, /* multiply */
+        nlMulV = 11, /* multiply variable */
+        nlMulI = 12, /* multiply immediate */
+        nlDiv = 13, /* divide */
+        nlDivV = 14, /* divide variable */
+        nlDivI = 15, /* divide immediate */
+        nlUMin = 16, /* unary minus */
+        nlUMinV = 17, /* unary minus variable */
         nlHeader = 18, /* header */
-        nlEnd = 19,    /* end of instruction list */
+        nlEnd = 19, /* end of instruction list */
         nlCallArg1 = 20,
         nlCallArg2 = 21,
         nlCallArgN = 22,
@@ -57,39 +57,10 @@ extern "C"
     } GamsOpCode;
 
     /** GAMS nonlinear expression opcode names as strings */
-    static const char *GamsOpCodeName[MAXINS] =
-        {
-            "nlNoOp",
-            "nlPushV",
-            "nlPushI",
-            "nlStore",
-            "nlAdd",
-            "nlAddV",
-            "nlAddI",
-            "nlSub",
-            "nlSubV",
-            "nlSubI",
-            "nlMul",
-            "nlMulV",
-            "nlMulI",
-            "nlDiv",
-            "nlDivV",
-            "nlDivI",
-            "nlUMin",
-            "nlUMinV",
-            "nlHeader",
-            "nlEnd",
-            "nlCallArg1",
-            "nlCallArg2",
-            "nlCallArgN",
-            "nlFuncArgN",
-            "nlMulIAdd",
-            "nlPushZero",
-            "nlChk",
-            "nlAddO",
-            "nlPushO",
-            "nlInvoc",
-            "nlStackIn"};
+    static const char* GamsOpCodeName[MAXINS] = { "nlNoOp", "nlPushV", "nlPushI", "nlStore", "nlAdd", "nlAddV",
+        "nlAddI", "nlSub", "nlSubV", "nlSubI", "nlMul", "nlMulV", "nlMulI", "nlDiv", "nlDivV", "nlDivI", "nlUMin",
+        "nlUMinV", "nlHeader", "nlEnd", "nlCallArg1", "nlCallArg2", "nlCallArgN", "nlFuncArgN", "nlMulIAdd",
+        "nlPushZero", "nlChk", "nlAddO", "nlPushO", "nlInvoc", "nlStackIn" };
 
     /** GAMS nonlinear function codes */
     typedef enum
@@ -209,41 +180,17 @@ extern "C"
         fndummy
     } GamsFuncCode;
 
-    static const char *GamsFuncCodeName[fndummy + 1] =
-        {
-            "mapval", "ceil", "floor", "round",
-            "mod", "trunc", "sign", "min",
-            "max", "sqr", "exp", "log",
-            "log10", "sqrt", "abs", "cos",
-            "sin", "arctan", "errf", "dunfm",
-            "dnorm", "power", "jdate", "jtime",
-            "jstart", "jnow", "error", "gyear",
-            "gmonth", "gday", "gdow", "gleap",
-            "ghour", "gminute", "gsecond",
-            "curseed", "timest", "timeco",
-            "timeex", "timecl", "frac", "errorl",
-            "heaps", "fact", "unfmi", "pi",
-            "ncpf", "ncpcm", "entropy", "sigmoid",
-            "log2", "boolnot", "booland",
-            "boolor", "boolxor", "boolimp",
-            "booleqv", "relopeq", "relopgt",
-            "relopge", "reloplt", "relople",
-            "relopne", "ifthen", "rpower",
-            "edist", "div", "div0", "sllog10",
-            "sqlog10", "slexp", "sqexp", "slrec",
-            "sqrec", "cvpower", "vcpower",
-            "centropy", "gmillisec", "maxerror",
-            "timeel", "gamma", "loggamma", "beta",
-            "logbeta", "gammareg", "betareg",
-            "sinh", "cosh", "tanh", "mathlastrc",
-            "mathlastec", "mathoval", "signpower",
-            "handle", "ncpvusin", "ncpvupow",
-            "binomial", "rehandle", "gamsver",
-            "delhandle", "tan", "arccos",
-            "arcsin", "arctan2", "sleep", "heapf",
-            "cohandle", "gamsrel", "poly",
-            "licensestatus", "licenselevel", "heaplimit",
-            "dummy"};
+    static const char* GamsFuncCodeName[fndummy + 1] = { "mapval", "ceil", "floor", "round", "mod", "trunc", "sign",
+        "min", "max", "sqr", "exp", "log", "log10", "sqrt", "abs", "cos", "sin", "arctan", "errf", "dunfm", "dnorm",
+        "power", "jdate", "jtime", "jstart", "jnow", "error", "gyear", "gmonth", "gday", "gdow", "gleap", "ghour",
+        "gminute", "gsecond", "curseed", "timest", "timeco", "timeex", "timecl", "frac", "errorl", "heaps", "fact",
+        "unfmi", "pi", "ncpf", "ncpcm", "entropy", "sigmoid", "log2", "boolnot", "booland", "boolor", "boolxor",
+        "boolimp", "booleqv", "relopeq", "relopgt", "relopge", "reloplt", "relople", "relopne", "ifthen", "rpower",
+        "edist", "div", "div0", "sllog10", "sqlog10", "slexp", "sqexp", "slrec", "sqrec", "cvpower", "vcpower",
+        "centropy", "gmillisec", "maxerror", "timeel", "gamma", "loggamma", "beta", "logbeta", "gammareg", "betareg",
+        "sinh", "cosh", "tanh", "mathlastrc", "mathlastec", "mathoval", "signpower", "handle", "ncpvusin", "ncpvupow",
+        "binomial", "rehandle", "gamsver", "delhandle", "tan", "arccos", "arcsin", "arctan2", "sleep", "heapf",
+        "cohandle", "gamsrel", "poly", "licensestatus", "licenselevel", "heaplimit", "dummy" };
 
 #ifdef __cplusplus
 }

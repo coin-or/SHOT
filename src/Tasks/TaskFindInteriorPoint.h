@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -17,14 +17,14 @@ namespace SHOT
 {
 class TaskFindInteriorPoint : public TaskBase
 {
-  public:
+public:
     TaskFindInteriorPoint(EnvironmentPtr envPtr);
     virtual ~TaskFindInteriorPoint();
 
     virtual void run();
     virtual std::string getType();
 
-  private:
+private:
     std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;
 
     VectorString variableNames;

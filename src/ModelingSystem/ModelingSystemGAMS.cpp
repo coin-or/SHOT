@@ -4,8 +4,8 @@
    @author Stefan Vigerske, GAMS Development Corp.
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -14,7 +14,11 @@
 namespace SHOT
 {
 
-ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr) : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false)
+ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
+    : IModelingSystem(envPtr)
+    , modelingObject(NULL)
+    , modelingEnvironment(NULL)
+    , createdtmpdir(false)
 {
 }
 
@@ -26,19 +30,17 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     gevLibraryUnload();
 }
 
-void ModelingSystemGAMS::augmentSettings(SettingsPtr settings)
-{
-}
+void ModelingSystemGAMS::augmentSettings(SettingsPtr settings) {}
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
-    if (gmoOptFile(modelingObject) > 0) // GAMS provides an option file
+    if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
         gevLogPChar(modelingEnvironment, "Reading options from ");
         gevLog(modelingEnvironment, buffer);
 
-        if (!boost::filesystem::exists(buffer))
+        if(!boost::filesystem::exists(buffer))
             throw std::logic_error("Options file not found.");
 
         try
@@ -47,7 +49,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 
             settings->readSettingsFromGAMSOptFormat(fileContents);
         }
-        catch (std::exception &e)
+        catch(std::exception& e)
         {
             env->output->outputError("Error when reading GAMS options file" + std::string(buffer));
             throw std::logic_error("Cannot read GAMS options file from.");
@@ -55,37 +57,39 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     }
     else // get default settings from GAMS
     {
-        // Removed this functionality, since otherwise we cannot control the time limit from an options file when SHOT is called on a gms file
+        // Removed this functionality, since otherwise we cannot control the time limit from an options file when SHOT
+        // is called on a gms file
         /*env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(gev, gevResLim));
-		 env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(gev, gevOptCA));
-		 env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
+                 env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(gev, gevOptCA));
+                 env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
 
 
-		 env->output->outputInfo(
-		 "Time limit set to "
-		 + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
-		 + " by GAMS");
-		 env->output->outputInfo(
-		 "Absolute termination tolerance set to "
-		 + UtilityFunctions::toString(
-		 env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
-		 + " by GAMS");
-		 env->output->outputInfo(
-		 "Relative termination tolerance set to "
-		 + UtilityFunctions::toString(
-		 env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
-		 + " by GAMS");
+                 env->output->outputInfo(
+                 "Time limit set to "
+                 + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
+                 + " by GAMS");
+                 env->output->outputInfo(
+                 "Absolute termination tolerance set to "
+                 + UtilityFunctions::toString(
+                 env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+                 + " by GAMS");
+                 env->output->outputInfo(
+                 "Relative termination tolerance set to "
+                 + UtilityFunctions::toString(
+                 env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+                 + " by GAMS");
 
-		 */
+                 */
     }
 
     // want to solve the NLP problems with GAMS
     settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
 }
 
-E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, const std::string &filename, const E_GAMSInputSource &inputSource)
+E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
+    ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource)
 {
-    if (!boost::filesystem::exists(filename))
+    if(!boost::filesystem::exists(filename))
     {
         env->output->outputError("File \"" + filename + "\" does not exist.");
 
@@ -94,20 +98,20 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
 
     try
     {
-        if (inputSource == E_GAMSInputSource::ProblemFile)
+        if(inputSource == E_GAMSInputSource::ProblemFile)
         {
             createModelFromProblemFile(filename);
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
-        else if (inputSource == E_GAMSInputSource::GAMSModel)
+        else if(inputSource == E_GAMSInputSource::GAMSModel)
         {
             createModelFromGAMSModel(filename);
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
     } // namespace SHOT
-    catch (const ErrorClass &eclass)
+    catch(const ErrorClass& eclass)
     {
         env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.errormsg);
 
@@ -122,29 +126,29 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
 
-    //env->results->GAMSModelingObject = gmo;
+    // env->results->GAMSModelingObject = gmo;
 
     try
     {
         gmoNameInput(modelingObject, buffer);
         problem->name = buffer;
 
-        if (!copyVariables(problem))
+        if(!copyVariables(problem))
             return (E_ProblemCreationStatus::ErrorInVariables);
 
-        if (!copyObjectiveFunction(problem))
+        if(!copyObjectiveFunction(problem))
             return (E_ProblemCreationStatus::ErrorInObjective);
 
-        if (!copyConstraints(problem))
+        if(!copyConstraints(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyLinearTerms(problem))
+        if(!copyLinearTerms(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyQuadraticTerms(problem))
+        if(!copyQuadraticTerms(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
-        if (!copyNonlinearExpressions(problem))
+        if(!copyNonlinearExpressions(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
         problem->updateProperties();
@@ -152,7 +156,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
 
         problem->finalize();
     }
-    catch (std::exception &e)
+    catch(std::exception& e)
     {
         env->output->outputError("Error when creating problem from GAMS object.");
 
@@ -162,12 +166,12 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr &problem, c
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 
-void ModelingSystemGAMS::createModelFromProblemFile(const std::string &filename)
+void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 {
     char gamscall[1024];
     char buffer[GMS_SSSIZE];
     int rc;
-    FILE *convertdopt;
+    FILE* convertdopt;
 
     assert(modelingObject == NULL);
     assert(modelingEnvironment == NULL);
@@ -178,7 +182,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string &filename)
 
     /* create empty convertd options file */
     convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
-    if (convertdopt == NULL)
+    if(convertdopt == NULL)
     {
         throw std::logic_error("Could not create convertd options file.");
     }
@@ -186,17 +190,18 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string &filename)
     fclose(convertdopt);
 
     /* call GAMS with convertd solver to get compiled model instance in temporary directory
-	 * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP) solvers later
-	 * but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null for this gams call
-	 */
-    snprintf(gamscall,
-             sizeof(gamscall),
-             GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > /dev/null",
-             filename.c_str());
+     * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP)
+     * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null
+     * for this gams call
+     */
+    snprintf(gamscall, sizeof(gamscall),
+        GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
+                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > /dev/null",
+        filename.c_str());
 
     /* printf(gamscall); fflush(stdout); */
     rc = system(gamscall);
-    if (rc != 0)
+    if(rc != 0)
     {
         snprintf(buffer, sizeof(buffer), "GAMS call returned with code %d", rc);
         throw std::logic_error(buffer);
@@ -204,28 +209,29 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string &filename)
 
     createModelFromGAMSModel("loadgms.tmp/gamscntr.dat");
 
-    /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use as a SHOT options file */
+    /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use
+     * as a SHOT options file */
     gmoOptFileSet(modelingObject, 0);
 }
 
-void ModelingSystemGAMS::createModelFromGAMSModel(const std::string &filename)
+void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
 {
     char buffer[GMS_SSSIZE];
 
     /* initialize GMO and GEV libraries */
-    if (!gmoCreateDD(&modelingObject, GAMSDIR, buffer, sizeof(buffer)) || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
-        throw std::logic_error(
-            buffer);
+    if(!gmoCreateDD(&modelingObject, GAMSDIR, buffer, sizeof(buffer))
+        || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
+        throw std::logic_error(buffer);
 
     /* load control file */
-    if (gevInitEnvironmentLegacy(modelingEnvironment, filename.c_str()))
+    if(gevInitEnvironmentLegacy(modelingEnvironment, filename.c_str()))
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
         throw std::logic_error("Could not load control file loadgms.tmp/gamscntr.dat.");
     }
 
-    if (gmoRegisterEnvironment(modelingObject, modelingEnvironment, buffer))
+    if(gmoRegisterEnvironment(modelingObject, modelingEnvironment, buffer))
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
@@ -233,7 +239,7 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string &filename)
         throw std::logic_error(buffer);
     }
 
-    if (gmoLoadDataLegacy(modelingObject, buffer))
+    if(gmoLoadDataLegacy(modelingObject, buffer))
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
@@ -243,13 +249,11 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string &filename)
     gevTerminateUninstall(modelingEnvironment);
 }
 
-void ModelingSystemGAMS::finalizeSolution()
-{
-}
+void ModelingSystemGAMS::finalizeSolution() {}
 
 void ModelingSystemGAMS::clearGAMSObjects()
 {
-    if (modelingObject == NULL)
+    if(modelingObject == NULL)
         return;
 
     gmoUnloadSolutionLegacy(modelingObject);
@@ -262,7 +266,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
     modelingEnvironment = NULL;
 
     /* remove temporary directory content (should have only files) and directory itself) */
-    if (createdtmpdir)
+    if(createdtmpdir)
     {
         system("rm loadgms.tmp/* && rmdir loadgms.tmp");
         createdtmpdir = false;
@@ -275,21 +279,21 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
     int numVariables = gmoN(modelingObject);
 
-    if (numVariables > 0)
+    if(numVariables > 0)
     {
         double minLBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
         double maxUBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
         double minLBInt = env->settings->getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
         double maxUBInt = env->settings->getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
 
-        double *variableLBs = new double[numVariables];
-        double *variableUBs = new double[numVariables];
+        double* variableLBs = new double[numVariables];
+        double* variableUBs = new double[numVariables];
         gmoGetVarLower(modelingObject, variableLBs);
         gmoGetVarUpper(modelingObject, variableUBs);
 
-        for (int i = 0; i < numVariables; i++)
+        for(int i = 0; i < numVariables; i++)
         {
-            if (gmoDict(modelingObject))
+            if(gmoDict(modelingObject))
                 gmoGetVarNameOne(modelingObject, i, buffer);
             else
                 sprintf(buffer, "x%08d", i);
@@ -298,17 +302,17 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
             E_VariableType variableType;
 
-            switch (gmoGetVarTypeOne(modelingObject, i))
+            switch(gmoGetVarTypeOne(modelingObject, i))
             {
             case gmovar_X:
                 variableType = E_VariableType::Real;
 
-                if (variableLBs[i] < minLBCont)
+                if(variableLBs[i] < minLBCont)
                 {
                     variableLBs[i] = minLBCont;
                 }
 
-                if (variableUBs[i] > maxUBCont)
+                if(variableUBs[i] > maxUBCont)
                 {
                     variableUBs[i] = maxUBCont;
                 }
@@ -318,12 +322,12 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             case gmovar_B:
                 variableType = E_VariableType::Binary;
 
-                if (variableLBs[i] < 0.0)
+                if(variableLBs[i] < 0.0)
                 {
                     variableLBs[i] = 0.0;
                 }
 
-                if (variableUBs[i] > 1.0)
+                if(variableUBs[i] > 1.0)
                 {
                     variableUBs[i] = 1.0;
                 }
@@ -333,12 +337,12 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             case gmovar_I:
                 variableType = E_VariableType::Integer;
 
-                if (variableLBs[i] < minLBInt)
+                if(variableLBs[i] < minLBInt)
                 {
                     variableLBs[i] = minLBInt;
                 }
 
-                if (variableUBs[i] > maxUBInt)
+                if(variableUBs[i] > maxUBInt)
                 {
                     variableUBs[i] = maxUBInt;
                 }
@@ -348,12 +352,12 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             case gmovar_SC:
                 variableType = E_VariableType::Semicontinuous;
 
-                if (variableLBs[i] < 0.0)
+                if(variableLBs[i] < 0.0)
                 {
                     variableLBs[i] = 0.0;
                 }
 
-                if (variableUBs[i] > maxUBCont)
+                if(variableUBs[i] > maxUBCont)
                 {
                     variableUBs[i] = maxUBCont;
                 }
@@ -393,7 +397,8 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
                 break;
             }
 
-            auto variable = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
+            auto variable
+                = std::make_shared<SHOT::Variable>(variableName, i, variableType, variableLBs[i], variableUBs[i]);
             destination->add(std::move(variable));
         }
         delete[] variableLBs;
@@ -416,7 +421,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
     env->output->outputDebug("Starting to copy objective function between GAMS modeling and SHOT problem objects.");
 
     // Check if we have an objective at all
-    if (gmoModelType(modelingObject) == gmoProc_cns)
+    if(gmoModelType(modelingObject) == gmoProc_cns)
     {
         // no objective in constraint satisfaction models
         env->output->outputError("Problem has no objective function.");
@@ -425,14 +430,15 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 
     ObjectiveFunctionPtr objectiveFunction;
 
-    switch (gmoGetObjOrder(modelingObject))
+    switch(gmoGetObjOrder(modelingObject))
     {
     case gmoorder_L:
         objectiveFunction = std::make_shared<LinearObjectiveFunction>();
         break;
 
     case gmoorder_Q:
-        if (env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model") >= static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective))
+        if(env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model")
+            >= static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective))
             objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
         else
             objectiveFunction = std::make_shared<NonlinearObjectiveFunction>();
@@ -448,7 +454,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
         break;
     }
 
-    if (gmoSense(modelingObject) == gmoObj_Min)
+    if(gmoSense(modelingObject) == gmoObj_Min)
         objectiveFunction->direction = E_ObjectiveFunctionDirection::Minimize;
     else
         objectiveFunction->direction = E_ObjectiveFunctionDirection::Maximize;
@@ -456,26 +462,28 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
     objectiveFunction->constant = gmoObjConst(modelingObject);
 
     // Now copying the linear terms (if any)
-    if (gmoN(modelingObject) > 0)
+    if(gmoN(modelingObject) > 0)
     {
-        int *variableIndexes = new int[gmoObjNZ(modelingObject)];
-        double *coefficients = new double[gmoObjNZ(modelingObject)];
-        int *nonlinearFlags = new int[gmoObjNZ(modelingObject)];
+        int* variableIndexes = new int[gmoObjNZ(modelingObject)];
+        double* coefficients = new double[gmoObjNZ(modelingObject)];
+        int* nonlinearFlags = new int[gmoObjNZ(modelingObject)];
         int numberOfNonzeros;
         int numberOfNonlinearNonzeros;
 
-        gmoGetObjSparse(modelingObject, variableIndexes, coefficients, nonlinearFlags, &numberOfNonzeros, &numberOfNonlinearNonzeros);
+        gmoGetObjSparse(modelingObject, variableIndexes, coefficients, nonlinearFlags, &numberOfNonzeros,
+            &numberOfNonlinearNonzeros);
 
         int numberLinearTerms = numberOfNonzeros - numberOfNonlinearNonzeros;
 
-        for (int i = 0, j = 0; i < numberLinearTerms; ++i)
+        for(int i = 0, j = 0; i < numberLinearTerms; ++i)
         {
             try
             {
                 VariablePtr variable = destination->getVariable(variableIndexes[i]);
-                (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))->add(std::move(std::make_shared<LinearTerm>(coefficients[i], variable)));
+                (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))
+                    ->add(std::move(std::make_shared<LinearTerm>(coefficients[i], variable)));
             }
-            catch (const VariableNotFoundException &e)
+            catch(const VariableNotFoundException& e)
             {
                 delete[] variableIndexes;
                 delete[] coefficients;
@@ -503,14 +511,14 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
 
     int numberOfConstraints = gmoM(modelingObject);
 
-    if (numberOfConstraints > 0)
+    if(numberOfConstraints > 0)
     {
-        for (int i = 0; i < numberOfConstraints; i++)
+        for(int i = 0; i < numberOfConstraints; i++)
         {
             double lb;
             double ub;
 
-            switch (gmoGetEquTypeOne(modelingObject, i))
+            switch(gmoGetEquTypeOne(modelingObject, i))
             {
             case gmoequ_E:
                 lb = ub = gmoGetRhsOne(modelingObject, i);
@@ -536,26 +544,26 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 return (false);
             }
 
-            if (gmoDict(modelingObject))
+            if(gmoDict(modelingObject))
                 gmoGetEquNameOne(modelingObject, i, buffer);
             else
                 sprintf(buffer, "e%08d", i);
 
-            switch (gmoGetEquOrderOne(modelingObject, i))
+            switch(gmoGetEquOrderOne(modelingObject, i))
             {
-            case (gmoorder_L):
+            case(gmoorder_L):
             {
                 LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(i, buffer, lb, ub);
                 destination->add(std::move(constraint));
                 break;
             }
-            case (gmoorder_Q):
+            case(gmoorder_Q):
             {
                 QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(i, buffer, lb, ub);
                 destination->add(std::move(constraint));
                 break;
             }
-            case (gmoorder_NL):
+            case(gmoorder_NL):
             {
                 NonlinearConstraintPtr constraint = std::make_shared<NonlinearConstraint>(i, buffer, lb, ub);
                 destination->add(std::move(constraint));
@@ -581,36 +589,39 @@ bool ModelingSystemGAMS::copyLinearTerms(ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy linear terms between GAMS modeling and SHOT problem objects.");
 
-    double *linearCoefficients = new double[gmoNZ(modelingObject) + gmoN(modelingObject)];
-    int *variableIndexes = new int[gmoNZ(modelingObject) + gmoN(modelingObject)];
-    int *nonlinearFlags = new int[gmoN(modelingObject)];
+    double* linearCoefficients = new double[gmoNZ(modelingObject) + gmoN(modelingObject)];
+    int* variableIndexes = new int[gmoNZ(modelingObject) + gmoN(modelingObject)];
+    int* nonlinearFlags = new int[gmoN(modelingObject)];
 
     int numConstraints = gmoM(modelingObject);
     int nz = 0;
-    for (int row = 0; row < numConstraints; ++row)
+    for(int row = 0; row < numConstraints; ++row)
     {
         int rownz;
         int nlnz;
 
-        gmoGetRowSparse(modelingObject, row, &variableIndexes[nz], &linearCoefficients[nz], nonlinearFlags, &rownz, &nlnz);
+        gmoGetRowSparse(
+            modelingObject, row, &variableIndexes[nz], &linearCoefficients[nz], nonlinearFlags, &rownz, &nlnz);
 
         try
         {
-            LinearConstraintPtr constraint = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(row));
+            LinearConstraintPtr constraint
+                = std::static_pointer_cast<LinearConstraint>(destination->getConstraint(row));
 
-            for (int j = 0; j < rownz; j++)
+            for(int j = 0; j < rownz; j++)
             {
-                constraint->add(std::make_shared<LinearTerm>(linearCoefficients[j], destination->getVariable(variableIndexes[j])));
+                constraint->add(
+                    std::make_shared<LinearTerm>(linearCoefficients[j], destination->getVariable(variableIndexes[j])));
             }
         }
-        catch (const VariableNotFoundException &e)
+        catch(const VariableNotFoundException& e)
         {
             delete[] linearCoefficients;
             delete[] variableIndexes;
             delete[] nonlinearFlags;
             return (false);
         }
-        catch (const ConstraintNotFoundException &e)
+        catch(const ConstraintNotFoundException& e)
         {
             delete[] linearCoefficients;
             delete[] variableIndexes;
@@ -632,29 +643,31 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy quadratic terms between GAMS modeling and SHOT problem objects.");
 
-    if (gmoGetObjOrder(modelingObject) == gmoorder_Q)
+    if(gmoGetObjOrder(modelingObject) == gmoorder_Q)
     {
         int numQuadraticTerms = gmoObjQNZ(modelingObject);
 
-        int *variableOneIndexes = new int[numQuadraticTerms];
-        int *variableTwoIndexes = new int[numQuadraticTerms];
-        double *quadraticCoefficients = new double[numQuadraticTerms];
+        int* variableOneIndexes = new int[numQuadraticTerms];
+        int* variableTwoIndexes = new int[numQuadraticTerms];
+        double* quadraticCoefficients = new double[numQuadraticTerms];
 
         gmoGetObjQ(modelingObject, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
 
-        for (int j = 0; j < numQuadraticTerms; ++j)
+        for(int j = 0; j < numQuadraticTerms; ++j)
         {
-            if (variableOneIndexes[j] == variableTwoIndexes[j])
-                quadraticCoefficients[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
+            if(variableOneIndexes[j] == variableTwoIndexes[j])
+                quadraticCoefficients[j]
+                    /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
 
             try
             {
                 VariablePtr firstVariable = destination->getVariable(variableOneIndexes[j]);
                 VariablePtr secondVariable = destination->getVariable(variableTwoIndexes[j]);
 
-                (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))->add(std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
+                (std::static_pointer_cast<QuadraticObjectiveFunction>(destination->objectiveFunction))
+                    ->add(std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
             }
-            catch (const VariableNotFoundException &e)
+            catch(const VariableNotFoundException& e)
             {
                 delete[] variableOneIndexes;
                 delete[] variableTwoIndexes;
@@ -671,24 +684,25 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 
     int numberOfConstraints = gmoM(modelingObject);
 
-    for (int i = 0; i < numberOfConstraints; ++i)
+    for(int i = 0; i < numberOfConstraints; ++i)
     {
-        if (gmoGetEquOrderOne(modelingObject, i) == gmoorder_Q)
+        if(gmoGetEquOrderOne(modelingObject, i) == gmoorder_Q)
         {
             // handle quadratic equation
 
             int numQuadraticTerms = gmoGetRowQNZOne(modelingObject, i);
 
-            int *variableOneIndexes = new int[numQuadraticTerms];
-            int *variableTwoIndexes = new int[numQuadraticTerms];
-            double *quadraticCoefficients = new double[numQuadraticTerms];
+            int* variableOneIndexes = new int[numQuadraticTerms];
+            int* variableTwoIndexes = new int[numQuadraticTerms];
+            double* quadraticCoefficients = new double[numQuadraticTerms];
 
             gmoGetRowQ(modelingObject, i, variableOneIndexes, variableTwoIndexes, quadraticCoefficients);
 
-            for (int j = 0; j < numQuadraticTerms; ++j)
+            for(int j = 0; j < numQuadraticTerms; ++j)
             {
-                if (variableOneIndexes[j] == variableTwoIndexes[j])
-                    quadraticCoefficients[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are multiplied by 2 in GMO */
+                if(variableOneIndexes[j] == variableTwoIndexes[j])
+                    quadraticCoefficients[j] /= 2.0; /* for some strange reason, the coefficients on the diagonal are
+                                                        multiplied by 2 in GMO */
 
                 try
                 {
@@ -696,9 +710,10 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
                     VariablePtr secondVariable = destination->getVariable(variableTwoIndexes[j]);
 
                     auto constraint = std::static_pointer_cast<QuadraticConstraint>(destination->getConstraint(i));
-                    constraint->add(std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
+                    constraint->add(
+                        std::make_shared<QuadraticTerm>(quadraticCoefficients[j], firstVariable, secondVariable));
                 }
-                catch (const VariableNotFoundException &e)
+                catch(const VariableNotFoundException& e)
                 {
                     delete[] variableOneIndexes;
                     delete[] variableTwoIndexes;
@@ -706,7 +721,7 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 
                     return (false);
                 }
-                catch (const ConstraintNotFoundException &e)
+                catch(const ConstraintNotFoundException& e)
                 {
                     delete[] variableOneIndexes;
                     delete[] variableTwoIndexes;
@@ -727,13 +742,13 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
-    int *opcodes = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
-    int *fields = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
+    int* opcodes = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
+    int* fields = new int[gmoNLCodeSizeMaxRow(modelingObject) + 1];
     int constantlen = gmoNLConst(modelingObject);
-    double *constants = (double *)gmoPPool(modelingObject);
+    double* constants = (double*)gmoPPool(modelingObject);
     int codelen;
 
-    if (gmoObjNLNZ(modelingObject) > 0 && gmoGetObjOrder(modelingObject) == gmoorder_NL)
+    if(gmoObjNLNZ(modelingObject) > 0 && gmoGetObjOrder(modelingObject) == gmoorder_NL)
     {
         // handle nonlinear objective
 
@@ -741,58 +756,59 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 
         try
         {
-            auto destinationExpression = parseGamsInstructions(codelen, opcodes, fields, constantlen, constants, destination);
+            auto destinationExpression
+                = parseGamsInstructions(codelen, opcodes, fields, constantlen, constants, destination);
 
-            if (codelen > 0)
+            if(codelen > 0)
             {
                 double objjacval = gmoObjJacVal(modelingObject);
-                if (objjacval == 1.0)
+                if(objjacval == 1.0)
                 {
                     // scale by -1/objjacval = negate
                     destinationExpression = std::make_shared<ExpressionNegate>(destinationExpression);
                 }
-                else if (objjacval != -1.0)
+                else if(objjacval != -1.0)
                 {
                     // scale by -1/objjacval
                     destinationExpression = std::make_shared<ExpressionTimes>(
-                        std::make_shared<ExpressionConstant>(-1 / objjacval),
-                        destinationExpression);
+                        std::make_shared<ExpressionConstant>(-1 / objjacval), destinationExpression);
                 }
 
                 auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination->objectiveFunction);
                 objective->add(std::move(destinationExpression));
             }
         }
-        catch (const ConstraintNotFoundException &e)
+        catch(const ConstraintNotFoundException& e)
         {
             return (false);
         }
-        catch (const OperationNotImplementedException &e)
+        catch(const OperationNotImplementedException& e)
         {
             return (false);
         }
     }
 
-    for (int i = 0; i < gmoM(modelingObject); ++i)
+    for(int i = 0; i < gmoM(modelingObject); ++i)
     {
-        if (gmoGetEquOrderOne(modelingObject, i) == gmoorder_NL)
+        if(gmoGetEquOrderOne(modelingObject, i) == gmoorder_NL)
         {
             gmoDirtyGetRowFNLInstr(modelingObject, i, &codelen, opcodes, fields);
-            if (codelen == 0)
+            if(codelen == 0)
                 continue;
 
             try
             {
-                auto destinationExpression = parseGamsInstructions(codelen, opcodes, fields, constantlen, constants, destination);
+                auto destinationExpression
+                    = parseGamsInstructions(codelen, opcodes, fields, constantlen, constants, destination);
 
                 auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(destination->getConstraint(i));
                 constraint->add(std::move(destinationExpression));
             }
-            catch (const ConstraintNotFoundException &e)
+            catch(const ConstraintNotFoundException& e)
             {
                 return (false);
             }
-            catch (const OperationNotImplementedException &e)
+            catch(const OperationNotImplementedException& e)
             {
                 return (false);
             }
@@ -804,35 +820,35 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
     return (true);
 }
 
-NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,       /**< length of GAMS instructions */
-                                                                 int *opcodes,      /**< opcodes of GAMS instructions */
-                                                                 int *fields,       /**< fields of GAMS instructions */
-                                                                 int constantlen,   /**< length of GAMS constants pool */
-                                                                 double *constants, /**< GAMS constants pool */
-                                                                 const ProblemPtr &destination)
+NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /**< length of GAMS instructions */
+    int* opcodes, /**< opcodes of GAMS instructions */
+    int* fields, /**< fields of GAMS instructions */
+    int constantlen, /**< length of GAMS constants pool */
+    double* constants, /**< GAMS constants pool */
+    const ProblemPtr& destination)
 {
     bool debugoutput = gevGetIntOpt(modelingEnvironment, gevInteger1) & 0x4;
-#define debugout     \
-    if (debugoutput) \
+#define debugout                                                                                                       \
+    if(debugoutput)                                                                                                    \
     std::clog
 
     std::vector<NonlinearExpressionPtr> stack;
     stack.reserve(20);
 
-    for (int i = 0; i < codelen; ++i)
+    for(int i = 0; i < codelen; ++i)
     {
         GamsOpCode opcode = (GamsOpCode)opcodes[i];
         int address = fields[i] - 1;
 
         debugout << '\t' << GamsOpCodeName[opcode] << ": ";
 
-        switch (opcode)
+        switch(opcode)
         {
-        case nlNoOp:   // no operation
-        case nlStore:  // store row
+        case nlNoOp: // no operation
+        case nlStore: // store row
         case nlHeader: // header
         {
-            //debugout << "ignored" << std::endl;
+            // debugout << "ignored" << std::endl;
             break;
         }
 
@@ -867,7 +883,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
         case nlAddV: // add variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionPlus>(std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionPlus>(
+                std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -875,7 +892,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
 
         case nlAddI: // add immediate
         {
-            auto expression = std::make_shared<ExpressionPlus>(std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionPlus>(
+                std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -893,7 +911,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
         case nlSubV: // subtract variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionMinus>(stack.rbegin()[0], std::make_shared<ExpressionVariable>(destination->getVariable(address)));
+            auto expression = std::make_shared<ExpressionMinus>(
+                stack.rbegin()[0], std::make_shared<ExpressionVariable>(destination->getVariable(address)));
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -901,7 +920,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
 
         case nlSubI: // subtract immediate
         {
-            auto expression = std::make_shared<ExpressionMinus>(stack.rbegin()[0], std::make_shared<ExpressionConstant>(constants[address]));
+            auto expression = std::make_shared<ExpressionMinus>(
+                stack.rbegin()[0], std::make_shared<ExpressionConstant>(constants[address]));
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -919,8 +939,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
         case nlMulV: // multiply variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionTimes>(std::make_shared<ExpressionVariable>(destination->getVariable(address)),
-                                                                stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionTimes>(
+                std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -928,7 +948,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
 
         case nlMulI: // multiply immediate
         {
-            auto expression = std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionTimes>(
+                std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -936,7 +957,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
 
         case nlMulIAdd: // multiply immediate and add
         {
-            auto expressionTimes = std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+            auto expressionTimes = std::make_shared<ExpressionTimes>(
+                std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expressionTimes);
             auto expressionPlus = std::make_shared<ExpressionPlus>(stack.rbegin()[1], stack.rbegin()[0]);
@@ -958,7 +980,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
         case nlDivV: // divide variable
         {
             address = gmoGetjSolver(modelingObject, address);
-            auto expression = std::make_shared<ExpressionDivide>(std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionDivide>(
+                std::make_shared<ExpressionVariable>(destination->getVariable(address)), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -966,7 +989,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
 
         case nlDivI: // divide immediate
         {
-            auto expression = std::make_shared<ExpressionDivide>(std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
+            auto expression = std::make_shared<ExpressionDivide>(
+                std::make_shared<ExpressionConstant>(constants[address]), stack.rbegin()[0]);
             stack.pop_back();
             stack.push_back(expression);
             break;
@@ -999,7 +1023,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
         {
             debugout << "call function ";
 
-            switch (GamsFuncCode(address + 1))
+            switch(GamsFuncCode(address + 1))
             // undo shift by 1
             {
 
@@ -1033,9 +1057,9 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
             case fnsllog10:
             case fnsqlog10:
             {
-                auto expression = std::make_shared<ExpressionTimes>(
-                    std::make_shared<ExpressionConstant>(1.0 / log(10.0)),
-                    std::make_shared<ExpressionLog>(stack.rbegin()[0]));
+                auto expression
+                    = std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(1.0 / log(10.0)),
+                        std::make_shared<ExpressionLog>(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1043,9 +1067,9 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
 
             case fnlog2:
             {
-                auto expression = std::make_shared<ExpressionTimes>(
-                    std::make_shared<ExpressionConstant>(1.0 / log(2.0)),
-                    std::make_shared<ExpressionLog>(stack.rbegin()[0]));
+                auto expression
+                    = std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(1.0 / log(2.0)),
+                        std::make_shared<ExpressionLog>(stack.rbegin()[0]));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
@@ -1084,7 +1108,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
             }
 
             case fnpower:
-            case fnrpower:  // x ^ y
+            case fnrpower: // x ^ y
             case fncvpower: // constant ^ x
             case fnvcpower: // x ^ constant
             {
@@ -1115,7 +1139,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen,   
             case fnsqrec: // 1/x
             {
                 stack.push_back(std::make_shared<ExpressionConstant>(1.0));
-                auto expression = std::make_shared<ExpressionDivide>(stack.rbegin()[0], std::make_shared<ExpressionConstant>(1.0));
+                auto expression
+                    = std::make_shared<ExpressionDivide>(stack.rbegin()[0], std::make_shared<ExpressionConstant>(1.0));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;

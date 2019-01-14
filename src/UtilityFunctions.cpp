@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -14,34 +14,32 @@
 namespace SHOT::UtilityFunctions
 {
 
-int round(double d)
-{
-    return static_cast<int>(d + 0.5);
-};
+int round(double d) { return static_cast<int>(d + 0.5); };
 
 bool isnan(double val)
 {
     /*#if defined(_WIN64)
-	 // x64 version
-	 return _isnanf(val) != 0;
-	 #else
-	 return _isnan(val) != 0;
-	 #endif*/
+         // x64 version
+         return _isnanf(val) != 0;
+         #else
+         return _isnan(val) != 0;
+         #endif*/
     return boost::math::isnan(val);
 };
 
-void saveVariablePointVectorToFile(const VectorDouble &point, const VectorString &variables, const std::string &fileName)
+void saveVariablePointVectorToFile(
+    const VectorDouble& point, const VectorString& variables, const std::string& fileName)
 {
-    if (point.size() != variables.size())
+    if(point.size() != variables.size())
     {
-        std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
-                  << variables.size() << '\n';
+        std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size()
+                  << "!=" << variables.size() << '\n';
         return;
     }
 
     std::stringstream str;
 
-    for (int i = 0; i < point.size(); i++)
+    for(int i = 0; i < point.size(); i++)
     {
         str << variables.at(i);
         str << "\t";
@@ -53,18 +51,18 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const VectorString
     writeStringToFile(fileName, str.str());
 };
 
-void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &variables, const std::string &fileName)
+void saveVariablePointVectorToFile(const VectorDouble& point, const Variables& variables, const std::string& fileName)
 {
-    if (point.size() != variables.size())
+    if(point.size() != variables.size())
     {
-        std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size() << "!="
-                  << variables.size() << '\n';
+        std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size()
+                  << "!=" << variables.size() << '\n';
         return;
     }
 
     std::stringstream str;
 
-    for (int i = 0; i < point.size(); i++)
+    for(int i = 0; i < point.size(); i++)
     {
         str << variables.at(i)->name;
         str << "\t";
@@ -76,8 +74,8 @@ void saveVariablePointVectorToFile(const VectorDouble &point, const Variables &v
     writeStringToFile(fileName, str.str());
 };
 
-void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString &variables,
-                              const std::string &fileName)
+void savePrimalSolutionToFile(
+    const PrimalSolution& solution, const VectorString& variables, const std::string& fileName)
 {
     std::stringstream str;
 
@@ -90,12 +88,12 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString
     str << "Objective value: " << toStringFormat(solution.objValue, "%.8f", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index << "): "
-        << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
+        << "): " << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index << "): "
-        << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
+        << "): " << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -114,7 +112,7 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for (int i = 0; i < solution.point.size(); i++)
+    for(int i = 0; i < solution.point.size(); i++)
     {
         str << variables.at(i);
         str << "\t";
@@ -125,8 +123,7 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const VectorString
     writeStringToFile(fileName, str.str());
 };
 
-void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &variables,
-                              const std::string &fileName)
+void savePrimalSolutionToFile(const PrimalSolution& solution, const Variables& variables, const std::string& fileName)
 {
     std::stringstream str;
 
@@ -139,12 +136,12 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &v
     str << "Objective value: " << toStringFormat(solution.objValue, "%.8f", false);
     str << '\n';
 
-    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index << "): "
-        << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
+        << "): " << toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
     str << '\n';
 
-    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index << "): "
-        << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
+        << "): " << toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -163,9 +160,9 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &v
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for (int i = 0; i < solution.point.size(); i++)
+    for(int i = 0; i < solution.point.size(); i++)
     {
-        if (i < variables.size())
+        if(i < variables.size())
             str << variables.at(i)->name;
         else
             str << '\t';
@@ -177,16 +174,16 @@ void savePrimalSolutionToFile(const PrimalSolution &solution, const Variables &v
     writeStringToFile(fileName, str.str());
 };
 
-void displayVector(const VectorDouble &point)
+void displayVector(const VectorDouble& point)
 {
     std::stringstream str;
 
-    if (point.size() == 0)
+    if(point.size() == 0)
         str << "vector is empty";
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for (int i = 0; i < point.size(); i++)
+    for(int i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
@@ -198,16 +195,16 @@ void displayVector(const VectorDouble &point)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const VectorDouble &point1, const VectorDouble &point2)
+void displayVector(const VectorDouble& point1, const VectorDouble& point2)
 {
     std::stringstream str;
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    if (point1.size() != point2.size())
+    if(point1.size() != point2.size())
         return;
 
-    for (int i = 0; i < point1.size(); i++)
+    for(int i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -221,15 +218,15 @@ void displayVector(const VectorDouble &point1, const VectorDouble &point2)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const VectorDouble &point1, const VectorDouble &point2, const VectorDouble &point3)
+void displayVector(const VectorDouble& point1, const VectorDouble& point2, const VectorDouble& point3)
 {
     std::stringstream str;
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    if (point1.size() != point2.size())
+    if(point1.size() != point2.size())
         return;
 
-    for (int i = 0; i < point1.size(); i++)
+    for(int i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -246,17 +243,17 @@ void displayVector(const VectorDouble &point1, const VectorDouble &point2, const
     std::cout << str.str() << '\n';
 };
 
-void displayDifferencesInVector(const VectorDouble &point1, const VectorDouble &point2, double tol)
+void displayDifferencesInVector(const VectorDouble& point1, const VectorDouble& point2, double tol)
 {
     std::stringstream str;
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    if (point1.size() != point2.size())
+    if(point1.size() != point2.size())
         return;
 
-    for (int i = 0; i < point1.size(); i++)
+    for(int i = 0; i < point1.size(); i++)
     {
-        if (std::abs(point1.at(i) - point2.at(i)) > tol)
+        if(std::abs(point1.at(i) - point2.at(i)) > tol)
         {
             str << i;
             str << "\t";
@@ -271,14 +268,14 @@ void displayDifferencesInVector(const VectorDouble &point1, const VectorDouble &
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const VectorInteger &point)
+void displayVector(const VectorInteger& point)
 {
     std::stringstream str;
 
-    if (point.size() == 0)
+    if(point.size() == 0)
         str << "vector is empty";
 
-    for (int i = 0; i < point.size(); i++)
+    for(int i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
@@ -289,14 +286,14 @@ void displayVector(const VectorInteger &point)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const VectorString &point)
+void displayVector(const VectorString& point)
 {
     std::stringstream str;
 
-    if (point.size() == 0)
+    if(point.size() == 0)
         str << "vector is empty";
 
-    for (int i = 0; i < point.size(); i++)
+    for(int i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
@@ -307,16 +304,16 @@ void displayVector(const VectorString &point)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const std::vector<VectorDouble> &points)
+void displayVector(const std::vector<VectorDouble>& points)
 {
     std::stringstream str;
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for (int i = 0; i < points.at(0).size(); i++)
+    for(int i = 0; i < points.at(0).size(); i++)
     {
         str << i;
 
-        for (int j = 0; j < points.size(); j++)
+        for(int j = 0; j < points.size(); j++)
         {
             str << "\t";
             str << points.at(j).at(i);
@@ -328,15 +325,15 @@ void displayVector(const std::vector<VectorDouble> &points)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const std::vector<VectorInteger> &points)
+void displayVector(const std::vector<VectorInteger>& points)
 {
     std::stringstream str;
 
-    for (int i = 0; i < points.at(0).size(); i++)
+    for(int i = 0; i < points.at(0).size(); i++)
     {
         str << i;
 
-        for (int j = 0; j < points.size(); j++)
+        for(int j = 0; j < points.size(); j++)
         {
             str << "\t";
             str << points.at(j).at(i);
@@ -348,15 +345,15 @@ void displayVector(const std::vector<VectorInteger> &points)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const std::vector<VectorString> &points)
+void displayVector(const std::vector<VectorString>& points)
 {
     std::stringstream str;
 
-    for (int i = 0; i < points.at(0).size(); i++)
+    for(int i = 0; i < points.at(0).size(); i++)
     {
         str << i;
 
-        for (int j = 0; j < points.size(); j++)
+        for(int j = 0; j < points.size(); j++)
         {
             str << "\t";
             str << points.at(j).at(i);
@@ -368,16 +365,16 @@ void displayVector(const std::vector<VectorString> &points)
     std::cout << str.str() << '\n';
 };
 
-double L2Norm(const VectorDouble &ptA, const VectorDouble &ptB)
+double L2Norm(const VectorDouble& ptA, const VectorDouble& ptB)
 {
     double norm = 0.0;
 
-    if (ptA.size() != ptB.size())
+    if(ptA.size() != ptB.size())
     {
         return (-1.0);
     }
 
-    for (int i = 0; i < ptA.size(); i++)
+    for(int i = 0; i < ptA.size(); i++)
     {
         norm = norm + pow(ptA.at(i) - ptB.at(i), 2.0);
     }
@@ -387,11 +384,11 @@ double L2Norm(const VectorDouble &ptA, const VectorDouble &ptB)
     return (norm);
 };
 
-VectorDouble L2Norms(const std::vector<VectorDouble> &ptsA, const VectorDouble &ptB)
+VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& ptB)
 {
     VectorDouble norms(ptsA.size());
 
-    for (int i = 0; i < ptsA.size(); i++)
+    for(int i = 0; i < ptsA.size(); i++)
     {
         norms.at(i) = L2Norm(ptsA.at(i), ptB);
     }
@@ -399,17 +396,17 @@ VectorDouble L2Norms(const std::vector<VectorDouble> &ptsA, const VectorDouble &
     return (norms);
 };
 
-VectorDouble calculateCenterPoint(const std::vector<VectorDouble> &pts)
+VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts)
 {
     int ptSize = pts.at(0).size();
     int numPts = pts.size();
 
     VectorDouble newPt(ptSize, 0.0);
 
-    for (int i = 0; i < ptSize; i++)
+    for(int i = 0; i < ptSize; i++)
     {
 
-        for (int j = 0; j < numPts; j++)
+        for(int j = 0; j < numPts; j++)
         {
             newPt.at(i) += pts.at(j).at(i);
         }
@@ -420,14 +417,14 @@ VectorDouble calculateCenterPoint(const std::vector<VectorDouble> &pts)
     return (newPt);
 };
 
-int numDifferentRoundedSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
-                                        const VectorInteger &indexes)
+int numDifferentRoundedSelectedElements(
+    const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
 {
     int numDiff = 0;
 
-    for (int i = 0; i < indexes.size(); i++)
+    for(int i = 0; i < indexes.size(); i++)
     {
-        if (round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
+        if(round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
         {
             numDiff++;
         }
@@ -435,44 +432,44 @@ int numDifferentRoundedSelectedElements(const VectorDouble &firstPt, const Vecto
     return (numDiff);
 };
 
-bool isDifferentRoundedSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
-                                        const VectorInteger &indexes)
+bool isDifferentRoundedSelectedElements(
+    const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
 {
-    for (int i = 0; i < indexes.size(); i++)
+    for(int i = 0; i < indexes.size(); i++)
     {
-        if (round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
+        if(round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
             return (true);
     }
 
     return (false);
 };
 
-bool isDifferentSelectedElements(const VectorDouble &firstPt, const VectorDouble &secondPt,
-                                 const VectorInteger &indexes)
+bool isDifferentSelectedElements(
+    const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
 {
-    for (int i = 0; i < indexes.size(); i++)
+    for(int i = 0; i < indexes.size(); i++)
     {
-        if (firstPt.at(indexes.at(i)) != secondPt.at(indexes.at(i)))
+        if(firstPt.at(indexes.at(i)) != secondPt.at(indexes.at(i)))
             return (true);
     }
 
     return (false);
 };
 
-std::string toStringFormat(const double value, const std::string &format)
+std::string toStringFormat(const double value, const std::string& format)
 {
     return (toStringFormat(value, format, true));
 }
 
-std::string toStringFormat(double value, const std::string &format, const bool useInfinitySymbol)
+std::string toStringFormat(double value, const std::string& format, const bool useInfinitySymbol)
 {
     std::string str;
 
-    if (useInfinitySymbol && value < -1.e20)
+    if(useInfinitySymbol && value < -1.e20)
     {
         str = "-inf.";
     }
-    else if (useInfinitySymbol && value > 1.e20)
+    else if(useInfinitySymbol && value > 1.e20)
     {
         str = "inf.";
     }
@@ -484,19 +481,16 @@ std::string toStringFormat(double value, const std::string &format, const bool u
     return (str);
 };
 
-std::string toString(double value)
-{
-    return (toStringFormat(value, "%.3f", true));
-}
+std::string toString(double value) { return (toStringFormat(value, "%.3f", true)); }
 
-void displayVector(const VectorInteger &point1, const VectorInteger &point2)
+void displayVector(const VectorInteger& point1, const VectorInteger& point2)
 {
     std::stringstream str;
 
-    if (point1.size() != point2.size())
+    if(point1.size() != point2.size())
         return;
 
-    for (int i = 0; i < point1.size(); i++)
+    for(int i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -510,14 +504,14 @@ void displayVector(const VectorInteger &point1, const VectorInteger &point2)
     std::cout << str.str() << '\n';
 };
 
-void displayVector(const VectorInteger &point1, const VectorDouble &point2)
+void displayVector(const VectorInteger& point1, const VectorDouble& point2)
 {
     std::stringstream str;
 
-    if (point1.size() != point2.size())
+    if(point1.size() != point2.size())
         return;
 
-    for (int i = 0; i < point1.size(); i++)
+    for(int i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -535,7 +529,7 @@ double getJulianFractionalDate()
 {
     auto now = std::chrono::system_clock::now();
     std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-    struct tm *parts = std::localtime(&now_c);
+    struct tm* parts = std::localtime(&now_c);
 
     auto Y = 1900 + parts->tm_year;
     auto M = 1 + parts->tm_mon;
@@ -547,16 +541,17 @@ double getJulianFractionalDate()
     auto secstoday = (3600 * hours + 60 * mins + secs);
 
     // To conform with GAMS Julian format
-    auto julianDate = -2415020 + (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12 - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
+    auto julianDate = -2415020 + (1461 * (Y + 4800 + (M - 14) / 12)) / 4 + (367 * (M - 2 - 12 * ((M - 14) / 12))) / 12
+        - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
 
     return julianDate;
 };
 
-bool writeStringToFile(const std::string &fileName, const std::string &str)
+bool writeStringToFile(const std::string& fileName, const std::string& str)
 {
     std::ofstream f(fileName);
 
-    if (f)
+    if(f)
     {
         f << str;
     }
@@ -569,10 +564,10 @@ bool writeStringToFile(const std::string &fileName, const std::string &str)
     return true;
 };
 
-std::string getFileAsString(const std::string &fileName)
+std::string getFileAsString(const std::string& fileName)
 {
     std::ifstream in(fileName, std::ios::in | std::ios::binary);
-    if (in)
+    if(in)
     {
         std::string contents;
         in.seekg(0, std::ios::end);

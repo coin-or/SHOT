@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -18,22 +18,22 @@ void Problem::updateVariables()
     auto numVariables = allVariables.size();
 
     // Update bound vectors
-    if (variableLowerBounds.size() != numVariables)
+    if(variableLowerBounds.size() != numVariables)
         variableLowerBounds.resize(numVariables);
 
-    if (variableUpperBounds.size() != numVariables)
+    if(variableUpperBounds.size() != numVariables)
         variableUpperBounds.resize(numVariables);
 
     int numNonlinearVars = 0;
 
     nonlinearVariables.clear();
 
-    for (int i = 0; i < numVariables; i++)
+    for(int i = 0; i < numVariables; i++)
     {
         variableLowerBounds[i] = allVariables[i]->lowerBound;
         variableUpperBounds[i] = allVariables[i]->upperBound;
 
-        if (allVariables[i]->isNonlinear)
+        if(allVariables[i]->isNonlinear)
             nonlinearVariables.push_back(allVariables[i]);
     }
 
@@ -44,12 +44,12 @@ void Problem::updateProperties()
 {
     objectiveFunction->updateProperties();
 
-    for (auto &C : numericConstraints)
+    for(auto& C : numericConstraints)
     {
         C->updateProperties();
     }
 
-    if (!variablesUpdated)
+    if(!variablesUpdated)
         updateVariables();
 
     properties.isConvex = true;
@@ -66,21 +66,23 @@ void Problem::updateProperties()
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
 
-    bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasNonlinearExpression));
-    bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic && objectiveFunction->properties.hasQuadraticTerms);
+    bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
+        && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasNonlinearExpression));
+    bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
+        && objectiveFunction->properties.hasQuadraticTerms);
 
     int numQuadraticConstraints = 0;
     int numNonlinearConstraints = 0;
 
-    for (auto &C : quadraticConstraints)
+    for(auto& C : quadraticConstraints)
     {
-        if (C->properties.hasQuadraticTerms)
+        if(C->properties.hasQuadraticTerms)
             numQuadraticConstraints++;
     }
 
-    for (auto &C : nonlinearConstraints)
+    for(auto& C : nonlinearConstraints)
     {
-        if (C->properties.hasNonlinearExpression)
+        if(C->properties.hasNonlinearExpression)
             numNonlinearConstraints++;
     }
 
@@ -93,15 +95,15 @@ void Problem::updateProperties()
 
     properties.isDiscrete = (properties.numberOfDiscreteVariables > 0);
 
-    if (areConstrsNonlinear || isObjNonlinear)
+    if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
 
-    if (objectiveFunction->properties.hasNonlinearExpression)
+    if(objectiveFunction->properties.hasNonlinearExpression)
         properties.numberOfNonlinearExpressions++;
 
-    if (properties.isDiscrete)
+    if(properties.isDiscrete)
     {
-        if (areConstrsNonlinear || isObjNonlinear)
+        if(areConstrsNonlinear || isObjNonlinear)
         {
             properties.isMINLPProblem = true;
             properties.isNLPProblem = false;
@@ -112,7 +114,7 @@ void Problem::updateProperties()
             properties.isMILPProblem = false;
             properties.isLPProblem = false;
         }
-        else if (areConstrsQuadratic)
+        else if(areConstrsQuadratic)
         {
             properties.isMINLPProblem = false;
             properties.isNLPProblem = false;
@@ -123,7 +125,7 @@ void Problem::updateProperties()
             properties.isMILPProblem = false;
             properties.isLPProblem = false;
         }
-        else if (isObjQuadratic)
+        else if(isObjQuadratic)
         {
             properties.isMINLPProblem = false;
             properties.isNLPProblem = false;
@@ -150,7 +152,7 @@ void Problem::updateProperties()
     {
         properties.isDiscrete = false;
 
-        if (areConstrsNonlinear || isObjNonlinear)
+        if(areConstrsNonlinear || isObjNonlinear)
         {
             properties.isMINLPProblem = false;
             properties.isNLPProblem = true;
@@ -161,7 +163,7 @@ void Problem::updateProperties()
             properties.isMILPProblem = false;
             properties.isLPProblem = false;
         }
-        else if (areConstrsQuadratic)
+        else if(areConstrsQuadratic)
         {
             properties.isMINLPProblem = false;
             properties.isNLPProblem = false;
@@ -172,7 +174,7 @@ void Problem::updateProperties()
             properties.isMILPProblem = false;
             properties.isLPProblem = false;
         }
-        else if (isObjQuadratic)
+        else if(isObjQuadratic)
         {
             properties.isMINLPProblem = false;
             properties.isNLPProblem = false;
@@ -203,7 +205,7 @@ void Problem::updateFactorableFunctions()
 {
     factorableFunctionsDAG = std::make_shared<FactorableFunctionGraph>();
 
-    for (auto &V : nonlinearVariables)
+    for(auto& V : nonlinearVariables)
     {
         auto factorableFunctionsVar = std::make_shared<FactorableFunction>();
         factorableFunctionsVar->set(factorableFunctionsDAG.get());
@@ -211,9 +213,9 @@ void Problem::updateFactorableFunctions()
         factorableFunctionVariables.push_back(*factorableFunctionsVar.get());
     }
 
-    for (auto &C : nonlinearConstraints)
+    for(auto& C : nonlinearConstraints)
     {
-        if (C->properties.hasNonlinearExpression)
+        if(C->properties.hasNonlinearExpression)
         {
             C->updateFactorableFunction();
             factorableFunctions.push_back(*C->factorableFunction.get());
@@ -221,7 +223,7 @@ void Problem::updateFactorableFunctions()
     }
 
     int objectiveFactorableFunctionIndex = -1;
-    if (objectiveFunction->properties.hasNonlinearExpression)
+    if(objectiveFunction->properties.hasNonlinearExpression)
     {
         auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
         objective->updateFactorableFunction();
@@ -231,14 +233,16 @@ void Problem::updateFactorableFunctions()
         objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
     }
 
-    auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0], factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
+    auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0],
+        factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
-    for (int i = 0; i < std::get<0>(jacobian); i++)
+    for(int i = 0; i < std::get<0>(jacobian); i++)
     {
         auto nonlinearVariable = nonlinearVariables[std::get<2>(jacobian)[i]];
         auto jacobianElement = std::get<3>(jacobian)[i];
 
-        if (objectiveFunction->properties.hasNonlinearExpression && std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
+        if(objectiveFunction->properties.hasNonlinearExpression
+            && std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
         {
             auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
             objective->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
@@ -254,7 +258,8 @@ void Problem::updateFactorableFunctions()
     delete[] std::get<3>(jacobian);
 };
 
-Problem::Problem(EnvironmentPtr env) : env(env){};
+Problem::Problem(EnvironmentPtr env)
+    : env(env){};
 
 Problem::~Problem()
 {
@@ -286,7 +291,7 @@ void Problem::finalize()
 
 void Problem::add(Variables variables)
 {
-    for (auto &V : variables)
+    for(auto& V : variables)
         add(V);
 }
 
@@ -294,18 +299,18 @@ void Problem::add(VariablePtr variable)
 {
     allVariables.push_back(variable);
 
-    switch (variable->type)
+    switch(variable->type)
     {
-    case (E_VariableType::Real):
+    case(E_VariableType::Real):
         realVariables.push_back(variable);
         break;
-    case (E_VariableType::Binary):
+    case(E_VariableType::Binary):
         binaryVariables.push_back(variable);
         break;
-    case (E_VariableType::Integer):
+    case(E_VariableType::Integer):
         integerVariables.push_back(variable);
         break;
-    case (E_VariableType::Semicontinuous):
+    case(E_VariableType::Semicontinuous):
         semicontinuousVariables.push_back(variable);
         break;
     default:
@@ -320,7 +325,7 @@ void Problem::add(VariablePtr variable)
 
 void Problem::add(AuxilliaryVariables variables)
 {
-    for (auto &V : variables)
+    for(auto& V : variables)
         add(V);
 }
 
@@ -329,18 +334,18 @@ void Problem::add(AuxilliaryVariablePtr variable)
     allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
     auxilliaryVariables.push_back(variable);
 
-    switch (variable->type)
+    switch(variable->type)
     {
-    case (E_VariableType::Real):
+    case(E_VariableType::Real):
         realVariables.push_back(variable);
         break;
-    case (E_VariableType::Binary):
+    case(E_VariableType::Binary):
         binaryVariables.push_back(variable);
         break;
-    case (E_VariableType::Integer):
+    case(E_VariableType::Integer):
         integerVariables.push_back(variable);
         break;
-    case (E_VariableType::Semicontinuous):
+    case(E_VariableType::Semicontinuous):
         semicontinuousVariables.push_back(variable);
         break;
     default:
@@ -423,10 +428,9 @@ void Problem::add(NonlinearObjectiveFunctionPtr objective)
     env->output->outputDebug("Added nonlinear objective function to problem.");
 };
 
-template <class T>
-void Problem::add(std::vector<T> elements)
+template <class T> void Problem::add(std::vector<T> elements)
 {
-    for (auto &E : elements)
+    for(auto& E : elements)
     {
         add(E);
 
@@ -436,7 +440,7 @@ void Problem::add(std::vector<T> elements)
 
 VariablePtr Problem::getVariable(int variableIndex)
 {
-    if (variableIndex > allVariables.size())
+    if(variableIndex > allVariables.size())
     {
         throw VariableNotFoundException(" with index " + std::to_string(variableIndex));
     }
@@ -446,7 +450,7 @@ VariablePtr Problem::getVariable(int variableIndex)
 
 ConstraintPtr Problem::getConstraint(int constraintIndex)
 {
-    if (constraintIndex > numericConstraints.size())
+    if(constraintIndex > numericConstraints.size())
     {
         throw ConstraintNotFoundException(" with index " + std::to_string(constraintIndex));
     }
@@ -454,19 +458,13 @@ ConstraintPtr Problem::getConstraint(int constraintIndex)
     return numericConstraints.at(constraintIndex);
 };
 
-double Problem::getVariableLowerBound(int variableIndex)
-{
-    return allVariables.at(variableIndex)->lowerBound;
-};
+double Problem::getVariableLowerBound(int variableIndex) { return allVariables.at(variableIndex)->lowerBound; };
 
-double Problem::getVariableUpperBound(int variableIndex)
-{
-    return allVariables.at(variableIndex)->upperBound;
-};
+double Problem::getVariableUpperBound(int variableIndex) { return allVariables.at(variableIndex)->upperBound; };
 
 VectorDouble Problem::getVariableLowerBounds()
 {
-    if (!variablesUpdated)
+    if(!variablesUpdated)
     {
         updateVariables();
     }
@@ -476,7 +474,7 @@ VectorDouble Problem::getVariableLowerBounds()
 
 VectorDouble Problem::getVariableUpperBounds()
 {
-    if (!variablesUpdated)
+    if(!variablesUpdated)
     {
         updateVariables();
     }
@@ -503,35 +501,36 @@ void Problem::setVariableBounds(int variableIndex, double lowerBound, double upp
     variablesUpdated = true;
 };
 
-std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point)
 {
     return (this->getMostDeviatingNumericConstraint(point, numericConstraints));
 };
 
-std::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearConstraint(const VectorDouble &point)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNonlinearConstraint(const VectorDouble& point)
 {
     return (this->getMostDeviatingNumericConstraint(point, nonlinearConstraints));
 };
 
 template <typename T>
-std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<T> constraintSelection)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(
+    const VectorDouble& point, std::vector<T> constraintSelection)
 {
     std::optional<NumericConstraintValue> optional;
     double error = 0;
 
-    for (auto &C : constraintSelection)
+    for(auto& C : constraintSelection)
     {
         auto constraintValue = C->calculateNumericValue(point);
 
-        if (constraintValue.isFulfilled)
+        if(constraintValue.isFulfilled)
             continue;
 
-        if (!optional) // No constraint with error found yet
+        if(!optional) // No constraint with error found yet
         {
             optional = constraintValue;
             error = constraintValue.error;
         }
-        else if (constraintValue.error > error)
+        else if(constraintValue.error > error)
         {
             optional = constraintValue;
             error = constraintValue.error;
@@ -542,29 +541,29 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 };
 
 template <typename T>
-std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                                 std::vector<T *> &activeConstraints)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(
+    const VectorDouble& point, std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
     std::optional<NumericConstraintValue> optional;
     double error = -1;
 
-    for (auto &C : constraintSelection)
+    for(auto& C : constraintSelection)
     {
         auto constraintValue = C->calculateNumericValue(point);
 
-        if (constraintValue.isFulfilled)
+        if(constraintValue.isFulfilled)
             continue;
         else
             activeConstraints.push_back(C.get());
 
-        if (!optional) // No constraint with error found yet
+        if(!optional) // No constraint with error found yet
         {
             optional = constraintValue;
             error = constraintValue.error;
         }
-        else if (constraintValue.error > error)
+        else if(constraintValue.error > error)
         {
             optional = constraintValue;
             error = constraintValue.error;
@@ -575,29 +574,29 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 };
 
 template <typename T>
-std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble &point, std::vector<std::shared_ptr<T>> constraintSelection,
-                                                                                 std::vector<std::shared_ptr<T>> &activeConstraints)
+std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point,
+    std::vector<std::shared_ptr<T>> constraintSelection, std::vector<std::shared_ptr<T>>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
 
     std::optional<NumericConstraintValue> optional;
     double error = -1;
 
-    for (auto &C : constraintSelection)
+    for(auto& C : constraintSelection)
     {
         auto constraintValue = C->calculateNumericValue(point);
 
-        if (constraintValue.isFulfilled)
+        if(constraintValue.isFulfilled)
             continue;
         else
             activeConstraints.push_back(C);
 
-        if (!optional) // No constraint with error found yet
+        if(!optional) // No constraint with error found yet
         {
             optional = constraintValue;
             error = constraintValue.error;
         }
-        else if (constraintValue.error > error)
+        else if(constraintValue.error > error)
         {
             optional = constraintValue;
             error = constraintValue.error;
@@ -608,44 +607,45 @@ std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint
 };
 
 template <typename T>
-NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<std::shared_ptr<T>> constraintSelection,
-                                                    std::vector<T *> &activeConstraints)
+NumericConstraintValue getMaxNumericConstraintValue(const VectorDouble& point,
+    const std::vector<std::shared_ptr<T>> constraintSelection, std::vector<T*>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
     assert(constraintSelection.size() > 0);
 
     auto value = constraintSelection[0]->calculateNumericValue(point);
 
-    if (value.error > 0)
+    if(value.error > 0)
         activeConstraints.push_back(constraintSelection[0].get());
 
-    for (int i = 1; i < constraintSelection.size(); i++)
+    for(int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.normalizedValue > value.normalizedValue)
+        if(tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
 
-        if (tmpValue.normalizedValue > 0)
+        if(tmpValue.normalizedValue > 0)
             activeConstraints.push_back(constraintSelection[i].get());
     }
 
     return value;
 };
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const LinearConstraints constraintSelection)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(
+    const VectorDouble& point, const LinearConstraints constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 
     auto value = constraintSelection[0]->calculateNumericValue(point);
 
-    for (int i = 1; i < constraintSelection.size(); i++)
+    for(int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.normalizedValue > value.normalizedValue)
+        if(tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -654,17 +654,18 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     return value;
 }
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const QuadraticConstraints constraintSelection)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(
+    const VectorDouble& point, const QuadraticConstraints constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 
     auto value = constraintSelection[0]->calculateNumericValue(point);
 
-    for (int i = 1; i < constraintSelection.size(); i++)
+    for(int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.normalizedValue > value.normalizedValue)
+        if(tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -673,17 +674,18 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     return value;
 }
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NonlinearConstraints constraintSelection, double correction)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(
+    const VectorDouble& point, const NonlinearConstraints constraintSelection, double correction)
 {
     assert(constraintSelection.size() > 0);
 
     auto value = constraintSelection[0]->calculateNumericValue(point, correction);
 
-    for (int i = 1; i < constraintSelection.size(); i++)
+    for(int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point, correction);
 
-        if (tmpValue.normalizedValue > value.normalizedValue)
+        if(tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -692,17 +694,18 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     return value;
 }
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const NumericConstraints constraintSelection)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(
+    const VectorDouble& point, const NumericConstraints constraintSelection)
 {
     assert(constraintSelection.size() > 0);
 
     auto value = constraintSelection[0]->calculateNumericValue(point);
 
-    for (int i = 1; i < constraintSelection.size(); i++)
+    for(int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.normalizedValue > value.normalizedValue)
+        if(tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
@@ -711,27 +714,27 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
     return value;
 }
 
-NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble &point, const std::vector<NumericConstraint *> &constraintSelection,
-                                                             std::vector<NumericConstraint *> &activeConstraints)
+NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble& point,
+    const std::vector<NumericConstraint*>& constraintSelection, std::vector<NumericConstraint*>& activeConstraints)
 {
     assert(activeConstraints.size() == 0);
     assert(constraintSelection.size() > 0);
 
     auto value = constraintSelection[0]->calculateNumericValue(point);
 
-    if (value.normalizedValue > 0)
+    if(value.normalizedValue > 0)
         activeConstraints.push_back(constraintSelection[0]);
 
-    for (int i = 1; i < constraintSelection.size(); i++)
+    for(int i = 1; i < constraintSelection.size(); i++)
     {
         auto tmpValue = constraintSelection[i]->calculateNumericValue(point);
 
-        if (tmpValue.normalizedValue > value.normalizedValue)
+        if(tmpValue.normalizedValue > value.normalizedValue)
         {
             value = tmpValue;
         }
 
-        if (tmpValue.normalizedValue > 0)
+        if(tmpValue.normalizedValue > 0)
             activeConstraints.push_back(constraintSelection[i]);
     }
 
@@ -739,24 +742,26 @@ NumericConstraintValue Problem::getMaxNumericConstraintValue(const VectorDouble 
 };
 
 template <typename T>
-NumericConstraintValues Problem::getAllDeviatingConstraints(const VectorDouble &point, double tolerance, std::vector<T> constraintSelection, double correction)
+NumericConstraintValues Problem::getAllDeviatingConstraints(
+    const VectorDouble& point, double tolerance, std::vector<T> constraintSelection, double correction)
 {
     NumericConstraintValues constraintValues;
-    for (auto &C : constraintSelection)
+    for(auto& C : constraintSelection)
     {
         NumericConstraintValue constraintValue = C->calculateNumericValue(point, correction);
-        if (constraintValue.normalizedValue > tolerance)
+        if(constraintValue.normalizedValue > tolerance)
             constraintValues.push_back(constraintValue);
     }
 
     return constraintValues;
 };
 
-NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance, double fraction, double correction)
+NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(
+    const VectorDouble& point, double tolerance, double fraction, double correction)
 {
-    if (fraction > 1)
+    if(fraction > 1)
         fraction = 1;
-    else if (fraction < 0)
+    else if(fraction < 0)
         fraction = 0;
 
     int fractionNumbers = std::max(1, (int)ceil(fraction * this->nonlinearConstraints.size()));
@@ -765,7 +770,7 @@ NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(cons
 
     std::sort(values.begin(), values.end(), std::greater<NumericConstraintValue>());
 
-    if (values.size() <= fractionNumbers) // Not enough elements to need truncating
+    if(values.size() <= fractionNumbers) // Not enough elements to need truncating
     {
         return values;
     }
@@ -774,22 +779,22 @@ NumericConstraintValues Problem::getFractionOfDeviatingNonlinearConstraints(cons
     return values;
 };
 
-NumericConstraintValues Problem::getAllDeviatingNumericConstraints(const VectorDouble &point, double tolerance)
+NumericConstraintValues Problem::getAllDeviatingNumericConstraints(const VectorDouble& point, double tolerance)
 {
     return getAllDeviatingConstraints(point, tolerance, numericConstraints);
 };
 
-NumericConstraintValues Problem::getAllDeviatingLinearConstraints(const VectorDouble &point, double tolerance)
+NumericConstraintValues Problem::getAllDeviatingLinearConstraints(const VectorDouble& point, double tolerance)
 {
     return getAllDeviatingConstraints(point, tolerance, linearConstraints);
 };
 
-NumericConstraintValues Problem::getAllDeviatingQuadraticConstraints(const VectorDouble &point, double tolerance)
+NumericConstraintValues Problem::getAllDeviatingQuadraticConstraints(const VectorDouble& point, double tolerance)
 {
     return getAllDeviatingConstraints(point, tolerance, quadraticConstraints);
 };
 
-NumericConstraintValues Problem::getAllDeviatingNonlinearConstraints(const VectorDouble &point, double tolerance)
+NumericConstraintValues Problem::getAllDeviatingNonlinearConstraints(const VectorDouble& point, double tolerance)
 {
     return getAllDeviatingConstraints(point, tolerance, nonlinearConstraints);
 };
@@ -820,9 +825,9 @@ bool Problem::areNumericConstraintsFulfilled(VectorDouble point, double toleranc
 
 bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tolerance)
 {
-    for (auto &V : integerVariables)
+    for(auto& V : integerVariables)
     {
-        if (abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
+        if(abs(point.at(V->index) - round(point.at(V->index))) > tolerance)
             return false;
     }
 
@@ -831,13 +836,13 @@ bool Problem::areIntegralityConstraintsFulfilled(VectorDouble point, double tole
 
 bool Problem::areVariableBoundsFulfilled(VectorDouble point, double tolerance)
 {
-    for (int i = 0; i < properties.numberOfVariables; ++i)
+    for(int i = 0; i < properties.numberOfVariables; ++i)
     {
-        if (point.at(i) - tolerance > allVariables.at(i)->upperBound)
+        if(point.at(i) - tolerance > allVariables.at(i)->upperBound)
         {
             return false;
         }
-        if (point.at(i) + tolerance < allVariables.at(i)->lowerBound)
+        if(point.at(i) + tolerance < allVariables.at(i)->lowerBound)
         {
             return false;
         }
@@ -851,27 +856,27 @@ void Problem::saveProblemToFile(std::string filename)
     std::stringstream stream;
     stream << this;
 
-    if (!UtilityFunctions::writeStringToFile(filename, stream.str()))
+    if(!UtilityFunctions::writeStringToFile(filename, stream.str()))
     {
         env->output->outputError("Error when writing to file " + filename);
     }
 }
 
-std::ostream &operator<<(std::ostream &stream, const Problem &problem)
+std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 {
     stream << problem.objectiveFunction << '\n';
 
-    if (problem.numericConstraints.size() > 0)
+    if(problem.numericConstraints.size() > 0)
         stream << "subject to:\n";
 
-    for (auto &C : problem.numericConstraints)
+    for(auto& C : problem.numericConstraints)
     {
         stream << C << '\n';
     }
 
     stream << "variables:\n";
 
-    for (auto &V : problem.allVariables)
+    for(auto& V : problem.allVariables)
     {
         stream << V << '\n';
     }

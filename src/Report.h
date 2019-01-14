@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -15,7 +15,7 @@ namespace SHOT
 {
 class Report
 {
-  public:
+public:
     Report(EnvironmentPtr envPtr);
     ~Report();
 
@@ -29,37 +29,22 @@ class Report
 
     void outputIterationDetailHeader();
 
-    void outputIterationDetail(int iterationNumber,
-                               std::string iterationDesc,
-                               double totalTime,
-                               int dualCutsAdded,
-                               int dualCutsTotal,
-                               double dualObjectiveValue,
-                               double primalObjectiveValue,
-                               double absoluteObjectiveGap,
-                               double relativeObjectiveGap,
-                               double currentObjectiveValue,
-                               int maxConstraintIndex,
-                               double maxConstraintError,
-                               E_IterationLineType lineType);
+    void outputIterationDetail(int iterationNumber, std::string iterationDesc, double totalTime, int dualCutsAdded,
+        int dualCutsTotal, double dualObjectiveValue, double primalObjectiveValue, double absoluteObjectiveGap,
+        double relativeObjectiveGap, double currentObjectiveValue, int maxConstraintIndex, double maxConstraintError,
+        E_IterationLineType lineType);
 
     void outputIterationDetailHeaderMinimax();
 
-    void outputIterationDetailMinimax(int iterationNumber,
-                                      std::string iterationDesc,
-                                      double totalTime,
-                                      int dualCutsAdded,
-                                      int dualCutsTotal,
-                                      double dualObjectiveValue,
-                                      double primalObjectiveValue,
-                                      double absoluteObjectiveGap,
-                                      double relativeObjectiveGap);
+    void outputIterationDetailMinimax(int iterationNumber, std::string iterationDesc, double totalTime,
+        int dualCutsAdded, int dualCutsTotal, double dualObjectiveValue, double primalObjectiveValue,
+        double absoluteObjectiveGap, double relativeObjectiveGap);
 
     void outputPrimalSolutionDetailedReport();
 
     void outputSolutionReport();
 
-  private:
+private:
     EnvironmentPtr env;
 
     double lastDualObjectiveValue = -DBL_MAX;

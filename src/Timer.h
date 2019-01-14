@@ -3,8 +3,8 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -13,7 +13,7 @@
 
 class Timer
 {
-  public:
+public:
     Timer(){};
 
     ~Timer(){};
@@ -34,12 +34,11 @@ class Timer
         name = timerName;
     }
 
-
     std::chrono::time_point<std::chrono::high_resolution_clock> lastStart;
 
     inline double elapsed()
     {
-        if (isRunning)
+        if(isRunning)
         {
             std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - lastStart;
             double tmpTime = dur.count();
@@ -57,7 +56,7 @@ class Timer
 
     inline void stop()
     {
-        if (!isRunning)
+        if(!isRunning)
             return;
 
         std::chrono::duration<double> dur = std::chrono::high_resolution_clock::now() - lastStart;
@@ -68,7 +67,7 @@ class Timer
 
     inline void start()
     {
-        if (isRunning)
+        if(isRunning)
         {
             return;
         }
@@ -80,7 +79,7 @@ class Timer
     std::string description;
     std::string name;
 
-  private:
+private:
     double timeElapsed;
     bool isRunning;
 };
