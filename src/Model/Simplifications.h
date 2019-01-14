@@ -884,7 +884,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double> e
     //if (nonlinearExpression != nullptr)
     //    std::cout << "final extracting results nonlinear: " << *nonlinearExpression << std::endl;
 
-    //std::cout << "number of terms: " << linearTerms.terms.size() << ", " << quadraticTerms.terms.size() << std::endl;
+    //std::cout << "number of terms: " << linearTerms.size() << ", " << quadraticterms.size() << std::endl;
 
     return std::make_tuple(linearTerms, quadraticTerms, nonlinearExpression, constant);
 }

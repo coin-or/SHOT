@@ -118,7 +118,7 @@ class LinearConstraint : public NumericConstraint
         valueLHS = LHS;
         valueRHS = RHS;
 
-        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
+        properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
     };
 
     void add(LinearTerms terms);
@@ -168,7 +168,7 @@ class QuadraticConstraint : public LinearConstraint
         valueLHS = LHS;
         valueRHS = RHS;
 
-        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
     QuadraticConstraint(int constraintIndex, std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS, double RHS)
@@ -180,8 +180,8 @@ class QuadraticConstraint : public LinearConstraint
         valueLHS = LHS;
         valueRHS = RHS;
 
-        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
-        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
+        properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
     void add(LinearTerms terms);
@@ -244,7 +244,7 @@ class NonlinearConstraint : public QuadraticConstraint
         valueLHS = LHS;
         valueRHS = RHS;
 
-        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
         properties.hasNonlinearExpression = true;
     };
 
@@ -257,7 +257,7 @@ class NonlinearConstraint : public QuadraticConstraint
         valueLHS = LHS;
         valueRHS = RHS;
 
-        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
+        properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
         properties.hasNonlinearExpression = true;
     };
 
@@ -271,8 +271,8 @@ class NonlinearConstraint : public QuadraticConstraint
         valueLHS = LHS;
         valueRHS = RHS;
 
-        properties.hasLinearTerms = linearTerms.terms.size() > 0 ? true : false;
-        properties.hasQuadraticTerms = quadraticTerms.terms.size() > 0 ? true : false;
+        properties.hasLinearTerms = linearTerms.size() > 0 ? true : false;
+        properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
         properties.hasNonlinearExpression = true;
     };
 

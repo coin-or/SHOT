@@ -103,7 +103,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     else
     {
         // Linear terms
-        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms.terms)
+        for (auto &T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms)
         {
             objectiveInitialized = objectiveInitialized && destination->addLinearTermToObjective(T->coefficient, T->variable->index);
         }
@@ -111,7 +111,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         // Quadratic terms
         if (sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
         {
-            for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms.terms)
+            for (auto &T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms)
             {
                 objectiveInitialized = objectiveInitialized && destination->addQuadraticTermToObjective(T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }
@@ -133,7 +133,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
         if (C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms.terms)
+            for (auto &T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
@@ -148,7 +148,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
         if (C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms.terms)
+            for (auto &T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
@@ -156,7 +156,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
         if (C->properties.hasQuadraticTerms)
         {
-            for (auto &T : C->quadraticTerms.terms)
+            for (auto &T : C->quadraticTerms)
             {
                 constraintsInitialized = constraintsInitialized && destination->addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }

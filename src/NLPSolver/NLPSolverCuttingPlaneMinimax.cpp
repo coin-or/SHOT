@@ -383,7 +383,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, Proble
 
         if (C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms.terms)
+            for (auto &T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
@@ -398,7 +398,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, Proble
 
         if (C->properties.hasLinearTerms)
         {
-            for (auto &T : C->linearTerms.terms)
+            for (auto &T : C->linearTerms)
             {
                 constraintsInitialized = constraintsInitialized && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
             }
@@ -406,7 +406,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver *destination, Proble
 
         if (C->properties.hasQuadraticTerms)
         {
-            for (auto &T : C->quadraticTerms.terms)
+            for (auto &T : C->quadraticTerms)
             {
                 constraintsInitialized = constraintsInitialized && destination->addQuadraticTermToConstraint(T->coefficient, T->firstVariable->index, T->secondVariable->index);
             }

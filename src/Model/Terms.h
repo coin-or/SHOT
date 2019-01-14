@@ -70,30 +70,40 @@ inline std::ostream &operator<<(std::ostream &stream, LinearTermPtr term)
     return stream;
 }
 
-class LinearTerms
+class LinearTerms : private std::vector<LinearTermPtr>
 {
   public:
-    std::vector<LinearTermPtr> terms;
+    using std::vector<LinearTermPtr>::operator[];
+
+    using std::vector<LinearTermPtr>::at;
+    using std::vector<LinearTermPtr>::begin;
+    using std::vector<LinearTermPtr>::clear;
+    using std::vector<LinearTermPtr>::end;
+    using std::vector<LinearTermPtr>::erase;
+    using std::vector<LinearTermPtr>::push_back;
+    using std::vector<LinearTermPtr>::reserve;
+    using std::vector<LinearTermPtr>::resize;
+    using std::vector<LinearTermPtr>::size;
 
     LinearTerms(){};
 
     void add(LinearTermPtr term)
     {
-        terms.push_back(term);
+        (*this).push_back(term);
     }
 
     void add(LinearTerms linearTerms)
     {
-        for (auto &T : linearTerms.terms)
+        for (auto &T : linearTerms)
         {
-            terms.push_back(T);
+            (*this).push_back(T);
         }
     }
 
     double calculate(const VectorDouble &point)
     {
         double value = 0.0;
-        for (auto T : terms)
+        for (auto T : *this)
         {
             value += T->calculate(point);
         }
@@ -104,7 +114,7 @@ class LinearTerms
     Interval calculate(const IntervalVector &intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for (auto T : terms)
+        for (auto T : *this)
         {
             value += T->calculate(intervalVector);
         }
@@ -114,7 +124,7 @@ class LinearTerms
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for (auto T : terms)
+        for (auto T : *this)
         {
             T->takeOwnership(owner);
         }
@@ -123,14 +133,14 @@ class LinearTerms
 
 inline std::ostream &operator<<(std::ostream &stream, LinearTerms linTerms)
 {
-    if (linTerms.terms.size() == 0)
+    if (linTerms.size() == 0)
         return stream;
 
-    stream << ' ' << linTerms.terms.at(0);
+    stream << ' ' << linTerms.at(0);
 
-    for (int i = 1; i < linTerms.terms.size(); i++)
+    for (int i = 1; i < linTerms.size(); i++)
     {
-        stream << linTerms.terms.at(i);
+        stream << linTerms.at(i);
     }
 
     return stream;
@@ -200,30 +210,40 @@ inline std::ostream &operator<<(std::ostream &stream, QuadraticTermPtr term)
     return stream;
 };
 
-class QuadraticTerms
+class QuadraticTerms : private std::vector<QuadraticTermPtr>
 {
   public:
-    std::vector<QuadraticTermPtr> terms;
+    using std::vector<QuadraticTermPtr>::operator[];
+
+    using std::vector<QuadraticTermPtr>::at;
+    using std::vector<QuadraticTermPtr>::begin;
+    using std::vector<QuadraticTermPtr>::clear;
+    using std::vector<QuadraticTermPtr>::end;
+    using std::vector<QuadraticTermPtr>::erase;
+    using std::vector<QuadraticTermPtr>::push_back;
+    using std::vector<QuadraticTermPtr>::reserve;
+    using std::vector<QuadraticTermPtr>::resize;
+    using std::vector<QuadraticTermPtr>::size;
 
     QuadraticTerms(){};
 
     inline void add(QuadraticTermPtr term)
     {
-        terms.push_back(term);
+        (*this).push_back(term);
     };
 
     void add(QuadraticTerms quadraticTerms)
     {
-        for (auto &T : quadraticTerms.terms)
+        for (auto &T : quadraticTerms)
         {
-            terms.push_back(T);
+            (*this).push_back(T);
         }
     }
 
     inline double calculate(const VectorDouble &point)
     {
         double value = 0.0;
-        for (auto T : terms)
+        for (auto T : (*this))
         {
             value += T->calculate(point);
         }
@@ -234,7 +254,7 @@ class QuadraticTerms
     inline Interval calculate(const IntervalVector &intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for (auto T : terms)
+        for (auto T : (*this))
         {
             value += T->calculate(intervalVector);
         }
@@ -244,7 +264,7 @@ class QuadraticTerms
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for (auto T : terms)
+        for (auto T : (*this))
         {
             T->takeOwnership(owner);
         }
@@ -253,21 +273,21 @@ class QuadraticTerms
 
 inline std::ostream &operator<<(std::ostream &stream, QuadraticTerms quadTerms)
 {
-    if (quadTerms.terms.size() == 0)
+    if (quadTerms.size() == 0)
         return stream;
 
-    if (quadTerms.terms.at(0)->coefficient > 0)
+    if (quadTerms.at(0)->coefficient > 0)
     {
-        stream << " +" << quadTerms.terms.at(0);
+        stream << " +" << quadTerms.at(0);
     }
     else
     {
-        stream << ' ' << quadTerms.terms.at(0);
+        stream << ' ' << quadTerms.at(0);
     }
 
-    for (int i = 1; i < quadTerms.terms.size(); i++)
+    for (int i = 1; i < quadTerms.size(); i++)
     {
-        stream << " +" << quadTerms.terms.at(i);
+        stream << " +" << quadTerms.at(i);
     }
 
     return stream;
@@ -342,30 +362,40 @@ inline std::ostream &operator<<(std::ostream &stream, MonomialTermPtr term)
     return stream;
 };
 
-class MonomialTerms
+class MonomialTerms : private std::vector<MonomialTermPtr>
 {
   public:
-    std::vector<MonomialTermPtr> terms;
+    using std::vector<MonomialTermPtr>::operator[];
+
+    using std::vector<MonomialTermPtr>::at;
+    using std::vector<MonomialTermPtr>::begin;
+    using std::vector<MonomialTermPtr>::clear;
+    using std::vector<MonomialTermPtr>::end;
+    using std::vector<MonomialTermPtr>::erase;
+    using std::vector<MonomialTermPtr>::push_back;
+    using std::vector<MonomialTermPtr>::reserve;
+    using std::vector<MonomialTermPtr>::resize;
+    using std::vector<MonomialTermPtr>::size;
 
     MonomialTerms(){};
 
     inline void add(MonomialTermPtr term)
     {
-        terms.push_back(term);
+        (*this).push_back(term);
     };
 
     void add(MonomialTerms monomialTerms)
     {
-        for (auto &T : monomialTerms.terms)
+        for (auto &T : monomialTerms)
         {
-            terms.push_back(T);
+            (*this).push_back(T);
         }
     }
 
     inline double calculate(const VectorDouble &point)
     {
         double value = 0.0;
-        for (auto T : terms)
+        for (auto T : (*this))
         {
             value += T->calculate(point);
         }
@@ -376,7 +406,7 @@ class MonomialTerms
     inline Interval calculate(const IntervalVector &intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for (auto T : terms)
+        for (auto T : (*this))
         {
             value += T->calculate(intervalVector);
         }
@@ -386,7 +416,7 @@ class MonomialTerms
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for (auto T : terms)
+        for (auto T : (*this))
         {
             T->takeOwnership(owner);
         }
@@ -395,26 +425,25 @@ class MonomialTerms
 
 inline std::ostream &operator<<(std::ostream &stream, MonomialTerms monomialTerms)
 {
-    if (monomialTerms.terms.size() == 0)
+    if (monomialTerms.size() == 0)
         return stream;
 
-    if (monomialTerms.terms.at(0)->coefficient > 0)
+    if (monomialTerms.at(0)->coefficient > 0)
     {
-        stream << " +" << monomialTerms.terms.at(0);
+        stream << " +" << monomialTerms.at(0);
     }
     else
     {
-        stream << ' ' << monomialTerms.terms.at(0);
+        stream << ' ' << monomialTerms.at(0);
     }
 
-    for (int i = 1; i < monomialTerms.terms.size(); i++)
+    for (int i = 1; i < monomialTerms.size(); i++)
     {
-        stream << " +" << monomialTerms.terms.at(i);
+        stream << " +" << monomialTerms.at(i);
     }
 
     return stream;
 };
-
 /*
 class SignomialElement
 {

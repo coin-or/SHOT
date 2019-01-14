@@ -47,14 +47,14 @@ std::ostream &operator<<(std::ostream &stream, ObjectiveFunctionPtr objective)
 
 void LinearObjectiveFunction::add(LinearTerms terms)
 {
-    if (linearTerms.terms.size() == 0)
+    if (linearTerms.size() == 0)
     {
         linearTerms = terms;
         properties.isValid = false;
     }
     else
     {
-        for (auto T : terms.terms)
+        for (auto T : terms)
         {
             add(T);
         }
@@ -63,13 +63,13 @@ void LinearObjectiveFunction::add(LinearTerms terms)
 
 void LinearObjectiveFunction::add(LinearTermPtr term)
 {
-    linearTerms.terms.push_back(term);
+    linearTerms.push_back(term);
     properties.isValid = false;
 };
 
 void LinearObjectiveFunction::updateProperties()
 {
-    if (linearTerms.terms.size() == 0)
+    if (linearTerms.size() == 0)
     {
         properties.hasLinearTerms = false;
     }
@@ -105,7 +105,7 @@ LinearObjectiveFunction::calculateGradient(const VectorDouble &point)
 {
     SparseVariableVector gradient;
 
-    for (auto T : linearTerms.terms)
+    for (auto T : linearTerms)
     {
         auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
         if (!element.second)
@@ -145,14 +145,14 @@ std::ostream &operator<<(std::ostream &stream, LinearObjectiveFunctionPtr object
 
 void QuadraticObjectiveFunction::add(QuadraticTerms terms)
 {
-    if (quadraticTerms.terms.size() == 0)
+    if (quadraticTerms.size() == 0)
     {
         quadraticTerms = terms;
         properties.isValid = false;
     }
     else
     {
-        for (auto T : terms.terms)
+        for (auto T : terms)
         {
             add(T);
         }
@@ -161,7 +161,7 @@ void QuadraticObjectiveFunction::add(QuadraticTerms terms)
 
 void QuadraticObjectiveFunction::add(QuadraticTermPtr term)
 {
-    quadraticTerms.terms.push_back(term);
+    quadraticTerms.push_back(term);
     properties.isValid = false;
 };
 
@@ -169,12 +169,12 @@ void QuadraticObjectiveFunction::updateProperties()
 {
     LinearObjectiveFunction::updateProperties();
 
-    if (quadraticTerms.terms.size() > 0)
+    if (quadraticTerms.size() > 0)
     {
         properties.hasQuadraticTerms = true;
         properties.classification = E_ObjectiveFunctionClassification::Quadratic;
 
-        for (auto const &T : quadraticTerms.terms)
+        for (auto const &T : quadraticTerms)
         {
             if (T->isBilinear)
             {
@@ -230,7 +230,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
 {
     SparseVariableVector gradient = LinearObjectiveFunction::calculateGradient(point);
 
-    for (auto T : quadraticTerms.terms)
+    for (auto T : quadraticTerms)
     {
         if (T->firstVariable == T->secondVariable) // variable squared
         {

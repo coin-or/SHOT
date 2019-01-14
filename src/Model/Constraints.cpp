@@ -67,14 +67,14 @@ bool NumericConstraint::isFulfilled(const VectorDouble &point)
 
 void LinearConstraint::add(LinearTerms terms)
 {
-    if (linearTerms.terms.size() == 0)
+    if (linearTerms.size() == 0)
     {
         linearTerms = terms;
         properties.hasLinearTerms = true;
     }
     else
     {
-        for (auto T : terms.terms)
+        for (auto T : terms)
         {
             add(T);
         }
@@ -110,7 +110,7 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble &poi
 {
     SparseVariableVector gradient;
 
-    for (auto T : linearTerms.terms)
+    for (auto T : linearTerms)
     {
         auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
         if (!element.second)
@@ -138,7 +138,7 @@ std::shared_ptr<NumericConstraint> LinearConstraint::getPointer()
 
 void LinearConstraint::updateProperties()
 {
-    if (linearTerms.terms.size() > 0)
+    if (linearTerms.size() > 0)
     {
         properties.hasLinearTerms = true;
         properties.classification = E_ConstraintClassification::Linear;
@@ -162,14 +162,14 @@ void QuadraticConstraint::add(LinearTermPtr term)
 
 void QuadraticConstraint::add(QuadraticTerms terms)
 {
-    if (quadraticTerms.terms.size() == 0)
+    if (quadraticTerms.size() == 0)
     {
         quadraticTerms = terms;
         properties.hasQuadraticTerms = true;
     }
     else
     {
-        for (auto T : terms.terms)
+        for (auto T : terms)
         {
             add(T);
         }
@@ -178,7 +178,7 @@ void QuadraticConstraint::add(QuadraticTerms terms)
 
 void QuadraticConstraint::add(QuadraticTermPtr term)
 {
-    quadraticTerms.terms.push_back(term);
+    quadraticTerms.push_back(term);
     properties.hasQuadraticTerms = true;
 };
 
@@ -206,7 +206,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble &
 {
     SparseVariableVector gradient = LinearConstraint::calculateGradient(point);
 
-    for (auto T : quadraticTerms.terms)
+    for (auto T : quadraticTerms)
     {
         if (T->firstVariable == T->secondVariable) // variable squared
         {
@@ -260,7 +260,7 @@ void QuadraticConstraint::updateProperties()
 {
     LinearConstraint::updateProperties();
 
-    if (quadraticTerms.terms.size() > 0)
+    if (quadraticTerms.size() > 0)
     {
         properties.hasQuadraticTerms = true;
         properties.classification = E_ConstraintClassification::Quadratic;
@@ -420,7 +420,7 @@ std::ostream &LinearConstraint::print(std::ostream &stream) const
     if (valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
-    if (linearTerms.terms.size() > 0)
+    if (linearTerms.size() > 0)
         stream << linearTerms;
 
     if (constant > 0)
@@ -449,10 +449,10 @@ std::ostream &QuadraticConstraint::print(std::ostream &stream) const
     if (valueLHS > SHOT_DBL_MIN)
         stream << valueLHS << " <= ";
 
-    if (linearTerms.terms.size() > 0)
+    if (linearTerms.size() > 0)
         stream << linearTerms;
 
-    if (quadraticTerms.terms.size() > 0)
+    if (quadraticTerms.size() > 0)
         stream << " +" << quadraticTerms;
 
     if (constant > 0)
@@ -478,10 +478,10 @@ std::ostream &NonlinearConstraint::print(std::ostream &stream) const
     if (valueLHS > SHOT_DBL_MIN)
         stream << valueLHS << " <= ";
 
-    if (linearTerms.terms.size() > 0)
+    if (linearTerms.size() > 0)
         stream << linearTerms;
 
-    if (quadraticTerms.terms.size() > 0)
+    if (quadraticTerms.size() > 0)
         stream << " +" << quadraticTerms;
 
     stream << " +" << nonlinearExpression;

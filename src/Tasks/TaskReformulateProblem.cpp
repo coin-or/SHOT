@@ -154,7 +154,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
         copyLinearTermsToConstraint(std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms, constraint);
 
-        for (auto &T : constraint->linearTerms.terms)
+        for (auto &T : constraint->linearTerms)
         {
             objectiveVariable->linearTerms.add(T);
         }
@@ -163,7 +163,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
         copyQuadraticTermsToConstraint(std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms, constraint);
 
-        for (auto &T : constraint->quadraticTerms.terms)
+        for (auto &T : constraint->quadraticTerms)
         {
             objectiveVariable->quadraticTerms.add(T);
         }
@@ -234,7 +234,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         objective = std::make_shared<NonlinearObjectiveFunction>();
     }
-    else if (destinationQuadraticTerms.terms.size() > 0)
+    else if (destinationQuadraticTerms.size() > 0)
     {
         objective = std::make_shared<QuadraticObjectiveFunction>();
     }
@@ -249,10 +249,10 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     if (copyOriginalLinearTerms)
         copyLinearTermsToObjectiveFunction(sourceObjective->linearTerms, std::dynamic_pointer_cast<LinearObjectiveFunction>(objective), isSignReversed);
 
-    if (destinationLinearTerms.terms.size() > 0)
+    if (destinationLinearTerms.size() > 0)
         std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)->add(destinationLinearTerms);
 
-    if (destinationQuadraticTerms.terms.size() > 0)
+    if (destinationQuadraticTerms.size() > 0)
         std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective)->add(destinationQuadraticTerms);
 
     if (copyOriginalNonlinearExpression)
@@ -267,7 +267,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)));
     }
-    else if (destinationQuadraticTerms.terms.size() > 0)
+    else if (destinationQuadraticTerms.size() > 0)
     {
         reformulatedProblem->add(std::move(std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective)));
     }
@@ -370,11 +370,11 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
     }
-    else if (destinationQuadraticTerms.terms.size() > 0 && !useQuadraticConstraints)
+    else if (destinationQuadraticTerms.size() > 0 && !useQuadraticConstraints)
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
     }
-    else if (destinationQuadraticTerms.terms.size() > 0)
+    else if (destinationQuadraticTerms.size() > 0)
     {
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
     }
@@ -389,10 +389,10 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
         copyLinearTermsToConstraint(std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms,
                                     std::dynamic_pointer_cast<LinearConstraint>(constraint), isSignReversed);
 
-    if (destinationLinearTerms.terms.size() > 0)
+    if (destinationLinearTerms.size() > 0)
         std::dynamic_pointer_cast<LinearConstraint>(constraint)->add(destinationLinearTerms);
 
-    if (destinationQuadraticTerms.terms.size() > 0)
+    if (destinationQuadraticTerms.size() > 0)
         std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->add(destinationQuadraticTerms);
 
     if (copyOriginalNonlinearExpression)
@@ -409,11 +409,11 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
     {
         reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
     }
-    else if (destinationQuadraticTerms.terms.size() > 0 && !useQuadraticConstraints)
+    else if (destinationQuadraticTerms.size() > 0 && !useQuadraticConstraints)
     {
         reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
     }
-    else if (destinationQuadraticTerms.terms.size() > 0)
+    else if (destinationQuadraticTerms.size() > 0)
     {
         reformulatedProblem->add(std::move(std::dynamic_pointer_cast<QuadraticConstraint>(constraint)));
     }
@@ -445,7 +445,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<
 
                 auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, false);
 
-                if (tmpQuadraticTerms.terms.size() == 0) // Otherwise we cannot proceed and will continue as if nonbilinear term
+                if (tmpQuadraticTerms.size() == 0) // Otherwise we cannot proceed and will continue as if nonbilinear term
                 {
                     resultLinearTerms.add(tmpLinearTerms);
                     continue; // Continue to next nonlinear term
@@ -462,7 +462,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<
 
                 auto [tmpLinearTerms, tmpMonomialTerms] = reformulateMonomialSum(monomialTerms, reversedSigns);
 
-                if (tmpMonomialTerms.terms.size() == 0) // Otherwise we cannot proceed and will continue as if nonbilinear term
+                if (tmpMonomialTerms.size() == 0) // Otherwise we cannot proceed and will continue as if nonbilinear term
                 {
                     resultLinearTerms.add(tmpLinearTerms);
 
@@ -513,7 +513,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
     bool allTermsAreBinary = true;
 
-    for (auto &T : quadraticTerms.terms)
+    for (auto &T : quadraticTerms)
     {
         if (!T->isBinary)
         {
@@ -522,7 +522,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
     }
 
-    for (auto &T : quadraticTerms.terms)
+    for (auto &T : quadraticTerms)
     {
         auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->index);
         auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->index);
@@ -702,7 +702,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
     bool allTermsAreBinary = true;
 
-    for (auto &T : monomialTerms.terms)
+    for (auto &T : monomialTerms)
     {
         if (!T->isBinary)
         {
@@ -711,7 +711,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
         }
     }
 
-    for (auto &T : monomialTerms.terms)
+    for (auto &T : monomialTerms)
     {
         if (T->isBinary && env->settings->getIntSetting("Reformulation.Monomials.Formulation", "Model") == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
@@ -838,7 +838,7 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
 {
     if (reversedSigns)
     {
-        for (auto &LT : terms.terms)
+        for (auto &LT : terms)
         {
             auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
@@ -847,7 +847,7 @@ void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T de
     }
     else
     {
-        for (auto &LT : terms.terms)
+        for (auto &LT : terms)
         {
             auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
@@ -861,7 +861,7 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
 {
     if (reversedSigns)
     {
-        for (auto &QT : terms.terms)
+        for (auto &QT : terms)
         {
             auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
             auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
@@ -871,7 +871,7 @@ void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms
     }
     else
     {
-        for (auto &QT : terms.terms)
+        for (auto &QT : terms)
         {
             auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
             auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
@@ -886,7 +886,7 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
 {
     if (reversedSigns)
     {
-        for (auto &LT : terms.terms)
+        for (auto &LT : terms)
         {
             auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
@@ -895,7 +895,7 @@ void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms term
     }
     else
     {
-        for (auto &LT : terms.terms)
+        for (auto &LT : terms)
         {
             auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
@@ -909,7 +909,7 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(QuadraticTerm
 {
     if (reversedSigns)
     {
-        for (auto &QT : terms.terms)
+        for (auto &QT : terms)
         {
             auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
             auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
@@ -919,7 +919,7 @@ void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(QuadraticTerm
     }
     else
     {
-        for (auto &QT : terms.terms)
+        for (auto &QT : terms)
         {
             auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
             auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);

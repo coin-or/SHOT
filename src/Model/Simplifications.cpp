@@ -24,10 +24,10 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant] = extractTermsAndConstant(nonlinearExpression);
 
-        if (tmpLinearTerms.terms.size() > 0)
+        if (tmpLinearTerms.size() > 0)
             objective->add(tmpLinearTerms);
 
-        if (tmpQuadraticTerms.terms.size() > 0)
+        if (tmpQuadraticTerms.size() > 0)
             objective->add(tmpQuadraticTerms);
 
         if (tmpNonlinearExpression != nullptr)
@@ -40,10 +40,10 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant] = extractTermsAndConstant(nonlinearExpression);
 
-        if (tmpLinearTerms.terms.size() > 0)
+        if (tmpLinearTerms.size() > 0)
             C->add(tmpLinearTerms);
 
-        if (tmpQuadraticTerms.terms.size() > 0)
+        if (tmpQuadraticTerms.size() > 0)
             C->add(tmpQuadraticTerms);
 
         if (tmpNonlinearExpression != nullptr)
@@ -52,7 +52,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
 
     for (auto &C : problem->nonlinearConstraints)
     {
-        if (C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.terms.size() == 0 && C->quadraticTerms.terms.size() == 0)
+        if (C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.size() == 0 && C->quadraticTerms.size() == 0)
         {
             // Can take the square of both sides
 

@@ -213,8 +213,6 @@ class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
     {
         this->linearTerms = LinearTerms();
         this->quadraticTerms = QuadraticTerms();
-        this->linearTerms.terms = std::vector<LinearTermPtr>();
-        this->quadraticTerms.terms = std::vector<QuadraticTermPtr>();
     }
 
     NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
