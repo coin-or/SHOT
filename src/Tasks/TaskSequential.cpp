@@ -13,13 +13,9 @@
 namespace SHOT
 {
 
-TaskSequential::TaskSequential(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskSequential::TaskSequential(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-TaskSequential::TaskSequential(EnvironmentPtr envPtr, int numberOfTasks)
-    : TaskBase(envPtr)
+TaskSequential::TaskSequential(EnvironmentPtr envPtr, int numberOfTasks) : TaskBase(envPtr)
 {
     m_tasks.reserve(numberOfTasks);
 }

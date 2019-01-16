@@ -13,11 +13,7 @@
 namespace SHOT
 {
 
-TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-    lastNumHyperplane = 0;
-}
+TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr) : TaskBase(envPtr) { lastNumHyperplane = 0; }
 
 TaskPrintIterationReport::~TaskPrintIterationReport() {}
 

@@ -15,10 +15,7 @@ namespace SHOT
 {
 
 ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
-    : IModelingSystem(envPtr)
-    , modelingObject(NULL)
-    , modelingEnvironment(NULL)
-    , createdtmpdir(false)
+    : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false)
 {
 }
 

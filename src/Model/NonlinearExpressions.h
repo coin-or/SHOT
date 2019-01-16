@@ -90,8 +90,7 @@ class ExpressionConstant : public NonlinearExpression
 {
 public:
     double constant = 0;
-    ExpressionConstant(double constant)
-        : constant(constant){};
+    ExpressionConstant(double constant) : constant(constant){};
 
     inline virtual double calculate(const VectorDouble& point) override { return constant; };
 
@@ -113,11 +112,7 @@ public:
 
     ExpressionVariable() { variable->isNonlinear = true; };
 
-    ExpressionVariable(VariablePtr variable)
-        : variable(variable)
-    {
-        variable->isNonlinear = true;
-    };
+    ExpressionVariable(VariablePtr variable) : variable(variable) { variable->isNonlinear = true; };
 
     inline virtual double calculate(const VectorDouble& point) override { return (variable->calculate(point)); };
 

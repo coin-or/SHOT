@@ -79,7 +79,7 @@ public:
     virtual double calculateValue(const VectorDouble& point) = 0;
     virtual Interval calculateValue(const IntervalVector& intervalVector) = 0;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point) = 0;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
 
     virtual std::ostream& print(std::ostream&) const = 0;
 };
@@ -126,7 +126,7 @@ public:
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point) override;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 };
@@ -190,7 +190,7 @@ public:
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point) override;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 };
@@ -277,7 +277,7 @@ public:
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point) override;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 };

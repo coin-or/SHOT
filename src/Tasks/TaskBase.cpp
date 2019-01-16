@@ -14,10 +14,7 @@
 namespace SHOT
 {
 
-TaskBase::TaskBase(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-}
+TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr) {}
 
 bool TaskBase::isActive() { return (m_isActive); }
 

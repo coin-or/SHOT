@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskPresolve::TaskPresolve(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskPresolve::TaskPresolve(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualStrategy");
 
@@ -55,7 +54,7 @@ void TaskPresolve::run()
 
     if(env->results->primalSolutions.size() > 0)
     {
-        env->dualSolver->MIPSolver->setCutOff(env->results->getPrimalBound());
+        // env->dualSolver->MIPSolver->setCutOff(env->results->getPrimalBound());
     }
 
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->primalSolutions.size() > 0)

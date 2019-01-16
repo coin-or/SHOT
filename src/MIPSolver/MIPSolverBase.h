@@ -46,7 +46,7 @@ public:
     ~MIPSolverBase();
 
     virtual void createHyperplane(Hyperplane hyperplane);
-    virtual void createIntegerCut(VectorInteger binaryIndexes);
+    // virtual void createIntegerCut(VectorInteger &binaryIndexes);
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane);
 
@@ -77,8 +77,9 @@ public:
     virtual void unfixVariables();
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant) = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) = 0;
+    virtual int addLinearConstraint(
+        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
         = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;

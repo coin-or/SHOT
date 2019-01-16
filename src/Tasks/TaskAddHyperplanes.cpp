@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskAddHyperplanes::TaskAddHyperplanes(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskAddHyperplanes::TaskAddHyperplanes(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualStrategy");
     itersWithoutAddedHPs = 0;

@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-Report::Report(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-}
+Report::Report(EnvironmentPtr envPtr) : env(envPtr) {}
 
 Report::~Report() {}
 

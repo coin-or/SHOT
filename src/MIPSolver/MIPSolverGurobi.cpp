@@ -339,7 +339,7 @@ void MIPSolverGurobi::initializeSolverSettings()
 }
 
 int MIPSolverGurobi::addLinearConstraint(
-    const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
+    const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
 {
     try
     {
@@ -544,6 +544,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     return (MIPSolutionStatus);
 }
+
+bool MIPSolverGurobi::repairInfeasibility() { return false; }
 
 int MIPSolverGurobi::increaseSolutionLimit(int increment)
 {
@@ -845,10 +847,7 @@ int MIPSolverGurobi::getNumberOfExploredNodes()
     }
 }
 
-GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-}
+GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr) : env(envPtr) {}
 
 // Used to get the number of open nodes
 void GurobiInfoCallback::callback()

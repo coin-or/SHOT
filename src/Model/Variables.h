@@ -32,16 +32,10 @@ public:
     bool isAuxilliary = false;
     FactorableFunctionPtr factorableFunctionVariable;
 
-    Variable()
-        : lowerBound(SHOT_DBL_MIN)
-        , upperBound(SHOT_DBL_MAX){};
+    Variable() : lowerBound(SHOT_DBL_MIN), upperBound(SHOT_DBL_MAX){};
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
-        : name(variableName)
-        , index(variableIndex)
-        , type(variableType)
-        , lowerBound(LB)
-        , upperBound(UB){};
+        : name(variableName), index(variableIndex), type(variableType), lowerBound(LB), upperBound(UB){};
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType)
         : name(variableName)

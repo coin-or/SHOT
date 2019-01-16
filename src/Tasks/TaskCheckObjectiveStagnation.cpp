@@ -14,8 +14,7 @@ namespace SHOT
 {
 
 TaskCheckObjectiveStagnation::TaskCheckObjectiveStagnation(EnvironmentPtr envPtr, std::string taskIDTrue)
-    : TaskBase(envPtr)
-    , taskIDIfTrue(taskIDTrue)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
 

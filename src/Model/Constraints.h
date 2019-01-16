@@ -84,7 +84,7 @@ public:
     virtual double calculateFunctionValue(const VectorDouble& point) = 0;
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector) = 0;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point) = 0;
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
 
@@ -129,7 +129,7 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point);
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
@@ -150,8 +150,7 @@ class QuadraticConstraint : public LinearConstraint
 public:
     QuadraticTerms quadraticTerms;
 
-    QuadraticConstraint()
-        : LinearConstraint(){};
+    QuadraticConstraint() : LinearConstraint(){};
 
     QuadraticConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
     {
@@ -197,7 +196,7 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point);
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
@@ -293,7 +292,7 @@ public:
 
     virtual double calculateFunctionValue(const VectorDouble& point) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point);
+    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
 

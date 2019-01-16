@@ -49,6 +49,8 @@ public:
     virtual void executeRelaxationStrategy() = 0;
 
     virtual E_ProblemSolutionStatus solveProblem() = 0;
+    virtual bool repairInfeasibility() = 0;
+
     virtual E_ProblemSolutionStatus getSolutionStatus() = 0;
     virtual double getObjectiveValue() = 0;
 
@@ -64,8 +66,9 @@ public:
     virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant) = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) = 0;
+    virtual int addLinearConstraint(
+        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
         = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
@@ -90,7 +93,7 @@ public:
     virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
     virtual void createHyperplane(Hyperplane hyperplane) = 0;
-    virtual void createIntegerCut(VectorInteger binaryIndexes) = 0;
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
     virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane)
@@ -108,7 +111,8 @@ public:
     virtual int getAuxilliaryObjectiveVariableIndex() = 0;
     virtual void setAuxilliaryObjectiveVariableIndex(int index) = 0;
 
-    std::vector<VectorInteger> integerCutWaitingList;
+    // First is binaries = 1, second is binaries = 0
+    std::vector<std::pair<VectorInteger, VectorInteger>> integerCutWaitingList;
     std::vector<Hyperplane> addedHyperplanes;
 
     std::vector<std::shared_ptr<InteriorPoint>> interiorPts;

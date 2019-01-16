@@ -84,6 +84,9 @@ void Problem::updateProperties()
     {
         if(C->properties.hasNonlinearExpression)
             numNonlinearConstraints++;
+
+        else if(C->properties.hasQuadraticTerms)
+            numNonlinearConstraints++;
     }
 
     properties.numberOfQuadraticConstraints = numQuadraticConstraints;
@@ -258,8 +261,7 @@ void Problem::updateFactorableFunctions()
     delete[] std::get<3>(jacobian);
 };
 
-Problem::Problem(EnvironmentPtr env)
-    : env(env){};
+Problem::Problem(EnvironmentPtr env) : env(env){};
 
 Problem::~Problem()
 {

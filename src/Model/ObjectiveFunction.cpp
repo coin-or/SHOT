@@ -94,7 +94,7 @@ Interval LinearObjectiveFunction::calculateValue(const IntervalVector& intervalV
     return value;
 };
 
-SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDouble& point)
+SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableVector gradient;
 
@@ -109,7 +109,8 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
         }
     }
 
-    UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+    if(eraseZeroes)
+        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -215,9 +216,9 @@ Interval QuadraticObjectiveFunction::calculateValue(const IntervalVector& interv
     return value;
 };
 
-SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorDouble& point)
+SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = LinearObjectiveFunction::calculateGradient(point);
+    SparseVariableVector gradient = LinearObjectiveFunction::calculateGradient(point, eraseZeroes);
 
     for(auto T : quadraticTerms)
     {
@@ -254,7 +255,8 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
         }
     }
 
-    UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+    if(eraseZeroes)
+        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -332,9 +334,9 @@ Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& interv
     return value;
 };
 
-SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorDouble& point)
+SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = QuadraticObjectiveFunction::calculateGradient(point);
+    SparseVariableVector gradient = QuadraticObjectiveFunction::calculateGradient(point, eraseZeroes);
 
     for(auto E : symbolicSparseJacobian)
     {
@@ -365,7 +367,8 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         }
     }
 
-    UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+    if(eraseZeroes)
+        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };

@@ -57,7 +57,8 @@ private:
     IloCplex cplexInst;
 
     void createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context& context);
-    void createIntegerCut(VectorInteger binaryIndexes, const IloCplex::Callback::Context& context);
+    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes,
+        const IloCplex::Callback::Context& context);
 
 public:
     /* Constructor with data */

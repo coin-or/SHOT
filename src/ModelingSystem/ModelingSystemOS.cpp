@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr)
-    : IModelingSystem(envPtr)
+ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envPtr)
 {
     std::shared_ptr<OSiLWriter> osilWriter();
 }

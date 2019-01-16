@@ -29,8 +29,7 @@ enum class E_ProblemCreationStatus
 class IModelingSystem
 {
 public:
-    IModelingSystem(EnvironmentPtr envPtr)
-        : env(envPtr){};
+    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr){};
     virtual ~IModelingSystem(){};
 
     // Adds modeling system specific settings

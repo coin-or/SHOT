@@ -23,9 +23,7 @@ public:
     std::weak_ptr<Problem> ownerProblem;
 
     LinearTerm(){};
-    LinearTerm(double coeff, VariablePtr var)
-        : coefficient(coeff)
-        , variable(var){};
+    LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
 
     inline double calculate(const VectorDouble& point)
     {
@@ -157,9 +155,7 @@ public:
 
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2)
-        : coefficient(coeff)
-        , firstVariable(variable1)
-        , secondVariable(variable2)
+        : coefficient(coeff), firstVariable(variable1), secondVariable(variable2)
     {
         if(firstVariable != secondVariable)
         {
@@ -300,9 +296,7 @@ public:
     std::weak_ptr<Problem> ownerProblem;
 
     MonomialTerm(){};
-    MonomialTerm(double coeff, Variables variables)
-        : coefficient(coeff)
-        , variables(variables)
+    MonomialTerm(double coeff, Variables variables) : coefficient(coeff), variables(variables)
     {
         isBinary = true;
 

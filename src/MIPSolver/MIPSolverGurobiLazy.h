@@ -49,7 +49,7 @@ private:
     int lastOpenNodes = 0;
 
     void createHyperplane(Hyperplane hyperplane);
-    void createIntegerCut(VectorInteger binaryIndexes);
+    void createIntegerCut(VectorInteger &binaryIndexes);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 };

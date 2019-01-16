@@ -51,6 +51,8 @@ public:
     bool isSolved = false;
 
     double solutionTime;
+    bool hasInfeasibilityRepairBeenPerformed = false;
+    bool wasInfeasibilityRepairSuccessful = false;
 
     std::vector<VectorDouble> hyperplanePoints;
 

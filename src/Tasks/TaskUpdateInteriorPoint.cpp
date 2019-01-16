@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
 TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() {}
 

@@ -19,6 +19,29 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
     stream << "[" << constraint.index << "]";
 
+    switch(constraint.properties.classification)
+    {
+    case(E_ConstraintClassification::Linear):
+        stream << "(L)   ";
+        break;
+
+    case(E_ConstraintClassification::Quadratic):
+        stream << "(Q)   ";
+        break;
+
+    case(E_ConstraintClassification::QuadraticConsideredAsNonlinear):
+        stream << "(QNL) ";
+        break;
+
+    case(E_ConstraintClassification::Nonlinear):
+        stream << "(NL)  ";
+        break;
+
+    default:
+        stream << "(?)   ";
+        break;
+    }
+
     if(constraint.name != "")
         stream << ' ' << constraint.name;
 
@@ -99,7 +122,7 @@ Interval LinearConstraint::calculateFunctionValue(const IntervalVector& interval
 
 bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
-SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point)
+SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableVector gradient;
 
@@ -114,7 +137,8 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& poi
         }
     }
 
-    UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+    if(eraseZeroes)
+        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -186,9 +210,9 @@ Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector& inter
 
 bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
-SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point)
+SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = LinearConstraint::calculateGradient(point);
+    SparseVariableVector gradient = LinearConstraint::calculateGradient(point, eraseZeroes);
 
     for(auto T : quadraticTerms)
     {
@@ -225,7 +249,8 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
         }
     }
 
-    UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+    if(eraseZeroes)
+        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -302,9 +327,9 @@ Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& inter
     return value;
 };
 
-SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point)
+SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point);
+    SparseVariableVector gradient = QuadraticConstraint::calculateGradient(point, eraseZeroes);
 
     try
     {
@@ -337,7 +362,8 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
             }
         }
 
-        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+        if(eraseZeroes)
+            UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {
@@ -371,6 +397,7 @@ void NonlinearConstraint::updateProperties()
     else
     {
         properties.hasNonlinearExpression = false;
+        properties.classification = E_ConstraintClassification::Nonlinear;
     }
 };
 

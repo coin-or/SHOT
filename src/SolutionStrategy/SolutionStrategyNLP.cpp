@@ -85,6 +85,18 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
+    if(env->settings->getIntSetting("ConvexityStrategy", "Dual")
+        != static_cast<int>(enumConvexityIdentificationStrategy::AssumeConvex))
+    {
+        TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
+        env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
+
+        TaskBase* tAddObjectiveCut = new TaskAddObjectiveCutFromPrimal(env, "InitIter2");
+        // env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCut);
+    }
+
     TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
@@ -106,7 +118,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tCheckObjStag = new TaskCheckObjectiveStagnation(env, "FinalizeSolution");
     env->tasks->addTask(tCheckObjStag, "CheckObjStag");
 
-    env->tasks->addTask(tInitializeIteration, "InitIter");
+    env->tasks->addTask(tInitializeIteration, "InitIter2");
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)

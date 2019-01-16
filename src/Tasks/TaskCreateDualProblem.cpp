@@ -12,8 +12,7 @@
 namespace SHOT
 {
 
-TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualStrategy");
 
@@ -79,9 +78,6 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-        // std::dynamic_pointer_cast<MIPSolverBase>(destination)->hasAuxilliaryObjectiveVariable = true;
-        // std::dynamic_pointer_cast<MIPSolverBase>(destination)->auxilliaryObjectiveVariableIndex =
-        // sourceProblem->properties.numberOfVariables;
 
         destination->setAuxilliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 

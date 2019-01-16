@@ -14,8 +14,7 @@ namespace SHOT
 {
 
 HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
-    : IloCplex::HeuristicCallbackI(iloEnv)
-    , cplexVars(xx2)
+    : IloCplex::HeuristicCallbackI(iloEnv), cplexVars(xx2)
 {
     env = envPtr;
 
@@ -143,8 +142,7 @@ void HCallbackI::main() // Called at each node...
 }
 
 InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
-    : IloCplex::MIPInfoCallbackI(iloEnv)
-    , cplexVars(xx2)
+    : IloCplex::MIPInfoCallbackI(iloEnv), cplexVars(xx2)
 {
     env = envPtr;
 }
@@ -198,8 +196,7 @@ void InfoCallbackI::main() // Called at each node...
 }
 
 CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
-    : IloCplex::LazyConstraintCallbackI(iloEnv)
-    , cplexVars(xx2)
+    : IloCplex::LazyConstraintCallbackI(iloEnv), cplexVars(xx2)
 {
     env = envPtr;
 
@@ -443,13 +440,13 @@ void CtCallbackI::main()
 
         for(auto ic : env->dualSolver->MIPSolver->integerCutWaitingList)
         {
-            this->createIntegerCut(ic);
+            this->createIntegerCut(ic.first, ic.second);
             addedIntegerCut = true;
         }
 
         if(addedIntegerCut)
         {
-            env->output->outputInfo("     Added "
+            env->output->outputInfo("        Added "
                 + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
                 + " integer cut(s).                                        ");
         }
@@ -528,16 +525,22 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     optional.value().first.clear();
 }
 
-void CtCallbackI::createIntegerCut(VectorInteger binaryIndexes)
+void CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
     IloExpr expr(this->getEnv());
 
-    for(int i = 0; i < binaryIndexes.size(); i++)
+    for(int i = 0; i < binaryIndexesOnes.size(); i++)
     {
-        expr += 1.0 * cplexVars[binaryIndexes.at(i)];
+        expr += 1.0 * cplexVars[binaryIndexesOnes.at(i)];
     }
 
-    IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexes.size() - 1.0);
+    for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+    {
+        expr += (1 - 1.0 * cplexVars[binaryIndexesZeroes.at(i)]);
+    }
+    
+    IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
+    tmpRange.setName("IC");
 
     add(tmpRange);
     env->solutionStatistics.numberOfIntegerCuts++;

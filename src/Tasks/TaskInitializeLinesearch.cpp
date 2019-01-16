@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualCutGenerationRootSearch");
 

@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
 TaskAddIntegerCuts::~TaskAddIntegerCuts() {}
 
@@ -35,26 +32,14 @@ void TaskAddIntegerCuts::run()
 
         for(int j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
         {
-            auto tmpBinaryCombination = env->dualSolver->MIPSolver->integerCutWaitingList.at(j);
-            int numOnes = tmpBinaryCombination.size();
+            auto [ones, zeroes] = env->dualSolver->MIPSolver->integerCutWaitingList.at(j);
 
-            std::vector<PairIndexValue> elements;
-
-            for(int i = 0; i < numOnes; i++)
-            {
-                PairIndexValue pair;
-                pair.index = tmpBinaryCombination.at(i);
-                pair.value = 1.0;
-
-                elements.push_back(pair);
-            }
-
-            env->dualSolver->MIPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
+            env->dualSolver->MIPSolver->createIntegerCut(ones, zeroes);
             env->solutionStatistics.numberOfIntegerCuts++;
         }
 
-        env->output->outputInfo("     Added " + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
-            + " integer cut(s).                                        ");
+        env->output->outputAlways("        Added "
+            + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size()) + " integer cut(s).");
 
         env->dualSolver->MIPSolver->integerCutWaitingList.clear();
     }

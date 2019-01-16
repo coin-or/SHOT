@@ -16,10 +16,7 @@ namespace SHOT
 std::vector<NumericConstraint*> activeConstraints;
 double lastActiveConstraintUpdateValue;
 
-Test::Test(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-}
+Test::Test(EnvironmentPtr envPtr) : env(envPtr) {}
 
 Test::~Test()
 {
@@ -68,10 +65,7 @@ double Test::operator()(const double x)
     return (calculatedValue);
 }
 
-TestObjective::TestObjective(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-}
+TestObjective::TestObjective(EnvironmentPtr envPtr) : env(envPtr) {}
 
 TestObjective::~TestObjective() {}
 
@@ -85,8 +79,7 @@ double TestObjective::operator()(const double x)
     return (calculatedValue);
 }
 
-LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr)
-    : env(envPtr)
+LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr)
 {
     test = std::make_unique<Test>(env);
     testObjective = std::make_unique<TestObjective>(env);

@@ -124,6 +124,8 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         }
     }
 
+    std::string constraintName;
+
     if(hyperplaneIsOk)
     {
         std::string source = "";
@@ -132,36 +134,47 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         {
         case E_HyperplaneSource::MIPOptimalLinesearch:
             source = "MIP linesearch";
+            constraintName = "H_LS_I_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::LPRelaxedLinesearch:
             source = "LP linesearch";
+            constraintName = "H_LS_R_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::MIPOptimalSolutionPoint:
             source = "MIP optimal solution";
+            constraintName = "H_OPT_I_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::MIPSolutionPoolSolutionPoint:
             source = "MIP solution pool";
+            constraintName = "H_SP_I_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::LPRelaxedSolutionPoint:
             source = "LP solution";
+            constraintName = "H_OPT_R_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::LPFixedIntegers:
             source = "LP fixed integer";
+            constraintName = "H_FI_R_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::PrimalSolutionSearch:
             source = "primal heuristic";
+            constraintName = "H_PH_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
             source = "primal heuristic (interior objective)";
+            constraintName = "H_PH_IO_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::InteriorPointSearch:
             source = "interior point search";
+            constraintName = "H_IP_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::MIPCallbackRelaxed:
             source = "MIP callback relaxed";
+            constraintName = "H_CB_R_" + hyperplane.sourceConstraint->name;
             break;
         case E_HyperplaneSource::ObjectiveLinesearch:
             source = "objective linesearch";
+            constraintName = "H_LS_OBJ";
             break;
         default:
             break;
@@ -171,7 +184,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
         env->output->outputWarning("     Hyperplane generated from: " + source);
 
-        int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second);
+        int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second, constraintName);
 
         /*genHyperplane.generatedConstraintIndex = constrIndex;
         genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
@@ -201,8 +214,19 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
         // constant =
         // std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
         constant = hyperplane.objectiveFunctionValue;
-        gradient = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->calculateGradient(hyperplane.generatedPoint);
+
+        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+        {
+            gradient
+                = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->calculateGradient(hyperplane.generatedPoint, true);
+        }
+        else
+        {
+            gradient
+                = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->calculateGradient(hyperplane.generatedPoint, true);
+        }
 
         PairIndexValue pair;
         pair.index = auxilliaryObjectiveVariableIndex;
@@ -228,7 +252,45 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
             constant = maxDev.normalizedRHSValue;
         }
 
-        gradient = hyperplane.sourceConstraint->calculateGradient(hyperplane.generatedPoint);
+        if(hyperplane.sourceConstraint->properties.hasNonlinearExpression)
+        {
+            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                           ->calculateGradient(hyperplane.generatedPoint, true);
+        }
+        else
+        {
+            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                           ->calculateGradient(hyperplane.generatedPoint, true);
+        }
+
+        int nonzeroes
+            = std::count_if(gradient.begin(), gradient.end(), [](auto element) { return (element.second != 0.0); });
+
+        if(nonzeroes == 0)
+        {
+            // Recalculate gradient without removing zeroes
+            if(hyperplane.sourceConstraint->properties.hasNonlinearExpression)
+            {
+                gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                               ->calculateGradient(hyperplane.generatedPoint, false);
+            }
+            else
+            {
+                gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                               ->calculateGradient(hyperplane.generatedPoint, false);
+            }
+
+            double eps = 0.000001;
+
+            for(auto& G : gradient)
+            {
+                if(G.second == 0.0)
+                    G.second = eps;
+            }
+
+            std::cout << "gradient recalculated \n";
+        }
+
         env->output->outputInfo("     HP point generated for constraint index "
             + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size())
             + " elements.");
@@ -244,7 +306,7 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
 
         constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(G.first->index);
 
-        env->output->outputInfo("     Gradient for variable " + G.first->name + " in point "
+        env->output->outputDebug("     Gradient for variable " + G.first->name + " in point "
             + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": "
             + std::to_string(signFactor * G.second));
     }
@@ -421,7 +483,8 @@ void MIPSolverBase::unfixVariables()
     isVariablesFixed = false;
 }
 
-void MIPSolverBase::createIntegerCut(VectorInteger binaryIndexes)
+/*
+void MIPSolverBase::createIntegerCut(VectorInteger& binaryIndexes)
 {
     std::vector<PairIndexValue> elements;
 
@@ -436,7 +499,7 @@ void MIPSolverBase::createIntegerCut(VectorInteger binaryIndexes)
 
     this->addLinearConstraint(elements, -(binaryIndexes.size() - 1.0));
     env->solutionStatistics.numberOfIntegerCuts++;
-}
+}*/
 
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
 } // namespace SHOT

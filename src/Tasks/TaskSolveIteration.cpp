@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
 TaskSolveIteration::~TaskSolveIteration() {}
 
@@ -32,10 +29,9 @@ void TaskSolveIteration::run()
     auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    /*
-    if (env->results->primalSolutions.size() > 0)
+    if(env->results->primalSolutions.size() > 0)
     {
-        if (isMinimization)
+        if(isMinimization)
         {
             env->dualSolver->MIPSolver->setCutOff(
                 env->results->getPrimalBound() + env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
@@ -45,7 +41,7 @@ void TaskSolveIteration::run()
             env->dualSolver->MIPSolver->setCutOff(
                 env->results->getPrimalBound() - env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
         }
-    }*/
+    }
 
     if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()
         && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
@@ -110,92 +106,94 @@ void TaskSolveIteration::run()
     currIter->solutionStatus = solStatus;
     env->output->outputInfo("     Dual problem return code: " + std::to_string((int)solStatus));
 
-    if(solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error
+    auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
+
+    /*if(solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error
         || solStatus == E_ProblemSolutionStatus::Abort || solStatus == E_ProblemSolutionStatus::CutOff
         || solStatus == E_ProblemSolutionStatus::Numeric || solStatus == E_ProblemSolutionStatus::Unbounded)
     {
     }
-    else
+    else*/
+
+    if(sols.size() > 0)
     {
-        auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
         currIter->solutionPoints = sols;
 
-        if(sols.size() > 0)
+        env->output->outputAlways("        Number of solutions in solution pool: " + std::to_string(sols.size()));
+
+        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {
+            std::stringstream ss;
+            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << "/lpsolpt";
+            ss << currIter->iterationNumber - 1;
+            ss << ".txt";
+            UtilityFunctions::saveVariablePointVectorToFile(
+                sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
+        }
+
+        currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
+
+        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        {
+            VectorDouble tmpObjValue;
+            VectorString tmpObjName;
+
+            tmpObjValue.push_back(env->dualSolver->MIPSolver->getObjectiveValue());
+            tmpObjName.push_back("objective");
+
+            std::stringstream ss;
+            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << "/lpobjsol";
+            ss << currIter->iterationNumber - 1;
+            ss << ".txt";
+            UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
+        }
+
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        {
+            auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(
+                sols.at(0).point, env->reformulatedProblem->nonlinearConstraints);
+
+            currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
+            currIter->maxDeviation = mostDevConstr.normalizedValue;
+
             if(env->settings->getBoolSetting("Debug.Enable", "Output"))
             {
-                std::stringstream ss;
-                ss << env->settings->getStringSetting("Debug.Path", "Output");
-                ss << "/lpsolpt";
-                ss << currIter->iterationNumber - 1;
-                ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(
-                    sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
-            }
+                VectorDouble tmpMostDevValue;
+                VectorString tmpConstrIndex;
 
-            currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
-
-            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
-            {
-                VectorDouble tmpObjValue;
-                VectorString tmpObjName;
-
-                tmpObjValue.push_back(env->dualSolver->MIPSolver->getObjectiveValue());
-                tmpObjName.push_back("objective");
+                tmpMostDevValue.push_back(currIter->maxDeviation);
+                tmpConstrIndex.push_back(std::to_string(currIter->maxDeviationConstraint));
 
                 std::stringstream ss;
                 ss << env->settings->getStringSetting("Debug.Path", "Output");
-                ss << "/lpobjsol";
+                ss << "/lpmostdevm";
                 ss << currIter->iterationNumber - 1;
                 ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
+                UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
             }
+        }
 
-            if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        double tmpDualObjBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+        if(currIter->isMIP())
+        {
+            DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
+                currIter->iterationNumber };
+            env->dualSolver->addDualSolutionCandidate(sol);
+
+            if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
             {
-                auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(
-                    sols.at(0).point, env->reformulatedProblem->nonlinearConstraints);
-
-                currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
-                currIter->maxDeviation = mostDevConstr.normalizedValue;
-
-                if(env->settings->getBoolSetting("Debug.Enable", "Output"))
-                {
-                    VectorDouble tmpMostDevValue;
-                    VectorString tmpConstrIndex;
-
-                    tmpMostDevValue.push_back(currIter->maxDeviation);
-                    tmpConstrIndex.push_back(std::to_string(currIter->maxDeviationConstraint));
-
-                    std::stringstream ss;
-                    ss << env->settings->getStringSetting("Debug.Path", "Output");
-                    ss << "/lpmostdevm";
-                    ss << currIter->iterationNumber - 1;
-                    ss << ".txt";
-                    UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
-                }
-            }
-
-            double tmpDualObjBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
-            if(currIter->isMIP())
-            {
-                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
-                    currIter->iterationNumber };
-                env->dualSolver->addDualSolutionCandidate(sol);
-
-                if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
-                {
-                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
-                        currIter->objectiveValue, currIter->iterationNumber };
-                    env->dualSolver->addDualSolutionCandidate(sol);
-                }
-            }
-            else
-            {
-                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::LPSolution, tmpDualObjBound,
-                    currIter->iterationNumber };
+                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
+                    currIter->objectiveValue, currIter->iterationNumber };
                 env->dualSolver->addDualSolutionCandidate(sol);
             }
+        }
+        else
+        {
+            DualSolution sol
+                = { sols.at(0).point, E_DualSolutionSource::LPSolution, tmpDualObjBound, currIter->iterationNumber };
+            env->dualSolver->addDualSolutionCandidate(sol);
         }
     }
 

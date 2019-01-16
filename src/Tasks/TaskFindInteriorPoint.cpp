@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     if(env->settings->getBoolSetting("Debug.Enable", "Output"))
     {

@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualStrategy");
 

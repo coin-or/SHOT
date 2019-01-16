@@ -295,13 +295,13 @@ void GurobiCallback::callback()
 
                 for(auto ic : env->dualSolver->MIPSolver->integerCutWaitingList)
                 {
-                    this->createIntegerCut(ic);
+                    this->createIntegerCut(ic.first, ic.second);
                     addedIntegerCut = true;
                 }
 
                 if(addedIntegerCut)
                 {
-                    env->output->outputInfo("     Added "
+                    env->output->outputInfo("        Added "
                         + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
                         + " integer cut(s).                                        ");
                 }
@@ -492,7 +492,7 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
         = (static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get()))->gurobiModel->get(GRB_IntAttr_NumVars);
 }
 
-void GurobiCallback::createIntegerCut(VectorInteger binaryIndexes)
+void GurobiCallback::createIntegerCut(VectorInteger &binaryIndexes)
 {
     try
     {

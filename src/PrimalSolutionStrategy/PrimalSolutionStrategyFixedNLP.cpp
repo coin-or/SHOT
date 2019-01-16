@@ -269,6 +269,61 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                     0.0, // Not shown
                     E_IterationLineType::PrimalNLP);
             }
+
+            // Add integer cut.
+            if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual")
+                && env->problem->properties.numberOfBinaryVariables > 0
+                && env->problem->properties.numberOfIntegerVariables == 0)
+            {
+                VectorInteger ones;
+                VectorInteger zeroes;
+                for(auto& V : env->problem->binaryVariables)
+                {
+                    if(testPts.at(j).point.at(V->index) > 0.9999)
+                    {
+                        ones.push_back(V->index);
+                    }
+                    else
+                    {
+                        zeroes.push_back(V->index);
+                    }
+                }
+
+                if(ones.size() > 0)
+                    env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
+            }
+
+            if(env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
+            {
+                // auto mostDevConstr
+                //     = env->problem->getMaxNumericConstraintValue(variableSolution,
+                //     env->problem->nonlinearConstraints);
+
+                SolutionPoint tmpSolPt;
+                tmpSolPt.point = variableSolution;
+                tmpSolPt.objectiveValue = env->problem->objectiveFunction->calculateValue(variableSolution);
+                tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
+                // tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr.constraint->index,
+                // mostDevConstr.normalizedValue);
+
+                for(auto& V : env->reformulatedProblem->auxilliaryVariables)
+                {
+                    tmpSolPt.point.push_back(V->calculate(variableSolution));
+                }
+
+                std::vector<SolutionPoint> solutionPoints(1);
+                solutionPoints.at(0) = tmpSolPt;
+
+                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+                    == ES_HyperplaneCutStrategy::ESH)
+                {
+                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
+                }
+                else
+                {
+                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
+                }
+            }
         }
         else if(env->problem->properties.numberOfNonlinearConstraints == 0)
         {
@@ -294,6 +349,11 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
                 tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr.constraint->index, mostDevConstr.normalizedValue);
 
+                for(auto& V : env->reformulatedProblem->auxilliaryVariables)
+                {
+                    tmpSolPt.point.push_back(V->calculate(variableSolution));
+                }
+
                 solutionPoints.at(0) = tmpSolPt;
 
                 if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
@@ -303,7 +363,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 }
                 else
                 {
-                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
+                    std::dynamic_pointer_cast<TaskSelectHyperplanePointsECP>(taskSelectHPPts)->run(solutionPoints);
                 }
             }
 
@@ -334,17 +394,22 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 && env->problem->properties.numberOfBinaryVariables > 0
                 && env->problem->properties.numberOfIntegerVariables == 0)
             {
-                VectorInteger elements;
+                VectorInteger ones;
+                VectorInteger zeroes;
                 for(auto& V : env->problem->binaryVariables)
                 {
-                    if(testPts.at(j).point.at(V->index) > 0.99)
+                    if(testPts.at(j).point.at(V->index) > 0.9999)
                     {
-                        elements.push_back(V->index);
+                        ones.push_back(V->index);
+                    }
+                    else
+                    {
+                        zeroes.push_back(V->index);
                     }
                 }
 
-                if(elements.size() > 0)
-                    env->dualSolver->MIPSolver->integerCutWaitingList.push_back(elements);
+                if(ones.size() > 0)
+                    env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
             }
         }
 

@@ -34,6 +34,8 @@
 #include "../Tasks/TaskSolveIteration.h"
 #include "../Tasks/TaskPresolve.h"
 
+#include "../Tasks/TaskRepairInfeasibleDualProblem.h"
+
 #include "../Tasks/TaskCheckAbsoluteGap.h"
 #include "../Tasks/TaskCheckIterationError.h"
 #include "../Tasks/TaskCheckIterationLimit.h"

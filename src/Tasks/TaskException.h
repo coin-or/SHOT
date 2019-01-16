@@ -16,10 +16,7 @@ namespace SHOT
 class TaskException : public std::exception
 {
 public:
-    TaskException(EnvironmentPtr envPtr, std::string msg)
-        : message(msg)
-    {
-    }
+    TaskException(EnvironmentPtr envPtr, std::string msg) : message(msg) {}
     TaskException();
 
     const char* what() const throw()
@@ -43,10 +40,7 @@ private:
 class TaskExceptionFunctionNotDefined : public std::exception
 {
 public:
-    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task)
-        : taskName(task)
-    {
-    }
+    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task) : taskName(task) {}
 
     const char* what() const throw()
     {
@@ -65,10 +59,7 @@ private:
 class TaskExceptionNotFound : public std::exception
 {
 public:
-    TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task)
-        : taskID(task)
-    {
-    }
+    TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task) : taskID(task) {}
 
     const char* what() const throw()
     {

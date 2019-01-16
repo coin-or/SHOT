@@ -15,22 +15,19 @@
 
 namespace SHOT
 {
-class TaskAddObjectiveCutFromPrimal : public TaskBase
+class TaskRepairInfeasibleDualProblem : public TaskBase
 {
 public:
-    TaskAddObjectiveCutFromPrimal(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskAddObjectiveCutFromPrimal();
+    TaskRepairInfeasibleDualProblem(EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse);
+    virtual ~TaskRepairInfeasibleDualProblem();
 
     virtual void run();
-
     virtual std::string getType();
 
 private:
     std::string taskIDIfTrue;
-
-    double previousCutOffModified;
-    double previousCutOffOriginal;
-    int numCutOff = 0;
-    int numWithoutPrimalUpdate = 0;
+    std::string taskIDIfFalse;
+    int repairCounter = 0;
+    int iterLastRepair = 0;
 };
 } // namespace SHOT

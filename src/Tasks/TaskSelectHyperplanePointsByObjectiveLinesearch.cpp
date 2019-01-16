@@ -80,9 +80,19 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
             hyperplane.sourceConstraintIndex = -1;
             hyperplane.generatedPoint = SOLPT.point;
             hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
-            hyperplane.objectiveFunctionValue
-                = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->calculateValue(hyperplane.generatedPoint);
+
+            if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+            {
+                hyperplane.objectiveFunctionValue
+                    = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                          ->calculateValue(hyperplane.generatedPoint);
+            }
+            else
+            {
+                hyperplane.objectiveFunctionValue
+                    = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                          ->calculateValue(hyperplane.generatedPoint);
+            }
 
             env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
         }

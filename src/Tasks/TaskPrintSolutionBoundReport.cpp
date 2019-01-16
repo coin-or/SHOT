@@ -12,8 +12,7 @@
 namespace SHOT
 {
 
-TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskPrintSolutionBoundReport::TaskPrintSolutionBoundReport(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     itersSinceLastPrintout = 0;
     timeLastPrintout = 0;

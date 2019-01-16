@@ -68,9 +68,7 @@ struct PairIndexValue
 
 public:
     PairIndexValue(){};
-    PairIndexValue(int index, double value)
-        : index(index)
-        , value(value){};
+    PairIndexValue(int index, double value) : index(index), value(value){};
 };
 
 struct PairCoordinateValue

@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
 TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy() {}
 

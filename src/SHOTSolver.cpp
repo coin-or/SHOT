@@ -35,11 +35,7 @@ SHOTSolver::SHOTSolver()
     initializeSettings();
 }
 
-SHOTSolver::SHOTSolver(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-    initializeSettings();
-}
+SHOTSolver::SHOTSolver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
 
 SHOTSolver::~SHOTSolver() {}
 
@@ -423,6 +419,17 @@ void SHOTSolver::initializeSettings()
     std::string empty; // Used to create empty string options
 
     env->output->outputInfo("Starting initialization of settings:");
+
+    // Convexity strategy
+
+    VectorString enumConvexityIdentificationStrategy;
+    enumConvexityIdentificationStrategy.push_back("Automatically");
+    enumConvexityIdentificationStrategy.push_back("AssumeConvex");
+    enumConvexityIdentificationStrategy.push_back("AssumeNonconvex");
+    env->settings->createSetting("ConvexityStrategy", "Dual",
+        static_cast<int>(enumConvexityIdentificationStrategy::Automatically),
+        "How to determine convexity of the problem", enumConvexityIdentificationStrategy);
+    enumConvexityIdentificationStrategy.clear();
 
     // Dual strategy settings: ECP and ESH
 

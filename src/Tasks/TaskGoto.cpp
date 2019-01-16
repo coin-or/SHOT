@@ -12,11 +12,7 @@
 namespace SHOT
 {
 
-TaskGoto::TaskGoto(EnvironmentPtr envPtr, std::string taskID)
-    : TaskBase(envPtr)
-    , gotoTaskID(taskID)
-{
-}
+TaskGoto::TaskGoto(EnvironmentPtr envPtr, std::string taskID) : TaskBase(envPtr), gotoTaskID(taskID) {}
 
 TaskGoto::~TaskGoto() {}
 

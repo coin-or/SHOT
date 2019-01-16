@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskSelectHyperplanePointsESH::TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskSelectHyperplanePointsESH::TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualCutGenerationRootSearch");
     env->timing->stopTimer("DualCutGenerationRootSearch");

@@ -69,15 +69,25 @@ void Results::addPrimalSolution(PrimalSolution solution)
         hyperplane.isObjectiveHyperplane = true;
         hyperplane.sourceConstraintIndex = -1;
         hyperplane.generatedPoint = solution.point;
-        hyperplane.objectiveFunctionValue
-            = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                  ->calculateValue(hyperplane.generatedPoint);
+
+        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+        {
+            hyperplane.objectiveFunctionValue
+                = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->calculateValue(hyperplane.generatedPoint);
+        }
+        else
+        {
+            hyperplane.objectiveFunctionValue
+                = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->calculateValue(hyperplane.generatedPoint);
+        }
 
         env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
 
         auto tmpLine = boost::format("     Primal objective cut added.");
 
-        env->output->outputWarning(tmpLine.str());
+        env->output->outputAlways(tmpLine.str());
     }
 }
 
@@ -105,10 +115,7 @@ bool Results::isAbsoluteObjectiveGapToleranceMet()
     }
 }
 
-Results::Results(EnvironmentPtr envPtr)
-    : env(envPtr)
-{
-}
+Results::Results(EnvironmentPtr envPtr) : env(envPtr) {}
 
 Results::~Results()
 {
@@ -202,13 +209,7 @@ std::string Results::getOSrl()
                     modelStatusDescription = "Feasible solution found";
                     modelStatus = "feasible";
                 }
-                else
-                {
-                    modelStatusDescription = "No feasible solutions found";
-                    modelStatus = "other";
-                }
-
-                if(this->terminationReason == E_TerminationReason::AbsoluteGap)
+                else if(this->terminationReason == E_TerminationReason::AbsoluteGap)
                 {
                     modelStatus = "globallyOptimal";
                     modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
@@ -276,7 +277,7 @@ std::string Results::getOSrl()
                 }
                 else
                 {
-                    modelStatus = "error";
+                    modelStatusDescription = "No feasible solutions found";
                     modelStatusDescription = "Unknown return code obtained from solver";
                     env->output->outputError("Unknown return code obtained from solver.");
                 }

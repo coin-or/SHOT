@@ -47,15 +47,18 @@ public:
     virtual void writeProblemToFile(std::string filename);
     virtual void writePresolvedToFile(std::string filename);
 
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant)
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name)
     {
-        return (addLinearConstraint(elements, constant, false));
+        return (addLinearConstraint(elements, constant, name, false));
     }
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan);
+    virtual int addLinearConstraint(
+        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
 
     virtual void createHyperplane(Hyperplane hyperplane) { MIPSolverBase::createHyperplane(hyperplane); }
 
-    virtual void createIntegerCut(VectorInteger binaryIndexes) { MIPSolverBase::createIntegerCut(binaryIndexes); }
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+    { /*MIPSolverBase::createIntegerCut(binaryIndexes); TODO*/
+    }
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane)
     {
@@ -94,6 +97,8 @@ public:
     virtual void executeRelaxationStrategy() { MIPSolverBase::executeRelaxationStrategy(); }
 
     virtual E_ProblemSolutionStatus solveProblem();
+    virtual bool repairInfeasibility();
+
     virtual E_ProblemSolutionStatus getSolutionStatus();
     virtual int getNumberOfSolutions();
     virtual VectorDouble getVariableSolution(int solIdx);

@@ -253,13 +253,13 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 for(auto& ic : env->dualSolver->MIPSolver->integerCutWaitingList)
                 {
-                    this->createIntegerCut(ic, context);
+                    this->createIntegerCut(ic.first, ic.second, context);
                     addedIntegerCut = true;
                 }
 
                 if(addedIntegerCut)
                 {
-                    env->output->outputInfo("     Added "
+                    env->output->outputInfo("        Added "
                         + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
                         + " integer cut(s).                                        ");
                 }
@@ -393,16 +393,24 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
     }
 }
 
-void CplexCallback::createIntegerCut(VectorInteger binaryIndexes, const IloCplex::Callback::Context& context)
+void CplexCallback::createIntegerCut(
+    VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes, const IloCplex::Callback::Context& context)
 {
     IloExpr expr(context.getEnv());
 
-    for(int i = 0; i < binaryIndexes.size(); i++)
+    for(int i = 0; i < binaryIndexesOnes.size(); i++)
     {
-        expr += 1.0 * cplexVars[binaryIndexes.at(i)];
+        expr += 1.0 * cplexVars[binaryIndexesOnes.at(i)];
     }
 
-    IloRange tmpRange(context.getEnv(), -IloInfinity, expr, binaryIndexes.size() - 1.0);
+    for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+    {
+        expr += (1 - 1.0 * cplexVars[binaryIndexesZeroes.at(i)]);
+    }
+
+    IloRange tmpRange(
+        context.getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
+    tmpRange.setName("IC");
 
     context.rejectCandidate(tmpRange);
     env->solutionStatistics.numberOfIntegerCuts++;

@@ -14,8 +14,7 @@ namespace SHOT
 {
 
 TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue)
-    : TaskBase(envPtr)
-    , taskIDIfTrue(taskIDTrue)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
 {
 }
 
@@ -28,6 +27,11 @@ void TaskCheckIterationError::run()
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Error)
     {
         env->results->terminationReason = E_TerminationReason::Error;
+        env->tasks->setNextTask(taskIDIfTrue);
+    }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && env->results->primalSolutions.size() > 0)
+    {
+        env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)

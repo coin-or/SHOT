@@ -93,6 +93,18 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
+    if(env->settings->getIntSetting("ConvexityStrategy", "Dual")
+        != static_cast<int>(enumConvexityIdentificationStrategy::AssumeConvex))
+    {
+        TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
+        env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
+
+        TaskBase* tAddObjectiveCut = new TaskAddObjectiveCutFromPrimal(env, "InitIter2");
+        // env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCut);
+    }
+
     TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
@@ -106,7 +118,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
     TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    // env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
@@ -136,14 +148,13 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
 
-    TaskBase* tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(env);
     if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
         env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
         env->tasks->addTask(tCreateDualProblem, "CreateMILPProblem");
     }
 
-    env->tasks->addTask(tInitializeIteration, "InitIter");
+    env->tasks->addTask(tInitializeIteration, "InitIter2");
 
     if(env->settings->getBoolSetting("Relaxation.Use", "Dual"))
     {
@@ -151,6 +162,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
     }
 
+    TaskBase* tExecuteSolLimStrategy = new TaskExecuteSolutionLimitStrategy(env);
     env->tasks->addTask(tExecuteSolLimStrategy, "ExecSolLimStrategy");
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
@@ -191,9 +203,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
 
     TaskBase* tGoto = new TaskGoto(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
-
-    TaskBase* tAddObjectiveCut = new TaskAddObjectiveCutFromPrimal(env, "InitIter");
-    dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCut);
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }

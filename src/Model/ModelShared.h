@@ -119,10 +119,7 @@ private:
     std::string errorMessage;
 
 public:
-    VariableNotFoundException(std::string message)
-        : errorMessage(message)
-    {
-    }
+    VariableNotFoundException(std::string message) : errorMessage(message) {}
 
     inline const char* what() const throw()
     {
@@ -140,10 +137,7 @@ private:
     std::string errorMessage;
 
 public:
-    ConstraintNotFoundException(std::string message)
-        : errorMessage(message)
-    {
-    }
+    ConstraintNotFoundException(std::string message) : errorMessage(message) {}
 
     inline const char* what() const throw()
     {
@@ -161,10 +155,7 @@ private:
     std::string errorMessage;
 
 public:
-    OperationNotImplementedException(std::string message)
-        : errorMessage(message)
-    {
-    }
+    OperationNotImplementedException(std::string message) : errorMessage(message) {}
 
     inline const char* what() const throw()
     {

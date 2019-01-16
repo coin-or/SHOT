@@ -13,13 +13,9 @@
 namespace SHOT
 {
 
-TaskSimple::TaskSimple(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskSimple::TaskSimple(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-TaskSimple::TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction)
-    : TaskBase(envPtr)
+TaskSimple::TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction) : TaskBase(envPtr)
 {
     task = taskFunction;
 }

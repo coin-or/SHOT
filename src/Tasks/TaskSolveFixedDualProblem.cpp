@@ -13,8 +13,7 @@
 namespace SHOT
 {
 
-TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
+TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualProblemsIntegerFixed");
 

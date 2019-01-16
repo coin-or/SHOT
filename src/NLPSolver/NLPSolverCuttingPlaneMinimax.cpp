@@ -45,8 +45,7 @@ public:
 };
 
 NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem)
-    : INLPSolver(envPtr)
-    , sourceProblem(problem)
+    : INLPSolver(envPtr), sourceProblem(problem)
 {
     auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
 
@@ -255,7 +254,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             std::vector<PairIndexValue> elements;
 
             double constant = NCV.normalizedValue;
-            auto gradient = NCV.constraint->calculateGradient(currSol);
+            auto gradient = NCV.constraint->calculateGradient(currSol, true);
 
             for(auto& G : gradient)
             {
@@ -276,7 +275,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             elements.push_back(pair);
 
             // Adds the linear constraint
-            LPSolver->addLinearConstraint(elements, constant);
+            LPSolver->addLinearConstraint(elements, constant, "minimax");
 
             numHyperTot++;
             numHyperAdded++;
@@ -387,32 +386,33 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
             = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
 
-    for(auto& C : env->problem->quadraticConstraints)
-    {
-        constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
-
-        if(C->properties.hasLinearTerms)
+    /*
+        for(auto& C : env->problem->quadraticConstraints)
         {
-            for(auto& T : C->linearTerms)
-            {
-                constraintsInitialized = constraintsInitialized
-                    && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
-            }
-        }
+            constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
-        if(C->properties.hasQuadraticTerms)
-        {
-            for(auto& T : C->quadraticTerms)
+            if(C->properties.hasLinearTerms)
             {
-                constraintsInitialized = constraintsInitialized
-                    && destination->addQuadraticTermToConstraint(
-                           T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                for(auto& T : C->linearTerms)
+                {
+                    constraintsInitialized = constraintsInitialized
+                        && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
+                }
             }
-        }
 
-        constraintsInitialized
-            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
-    }
+            if(C->properties.hasQuadraticTerms)
+            {
+                for(auto& T : C->quadraticTerms)
+                {
+                    constraintsInitialized = constraintsInitialized
+                        && destination->addQuadraticTermToConstraint(
+                               T->coefficient, T->firstVariable->index, T->secondVariable->index);
+                }
+            }
+
+            constraintsInitialized
+                = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+        }*/
 
     if(!constraintsInitialized)
         return false;

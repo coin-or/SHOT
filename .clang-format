@@ -8,3 +8,4 @@ IndentWrappedFunctionNames: true
 SortIncludes: false
 SpaceBeforeParens: Never
 SpaceInEmptyParentheses: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true

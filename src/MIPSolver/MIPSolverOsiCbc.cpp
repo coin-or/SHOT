@@ -244,7 +244,7 @@ void MIPSolverOsiCbc::initializeSolverSettings()
 }
 
 int MIPSolverOsiCbc::addLinearConstraint(
-    const std::vector<PairIndexValue>& elements, double constant, bool isGreaterThan)
+    const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
 {
     CoinPackedVector cut;
 
@@ -364,6 +364,8 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
 
     return (MIPSolutionStatus);
 }
+
+bool MIPSolverOsiCbc::repairInfeasibility() { return false; }
 
 int MIPSolverOsiCbc::increaseSolutionLimit(int increment)
 {

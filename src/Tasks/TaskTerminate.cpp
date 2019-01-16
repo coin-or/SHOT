@@ -13,10 +13,7 @@
 namespace SHOT
 {
 
-TaskTerminate::TaskTerminate(EnvironmentPtr envPtr)
-    : TaskBase(envPtr)
-{
-}
+TaskTerminate::TaskTerminate(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
 TaskTerminate::~TaskTerminate() {}
 
