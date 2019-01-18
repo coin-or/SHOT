@@ -29,6 +29,7 @@ void TaskCheckIterationLimit::run()
     {
         env->results->terminationReason = E_TerminationReason::IterationLimit;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since the iteration limit was reached.";
     }
 }
 

@@ -729,11 +729,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auxVariable->auxilliaryType = E_AuxilliaryVariableType::NonlinearExpressionPartitioning;
             auxVariableCounter++;
 
-            double absLB = std::abs(firstVariable->lowerBound * secondVariable->lowerBound);
-            double absUB = std::abs(firstVariable->upperBound * secondVariable->upperBound);
-
-            auxVariable->lowerBound = std::min(absLB, absUB);
-            auxVariable->upperBound = std::max(absLB, absUB);
+            // auxVariable->lowerBound = firstVariable->lowerBound * secondVariable->lowerBound;
+            // auxVariable->upperBound = firstVariable->upperBound * secondVariable->upperBound;
 
             /*
                         if(reversedSigns)
@@ -751,27 +748,13 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
             auto auxConstraint = std::make_shared<NonlinearConstraint>(
                 auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-            auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
             auxConstraintCounter++;
 
-            if(reversedSigns)
-            {
-                auxConstraint->add(
-                    std::make_shared<QuadraticTerm>(-1.0 * coeffSign * signfactor, firstVariable, secondVariable));
-                auxVariable->quadraticTerms.add(
-                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, firstVariable, secondVariable));
-            }
-            else
-            {
-                auxConstraint->add(std::make_shared<QuadraticTerm>(1.0 * coeffSign, firstVariable, secondVariable));
-                auxVariable->quadraticTerms.add(
-                    std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
-            }
+            auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
 
-            if(firstVariable == secondVariable && signfactor * T->coefficient > 0.0)
-            {
-                auxVariable->lowerBound = T->coefficient * firstVariable->lowerBound * firstVariable->lowerBound;
-            }
+            auxConstraint->add(std::make_shared<QuadraticTerm>(coeffSign * signfactor, firstVariable, secondVariable));
+
+            auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
 
             if(env->settings->getBoolSetting("Reformulation.Bilinear.AddConvexEnvelope",
                    "Model")) // Also adds the McCormick envelopes to the dual model

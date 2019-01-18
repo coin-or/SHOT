@@ -26,6 +26,8 @@ void TaskCheckAbsoluteGap::run()
     {
         env->results->terminationReason = E_TerminationReason::AbsoluteGap;
         env->tasks->setNextTask(taskIDIfTrue);
+
+         env->results->terminationReasonDescription = "Terminated since absolute gap met requirements.";
     }
 }
 

@@ -104,4 +104,6 @@ template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElem
         }
     }
 }
+
+bool isAlmostEqual(double x, double y, const double epsilon);
 } // namespace SHOT::UtilityFunctions

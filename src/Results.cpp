@@ -27,7 +27,6 @@ void Results::addDualSolution(DualSolution solution)
 
 void Results::addPrimalSolution(PrimalSolution solution)
 {
-
     if(env->settings->getIntSetting("SaveNumberOfSolutions", "Output") > 1)
     {
         env->results->primalSolutions.insert(env->results->primalSolutions.begin(), solution);
@@ -614,11 +613,25 @@ IterationPtr Results::getPreviousIteration()
 
 double Results::getPrimalBound() { return (this->currentPrimalBound); }
 
-void Results::setPrimalBound(double value) { this->currentPrimalBound = value; }
+void Results::setPrimalBound(double value)
+{
+    this->currentPrimalBound = value;
+    env->dualSolver->cutOffToUse = value;
+    env->dualSolver->useCutOff = true;
+    env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
+    env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = iterations.size() - 1;
+    env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
+}
 
 double Results::getDualBound() { return (this->currentDualBound); }
 
-void Results::setDualBound(double value) { this->currentDualBound = value; }
+void Results::setDualBound(double value)
+{
+    this->currentDualBound = value;
+    env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
+
+    env->solutionStatistics.lastIterationWithSignificantDualUpdate = iterations.size() - 1;
+}
 
 double Results::getAbsoluteObjectiveGap()
 {

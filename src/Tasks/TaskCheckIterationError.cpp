@@ -28,36 +28,45 @@ void TaskCheckIterationError::run()
     {
         env->results->terminationReason = E_TerminationReason::Error;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since an error occured.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && env->results->primalSolutions.size() > 0)
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription
+            = "Terminated since the specified objective gap tolerance could not be met.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since the problem is infeasible.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since the problem is infeasible due to dual cutoff.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since the problem is unbounded.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
     {
         env->results->terminationReason = E_TerminationReason::NumericIssues;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated due to numerical issues.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::None && env->results->primalSolutions.size() > 0)
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription
+            = "Terminated since the specified objective gap tolerance could not be met.";
     }
 }
 

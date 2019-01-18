@@ -36,9 +36,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, true);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    // TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(env, osInstance);
-    // env->tasks->addTask(tInitOrigProblem, "InitOrigProb");
-
     TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
@@ -81,8 +78,23 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
+    if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    {
+        TaskBase* tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch(env);
+        env->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+    }
+
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
+
+    if(env->settings->getIntSetting("Convexity", "Strategy")
+        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    {
+        TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
+        env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
+    }
 
     TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
@@ -90,19 +102,52 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
+    TaskBase* tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterLim, "CheckIterLim");
+
     TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+
+    // Remove?
+    TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    // TaskBase *tCheckObjectiveGapNotMet = new TaskCheckObjectiveGapNotMet(env, "FinalizeSolution");
-    // env->tasks->addTask(tCheckObjectiveGapNotMet, "CheckObjGapNotMet");
+    TaskBase* tCheckPrimalStag = new TaskCheckPrimalStagnation(env, "AddObjectiveCut", "CheckDualStag");
+    env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
-    env->tasks->addTask(tInitializeIteration, "InitIter");
+    TaskBase* tAddObjectiveCut = new TaskAddPrimalReductionCut(env, "CheckDualStag", "CheckDualStag");
+    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+
+    TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckDualStag, "CheckDualStag");
+
+    if(env->settings->getBoolSetting("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
+    {
+        TaskBase* tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
+        env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
+
+        TaskBase* tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
+        env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+
+        env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+        env->tasks->addTask(tCheckRelGap, "CheckRelGap");
+    }
+
+    env->tasks->addTask(tInitializeIteration, "InitIter2");
+
+    if(env->settings->getBoolSetting("Relaxation.Use", "Dual"))
+    {
+        TaskBase* tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+        env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
+    }
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
@@ -125,26 +170,28 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    TaskBase* tGoto = new TaskGoto(env, "AddHPs");
-    env->tasks->addTask(tGoto, "Goto");
-
-    if(env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal")
-        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0
-        && env->reformulatedProblem->properties.numberOfDiscreteVariables > 0)
+    if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
-        TaskBase* tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
-        env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
-
-        TaskBase* tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
-        env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-        // dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
-
-        env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
-        env->tasks->addTask(tCheckRelGap, "CheckRelGap");
+        TaskBase* tAddICs = new TaskAddIntegerCuts(env);
+        env->tasks->addTask(tAddICs, "AddICs");
     }
 
+    env->tasks->addTask(tAddHPs, "AddHPs");
+
+    TaskBase* tGoto = new TaskGoto(env, "SolveIter");
+    env->tasks->addTask(tGoto, "Goto");
+
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+
+    if(env->settings->getIntSetting("Convexity", "Strategy")
+        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    {
+        TaskBase* tAddObjectiveCutFinal = new TaskAddPrimalReductionCut(env, "InitIter2", "Terminate");
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
+    }
+
+    TaskBase* tTerminate = new TaskTerminate(env);
+    env->tasks->addTask(tTerminate, "Terminate");
 }
 
 SolutionStrategySingleTree::~SolutionStrategySingleTree() {}

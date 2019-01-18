@@ -404,8 +404,12 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
         {
             if(E.value != E.value) // Check for NaN
             {
-                env->output->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+                env->output->outputError("     Warning: hyperplane for constraint "
+                    + std::to_string(hyperplane.sourceConstraint->index)
+                    + " not generated, NaN found in linear terms for variable "
+                    + env->problem->getVariable(E.index)->name);
                 hyperplaneIsOk = false;
+
                 break;
             }
         }
@@ -492,7 +496,7 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
         = (static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get()))->gurobiModel->get(GRB_IntAttr_NumVars);
 }
 
-void GurobiCallback::createIntegerCut(VectorInteger &binaryIndexes)
+void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexes)
 {
     try
     {

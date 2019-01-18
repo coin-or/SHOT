@@ -107,18 +107,22 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     bool hyperplaneIsOk = true;
 
-    for(auto E : tmpPair.first)
+    for(auto& E : tmpPair.first)
     {
         if(E.value != E.value) // Check for NaN
         {
-            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputError("        Warning: hyperplane for constraint " + hyperplane.sourceConstraint->name
+                + " not generated, NaN found in linear terms for " + env->problem->getVariable(E.index)->name + " = "
+                + std::to_string(hyperplane.generatedPoint.at(E.index)));
             hyperplaneIsOk = false;
             break;
         }
 
         if(isinf(E.value))
         {
-            env->output->outputError("     Warning: hyperplane not generated, inf found in linear terms!");
+            env->output->outputError("        Warning: hyperplane for constraint " + hyperplane.sourceConstraint->name
+                + " not generated, inf found in linear terms for " + env->problem->getVariable(E.index)->name + " = "
+                + std::to_string(hyperplane.generatedPoint.at(E.index)));
             hyperplaneIsOk = false;
             break;
         }

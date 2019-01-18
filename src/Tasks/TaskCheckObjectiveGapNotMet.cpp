@@ -32,6 +32,8 @@ void TaskCheckObjectiveGapNotMet::run()
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription
+            = "Terminated since the specified objective gap requirement could not be met.";
     }
 }
 

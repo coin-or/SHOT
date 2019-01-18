@@ -353,6 +353,12 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                     &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
             }
 
+            if(value[0] != value[0])
+            {
+                std::cout << "nan" << std::endl;
+                value[0] = 0.0;
+            }
+
             auto element = gradient.insert(std::make_pair(E.first, value[0]));
 
             if(!element.second)

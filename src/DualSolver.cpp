@@ -13,6 +13,13 @@
 namespace SHOT
 {
 
+DualSolver::DualSolver(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+
+    // cutOffToUse = env->reformulatedProblem->objectiveFunction->properties.isMinimize ? SHOT_DBL_MAX : SHOT_DBL_MIN;
+}
+
 void DualSolver::addDualSolutionCandidate(DualSolution solution)
 {
     dualSolutionCandidates.push_back(solution);

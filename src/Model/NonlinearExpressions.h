@@ -680,6 +680,30 @@ public:
 
     inline virtual double calculate(const VectorDouble& point) override
     {
+        auto firstChildValue = firstChild->calculate(point);
+        auto secondChildValue = secondChild->calculate(point);
+
+        // if(UtilityFunctions::isAlmostEqual(firstChildValue, 0.0, 1e-10))
+        if(std::abs(firstChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
+        {
+            return 0.0;
+        }
+
+        if(std::abs(firstChildValue - 1.0) <= 1e-10 * std::abs(firstChildValue))
+        {
+            return 1.0;
+        }
+
+        if(std::abs(secondChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
+        {
+            return 1.0;
+        }
+
+        if(std::abs(secondChildValue - 1.0) <= 1e-10 * std::abs(firstChildValue))
+        {
+            return firstChildValue;
+        }
+
         return (pow(firstChild->calculate(point), secondChild->calculate(point)));
     }
 

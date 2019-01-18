@@ -63,6 +63,7 @@ void TaskCheckConstraintTolerance::run()
         {
             env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);
+             env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
         }
     }
     else
@@ -71,6 +72,7 @@ void TaskCheckConstraintTolerance::run()
         {
             env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);
+             env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
         }
     }
 

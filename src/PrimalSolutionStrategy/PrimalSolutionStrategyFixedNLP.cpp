@@ -289,8 +289,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                     }
                 }
 
-                if(ones.size() > 0)
-                    env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
+                env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
             }
 
             if(env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
@@ -408,8 +407,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                     }
                 }
 
-                if(ones.size() > 0)
-                    env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
+                env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
             }
         }
 

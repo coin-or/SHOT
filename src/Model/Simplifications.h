@@ -516,6 +516,34 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
             return (std::make_shared<ExpressionInvert>(firstChild));
     }
 
+    // Extract constants in if first child is product and has a constant as its first child.
+    // Since the children have been simplified, we can assume that the constant (if it exists) is first.
+    if(firstChild->getType() == E_NonlinearExpressionTypes::Product
+        && secondChild->getType() == E_NonlinearExpressionTypes::Constant && firstChild->getNumberOfChildren() > 1)
+    {
+        auto product = std::dynamic_pointer_cast<ExpressionProduct>(firstChild);
+        auto power = std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
+
+        double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.expressions.at(0))->constant;
+
+        NonlinearExpressions children;
+
+        for(auto it = product->children.expressions.begin() + 1; it != product->children.expressions.end(); it++)
+        {
+            children.add(*it);
+        }
+
+        auto newProduct = std::make_shared<ExpressionProduct>();
+
+        if(constant != 1.0)
+            newProduct->children.add(std::make_shared<ExpressionConstant>(std::pow(constant, power)));
+
+        newProduct->children.add(
+            std::make_shared<ExpressionPower>(std::make_shared<ExpressionProduct>(children), secondChild));
+
+        return (newProduct);
+    }
+
     return (std::make_shared<ExpressionPower>(firstChild, secondChild));
 }
 

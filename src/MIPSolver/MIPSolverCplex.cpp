@@ -389,7 +389,7 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::WorkMem, env->settings->getDoubleSetting("Cplex.WorkMem", "Subsolver"));
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getIntSetting("Cplex.NodeFileInd", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::FeasOptMode, 1);
+        cplexInstance.setParam(IloCplex::FeasOptMode, 3);
     }
     catch(IloException& e)
     {
@@ -580,6 +580,10 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
         MIPSolutionStatus = getSolutionStatus();
 
+        /*if(MIPSolutionStatus != E_ProblemSolutionStatus::Infeasible && env->reformulatedProblem->properties.isDiscrete
+            && discreteVariablesActivated)
+            cplexInstance.populate();
+*/
         /*
                 if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
                 {
@@ -621,11 +625,8 @@ bool MIPSolverCplex::repairInfeasibility()
 
         IloNumArray relax(cplexEnv);
 
-        if(!cutOffConstraintDefined)
-        {
-            setCutOffAsConstraint(env->results->getPrimalBound());
-            cplexInstance.extract(cplexModel);
-        }
+        // setCutOffAsConstraint(env->results->getPrimalBound());
+        cplexInstance.extract(cplexModel);
 
         int rows = cplexConstrs.getSize();
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
@@ -643,7 +644,7 @@ bool MIPSolverCplex::repairInfeasibility()
             }
             else
             {
-                relax.add(((double)i + 1.0) * i * i);
+                relax.add(1 / (((double)i) + 1.0));
             }
         }
 
@@ -665,15 +666,34 @@ bool MIPSolverCplex::repairInfeasibility()
             cplexInstance.getSlacks(slacks, cplexConstrs);
             std::cout << "slacks: " << slacks << std::endl;*/
 
+            int numRepairs = 0;
+
             for(int i = numOrigConstraints; i < infeas.getSize(); i++)
             {
                 if(infeas[i] > 0)
-                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + infeas[i]);
-                else if(infeas[i] < 0) // Should not happen fur generated cuts
+                {
+                    numRepairs++;
+                    env->output->outputDebug("        Constraint: " + std::to_string(i)
+                        + " repaired with infeasibility = " + std::to_string(infeas[i]));
+                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.1 * infeas[i]);
+                }
+                else if(infeas[i] < 0) // Should not happen for generated cuts
+                {
+                    numRepairs++;
+                    env->output->outputDebug("        Constraint: " + std::to_string(i)
+                        + " repaired with infeasibility = " + std::to_string(infeas[i]));
                     cplexConstrs[i].setLB(cplexConstrs[i].getLB() + 1.1 * infeas[i]);
+                }
             }
 
-            env->output->outputAlways("        Number of constraints modified: " + std::to_string(infeas.getSize()));
+            if(numRepairs == 0)
+            {
+
+                env->output->outputAlways("        No constraints modified during repair");
+                return (false);
+            }
+
+            env->output->outputAlways("        Number of constraints modified: " + std::to_string(numRepairs));
 
             cplexInstance.extract(cplexModel);
 
@@ -871,23 +891,28 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 
 void MIPSolverCplex::setCutOff(double cutOff)
 {
-    double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
+    // double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
 
     try
     {
-        if(isMinimizationProblem)
-        {
-            cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
+        cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
-            env->output->outputAlways(
-                "        Setting cutoff value to " + std::to_string(cutOff + cutOffTol) + " for minimization.");
-        }
-        else
-        {
-            cplexInstance.setParam(IloCplex::CutLo, cutOff - cutOffTol);
-            env->output->outputAlways(
-                "        Setting cutoff value to " + std::to_string(cutOff - cutOffTol) + " for maximization.");
-        }
+        env->output->outputAlways(
+            "        Setting cutoff value to " + UtilityFunctions::toString(cutOff) + " for minimization.");
+        /*
+    if(isMinimizationProblem)
+    {
+        cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
+
+        env->output->outputAlways("        Setting cutoff value to "
+            + UtilityFunctions::toStringFormat(cutOff, true) + " for minimization.");
+    }
+    else
+    {
+        cplexInstance.setParam(IloCplex::CutLo, cutOff);
+        env->output->outputAlways("        Setting cutoff value to "
+            + UtilityFunctions::toStringFormat(cutOff, true) + " for maximization.");
+    }*/
     }
     catch(IloException& e)
     {
@@ -908,8 +933,8 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputAlways(
-                    "        Setting cutoff constraint to " + std::to_string(cutOff) + " for maximization.");
+                env->output->outputAlways("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                    + " for maximization.");
             }
             else
             {
@@ -918,8 +943,8 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputAlways(
-                    "        Setting cutoff constraint to " + std::to_string(cutOff) + " for minimization.");
+                env->output->outputAlways("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                    + " for minimization.");
             }
 
             cutOffConstraintIndex = cplexConstrs.getSize() - 1;
@@ -933,14 +958,14 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
-                env->output->outputAlways(
-                    "        Setting cutoff constraint value to " + std::to_string(cutOff) + " for maximization.");
+                env->output->outputAlways("        Setting cutoff constraint value to "
+                    + UtilityFunctions::toString(cutOff) + " for maximization.");
             }
             else
             {
                 cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
-                env->output->outputAlways(
-                    "        Setting cutoff constraint to " + std::to_string(cutOff) + " for minimization.");
+                env->output->outputAlways("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                    + " for minimization.");
             }
 
             modelUpdated = true;
@@ -1112,7 +1137,12 @@ double MIPSolverCplex::getDualObjectiveValue()
     }
     catch(IloException& e)
     {
-        env->output->outputError("        Error when obtaining dual objective value", e.getMessage());
+        // env->output->outputError("        Error when obtaining dual objective value", e.getMessage());
+        // Happens for infeasible LP
+        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+            return (SHOT_DBL_MIN);
+        else
+            return (SHOT_DBL_MAX);
     }
 
     return (objVal);
@@ -1221,7 +1251,8 @@ void MIPSolverCplex::createHyperplane(
     {
         if(E.value != E.value) // Check for NaN
         {
-            env->output->outputWarning("        Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
+                + env->problem->getVariable(E.index)->name);
             hyperplaneIsOk = false;
             break;
         }

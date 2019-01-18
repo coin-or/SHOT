@@ -768,6 +768,9 @@ void Report::outputSolutionReport()
 
     bool primalSolutionFound = (env->results->primalSolutions.size() > 0);
 
+    if(env->results->terminationReasonDescription != "")
+        report << " " << env->results->terminationReasonDescription << "\r\n\r\n";
+
     if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
     {
         report << " Optimal primal solution found to given tolerances.\r\n";

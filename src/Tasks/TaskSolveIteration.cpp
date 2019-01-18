@@ -29,18 +29,24 @@ void TaskSolveIteration::run()
     auto timeLim = env->settings->getDoubleSetting("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if(env->results->primalSolutions.size() > 0)
+    if(env->dualSolver->useCutOff)
     {
+        double cutOffValue;
+        double cutOffValueConstraint;
+
         if(isMinimization)
         {
-            env->dualSolver->MIPSolver->setCutOff(
-                env->results->getPrimalBound() + env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
+            cutOffValue = env->dualSolver->cutOffToUse + env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
+            cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
         else
         {
-            env->dualSolver->MIPSolver->setCutOff(
-                env->results->getPrimalBound() - env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual"));
+            cutOffValue = env->dualSolver->cutOffToUse - env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
+            cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
+
+        env->dualSolver->MIPSolver->setCutOff(cutOffValue);
+        env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
 
     if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()
@@ -115,7 +121,18 @@ void TaskSolveIteration::run()
     }
     else*/
 
-    if(sols.size() > 0)
+    if(sols.size() == 0)
+    {
+        // Will try to get atleast a dual bound
+        double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+
+        if(env->results->iterations.size() > 1)
+        {
+            if(env->results->getPreviousIteration()->currentObjectiveBounds.first == currentDualBound)
+                env->results->setDualBound(currentDualBound);
+        }
+    }
+    else
     {
         currIter->solutionPoints = sols;
 
@@ -175,10 +192,10 @@ void TaskSolveIteration::run()
             }
         }
 
-        double tmpDualObjBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+        double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
         if(currIter->isMIP())
         {
-            DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
+            DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
                 currIter->iterationNumber };
             env->dualSolver->addDualSolutionCandidate(sol);
 
@@ -192,7 +209,7 @@ void TaskSolveIteration::run()
         else
         {
             DualSolution sol
-                = { sols.at(0).point, E_DualSolutionSource::LPSolution, tmpDualObjBound, currIter->iterationNumber };
+                = { sols.at(0).point, E_DualSolutionSource::LPSolution, currentDualBound, currIter->iterationNumber };
             env->dualSolver->addDualSolutionCandidate(sol);
         }
     }

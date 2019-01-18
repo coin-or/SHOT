@@ -188,7 +188,7 @@ enum class ES_AddPrimalPointAsInteriorPoint
     OnlyAverage
 };
 
-enum class enumConvexityIdentificationStrategy
+enum class ES_ConvexityIdentificationStrategy
 {
     Automatically,
     AssumeConvex,

@@ -422,12 +422,15 @@ void SHOTSolver::initializeSettings()
 
     // Convexity strategy
 
+    env->settings->createSetting("UseRecommendedSettings", "Strategy", true,
+        "Modifies some settings to their recommended values based on the strategy");
+
     VectorString enumConvexityIdentificationStrategy;
     enumConvexityIdentificationStrategy.push_back("Automatically");
     enumConvexityIdentificationStrategy.push_back("AssumeConvex");
     enumConvexityIdentificationStrategy.push_back("AssumeNonconvex");
-    env->settings->createSetting("ConvexityStrategy", "Dual",
-        static_cast<int>(enumConvexityIdentificationStrategy::Automatically),
+    env->settings->createSetting("Convexity", "Strategy",
+        static_cast<int>(ES_ConvexityIdentificationStrategy::Automatically),
         "How to determine convexity of the problem", enumConvexityIdentificationStrategy);
     enumConvexityIdentificationStrategy.clear();
 
@@ -913,11 +916,14 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("ObjectiveGap.Relative", "Termination", 0.001,
         "Relative gap termination tolerance for objective function", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ObjectiveStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
-        "Max number of iterations without significant objective value improvement", 0, SHOT_INT_MAX);
+    env->settings->createSetting("DualStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
+        "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("ObjectiveStagnation.Tolerance", "Termination", 0.000001,
-        "Objective value improvement tolerance", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
+        "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination", 5,
+        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 
@@ -1035,6 +1041,44 @@ void SHOTSolver::verifySettings()
     {
         env->output->outputError("SHOT has not been compiled with support selected MIP solver. Defaulting to Cbc.");
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+    }
+
+    if(env->settings->getBoolSetting("UseRecommendedSettings", "Strategy"))
+    {
+
+        switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getIntSetting("Convexity", "Strategy")))
+        {
+        case(ES_ConvexityIdentificationStrategy::Automatically):
+            break;
+
+        case(ES_ConvexityIdentificationStrategy::AssumeConvex):
+            break;
+
+        case(ES_ConvexityIdentificationStrategy::AssumeNonconvex):
+            env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
+            env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
+            // env->settings->updateSetting("Relaxation.Use", "Dual", false);
+
+            env->settings->updateSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
+
+            env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
+            env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
+            env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
+            env->settings->updateSetting("Linesearch.Use", "Primal", false);
+
+            env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
+            env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
+            env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
+
+            break;
+
+        default:
+            break;
+        }
     }
 }
 

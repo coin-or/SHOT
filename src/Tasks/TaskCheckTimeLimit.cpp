@@ -28,6 +28,7 @@ void TaskCheckTimeLimit::run()
     {
         env->results->terminationReason = E_TerminationReason::TimeLimit;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since time limit was reached.";
     }
 }
 

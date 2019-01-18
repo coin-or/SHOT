@@ -58,6 +58,8 @@ public:
     std::vector<IterationPtr> iterations;
 
     E_TerminationReason terminationReason = E_TerminationReason::None;
+    std::string terminationReasonDescription;
+
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;

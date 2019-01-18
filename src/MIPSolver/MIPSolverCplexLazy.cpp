@@ -356,7 +356,8 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
     {
         if(E.value != E.value) // Check for NaN
         {
-            env->output->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
+                + env->problem->getVariable(E.index)->name);
             hyperplaneIsOk = false;
             break;
         }

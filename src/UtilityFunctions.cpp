@@ -580,4 +580,7 @@ std::string getFileAsString(const std::string& fileName)
 
     throw(errno);
 };
+
+bool isAlmostEqual(double x, double y, const double epsilon) { return std::abs(x - y) <= epsilon * std::abs(x); }
+
 }; // namespace SHOT::UtilityFunctions

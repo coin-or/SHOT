@@ -85,16 +85,11 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->settings->getIntSetting("ConvexityStrategy", "Dual")
-        != static_cast<int>(enumConvexityIdentificationStrategy::AssumeConvex))
+    if(env->settings->getIntSetting("Convexity", "Strategy")
+        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
-
-        TaskBase* tAddObjectiveCut = new TaskAddObjectiveCutFromPrimal(env, "InitIter2");
-        // env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
-
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCut);
     }
 
     TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
@@ -115,8 +110,14 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    TaskBase* tCheckObjStag = new TaskCheckObjectiveStagnation(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckObjStag, "CheckObjStag");
+    TaskBase* tCheckPrimalStag = new TaskCheckPrimalStagnation(env, "AddObjectiveCut", "CheckDualStag");
+    env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
+
+    TaskBase* tAddObjectiveCut = new TaskAddPrimalReductionCut(env, "CheckDualStag", "CheckDualStag");
+    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+
+    TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckDualStag, "CheckDualStag");
 
     env->tasks->addTask(tInitializeIteration, "InitIter2");
 
@@ -148,6 +149,16 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->tasks->addTask(tGoto, "Goto");
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+
+    if(env->settings->getIntSetting("Convexity", "Strategy")
+        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    {
+        TaskBase* tAddObjectiveCutFinal = new TaskAddPrimalReductionCut(env, "InitIter2", "Terminate");
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
+    }
+
+    TaskBase* tTerminate = new TaskTerminate(env);
+    env->tasks->addTask(tTerminate, "Terminate");
 }
 
 SolutionStrategyNLP::~SolutionStrategyNLP() {}

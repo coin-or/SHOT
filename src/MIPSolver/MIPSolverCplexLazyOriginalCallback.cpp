@@ -473,7 +473,8 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     {
         if(E.value != E.value) // Check for NaN
         {
-            env->output->outputWarning("     Warning: hyperplane not generated, NaN found in linear terms!");
+            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
+                + env->problem->getVariable(E.index)->name);
             hyperplaneIsOk = false;
             break;
         }
@@ -538,7 +539,7 @@ void CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteg
     {
         expr += (1 - 1.0 * cplexVars[binaryIndexesZeroes.at(i)]);
     }
-    
+
     IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
     tmpRange.setName("IC");
 

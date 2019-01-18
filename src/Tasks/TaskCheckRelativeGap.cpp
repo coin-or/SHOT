@@ -26,6 +26,7 @@ void TaskCheckRelativeGap::run()
     {
         env->results->terminationReason = E_TerminationReason::RelativeGap;
         env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since relative gap met requirements.";
     }
 }
 

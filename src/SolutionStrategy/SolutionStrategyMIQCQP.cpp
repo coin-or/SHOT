@@ -49,9 +49,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckIterError, "CheckIterError");
-
     TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
@@ -63,6 +60,12 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     TaskBase* tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterLim, "CheckIterLim");
+
+    TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
+
+    TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckDualStag, "CheckDualStag");
 
     TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");

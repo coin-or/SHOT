@@ -29,17 +29,7 @@ void TaskRepairInfeasibleDualProblem::run()
 
     if(currIter->solutionStatus != E_ProblemSolutionStatus::Infeasible)
     {
-        return;
-    }
-
-    if(iterLastRepair != currIter->iterationNumber - 1)
-    {
-        repairCounter = 0;
-    }
-
-    if(repairCounter > 10)
-    {
-        std::cout << "        Will not repair further since limit " << 10 << " is met.\n";
+        env->tasks->setNextTask(taskIDIfTrue);
         return;
     }
 
@@ -50,18 +40,25 @@ void TaskRepairInfeasibleDualProblem::run()
         env->tasks->setNextTask(taskIDIfTrue);
         iterLastRepair = currIter->iterationNumber;
 
-        env->results->setDualBound(SHOT_DBL_MIN);
+        env->results->setDualBound(env->dualSolver->MIPSolver->getDualObjectiveValue());
 
-        repairCounter++;
         currIter->wasInfeasibilityRepairSuccessful = true;
 
         // currIter->solutionStatus = env->dualSolver->MIPSolver->solveProblem();
         // currIter->solutionPoints = env->dualSolver->MIPSolver->getAllVariableSolutions();
     }
+    else if(mainRepairTries < 1)
+    {
+        currIter->wasInfeasibilityRepairSuccessful = false;
+        env->dualSolver->cutOffToUse = env->results->getPrimalBound();
+        env->tasks->setNextTask(taskIDIfTrue);
+        mainRepairTries++;
+    }
     else
     {
         currIter->wasInfeasibilityRepairSuccessful = false;
         env->tasks->setNextTask(taskIDIfFalse);
+        mainRepairTries++;
     }
 
     env->timing->stopTimer("DualStrategy");

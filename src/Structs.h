@@ -205,8 +205,10 @@ struct SolutionStatistics
 
     int numberOfIntegerCuts = 0;
 
-    int numberOfIterationsWithStagnationMIP = 0;
-    int numberOfIterationsWithSignificantObjectiveUpdate = 0;
+    int numberOfIterationsWithDualStagnation = 0;
+    int lastIterationWithSignificantDualUpdate = 0;
+    int numberOfIterationsWithPrimalStagnation = 0;
+    int lastIterationWithSignificantPrimalUpdate = 0;
     int numberOfIterationsWithoutNLPCallMIP = 0;
 
     int iterationLastPrimalBoundUpdate = 0;
@@ -220,6 +222,8 @@ struct SolutionStatistics
 
     int numberOfExploredNodes = 0;
     int numberOfOpenNodes = 0;
+
+    int numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
 
     int getNumberOfTotalDualProblems()
     {

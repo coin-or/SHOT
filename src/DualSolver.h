@@ -17,7 +17,7 @@ namespace SHOT
 class DualSolver
 {
 public:
-    DualSolver(EnvironmentPtr envPtr) { env = envPtr; }
+    DualSolver(EnvironmentPtr envPtr);
 
     ~DualSolver() { dualSolutionCandidates.clear(); }
 
@@ -26,6 +26,9 @@ public:
 
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
+
+    double cutOffToUse;
+    bool useCutOff = false;
 
 private:
     EnvironmentPtr env;
