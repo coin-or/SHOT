@@ -7,7 +7,6 @@ set(CMAKE_BUILD_TYPE Debug)
 
 option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
-
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
 set(SHOT_VERSION_MINOR   9   CACHE STRING "Project minor version number.")

@@ -389,7 +389,7 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::WorkMem, env->settings->getDoubleSetting("Cplex.WorkMem", "Subsolver"));
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getIntSetting("Cplex.NodeFileInd", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::FeasOptMode, 3);
+        cplexInstance.setParam(IloCplex::FeasOptMode, 2);
     }
     catch(IloException& e)
     {
@@ -743,6 +743,9 @@ int MIPSolverCplex::increaseSolutionLimit(int increment)
 
 void MIPSolverCplex::setSolutionLimit(long limit)
 {
+    if(limit <= 1)
+        limit = 1;
+
     try
     {
         cplexInstance.setParam(IloCplex::IntSolLim, limit);
@@ -897,7 +900,7 @@ void MIPSolverCplex::setCutOff(double cutOff)
     {
         cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
-        env->output->outputAlways(
+        env->output->outputInfo(
             "        Setting cutoff value to " + UtilityFunctions::toString(cutOff) + " for minimization.");
         /*
     if(isMinimizationProblem)
@@ -933,7 +936,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputAlways("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputInfo("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for maximization.");
             }
             else
@@ -943,7 +946,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputAlways("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputInfo("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for minimization.");
             }
 
@@ -958,13 +961,13 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
-                env->output->outputAlways("        Setting cutoff constraint value to "
+                env->output->outputInfo("        Setting cutoff constraint value to "
                     + UtilityFunctions::toString(cutOff) + " for maximization.");
             }
             else
             {
                 cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
-                env->output->outputAlways("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputInfo("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for minimization.");
             }
 

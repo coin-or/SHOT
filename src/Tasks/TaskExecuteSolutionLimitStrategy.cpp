@@ -41,58 +41,73 @@ void TaskExecuteSolutionLimitStrategy::run()
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
 
-    if(temporaryOptLimitUsed)
+    if(env->settings->getIntSetting("Convexity", "Strategy")
+        == static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
-        temporaryOptLimitUsed = false;
-        env->dualSolver->MIPSolver->setSolutionLimit(previousSolLimit);
-    }
-
-    if(currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate
-            > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
-        && env->results->getDualBound() > SHOT_DBL_MIN)
-    {
-        previousSolLimit = prevIter->usedMIPSolutionLimit;
-        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
-        temporaryOptLimitUsed = true;
-        currIter->MIPSolutionLimitUpdated = true;
-        env->output->outputInfo("     Forced optimal iteration since too many iterations since last dual bound update");
-    }
-    else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate
-            > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
-        && env->results->getDualBound() > SHOT_DBL_MIN)
-    {
-        previousSolLimit = prevIter->usedMIPSolutionLimit;
-        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
-        temporaryOptLimitUsed = true;
-        currIter->MIPSolutionLimitUpdated = true;
-        env->output->outputAlways("     Forced optimal iteration since too long time since last dual bound update");
-    }
-    else if(env->results->getPrimalBound() < SHOT_DBL_MAX
-        && abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
-    {
-        previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
-        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
-        temporaryOptLimitUsed = true;
-        currIter->MIPSolutionLimitUpdated = true;
-        env->output->outputInfo(
-            "     Forced optimal iteration since difference between MIP solution and primal is small");
-    }
-    else
-    {
-        currIter->MIPSolutionLimitUpdated = solutionLimitStrategy->updateLimit();
-
-        if(currIter->MIPSolutionLimitUpdated)
+        if(temporaryOptLimitUsed)
         {
-            int newLimit = solutionLimitStrategy->getNewLimit();
+            temporaryOptLimitUsed = false;
+            env->dualSolver->MIPSolver->setSolutionLimit(previousSolLimit);
+        }
 
-            if(newLimit != env->results->getPreviousIteration()->usedMIPSolutionLimit)
-            {
-                env->dualSolver->MIPSolver->setSolutionLimit(newLimit);
-            }
+        if(currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate
+                > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
+            && env->results->getDualBound() > SHOT_DBL_MIN)
+        {
+            previousSolLimit = prevIter->usedMIPSolutionLimit;
+            env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
+            temporaryOptLimitUsed = true;
+            currIter->MIPSolutionLimitUpdated = true;
+            env->output->outputInfo(
+                "     Forced optimal iteration since too many iterations since last dual bound update");
+
+            env->timing->stopTimer("DualStrategy");
+            return;
+        }
+
+        if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate
+                > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
+            && env->results->getDualBound() > SHOT_DBL_MIN)
+        {
+            previousSolLimit = prevIter->usedMIPSolutionLimit;
+            env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
+            temporaryOptLimitUsed = true;
+            currIter->MIPSolutionLimitUpdated = true;
+            env->output->outputAlways("     Forced optimal iteration since too long time since last dual bound update");
+
+            env->timing->stopTimer("DualStrategy");
+            return;
+        }
+
+        if(env->results->getPrimalBound() < SHOT_DBL_MAX
+            && abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
+        {
+            previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
+            env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
+            temporaryOptLimitUsed = true;
+            currIter->MIPSolutionLimitUpdated = true;
+            env->output->outputInfo(
+                "     Forced optimal iteration since difference between MIP solution and primal is small");
+
+            env->timing->stopTimer("DualStrategy");
+            return;
+        }
+    }
+
+    currIter->MIPSolutionLimitUpdated = solutionLimitStrategy->updateLimit();
+
+    if(currIter->MIPSolutionLimitUpdated)
+    {
+        int newLimit = solutionLimitStrategy->getNewLimit();
+
+        if(newLimit != env->results->getPreviousIteration()->usedMIPSolutionLimit)
+        {
+            env->dualSolver->MIPSolver->setSolutionLimit(newLimit);
         }
     }
 
     env->timing->stopTimer("DualStrategy");
+    return;
 }
 
 std::string TaskExecuteSolutionLimitStrategy::getType()

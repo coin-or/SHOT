@@ -621,6 +621,7 @@ void Results::setPrimalBound(double value)
     env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
     env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = iterations.size() - 1;
     env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
+    env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
 }
 
 double Results::getDualBound() { return (this->currentDualBound); }

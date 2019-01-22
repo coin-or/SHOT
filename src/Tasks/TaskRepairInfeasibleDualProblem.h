@@ -27,7 +27,6 @@ public:
 private:
     std::string taskIDIfTrue;
     std::string taskIDIfFalse;
-    int repairCounter = 0;
     int iterLastRepair = 0;
     int mainRepairTries = 0;
 };

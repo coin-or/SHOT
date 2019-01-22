@@ -802,6 +802,9 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting(
         "Cplex.OptimalityTarget", "Subsolver", 0, "Specifies how CPLEX treats nonconvex quadratics", 0, 3);
 
+    env->settings->createSetting(
+        "Cplex.FeasOptMode", "Subsolver", 0, "Strategy to use for the feasibility repair", 0, 5);
+
     env->settings->createSetting("Cplex.MemoryEmphasis", "Subsolver", 0, "Try to conserve memory when possible", 0, 1);
 
     env->settings->createSetting("Cplex.MIPEmphasis", "Subsolver", 0,
@@ -921,6 +924,12 @@ void SHOTSolver::initializeSettings()
 
     env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("InfeasibilityRepair.IterationLimit", "Termination", 100,
+        "Max number of infeasible problems repaired without primal objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("InfeasibilityRepair.TimeLimit", "Termination", 10.0,
+        "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination", 5,
         "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);

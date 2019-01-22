@@ -136,7 +136,7 @@ void TaskSolveIteration::run()
     {
         currIter->solutionPoints = sols;
 
-        env->output->outputAlways("        Number of solutions in solution pool: " + std::to_string(sols.size()));
+        env->output->outputInfo("        Number of solutions in solution pool: " + std::to_string(sols.size()));
 
         if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {

@@ -224,6 +224,7 @@ struct SolutionStatistics
     int numberOfOpenNodes = 0;
 
     int numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
+    int numberOfDualRepairsSinceLastPrimalUpdate = 0;
 
     int getNumberOfTotalDualProblems()
     {
