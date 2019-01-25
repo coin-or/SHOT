@@ -1057,6 +1057,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 auto expression
                     = std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(1.0 / log(10.0)),
                         std::make_shared<ExpressionLog>(stack.rbegin()[0]));
+
                 stack.pop_back();
                 stack.push_back(expression);
                 break;

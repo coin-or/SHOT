@@ -23,6 +23,13 @@ TaskAddPrimalReductionCut::~TaskAddPrimalReductionCut() {}
 
 void TaskAddPrimalReductionCut::run()
 {
+
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
+    }
+
     auto currIter = env->results->getCurrentIteration(); // The solved iteration
 
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && !currIter->wasInfeasibilityRepairSuccessful)
@@ -70,7 +77,7 @@ void TaskAddPrimalReductionCut::run()
         env->output->outputAlways("        New cutoff: " + std::to_string(env->dualSolver->cutOffToUse));
 
         // Want to solve the following subproblems to optimality
-        //env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
+        // env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
 
         env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect++;
         env->tasks->setNextTask(taskIDIfTrue);
@@ -80,7 +87,7 @@ void TaskAddPrimalReductionCut::run()
     env->output->outputAlways("********Number of nonconvex objective cutoffs tried: "
         + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize && env->dualSolver->cutOffToUse > 0)
     {
         env->dualSolver->cutOffToUse = 0.99 * env->dualSolver->cutOffToUse;
         env->results->currentDualBound = SHOT_DBL_MIN;

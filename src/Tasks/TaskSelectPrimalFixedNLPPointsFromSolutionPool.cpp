@@ -22,6 +22,9 @@ TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsF
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {
+    env->timing->startTimer("PrimalStrategy");
+    env->timing->startTimer("PrimalBoundStrategyNLP");
+
     auto currIter = env->results->getCurrentIteration();
     auto allSolutions = env->results->getCurrentIteration()->solutionPoints;
 
@@ -43,9 +46,6 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
     }
-
-    env->timing->startTimer("PrimalStrategy");
-    env->timing->startTimer("PrimalBoundStrategyNLP");
 
     auto userSettingStrategy = env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal");
     auto userSetting = env->settings->getIntSetting("FixedInteger.Source", "Primal");

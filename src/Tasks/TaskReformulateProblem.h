@@ -66,6 +66,8 @@ private:
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;
 
+    std::map<VariablePtr, Variables> integerAuxilliaryBinaryVariables;
+
     ProblemPtr reformulatedProblem;
 };
 } // namespace SHOT

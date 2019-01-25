@@ -128,8 +128,6 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
     env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    env->tasks->addTask(tInitializeIteration, "InitIter2");
-
     if(env->settings->getBoolSetting("FixedInteger.Use", "Dual"))
     {
         TaskBase* tSolveFixedLP = new TaskSolveFixedDualProblem(env);
@@ -151,6 +149,8 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
     }
+
+    env->tasks->addTask(tInitializeIteration, "InitIter2");
 
     if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
