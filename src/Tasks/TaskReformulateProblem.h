@@ -63,10 +63,17 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
+    AuxilliaryVariablePtr getBilinearAuxilliaryVariable(VariablePtr firstVariable, VariablePtr secondVariable);
+
+    void addBilinearMcCormickEnvelope(
+        AuxilliaryVariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
+
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;
 
     std::map<VariablePtr, Variables> integerAuxilliaryBinaryVariables;
+
+    std::map<std::tuple<VariablePtr, VariablePtr>, AuxilliaryVariablePtr> bilinearAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };

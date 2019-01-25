@@ -634,6 +634,16 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", false,
         "Add convex envelopes (subject to original bounds) to bilinear terms");
 
+    // Reformulations for integer bilinears
+    VectorString enumBilinearIntegerReformulation;
+    enumBilinearIntegerReformulation.push_back("None");
+    enumBilinearIntegerReformulation.push_back("1D");
+    enumBilinearIntegerReformulation.push_back("2D");
+    env->settings->createSetting("Reformulation.Bilinear.IntegerFormulation", "Model",
+        static_cast<int>(ES_ReformulatiomBilinearInteger::OneDiscretization),
+        "How to reformulate integer bilinear terms", enumBilinearIntegerReformulation);
+    enumBilinearIntegerReformulation.clear();
+
     // Reformulations for constraints
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false,
         "Partition nonlinear terms as auxilliary constraints");

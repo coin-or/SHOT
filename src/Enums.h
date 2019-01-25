@@ -18,6 +18,7 @@ enum class E_AuxilliaryVariableType
     None,
     NonlinearObjectiveFunction, // From epigraph formulation of (nonlinear) objective function
     NonlinearExpressionPartitioning, // From reformulating nonlinear terms as constraints
+    ContinuousBilinear, // From linearizing a bilinear term x1 * x2 where x1 and x2 are real
     BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
     BinaryContinuousOrIntegerBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or
                                        // integer
@@ -289,6 +290,13 @@ enum class ES_ReformulationBinaryMonomials
     None,
     Simple,
     CostaLiberti
+};
+
+enum class ES_ReformulatiomBilinearInteger
+{
+    None,
+    OneDiscretization,
+    TwoDiscretization
 };
 
 enum class ES_QuadraticProblemStrategy
