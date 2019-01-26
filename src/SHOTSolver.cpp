@@ -449,10 +449,10 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual", 0.25,
         "The fraction of violated constraints to generate cutting planes for", 0.0, 1.0);
 
-    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 2000,
+    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 100,
         "Iteration limit for minimax cutting plane solver", 1, SHOT_INT_MAX);
 
-    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual", 1000,
+    env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual", 100,
         "Iteration limit for minimization subsolver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
@@ -929,10 +929,10 @@ void SHOTSolver::initializeSettings()
     env->settings->createSetting("ObjectiveGap.Relative", "Termination", 0.001,
         "Relative gap termination tolerance for objective function", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("DualStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
+    env->settings->createSetting("DualStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", SHOT_INT_MAX,
+    env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("InfeasibilityRepair.IterationLimit", "Termination", 100,
@@ -1074,9 +1074,13 @@ void SHOTSolver::verifySettings()
             break;
 
         case(ES_ConvexityIdentificationStrategy::AssumeNonconvex):
+            // env->settings->updateSetting("CutStrategy", "Dual", 1);
+            env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
+            env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
             env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
-            // env->settings->updateSetting("Relaxation.Use", "Dual", false);
+
+            env->settings->updateSetting("Relaxation.Use", "Dual", false);
 
             env->settings->updateSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", true);
             env->settings->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", true);
@@ -1090,6 +1094,7 @@ void SHOTSolver::verifySettings()
             env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
             env->settings->updateSetting("Linesearch.Use", "Primal", false);
             env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
+            env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
             env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
             env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
 

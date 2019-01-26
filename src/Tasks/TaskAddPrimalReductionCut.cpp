@@ -89,12 +89,12 @@ void TaskAddPrimalReductionCut::run()
 
     if(env->reformulatedProblem->objectiveFunction->properties.isMinimize && env->dualSolver->cutOffToUse > 0)
     {
-        env->dualSolver->cutOffToUse = 0.99 * env->dualSolver->cutOffToUse;
+        env->dualSolver->cutOffToUse = 0.999 * env->dualSolver->cutOffToUse;
         env->results->currentDualBound = SHOT_DBL_MIN;
     }
     else
     {
-        env->dualSolver->cutOffToUse = 1.01 * env->dualSolver->cutOffToUse;
+        env->dualSolver->cutOffToUse = 1.001 * env->dualSolver->cutOffToUse;
         env->results->currentDualBound = SHOT_DBL_MAX;
     }
 

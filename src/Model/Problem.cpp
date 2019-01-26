@@ -360,6 +360,33 @@ void Problem::add(AuxilliaryVariablePtr variable)
     env->output->outputDebug("Added variable to problem: " + variable->name);
 };
 
+void Problem::add(NumericConstraintPtr constraint)
+{
+    numericConstraints.push_back(constraint);
+
+    if(constraint->properties.classification == E_ConstraintClassification::Linear)
+    {
+        linearConstraints.push_back(std::dynamic_pointer_cast<LinearConstraint>(constraint));
+    }
+    else if(constraint->properties.classification == E_ConstraintClassification::Quadratic)
+    {
+        quadraticConstraints.push_back(std::dynamic_pointer_cast<QuadraticConstraint>(constraint));
+    }
+    else if(constraint->properties.classification > E_ConstraintClassification::Quadratic)
+    {
+        nonlinearConstraints.push_back(std::dynamic_pointer_cast<NonlinearConstraint>(constraint));
+    }
+    else
+    {
+        env->output->outputError("Error: Trying to add constraint of unknown type "
+            + std::to_string((int)constraint->properties.classification) + " to problem.");
+    }
+
+    constraint->takeOwnership(shared_from_this());
+
+    env->output->outputDebug("Added numeric constraint to problem: " + constraint->name);
+};
+
 void Problem::add(LinearConstraintPtr constraint)
 {
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));

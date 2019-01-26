@@ -59,7 +59,12 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Reformulating constraints
     for(auto& C : env->problem->numericConstraints)
     {
-        reformulateConstraint(C);
+        auto reformulatedConstraints = reformulateConstraint(C);
+
+        for(auto& RC : reformulatedConstraints)
+        {
+            reformulatedProblem->add(std::move(RC));
+        }
     }
 
     // Reformulating objective function
@@ -226,7 +231,13 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
         reformulatedProblem->add(std::move(objectiveVariable));
         reformulatedProblem->add(std::move(objective));
-        reformulateConstraint(constraint);
+
+        auto reformulatedConstraints = reformulateConstraint(constraint);
+
+        for(auto& RC : reformulatedConstraints)
+        {
+            reformulatedProblem->add(std::move(RC));
+        }
 
         return;
     }
@@ -329,7 +340,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     }
 }
 
-void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
+NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
 {
     double valueLHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueLHS;
     double valueRHS = std::dynamic_pointer_cast<NumericConstraint>(C)->valueRHS;
@@ -339,14 +350,14 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
         || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms))
     {
         LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Linear;
         auto sourceConstraint = std::dynamic_pointer_cast<LinearConstraint>(C);
 
         copyLinearTermsToConstraint(sourceConstraint->linearTerms, constraint);
 
         constraint->constant = constant;
-        reformulatedProblem->add(std::move(constraint));
 
-        return;
+        return (NumericConstraints({ constraint }));
     }
 
     if(useQuadraticConstraints
@@ -355,15 +366,16 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
     {
         QuadraticConstraintPtr constraint
             = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Quadratic;
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
         copyLinearTermsToConstraint(sourceConstraint->linearTerms, constraint);
         copyQuadraticTermsToConstraint(sourceConstraint->quadraticTerms, constraint);
 
         constraint->constant = constant;
-        reformulatedProblem->add(std::move(constraint));
+        // reformulatedProblem->add(std::move(constraint));
 
-        return;
+        return (NumericConstraints({ constraint }));
     }
 
     // Constraint is to be regarded as nonlinear
@@ -405,7 +417,70 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
             auxConstraint1->add(copyNonlinearExpression(
                 std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), reformulatedProblem));
 
-        reformulateConstraint(auxConstraint1);
+        auto reformulatedConstraint1 = reformulateConstraint(auxConstraint1);
+
+        if(reformulatedConstraint1.size() > 1)
+            return (reformulatedConstraint1);
+
+        if(reformulatedConstraint1.at(0)->properties.classification == E_ConstraintClassification::Linear)
+        {
+            reformulatedConstraint1.at(0)->valueLHS = reformulatedConstraint1.at(0)->valueRHS;
+            return (reformulatedConstraint1);
+        }
+
+        // Will rewrite it as (f(x))^2 <= 0
+
+        auto nonlinearConstraint = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name, SHOT_DBL_MIN,
+            reformulatedConstraint1.at(0)->valueRHS * reformulatedConstraint1.at(0)->valueRHS);
+
+        nonlinearConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
+
+        if(reformulatedConstraint1.at(0)->properties.hasLinearTerms)
+        {
+            for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(reformulatedConstraint1.at(0))->linearTerms)
+            {
+                if(LT->coefficient == 1.0)
+                    nonlinearConstraint->add(std::make_shared<ExpressionVariable>(LT->variable));
+                else
+                {
+                    nonlinearConstraint->add(
+                        std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(LT->coefficient),
+                            std::make_shared<ExpressionVariable>(LT->variable)));
+                }
+            }
+        }
+
+        if(reformulatedConstraint1.at(0)->properties.hasQuadraticTerms)
+        {
+            for(auto& QT :
+                std::dynamic_pointer_cast<QuadraticConstraint>(reformulatedConstraint1.at(0))->quadraticTerms)
+            {
+                NonlinearExpressions product;
+
+                if(QT->coefficient != 1.0)
+                {
+                    product.expressions.push_back(std::make_shared<ExpressionConstant>(QT->coefficient));
+                }
+
+                product.expressions.push_back(std::make_shared<ExpressionVariable>(QT->firstVariable));
+                product.expressions.push_back(std::make_shared<ExpressionVariable>(QT->secondVariable));
+
+                nonlinearConstraint->add(std::make_shared<ExpressionProduct>(product));
+            }
+        }
+
+        if(reformulatedConstraint1.at(0)->properties.hasNonlinearExpression)
+        {
+            nonlinearConstraint->add(
+                copyNonlinearExpression(std::dynamic_pointer_cast<NonlinearConstraint>(reformulatedConstraint1.at(0))
+                                            ->nonlinearExpression.get(),
+                    reformulatedProblem));
+        }
+
+        nonlinearConstraint->nonlinearExpression
+            = std::make_shared<ExpressionSquare>(nonlinearConstraint->nonlinearExpression);
+
+        return (NumericConstraints({ nonlinearConstraint }));
 
         auto auxConstraint2
             = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name + "_b", SHOT_DBL_MIN, -valueRHS);
@@ -425,16 +500,61 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
             auxConstraint2->add(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
                 std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), reformulatedProblem))));
 
-        reformulateConstraint(auxConstraint2);
+        auto reformulatedConstraint2 = reformulateConstraint(auxConstraint2);
 
-        return;
+        /*
+        if(reformulatedConstraint1.size() == 1 && reformulatedConstraint2.size() == 1
+            && reformulatedConstraint1.at(0)->properties.classification == E_ConstraintClassification::Linear
+            && reformulatedConstraint2.at(0)->properties.classification == E_ConstraintClassification::Linear)
+        {
+            auto linearConstraint1 = std::dynamic_pointer_cast<LinearConstraint>(reformulatedConstraint1.at(0));
+            auto linearConstraint2 = std::dynamic_pointer_cast<LinearConstraint>(reformulatedConstraint2.at(0));
+
+            if(linearConstraint1->linearTerms.size() == linearConstraint2->linearTerms.size())
+            {
+                bool isEqual = true;
+
+                if(linearConstraint1->valueLHS == linearConstraint2->valueLHS
+                        && (abs(linearConstraint1->valueRHS) == 0.0 && abs(linearConstraint2->valueRHS == 0.0))
+                    || linearConstraint1->valueRHS == -linearConstraint2->valueRHS)
+                {
+                    for(int i = 0; i < linearConstraint1->linearTerms.size(); i++)
+                    {
+                        if(linearConstraint1->linearTerms.at(i)->variable->name
+                                != linearConstraint2->linearTerms.at(i)->variable->name
+                            || linearConstraint1->linearTerms.at(i)->coefficient
+                                != -linearConstraint2->linearTerms.at(i)->coefficient)
+                        {
+                            isEqual = false;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    isEqual = false;
+                }
+
+                if(isEqual)
+                {
+                    reformulatedConstraint1.at(0)->valueLHS = reformulatedConstraint1.at(0)->valueRHS;
+
+                    return (reformulatedConstraint1);
+                }
+            }
+        }*/
+
+        for(auto& RC : reformulatedConstraint2)
+            reformulatedConstraint1.push_back(RC);
+
+        return (reformulatedConstraint1);
     }
     else if(valueLHS != SHOT_DBL_MIN && valueRHS != SHOT_DBL_MAX)
     {
         // Constraint is of type l <= g(x) <= u. Rewrite as -g(x) <= -l and g(x) <= u
 
         std::cout << "Can not reformulate constraint currently\n";
-    }
+    };
 
     if(C->properties.hasLinearTerms)
         copyOriginalLinearTerms = true;
@@ -472,18 +592,22 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
     if(copyOriginalNonlinearExpression)
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Nonlinear;
     }
     else if(destinationQuadraticTerms.size() > 0 && !useQuadraticConstraints)
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Nonlinear;
     }
     else if(destinationQuadraticTerms.size() > 0)
     {
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Quadratic;
     }
     else
     {
         constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Linear;
     }
 
     constraint->constant = constant;
@@ -511,22 +635,25 @@ void TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
                 ->add(copyNonlinearExpression(sourceConstraint->nonlinearExpression.get(), reformulatedProblem));
     }
 
-    if(copyOriginalNonlinearExpression)
-    {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
-    }
-    else if(destinationQuadraticTerms.size() > 0 && !useQuadraticConstraints)
-    {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
-    }
-    else if(destinationQuadraticTerms.size() > 0)
-    {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<QuadraticConstraint>(constraint)));
-    }
-    else
-    {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<LinearConstraint>(constraint)));
-    }
+    /*
+        if(copyOriginalNonlinearExpression)
+        {
+            reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
+        }
+        else if(destinationQuadraticTerms.size() > 0 && !useQuadraticConstraints)
+        {
+            reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)));
+        }
+        else if(destinationQuadraticTerms.size() > 0)
+        {
+            reformulatedProblem->add(std::move(std::dynamic_pointer_cast<QuadraticConstraint>(constraint)));
+        }
+        else
+        {
+            reformulatedProblem->add(std::move(std::dynamic_pointer_cast<LinearConstraint>(constraint)));
+        }*/
+
+    return (NumericConstraints({ constraint }));
 }
 
 LinearTerms TaskReformulateProblem::partitionNonlinearSum(
@@ -541,8 +668,8 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
     for(auto& T : source->children.expressions)
     {
-        if(T->getType() == E_NonlinearExpressionTypes::Product) // Might be able to reuse auxilliary variable further if
-                                                                // e.g. bilinear term
+        if(T->getType() == E_NonlinearExpressionTypes::Product) // Might be able to reuse auxilliary variable
+                                                                // further if e.g. bilinear term
         {
             auto optionalQuadraticTerm = convertProductToQuadraticTerm(std::dynamic_pointer_cast<ExpressionProduct>(T));
 
@@ -697,16 +824,16 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
             auto auxConstraint1 = std::make_shared<LinearConstraint>(auxConstraintCounter,
                 "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
-            auxConstraint1->add(std::make_shared<LinearTerm>(1.0, otherVariable));
-            auxConstraint1->add(std::make_shared<LinearTerm>(secondVariable->upperBound, binaryVariable));
             auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+            auxConstraint1->add(std::make_shared<LinearTerm>(1.0, otherVariable));
+            auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
             auxConstraintCounter++;
 
             auto auxConstraint2 = std::make_shared<LinearConstraint>(auxConstraintCounter,
-                "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, -otherVariable->lowerBound);
-            auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
-            auxConstraint2->add(std::make_shared<LinearTerm>(-secondVariable->lowerBound, binaryVariable));
+                "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
             auxConstraint2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+            auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
+            auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
             auxConstraintCounter++;
 
             reformulatedProblem->add(std::move(auxConstraint1));

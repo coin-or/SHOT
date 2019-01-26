@@ -109,6 +109,7 @@ public:
     void add(LinearConstraintPtr constraint);
     void add(QuadraticConstraintPtr constraint);
     void add(NonlinearConstraintPtr constraint);
+    void add(NumericConstraintPtr constraint);
 
     void add(ObjectiveFunctionPtr objective);
     void add(LinearObjectiveFunctionPtr objective);

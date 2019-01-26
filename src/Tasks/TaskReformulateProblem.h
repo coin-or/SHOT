@@ -39,7 +39,7 @@ private:
     bool PartitionQuadraticTermsInConstraint = false;
 
     void reformulateObjectiveFunction();
-    void reformulateConstraint(NumericConstraintPtr constraint);
+    NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
 
     NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
 
