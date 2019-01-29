@@ -186,6 +186,16 @@ public:
     }
 
     inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
+
+    inline bool isConvex()
+    {
+        if(coefficient > 0 && firstVariable == secondVariable)
+        {
+            return (true);
+        }
+
+        return (false);
+    }
 };
 
 inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)

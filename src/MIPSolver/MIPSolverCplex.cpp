@@ -675,14 +675,14 @@ bool MIPSolverCplex::repairInfeasibility()
                     numRepairs++;
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
-                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.1 * infeas[i]);
+                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.5 * infeas[i]);
                 }
                 else if(infeas[i] < 0) // Should not happen for generated cuts
                 {
                     numRepairs++;
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
-                    cplexConstrs[i].setLB(cplexConstrs[i].getLB() + 1.1 * infeas[i]);
+                    cplexConstrs[i].setLB(cplexConstrs[i].getLB() + 1.5 * infeas[i]);
                 }
             }
 

@@ -62,6 +62,9 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     std::vector<bool> hyperplaneAddedToConstraint(
         env->reformulatedProblem->properties.numberOfNumericConstraints, false);
 
+    std::vector<std::tuple<int, int, NumericConstraintValue>> selectedNumericValues;
+    std::vector<std::tuple<int, int, NumericConstraintValue>> nonconvexSelectedNumericValues;
+
     for(int i = 0; i < solPoints.size(); i++)
     {
         auto numericConstraintValues = env->reformulatedProblem->getFractionOfDeviatingNonlinearConstraints(
@@ -105,73 +108,167 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     continue;
                 }
 
-                VectorDouble externalPoint;
-                VectorDouble internalPoint;
-
-                std::vector<NumericConstraint*> currentConstraint;
-                currentConstraint.push_back(std::dynamic_pointer_cast<NumericConstraint>(NCV.constraint).get());
-
-                try
+                if(NCV.constraint->properties.curvature == E_Curvature::Nonconvex)
                 {
-                    env->timing->startTimer("DualCutGenerationRootSearch");
-                    auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
-                        solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
-                        currentConstraint);
-
-                    env->timing->stopTimer("DualCutGenerationRootSearch");
-                    internalPoint = xNewc.first;
-                    externalPoint = xNewc.second;
-                }
-                catch(std::exception& e)
-                {
-                    env->timing->stopTimer("DualCutGenerationRootSearch");
-                    externalPoint = solPoints.at(i).point;
-
-                    env->output->outputWarning(
-                        "     Cannot find solution with linesearch, using solution point instead.");
+                    nonconvexSelectedNumericValues.push_back(std::make_tuple(i, j, NCV));
+                    continue;
                 }
 
-                auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+                selectedNumericValues.push_back(std::make_tuple(i, j, NCV));
+                addedHyperplanes++;
+            }
+        }
+    }
 
-                if(externalConstraintValue.normalizedValue >= 0)
+    for(auto& values : selectedNumericValues)
+    {
+        int i = std::get<0>(values);
+        int j = std::get<1>(values);
+        auto NCV = std::get<2>(values);
+
+        VectorDouble externalPoint;
+        VectorDouble internalPoint;
+
+        std::vector<NumericConstraint*> currentConstraint;
+        currentConstraint.push_back(std::dynamic_pointer_cast<NumericConstraint>(NCV.constraint).get());
+
+        try
+        {
+            env->timing->startTimer("DualCutGenerationRootSearch");
+            auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
+                solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
+                currentConstraint);
+
+            env->timing->stopTimer("DualCutGenerationRootSearch");
+            internalPoint = xNewc.first;
+            externalPoint = xNewc.second;
+        }
+        catch(std::exception& e)
+        {
+            env->timing->stopTimer("DualCutGenerationRootSearch");
+            externalPoint = solPoints.at(i).point;
+
+            env->output->outputWarning("     Cannot find solution with linesearch, using solution point instead.");
+        }
+
+        auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+
+        if(externalConstraintValue.normalizedValue >= 0)
+        {
+            Hyperplane hyperplane;
+            hyperplane.sourceConstraint = externalConstraintValue.constraint;
+            hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
+            hyperplane.generatedPoint = externalPoint;
+
+            if(solPoints.at(i).isRelaxedPoint)
+            {
+                hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+            }
+            else if(i == 0 && currIter->isMIP())
+            {
+                hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
+            }
+            else if(currIter->isMIP())
+            {
+                hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
+            }
+            else
+            {
+                hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
+            }
+
+            env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+
+            hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
+
+            env->output->outputInfo("     Added hyperplane to waiting list with deviation: "
+                + UtilityFunctions::toString(externalConstraintValue.error));
+
+            hyperplane.generatedPoint.clear();
+        }
+        else
+        {
+            env->output->outputAlways("     Could not add hyperplane to waiting list since constraint value is "
+                + std::to_string(externalConstraintValue.normalizedValue));
+        }
+    }
+
+    if(addedHyperplanes == 0)
+    {
+        for(auto& values : nonconvexSelectedNumericValues)
+        {
+            if(addedHyperplanes > maxHyperplanesPerIter)
+                break;
+
+            int i = std::get<0>(values);
+            int j = std::get<1>(values);
+            auto NCV = std::get<2>(values);
+
+            VectorDouble externalPoint;
+            VectorDouble internalPoint;
+
+            std::vector<NumericConstraint*> currentConstraint;
+            currentConstraint.push_back(std::dynamic_pointer_cast<NumericConstraint>(NCV.constraint).get());
+
+            try
+            {
+                env->timing->startTimer("DualCutGenerationRootSearch");
+                auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
+                    solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
+                    currentConstraint);
+
+                env->timing->stopTimer("DualCutGenerationRootSearch");
+                internalPoint = xNewc.first;
+                externalPoint = xNewc.second;
+            }
+            catch(std::exception& e)
+            {
+                env->timing->stopTimer("DualCutGenerationRootSearch");
+                externalPoint = solPoints.at(i).point;
+
+                env->output->outputWarning("     Cannot find solution with linesearch, using solution point instead.");
+            }
+
+            auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+
+            if(externalConstraintValue.normalizedValue >= 0)
+            {
+                Hyperplane hyperplane;
+                hyperplane.sourceConstraint = externalConstraintValue.constraint;
+                hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
+                hyperplane.generatedPoint = externalPoint;
+
+                if(solPoints.at(i).isRelaxedPoint)
                 {
-                    Hyperplane hyperplane;
-                    hyperplane.sourceConstraint = externalConstraintValue.constraint;
-                    hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
-                    hyperplane.generatedPoint = externalPoint;
-
-                    if(solPoints.at(i).isRelaxedPoint)
-                    {
-                        hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
-                    }
-                    else if(i == 0 && currIter->isMIP())
-                    {
-                        hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
-                    }
-                    else if(currIter->isMIP())
-                    {
-                        hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
-                    }
-                    else
-                    {
-                        hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
-                    }
-
-                    env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
-                    addedHyperplanes++;
-
-                    hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
-
-                    env->output->outputInfo("     Added hyperplane to waiting list with deviation: "
-                        + UtilityFunctions::toString(externalConstraintValue.error));
-
-                    hyperplane.generatedPoint.clear();
+                    hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                }
+                else if(i == 0 && currIter->isMIP())
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
+                }
+                else if(currIter->isMIP())
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
                 }
                 else
                 {
-                    env->output->outputAlways("     Could not add hyperplane to waiting list since constraint value is "
-                        + std::to_string(externalConstraintValue.normalizedValue));
+                    hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
                 }
+
+                env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+                addedHyperplanes++;
+
+                hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
+
+                env->output->outputInfo("     Added hyperplane to waiting list with deviation: "
+                    + UtilityFunctions::toString(externalConstraintValue.error));
+
+                hyperplane.generatedPoint.clear();
+            }
+            else
+            {
+                env->output->outputAlways("     Could not add hyperplane to waiting list since constraint value is "
+                    + std::to_string(externalConstraintValue.normalizedValue));
             }
         }
     }

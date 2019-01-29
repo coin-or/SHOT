@@ -90,6 +90,11 @@ void TaskSolveIteration::run()
         env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
     }
 
+    if(env->reformulatedProblem->properties.isLPProblem || env->reformulatedProblem->properties.isMILPProblem)
+    {
+        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
+    }
+
     env->output->outputInfo("     Solving dual problem.");
     auto solStatus = env->dualSolver->MIPSolver->solveProblem();
     env->output->outputInfo("     Dual problem solved.");

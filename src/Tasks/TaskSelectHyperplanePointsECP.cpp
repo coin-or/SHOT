@@ -40,6 +40,9 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
     std::vector<bool> hyperplaneAddedToConstraint(
         env->reformulatedProblem->properties.numberOfNumericConstraints, false);
 
+    std::vector<std::tuple<int, NumericConstraintValue>> selectedNumericValues;
+    std::vector<std::tuple<int, NumericConstraintValue>> nonconvexSelectedNumericValues;
+
     for(int i = 0; i < solPoints.size(); i++)
     {
         auto numericConstraintValues = env->reformulatedProblem->getFractionOfDeviatingNonlinearConstraints(
@@ -69,6 +72,60 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
+            if(NCV.constraint->properties.curvature == E_Curvature::Nonconvex)
+            {
+                nonconvexSelectedNumericValues.push_back(std::make_tuple(i, NCV));
+                continue;
+            }
+
+            selectedNumericValues.push_back(std::make_tuple(i, NCV));
+            addedHyperplanes++;
+        }
+    }
+
+    for(auto& values : selectedNumericValues)
+    {
+        int i = std::get<0>(values);
+        auto NCV = std::get<1>(values);
+
+        Hyperplane hyperplane;
+        hyperplane.sourceConstraint = NCV.constraint;
+        hyperplane.sourceConstraintIndex = NCV.constraint->index;
+        hyperplane.generatedPoint = solPoints.at(i).point;
+
+        if(solPoints.at(i).isRelaxedPoint)
+        {
+            hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+        }
+        else if(i == 0 && currIter->isMIP())
+        {
+            hyperplane.source = E_HyperplaneSource::MIPOptimalSolutionPoint;
+        }
+        else if(currIter->isMIP())
+        {
+            hyperplane.source = E_HyperplaneSource::MIPSolutionPoolSolutionPoint;
+        }
+        else
+        {
+            hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
+        }
+
+        env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+
+        addedHyperplanes++;
+        hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
+    }
+
+    if(addedHyperplanes == 0)
+    {
+        for(auto& values : nonconvexSelectedNumericValues)
+        {
+            if(addedHyperplanes > maxHyperplanesPerIter)
+                break;
+
+            int i = std::get<0>(values);
+            auto NCV = std::get<1>(values);
+
             Hyperplane hyperplane;
             hyperplane.sourceConstraint = NCV.constraint;
             hyperplane.sourceConstraintIndex = NCV.constraint->index;
@@ -93,7 +150,6 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
 
             env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
 
-            addedHyperplanes++;
             hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
         }
     }

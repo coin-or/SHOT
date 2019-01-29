@@ -45,6 +45,9 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
     if(constraint.name != "")
         stream << ' ' << constraint.name;
 
+    if(constraint.properties.curvature == E_Curvature::Nonconvex)
+        stream << " (nonconvex)";
+
     stream << ":\t";
 
     return constraint.print(stream); // polymorphic print via reference
