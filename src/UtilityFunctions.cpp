@@ -34,12 +34,13 @@ void saveVariablePointVectorToFile(
     {
         std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size()
                   << "!=" << variables.size() << '\n';
-        return;
     }
 
     std::stringstream str;
 
-    for(int i = 0; i < point.size(); i++)
+    int number = std::min(point.size(), variables.size());
+
+    for(int i = 0; i < number; i++)
     {
         str << variables.at(i);
         str << "\t";
@@ -57,12 +58,13 @@ void saveVariablePointVectorToFile(const VectorDouble& point, const Variables& v
     {
         std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size()
                   << "!=" << variables.size() << '\n';
-        return;
     }
 
     std::stringstream str;
 
-    for(int i = 0; i < point.size(); i++)
+    int number = std::min(point.size(), variables.size());
+
+    for(int i = 0; i < number; i++)
     {
         str << variables.at(i)->name;
         str << "\t";

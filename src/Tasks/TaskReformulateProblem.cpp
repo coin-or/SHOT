@@ -1057,8 +1057,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
                         auxConstraintCounter++;
 
-                        auxConstraint->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-                        auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * i, nonDiscretizationVariable));
+                        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+                        auxConstraint->add(std::make_shared<LinearTerm>(i, nonDiscretizationVariable));
                         auxConstraint->add(std::make_shared<LinearTerm>(
                             discretizationVariable->upperBound * nonDiscretizationVariable->upperBound,
                             discretizationBinaries[i]));

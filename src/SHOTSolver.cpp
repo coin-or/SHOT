@@ -1091,7 +1091,7 @@ void SHOTSolver::verifySettings()
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
+            // env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
             env->settings->updateSetting("Linesearch.Use", "Primal", false);
             env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);

@@ -181,9 +181,18 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 startingPointIndexes.at(V->index) = V->index;
                 startingPointValues.at(V->index) = testPts.at(j).point.at(V->index);
             }
-        }
 
-        NLPSolver->setStartingPoint(startingPointIndexes, startingPointValues);
+            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            {
+                std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/primalnlp_warmstart"
+                    + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j) + ".txt";
+
+                UtilityFunctions::saveVariablePointVectorToFile(
+                    startingPointValues, env->problem->allVariables, filename);
+            }
+
+            NLPSolver->setStartingPoint(startingPointIndexes, startingPointValues);
+        }
 
         NLPSolver->fixVariables(discreteVariableIndexes, fixedVariableValues);
 
