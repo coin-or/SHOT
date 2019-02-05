@@ -97,7 +97,7 @@ public:
     double calculate(const VectorDouble& point)
     {
         double value = 0.0;
-        for(auto T : *this)
+        for(auto& T : *this)
         {
             value += T->calculate(point);
         }
@@ -108,7 +108,7 @@ public:
     Interval calculate(const IntervalVector& intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for(auto T : *this)
+        for(auto& T : *this)
         {
             value += T->calculate(intervalVector);
         }
@@ -118,7 +118,7 @@ public:
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for(auto T : *this)
+        for(auto& T : *this)
         {
             T->takeOwnership(owner);
         }
@@ -243,7 +243,7 @@ public:
     inline double calculate(const VectorDouble& point)
     {
         double value = 0.0;
-        for(auto T : (*this))
+        for(auto& T : (*this))
         {
             value += T->calculate(point);
         }
@@ -254,7 +254,7 @@ public:
     inline Interval calculate(const IntervalVector& intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for(auto T : (*this))
+        for(auto& T : (*this))
         {
             value += T->calculate(intervalVector);
         }
@@ -264,7 +264,7 @@ public:
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for(auto T : (*this))
+        for(auto& T : (*this))
         {
             T->takeOwnership(owner);
         }
@@ -389,7 +389,7 @@ public:
     inline double calculate(const VectorDouble& point)
     {
         double value = 0.0;
-        for(auto T : (*this))
+         for(auto&T : (*this))
         {
             value += T->calculate(point);
         }
@@ -400,7 +400,7 @@ public:
     inline Interval calculate(const IntervalVector& intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for(auto T : (*this))
+        for(auto& T : (*this))
         {
             value += T->calculate(intervalVector);
         }
@@ -410,7 +410,7 @@ public:
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for(auto T : (*this))
+        for(auto &T : (*this))
         {
             T->takeOwnership(owner);
         }

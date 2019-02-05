@@ -425,7 +425,7 @@ void CtCallbackI::main()
         taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
     }
 
-    for(auto hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
+    for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
     {
         this->createHyperplane(hp);
 
@@ -438,7 +438,7 @@ void CtCallbackI::main()
     {
         bool addedIntegerCut = false;
 
-        for(auto ic : env->dualSolver->MIPSolver->integerCutWaitingList)
+        for(auto& ic : env->dualSolver->MIPSolver->integerCutWaitingList)
         {
             this->createIntegerCut(ic.first, ic.second);
             addedIntegerCut = true;
@@ -469,7 +469,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     auto tmpPair = optional.value();
 
     bool hyperplaneIsOk = true;
-    for(auto E : tmpPair.first)
+    for(auto& E : tmpPair.first)
     {
         if(E.value != E.value) // Check for NaN
         {

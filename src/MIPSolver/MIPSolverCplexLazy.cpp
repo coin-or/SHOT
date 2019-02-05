@@ -352,7 +352,7 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
     bool hyperplaneIsOk = true;
 
-    for(auto E : tmpPair.first)
+    for(auto &E : tmpPair.first)
     {
         if(E.value != E.value) // Check for NaN
         {
@@ -451,7 +451,7 @@ void CplexCallback::addLazyConstraint(
             }
         }
 
-        for(auto hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
+        for(auto &hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
         {
             this->createHyperplane(hp, context);
             this->lastNumAddedHyperplanes++;

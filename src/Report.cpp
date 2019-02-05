@@ -1002,7 +1002,7 @@ void Report::outputSolutionReport()
 
     report << "\r\n";
 
-    for(auto T : env->timing->timers)
+    for(auto &T : env->timing->timers)
     {
         T.stop();
         auto elapsed = T.elapsed();

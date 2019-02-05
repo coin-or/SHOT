@@ -293,7 +293,7 @@ void GurobiCallback::callback()
             {
                 bool addedIntegerCut = false;
 
-                for(auto ic : env->dualSolver->MIPSolver->integerCutWaitingList)
+                for(auto& ic : env->dualSolver->MIPSolver->integerCutWaitingList)
                 {
                     this->createIntegerCut(ic.first, ic.second);
                     addedIntegerCut = true;
@@ -400,7 +400,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 
         bool hyperplaneIsOk = true;
 
-        for(auto E : tmpPair.first)
+        for(auto& E : tmpPair.first)
         {
             if(E.value != E.value) // Check for NaN
             {
@@ -547,7 +547,7 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
             }
         }
 
-        for(auto hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
+        for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
         {
             this->createHyperplane(hp);
             this->lastNumAddedHyperplanes++;

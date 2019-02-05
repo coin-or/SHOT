@@ -24,7 +24,7 @@ TaskSequential::~TaskSequential() {}
 
 void TaskSequential::run()
 {
-    for(auto T : m_tasks)
+    for(auto& T : m_tasks)
     {
         env->output->outputInfo("┌─── Started task:  " + T->getType());
         T->run();
@@ -34,7 +34,7 @@ void TaskSequential::run()
 
 void TaskSequential::addTasks(std::vector<TaskBase*> tasks)
 {
-    for(auto T : tasks)
+    for(auto& T : tasks)
         addTask(T);
 }
 

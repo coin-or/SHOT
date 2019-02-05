@@ -342,7 +342,7 @@ std::string Results::getOSrl()
             "The relative optimality gap", 0, NULL);
     }
 
-    for(auto T : env->timing->timers)
+    for(auto &T : env->timing->timers)
     {
         osResult->addTimingInformation(T.name, "SHOT", "second", T.description, T.elapsed());
     }

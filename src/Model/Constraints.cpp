@@ -96,7 +96,7 @@ void LinearConstraint::add(LinearTerms terms)
     }
     else
     {
-        for(auto T : terms)
+        for(auto& T : terms)
         {
             add(T);
         }
@@ -129,7 +129,7 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& poi
 {
     SparseVariableVector gradient;
 
-    for(auto T : linearTerms)
+    for(auto& T : linearTerms)
     {
         auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
         if(!element.second)
@@ -183,7 +183,7 @@ void QuadraticConstraint::add(QuadraticTerms terms)
     }
     else
     {
-        for(auto T : terms)
+        for(auto& T : terms)
         {
             add(T);
         }
@@ -217,7 +217,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
 {
     SparseVariableVector gradient = LinearConstraint::calculateGradient(point, eraseZeroes);
 
-    for(auto T : quadraticTerms)
+    for(auto& T : quadraticTerms)
     {
         if(T->firstVariable == T->secondVariable) // variable squared
         {
@@ -336,7 +336,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
 
     try
     {
-        for(auto E : symbolicSparseJacobian)
+        for(auto& E : symbolicSparseJacobian)
         {
             double value[1];
 

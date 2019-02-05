@@ -42,7 +42,7 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
 
 void PrimalSolver::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter)
 {
-    for(auto PT : pts)
+    for(auto& PT : pts)
     {
         addPrimalSolutionCandidate(PT, source, iter);
     }
@@ -64,9 +64,9 @@ void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolution
 
 void PrimalSolver::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source)
 {
-    for(auto pt : pts)
+    for(auto& PT : pts)
     {
-        addPrimalSolutionCandidate(pt, source);
+        addPrimalSolutionCandidate(PT, source);
     }
 }
 
@@ -74,7 +74,7 @@ void PrimalSolver::checkPrimalSolutionCandidates()
 {
     env->timing->startTimer("PrimalStrategy");
 
-    for(auto cand : env->primalSolver->primalSolutionCandidates)
+    for(auto& cand : env->primalSolver->primalSolutionCandidates)
     {
         this->checkPrimalSolutionPoint(cand);
     }

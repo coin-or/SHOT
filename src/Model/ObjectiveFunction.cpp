@@ -51,7 +51,7 @@ void LinearObjectiveFunction::add(LinearTerms terms)
     }
     else
     {
-        for(auto T : terms)
+        for(auto& T : terms)
         {
             add(T);
         }
@@ -98,7 +98,7 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
 {
     SparseVariableVector gradient;
 
-    for(auto T : linearTerms)
+    for(auto& T : linearTerms)
     {
         auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
         if(!element.second)
@@ -146,7 +146,7 @@ void QuadraticObjectiveFunction::add(QuadraticTerms terms)
     }
     else
     {
-        for(auto T : terms)
+        for(auto& T : terms)
         {
             add(T);
         }
@@ -220,7 +220,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
 {
     SparseVariableVector gradient = LinearObjectiveFunction::calculateGradient(point, eraseZeroes);
 
-    for(auto T : quadraticTerms)
+    for(auto& T : quadraticTerms)
     {
         if(T->firstVariable == T->secondVariable) // variable squared
         {
@@ -338,7 +338,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 {
     SparseVariableVector gradient = QuadraticObjectiveFunction::calculateGradient(point, eraseZeroes);
 
-    for(auto E : symbolicSparseJacobian)
+    for(auto& E : symbolicSparseJacobian)
     {
         double value[1];
 

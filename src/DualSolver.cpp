@@ -35,7 +35,7 @@ void DualSolver::checkDualSolutionCandidates()
     double gapRelTolerance = env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination");
     double gapAbsTolerance = env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination");
 
-    for(auto C : this->dualSolutionCandidates)
+    for(auto& C : this->dualSolutionCandidates)
     {
         bool updateDual = false;
 

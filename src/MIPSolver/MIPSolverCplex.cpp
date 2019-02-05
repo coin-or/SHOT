@@ -1250,7 +1250,7 @@ void MIPSolverCplex::createHyperplane(
     // auto tmpPair = createHyperplaneTerms(hyperplane);
     bool hyperplaneIsOk = true;
 
-    for(auto E : tmpPair.first)
+    for(auto &E : tmpPair.first)
     {
         if(E.value != E.value) // Check for NaN
         {

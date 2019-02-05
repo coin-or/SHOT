@@ -32,7 +32,7 @@ void Test::setActiveConstraints(const std::vector<NumericConstraint*>& constrain
 {
     clearActiveConstraints();
 
-    for(auto C : constraints)
+    for(auto& C : constraints)
         addActiveConstraint(C);
 }
 
@@ -94,7 +94,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
     std::vector<NumericConstraint*> tmpConstraints;
     tmpConstraints.reserve(size(constraints));
 
-    for(auto C : env->reformulatedProblem->nonlinearConstraints)
+    for(auto& C : env->reformulatedProblem->nonlinearConstraints)
     {
         tmpConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(C).get());
     }

@@ -741,7 +741,7 @@ public:
     {
         double value = 0.0;
 
-        for(auto C : children.expressions)
+        for(auto& C : children.expressions)
         {
             value += C->calculate(point);
         }
@@ -753,7 +753,7 @@ public:
     {
         Interval tmpInterval(0.);
 
-        for(auto C : children.expressions)
+        for(auto& C : children.expressions)
         {
             tmpInterval += C->calculate(intervalVector);
         }
@@ -765,7 +765,7 @@ public:
     {
         FactorableFunction funct;
 
-        for(auto C : children.expressions)
+        for(auto& C : children.expressions)
         {
             funct += C->getFactorableFunction();
         }
@@ -807,7 +807,7 @@ public:
     {
         double value = 1.0;
 
-        for(auto C : children.expressions)
+        for(auto& C : children.expressions)
         {
             double tmpValue = C->calculate(point);
 
@@ -824,7 +824,7 @@ public:
     {
         Interval tmpInterval(1., 1.);
 
-        for(auto C : children.expressions)
+        for(auto& C : children.expressions)
         {
             tmpInterval = tmpInterval * C->calculate(intervalVector);
         }

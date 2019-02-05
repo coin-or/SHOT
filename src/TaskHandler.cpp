@@ -22,7 +22,7 @@ TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 
 TaskHandler::~TaskHandler()
 {
-    for(auto task : allTasks)
+    for(auto &task : allTasks)
     {
         delete task;
     }
