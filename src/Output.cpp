@@ -21,7 +21,7 @@ Output::Output()
     osOutput->AddChannel("stdout");
 }
 
-Output::~Output() { outputAlways("output deleted"); }
+Output::~Output() {}
 
 void Output::outputAlways(std::string message)
 {

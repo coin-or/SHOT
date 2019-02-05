@@ -8,15 +8,15 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include "Shared.h"
+#include "SHOTSettings.h"
 #include "SHOTSolver.h"
-#include "UtilityFunctions.h"
 
 using namespace SHOT;
 
-bool SHOTSolverReadProblem(std::string filename);
-bool SHOTSolverTestOptions(bool useOSiL);
+bool SettingsTestOptions(bool useOSiL);
 
-int SHOTSolverTest(int argc, char* argv[])
+int SettingsTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
 
@@ -36,23 +36,13 @@ int SHOTSolverTest(int argc, char* argv[])
     switch(choice)
     {
     case 1:
-        std::cout << "Starting test to read OSiL files:" << std::endl;
-        passed = SHOTSolverReadProblem("data/tls2.osil");
-        std::cout << "Finished test to read OSiL files." << std::endl;
-        break;
-    case 2:
-        std::cout << "Starting test to read Ampl nl files:" << std::endl;
-        passed = SHOTSolverReadProblem("data/tls2.nl");
-        std::cout << "Finished test to read Ampl nl files." << std::endl;
-        break;
-    case 3:
         std::cout << "Starting test to read and write OSoL files:" << std::endl;
-        passed = SHOTSolverTestOptions(true);
+        passed = SettingsTestOptions(true);
         std::cout << "Finished test to read and write OSoL files." << std::endl;
         break;
-    case 4:
+    case 2:
         std::cout << "Starting test to read and write opt files:" << std::endl;
-        passed = SHOTSolverTestOptions(false);
+        passed = SettingsTestOptions(false);
         std::cout << "Finished test to read and write opt files." << std::endl;
         break;
     default:
@@ -67,50 +57,12 @@ int SHOTSolverTest(int argc, char* argv[])
         return -1;
 }
 
-// Test the reading a problem
-bool SHOTSolverReadProblem(std::string filename)
-{
-    bool passed = true;
-
-    EnvironmentPtr env(new Environment);
-    env->output = OutputPtr(new Output());
-    env->results = ResultsPtr(new Results(env));
-    env->settings = SettingsPtr(new Settings(env->output));
-    env->tasks = TaskHandlerPtr(new TaskHandler(env));
-    env->report = ReportPtr(new Report(env));
-    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
-
-    try
-    {
-        if(solver->setProblem(filename))
-        {
-            passed = true;
-        }
-        else
-        {
-            passed = false;
-        }
-    }
-    catch(ErrorClass& e)
-    {
-        std::cout << "Error: " << e.errormsg << std::endl;
-        return false;
-    }
-
-    return passed;
-}
-
 // Test the writing and reading of options files
-bool SHOTSolverTestOptions(bool useOSiL)
+bool SettingsTestOptions(bool useOSiL)
 {
     bool passed = true;
-    EnvironmentPtr env(new Environment);
-    env->output = OutputPtr(new Output());
-    env->results = ProcessPtr(new ProcessInfo(env));
-    env->settings = SettingsPtr(new Settings(env->output));
-    env->tasks = TaskHandlerPtr(new TaskHandler(env));
-    env->report = ReportPtr(new Report(env));
-    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+
+    std::unique_ptr<SHOTSolver> solver = std::make_unique<SHOTSolver>();
 
     std::string filename;
 

@@ -9,11 +9,11 @@
 */
 
 #include "SHOTSolver.h"
-#include "ModelingSystemGAMS.h"
+#include "ModelingSystemOS.h"
 
 using namespace SHOT;
 
-bool ReadProblemGAMS(std::string filename)
+bool ReadProblemOS(std::string filename)
 {
     bool passed = true;
 
@@ -40,7 +40,7 @@ bool ReadProblemGAMS(std::string filename)
     return passed;
 }
 
-bool SolveProblemGAMS(std::string filename)
+bool SolveProblemOS(std::string filename)
 {
     bool passed = true;
 
@@ -91,7 +91,7 @@ bool SolveProblemGAMS(std::string filename)
     return passed;
 }
 
-bool TestRootsearchGAMS(const std::string& problemFile)
+bool TestRootsearchOS(const std::string& problemFile)
 {
     bool passed = true;
 
@@ -100,13 +100,13 @@ bool TestRootsearchGAMS(const std::string& problemFile)
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
 
-    env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+    env->modelingSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
     std::cout << "Reading problem:  " << problemFile << '\n';
 
-    if(std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem)
-            ->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
+    if(std::dynamic_pointer_cast<ModelingSystemOS>(env->modelingSystem)
+            ->createProblem(problem, problemFile, E_OSInputFileFormat::OSiL)
         != E_ProblemCreationStatus::NormalCompletion)
     {
         std::cout << "Error while reading problem";
@@ -177,7 +177,7 @@ bool TestRootsearchGAMS(const std::string& problemFile)
     return passed;
 }
 
-bool TestGradientGAMS(const std::string& problemFile)
+bool TestGradientOS(const std::string& problemFile)
 {
     bool passed = true;
 
@@ -186,13 +186,13 @@ bool TestGradientGAMS(const std::string& problemFile)
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
 
-    env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+    env->modelingSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
     std::cout << "Reading problem: " << problemFile << '\n';
 
-    if(std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem)
-            ->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
+    if(std::dynamic_pointer_cast<ModelingSystemOS>(env->modelingSystem)
+            ->createProblem(problem, problemFile, E_OSInputFileFormat::OSiL)
         != E_ProblemCreationStatus::NormalCompletion)
     {
         std::cout << "Error while reading problem";
@@ -233,7 +233,7 @@ bool TestGradientGAMS(const std::string& problemFile)
     return passed;
 }
 
-bool TestReformulateProblemGAMS(const std::string& problemFile)
+bool TestReformulateProblemOS(const std::string& problemFile)
 {
     bool passed = true;
 
@@ -242,13 +242,13 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
 
-    env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+    env->modelingSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
     std::cout << "Reading problem: " << problemFile << '\n';
 
-    if(std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem)
-            ->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
+    if(std::dynamic_pointer_cast<ModelingSystemOS>(env->modelingSystem)
+            ->createProblem(problem, problemFile, E_OSInputFileFormat::OSiL)
         != E_ProblemCreationStatus::NormalCompletion)
     {
         std::cout << "Error while reading problem";
@@ -270,7 +270,7 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
     return passed;
 }
 
-int GAMSTest(int argc, char* argv[])
+int OSTest(int argc, char* argv[])
 {
     osoutput->AddChannel("shotlogfile");
 
@@ -292,22 +292,23 @@ int GAMSTest(int argc, char* argv[])
     switch(choice)
     {
     case 1:
-        std::cout << "Starting test to read GAMS files:" << std::endl;
-        passed = ReadProblemGAMS("data/tls2.gms");
-        std::cout << "Finished test to read GAMS files." << std::endl;
+        std::cout << "Starting test to read OSiL files:" << std::endl;
+        passed = ReadProblemOS("data/tls2.osil");
+        std::cout << "Finished test to read OSiL files." << std::endl;
     case 2:
-        std::cout << "Starting test to solve a MINLP problem in GAMS syntax:" << std::endl;
-        passed = SolveProblemGAMS("data/tls2.gms");
-        std::cout << "Finished test to solve a MINLP problem in GAMS syntax." << std::endl;
-        break;
+        std::cout << "Starting test to read NL files:" << std::endl;
+        passed = ReadProblemOS("data/tls2.nl");
+        std::cout << "Finished test to read NL files." << std::endl;
     case 3:
-        passed = TestRootsearchGAMS("data/shot_ex_jogo.gms");
+        std::cout << "Starting test to solve a MINLP problem in OSiL syntax:" << std::endl;
+        passed = SolveProblemOS("data/tls2.osil");
+        std::cout << "Finished test to solve a MINLP problem in OSiL syntax." << std::endl;
         break;
     case 4:
-        passed = TestGradientGAMS("data/flay02h.gms");
+        passed = TestGradientOS("data/flay02h.osil");
         break;
     case 5:
-        passed = TestReformulateProblemGAMS("data/synthes1.gms");
+        passed = TestReformulateProblemOS("data/synthes1.osil");
         break;
     default:
         passed = false;

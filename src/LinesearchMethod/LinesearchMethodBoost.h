@@ -79,10 +79,10 @@ public:
     virtual ~LinesearchMethodBoost();
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearConstraints constraints);
+        double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate);
 
     std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints);
+        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate);
 
     virtual std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
         double lambdaTol, double constrTol, const NonlinearObjectiveFunction* objectiveFunction);

@@ -18,7 +18,7 @@ ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envP
     std::shared_ptr<OSiLWriter> osilWriter();
 }
 
-ModelingSystemOS::~ModelingSystemOS() { osilReaders.clear(); }
+ModelingSystemOS::~ModelingSystemOS() {}
 
 void ModelingSystemOS::augmentSettings(SettingsPtr settings) {}
 

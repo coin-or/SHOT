@@ -24,11 +24,11 @@ public:
     //                                                       int Nmax, double lambdaTol, double constrTol) = 0;
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints)
+        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate)
         = 0;
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearConstraints constraints)
+        double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate)
         = 0;
 
     virtual std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,

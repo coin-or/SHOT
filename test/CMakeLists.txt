@@ -3,12 +3,11 @@ set(TEST_EXE_NAME test_runner)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
-
 # The main groups of tests, there should be a file matching the name +"test".cpp in the test directory
-set (cpptests Model SHOTSolver ${cplex_tests} ${gurobi_tests} ${gams_tests})
+set (cpptests Model Settings)
 
-set (Model_parts 1 2 3 4 5 6 7 8 9 10 11 12)    # The different parts of each test (if any)
-set (SHOTSolver_parts 1 2 3)    # The different parts of each test (if any)
+set (Model_parts 1 2 3 4 5 6)    # The different parts of each test (if any)
+set (Settings_parts 1 2)   
 
 if(HAS_CPLEX)
     set(Cplex_parts 1)
@@ -20,7 +19,13 @@ if(HAS_GUROBI)
 endif()
 
 if(HAS_GAMS)
+    set(GAMS_parts 1 2 3 4 5)
     set(cpptests ${cpptests} GAMS)
+endif()
+
+if(HAS_OS)
+    set(OS_parts 1 2 3 4 5)
+    set(cpptests ${cpptests} OS)
 endif()
 
 # Adds a "1" to tests without parts
@@ -74,6 +79,7 @@ if (HAS_GAMS)
   target_link_libraries (${TEST_EXE_NAME} ${GAMS_DIR}/libstdc++.so.6)
 endif (HAS_GAMS)
 
+if (HAS_OS)
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinasl.so )
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinmumps.so )
 #target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libcoinmetis.so )
@@ -87,6 +93,7 @@ target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libCgl.so )
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libCbc.so )
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libCbcSolver.so )
 target_link_libraries (${TEST_EXE_NAME} ${COINOS_DIR}/lib/libOS.so )
+endif (HAS_OS)
 
 target_link_libraries(${TEST_EXE_NAME} ${Boost_LIBRARIES})
 

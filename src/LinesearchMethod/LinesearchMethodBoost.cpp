@@ -88,7 +88,8 @@ LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr
 LinesearchMethodBoost::~LinesearchMethodBoost() { activeConstraints.clear(); }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
-    int Nmax, double lambdaTol, double constrTol, const NonlinearConstraints constraints)
+    int Nmax, double lambdaTol, double constrTol, const NonlinearConstraints constraints,
+    bool addPrimalCandidate = true)
 {
     std::vector<NumericConstraint*> tmpConstraints;
     tmpConstraints.reserve(size(constraints));
@@ -98,13 +99,13 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
         tmpConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(C).get());
     }
 
-    return (LinesearchMethodBoost::findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpConstraints));
+    return (LinesearchMethodBoost::findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpConstraints, addPrimalCandidate));
 }
 
 std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
-    int Nmax, double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints)
+    int Nmax, double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints,
+    bool addPrimalCandidate = true)
 {
-
     if(ptA.size() != ptB.size())
     {
         env->output->outputError("     Line search error: sizes of points vary: " + std::to_string(ptA.size())
@@ -195,16 +196,22 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
 
     if(!validNewPt) // ptNew Outside feasible region
     {
-        env->primalSolver->addPrimalSolutionCandidate(
-            ptNew2, E_PrimalSolutionSource::Linesearch, env->results->getCurrentIteration()->iterationNumber);
+        if(addPrimalCandidate)
+        {
+            env->primalSolver->addPrimalSolutionCandidate(
+                ptNew2, E_PrimalSolutionSource::Linesearch, env->results->getCurrentIteration()->iterationNumber);
+        }
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew2, ptNew);
         return (tmpPair);
     }
     else
     {
-        env->primalSolver->addPrimalSolutionCandidate(
-            ptNew, E_PrimalSolutionSource::Linesearch, env->results->getCurrentIteration()->iterationNumber);
+        if(addPrimalCandidate)
+        {
+            env->primalSolver->addPrimalSolutionCandidate(
+                ptNew, E_PrimalSolutionSource::Linesearch, env->results->getCurrentIteration()->iterationNumber);
+        }
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew, ptNew2);
         return (tmpPair);

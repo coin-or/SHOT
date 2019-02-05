@@ -10,8 +10,13 @@
 
 #include "SHOTSolver.h"
 
-#include "ModelingSystem/ModelingSystemOS.h"
+#ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
+#endif
+
+#ifdef HAS_OS
+#include "ModelingSystem/ModelingSystemOS.h"
+#endif
 
 #include "LinesearchMethod/LinesearchMethodBoost.h"
 
@@ -25,13 +30,11 @@ bool ModelTestNonlinearExpressions();
 bool ModelTestObjective();
 bool ModelTestConstraints();
 bool ModelTestCreateProblem();
-bool ModelTestReadOSiLProblem(const std::string& problemFile);
-bool ModelTestReadNLProblem(const std::string& problemFile);
-bool ModelTestReadGAMSProblem(const std::string& problemFile);
-bool ModelTestModelingSystemOS();
-bool ModelTestRootsearch(const std::string& problemFile);
-bool ModelTestGradient(const std::string& problemFile);
-bool ModelTestReformulateProblem(const std::string& problemFile);
+
+bool TestReadProblem(const std::string& problemFile);
+bool TestRootsearch(const std::string& problemFile);
+bool TestGradient(const std::string& problemFile);
+bool TestReformulateProblem(const std::string& problemFile);
 
 int ModelTest(int argc, char* argv[])
 {
@@ -70,24 +73,21 @@ int ModelTest(int argc, char* argv[])
     case 6:
         passed = ModelTestCreateProblem();
         break;
-    case 7:
+    /*case 7:
         passed = ModelTestReadOSiLProblem("data/tls2.osil");
         break;
     case 8:
         passed = ModelTestReadNLProblem("data/tls2.nl");
         break;
     case 9:
-        passed = ModelTestReadGAMSProblem("data/fo7.gms");
-        break;
-    case 10:
         passed = ModelTestRootsearch("data/shot_ex_jogo.gms");
         break;
-    case 11:
+    case 10:
         passed = ModelTestGradient("data/flay02h.gms");
         break;
-    case 12:
+    case 11:
         passed = ModelTestReformulateProblem("data/synthes1.gms");
-        break;
+        break;*/
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";
@@ -474,16 +474,16 @@ bool ModelTestCreateProblem()
     std::cout << "Nonlinear constraint " << nonlinearConstraint << " created\n";
 
     SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(40.0);
-    SHOT::NonlinearExpressionPtr exprDivide
-        = std::make_shared<SHOT::ExpressionDivide>(exprConstant2, expressionVariable_x);
-    SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionMinus>(exprDivide, expressionVariable_y);
+    SHOT::NonlinearExpressionPtr exprTimes
+        = std::make_shared<SHOT::ExpressionTimes>(exprConstant2, expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionMinus>(exprTimes, expressionVariable_y);
 
-    SHOT::NonlinearConstraintPtr nonlinearConstraintDivide
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2
         = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);
-    problem->add(nonlinearConstraintDivide);
+    problem->add(nonlinearConstraint2);
 
     std::cout << '\n';
-    std::cout << "Nonlinear constraint " << nonlinearConstraintDivide << " created\n";
+    std::cout << "Nonlinear constraint " << nonlinearConstraint2 << " created\n";
 
     std::cout << '\n';
     std::cout << "Finalizing problem:\n";
@@ -503,7 +503,7 @@ bool ModelTestCreateProblem()
     point.push_back(1.0);
 
     std::cout << "Calculating gradient for function in linear constraint:\n";
-    auto gradientLinear = linearConstraint->calculateGradient(point);
+    auto gradientLinear = linearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientLinear)
     {
@@ -511,7 +511,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in quadratic constraint:\n";
-    auto gradientQuadratic = quadraticConstraint->calculateGradient(point);
+    auto gradientQuadratic = quadraticConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientQuadratic)
     {
@@ -519,7 +519,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
-    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point);
+    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear)
     {
@@ -527,7 +527,7 @@ bool ModelTestCreateProblem()
     }
 
     std::cout << "\nCalculating gradient for function in second nonlinear constraint:\n";
-    auto gradientNonlinear2 = nonlinearConstraintDivide->calculateGradient(point);
+    auto gradientNonlinear2 = nonlinearConstraint2->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear2)
     {
@@ -590,8 +590,8 @@ bool ModelTestCreateProblem()
     }
     else
     {
-        double error = mostDevConstraint.get().error;
-        auto name = mostDevConstraint.get().constraint->name;
+        double error = mostDevConstraint.value().error;
+        auto name = mostDevConstraint.value().constraint->name;
         std::cout << "The most deviating constraint in the point (x,y) = (" << point.at(0) << ',' << point.at(1)
                   << ") is " << name << " with error " << error << "\n";
 
@@ -617,9 +617,11 @@ bool ModelTestCreateProblem()
 
     std::cout << '\n';
 
-    std::cout << "Testing to get the most deviating constraint value in a valid point:\n";
+    std::cout << "Testing to get the most deviating constraint value in a valid point (x,y) = (" << point.at(0) << ','
+              << point.at(1) << "):\n";
 
     auto mostDevConstraint2 = problem->getMostDeviatingNumericConstraint(point);
+
     if(!mostDevConstraint2)
     {
         std::cout << "Constraint not found, everything ok\n";
@@ -630,272 +632,6 @@ bool ModelTestCreateProblem()
         std::cout << "Constraint found, something went wrong\n";
         passed = false;
     }
-
-    return passed;
-}
-
-bool ModelTestReadOSiLProblem(const std::string& problemFile)
-{
-    bool passed = true;
-
-    {
-        auto solver = std::make_unique<SHOT::SHOTSolver>();
-        auto env = solver->getEnvironment();
-
-        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
-
-        auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
-        SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-        std::cout << "Testing to read problem in OSiL format: " << problemFile << '\n';
-
-        if(modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::OSiL)
-            != E_ProblemCreationStatus::NormalCompletion)
-        {
-            std::cout << "Error while reading problem";
-            passed = false;
-        }
-        else
-        {
-            std::cout << "Problem read successfully:\n\n";
-            std::cout << problem << "\n\n";
-            std::cout << problem->factorableFunctionsDAG << '\n';
-        }
-    }
-
-    return passed;
-}
-
-bool ModelTestReadNLProblem(const std::string& problemFile)
-{
-    bool passed = true;
-
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
-    auto env = solver->getEnvironment();
-
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary));
-
-    auto modelSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
-    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-    std::cout << "Testing to read problem in nl format: " << problemFile << '\n';
-
-    if(modelSystem->createProblem(problem, problemFile, E_OSInputFileFormat::Ampl)
-        != E_ProblemCreationStatus::NormalCompletion)
-    {
-        std::cout << "Error while reading problem";
-        passed = false;
-    }
-    else
-    {
-        std::cout << "Problem read successfully:\n\n";
-        std::cout << problem << "\n\n";
-        std::cout << problem->factorableFunctionsDAG << '\n';
-    }
-
-    return passed;
-}
-
-bool ModelTestReadGAMSProblem(const std::string& problemFile)
-{
-    bool passed = true;
-
-    {
-        auto solver = std::make_unique<SHOT::SHOTSolver>();
-        auto env = solver->getEnvironment();
-
-        solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
-
-        auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
-        SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-        std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
-
-        if(modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
-            != E_ProblemCreationStatus::NormalCompletion)
-        {
-            std::cout << "Error while reading problem";
-            passed = false;
-        }
-        else
-        {
-            std::cout << "Problem read successfully:\n\n";
-            std::cout << problem << "\n\n";
-            std::cout << problem->factorableFunctionsDAG << '\n';
-        }
-    }
-
-    return passed;
-}
-
-bool ModelTestRootsearch(const std::string& problemFile)
-{
-    bool passed = true;
-
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
-    auto env = solver->getEnvironment();
-
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
-
-    auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
-    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-    std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
-
-    if(modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
-        != E_ProblemCreationStatus::NormalCompletion)
-    {
-        std::cout << "Error while reading problem";
-        passed = false;
-    }
-    else
-    {
-        std::cout << "Problem read successfully:\n\n";
-        std::cout << problem << "\n\n";
-        // std::cout << problem->factorableFunctionsDAG << '\n';
-    }
-
-    VectorDouble interiorPoint;
-    interiorPoint.push_back(7.44902);
-    interiorPoint.push_back(8.53506);
-
-    VectorDouble exteriorPoint;
-    exteriorPoint.push_back(20.0);
-    exteriorPoint.push_back(20.0);
-
-    std::cout << "Interior point:\n";
-    UtilityFunctions::displayVector(interiorPoint);
-
-    std::cout << "Exterior point:\n";
-    UtilityFunctions::displayVector(exteriorPoint);
-
-    auto rootsearch = std::make_unique<LinesearchMethodBoost>(env);
-
-    auto root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, problem->nonlinearConstraints);
-
-    std::cout << "Root found:\n";
-    UtilityFunctions::displayVector(root.first, root.second);
-
-    exteriorPoint.clear();
-    exteriorPoint.push_back(8.47199);
-    exteriorPoint.push_back(20.0);
-
-    std::cout << "Interior point:\n";
-    UtilityFunctions::displayVector(interiorPoint);
-
-    std::cout << "Exterior point:\n";
-    UtilityFunctions::displayVector(exteriorPoint);
-
-    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, problem->nonlinearConstraints);
-
-    std::cout << "Root found:\n";
-    UtilityFunctions::displayVector(root.first, root.second);
-
-    exteriorPoint.clear();
-    exteriorPoint.push_back(1.0);
-    exteriorPoint.push_back(10.0);
-
-    std::cout << "Interior point:\n";
-    UtilityFunctions::displayVector(interiorPoint);
-
-    std::cout << "Exterior point:\n";
-    UtilityFunctions::displayVector(exteriorPoint);
-
-    root = rootsearch->findZero(interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, problem->nonlinearConstraints);
-
-    std::cout << "Root found:\n";
-    UtilityFunctions::displayVector(root.first, root.second);
-
-    return passed;
-}
-
-bool ModelTestGradient(const std::string& problemFile)
-{
-    bool passed = true;
-
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
-    auto env = solver->getEnvironment();
-
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
-
-    auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
-    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-    std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
-
-    if(modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
-        != E_ProblemCreationStatus::NormalCompletion)
-    {
-        std::cout << "Error while reading problem";
-        passed = false;
-    }
-    else
-    {
-        std::cout << "Problem read successfully:\n\n";
-        std::cout << problem << "\n\n";
-        std::cout << problem->factorableFunctionsDAG << '\n';
-    }
-
-    VectorDouble point;
-
-    for(auto& V : problem->allVariables)
-    {
-        point.push_back((V->upperBound - V->lowerBound) / 2.0);
-    }
-
-    std::cout << "Point to evaluate gradients in:\n";
-    UtilityFunctions::displayVector(point);
-
-    for(auto& C : problem->numericConstraints)
-    {
-
-        std::cout << "\nCalculating gradient for constraint:\t" << C << ":\n";
-
-        auto gradient = C->calculateGradient(point);
-
-        for(auto const& G : gradient)
-        {
-            std::cout << G.first->name << ":  " << G.second << '\n';
-        }
-
-        std::cout << '\n';
-    }
-
-    return passed;
-}
-
-bool ModelTestReformulateProblem(const std::string& problemFile)
-{
-    bool passed = true;
-
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
-    auto env = solver->getEnvironment();
-
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
-
-    auto modelSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
-    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-    std::cout << "Testing to read problem in GAMS format: " << problemFile << '\n';
-
-    if(modelSystem->createProblem(problem, problemFile, E_GAMSInputSource::ProblemFile)
-        != E_ProblemCreationStatus::NormalCompletion)
-    {
-        std::cout << "Error while reading problem";
-        passed = false;
-    }
-    else
-    {
-        std::cout << "Problem read successfully:\n\n";
-        std::cout << problem << "\n\n";
-    }
-
-    env->problem = problem;
-    auto taskReformulate = std::make_unique<TaskReformulateProblem>(env);
-
-    taskReformulate->run();
-
-    std::cout << env->reformulatedProblem << std::endl;
 
     return passed;
 }

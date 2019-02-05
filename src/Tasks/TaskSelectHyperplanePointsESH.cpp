@@ -137,7 +137,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             env->timing->startTimer("DualCutGenerationRootSearch");
             auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
                 solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
-                currentConstraint);
+                currentConstraint, true);
 
             env->timing->stopTimer("DualCutGenerationRootSearch");
             internalPoint = xNewc.first;
@@ -215,7 +215,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 env->timing->startTimer("DualCutGenerationRootSearch");
                 auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
                     solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
-                    currentConstraint);
+                    currentConstraint, true);
 
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 internalPoint = xNewc.first;

@@ -169,7 +169,7 @@ void TaskSolveFixedDualProblem::run()
                         env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
                         env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
                         env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
-                        env->reformulatedProblem->nonlinearConstraints);
+                        env->reformulatedProblem->nonlinearConstraints, true);
 
                     env->timing->stopTimer("DualCutGenerationRootSearch");
                     internalPoint = xNewc.first;
