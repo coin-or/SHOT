@@ -87,6 +87,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
