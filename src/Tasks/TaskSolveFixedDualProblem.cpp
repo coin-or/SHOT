@@ -144,8 +144,8 @@ void TaskSolveFixedDualProblem::run()
 
             env->report->outputIterationDetail(totalIters, tmpType.str(), env->timing->getElapsedTime("Total"), 1,
                 currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), NAN, NAN, NAN,
-                E_IterationLineType::DualIntegerFixed);
+                env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), NAN, SHOT_INT_MAX,
+                NAN, E_IterationLineType::DualIntegerFixed);
 
             break;
         }
