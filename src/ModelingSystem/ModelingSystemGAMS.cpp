@@ -118,6 +118,17 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         return (E_ProblemCreationStatus::Error);
     }
 
+    return createProblem(problem, modelingObject);
+}
+
+E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
+    ProblemPtr& problem, gmoHandle_t gmo)
+{
+    assert(gmo != NULL);
+
+    modelingObject = gmo;
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
+
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(modelingObject, 1);
     gmoObjStyleSet(modelingObject, gmoObjType_Fun);
