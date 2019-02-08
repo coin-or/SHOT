@@ -55,6 +55,7 @@ public:
     bool setOptions(OSOption* osOptions);
 
     bool setProblem(std::string fileName);
+    bool setProblem(ProblemPtr problem, ModelingSystemPtr modelingSystem);
 
     bool selectStrategy();
 
