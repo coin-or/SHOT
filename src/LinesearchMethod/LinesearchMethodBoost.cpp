@@ -176,12 +176,12 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
     int resFVals = env->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
     if(max_iter == Nmax)
     {
-        env->output->outputWarning(
+        env->output->outputDebug(
             "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
     }
     else
     {
-        env->output->outputInfo("     Line search iterations: " + std::to_string(max_iter)
+        env->output->outputTrace("     Line search iterations: " + std::to_string(max_iter)
             + ". Function evaluations: " + std::to_string(resFVals));
     }
 
@@ -251,12 +251,12 @@ std::pair<double, double> LinesearchMethodBoost::findZero(const VectorDouble& pt
     int resFVals = env->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
     if(max_iter == Nmax)
     {
-        env->output->outputWarning(
+        env->output->outputDebug(
             "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
     }
     else
     {
-        env->output->outputInfo("     Line search iterations: " + std::to_string(max_iter)
+        env->output->outputTrace("     Line search iterations: " + std::to_string(max_iter)
             + ". Function evaluations: " + std::to_string(resFVals));
     }
 

@@ -61,16 +61,16 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
                  env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
 
 
-                 env->output->outputInfo(
+                 env->output->outputDebug(
                  "Time limit set to "
                  + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
                  + " by GAMS");
-                 env->output->outputInfo(
+                 env->output->outputDebug(
                  "Absolute termination tolerance set to "
                  + UtilityFunctions::toString(
                  env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
                  + " by GAMS");
-                 env->output->outputInfo(
+                 env->output->outputDebug(
                  "Relative termination tolerance set to "
                  + UtilityFunctions::toString(
                  env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
@@ -537,7 +537,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
 
             default:
-                env->output->outputDebug("Constraint index" + std::to_string(i) + "is of unknown type.");
+                env->output->outputError("Constraint index" + std::to_string(i) + "is of unknown type.");
                 return (false);
             }
 
@@ -567,7 +567,7 @@ bool ModelingSystemGAMS::copyConstraints(ProblemPtr destination)
                 break;
             }
             default:
-                env->output->outputDebug("Constraint index" + std::to_string(i) + "is of unknown type.");
+                env->output->outputError("Constraint index" + std::to_string(i) + "is of unknown type.");
                 return (false);
             }
         }

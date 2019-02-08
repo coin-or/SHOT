@@ -35,7 +35,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = env->results->primalSolutions.at(0).point;
         tmpIP->maxDevatingConstraint = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
 
-        env->output->outputInfo("     Interior point replaced with primal solution point since no interior point was "
+        env->output->outputDebug("     Interior point replaced with primal solution point since no interior point was "
                                 "previously available.");
 
         env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
@@ -56,7 +56,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputInfo("     Interior point replaced with primal solution point due to constraint deviation.");
+        env->output->outputDebug("     Interior point replaced with primal solution point due to constraint deviation.");
 
         env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
@@ -69,7 +69,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputInfo("     Primal solution point used as additional interior point.");
+        env->output->outputDebug("     Primal solution point used as additional interior point.");
 
         if(env->dualSolver->MIPSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
@@ -90,7 +90,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputInfo("     Interior point replaced with primal solution point.");
+        env->output->outputDebug("     Interior point replaced with primal solution point.");
 
         env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
@@ -113,7 +113,7 @@ void TaskUpdateInteriorPoint::run()
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
         tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        env->output->outputInfo("     Interior point replaced with primal solution point.");
+        env->output->outputDebug("     Interior point replaced with primal solution point.");
 
         env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }

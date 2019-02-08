@@ -72,7 +72,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(numericConstraintValues.size() == 0)
         {
-            env->output->outputInfo("     All nonlinear constraints fulfilled, so no constraint cuts added.");
+            env->output->outputInfo("        All nonlinear constraints fulfilled, so no constraint cuts added.");
             return;
         }
 
@@ -148,7 +148,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             env->timing->stopTimer("DualCutGenerationRootSearch");
             externalPoint = solPoints.at(i).point;
 
-            env->output->outputWarning("     Cannot find solution with linesearch, using solution point instead.");
+            env->output->outputInfo("     Cannot find solution with linesearch, using solution point instead.");
         }
 
         auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
@@ -181,14 +181,14 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
             hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
 
-            env->output->outputInfo("     Added hyperplane to waiting list with deviation: "
+            env->output->outputDebug("     Added hyperplane to waiting list with deviation: "
                 + UtilityFunctions::toString(externalConstraintValue.error));
 
             hyperplane.generatedPoint.clear();
         }
         else
         {
-            env->output->outputAlways("     Could not add hyperplane to waiting list since constraint value is "
+            env->output->outputCritical("     Could not add hyperplane to waiting list since constraint value is "
                 + std::to_string(externalConstraintValue.normalizedValue));
         }
     }
@@ -226,7 +226,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 externalPoint = solPoints.at(i).point;
 
-                env->output->outputWarning("     Cannot find solution with linesearch, using solution point instead.");
+                env->output->outputInfo("     Cannot find solution with linesearch, using solution point instead.");
             }
 
             auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
@@ -260,14 +260,14 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                 hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
 
-                env->output->outputInfo("     Added hyperplane to waiting list with deviation: "
+                env->output->outputDebug("     Added hyperplane to waiting list with deviation: "
                     + UtilityFunctions::toString(externalConstraintValue.error));
 
                 hyperplane.generatedPoint.clear();
             }
             else
             {
-                env->output->outputAlways("     Could not add hyperplane to waiting list since constraint value is "
+                env->output->outputCritical("     Could not add hyperplane to waiting list since constraint value is "
                     + std::to_string(externalConstraintValue.normalizedValue));
             }
         }
@@ -275,7 +275,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
     if(addedHyperplanes == 0)
     {
-        env->output->outputInfo("     All nonlinear constraints fulfilled, so no constraint cuts added.");
+        env->output->outputInfo("        All nonlinear constraints fulfilled, so no constraint cuts added.");
     }
 
     env->timing->stopTimer("DualCutGenerationRootSearch");

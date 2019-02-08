@@ -168,7 +168,7 @@ void InfoCallbackI::main() // Called at each node...
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputAlways("     Terminated by relative objective gap tolerance in info callback: "
+        env->output->outputCritical("     Terminated by relative objective gap tolerance in info callback: "
             + UtilityFunctions::toString(relObjGap) + " < "
             + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination")));
 
@@ -177,7 +177,7 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputAlways("     Terminated by absolute objective gap tolerance in info callback: "
+        env->output->outputCritical("     Terminated by absolute objective gap tolerance in info callback: "
             + UtilityFunctions::toString(absObjGap) + " < "
             + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination")));
 
@@ -186,7 +186,7 @@ void InfoCallbackI::main() // Called at each node...
     }
     else if(checkIterationLimit())
     {
-        env->output->outputAlways("     Terminated since iteration limit reached in info callback.");
+        env->output->outputCritical("     Terminated since iteration limit reached in info callback.");
 
         this->abort();
         return;
@@ -349,7 +349,7 @@ void CtCallbackI::main()
 
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputAlways("     Terminated by absolute objective gap tolerance in lazy callback");
+        env->output->outputCritical("     Terminated by absolute objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -358,7 +358,7 @@ void CtCallbackI::main()
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputAlways("     Terminated by relative objective gap tolerance in lazy callback");
+        env->output->outputCritical("     Terminated by relative objective gap tolerance in lazy callback");
 
         solution.clear();
         abort();
@@ -367,7 +367,7 @@ void CtCallbackI::main()
 
     if(checkIterationLimit())
     {
-        env->output->outputAlways("     Terminated by iteration limit in lazy callback");
+        env->output->outputCritical("     Terminated by iteration limit in lazy callback");
 
         solution.clear();
         abort();
@@ -391,7 +391,7 @@ void CtCallbackI::main()
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet())
         {
-            env->output->outputAlways("     Terminated by absolute objective gap tolerance in lazy callback");
+            env->output->outputCritical("     Terminated by absolute objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -400,7 +400,7 @@ void CtCallbackI::main()
 
         if(env->results->isRelativeObjectiveGapToleranceMet())
         {
-            env->output->outputAlways("     Terminated by relative objective gap tolerance in lazy callback");
+            env->output->outputCritical("     Terminated by relative objective gap tolerance in lazy callback");
 
             solution.clear();
             abort();
@@ -446,7 +446,7 @@ void CtCallbackI::main()
 
         if(addedIntegerCut)
         {
-            env->output->outputInfo("        Added "
+            env->output->outputDebug("        Added "
                 + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
                 + " integer cut(s).                                        ");
         }

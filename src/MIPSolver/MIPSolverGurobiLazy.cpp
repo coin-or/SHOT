@@ -301,7 +301,7 @@ void GurobiCallback::callback()
 
                 if(addedIntegerCut)
                 {
-                    env->output->outputInfo("        Added "
+                    env->output->outputDebug("        Added "
                         + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
                         + " integer cut(s).                                        ");
                 }
@@ -365,7 +365,7 @@ void GurobiCallback::callback()
                 static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
                     ->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound + cutOffTol);
 
-                env->output->outputInfo("     Setting cutoff value to "
+                env->output->outputDebug("     Setting cutoff value to "
                     + UtilityFunctions::toString(primalBound + cutOffTol) + " for minimization.");
             }
             else
@@ -373,7 +373,7 @@ void GurobiCallback::callback()
                 static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
                     ->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound - cutOffTol);
 
-                env->output->outputInfo("     Setting cutoff value to "
+                env->output->outputDebug("     Setting cutoff value to "
                     + UtilityFunctions::toString(-primalBound - cutOffTol) + " for minimization.");
             }
         }

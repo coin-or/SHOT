@@ -62,7 +62,7 @@ void TaskSolveIteration::run()
         {
             env->dualSolver->MIPSolver->updateVariableBound(
                 env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex(), newLB, newUB);
-            env->output->outputInfo("     Bounds for nonlinear objective function updated to "
+            env->output->outputDebug("     Bounds for nonlinear objective function updated to "
                 + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
         }
     }
@@ -95,9 +95,9 @@ void TaskSolveIteration::run()
         env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
     }
 
-    env->output->outputInfo("     Solving dual problem.");
+    env->output->outputDebug("     Solving dual problem.");
     auto solStatus = env->dualSolver->MIPSolver->solveProblem();
-    env->output->outputInfo("     Dual problem solved.");
+    env->output->outputDebug("     Dual problem solved.");
 
     // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been
     // created when solving
@@ -115,7 +115,7 @@ void TaskSolveIteration::run()
     }
 
     currIter->solutionStatus = solStatus;
-    env->output->outputInfo("     Dual problem return code: " + std::to_string((int)solStatus));
+    env->output->outputDebug("     Dual problem return code: " + std::to_string((int)solStatus));
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
@@ -141,7 +141,7 @@ void TaskSolveIteration::run()
     {
         currIter->solutionPoints = sols;
 
-        env->output->outputInfo("        Number of solutions in solution pool: " + std::to_string(sols.size()));
+        env->output->outputDebug("        Number of solutions in solution pool: " + std::to_string(sols.size()));
 
         if(env->settings->getBoolSetting("Debug.Enable", "Output"))
         {

@@ -387,7 +387,7 @@ bool PrimalSolutionStrategyFixedNLP::runStrategy()
                 if(interval < 10 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
 
-                env->output->outputInfo("     Duration:  " + std::to_string(timeEnd - timeStart)
+                env->output->outputDebug("     Duration:  " + std::to_string(timeEnd - timeStart)
                     + " s. New interval: " + std::to_string(interval) + " s or " + std::to_string(iters) + " iters.");
             }
 

@@ -322,7 +322,7 @@ void Problem::add(VariablePtr variable)
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
-    env->output->outputDebug("Added variable to problem: " + variable->name);
+    env->output->outputTrace("Added variable to problem: " + variable->name);
 };
 
 void Problem::add(AuxilliaryVariables variables)
@@ -357,7 +357,7 @@ void Problem::add(AuxilliaryVariablePtr variable)
     variable->takeOwnership(shared_from_this());
     variablesUpdated = false;
 
-    env->output->outputDebug("Added variable to problem: " + variable->name);
+    env->output->outputTrace("Added variable to problem: " + variable->name);
 };
 
 void Problem::add(NumericConstraintPtr constraint)
@@ -384,7 +384,7 @@ void Problem::add(NumericConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added numeric constraint to problem: " + constraint->name);
+    env->output->outputTrace("Added numeric constraint to problem: " + constraint->name);
 };
 
 void Problem::add(LinearConstraintPtr constraint)
@@ -394,7 +394,7 @@ void Problem::add(LinearConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added linear constraint to problem: " + constraint->name);
+    env->output->outputTrace("Added linear constraint to problem: " + constraint->name);
 };
 
 void Problem::add(QuadraticConstraintPtr constraint)
@@ -404,7 +404,7 @@ void Problem::add(QuadraticConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added quadratic constraint to problem: " + constraint->name);
+    env->output->outputTrace("Added quadratic constraint to problem: " + constraint->name);
 };
 
 void Problem::add(NonlinearConstraintPtr constraint)
@@ -414,7 +414,7 @@ void Problem::add(NonlinearConstraintPtr constraint)
 
     constraint->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added nonlinear constraint to problem: " + constraint->name);
+    env->output->outputTrace("Added nonlinear constraint to problem: " + constraint->name);
 };
 
 void Problem::add(ObjectiveFunctionPtr objective)
@@ -424,7 +424,7 @@ void Problem::add(ObjectiveFunctionPtr objective)
 
     objective->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added objective function to problem.");
+    env->output->outputTrace("Added objective function to problem.");
 };
 
 void Problem::add(LinearObjectiveFunctionPtr objective)
@@ -434,7 +434,7 @@ void Problem::add(LinearObjectiveFunctionPtr objective)
 
     objective->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added linear objective function to problem.");
+    env->output->outputTrace("Added linear objective function to problem.");
 };
 
 void Problem::add(QuadraticObjectiveFunctionPtr objective)
@@ -444,7 +444,7 @@ void Problem::add(QuadraticObjectiveFunctionPtr objective)
 
     objective->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added quadratic objective function to problem.");
+    env->output->outputTrace("Added quadratic objective function to problem.");
 };
 
 void Problem::add(NonlinearObjectiveFunctionPtr objective)
@@ -454,7 +454,7 @@ void Problem::add(NonlinearObjectiveFunctionPtr objective)
 
     objective->takeOwnership(shared_from_this());
 
-    env->output->outputDebug("Added nonlinear objective function to problem.");
+    env->output->outputTrace("Added nonlinear objective function to problem.");
 };
 
 template <class T> void Problem::add(std::vector<T> elements)

@@ -86,7 +86,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
         auto tmpLine = boost::format("     Primal objective cut added.");
 
-        env->output->outputAlways(tmpLine.str());
+        env->output->outputCritical(tmpLine.str());
     }
 }
 
@@ -342,7 +342,7 @@ std::string Results::getOSrl()
             "The relative optimality gap", 0, NULL);
     }
 
-    for(auto &T : env->timing->timers)
+    for(auto& T : env->timing->timers)
     {
         osResult->addTimingInformation(T.name, "SHOT", "second", T.description, T.elapsed());
     }

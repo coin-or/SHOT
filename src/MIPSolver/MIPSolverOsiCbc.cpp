@@ -234,12 +234,12 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     {
         cbcModel->setCutoff(this->cutOff);
 
-        env->output->outputInfo("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
+        env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
     }
     else if(!isMinimizationProblem && abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
-        env->output->outputInfo("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
+        env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
     }
 }
 
@@ -266,7 +266,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
 {
     if(activate)
     {
-        env->output->outputInfo("Activating MIP strategy");
+        env->output->outputDebug("Activating MIP strategy");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
@@ -280,7 +280,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
     }
     else
     {
-        env->output->outputInfo("Activating LP strategy");
+        env->output->outputDebug("Activating LP strategy");
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
@@ -403,14 +403,14 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
         {
             this->cutOff = cutOff + cutOffTol;
 
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "     Setting cutoff value to " + std::to_string(this->cutOff) + " for minimization.");
         }
         else
         {
             this->cutOff = cutOff - cutOffTol;
 
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "     Setting cutoff value to " + std::to_string(this->cutOff) + " for maximization.");
         }
     }

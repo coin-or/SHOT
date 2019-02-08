@@ -9,12 +9,12 @@
 */
 
 #pragma once
-#include "Shared.h"
+#include "Enums.h"
+#include <memory>
 
-// Used for OSOutput
-#include "cstdio"
-#define HAVE_STDIO_H 1
-#include "OSOutput.h"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 namespace SHOT
 {
@@ -24,19 +24,20 @@ public:
     Output();
     virtual ~Output();
 
-    void outputAlways(std::string message);
+    void outputCritical(std::string message);
     void outputError(std::string message);
     void outputError(std::string message, std::string errormessage);
-    void outputSummary(std::string message);
     void outputWarning(std::string message);
     void outputInfo(std::string message);
     void outputDebug(std::string message);
     void outputTrace(std::string message);
-    void outputDetailedTrace(std::string message);
 
-    void setLogLevels(int consoleLogLevel, int fileLogLevel);
+    void setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel);
 
 private:
-    std::unique_ptr<OSOutput> osOutput;
+    std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> consoleSink;
+    std::shared_ptr<spdlog::sinks::basic_file_sink_mt> fileSink;
+
+    std::shared_ptr<spdlog::logger> logger;
 };
 }

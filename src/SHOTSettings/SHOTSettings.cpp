@@ -44,7 +44,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
 
     if(oldvalue == value)
     {
-        output->outputInfo(
+        output->outputDebug(
             "Setting " + key.first + "." + key.second + " not updated. Same value " + oldvalue + " given.");
         return;
     }
@@ -53,7 +53,7 @@ void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::s
         _settings[key] = value;
         _isDefault[key] = false;
 
-        output->outputInfo(
+        output->outputDebug(
             "Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
     }
 }
@@ -74,7 +74,7 @@ void Settings::createSetting(
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    output->outputInfo("Setting <" + name + "," + category + "> = " + value + " created.");
+    output->outputDebug("Setting <" + name + "," + category + "> = " + value + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, std::string value)
@@ -136,7 +136,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    output->outputInfo("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
+    output->outputDebug("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
 }
 
 void Settings::createSetting(
@@ -230,7 +230,7 @@ void Settings::createSetting(
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    output->outputInfo("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
+    output->outputDebug("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
 }
 
 void Settings::createSetting(std::string name, std::string category, bool value, std::string description)
@@ -307,7 +307,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
     {
         _enumDescription[make_tuple(name, category, i)] = enumDescriptions.at(i);
 
-        output->outputInfo(" Enum value " + std::to_string(i) + ": " + enumDescriptions.at(i));
+        output->outputDebug(" Enum value " + std::to_string(i) + ": " + enumDescriptions.at(i));
     }
 
     _settingsEnum[make_pair(name, category)] = true;
@@ -397,7 +397,7 @@ void Settings::createSetting(std::string name, std::string category, double valu
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
-    output->outputInfo("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
+    output->outputDebug("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, double value)
@@ -705,7 +705,7 @@ std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
 
 void Settings::readSettingsFromOSoL(std::string osol)
 {
-    output->outputInfo("Starting conversion of settings from OSoL.");
+    output->outputDebug("Starting conversion of settings from OSoL.");
 
     auto osolreader = std::make_unique<OSoLReader>();
     readSettingsFromOSOption(osolreader->readOSoL(osol));
@@ -713,7 +713,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
 
 void Settings::readSettingsFromGAMSOptFormat(std::string options)
 {
-    output->outputInfo("Starting conversion of settings from GAMS options format.");
+    output->outputDebug("Starting conversion of settings from GAMS options format.");
 
     std::istringstream f(options);
     std::string line;
@@ -790,7 +790,7 @@ void Settings::readSettingsFromGAMSOptFormat(std::string options)
 
 void Settings::readSettingsFromOSOption(OSOption* options)
 {
-    output->outputInfo("Conversion of settings from OSOptions.");
+    output->outputDebug("Conversion of settings from OSOptions.");
 
     for(int i = 0; i < options->getNumberOfSolverOptions(); i++)
     {
@@ -866,6 +866,6 @@ void Settings::readSettingsFromOSOption(OSOption* options)
         }
     }
 
-    output->outputInfo("Conversion of settings from OSoL completed.");
+    output->outputDebug("Conversion of settings from OSoL completed.");
 }
 } // namespace SHOT

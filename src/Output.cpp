@@ -14,69 +14,113 @@ namespace SHOT
 {
 Output::Output()
 {
-    osOutput = std::make_unique<OSOutput>();
+    consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("multisink.txt", true);
+    std::vector<spdlog::sink_ptr> sinks{ consoleSink, fileSink };
+    logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
-    // Adds a file output
-    osOutput->AddChannel("shotlogfile");
-    osOutput->AddChannel("stdout");
+    logger->set_pattern("%v");
+
+    spdlog::register_logger(logger);
+
+    logger->set_level(spdlog::level::info);
+    setLogLevels(E_LogLevel::Info, E_LogLevel::Info);
 }
 
 Output::~Output() {}
 
-void Output::outputAlways(std::string message)
-{
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_always, message);
-}
+void Output::outputCritical(std::string message) { logger->critical(message); }
 
-void Output::outputError(std::string message)
-{
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
-}
+void Output::outputError(std::string message) { logger->error(message); }
 
 void Output::outputError(std::string message, std::string errormessage)
 {
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, message);
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_error, " \"" + errormessage + "\"");
+    logger->error("{}: \"{}\"", message, errormessage);
 }
 
-void Output::outputSummary(std::string message)
-{
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_summary, message);
-}
+void Output::outputWarning(std::string message) { logger->warn(message); }
 
-void Output::outputWarning(std::string message)
-{
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_warning, message);
-}
+void Output::outputInfo(std::string message) { logger->info(message); }
 
-void Output::outputInfo(std::string message)
-{
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_info, message);
-}
-
-void Output::outputDebug(std::string message)
-{
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_debug, message);
-}
+void Output::outputDebug(std::string message) { logger->debug(message); }
 
 void Output::outputTrace(std::string message)
 {
 #ifndef NDEBUG
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_trace, message);
+    logger->trace(message);
 #endif
 }
 
-void Output::outputDetailedTrace(std::string message)
-{
-#ifndef NDEBUG
-    osOutput->OSPrint(ENUM_OUTPUT_AREA_main, ENUM_OUTPUT_LEVEL_detailed_trace, message);
-#endif
-}
-
-void Output::setLogLevels(int consoleLogLevel, int fileLogLevel)
+void Output::setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel)
 {
     // Sets the correct log levels
-    osOutput->SetPrintLevel("stdout", (ENUM_OUTPUT_LEVEL)(consoleLogLevel));
-    osOutput->SetPrintLevel("shotlogfile", (ENUM_OUTPUT_LEVEL)(fileLogLevel));
+
+    switch(consoleLogLevel)
+    {
+    case E_LogLevel::Off:
+        consoleSink->set_level(spdlog::level::off);
+        break;
+
+    case E_LogLevel::Critical:
+        consoleSink->set_level(spdlog::level::critical);
+        break;
+
+    case E_LogLevel::Error:
+        consoleSink->set_level(spdlog::level::err);
+        break;
+
+    case E_LogLevel::Warning:
+        consoleSink->set_level(spdlog::level::warn);
+        break;
+
+    case E_LogLevel::Info:
+        consoleSink->set_level(spdlog::level::info);
+        break;
+
+    case E_LogLevel::Debug:
+        consoleSink->set_level(spdlog::level::debug);
+        break;
+
+    case E_LogLevel::Trace:
+        consoleSink->set_level(spdlog::level::trace);
+        break;
+
+    default:
+        break;
+    }
+
+    switch(fileLogLevel)
+    {
+    case E_LogLevel::Off:
+        fileSink->set_level(spdlog::level::off);
+        break;
+
+    case E_LogLevel::Critical:
+        fileSink->set_level(spdlog::level::critical);
+        break;
+
+    case E_LogLevel::Error:
+        fileSink->set_level(spdlog::level::err);
+        break;
+
+    case E_LogLevel::Warning:
+        fileSink->set_level(spdlog::level::warn);
+        break;
+
+    case E_LogLevel::Info:
+        fileSink->set_level(spdlog::level::info);
+        break;
+
+    case E_LogLevel::Debug:
+        fileSink->set_level(spdlog::level::debug);
+        break;
+
+    case E_LogLevel::Trace:
+        fileSink->set_level(spdlog::level::trace);
+        break;
+
+    default:
+        break;
+    }
 }
 } // namespace SHOT

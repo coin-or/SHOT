@@ -65,9 +65,9 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
             }
             catch(std::exception& e)
             {
-                env->output->outputAlways(
+                env->output->outputCritical(
                     "     Cannot find solution with root search for generating objective supporting hyperplane:");
-                env->output->outputAlways(e.what());
+                env->output->outputCritical(e.what());
             }
         }
     }

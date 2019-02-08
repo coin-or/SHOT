@@ -135,8 +135,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        env->output->setLogLevels(env->settings->getIntSetting("Console.LogLevel", "Output") + 1,
-            env->settings->getIntSetting("File.LogLevel", "Output") + 1);
+        env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getIntSetting("Console.LogLevel", "Output")),
+            static_cast<E_LogLevel>(env->settings->getIntSetting("File.LogLevel", "Output")));
         env->report->outputSolverHeader();
 
         if(!solver->setProblem(fileName))
@@ -158,8 +158,8 @@ int main(int argc, char* argv[])
 
         env->report->outputSolutionReport();
 
-        env->output->outputSummary("╶──────────────────────────────────────────────────────────────────────────────────"
-                                   "───────────────────────────────────╴\r\n");
+        env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
+                                "───────────────────────────────────╴\r\n");
     }
     catch(const ErrorClass& eclass)
     {
@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
         boost::filesystem::path resultPath(env->settings->getStringSetting("ResultPath", "Output"));
         resultPath /= env->problem->name;
         resultPath = resultPath.replace_extension(".osrl");
-        env->output->outputSummary(" Results written to: " + resultPath.string());
+        env->output->outputInfo(" Results written to: " + resultPath.string());
 
         if(!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
         {
@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-        env->output->outputSummary(" Results written to: " + resultFile.string());
+        env->output->outputInfo(" Results written to: " + resultFile.string());
 
         if(!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
         {
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
         boost::filesystem::path tracePath(env->settings->getStringSetting("ResultPath", "Output"));
         tracePath /= env->problem->name;
         tracePath = tracePath.replace_extension(".trc");
-        env->output->outputSummary("                     " + tracePath.string());
+        env->output->outputInfo("                     " + tracePath.string());
 
         if(!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
         {

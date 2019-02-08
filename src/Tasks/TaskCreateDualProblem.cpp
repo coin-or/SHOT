@@ -43,7 +43,7 @@ void TaskCreateDualProblem::run()
     {
         env->timing->startTimer("DualStrategy");
 
-        env->output->outputDebug("Creating dual problem");
+        env->output->outputDebug("Recreating dual problem");
 
         createProblem(env->dualSolver->MIPSolver, env->reformulatedProblem);
 
@@ -57,7 +57,7 @@ void TaskCreateDualProblem::run()
                 env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
         }
 
-        env->output->outputDebug("Dual problem created");
+        env->output->outputDebug("Dual problem recreated");
         env->timing->stopTimer("DualStrategy");
     }
 }

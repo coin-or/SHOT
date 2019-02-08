@@ -58,7 +58,7 @@ void TaskExecuteSolutionLimitStrategy::run()
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "     Forced optimal iteration since too many iterations since last dual bound update");
 
             env->timing->stopTimer("DualStrategy");
@@ -73,7 +73,8 @@ void TaskExecuteSolutionLimitStrategy::run()
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
-            env->output->outputAlways("     Forced optimal iteration since too long time since last dual bound update");
+            env->output->outputCritical(
+                "     Forced optimal iteration since too long time since last dual bound update");
 
             env->timing->stopTimer("DualStrategy");
             return;
@@ -86,7 +87,7 @@ void TaskExecuteSolutionLimitStrategy::run()
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
             temporaryOptLimitUsed = true;
             currIter->MIPSolutionLimitUpdated = true;
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "     Forced optimal iteration since difference between MIP solution and primal is small");
 
             env->timing->stopTimer("DualStrategy");

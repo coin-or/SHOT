@@ -48,7 +48,7 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
                && currIter->iterationNumber - lastIterOptimal
                    > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
     {
-        env->output->outputInfo("     Force solution limit update.");
+        env->output->outputDebug("     Force solution limit update.");
         return (true);
     }
 

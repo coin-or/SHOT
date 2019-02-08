@@ -89,7 +89,7 @@ bool SHOTSolver::setOptions(std::string fileName)
 
     env->settings->updateSetting("OptionsFile", "Input", fileName);
 
-    env->output->outputSummary("Options read from file \"" + fileName + "\"");
+    env->output->outputDebug("Options read from file \"" + fileName + "\"");
 
     return (true);
 }
@@ -108,7 +108,7 @@ bool SHOTSolver::setOptions(OSOption* osOptions)
         return (false);
     }
 
-    env->output->outputInfo("Options read.");
+    env->output->outputDebug("Options read.");
 
     return (true);
 }
@@ -301,7 +301,7 @@ bool SHOTSolver::selectStrategy()
     {
         if(env->problem->properties.isNLPProblem)
         {
-            env->output->outputInfo(" Using NLP solution strategy.");
+            env->output->outputDebug(" Using NLP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
 
             env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
@@ -324,14 +324,14 @@ bool SHOTSolver::selectStrategy()
     if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
     // MIQP problem
     {
-        env->output->outputInfo(" Using MIQP solution strategy.");
+        env->output->outputDebug(" Using MIQP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     // MIQCQP problem
     else if(useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
     {
-        env->output->outputInfo(" Using MIQCQP solution strategy.");
+        env->output->outputDebug(" Using MIQCQP solution strategy.");
 
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
@@ -339,7 +339,7 @@ bool SHOTSolver::selectStrategy()
     // NLP problem
     else if(env->problem->properties.isNLPProblem)
     {
-        env->output->outputInfo(" Using NLP solution strategy.");
+        env->output->outputDebug(" Using NLP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
     }
@@ -348,12 +348,12 @@ bool SHOTSolver::selectStrategy()
         switch(static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")))
         {
         case(ES_TreeStrategy::SingleTree):
-            env->output->outputInfo(" Using single-tree solution strategy.");
+            env->output->outputDebug(" Using single-tree solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
             break;
         case(ES_TreeStrategy::MultiTree):
-            env->output->outputInfo(" Using multi-tree solution strategy.");
+            env->output->outputDebug(" Using multi-tree solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
             break;
@@ -418,7 +418,7 @@ void SHOTSolver::initializeSettings()
 
     std::string empty; // Used to create empty string options
 
-    env->output->outputInfo("Starting initialization of settings:");
+    env->output->outputDebug("Starting initialization of settings:");
 
     // Convexity strategy
 
@@ -683,22 +683,22 @@ void SHOTSolver::initializeSettings()
 
     // Logging and output settings
     VectorString enumLogLevel;
+    enumLogLevel.push_back("Off");
+    enumLogLevel.push_back("Critical");
     enumLogLevel.push_back("Error");
-    enumLogLevel.push_back("Summary");
     enumLogLevel.push_back("Warning");
     enumLogLevel.push_back("Info");
     enumLogLevel.push_back("Debug");
     enumLogLevel.push_back("Trace");
-    enumLogLevel.push_back("Detailed trace");
-    env->settings->createSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1,
-        "Log level for console output", enumLogLevel);
+    env->settings->createSetting(
+        "Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for console output", enumLogLevel);
 
     env->settings->createSetting("Debug.Enable", "Output", false, "Use debug functionality");
 
     env->settings->createSetting("Debug.Path", "Output", empty, "The path where to save the debug information", true);
 
-    env->settings->createSetting("File.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_summary) - 1,
-        "Log level for file output", enumLogLevel);
+    env->settings->createSetting(
+        "File.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for file output", enumLogLevel);
     enumLogLevel.clear();
 
     env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
@@ -977,13 +977,13 @@ void SHOTSolver::initializeDebugMode()
 
     if(boost::filesystem::exists(debugDir))
     {
-        env->output->outputInfo("Debug directory " + debugPath + " already exists.");
+        env->output->outputDebug("Debug directory " + debugPath + " already exists.");
     }
     else
     {
         if(boost::filesystem::create_directories(debugDir))
         {
-            env->output->outputInfo("Debug directory " + debugPath + " created.");
+            env->output->outputDebug("Debug directory " + debugPath + " created.");
         }
         else
         {
@@ -1010,7 +1010,7 @@ void SHOTSolver::verifySettings()
         if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::Ipopt)
         {
-            env->output->outputError("Changing to GAMS NLP solver since problem is given in GAMS format.");
+            env->output->outputWarning(" Changing to GAMS NLP solver since problem is given in GAMS format.");
             env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
         }
     }
@@ -1021,7 +1021,7 @@ void SHOTSolver::verifySettings()
         if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::Ipopt)
         {
-            env->output->outputError("Using Ipopt as NLP solver since problem is given in OSiL or Ampl format.");
+            env->output->outputWarning(" Using Ipopt as NLP solver since problem is given in OSiL or Ampl format.");
             env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
         }
     }
@@ -1030,7 +1030,7 @@ void SHOTSolver::verifySettings()
         == ES_PrimalNLPSolver::GAMS)
     {
 #ifndef HAS_GAMS
-        env->output->outputError("SHOT has not been compiled with support for GAMS NLP solvers.");
+        env->output->outputWarning(" SHOT has not been compiled with support for GAMS NLP solvers.");
         env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
 #endif
     }
@@ -1058,7 +1058,7 @@ void SHOTSolver::verifySettings()
 
     if(!correctSolverDefined)
     {
-        env->output->outputError("SHOT has not been compiled with support selected MIP solver. Defaulting to Cbc.");
+        env->output->outputWarning(" SHOT has not been compiled with support selected MIP solver. Defaulting to Cbc.");
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
     }
 

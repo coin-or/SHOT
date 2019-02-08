@@ -259,7 +259,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 if(addedIntegerCut)
                 {
-                    env->output->outputInfo("        Added "
+                    env->output->outputDebug("        Added "
                         + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
                         + " integer cut(s).                                        ");
                 }
@@ -317,7 +317,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             (static_cast<MIPSolverCplexLazy*>(env->dualSolver->MIPSolver.get()))
                 ->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
 
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "     Setting cutoff value to " + std::to_string(primalBound + cutOffTol) + " for minimization.");
         }
         else
@@ -325,7 +325,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             (static_cast<MIPSolverCplexLazy*>(env->dualSolver->MIPSolver.get()))
                 ->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
 
-            env->output->outputInfo(
+            env->output->outputDebug(
                 "     Setting cutoff value to " + std::to_string(primalBound - cutOffTol) + " for maximization.");
         }
     }

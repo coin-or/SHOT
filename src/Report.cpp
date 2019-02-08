@@ -118,7 +118,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|%|-32s|") % iterationNumber
             % iterationDesc % totalTime % combDualCuts % combObjectiveValue % combObjectiveGap % combCurrSol;
 
-        env->output->outputSummary(tmpLine.str());
+        env->output->outputInfo(tmpLine.str());
 
         std::stringstream nodes;
 
@@ -138,11 +138,11 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         nodes << "\r\n";
 
-        env->output->outputInfo(nodes.str());
+        env->output->outputDebug(nodes.str());
     }
     catch(...)
     {
-        env->output->outputError("ERROR, cannot write iteration solution report!");
+        env->output->outputError("Cannot write iteration solution report!");
     }
 }
 
@@ -192,11 +192,11 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
         auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|") % iterationNumber % iterationDesc
             % totalTime % combDualCuts % combObjectiveValue % combObjectiveGap;
 
-        env->output->outputSummary(tmpLine.str());
+        env->output->outputInfo(tmpLine.str());
     }
     catch(...)
     {
-        env->output->outputError("ERROR, cannot write iteration solution report!");
+        env->output->outputError("Cannot write iteration solution report!");
     }
 }
 
@@ -215,7 +215,7 @@ void Report::outputIterationDetailHeader()
               "───────────╴\r\n";
     header << "\r\n";
 
-    env->output->outputSummary(header.str());
+    env->output->outputInfo(header.str());
     iterationPrintoutsSinceLastHeader = 0;
 }
 
@@ -228,7 +228,7 @@ void Report::outputIterationDetailHeaderMinimax()
     header << "     #: type      │  tot.  │   + | tot.  │    problem | line srch  │    abs. | rel.    \r\n";
     header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴──────────────────╴\r\n";
 
-    env->output->outputSummary(header.str());
+    env->output->outputInfo(header.str());
 }
 
 void Report::outputSolverHeader()
@@ -259,7 +259,7 @@ void Report::outputSolverHeader()
     header << __DATE__;
     header << "\r\n";
 
-    env->output->outputSummary(header.str());
+    env->output->outputInfo(header.str());
 }
 
 void Report::outputOptionsReport()
@@ -453,7 +453,7 @@ void Report::outputOptionsReport()
         report << "\r\n";
     }
 
-    env->output->outputSummary(report.str());
+    env->output->outputInfo(report.str());
 }
 
 void Report::outputProblemInstanceReport()
@@ -751,7 +751,7 @@ void Report::outputProblemInstanceReport()
                    << "\r\n";
     }
 
-    env->output->outputSummary(report.str());
+    env->output->outputInfo(report.str());
 }
 
 void Report::outputSolutionReport()
@@ -1002,7 +1002,7 @@ void Report::outputSolutionReport()
 
     report << "\r\n";
 
-    for(auto &T : env->timing->timers)
+    for(auto& T : env->timing->timers)
     {
         T.stop();
         auto elapsed = T.elapsed();
@@ -1013,7 +1013,7 @@ void Report::outputSolutionReport()
         }
     }
 
-    env->output->outputSummary(report.str());
+    env->output->outputInfo(report.str());
 }
 
 void Report::outputInteriorPointPreReport()
@@ -1046,6 +1046,6 @@ void Report::outputInteriorPointPreReport()
         break;
     }
 
-    env->output->outputSummary(report.str());
+    env->output->outputInfo(report.str());
 }
 } // namespace SHOT

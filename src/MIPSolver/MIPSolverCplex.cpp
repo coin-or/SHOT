@@ -336,8 +336,7 @@ void MIPSolverCplex::initializeSolverSettings()
         {
             cplexInstance.setOut(cplexEnv.getNullStream());
 
-            if(env->settings->getIntSetting("Console.LogLevel", "Output")
-                <= static_cast<int>(ENUM_OUTPUT_LEVEL_summary))
+            if(env->settings->getIntSetting("Console.LogLevel", "Output") >= static_cast<int>(E_LogLevel::Debug))
             {
                 cplexInstance.setWarning(cplexEnv.getNullStream());
             }
@@ -689,11 +688,11 @@ bool MIPSolverCplex::repairInfeasibility()
             if(numRepairs == 0)
             {
 
-                env->output->outputAlways("        No constraints modified during repair");
+                env->output->outputCritical("        No constraints modified during repair");
                 return (false);
             }
 
-            env->output->outputAlways("        Number of constraints modified: " + std::to_string(numRepairs));
+            env->output->outputCritical("        Number of constraints modified: " + std::to_string(numRepairs));
 
             cplexInstance.extract(cplexModel);
 
@@ -714,7 +713,7 @@ bool MIPSolverCplex::repairInfeasibility()
             return (true);
         }
 
-        env->output->outputAlways("        Could not repair the infeasiblity");
+        env->output->outputCritical("        Could not repair the infeasiblity");
     }
     catch(IloException& e)
     {
@@ -900,20 +899,20 @@ void MIPSolverCplex::setCutOff(double cutOff)
     {
         cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
-        env->output->outputInfo(
+        env->output->outputDebug(
             "        Setting cutoff value to " + UtilityFunctions::toString(cutOff) + " for minimization.");
         /*
     if(isMinimizationProblem)
     {
         cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
 
-        env->output->outputAlways("        Setting cutoff value to "
+        env->output->outputCritical("        Setting cutoff value to "
             + UtilityFunctions::toStringFormat(cutOff, true) + " for minimization.");
     }
     else
     {
         cplexInstance.setParam(IloCplex::CutLo, cutOff);
-        env->output->outputAlways("        Setting cutoff value to "
+        env->output->outputCritical("        Setting cutoff value to "
             + UtilityFunctions::toStringFormat(cutOff, true) + " for maximization.");
     }*/
     }
@@ -936,7 +935,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputInfo("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for maximization.");
             }
             else
@@ -946,7 +945,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputInfo("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for minimization.");
             }
 
@@ -961,13 +960,13 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
-                env->output->outputInfo("        Setting cutoff constraint value to "
+                env->output->outputDebug("        Setting cutoff constraint value to "
                     + UtilityFunctions::toString(cutOff) + " for maximization.");
             }
             else
             {
                 cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
-                env->output->outputInfo("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for minimization.");
             }
 
@@ -1012,7 +1011,7 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     startVal.end();
 
-    env->output->outputInfo("        Added MIP starting point.");
+    env->output->outputDebug("        Added MIP starting point.");
 }
 
 void MIPSolverCplex::deleteMIPStarts()
@@ -1195,7 +1194,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
             if(isUpdated)
             {
                 cplexInstance.extract(cplexModel);
-                env->output->outputInfo(
+                env->output->outputDebug(
                     "        Removed " + std::to_string(numconstr) + " redundant constraints from MIP model.");
                 env->solutionStatistics.numberOfConstraintsRemovedInPresolve = numconstr;
             }
@@ -1250,7 +1249,7 @@ void MIPSolverCplex::createHyperplane(
     // auto tmpPair = createHyperplaneTerms(hyperplane);
     bool hyperplaneIsOk = true;
 
-    for(auto &E : tmpPair.first)
+    for(auto& E : tmpPair.first)
     {
         if(E.value != E.value) // Check for NaN
         {

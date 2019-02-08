@@ -28,6 +28,7 @@ set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
 set(GAMS_DIR /opt/gams/gams25.1.2)
 
 set(MCPP_DIR ThirdParty/mc++)
+set(SPDLOG_DIR ThirdParty/spdlog)
 
 # May be needed to specify the path to where Boost is installed, if not automatically detected
 #set(Boost_INCLUDE_DIR /usr/include)
@@ -221,6 +222,10 @@ include_directories("${COINOS_DIR}/include")
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories("${MCPP_DIR}/3rdparty/fadbad++")
+
+
+include_directories("${SPDLOG_DIR}")
+
 
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")

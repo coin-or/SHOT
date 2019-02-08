@@ -421,7 +421,7 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
 {
     if(activate)
     {
-        env->output->outputInfo("Activating MIP strategy.");
+        env->output->outputDebug("Activating MIP strategy.");
 
         for(int i = 0; i < numberOfVariables; i++)
         {
@@ -443,7 +443,7 @@ void MIPSolverGurobi::activateDiscreteVariables(bool activate)
     }
     else
     {
-        env->output->outputInfo("Activating LP strategy.");
+        env->output->outputDebug("Activating LP strategy.");
         for(int i = 0; i < numberOfVariables; i++)
         {
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
@@ -596,12 +596,12 @@ void MIPSolverGurobi::setCutOff(double cutOff)
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff + cutOffTol);
 
-            env->output->outputInfo("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
+            env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
         }
         else
         {
             gurobiModel->getEnv().set(GRB_DoubleParam_Cutoff, cutOff - cutOffTol);
-            env->output->outputInfo("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
+            env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
         }
     }
     catch(GRBException& e)
@@ -630,7 +630,7 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
         env->output->outputError("Error when adding MIP starting point", e.getMessage());
     }
 
-    env->output->outputInfo("      Added MIP starting point.");
+    env->output->outputDebug("      Added MIP starting point.");
 }
 
 void MIPSolverGurobi::writeProblemToFile(std::string filename)

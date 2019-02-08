@@ -73,6 +73,17 @@ enum class E_IterationProblemType
     None
 };
 
+enum class E_LogLevel
+{
+    Off,
+    Critical,
+    Error,
+    Warning,
+    Info,
+    Debug,
+    Trace
+};
+
 enum class E_PrimalNLPSource
 {
     FirstSolution,

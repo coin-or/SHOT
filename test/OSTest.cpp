@@ -272,8 +272,6 @@ bool TestReformulateProblemOS(const std::string& problemFile)
 
 int OSTest(int argc, char* argv[])
 {
-    osoutput->AddChannel("shotlogfile");
-
     int defaultchoice = 1;
 
     int choice = defaultchoice;

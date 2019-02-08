@@ -88,7 +88,7 @@ void TaskFindInteriorPoint::run()
         }
         else
         {
-            env->output->outputSummary("\n Valid interior point with constraint deviation "
+            env->output->outputInfo("\n Valid interior point with constraint deviation "
                 + UtilityFunctions::toString(maxDev.normalizedValue) + " found.");
             env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
         }

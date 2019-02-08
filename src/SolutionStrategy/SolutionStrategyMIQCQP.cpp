@@ -81,9 +81,9 @@ bool SolutionStrategyMIQCQP::solveProblem()
 
     while(env->tasks->getNextTask(nextTask))
     {
-        env->output->outputInfo("┌─── Started task:  " + nextTask->getType());
+        env->output->outputDebug("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
-        env->output->outputInfo("└─── Finished task: " + nextTask->getType());
+        env->output->outputDebug("└─── Finished task: " + nextTask->getType());
     }
 
     return (true);

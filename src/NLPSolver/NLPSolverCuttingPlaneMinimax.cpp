@@ -61,7 +61,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Cplex)
     {
         LPSolver = std::make_unique<MIPSolverCplex>(env);
-        env->output->outputInfo("Cplex selected as MIP solver for minimax solver.");
+        env->output->outputDebug("Cplex selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -69,7 +69,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Gurobi)
     {
         LPSolver = std::make_unique<MIPSolverGurobi>(env);
-        env->output->outputInfo("Gurobi selected as MIP solver for minimax solver.");
+        env->output->outputDebug("Gurobi selected as MIP solver for minimax solver.");
     }
 #endif
 
@@ -77,13 +77,13 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     if(solver == ES_MIPSolver::Cbc)
     {
         LPSolver = std::make_unique<MIPSolverOsiCbc>(env);
-        env->output->outputInfo("Cbc selected as MIP solver for minimax solver.");
+        env->output->outputDebug("Cbc selected as MIP solver for minimax solver.");
     }
 #endif
 
-    env->output->outputInfo("Creating LP problem for minimax solver");
+    env->output->outputDebug("Creating LP problem for minimax solver");
     createProblem(LPSolver.get(), sourceProblem);
-    env->output->outputInfo("LP problem for minimax solver created");
+    env->output->outputDebug("LP problem for minimax solver created");
 
     LPSolver->activateDiscreteVariables(false);
     LPSolver->initializeSolverSettings();
