@@ -53,6 +53,7 @@ public:
 
 private:
     bool createdtmpdir;
+    bool createdgmo;
     char buffer[GMS_SSSIZE];
 
     void createModelFromProblemFile(const std::string& filename);

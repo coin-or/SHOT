@@ -15,7 +15,7 @@ namespace SHOT
 {
 
 ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
-    : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false)
+    : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false), createdgmo(false)
 {
 }
 
@@ -23,8 +23,11 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
 {
     clearGAMSObjects();
 
-    gmoLibraryUnload();
-    gevLibraryUnload();
+    if(createdgmo)
+    {
+        gmoLibraryUnload();
+        gevLibraryUnload();
+    }
 }
 
 void ModelingSystemGAMS::augmentSettings(SettingsPtr settings) {}
@@ -220,6 +223,8 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
         || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
         throw std::logic_error(buffer);
 
+    createdgmo = true;
+
     /* load control file */
     if(gevInitEnvironmentLegacy(modelingEnvironment, filename.c_str()))
     {
@@ -250,17 +255,17 @@ void ModelingSystemGAMS::finalizeSolution() {}
 
 void ModelingSystemGAMS::clearGAMSObjects()
 {
-    if(modelingObject == NULL)
-        return;
+    if(createdgmo && modelingObject != NULL)
+    {
+        gmoUnloadSolutionLegacy(modelingObject);
 
-    gmoUnloadSolutionLegacy(modelingObject);
+        gmoFree(&modelingObject);
+        modelingObject = NULL;
 
-    gmoFree(&modelingObject);
-    modelingObject = NULL;
-
-    assert(modelingEnvironment != NULL);
-    gevFree(&modelingEnvironment);
-    modelingEnvironment = NULL;
+        assert(modelingEnvironment != NULL);
+        gevFree(&modelingEnvironment);
+        modelingEnvironment = NULL;
+    }
 
     /* remove temporary directory content (should have only files) and directory itself) */
     if(createdtmpdir)
