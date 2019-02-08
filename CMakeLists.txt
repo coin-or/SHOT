@@ -136,7 +136,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"  
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h" 
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS'.h"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/ILinesearchMethod.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.h"
