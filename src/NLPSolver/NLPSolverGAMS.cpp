@@ -156,6 +156,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     case gmoModelStat_LicenseError:
     case gmoModelStat_ErrorUnknown:
     case gmoModelStat_ErrorNoSolution:
+    default:
         return E_NLPSolutionStatus::Error;
     }
 }
