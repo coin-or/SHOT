@@ -230,10 +230,12 @@ include_directories("${SPDLOG_DIR}")
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 
+# got an undefined symbol _ZN4SHOT8Settings13updateSettingENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES6_i if not linking SHOTSettings into SHOTSolver
 add_library (SHOTSolver SHARED ${SOURCES})
+target_link_libraries (SHOTSolver SHOTSettings)
 
 add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
-target_link_libraries (${PROJECT_NAME} SHOTSolver SHOTSettings)
+target_link_libraries (${PROJECT_NAME} SHOTSolver)
 
 if (HAS_CPLEX)
   target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
@@ -260,20 +262,9 @@ if (HAS_GAMS)
   target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
 endif (HAS_GAMS)
 
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinasl.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinmumps.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipopt.so) 
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipoptamplinterface.so)
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCoinUtils.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libClp.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libOsi.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libOsiClp.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCgl.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCbc.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCbcSolver.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libOS.so )
+target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
 
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 

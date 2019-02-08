@@ -1,1 +1,1 @@
-add_library(SHOTSettings SHOTSettings.cpp)
+add_library(SHOTSettings SHARED SHOTSettings.cpp)
