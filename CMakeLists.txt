@@ -7,14 +7,13 @@ set(CMAKE_BUILD_TYPE Debug)
 
 option (COMPILE_TESTS "Should the automated tests be compiled" ON)
 
-
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
 set(SHOT_VERSION_MINOR   9   CACHE STRING "Project minor version number.")
 set(SHOT_VERSION_PATCH   2   CACHE STRING "Project patch version number.")
 mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
 
-# Activates subsolvers, note that corresponding libraries are needed
+# Activates extra functionality, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON)
 option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON)
 option (HAS_GUROBI "Is Gurobi available" OFF)
@@ -22,11 +21,12 @@ option (HAS_GAMS "Is GAMS available" ON)
 option (HAS_OS "Is COIN-OR Optimization Services available" ON)
 
 # Sets the paths required. Edit these to suit your system:
-set(COINOS_DIR /opt/OS-2.10)
-set(GUROBI_DIR /opt/gurobi/gurobi810)
-set(CPLEX_DIR /opt/ibm/ILOG/CPLEX_Studio128)
-set(GAMS_DIR /opt/gams/gams25.1.2)
+set(COINOS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
+set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
+set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(GAMS_DIR "/opt/gams/gams25.1.2"  CACHE STRING "The base directory where GAMS is located (if available)")
 
+# These are included in SHOT's the source tree, and should not need to be modified
 set(MCPP_DIR ThirdParty/mc++)
 set(SPDLOG_DIR ThirdParty/spdlog)
 
@@ -62,7 +62,11 @@ endif()
 INCLUDE(FindPkgConfig)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+
+if(HAS_CPLEX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+endif()
+
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
 
@@ -197,8 +201,6 @@ if (HAS_GAMS)
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.h")
-#  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/GAMS/GAMS2OS.cpp")
-#  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GAMS2OS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GamsNLinstr.h")
 endif (HAS_GAMS)
 
@@ -216,9 +218,11 @@ find_package(Boost 1.63.0 COMPONENTS system filesystem REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
 
-include_directories("${COINOS_DIR}/include/coin")
-include_directories("${COINOS_DIR}/include/cppad")
-include_directories("${COINOS_DIR}/include")
+if(HAS_OS)
+    include_directories("${COINOS_DIR}/include/coin")
+    include_directories("${COINOS_DIR}/include/cppad")
+    include_directories("${COINOS_DIR}/include")
+endif()
 
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
@@ -261,7 +265,9 @@ if (HAS_GAMS)
   target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
 endif (HAS_GAMS)
 
-target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
+if(HAS_OS)
+    target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
+endif()
 
 target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
