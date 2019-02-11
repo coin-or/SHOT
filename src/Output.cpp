@@ -21,8 +21,6 @@ Output::Output()
 
     logger->set_pattern("%v");
 
-    // spdlog::register_logger(logger);
-
     logger->set_level(spdlog::level::info);
     setLogLevels(E_LogLevel::Info, E_LogLevel::Info);
 }
