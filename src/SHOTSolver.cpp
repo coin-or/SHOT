@@ -409,6 +409,18 @@ bool SHOTSolver::selectStrategy()
 
 bool SHOTSolver::solveProblem()
 {
+    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    {
+        std::stringstream filename;
+        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << "/usedsettings";
+        filename << ".opt";
+
+        auto usedSettings = env->settings->getSettingsInGAMSOptFormat(true);
+
+        UtilityFunctions::writeStringToFile(filename.str(), usedSettings);
+    }
+
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
         env->results->setDualBound(SHOT_DBL_MIN);
@@ -1034,13 +1046,6 @@ void SHOTSolver::initializeDebugMode()
     boost::filesystem::path source(env->settings->getStringSetting("ProblemFile", "Input"));
     boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
         boost::filesystem::copy_option::overwrite_if_exists);
-
-    std::string tmpFilename = debugPath + "/options.xml";
-
-    if(!UtilityFunctions::writeStringToFile(tmpFilename, getOSoL()))
-    {
-        env->output->outputError("Error when writing OsoL file: " + tmpFilename);
-    }
 }
 
 void SHOTSolver::verifySettings()
