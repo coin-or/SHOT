@@ -224,9 +224,7 @@ include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories("${MCPP_DIR}/3rdparty/fadbad++")
 
-
 include_directories("${SPDLOG_DIR}")
-
 
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")

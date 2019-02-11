@@ -110,7 +110,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
-    } // namespace SHOT
+    }
     catch(const ErrorClass& eclass)
     {
         env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.errormsg);
@@ -121,8 +121,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     return createProblem(problem, modelingObject);
 }
 
-E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
-    ProblemPtr& problem, gmoHandle_t gmo)
+E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, gmoHandle_t gmo)
 {
     assert(gmo != NULL);
 
@@ -136,8 +135,6 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     gmoPinfSet(modelingObject, SHOT_DBL_MAX);
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
-
-    // env->results->GAMSModelingObject = gmo;
 
     try
     {
