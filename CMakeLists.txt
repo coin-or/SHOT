@@ -239,15 +239,15 @@ add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
 target_link_libraries (${PROJECT_NAME} SHOTSolver)
 
 if (HAS_CPLEX)
-  target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
-  target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
-  target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
+  target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
+  target_link_libraries (SHOTSolver ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
+  target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
 endif (HAS_CPLEX)
 
 if (HAS_GUROBI)
   # Change the Gurobi library below to match the version on the system
-  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
-  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
+  target_link_libraries (SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
+  target_link_libraries (SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
 endif (HAS_GUROBI)
 
 target_link_libraries (${PROJECT_NAME} pthread)
