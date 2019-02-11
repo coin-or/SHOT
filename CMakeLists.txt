@@ -87,6 +87,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
@@ -136,7 +137,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"  
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h" 
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS'.h"
+  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/ILinesearchMethod.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.h"
@@ -223,28 +224,28 @@ include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories("${MCPP_DIR}/3rdparty/fadbad++")
 
-
 include_directories("${SPDLOG_DIR}")
-
 
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 
+# got an undefined symbol _ZN4SHOT8Settings13updateSettingENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES6_i if not linking SHOTSettings into SHOTSolver
 add_library (SHOTSolver SHARED ${SOURCES})
+target_link_libraries (SHOTSolver SHOTSettings)
 
 add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
-target_link_libraries (${PROJECT_NAME} SHOTSolver SHOTSettings)
+target_link_libraries (${PROJECT_NAME} SHOTSolver)
 
 if (HAS_CPLEX)
-  target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
-  target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
-  target_link_libraries (${PROJECT_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
+  target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
+  target_link_libraries (SHOTSolver ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
+  target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
 endif (HAS_CPLEX)
 
 if (HAS_GUROBI)
   # Change the Gurobi library below to match the version on the system
-  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
-  target_link_libraries (${PROJECT_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
+  target_link_libraries (SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
+  target_link_libraries (SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
 endif (HAS_GUROBI)
 
 target_link_libraries (${PROJECT_NAME} pthread)
@@ -260,20 +261,9 @@ if (HAS_GAMS)
   target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
 endif (HAS_GAMS)
 
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinasl.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libcoinmumps.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipopt.so) 
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libipoptamplinterface.so)
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCoinUtils.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libClp.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libOsi.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libOsiClp.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCgl.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCbc.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libCbcSolver.so )
-target_link_libraries (${PROJECT_NAME} ${COINOS_DIR}/lib/libOS.so )
+target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
 
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 

@@ -15,7 +15,7 @@ namespace SHOT
 {
 
 ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
-    : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false)
+    : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false), createdgmo(false)
 {
 }
 
@@ -23,8 +23,11 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
 {
     clearGAMSObjects();
 
-    gmoLibraryUnload();
-    gevLibraryUnload();
+    if(createdgmo)
+    {
+        gmoLibraryUnload();
+        gevLibraryUnload();
+    }
 }
 
 void ModelingSystemGAMS::augmentSettings(SettingsPtr settings) {}
@@ -107,13 +110,23 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
-    } // namespace SHOT
+    }
     catch(const ErrorClass& eclass)
     {
         env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.errormsg);
 
         return (E_ProblemCreationStatus::Error);
     }
+
+    return createProblem(problem, modelingObject);
+}
+
+E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, gmoHandle_t gmo)
+{
+    assert(gmo != NULL);
+
+    modelingObject = gmo;
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
 
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(modelingObject, 1);
@@ -122,8 +135,6 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     gmoPinfSet(modelingObject, SHOT_DBL_MAX);
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
-
-    // env->results->GAMSModelingObject = gmo;
 
     try
     {
@@ -220,6 +231,8 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
         || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
         throw std::logic_error(buffer);
 
+    createdgmo = true;
+
     /* load control file */
     if(gevInitEnvironmentLegacy(modelingEnvironment, filename.c_str()))
     {
@@ -250,17 +263,17 @@ void ModelingSystemGAMS::finalizeSolution() {}
 
 void ModelingSystemGAMS::clearGAMSObjects()
 {
-    if(modelingObject == NULL)
-        return;
+    if(createdgmo && modelingObject != NULL)
+    {
+        gmoUnloadSolutionLegacy(modelingObject);
 
-    gmoUnloadSolutionLegacy(modelingObject);
+        gmoFree(&modelingObject);
+        modelingObject = NULL;
 
-    gmoFree(&modelingObject);
-    modelingObject = NULL;
-
-    assert(modelingEnvironment != NULL);
-    gevFree(&modelingEnvironment);
-    modelingEnvironment = NULL;
+        assert(modelingEnvironment != NULL);
+        gevFree(&modelingEnvironment);
+        modelingEnvironment = NULL;
+    }
 
     /* remove temporary directory content (should have only files) and directory itself) */
     if(createdtmpdir)

@@ -45,6 +45,10 @@ public:
     E_ProblemCreationStatus createProblem(
         ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource);
 
+    // Create the optimization problem by filename from a GAMS model instance object
+    E_ProblemCreationStatus createProblem(
+        ProblemPtr& problem, gmoHandle_t gmo);
+
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution();
 
@@ -53,6 +57,7 @@ public:
 
 private:
     bool createdtmpdir;
+    bool createdgmo;
     char buffer[GMS_SSSIZE];
 
     void createModelFromProblemFile(const std::string& filename);

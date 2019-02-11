@@ -295,6 +295,46 @@ bool SHOTSolver::setProblem(std::string fileName)
     return (true);
 }
 
+bool SHOTSolver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modelingSystem)
+{
+    env->modelingSystem = modelingSystem;
+    env->problem = problem;
+    env->reformulatedProblem = problem;
+
+    env->settings->updateSetting("ProblemName", "Input", problem->name);
+
+    if(static_cast<ES_OutputDirectory>(env->settings->getIntSetting("OutputDirectory", "Output"))
+        == ES_OutputDirectory::Program)
+    {
+        boost::filesystem::path debugPath(boost::filesystem::current_path());
+        debugPath /= problem->name;
+
+        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problem->name);
+        env->settings->updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
+    }
+
+    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    {
+        initializeDebugMode();
+
+        std::stringstream filename;
+        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << "/originalproblem";
+        filename << ".txt";
+
+        std::stringstream problem;
+        problem << env->problem;
+
+        UtilityFunctions::writeStringToFile(filename.str(), problem.str());
+    }
+
+    verifySettings();
+
+    this->selectStrategy();
+
+    return (true);
+}
+
 bool SHOTSolver::selectStrategy()
 {
     if(static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
