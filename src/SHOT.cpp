@@ -33,14 +33,7 @@ int main(int argc, char* argv[])
 
     boost::filesystem::path resultFile, optionsFile, traceFile;
 
-    if(strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
-    {
-        // special handling when run on gams control file (.dat): don't read options file, don't write results or trace
-        // file
-        // TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking
-        // this main()
-    }
-    else if(argc == 2) // No options file specified, use or create defaults
+    if(argc == 2) // No options file specified, use or create defaults
     {
         bool GAMSOptFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.opt");
         bool OSoLFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.xml");
