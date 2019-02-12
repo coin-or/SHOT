@@ -46,8 +46,7 @@ public:
         ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource);
 
     // Create the optimization problem by filename from a GAMS model instance object
-    E_ProblemCreationStatus createProblem(
-        ProblemPtr& problem, gmoHandle_t gmo);
+    E_ProblemCreationStatus createProblem(ProblemPtr& problem, gmoHandle_t gmo);
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution();
@@ -80,21 +79,6 @@ private:
         int constantlen, /**< length of GAMS constants pool */
         double* constants, /**< GAMS constants pool */
         const ProblemPtr& destination);
-
-    /*std::vector<std::shared_ptr<OSiLReader>> osilReaders;
-    std::shared_ptr<OSiLWriter> osilWriter;
-    std::shared_ptr<OSnl2OS> nl2os;
-    */
-
-    // bool areAllConstraintsLinear(OSInstance* instance);
-    // bool areAllConstraintsQuadratic(OSInstance* instance);
-    // bool areAllVariablesReal(OSInstance* instance);
-
-    // bool isConstraintNonlinear(OSInstance* instance);
-    // bool isConstraintQuadratic(OSInstance* instance);
-
-    // Determines whether all individual constraints are linear, quadratic or nonlinear
-    // std::vector<E_ConstraintClassification> getConstraintClassifications(OSInstance *instance);
 };
 
 typedef std::shared_ptr<ModelingSystemGAMS> ModelingSystemGAMSPtr;
