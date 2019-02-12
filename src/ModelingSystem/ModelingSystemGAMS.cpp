@@ -136,6 +136,8 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
 
+    gevTerminateUninstall(modelingEnvironment);
+
     try
     {
         gmoNameInput(modelingObject, buffer);
@@ -255,8 +257,6 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
         gevFree(&modelingEnvironment);
         throw std::logic_error("Could not load model data.");
     }
-
-    gevTerminateUninstall(modelingEnvironment);
 }
 
 void ModelingSystemGAMS::finalizeSolution() {}
