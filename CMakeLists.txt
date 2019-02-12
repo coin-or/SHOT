@@ -29,6 +29,7 @@ set(GAMS_DIR "/opt/gams/gams25.1.2"  CACHE STRING "The base directory where GAMS
 # These are included in SHOT's the source tree, and should not need to be modified
 set(MCPP_DIR ThirdParty/mc++)
 set(SPDLOG_DIR ThirdParty/spdlog)
+set(TINYXML2_DIR ThirdParty/tinyxml2)
 
 # May be needed to specify the path to where Boost is installed, if not automatically detected
 #set(Boost_INCLUDE_DIR /usr/include)
@@ -110,6 +111,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
+  "${TINYXML2_DIR}/tinyxml2.cpp"
   )
 
 # Adding header files
@@ -165,6 +167,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
+  "${TINYXML2_DIR}/tinyxml2.h"
   )
 
 if (HAS_CPLEX)
@@ -229,6 +232,7 @@ include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories("${MCPP_DIR}/3rdparty/fadbad++")
 
 include_directories("${SPDLOG_DIR}")
+include_directories("${TINYXML2_DIR}/")
 
 include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
 add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")

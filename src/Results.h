@@ -15,6 +15,8 @@
 #include "OSResult.h"
 #include "OSrLWriter.h"
 
+#include "tinyxml2.h"
+
 namespace SHOT
 {
 

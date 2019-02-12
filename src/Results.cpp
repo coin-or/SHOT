@@ -134,294 +134,429 @@ void Results::initializeResults(int numObj, int numVar, int numConstr)
 
 std::string Results::getOSrl()
 {
-    return "";
-    int numConstr = osResult->getConstraintNumber();
+    using namespace tinyxml2;
 
-    int numVar = osResult->getVariableNumber();
+    XMLDocument osrlDocument;
 
-    int numPrimalSols = primalSolutions.size();
+    auto osrlNode = osrlDocument.NewElement("osrl");
+    osrlNode->SetAttribute("xmlns", "os.optimizationservices.org");
+    osrlNode->SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    osrlNode->SetAttribute(
+        "xmlns:schemaLocation", "os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSrL.xsd");
+
+    osrlDocument.InsertFirstChild(osrlNode);
+
+    auto generalNode = osrlDocument.NewElement("general");
+
+    auto instanceNameNode = osrlDocument.NewElement("instanceName");
+    instanceNameNode->SetText(env->settings->getStringSetting("ProblemName", "Input").c_str());
+    generalNode->InsertFirstChild(instanceNameNode);
 
     std::stringstream ssSolver;
     ssSolver << "Supporting Hyperplane Optimization Toolkit, version ";
     ssSolver << SHOT_VERSION_MAJOR << "." << SHOT_VERSION_MINOR << "." << SHOT_VERSION_PATCH;
-    osResult->setSolverInvoked(ssSolver.str());
+    auto solver = ssSolver.str();
 
-    osResult->setInstanceName(env->settings->getStringSetting("ProblemName", "Input"));
-    osResult->setNumberOfOtherGeneralResults(1);
-    osResult->setOtherGeneralResultName(0, "UsedOptions");
+    auto solverInvoked = osrlDocument.NewElement("solverInvoked");
+    solverInvoked->SetText(solver.c_str());
+    generalNode->InsertFirstChild(solverInvoked);
 
-    osResult->setOtherGeneralResultValue(0, env->settings->getSettingsAsString());
+    auto otherResultsNode = osrlDocument.NewElement("otherResults");
+    otherResultsNode->SetAttribute("numberOfOtherResults", "1");
+    auto otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "UsedOptions");
+    otherNode->SetText(env->settings->getSettingsInGAMSOptFormat(false).c_str());
+    otherResultsNode->InsertFirstChild(otherNode);
 
-    if(numPrimalSols == 0)
-    {
-        osResult->setSolutionNumber(1);
-        osResult->setNumberOfObjValues(0, 1);
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "DualObjectiveBound");
+    otherNode->SetAttribute("value", currentDualBound);
+    otherNode->SetAttribute("description", "The dual bound for the objective");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        std::stringstream strstrdb;
-        strstrdb << std::fixed << std::setprecision(15) << getDualBound();
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "PrimalObjectiveBound");
+    otherNode->SetAttribute("value", currentPrimalBound);
+    otherNode->SetAttribute("description", "The primal bound for the objective");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        osResult->setAnOtherSolutionResult(
-            0, "DualObjectiveBound", strstrdb.str(), "Final solution", "The dual bound for the objective", 0, NULL);
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "MaxConstraintError");
+    otherNode->SetAttribute("value", getCurrentIteration()->maxDeviation);
+    otherNode->SetAttribute("description", "The maximal constraint error");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        if(dualSolutions.size() > 0 && dualSolutions.back().point.size() > 0)
-        {
-            osResult->setObjValue(0, 0, -1, "", dualSolutions.back().objValue);
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "AbsoluteOptimalityGap");
+    otherNode->SetAttribute("value", getAbsoluteObjectiveGap());
+    otherNode->SetAttribute("description", "The absolute optimality gap");
+    otherResultsNode->InsertEndChild(otherNode);
 
-            std::stringstream strstr;
-            strstr << std::fixed << std::setprecision(15) << dualSolutions.back().objValue;
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "RelativeOptimalityGap");
+    otherNode->SetAttribute("value", getRelativeObjectiveGap());
+    otherNode->SetAttribute("description", "The relative optimality gap");
+    otherResultsNode->InsertEndChild(otherNode);
 
-            osResult->setAnOtherSolutionResult(
-                0, "MaxErrorConstrs", strstr.str(), "Final solution", "Maximal error in constraint", 0, NULL);
-        }
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfLPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsLP);
+    otherNode->SetAttribute("description", "The number of LP problems solved in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        std::stringstream strstr2;
-        strstr2 << std::fixed << std::setprecision(15) << getAbsoluteObjectiveGap();
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfQPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsQP);
+    otherNode->SetAttribute("description", "The number of QP problems solved in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "AbsOptimalityGap", strstr2.str(), "Final solution",
-            "The absolute optimality gap", 0, NULL);
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfFeasibleMILPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsFeasibleMILP);
+    otherNode->SetAttribute("description", "The number of MILP problems solved to feasibility in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        std::stringstream strstr3;
-        strstr3 << std::fixed << std::setprecision(15) << getRelativeObjectiveGap();
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfFeasibleMIQPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsFeasibleMIQP);
+    otherNode->SetAttribute("description", "The number of MIQP problems solved to feasibility in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "RelOptimalityGap", strstr3.str(), "Final solution",
-            "The relative optimality gap", 0, NULL);
-    }
-    else
-    {
-        int numSaveSolutions = env->settings->getIntSetting("SaveNumberOfSolutions", "Output");
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfOptimalMILPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsOptimalMILP);
+    otherNode->SetAttribute("description", "The number of MILP problems solved to optimality in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        osResult->setSolutionNumber(numSaveSolutions);
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfOptimalMIQPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfProblemsOptimalMIQP);
+    otherNode->SetAttribute("description", "The number of MIQP problems solved to optimality in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-        for(int i = 0; i < numSaveSolutions; i++)
-        {
-            if(i == 0)
-            {
-                std::string modelStatus;
-                std::string modelStatusDescription;
-                std::string modelSubStatus;
-                std::string modelSubStatusDescription;
+    int totalNumberOfProblems = env->solutionStatistics.numberOfProblemsLP
+        + env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
+        + env->solutionStatistics.numberOfProblemsQP + env->solutionStatistics.numberOfProblemsFeasibleMIQP
+        + env->solutionStatistics.numberOfProblemsOptimalMIQP;
 
-                osResult->setNumberOfSolutionSubstatuses(0, 1);
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "TotalNumberOfDualProblems");
+    otherNode->SetAttribute("value", totalNumberOfProblems);
+    otherNode->SetAttribute("description", "The total number of problems solved in the dual strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-                if(this->primalSolutions.size() > 0)
-                {
-                    modelStatusDescription = "Feasible solution found";
-                    modelStatus = "feasible";
-                }
-                else if(this->terminationReason == E_TerminationReason::AbsoluteGap)
-                {
-                    modelStatus = "globallyOptimal";
-                    modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
-                    modelSubStatus = "stoppedByBounds";
-                    modelSubStatusDescription = "Objective gap fulfills absolute gap termination criterion";
-                }
-                else if(this->terminationReason == E_TerminationReason::RelativeGap)
-                {
-                    modelStatus = "globallyOptimal";
-                    modelStatusDescription = "Solved to global optimality (assuming the problem is convex)";
-                    modelSubStatus = "stoppedByBounds";
-                    modelSubStatusDescription = "Objective gap fulfills relative gap termination criterion";
-                }
-                else if(this->terminationReason == E_TerminationReason::ConstraintTolerance)
-                {
-                    modelStatus = "locallyOptimal";
-                    modelStatusDescription = "Solved to global optimality";
-                    modelSubStatus = "stoppedByLimit";
-                    modelSubStatusDescription
-                        = "All nonlinear constraints fulfilled to given tolerance by dual solution";
-                }
-                else if(this->terminationReason == E_TerminationReason::InfeasibleProblem)
-                {
-                    modelStatus = "infeasible";
-                    modelStatusDescription = "Problem may be infeasible or specified tolerances are too strict";
-                }
-                else if(this->terminationReason == E_TerminationReason::UnboundedProblem)
-                {
-                    modelStatus = "unbounded";
-                    modelStatusDescription = "Problem is unbounded";
-                }
-                else if(this->terminationReason == E_TerminationReason::ObjectiveGapNotReached)
-                {
-                    modelStatusDescription = "Feasible solution found, but could not verify optimality";
-                }
-                else if(this->terminationReason == E_TerminationReason::ObjectiveStagnation)
-                {
-                    modelStatusDescription = "Terminated due to objective stagnation";
-                    modelSubStatus = "stoppedByLimit";
-                    modelSubStatusDescription = "Terminated due to objective stagnation";
-                }
-                else if(this->terminationReason == E_TerminationReason::IterationLimit)
-                {
-                    modelStatusDescription = "Terminated due to iteration limit";
-                    modelSubStatus = "stoppedByLimit";
-                    modelSubStatusDescription = "Terminated due to iteration limit";
-                }
-                else if(this->terminationReason == E_TerminationReason::TimeLimit)
-                {
-                    modelStatusDescription = "Terminated due to time limit";
-                    modelSubStatus = "stoppedByLimit";
-                    modelSubStatusDescription = "Terminated due to time limit";
-                }
-                else if(this->terminationReason == E_TerminationReason::NumericIssues)
-                {
-                    modelStatusDescription = "Terminated due to numeric issues";
-                }
-                else if(this->terminationReason == E_TerminationReason::UserAbort)
-                {
-                    modelStatusDescription = "User aborted solution process";
-                }
-                else if(this->terminationReason == E_TerminationReason::Error)
-                {
-                    modelStatusDescription = "Error during solution process";
-                }
-                else
-                {
-                    modelStatusDescription = "No feasible solutions found";
-                    modelStatusDescription = "Unknown return code obtained from solver";
-                    env->output->outputError("Unknown return code obtained from solver.");
-                }
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfNLPProblems");
+    otherNode->SetAttribute("value", env->solutionStatistics.getNumberOfTotalNLPProblems());
+    otherNode->SetAttribute("description", "The number of NLP problems solved in the primal strategy");
+    otherResultsNode->InsertEndChild(otherNode);
 
-                osResult->setSolutionStatusType(0, modelStatus);
-                osResult->setSolutionStatusDescription(0, modelStatusDescription);
-                osResult->setSolutionSubstatusType(0, 0, modelSubStatus);
-                osResult->setSolutionSubstatusDescription(0, 0, modelSubStatusDescription);
-            }
-            else
-            {
-                osResult->setSolutionStatusType(i, "feasible");
-                osResult->setSolutionStatusDescription(i, "Additional primal solution");
-            }
+    generalNode->InsertFirstChild(otherResultsNode);
 
-            osResult->setNumberOfObjValues(i, 1);
-            osResult->setNumberOfPrimalVariableValues(i, numVar);
-            osResult->setObjValue(i, 0, -1, "", primalSolutions.at(i).objValue);
+    osrlNode->InsertFirstChild(generalNode);
 
-            osResult->setPrimalVariableValuesDense(i, &primalSolutions.at(i).point[0]);
+    auto jobNode = osrlDocument.NewElement("job");
 
-            VectorDouble tmpConstrVals;
-
-            osResult->setNumberOfDualValues(i, numConstr);
-
-            for(int j = 0; j < numConstr; j++)
-            {
-                osResult->setDualValue(i, j, j, env->problem->numericConstraints.at(j)->name,
-                    env->problem->numericConstraints.at(j)
-                        ->calculateNumericValue(primalSolutions.at(i).point)
-                        .normalizedValue);
-            }
-        }
-
-        std::stringstream strstrdb;
-        strstrdb << std::fixed << std::setprecision(15) << getDualBound();
-
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "DualObjectiveBound", strstrdb.str(), "Final solution",
-            "The dual bound for the objective", 0, NULL);
-
-        std::stringstream strstrpb;
-        strstrpb << std::fixed << std::setprecision(15) << getPrimalBound();
-
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "PrimalObjectiveBound", strstrpb.str(), "Final solution",
-            "The primal bound for the objective", 0, NULL);
-
-        std::stringstream strstr;
-        strstr << std::fixed << std::setprecision(15) << getCurrentIteration()->maxDeviation;
-
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "MaxErrorConstrs", strstr.str(), "Final solution",
-            "Maximal error in constraint", 0, NULL);
-
-        std::stringstream strstr2;
-        strstr2 << std::fixed << std::setprecision(15) << getAbsoluteObjectiveGap();
-
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "AbsOptimalityGap", strstr2.str(), "Final solution",
-            "The absolute optimality gap", 0, NULL);
-
-        std::stringstream strstr3;
-        strstr3 << std::fixed << std::setprecision(15) << getRelativeObjectiveGap();
-
-        osResult->setAnOtherSolutionResult(numPrimalSols - 1, "RelOptimalityGap", strstr3.str(), "Final solution",
-            "The relative optimality gap", 0, NULL);
-    }
+    auto timingInformationNode = osrlDocument.NewElement("timingInformation");
+    int numberOfTimes = 0;
 
     for(auto& T : env->timing->timers)
     {
-        osResult->addTimingInformation(T.name, "SHOT", "second", T.description, T.elapsed());
+        auto timeNode = osrlDocument.NewElement("time");
+        timeNode->SetText(T.elapsed());
+        timeNode->SetAttribute("type", T.name.c_str());
+        timeNode->SetAttribute("unit", "second");
+        timeNode->SetAttribute("description", T.description.c_str());
+        timingInformationNode->InsertEndChild(timeNode);
+        numberOfTimes++;
     }
 
-    numPrimalSols
-        = std::max(1, numPrimalSols); // To make sure we also print the following even if we have no primal solution
+    timingInformationNode->SetAttribute("numberOfTimes", numberOfTimes);
+    jobNode->InsertEndChild(timingInformationNode);
 
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "LP",
-        std::to_string(env->solutionStatistics.numberOfProblemsLP), "ProblemsSolved", "Relaxed LP problems solved", 0,
-        NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "QP",
-        std::to_string(env->solutionStatistics.numberOfProblemsQP), "ProblemsSolved", "Relaxed QP problems solved", 0,
-        NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMILP",
-        std::to_string(env->solutionStatistics.numberOfProblemsFeasibleMILP), "ProblemsSolved",
-        "MILP problems solved to feasibility", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMILP",
-        std::to_string(env->solutionStatistics.numberOfProblemsOptimalMILP), "ProblemsSolved",
-        "MILP problems solved to optimality", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "FeasibleMIQP",
-        std::to_string(env->solutionStatistics.numberOfProblemsFeasibleMIQP), "ProblemsSolved",
-        "MIQP problems solved to feasibility", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "OptimalMIQP",
-        std::to_string(env->solutionStatistics.numberOfProblemsOptimalMIQP), "ProblemsSolved",
-        "MIQP problems solved to optimality", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Total",
-        std::to_string(env->solutionStatistics.numberOfProblemsLP + env->solutionStatistics.numberOfProblemsFeasibleMILP
-            + env->solutionStatistics.numberOfProblemsOptimalMILP + env->solutionStatistics.numberOfProblemsQP
-            + env->solutionStatistics.numberOfProblemsFeasibleMIQP
-            + env->solutionStatistics.numberOfProblemsOptimalMIQP),
-        "ProblemsSolved", "Total number of (MI)QP/(MI)LP subproblems solved", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NLP",
-        std::to_string(env->solutionStatistics.getNumberOfTotalNLPProblems()), "ProblemsSolved", "NLP problems solved",
-        0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Functions",
-        std::to_string(env->solutionStatistics.numberOfFunctionEvalutions), "Evaluations",
-        "Total number of function evaluations in SHOT", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "Gradients",
-        std::to_string(env->solutionStatistics.numberOfGradientEvaluations), "Evaluations",
-        "Total number of gradient evaluations in SHOT", 0, NULL);
+    osrlNode->InsertEndChild(jobNode);
 
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberVariables",
-        std::to_string(env->problem->properties.numberOfVariables), "Problem", "Total number of variables", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberContinousVariables",
-        std::to_string(env->problem->properties.numberOfRealVariables), "Problem", "Number of continuous variables", 0,
-        NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberBinaryVariables",
-        std::to_string(env->problem->properties.numberOfBinaryVariables), "Problem", "Number of binary variables", 0,
-        NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberIntegerVariables",
-        std::to_string(env->problem->properties.numberOfIntegerVariables), "Problem", "Number of integer variables", 0,
-        NULL);
+    auto optimizationNode = osrlDocument.NewElement("optimization");
+    optimizationNode->SetAttribute("numberOfSolutions", (int)primalSolutions.size());
+    optimizationNode->SetAttribute("numberOfVariables", env->problem->properties.numberOfVariables);
+    optimizationNode->SetAttribute("numberOfConstraints", env->problem->properties.numberOfNumericConstraints);
+    optimizationNode->SetAttribute("numberOfObjectives", 1);
 
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberConstraints",
-        std::to_string(env->problem->properties.numberOfNumericConstraints), "Problem", "Number of constraints", 0,
-        NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberNonlinearConstraints",
-        std::to_string(env->problem->properties.numberOfNonlinearConstraints), "Problem",
-        "Number of nonlinear constraints", 0, NULL);
-    osResult->setAnOtherSolutionResult(numPrimalSols - 1, "NumberLinearConstraints",
-        std::to_string(env->problem->properties.numberOfLinearConstraints), "Problem", "Number of linear constraints",
-        0, NULL);
+    auto solutionNode = osrlDocument.NewElement("solution");
 
-    OSrLWriter writer;
-    writer.m_bWhiteSpace = false;
+    auto otherSolutionResultsNode = osrlDocument.NewElement("otherSolutionResults");
 
-    using boost::property_tree::ptree;
-    ptree pt;
-    boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
+    int numPrimalSols = primalSolutions.size();
 
-    std::stringstream ssOSrL;
-    ssOSrL << writer.writeOSrL(osResult.get());
+    int numSaveSolutions = std::min(env->settings->getIntSetting("SaveNumberOfSolutions", "Output"), numPrimalSols);
 
-    read_xml(ssOSrL, pt, boost::property_tree::xml_parser::trim_whitespace);
+    auto statusNode = osrlDocument.NewElement("status");
 
-    std::ostringstream ossXML;
-    write_xml(ossXML, pt, settings);
+    if(this->terminationReason == E_TerminationReason::AbsoluteGap
+        || this->terminationReason == E_TerminationReason::RelativeGap)
+    {
+        statusNode->SetAttribute("type", "globallyOptimal");
+        statusNode->SetAttribute("description", "Solved to global optimality (assuming the problem is convex)");
 
-    return (ossXML.str());
+        statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+        auto substatusNode = osrlDocument.NewElement("substatus");
+        substatusNode->SetAttribute("type", "stoppedByBounds");
+        substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+        statusNode->InsertFirstChild(substatusNode);
+    }
+    else if(this->terminationReason == E_TerminationReason::ConstraintTolerance)
+    {
+        statusNode->SetAttribute("type", "locallyOptimal");
+        statusNode->SetAttribute("description", "Solved to local optimality");
+
+        statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+        auto substatusNode = osrlDocument.NewElement("substatus");
+        substatusNode->SetAttribute("type", "stoppedByBounds");
+        substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+        statusNode->InsertFirstChild(substatusNode);
+    }
+    else if(this->primalSolutions.size() > 0)
+    {
+        statusNode->SetAttribute("type", "feasible");
+        statusNode->SetAttribute("description", "Feasible solution found");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "other");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::InfeasibleProblem)
+    {
+        statusNode->SetAttribute("type", "infeasible");
+        statusNode->SetAttribute("description", "No solution found since problem is infeasible");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "other");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::UnboundedProblem)
+    {
+        statusNode->SetAttribute("type", "unbounded");
+        statusNode->SetAttribute("description", "No solution found since problem is unbounded");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "other");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::ObjectiveGapNotReached)
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "No solution found");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::ObjectiveStagnation)
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "No solution found");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::IterationLimit)
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "No solution found");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::TimeLimit)
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "No solution found");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::NumericIssues)
+    {
+        statusNode->SetAttribute("type", "error");
+        statusNode->SetAttribute("description", "No solution found since an error occured");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::UserAbort)
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "No solution found due to user abort");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else if(this->terminationReason == E_TerminationReason::Error)
+    {
+        statusNode->SetAttribute("type", "error");
+        statusNode->SetAttribute("description", "No solution found since an error occured");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
+    else
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "Unknown return code obtained from solver");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+
+        env->output->outputError("Unknown return code obtained from solver.");
+    }
+
+    solutionNode->InsertFirstChild(statusNode);
+
+    for(int i = 0; i < numSaveSolutions; i++)
+    {
+        if(i > 0)
+        {
+            solutionNode = osrlDocument.NewElement("solution");
+            statusNode = osrlDocument.NewElement("status");
+            statusNode->SetAttribute("type", "feasible");
+            statusNode->SetAttribute("description", "Additional primal solution");
+            solutionNode->InsertFirstChild(statusNode);
+        }
+
+        auto objectivesNode = osrlDocument.NewElement("objectives");
+
+        auto objectiveValueNode = osrlDocument.NewElement("values");
+        objectiveValueNode->SetAttribute("numberOfObj", 1);
+
+        auto objectiveSolutionNode = osrlDocument.NewElement("obj");
+        objectiveSolutionNode->SetAttribute("idx", -1);
+        objectiveSolutionNode->SetText(std::to_string(primalSolutions.at(i).objValue).c_str());
+        objectiveValueNode->InsertFirstChild(objectiveSolutionNode);
+
+        objectivesNode->InsertFirstChild(objectiveValueNode);
+        solutionNode->InsertFirstChild(objectivesNode);
+
+        auto variablesNode = osrlDocument.NewElement("variables");
+
+        auto variableValueNode = osrlDocument.NewElement("values");
+        variableValueNode->SetAttribute("numberOfVar", (int)primalSolutions.at(i).point.size());
+
+        for(int j = 0; j < primalSolutions.at(i).point.size(); j++)
+        {
+            auto variableSolutionNode = osrlDocument.NewElement("var");
+            variableSolutionNode->SetAttribute("idx", j);
+            variableSolutionNode->SetAttribute("name", env->problem->allVariables.at(j)->name.c_str());
+            variableSolutionNode->SetText(std::to_string(primalSolutions.at(i).point.at(j)).c_str());
+            variableValueNode->InsertEndChild(variableSolutionNode);
+        }
+
+        variablesNode->InsertFirstChild(variableValueNode);
+        solutionNode->InsertFirstChild(variablesNode);
+
+        auto constraintsNode = osrlDocument.NewElement("constraints");
+
+        auto dualValuesNode = osrlDocument.NewElement("dualValues");
+        dualValuesNode->SetAttribute("numberOfCon", (int)env->problem->properties.numberOfNumericConstraints);
+
+        for(int j = 0; j < env->problem->numericConstraints.size(); j++)
+        {
+            auto dualValueNode = osrlDocument.NewElement("con");
+            dualValueNode->SetAttribute("idx", j);
+            dualValueNode->SetAttribute("name", env->problem->numericConstraints.at(j)->name.c_str());
+            dualValueNode->SetText(std::to_string(env->problem->numericConstraints.at(j)
+                                                      ->calculateNumericValue(primalSolutions.at(i).point)
+                                                      .normalizedValue)
+                                       .c_str());
+            dualValuesNode->InsertEndChild(dualValueNode);
+        }
+
+        constraintsNode->InsertFirstChild(dualValuesNode);
+        solutionNode->InsertFirstChild(constraintsNode);
+
+        optimizationNode->InsertEndChild(solutionNode);
+    }
+
+    osrlNode->InsertEndChild(optimizationNode);
+
+    XMLPrinter printer;
+    osrlDocument.Print(&printer);
+
+    return (printer.CStr());
 }
 
 std::string Results::getTraceResult()
@@ -647,4 +782,5 @@ double Results::getRelativeObjectiveGap()
 
     return (gap);
 }
+
 } // namespace SHOT
