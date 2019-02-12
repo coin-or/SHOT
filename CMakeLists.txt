@@ -63,7 +63,7 @@ INCLUDE(FindPkgConfig)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 
-if(HAS_CPLEX)
+if(HAS_OS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
 endif()
 
