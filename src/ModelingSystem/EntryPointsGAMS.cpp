@@ -134,7 +134,9 @@ extern "C"
         assert(gs->gmo != NULL);
         assert(gs->opt == NULL); /* we don't process GAMS options objects so far */
 
-        SHOTSolver solver;
+        // create solver, direct SHOT console output to GAMS log and status file
+        SHOTSolver solver(std::make_shared<GamsOutputSink>((gevHandle_t)gmoEnvironment(gs->gmo)));
+
         /* solver.updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug)); */
         auto env = solver.getEnvironment();
 
