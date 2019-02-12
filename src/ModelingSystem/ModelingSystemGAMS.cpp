@@ -78,6 +78,9 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
                 + " by GAMS");
     }
 
+    // want to solve the NLP problems with GAMS
+    settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
+
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
@@ -99,9 +102,6 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             throw std::logic_error("Cannot read GAMS options file.");
         }
     }
-
-    // want to solve the NLP problems with GAMS
-    settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
 }
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
