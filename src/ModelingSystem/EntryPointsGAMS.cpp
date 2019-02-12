@@ -140,12 +140,11 @@ extern "C"
         /* solver.updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug)); */
         auto env = solver.getEnvironment();
 
-        env->timing->startTimer("Total");
-
         try
         {
             env->report->outputSolverHeader();
 
+            env->timing->startTimer("ProblemInitialization");
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
 
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -157,6 +156,7 @@ extern "C"
             }
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->timing->stopTimer("ProblemInitialization");
 
             /* correct to call this here? */
             modelingSystem->updateSettings(env->settings);
