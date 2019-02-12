@@ -13,11 +13,14 @@
 namespace SHOT
 {
 
-SHOTSolver::SHOTSolver()
+SHOTSolver::SHOTSolver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 {
     env = std::make_shared<Environment>();
 
     env->output = std::make_shared<Output>();
+    if( consoleSink != NULL )
+        env->output->setConsoleSink(consoleSink);
+
     env->results = std::make_shared<Results>(env);
     env->timing = std::make_shared<Timing>(env);
 

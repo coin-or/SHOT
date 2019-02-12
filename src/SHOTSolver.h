@@ -45,7 +45,7 @@ private:
     EnvironmentPtr env;
 
 public:
-    SHOTSolver();
+    SHOTSolver(std::shared_ptr<spdlog::sinks::sink> consoleSink = NULL);
     SHOTSolver(EnvironmentPtr environment);
     ~SHOTSolver();
 
