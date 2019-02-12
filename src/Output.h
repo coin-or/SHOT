@@ -34,8 +34,10 @@ public:
 
     void setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel);
 
+    void setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink);
+
 private:
-    std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> consoleSink;
+    std::shared_ptr<spdlog::sinks::sink> consoleSink;
     std::shared_ptr<spdlog::sinks::basic_file_sink_mt> fileSink;
 
     std::shared_ptr<spdlog::logger> logger;

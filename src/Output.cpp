@@ -121,4 +121,17 @@ void Output::setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel)
         break;
     }
 }
+
+void Output::setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink)
+{
+    // copy loglevel from previous consoleSink
+    newSink->set_level(consoleSink->level());
+    // set our pattern
+    newSink->set_pattern("%v");
+
+    // install new consoleSink
+    consoleSink = newSink;
+    logger->sinks()[0] = consoleSink;
+}
+
 } // namespace SHOT
