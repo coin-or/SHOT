@@ -637,7 +637,7 @@ void SHOTSolver::initializeSettings()
 
     // Dual strategy settings: Relaxation strategies
 
-    env->settings->createSetting("Relaxation.Use", "Dual", true, "Initially solve continous dual relaxations");
+    env->settings->createSetting("Relaxation.Use", "Dual", true, "Initially solve continuous dual relaxations");
 
     env->settings->createSetting(
         "Relaxation.Frequency", "Dual", 0, "The frequency to solve an LP problem: 0: Disable", 0, SHOT_INT_MAX);
@@ -698,10 +698,10 @@ void SHOTSolver::initializeSettings()
 
     // Reformulations for constraints
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false,
-        "Partition nonlinear terms as auxilliary constraints");
+        "Partition nonlinear terms as auxiliary constraints");
 
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false,
-        "Partition quadratic terms as auxilliary constraints");
+        "Partition quadratic terms as auxiliary constraints");
 
     // Reformulations for binary monomials
     VectorString enumBinaryMonomialReformulation;
