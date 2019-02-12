@@ -269,9 +269,18 @@ if (HAS_GAMS)
   target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
 endif (HAS_GAMS)
 
-if(HAS_OS)
-    target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
-endif()
+if (HAS_OS)
+  #target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
+
+  # add libraries from os_addlibs_cpp.txt
+  # TODO should probably use pkg-config instead
+  file(READ ${COINOS_DIR}/share/coin/doc/OS/os_addlibs.txt OS_LINKFLAGS)
+  string(STRIP ${OS_LINKFLAGS} OS_LINKFLAGS)
+  target_link_libraries(SHOTSolver ${OS_LINKFLAGS})
+  if (UNIX)
+    target_link_libraries(SHOTSolver -Wl,-rpath,${COINOS_DIR}/lib)
+  endif (UNIX)
+endif (HAS_OS)
 
 target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
