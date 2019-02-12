@@ -34,6 +34,30 @@ void ModelingSystemGAMS::augmentSettings(SettingsPtr settings) {}
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
+    // Process GAMS options.
+    // We do not want to use GAMS defaults if called on a gms file, in which case we would have created our own GMO.
+    if( !createdgmo )
+    {
+        env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
+        env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
+        env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
+
+        env->output->outputDebug(
+                "Time limit set to "
+                + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
+        + " by GAMS");
+        env->output->outputDebug(
+                "Absolute termination tolerance set to "
+                + UtilityFunctions::toString(
+                        env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+        + " by GAMS");
+        env->output->outputDebug(
+                "Relative termination tolerance set to "
+                + UtilityFunctions::toString(
+                        env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+        + " by GAMS");
+    }
+
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
@@ -54,32 +78,6 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             env->output->outputError("Error when reading GAMS options file" + std::string(buffer));
             throw std::logic_error("Cannot read GAMS options file from.");
         }
-    }
-    else // get default settings from GAMS
-    {
-        // Removed this functionality, since otherwise we cannot control the time limit from an options file when SHOT
-        // is called on a gms file
-        /*env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(gev, gevResLim));
-                 env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(gev, gevOptCA));
-                 env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(gev, gevOptCR));
-
-
-                 env->output->outputDebug(
-                 "Time limit set to "
-                 + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
-                 + " by GAMS");
-                 env->output->outputDebug(
-                 "Absolute termination tolerance set to "
-                 + UtilityFunctions::toString(
-                 env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
-                 + " by GAMS");
-                 env->output->outputDebug(
-                 "Relative termination tolerance set to "
-                 + UtilityFunctions::toString(
-                 env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
-                 + " by GAMS");
-
-                 */
     }
 
     // want to solve the NLP problems with GAMS
