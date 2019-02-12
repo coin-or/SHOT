@@ -36,26 +36,46 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
     // Process GAMS options.
     // We do not want to use GAMS defaults if called on a gms file, in which case we would have created our own GMO.
-    if( !createdgmo )
+    if(!createdgmo)
     {
         env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
+        if( gevGetIntOpt(modelingEnvironment, gevIterLim) != ITERLIM_INFINITY )
+            env->settings->updateSetting("IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
+        else
+            env->settings->updateSetting("IterationLimit", "Termination", SHOT_INT_MAX);
         env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
         env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
+
+        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
+
+        // TODO? gevDomLim: stop if so many evaluation errors in nonlinear functions
+        // TODO gevNodeLim: should be node limit for single-tree strategy, if > 0
+        // TODO? gevCutOff, gevUseCutOff: stop if dual bound is above this value (if I remember right)
+        // TODO gevCheat, gevUseCheat -> MIP.CutOffTolerance ?
+        // TODO?? gevTryInt: handling of fractional values in initial solution for repair heuristics
 
         env->output->outputDebug(
                 "Time limit set to "
                 + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
-        + " by GAMS");
+                + " by GAMS");
+        env->output->outputDebug(
+                "Iteration limit set to "
+                + UtilityFunctions::toString(env->settings->getIntSetting("IterationLimit", "Termination"))
+                + " by GAMS");
         env->output->outputDebug(
                 "Absolute termination tolerance set to "
                 + UtilityFunctions::toString(
                         env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
-        + " by GAMS");
+                + " by GAMS");
         env->output->outputDebug(
                 "Relative termination tolerance set to "
                 + UtilityFunctions::toString(
                         env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
-        + " by GAMS");
+                + " by GAMS");
+        env->output->outputDebug(
+                "MIP number of threads set to "
+                + UtilityFunctions::toString(env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"))
+                + " by GAMS");
     }
 
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
@@ -75,8 +95,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
         catch(std::exception& e)
         {
-            env->output->outputError("Error when reading GAMS options file" + std::string(buffer));
-            throw std::logic_error("Cannot read GAMS options file from.");
+            env->output->outputError("Error when reading GAMS options file " + std::string(buffer));
+            throw std::logic_error("Cannot read GAMS options file.");
         }
     }
 
