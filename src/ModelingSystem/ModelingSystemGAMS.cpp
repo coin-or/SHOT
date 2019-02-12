@@ -259,7 +259,12 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
     }
 }
 
-void ModelingSystemGAMS::finalizeSolution() {}
+void ModelingSystemGAMS::finalizeSolution()
+{
+    // TODO when #205 is done
+    gmoSolveStatSet(modelingObject, gmoSolveStat_Skipped);
+    gmoModelStatSet(modelingObject, gmoModelStat_NoSolutionReturned);
+}
 
 void ModelingSystemGAMS::clearGAMSObjects()
 {

@@ -149,7 +149,8 @@ extern "C"
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
             if(modelingSystem->createProblem(problem, gs->gmo) != E_ProblemCreationStatus::NormalCompletion)
             {
-                /* std::cout << "Error while reading problem"; */
+                gmoSolveStatSet(gs->gmo, gmoSolveStat_Capability);
+                gmoModelStatSet(gs->gmo, gmoModelStat_NoSolutionReturned);
                 return 0;
             }
 
@@ -167,14 +168,23 @@ extern "C"
             {
                 env->output->outputError(" Error when solving problem.");
 
+                gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
+                gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+
                 return (0);
             }
 
             env->report->outputSolutionReport();
+
+            // pass solution info, etc. to GAMS
+            modelingSystem->finalizeSolution();
         }
         catch(const ErrorClass& eclass)
         {
             env->output->outputError(eclass.errormsg);
+
+            gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
+            gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
 
             return (0);
         }
