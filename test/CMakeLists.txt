@@ -53,7 +53,7 @@ create_test_sourcelist(srclist test_runner.cpp ${cpptestsrc})
 add_executable(${TEST_EXE_NAME}  ${srclist})
 target_link_libraries(${TEST_EXE_NAME}  ${libs})
 
-target_link_libraries (${TEST_EXE_NAME} SHOTSolver SHOTSettings)
+target_link_libraries (${TEST_EXE_NAME} SHOTSolver)
 
 if (HAS_CPLEX)  
   target_link_libraries (${TEST_EXE_NAME} ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
