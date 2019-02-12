@@ -264,14 +264,17 @@ void ModelingSystemGAMS::finalizeSolution()
     // TODO when #205 is done
     gmoSolveStatSet(modelingObject, gmoSolveStat_Skipped);
     gmoModelStatSet(modelingObject, gmoModelStat_NoSolutionReturned);
+
+    // if we created the GMO object due to starting from a .gms or .dat file, then we should write the solution into a GAMS solution file
+    // (though it's probably of no interest if started from .gms and starting from .dat has been removed here)
+    if(createdgmo)
+        gmoUnloadSolutionLegacy(modelingObject);
 }
 
 void ModelingSystemGAMS::clearGAMSObjects()
 {
     if(createdgmo && modelingObject != NULL)
     {
-        gmoUnloadSolutionLegacy(modelingObject);
-
         gmoFree(&modelingObject);
         modelingObject = NULL;
 
