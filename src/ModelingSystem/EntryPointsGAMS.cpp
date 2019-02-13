@@ -134,26 +134,28 @@ extern "C"
         assert(gs->gmo != NULL);
         assert(gs->opt == NULL); /* we don't process GAMS options objects so far */
 
-        SHOTSolver solver;
-        /* solver.updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug)); */
-        auto env = solver.getEnvironment();
+        // create solver, direct SHOT console output to GAMS log and status file
+        SHOTSolver solver(std::make_shared<GamsOutputSink>((gevHandle_t)gmoEnvironment(gs->gmo)));
 
-        env->timing->startTimer("Total");
+        auto env = solver.getEnvironment();
 
         try
         {
             env->report->outputSolverHeader();
 
+            env->timing->startTimer("ProblemInitialization");
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
 
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
             if(modelingSystem->createProblem(problem, gs->gmo) != E_ProblemCreationStatus::NormalCompletion)
             {
-                /* std::cout << "Error while reading problem"; */
+                gmoSolveStatSet(gs->gmo, gmoSolveStat_Capability);
+                gmoModelStatSet(gs->gmo, gmoModelStat_NoSolutionReturned);
                 return 0;
             }
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
+            env->timing->stopTimer("ProblemInitialization");
 
             /* correct to call this here? */
             modelingSystem->updateSettings(env->settings);
@@ -167,14 +169,23 @@ extern "C"
             {
                 env->output->outputError(" Error when solving problem.");
 
+                gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
+                gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+
                 return (0);
             }
 
             env->report->outputSolutionReport();
+
+            // pass solution info, etc. to GAMS
+            modelingSystem->finalizeSolution();
         }
         catch(const ErrorClass& eclass)
         {
             env->output->outputError(eclass.errormsg);
+
+            gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
+            gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
 
             return (0);
         }

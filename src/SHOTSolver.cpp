@@ -13,11 +13,14 @@
 namespace SHOT
 {
 
-SHOTSolver::SHOTSolver()
+SHOTSolver::SHOTSolver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 {
     env = std::make_shared<Environment>();
 
     env->output = std::make_shared<Output>();
+    if(consoleSink != NULL)
+        env->output->setConsoleSink(consoleSink);
+
     env->results = std::make_shared<Results>(env);
     env->timing = std::make_shared<Timing>(env);
 
@@ -735,13 +738,13 @@ void SHOTSolver::initializeSettings()
 
     // Logging and output settings
     VectorString enumLogLevel;
-    enumLogLevel.push_back("Off");
-    enumLogLevel.push_back("Critical");
-    enumLogLevel.push_back("Error");
-    enumLogLevel.push_back("Warning");
-    enumLogLevel.push_back("Info");
-    enumLogLevel.push_back("Debug");
     enumLogLevel.push_back("Trace");
+    enumLogLevel.push_back("Debug");
+    enumLogLevel.push_back("Info");
+    enumLogLevel.push_back("Warning");
+    enumLogLevel.push_back("Error");
+    enumLogLevel.push_back("Critical");
+    enumLogLevel.push_back("Off");
     env->settings->createSetting(
         "Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for console output", enumLogLevel);
 
@@ -1019,7 +1022,7 @@ void SHOTSolver::initializeSettings()
 
     env->settings->settingsInitialized = true;
 
-    env->output->outputInfo("Initialization of settings complete.");
+    env->output->outputDebug("Initialization of settings complete.");
 }
 
 void SHOTSolver::initializeDebugMode()

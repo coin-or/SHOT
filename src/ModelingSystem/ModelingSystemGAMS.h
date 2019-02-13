@@ -83,4 +83,32 @@ private:
 
 typedef std::shared_ptr<ModelingSystemGAMS> ModelingSystemGAMSPtr;
 
+class GamsOutputSink : public spdlog::sinks::base_sink<std::mutex>
+{
+private:
+    gevHandle_t gev;
+    GamsOutputSink() = delete;
+
+public:
+    GamsOutputSink(gevHandle_t gev_) : gev(gev_) {}
+
+    void sink_it_(const spdlog::details::log_msg& msg) override
+    {
+        // log_msg is a struct containing the log entry info like level, timestamp, thread id etc.
+        // msg.raw contains pre formatted log
+
+        // If needed (very likely but not mandatory), the sink formats the message before sending it to its final
+        // destination:
+        fmt::memory_buffer formatted;
+        sink::formatter_->format(msg, formatted);
+
+        if(msg.level <= spdlog::level::warn)
+            gevLogStatPChar(gev, fmt::to_string(formatted).c_str());
+        else
+            gevLogPChar(gev, fmt::to_string(formatted).c_str());
+    }
+
+    void flush_() override { gevLogStatFlush(gev); }
+};
+
 } // namespace SHOT
