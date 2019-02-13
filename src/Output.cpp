@@ -21,7 +21,9 @@ Output::Output()
 
     logger->set_pattern("%v");
 
-    logger->set_level(spdlog::level::info);
+    // The maximum level of logging to use by all sinks
+    logger->set_level(spdlog::level::trace);
+
     setLogLevels(E_LogLevel::Info, E_LogLevel::Info);
 }
 
@@ -119,6 +121,16 @@ void Output::setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel)
 
     default:
         break;
+    }
+
+    // Also set the level for the main logger
+    if((int)consoleLogLevel <= (int)fileLogLevel)
+    {
+        logger->set_level((spdlog::level::level_enum)consoleLogLevel);
+    }
+    else
+    {
+        logger->set_level((spdlog::level::level_enum)fileLogLevel);
     }
 }
 
