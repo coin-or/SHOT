@@ -95,6 +95,9 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             throw std::logic_error("Cannot read GAMS options file.");
         }
     }
+
+    env->output->setLogLevels(static_cast<E_LogLevel>(settings->getIntSetting("Console.LogLevel", "Output")),
+        static_cast<E_LogLevel>(settings->getIntSetting("File.LogLevel", "Output")));
 }
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
