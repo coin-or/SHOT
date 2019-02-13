@@ -39,12 +39,15 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(!createdgmo)
     {
         env->settings->updateSetting("TimeLimit", "Termination", gevGetDblOpt(modelingEnvironment, gevResLim));
-        if( gevGetIntOpt(modelingEnvironment, gevIterLim) != ITERLIM_INFINITY )
-            env->settings->updateSetting("IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
+        if(gevGetIntOpt(modelingEnvironment, gevIterLim) != ITERLIM_INFINITY)
+            env->settings->updateSetting(
+                "IterationLimit", "Termination", gevGetIntOpt(modelingEnvironment, gevIterLim));
         else
             env->settings->updateSetting("IterationLimit", "Termination", SHOT_INT_MAX);
-        env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
-        env->settings->updateSetting("ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
+        env->settings->updateSetting(
+            "ObjectiveGap.Absolute", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCA));
+        env->settings->updateSetting(
+            "ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
 
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
 
@@ -54,28 +57,18 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // TODO gevCheat, gevUseCheat -> MIP.CutOffTolerance ?
         // TODO?? gevTryInt: handling of fractional values in initial solution for repair heuristics
 
-        env->output->outputDebug(
-                "Time limit set to "
-                + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination"))
-                + " by GAMS");
-        env->output->outputDebug(
-                "Iteration limit set to "
-                + UtilityFunctions::toString(env->settings->getIntSetting("IterationLimit", "Termination"))
-                + " by GAMS");
-        env->output->outputDebug(
-                "Absolute termination tolerance set to "
-                + UtilityFunctions::toString(
-                        env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
-                + " by GAMS");
-        env->output->outputDebug(
-                "Relative termination tolerance set to "
-                + UtilityFunctions::toString(
-                        env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
-                + " by GAMS");
-        env->output->outputDebug(
-                "MIP number of threads set to "
-                + UtilityFunctions::toString(env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"))
-                + " by GAMS");
+        env->output->outputDebug("Time limit set to "
+            + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination")) + " by GAMS");
+        env->output->outputDebug("Iteration limit set to "
+            + UtilityFunctions::toString(env->settings->getIntSetting("IterationLimit", "Termination")) + " by GAMS");
+        env->output->outputDebug("Absolute termination tolerance set to "
+            + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+            + " by GAMS");
+        env->output->outputDebug("Relative termination tolerance set to "
+            + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+            + " by GAMS");
+        env->output->outputDebug("MIP number of threads set to "
+            + UtilityFunctions::toString(env->settings->getIntSetting("MIP.NumberOfThreads", "Dual")) + " by GAMS");
     }
 
     // want to solve the NLP problems with GAMS
@@ -283,11 +276,12 @@ void ModelingSystemGAMS::finalizeSolution()
     assert(r != NULL);
 
     // set primal solution and model status
-    if( r->primalSolutions.size() > 0 )
+    if(r->primalSolutions.size() > 0)
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
         // TODO might we claim global optimal in some cases? we should not do this for nonconvex problems
-        gmoModelStatSet(modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Feasible : gmoModelStat_OptimalLocal);
+        gmoModelStatSet(
+            modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Feasible : gmoModelStat_OptimalLocal);
     }
     else
     {
@@ -295,56 +289,58 @@ void ModelingSystemGAMS::finalizeSolution()
     }
 
     // set solve status and possibly change model status
-    switch( r->terminationReason )
+    switch(r->terminationReason)
     {
-        case E_TerminationReason::IterationLimit :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_Iteration);
-            break;
-        case E_TerminationReason::TimeLimit :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_Resource);
-            break;
-        case E_TerminationReason::UserAbort :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_User);
-            break;
-        case E_TerminationReason::InfeasibleProblem :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
-            gmoModelStatSet(modelingObject, gmoModelStat_InfeasibleNoSolution);
-            break;
-        case E_TerminationReason::UnboundedProblem :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
-            gmoModelStatSet(modelingObject, gmoModelStat_UnboundedNoSolution);
-            break;
-        case E_TerminationReason::ConstraintTolerance :
-        case E_TerminationReason::ObjectiveStagnation :
-        case E_TerminationReason::AbsoluteGap :
-        case E_TerminationReason::RelativeGap :
-        case E_TerminationReason::ObjectiveGapNotReached :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
-            break;
-        case E_TerminationReason::Error :
-        case E_TerminationReason::InteriorPointError :
-        case E_TerminationReason::NumericIssues :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_SolverErr);
-            gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
-            break;
-        default:
-        case E_TerminationReason::None :
-            gmoSolveStatSet(modelingObject, gmoSolveStat_SystemErr);
-            gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
-            break;
+    case E_TerminationReason::IterationLimit:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Iteration);
+        break;
+    case E_TerminationReason::TimeLimit:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Resource);
+        break;
+    case E_TerminationReason::UserAbort:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_User);
+        break;
+    case E_TerminationReason::InfeasibleProblem:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
+        gmoModelStatSet(modelingObject, gmoModelStat_InfeasibleNoSolution);
+        break;
+    case E_TerminationReason::UnboundedProblem:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
+        gmoModelStatSet(modelingObject, gmoModelStat_UnboundedNoSolution);
+        break;
+    case E_TerminationReason::ConstraintTolerance:
+    case E_TerminationReason::ObjectiveStagnation:
+    case E_TerminationReason::AbsoluteGap:
+    case E_TerminationReason::RelativeGap:
+    case E_TerminationReason::ObjectiveGapNotReached:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
+        break;
+    case E_TerminationReason::Error:
+    case E_TerminationReason::InteriorPointError:
+    case E_TerminationReason::NumericIssues:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_SolverErr);
+        gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
+        break;
+    default:
+    case E_TerminationReason::None:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_SystemErr);
+        gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
+        break;
     }
 
     gmoCompleteSolution(modelingObject);
 
     // set some more statistics, etc
-    gmoSetHeadnTail(modelingObject, gmoTmipbest,  r->currentDualBound);  // TODO how do we know that a dual bound has actually been computed
+    gmoSetHeadnTail(modelingObject, gmoTmipbest,
+        r->currentDualBound); // TODO how do we know that a dual bound has actually been computed
     gmoSetHeadnTail(modelingObject, gmoHiterused, r->getCurrentIteration()->iterationNumber);
-    gmoSetHeadnTail(modelingObject, gmoHresused,  env->timing->getElapsedTime("Total"));
-    //TODO gmoSetHeadnTail(modelingObject, gmoTmipnod,   );
-    //TODO? gmoHdomused
+    gmoSetHeadnTail(modelingObject, gmoHresused, env->timing->getElapsedTime("Total"));
+    // TODO gmoSetHeadnTail(modelingObject, gmoTmipnod,   );
+    // TODO? gmoHdomused
 
-    // if we created the GMO object due to starting from a .gms or .dat file, then we should write the solution into a GAMS solution file
-    // (though it's probably of no interest if started from .gms and starting from .dat has been removed here)
+    // if we created the GMO object due to starting from a .gms or .dat file, then we should write the solution into a
+    // GAMS solution file (though it's probably of no interest if started from .gms and starting from .dat has been
+    // removed here)
     if(createdgmo)
         gmoUnloadSolutionLegacy(modelingObject);
 }
