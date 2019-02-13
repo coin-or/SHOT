@@ -111,6 +111,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
+  "${PROJECT_SOURCE_DIR}/src/SHOTSettings/*.cpp"
   "${TINYXML2_DIR}/tinyxml2.cpp"
   )
 
@@ -167,6 +168,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
+  "${PROJECT_SOURCE_DIR}/src/SHOTSettings/*.h"
   "${TINYXML2_DIR}/tinyxml2.h"
   )
 
@@ -234,12 +236,7 @@ include_directories("${MCPP_DIR}/3rdparty/fadbad++")
 include_directories("${SPDLOG_DIR}")
 include_directories("${TINYXML2_DIR}/")
 
-include_directories ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
-add_subdirectory ("${PROJECT_SOURCE_DIR}/src/SHOTSettings")
-
-# got an undefined symbol _ZN4SHOT8Settings13updateSettingENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEES6_i if not linking SHOTSettings into SHOTSolver
 add_library (SHOTSolver SHARED ${SOURCES})
-target_link_libraries (SHOTSolver SHOTSettings)
 
 add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
 target_link_libraries (${PROJECT_NAME} SHOTSolver)
@@ -266,12 +263,27 @@ target_link_libraries (${PROJECT_NAME} dl)
 target_link_libraries (${PROJECT_NAME} gomp)
 
 if (HAS_GAMS)
-  target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
+  if (UNIX)
+    if (APPLE)
+      target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
+    else (APPLE)
+      target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
+    endif (APPLE)
+  endif (UNIX)
 endif (HAS_GAMS)
 
-if(HAS_OS)
-    target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
-endif()
+if (HAS_OS)
+  #target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
+
+  # add libraries from os_addlibs_cpp.txt
+  # TODO should probably use pkg-config instead
+  file(READ ${COINOS_DIR}/share/coin/doc/OS/os_addlibs.txt OS_LINKFLAGS)
+  string(STRIP ${OS_LINKFLAGS} OS_LINKFLAGS)
+  target_link_libraries(SHOTSolver ${OS_LINKFLAGS})
+  if (UNIX)
+    target_link_libraries(SHOTSolver -Wl,-rpath,${COINOS_DIR}/lib)
+  endif (UNIX)
+endif (HAS_OS)
 
 target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
