@@ -57,6 +57,7 @@
 
 #include "Environment.h"
 #include "Output.h"
+#include "EventHandler.h"
 #include "SHOTSettings.h"
 
 #include "ModelShared.h"

@@ -270,6 +270,57 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
     return passed;
 }
 
+bool TestCallbackGAMS(std::string filename)
+{
+    bool passed = true;
+
+    std::cout << "The following test will solve a problem, and terminate as soon as the first primal solution has been "
+                 "found.\n";
+
+    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto env = solver->getEnvironment();
+
+    solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
+        std::cout << "Checking whether to terminate SHOT... ";
+
+        if(env->results->primalSolutions.size() > 0)
+        {
+            env->tasks->terminate();
+            std::cout << "Sure, do it.\n";
+        }
+        else
+        {
+            std::cout << "Not yet!\n";
+        }
+    });
+
+    try
+    {
+        if(solver->setProblem(filename))
+        {
+            passed = true;
+        }
+        else
+        {
+            passed = false;
+        }
+    }
+    catch(ErrorClass& e)
+    {
+        std::cout << "Error: " << e.errormsg << std::endl;
+        return false;
+    }
+
+    solver->solveProblem();
+
+    if(env->results->iterations.size() == 1)
+        passed = true;
+    else
+        passed = false;
+
+    return passed;
+}
+
 int GAMSTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -306,6 +357,9 @@ int GAMSTest(int argc, char* argv[])
         break;
     case 5:
         passed = TestReformulateProblemGAMS("data/synthes1.gms");
+        break;
+    case 6:
+        passed = TestCallbackGAMS("data/synthes1.gms");
         break;
     default:
         passed = false;

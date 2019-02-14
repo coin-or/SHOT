@@ -33,13 +33,11 @@ public:
     ReportPtr report;
     TaskHandlerPtr tasks;
     TimingPtr timing;
+    EventHandlerPtr events;
 
     std::shared_ptr<ILinesearchMethod> rootsearchMethod;
 
     SolutionStatistics solutionStatistics;
-
-    using TCallback = std::function<void(EnvironmentPtr)>;
-    using CallbackVector = std::vector<TCallback>;
 
 private:
 };

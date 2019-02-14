@@ -61,7 +61,12 @@ public:
 
     bool solveProblem();
 
-    bool terminateSolver();
+    template <typename Callback> inline void registerCallback(const E_EventType& event, Callback&& callback)
+    {
+        env->events->registerCallback(event, callback);
+    }
+
+    // extern template void registerCallback(const E_EventType& event, std::function&& callback);
 
     std::string getOSoL();
     std::string getGAMSOptFile();

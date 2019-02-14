@@ -15,6 +15,9 @@ namespace SHOT
 
 bool MIPSolverCallbackBase::checkIterationLimit()
 {
+    if(env->tasks->isTerminated())
+        return (true);
+
     auto currIter = env->results->getCurrentIteration();
 
     if(currIter->iterationNumber >= env->settings->getIntSetting("Relaxation.IterationLimit", "Dual")
@@ -22,6 +25,16 @@ bool MIPSolverCallbackBase::checkIterationLimit()
     {
         return (true);
     }
+
+    return (false);
+}
+
+bool MIPSolverCallbackBase::checkUserTermination()
+{
+    env->events->notify(E_EventType::UserTerminationCheck);
+
+    if(env->tasks->isTerminated())
+        return (true);
 
     return (false);
 }

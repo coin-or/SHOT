@@ -22,6 +22,8 @@ TaskCheckUserTermination::~TaskCheckUserTermination() {}
 
 void TaskCheckUserTermination::run()
 {
+    env->events->notify(E_EventType::UserTerminationCheck);
+
     if(env->tasks->isTerminated())
     {
         env->results->terminationReason = E_TerminationReason::UserAbort;

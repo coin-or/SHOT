@@ -31,6 +31,7 @@ SHOTSolver::SHOTSolver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
+    env->events = std::make_shared<EventHandler>(env);
     env->report = std::make_shared<Report>(env);
 
     env->dualSolver = std::make_shared<DualSolver>(env);

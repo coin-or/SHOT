@@ -25,6 +25,15 @@ enum class E_AuxilliaryVariableType
     IntegerBilinear // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
 };
 
+enum class E_Curvature
+{
+    None,
+    Convex,
+    Concave,
+    Nonconvex,
+    Indeterminate
+};
+
 enum class E_DualSolutionSource
 {
     LPSolution,
@@ -33,13 +42,9 @@ enum class E_DualSolutionSource
     MIPSolverBound
 };
 
-enum class E_Curvature
+enum class E_EventType
 {
-    None,
-    Convex,
-    Concave,
-    Nonconvex,
-    Indeterminate
+    UserTerminationCheck
 };
 
 enum class E_HyperplaneSource
