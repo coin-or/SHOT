@@ -313,7 +313,7 @@ bool TestCallbackGAMS(std::string filename)
 
     solver->solveProblem();
 
-    if(env->results->iterations.size() == 1)
+    if(env->results->primalSolutions.size() == 1)
         passed = true;
     else
         passed = false;
