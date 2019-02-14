@@ -38,6 +38,9 @@ public:
 
     SolutionStatistics solutionStatistics;
 
+    using TCallback = std::function<void(EnvironmentPtr)>;
+    using CallbackVector = std::vector<TCallback>;
+
 private:
 };
 

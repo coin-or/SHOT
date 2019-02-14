@@ -61,6 +61,8 @@ public:
 
     bool solveProblem();
 
+    bool terminateSolver();
+
     std::string getOSoL();
     std::string getGAMSOptFile();
 
