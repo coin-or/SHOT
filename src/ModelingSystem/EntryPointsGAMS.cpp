@@ -160,6 +160,11 @@ extern "C"
             /* correct to call this here? */
             modelingSystem->updateSettings(env->settings);
 
+            solver.registerCallback(E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t) gmoEnvironment(gs->gmo)] {
+                if(gevTerminateGet(gev))
+                    env->tasks->terminate();
+            });
+
             solver.setProblem(problem, modelingSystem);
 
             env->report->outputOptionsReport();

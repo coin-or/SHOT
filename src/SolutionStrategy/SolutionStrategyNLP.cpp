@@ -104,6 +104,9 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
+    TaskBase* tCheckUserTerm = new TaskCheckUserTermination(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
+
     TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 

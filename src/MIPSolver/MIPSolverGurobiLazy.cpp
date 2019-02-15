@@ -169,7 +169,7 @@ void GurobiCallback::callback()
         }
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet() || env->results->isRelativeObjectiveGapToleranceMet()
-            || checkIterationLimit())
+            || checkIterationLimit() || checkUserTermination())
         {
             abort();
             return;

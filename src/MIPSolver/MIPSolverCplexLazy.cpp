@@ -111,7 +111,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         }
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet() || env->results->isRelativeObjectiveGapToleranceMet()
-            || checkIterationLimit())
+            || checkIterationLimit() || checkUserTermination())
         {
             abort();
             return;

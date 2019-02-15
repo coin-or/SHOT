@@ -44,6 +44,8 @@ protected:
 
     bool checkIterationLimit();
 
+    bool checkUserTermination();
+
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 
     void printIterationReport(SolutionPoint solution, std::string threadId);

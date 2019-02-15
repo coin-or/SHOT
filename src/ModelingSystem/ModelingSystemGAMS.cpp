@@ -150,8 +150,6 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
     gmoIndexBaseSet(modelingObject, 0);
     gmoUseQSet(modelingObject, 1);
 
-    gevTerminateUninstall(modelingEnvironment);
-
     try
     {
         gmoNameInput(modelingObject, buffer);
@@ -236,6 +234,9 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use
      * as a SHOT options file */
     gmoOptFileSet(modelingObject, 0);
+
+    /* do not have GEV catch SIGINT, as with this setup we would not pass this signal on to SHOT */
+    gevTerminateUninstall(modelingEnvironment);
 }
 
 void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)

@@ -109,6 +109,9 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
+    TaskBase* tCheckUserTerm = new TaskCheckUserTermination(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
+
     // Remove?
     TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
     // env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
