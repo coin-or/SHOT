@@ -114,9 +114,6 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     gmoAltBoundsSet(modelingObject, 0);
     gmoForceContSet(modelingObject, 0);
 
-    /* the callSolver calls installs a SIGINT handler again, which prevents stopping on Ctrl+C */
-    gevTerminateUninstall(modelingEnvironment);
-
     switch(gmoModelStat(modelingObject))
     {
     case gmoModelStat_OptimalGlobal:
