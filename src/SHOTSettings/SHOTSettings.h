@@ -15,6 +15,8 @@
 #include "OSoLWriter.h"
 #include "OSoLReader.h"
 
+#include "tinyxml2.h"
+
 namespace SHOT
 {
 class Settings
@@ -37,7 +39,7 @@ public:
 
     void readSettingsFromOSoL(std::string osol);
     void readSettingsFromOSOption(OSOption* options);
-    void readSettingsFromGAMSOptFormat(std::string options);
+    void readSettingsFromString(std::string options);
 
     std::string getSettingsInOSolFormat();
     std::string getSettingsAsString();

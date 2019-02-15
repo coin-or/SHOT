@@ -53,30 +53,33 @@ bool SHOTSolver::setOptions(std::string fileName)
 
         if(fileExtension == ".xml" || fileExtension == ".osol")
         {
-            try
+            fileContents = UtilityFunctions::getFileAsString(fileName);
+
+            // try
             {
-                fileContents = UtilityFunctions::getFileAsString(fileName);
                 env->settings->readSettingsFromOSoL(fileContents);
-                verifySettings();
             }
-            catch(std::exception& e)
+            /*catch(std::exception& e)
             {
-                env->output->outputError("Error when reading OSoL options file" + fileName);
+                env->output->outputError("Error when reading OSoL options file " + fileName, e.what());
                 return (false);
-            }
+            }*/
+
+            verifySettings();
         }
         else if(fileExtension == ".opt")
         {
-            try
+            fileContents = UtilityFunctions::getFileAsString(fileName);
+
+            // try
             {
-                fileContents = UtilityFunctions::getFileAsString(fileName);
-                env->settings->readSettingsFromGAMSOptFormat(fileContents);
+                env->settings->readSettingsFromString(fileContents);
             }
-            catch(std::exception& e)
+            /*catch(std::exception& e)
             {
                 env->output->outputError("Error when reading options file" + fileName);
                 return (false);
-            }
+            }*/
         }
         else
         {
