@@ -287,7 +287,7 @@ void Report::outputOptionsReport()
 
     report << "\r\n";
 
-    std::string nonDefaultOptions = env->settings->getUpdatedSettingsAsString();
+    std::string nonDefaultOptions = env->settings->getSettingsAsString(true, true);
 
     if(nonDefaultOptions != "")
     {

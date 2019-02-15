@@ -10,11 +10,6 @@
 
 #pragma once
 #include "../Shared.h"
-
-#include "OSOption.h"
-#include "OSoLWriter.h"
-#include "OSoLReader.h"
-
 #include "tinyxml2.h"
 
 namespace SHOT
@@ -22,9 +17,28 @@ namespace SHOT
 class Settings
 {
 private:
-    void updateSettingBase(std::pair<std::string, std::string> key, std::string value);
+    void updateSettingBase(PairString key, std::string value);
 
     Output* output;
+
+    std::map<PairString, std::string> _settings;
+
+    typedef std::map<PairString, std::string>::iterator SettingsIter;
+    SettingsIter _settingsIter;
+
+    std::map<PairString, std::string> _settingsDesc;
+    std::map<PairString, E_SettingsType> _settingsType;
+    std::map<PairString, bool> _isPrivate;
+    std::map<PairString, bool> _isDefault;
+    std::map<PairString, PairDouble> _settingsBounds;
+    std::map<PairString, bool> _settingsEnum;
+
+    typedef std::tuple<std::string, std::string, int> TupleStringPairInt;
+
+    std::map<TupleStringPairInt, std::string> _enumDescription;
+
+    typedef std::map<TupleStringPairInt, std::string>::iterator EnumDescriptionIter;
+    EnumDescriptionIter _enumDescriptionIter;
 
 public:
     Settings(OutputPtr outputPtr)
@@ -38,15 +52,10 @@ public:
     bool settingsInitialized = false;
 
     void readSettingsFromOSoL(std::string osol);
-    void readSettingsFromOSOption(OSOption* options);
     void readSettingsFromString(std::string options);
 
-    std::string getSettingsInOSolFormat();
-    std::string getSettingsAsString();
-    std::string getUpdatedSettingsAsString();
-    std::unique_ptr<OSOption> getSettingsAsOSOption();
-    std::string getSettingsInGAMSOptFormat();
-    std::string getSettingsInGAMSOptFormat(bool includeDescriptions);
+    std::string getSettingsAsOSoL();
+    std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);
 
     // String settings
     void createSetting(
@@ -92,8 +101,7 @@ class SettingKeyNotFoundException : public std::runtime_error
 {
 public:
     SettingKeyNotFoundException(const std::string& key, const std::string& category)
-        : std::runtime_error(str(
-              boost::format("Exception: Setting with <key,category> std::pair <%1%,%2%> not found!") % key % category))
+        : std::runtime_error(fmt::format("Setting with <key,category> = <{},{}> not found!", key, category))
     {
     }
 };
@@ -102,9 +110,8 @@ class SettingSetWrongTypeException : public std::runtime_error
 {
 public:
     SettingSetWrongTypeException(const std::string& key, const std::string& category)
-        : std::runtime_error(
-              str(boost::format("Exception: Cannot set setting with <key,category> std::pair <%1%,%2%>, wrong type!")
-                  % key % category))
+        : std::runtime_error(fmt::format(
+              "Cannot set setting with  <key,category> = <{},{}> since value is of the wrong type!", key, category))
     {
     }
 };
@@ -113,9 +120,8 @@ class SettingGetWrongTypeException : public std::runtime_error
 {
 public:
     SettingGetWrongTypeException(const std::string& key, const std::string& category)
-        : std::runtime_error(
-              str(boost::format("Exception: Cannot get setting with <key,category> std::pair <%1%,%2%>, wrong type!")
-                  % key % category))
+        : std::runtime_error(fmt::format(
+              "Cannot get setting with <key,category> = <{},{}> since value is of the wrong type!", key, category))
     {
     }
 };
@@ -125,9 +131,9 @@ class SettingOutsideBoundsException : public std::runtime_error
 public:
     SettingOutsideBoundsException(const std::string& key, const std::string& category, const double& value,
         const double& minVal, const double& maxVal)
-        : std::runtime_error(str(boost::format("Exception: The value %1% of setting with <key,category> std::pair "
-                                               "<%2%,%3%> is not between %4% and %5%!")
-              % value % key % category % minVal % maxVal))
+        : std::runtime_error(
+              fmt::format("The value {} of setting with <key,category> = <{},{}> is not in interval [{},{}]!", value,
+                  key, category, minVal, maxVal))
     {
     }
 };

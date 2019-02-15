@@ -100,25 +100,6 @@ bool SHOTSolver::setOptions(std::string fileName)
     return (true);
 }
 
-bool SHOTSolver::setOptions(OSOption* osOptions)
-{
-    try
-    {
-        env->settings->readSettingsFromOSOption(osOptions);
-    }
-    catch(ErrorClass& eclass)
-    {
-
-        env->output->outputError("Error when reading options.", eclass.errormsg);
-
-        return (false);
-    }
-
-    env->output->outputDebug("Options read.");
-
-    return (true);
-}
-
 bool SHOTSolver::setProblem(std::string fileName)
 {
     if(!boost::filesystem::exists(fileName))
@@ -422,7 +403,7 @@ bool SHOTSolver::solveProblem()
         filename << "/usedsettings";
         filename << ".opt";
 
-        auto usedSettings = env->settings->getSettingsInGAMSOptFormat(true);
+        auto usedSettings = env->settings->getSettingsAsString(false, false);
 
         UtilityFunctions::writeStringToFile(filename.str(), usedSettings);
     }
@@ -446,25 +427,25 @@ bool SHOTSolver::solveProblem()
     return (result);
 }
 
-std::string SHOTSolver::getOSrL() { return (env->results->getOSrl()); }
+std::string SHOTSolver::getResultsOSrL() { return (env->results->getResultsOSrL()); }
 
-std::string SHOTSolver::getOSoL()
+std::string SHOTSolver::getOptionsOSoL()
 {
     if(!env->settings->settingsInitialized)
         initializeSettings();
 
-    return (env->settings->getSettingsInOSolFormat());
+    return (env->settings->getSettingsAsOSoL());
 }
 
-std::string SHOTSolver::getGAMSOptFile()
+std::string SHOTSolver::getOptions()
 {
     if(!env->settings->settingsInitialized)
         initializeSettings();
 
-    return (env->settings->getSettingsInGAMSOptFormat());
+    return (env->settings->getSettingsAsString(false, false));
 }
 
-std::string SHOTSolver::getTraceResult() { return (env->results->getTraceResult()); }
+std::string SHOTSolver::getResultsTrace() { return (env->results->getResultsTrace()); }
 
 void SHOTSolver::initializeSettings()
 {

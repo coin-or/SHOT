@@ -19,6 +19,7 @@
 #include "OSnl2OS.h"
 #include "OSOption.h"
 #include "OSoLReader.h"
+#include "OSoLWriter.h"
 #include "OSResult.h"
 #include "OSrLWriter.h"
 

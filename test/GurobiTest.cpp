@@ -84,8 +84,8 @@ bool GurobiTest1(std::string filename)
     }
 
     solver->solveProblem();
-    std::string osrl = solver->getOSrL();
-    std::string trace = solver->getTraceResult();
+    std::string osrl = solver->getResultsOSrL();
+    std::string trace = solver->getResultsTrace();
     if(!UtilityFunctions::writeStringToFile("result.osrl", osrl))
     {
         std::cout << "Could not write results to OSrL file." << std::endl;

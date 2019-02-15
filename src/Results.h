@@ -67,8 +67,8 @@ public:
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
 
-    std::string getOSrl();
-    std::string getTraceResult();
+    std::string getResultsOSrL();
+    std::string getResultsTrace();
 
 private:
     EnvironmentPtr env;

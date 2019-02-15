@@ -13,32 +13,7 @@
 namespace SHOT
 {
 
-enum ESettingsType
-{
-    String,
-    Integer,
-    Double,
-    Enum,
-    Boolean
-};
-
-std::map<std::pair<std::string, std::string>, std::string> _settings;
-
-typedef std::map<std::pair<std::string, std::string>, std::string>::iterator SettingsIter;
-SettingsIter _settingsIter;
-
-std::map<std::pair<std::string, std::string>, std::string> _settingsDesc;
-std::map<std::pair<std::string, std::string>, ESettingsType> _settingsType;
-std::map<std::pair<std::string, std::string>, bool> _isPrivate;
-std::map<std::pair<std::string, std::string>, bool> _isDefault;
-std::map<std::pair<std::string, std::string>, PairDouble> _settingsBounds;
-std::map<std::pair<std::string, std::string>, bool> _settingsEnum;
-std::map<std::tuple<std::string, std::string, int>, std::string> _enumDescription;
-
-typedef std::map<std::tuple<std::string, std::string, int>, std::string>::iterator EnumDescriptionIter;
-EnumDescriptionIter _enumDescriptionIter;
-
-void Settings::updateSettingBase(std::pair<std::string, std::string> key, std::string value)
+void Settings::updateSettingBase(PairString key, std::string value)
 {
     std::string oldvalue = _settings[key];
 
@@ -66,10 +41,10 @@ void Settings::createSetting(std::string name, std::string category, std::string
 void Settings::createSetting(
     std::string name, std::string category, std::string value, std::string description, bool isPrivate)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settings[key] = value;
     _settingsDesc[key] = description;
-    _settingsType[key] = ESettingsType::String;
+    _settingsType[key] = E_SettingsType::String;
     std::string test = name;
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
@@ -79,7 +54,7 @@ void Settings::createSetting(
 
 void Settings::updateSetting(std::string name, std::string category, std::string value)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -89,7 +64,7 @@ void Settings::updateSetting(std::string name, std::string category, std::string
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::String)
+    if(_settingsType[key] != E_SettingsType::String)
     {
         output->outputError(
             "Cannot update setting <" + name + "," + category + "> since it is of the wrong type. (Expected string).");
@@ -102,7 +77,7 @@ void Settings::updateSetting(std::string name, std::string category, std::string
 
 std::string Settings::getStringSetting(std::string name, std::string category)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -112,7 +87,7 @@ std::string Settings::getStringSetting(std::string name, std::string category)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::String)
+    if(_settingsType[key] != E_SettingsType::String)
     {
         output->outputError(
             "Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
@@ -128,10 +103,10 @@ std::string Settings::getStringSetting(std::string name, std::string category)
 void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal,
     double maxVal, bool isPrivate)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
-    _settings[key] = boost::lexical_cast<std::string>(value);
+    PairString key = make_pair(name, category);
+    _settings[key] = std::to_string(value);
     _settingsDesc[key] = description;
-    _settingsType[key] = ESettingsType::Integer;
+    _settingsType[key] = E_SettingsType::Integer;
     _settingsBounds[key] = std::make_pair(minVal, maxVal);
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
@@ -152,7 +127,7 @@ void Settings::createSetting(std::string name, std::string category, int value, 
 
 void Settings::updateSetting(std::string name, std::string category, int value)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -162,7 +137,7 @@ void Settings::updateSetting(std::string name, std::string category, int value)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Integer)
+    if(_settingsType[key] != E_SettingsType::Integer)
     {
         output->outputError("Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
 
@@ -178,14 +153,12 @@ void Settings::updateSetting(std::string name, std::string category, int value)
             name, category, (double)value, _settingsBounds[key].first, _settingsBounds[key].second);
     }
 
-    std::string newvalue = boost::lexical_cast<std::string>(value);
-
-    updateSettingBase(key, newvalue);
+    updateSettingBase(key, std::to_string(value));
 }
 
 int Settings::getIntSetting(std::string name, std::string category)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -195,7 +168,7 @@ int Settings::getIntSetting(std::string name, std::string category)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Integer)
+    if(_settingsType[key] != E_SettingsType::Integer)
     {
         output->outputError(
             "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
@@ -203,19 +176,8 @@ int Settings::getIntSetting(std::string name, std::string category)
         throw SettingGetWrongTypeException(name, category);
     }
 
-    try
-    {
-        int intval = boost::lexical_cast<int>(_settings[key]);
-        return intval;
-    }
-    catch(boost::bad_lexical_cast& e)
-    {
-
-        output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
-
-        throw SettingGetWrongTypeException(name, category);
-    }
+    int intval = std::stoi(_settings[key]);
+    return intval;
 }
 
 // Boolean settings ==============================================================
@@ -223,10 +185,10 @@ int Settings::getIntSetting(std::string name, std::string category)
 void Settings::createSetting(
     std::string name, std::string category, bool value, std::string description, bool isPrivate)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
-    _settings[key] = boost::lexical_cast<std::string>(value);
+    PairString key = make_pair(name, category);
+    _settings[key] = std::to_string(value);
     _settingsDesc[key] = description;
-    _settingsType[key] = ESettingsType::Boolean;
+    _settingsType[key] = E_SettingsType::Boolean;
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
 
@@ -240,7 +202,7 @@ void Settings::createSetting(std::string name, std::string category, bool value,
 
 void Settings::updateSetting(std::string name, std::string category, bool value)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -250,21 +212,21 @@ void Settings::updateSetting(std::string name, std::string category, bool value)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Boolean)
+    if(_settingsType[key] != E_SettingsType::Boolean)
     {
         output->outputError("Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
 
-    std::string newvalue = boost::lexical_cast<std::string>(value);
+    std::string newvalue = std::to_string(value);
 
     updateSettingBase(key, newvalue);
 }
 
 bool Settings::getBoolSetting(std::string name, std::string category)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -274,7 +236,7 @@ bool Settings::getBoolSetting(std::string name, std::string category)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Boolean)
+    if(_settingsType[key] != E_SettingsType::Boolean)
     {
         output->outputError(
             "Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
@@ -282,18 +244,8 @@ bool Settings::getBoolSetting(std::string name, std::string category)
         throw SettingGetWrongTypeException(name, category);
     }
 
-    try
-    {
-        bool boolval = boost::lexical_cast<bool>(_settings[key]);
-        return boolval;
-    }
-    catch(boost::bad_lexical_cast& e)
-    {
-        output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
-
-        throw SettingGetWrongTypeException(name, category);
-    }
+    bool boolval = (_settings[key] != "0");
+    return boolval;
 }
 
 // Enum settings ==================================================================
@@ -329,7 +281,7 @@ std::string Settings::getEnumDescriptionList(std::string name, std::string categ
 
         if(name == std::get<0>(t) && category == std::get<1>(t))
         {
-            desc << boost::lexical_cast<std::string>(std::get<2>(t)) << ": " << iterator->second << ". ";
+            desc << std::get<2>(t) << ": " << iterator->second << ". ";
         }
     }
 
@@ -338,7 +290,7 @@ std::string Settings::getEnumDescriptionList(std::string name, std::string categ
 
 std::string Settings::getEnumDescription(std::string name, std::string category)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -348,7 +300,7 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Integer)
+    if(_settingsType[key] != E_SettingsType::Integer)
     {
         output->outputError(
             "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
@@ -356,21 +308,10 @@ std::string Settings::getEnumDescription(std::string name, std::string category)
         throw SettingGetWrongTypeException(name, category);
     }
 
-    try
-    {
-        int intval = boost::lexical_cast<int>(_settings[key]);
-        std::tuple<std::string, std::string, int> tpl = make_tuple(name, category, intval);
+    int intval = std::stoi(_settings[key]);
+    std::tuple<std::string, std::string, int> tpl = make_tuple(name, category, intval);
 
-        return _enumDescription[tpl];
-    }
-    catch(boost::bad_lexical_cast& e)
-    {
-
-        output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
-
-        throw SettingGetWrongTypeException(name, category);
-    }
+    return _enumDescription[tpl];
 }
 
 // Double settings ================================================================
@@ -389,10 +330,10 @@ void Settings::createSetting(
 void Settings::createSetting(std::string name, std::string category, double value, std::string description,
     double minVal, double maxVal, bool isPrivate)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
-    _settings[key] = boost::lexical_cast<std::string>(value);
+    PairString key = make_pair(name, category);
+    _settings[key] = std::to_string(value);
     _settingsDesc[key] = description;
-    _settingsType[key] = ESettingsType::Double;
+    _settingsType[key] = E_SettingsType::Double;
     _settingsBounds[key] = std::make_pair(minVal, maxVal);
     _isPrivate[key] = isPrivate;
     _isDefault[key] = true;
@@ -402,7 +343,7 @@ void Settings::createSetting(std::string name, std::string category, double valu
 
 void Settings::updateSetting(std::string name, std::string category, double value)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -412,7 +353,7 @@ void Settings::updateSetting(std::string name, std::string category, double valu
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Double)
+    if(_settingsType[key] != E_SettingsType::Double)
     {
         output->outputError("Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
 
@@ -428,14 +369,14 @@ void Settings::updateSetting(std::string name, std::string category, double valu
             name, category, value, _settingsBounds[key].first, _settingsBounds[key].second);
     }
 
-    std::string newvalue = boost::lexical_cast<std::string>(value);
+    std::string newvalue = std::to_string(value);
 
     updateSettingBase(key, newvalue);
 }
 
 double Settings::getDoubleSetting(std::string name, std::string category)
 {
-    std::pair<std::string, std::string> key = make_pair(name, category);
+    PairString key = make_pair(name, category);
     _settingsIter = _settings.find(key);
 
     if(_settingsIter == _settings.end())
@@ -445,7 +386,7 @@ double Settings::getDoubleSetting(std::string name, std::string category)
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != ESettingsType::Double)
+    if(_settingsType[key] != E_SettingsType::Double)
     {
         output->outputError(
             "Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
@@ -453,167 +394,55 @@ double Settings::getDoubleSetting(std::string name, std::string category)
         throw SettingGetWrongTypeException(name, category);
     }
 
-    try
-    {
-        double intval = boost::lexical_cast<double>(_settings[key]);
-        return intval;
-    }
-    catch(boost::bad_lexical_cast& e)
-    {
-        output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
-
-        throw SettingGetWrongTypeException(name, category);
-    }
+    double intval = std::stod(_settings[key]);
+    return intval;
 }
 
-struct SortPred
+std::string Settings::getSettingsAsOSoL()
 {
-    bool operator()(
-        const boost::property_tree::ptree::value_type& v1, const boost::property_tree::ptree::value_type& v2) const
-    {
-        if(v1.first == "solverOption" && v2.first == "solverOption")
-        {
-            if(v1.second.get<std::string>("<xmlattr>.category") == v2.second.get<std::string>("<xmlattr>.category"))
-            {
-                return (v1.second.get<std::string>("<xmlattr>.name") < v2.second.get<std::string>("<xmlattr>.name"));
-            }
-            else
-            {
-                return (v1.second.get<std::string>("<xmlattr>.category")
-                    < v2.second.get<std::string>("<xmlattr>.category"));
-            }
-        }
+    using namespace tinyxml2;
 
-        return (v1.first < v2.first);
-    }
-};
+    XMLDocument osolDocument;
 
-std::string Settings::getSettingsInOSolFormat()
-{
-    auto osolwriter = std::make_unique<OSoLWriter>();
-    osolwriter->m_bWhiteSpace = false;
+    auto osolNode = osolDocument.NewElement("osol");
+    osolNode->SetAttribute("xmlns", "os.optimizationservices.org");
+    osolNode->SetAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+    osolNode->SetAttribute(
+        "xmlns:schemaLocation", "os.optimizationservices.org http://www.optimizationservices.org/schemas/2.0/OSoL.xsd");
 
-    boost::property_tree::ptree pt;
-    boost::property_tree::xml_writer_settings<std::string> settings(' ', 1);
+    osolDocument.InsertFirstChild(osolNode);
 
-    std::stringstream ss;
-    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
+    auto optimizationNode = osolDocument.NewElement("optimization");
 
-    read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
+    auto solverOptionsNode = osolDocument.NewElement("solverOptions");
+    int numberOfIncludedOptions = 0;
 
-    // This sort the options according to category first and name after
-    pt.get_child("osol.optimization.solverOptions").sort(SortPred());
-
-    std::ostringstream oss;
-    write_xml(oss, pt, settings);
-
-    return (oss.str());
-}
-
-std::string Settings::getSettingsAsString()
-{
-    std::unique_ptr<OSoLWriter> osolwriter;
-    osolwriter->m_bWhiteSpace = false;
-
-    boost::property_tree::ptree pt;
-
-    std::stringstream ss;
-
-    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
-
-    read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
-
-    // This sort the options according to category first and name after
-    pt.get_child("osol.optimization.solverOptions").sort(SortPred());
-
-    auto tmp = pt.get_child("osol.optimization.solverOptions");
-
-    std::ostringstream oss;
-
-    for(auto& child : pt.get_child("osol.optimization.solverOptions"))
-    {
-        if(child.second.get<std::string>("<xmlattr>.name", "") == "")
-            continue;
-        oss << (((int)oss.tellp()) == 0 ? "\r\n" : ",\r\n");
-        oss << child.second.get<std::string>("<xmlattr>.category", "") << ".";
-        oss << child.second.get<std::string>("<xmlattr>.name", "") << " = ";
-        oss << child.second.get<std::string>("<xmlattr>.value", "");
-    }
-
-    return (oss.str());
-}
-
-std::string Settings::getUpdatedSettingsAsString()
-{
-    auto osolwriter = std::make_unique<OSoLWriter>();
-    osolwriter->m_bWhiteSpace = false;
-
-    boost::property_tree::ptree pt;
-
-    std::stringstream ss;
-
-    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
-
-    read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
-
-    // This sort the options according to category first and name after
-    pt.get_child("osol.optimization.solverOptions").sort(SortPred());
-
-    auto tmp = pt.get_child("osol.optimization.solverOptions");
-
-    std::ostringstream oss;
-
-    for(auto& child : pt.get_child("osol.optimization.solverOptions"))
-    {
-        std::string category = child.second.get<std::string>("<xmlattr>.category", "");
-        std::string name = child.second.get<std::string>("<xmlattr>.name", "");
-        std::string value = child.second.get<std::string>("<xmlattr>.value", "");
-
-        if(name == "")
-            continue;
-
-        auto key = make_pair(name, category);
-
-        if(_isDefault[key])
-            continue;
-
-        oss << "  " << category << "." << name << " = " << value << std::endl;
-    }
-
-    return (oss.str());
-}
-
-std::unique_ptr<OSOption> Settings::getSettingsAsOSOption()
-{
-    output->outputTrace("Starting conversion of settings to OSOption object.");
-
-    auto options = std::make_unique<OSOption>();
+    solverOptionsNode->SetAttribute("numberOfSolverOptions", numberOfIncludedOptions);
 
     for(SettingsIter iterator = _settings.begin(); iterator != _settings.end(); iterator++)
     {
         auto p = iterator->first;
 
         if(_isPrivate[p])
-            continue; // Do not include an internal setting in the class
+            continue; // Do not include an internal setting
 
         std::stringstream type;
 
         switch(_settingsType[p])
         {
-        case ESettingsType::String:
+        case E_SettingsType::String:
             type << "string";
             break;
-        case ESettingsType::Integer:
+        case E_SettingsType::Integer:
             type << "integer";
             break;
-        case ESettingsType::Boolean:
+        case E_SettingsType::Boolean:
             type << "integer";
             break;
-        case ESettingsType::Enum:
+        case E_SettingsType::Enum:
             type << "integer";
             break;
-        case ESettingsType::Double:
+        case E_SettingsType::Double:
             type << "double";
         }
 
@@ -628,79 +457,68 @@ std::unique_ptr<OSOption> Settings::getSettingsAsOSOption()
             desc << _settingsDesc[p] << ". ";
         }
 
-        options->setAnotherSolverOption(p.first, iterator->second, "SHOT", p.second, type.str(), desc.str());
+        auto solverOptionNode = osolDocument.NewElement("solverOption");
+        solverOptionNode->SetAttribute("name", p.first.c_str());
+        solverOptionNode->SetAttribute("value", iterator->second.c_str());
+        solverOptionNode->SetAttribute("solver", std::string("SHOT").c_str());
+        solverOptionNode->SetAttribute("category", p.second.c_str());
+        solverOptionNode->SetAttribute("value", type.str().c_str());
+        solverOptionNode->SetAttribute("description", desc.str().c_str());
+        solverOptionsNode->InsertEndChild(solverOptionNode);
+        solverOptionNode++;
 
-        output->outputTrace(" Setting <" + p.first + "," + p.second + "> converted.");
+        output->outputDebug(" Setting <" + p.first + "," + p.second + "> converted.");
 
         type.clear();
         desc.clear();
     }
 
-    output->outputTrace("Conversion of settings to OSOption object completed.");
+    optimizationNode->InsertEndChild(solverOptionsNode);
+    osolNode->InsertEndChild(optimizationNode);
 
-    return options;
+    XMLPrinter printer;
+    osolDocument.Print(&printer);
+
+    return (printer.CStr());
 }
 
-std::string Settings::getSettingsInGAMSOptFormat() { return (getSettingsInGAMSOptFormat(true)); }
-
-std::string Settings::getSettingsInGAMSOptFormat(bool includeDescriptions)
+std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideDescriptions = false)
 {
-    auto osolwriter = std::make_unique<OSoLWriter>();
-    osolwriter->m_bWhiteSpace = false;
-
-    boost::property_tree::ptree pt;
-
     std::stringstream ss;
-    ss << osolwriter->writeOSoL(getSettingsAsOSOption().get());
 
-    read_xml(ss, pt, boost::property_tree::xml_parser::trim_whitespace);
-
-    // This sort the options according to category first and name after
-    pt.get_child("osol.optimization.solverOptions").sort(SortPred());
-
-    auto tmp = pt.get_child("osol.optimization.solverOptions");
-
-    std::ostringstream oss;
-
-    for(auto& child : pt.get_child("osol.optimization.solverOptions"))
+    for(SettingsIter iterator = _settings.begin(); iterator != _settings.end(); iterator++)
     {
-        std::stringstream desc;
+        auto p = iterator->first;
 
-        std::string name = child.second.get<std::string>("<xmlattr>.name", "");
-        std::string category = child.second.get<std::string>("<xmlattr>.category", "");
-        std::string value = child.second.get<std::string>("<xmlattr>.value", "");
+        if(_isPrivate[p])
+            continue; // Do not include an internal setting
 
-        auto key = make_pair(name, category);
-
-        if(name == "")
+        if(hideUnchanged && _isDefault[p])
             continue;
 
-        oss << std::endl;
-
-        if(includeDescriptions)
+        if(!hideDescriptions)
         {
-            if(_settingsEnum[make_pair(name, category)] == true)
+            std::stringstream desc;
+
+            if(_settingsEnum[p] == true)
             {
-                desc << _settingsDesc[key] << ": " << getEnumDescriptionList(name, category);
+                desc << _settingsDesc[p] << ": " << getEnumDescriptionList(p.first, p.second);
             }
             else
             {
-                desc << _settingsDesc[key] << ". ";
+                desc << _settingsDesc[p] << ". ";
+            }
+
+            if(((int)desc.tellp()) != 0)
+            {
+                ss << fmt::format("* {}", desc.str());
             }
         }
 
-        if(((int)desc.tellp()) != 0)
-        {
-            oss << "* " << desc.str() << std::endl;
-        }
-
-        oss << category << ".";
-        oss << name << " = ";
-        oss << value;
-        oss << std::endl;
+        ss << fmt::format("{}.{} = {}", p.second, p.first, iterator->second);
     }
 
-    return (oss.str());
+    return (ss.str());
 }
 
 void Settings::readSettingsFromOSoL(std::string osol)
@@ -747,7 +565,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
 
             std::string category = N->Attribute("category");
 
-            std::pair<std::string, std::string> key = make_pair(name, category);
+            PairString key = make_pair(name, category);
             _settingsIter = _settings.find(key);
 
             if(_settingsIter == _settings.end())
@@ -762,20 +580,20 @@ void Settings::readSettingsFromOSoL(std::string osol)
 
             switch(_settingsType[key])
             {
-            case ESettingsType::String:
+            case E_SettingsType::String:
                 updateSetting(name, category, value);
                 break;
-            case ESettingsType::Enum:
-            case ESettingsType::Integer:
+            case E_SettingsType::Enum:
+            case E_SettingsType::Integer:
                 updateSetting(name, category, std::stoi(value, &convertedChars));
                 break;
-            case ESettingsType::Boolean:
+            case E_SettingsType::Boolean:
             {
                 bool convertedValue = (value != "0");
                 updateSetting(name, category, convertedValue);
                 break;
             }
-            case ESettingsType::Double:
+            case E_SettingsType::Double:
                 updateSetting(name, category, std::stod(value));
                 break;
             default:
@@ -809,7 +627,6 @@ void Settings::readSettingsFromString(std::string options)
         VectorString nameCategoryPair;
         VectorString keyValuePair;
         boost::split(keyValuePair, line, boost::is_any_of("="));
-        // boost::split(nameCategoryPair, keyValuePair.front(), std::bind1st(std::equal_to<char>(), '.'));
 
         int dotindex = line.find('.');
         std::string category = keyValuePair.at(0).substr(0, dotindex);
@@ -828,7 +645,7 @@ void Settings::readSettingsFromString(std::string options)
         boost::trim(name);
         boost::trim(value);
 
-        std::pair<std::string, std::string> key = make_pair(name, category);
+        PairString key = make_pair(name, category);
         _settingsIter = _settings.find(key);
 
         if(_settingsIter == _settings.end())
@@ -838,114 +655,33 @@ void Settings::readSettingsFromString(std::string options)
             throw SettingKeyNotFoundException(name, category);
         }
 
-        try
+        std::string::size_type convertedChars = value.length();
+
+        switch(_settingsType[key])
         {
-            switch(_settingsType[key])
-            {
-            case ESettingsType::String:
-                updateSetting(name, category, value);
-                break;
-            case ESettingsType::Integer:
-                updateSetting(name, category, boost::lexical_cast<int>(value));
-                break;
-            case ESettingsType::Boolean:
-                updateSetting(name, category, boost::lexical_cast<bool>(value));
-                break;
-            case ESettingsType::Double:
-                updateSetting(name, category, boost::lexical_cast<double>(value));
-                break;
-            case ESettingsType::Enum:
-                updateSetting(name, category, boost::lexical_cast<int>(value));
-                break;
-            default:
-                break;
-            }
+        case E_SettingsType::String:
+            updateSetting(name, category, value);
+            break;
+        case E_SettingsType::Enum:
+        case E_SettingsType::Integer:
+            updateSetting(name, category, std::stoi(value, &convertedChars));
+            break;
+        case E_SettingsType::Boolean:
+        {
+            bool convertedValue = (value != "0");
+            updateSetting(name, category, convertedValue);
+            break;
         }
-        catch(boost::bad_lexical_cast&)
-        {
+        case E_SettingsType::Double:
+            updateSetting(name, category, std::stod(value));
+            break;
+        default:
+            break;
+        }
+
+        if(convertedChars != value.length())
             output->outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
-        }
     }
 }
 
-void Settings::readSettingsFromOSOption(OSOption* options)
-{
-    output->outputTrace("Conversion of settings from OSOptions.");
-
-    for(int i = 0; i < options->getNumberOfSolverOptions(); i++)
-    {
-        auto* so = options->getAllSolverOptions()[i];
-
-        if(so->solver == "SHOT")
-        {
-            try
-            {
-                if(so->type == "string")
-                {
-                    updateSetting(so->name, so->category, so->value);
-                }
-                else if(so->type == "integer")
-                {
-                    std::pair<std::string, std::string> key = make_pair(so->name, so->category);
-                    _settingsIter = _settings.find(key);
-
-                    if(_settingsIter == _settings.end())
-                    {
-                        throw SettingKeyNotFoundException(so->name, so->category);
-                    }
-
-                    try
-                    {
-                        if(_settingsType[key] == ESettingsType::Boolean)
-                        {
-                            bool boolval = boost::lexical_cast<bool>(so->value);
-                            updateSetting(so->name, so->category, boolval);
-                        }
-                        else // Integer type
-                        {
-                            int intval = boost::lexical_cast<int>(so->value);
-                            updateSetting(so->name, so->category, intval);
-                        }
-                    }
-                    catch(boost::bad_lexical_cast& e)
-                    {
-
-                        output->outputError("Value for setting <" + so->name + "," + so->category
-                            + "> in OSoL file is not an integer. Using default value.");
-                    }
-                }
-                else if(so->type == "double")
-                {
-                    try
-                    {
-                        double dblval = boost::lexical_cast<double>(so->value);
-                        updateSetting(so->name, so->category, dblval);
-                    }
-                    catch(boost::bad_lexical_cast& e)
-                    {
-                        output->outputError("Value for setting <" + so->name + "," + so->category
-                            + "> in OSoL file is not a double. Using default value.");
-                    }
-                }
-                else
-                {
-
-                    output->outputError("Value for setting <" + so->name + "," + so->category
-                        + "> in OSoL file is of unknown type. Skipping it.");
-                }
-            }
-            catch(SettingKeyNotFoundException& e)
-            {
-            }
-            catch(SettingSetWrongTypeException& e)
-            {
-            }
-            catch(SettingOutsideBoundsException& e)
-            {
-            }
-        }
-    }
-
-    output->outputTrace("Conversion of settings from OSoL completed.");
-}
 } // namespace SHOT
