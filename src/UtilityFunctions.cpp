@@ -9,7 +9,6 @@
 */
 
 #include "UtilityFunctions.h"
-//#include "Model/Variables.h"
 
 namespace SHOT::UtilityFunctions
 {
