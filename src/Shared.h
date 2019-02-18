@@ -40,13 +40,9 @@
 #include <iostream>
 #include <map>
 
-#include <boost/algorithm/string.hpp>
 #include "boost/filesystem.hpp"
 #include <boost/format.hpp>
-#include <boost/lexical_cast.hpp>
 #include "boost/math/tools/minima.hpp"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 #include <boost/math/special_functions/fpclassify.hpp> // isnan
 

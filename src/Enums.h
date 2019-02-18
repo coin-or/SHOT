@@ -157,7 +157,7 @@ enum class E_ProblemType
     None
 };
 
-enum E_SettingsType
+enum E_SettingType
 {
     String,
     Integer,

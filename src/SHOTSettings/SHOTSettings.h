@@ -21,24 +21,23 @@ private:
 
     Output* output;
 
-    std::map<PairString, std::string> _settings;
+    std::map<PairString, std::string> settings;
 
     typedef std::map<PairString, std::string>::iterator SettingsIter;
-    SettingsIter _settingsIter;
+    SettingsIter settingsIterator;
 
-    std::map<PairString, std::string> _settingsDesc;
-    std::map<PairString, E_SettingsType> _settingsType;
-    std::map<PairString, bool> _isPrivate;
-    std::map<PairString, bool> _isDefault;
-    std::map<PairString, PairDouble> _settingsBounds;
-    std::map<PairString, bool> _settingsEnum;
+    std::map<PairString, std::string> settingDescriptions;
+    std::map<PairString, E_SettingType> settingTypes;
+    std::map<PairString, bool> settingIsPrivate;
+    std::map<PairString, bool> settingIsDefaultValue;
+    std::map<PairString, PairDouble> settingBounds;
+    std::map<PairString, bool> settingEnums;
 
     typedef std::tuple<std::string, std::string, int> TupleStringPairInt;
 
-    std::map<TupleStringPairInt, std::string> _enumDescription;
+    std::map<TupleStringPairInt, std::string> enumDescriptions;
 
     typedef std::map<TupleStringPairInt, std::string>::iterator EnumDescriptionIter;
-    EnumDescriptionIter _enumDescriptionIter;
 
 public:
     Settings(OutputPtr outputPtr)
@@ -101,7 +100,7 @@ class SettingKeyNotFoundException : public std::runtime_error
 {
 public:
     SettingKeyNotFoundException(const std::string& key, const std::string& category)
-        : std::runtime_error(fmt::format("Setting with <key,category> = <{},{}> not found!", key, category))
+        : std::runtime_error(fmt::format("Setting {}.{} not found!", category, key))
     {
     }
 };
@@ -110,8 +109,7 @@ class SettingSetWrongTypeException : public std::runtime_error
 {
 public:
     SettingSetWrongTypeException(const std::string& key, const std::string& category)
-        : std::runtime_error(fmt::format(
-              "Cannot set setting with  <key,category> = <{},{}> since value is of the wrong type!", key, category))
+        : std::runtime_error(fmt::format("Cannot set setting {}.{} since value is of the wrong type!", category, key))
     {
     }
 };
@@ -120,8 +118,7 @@ class SettingGetWrongTypeException : public std::runtime_error
 {
 public:
     SettingGetWrongTypeException(const std::string& key, const std::string& category)
-        : std::runtime_error(fmt::format(
-              "Cannot get setting with <key,category> = <{},{}> since value is of the wrong type!", key, category))
+        : std::runtime_error(fmt::format("Cannot get setting {}.{} since value is of the wrong type!", category, key))
     {
     }
 };
@@ -131,9 +128,8 @@ class SettingOutsideBoundsException : public std::runtime_error
 public:
     SettingOutsideBoundsException(const std::string& key, const std::string& category, const double& value,
         const double& minVal, const double& maxVal)
-        : std::runtime_error(
-              fmt::format("The value {} of setting with <key,category> = <{},{}> is not in interval [{},{}]!", value,
-                  key, category, minVal, maxVal))
+        : std::runtime_error(fmt::format(
+              "The value {} of setting {}.{} is not in interval [{},{}]!", value, category, key, minVal, maxVal))
     {
     }
 };

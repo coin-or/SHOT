@@ -15,7 +15,7 @@ namespace SHOT
 
 void Settings::updateSettingBase(PairString key, std::string value)
 {
-    std::string oldvalue = _settings[key];
+    std::string oldvalue = settings[key];
 
     if(oldvalue == value)
     {
@@ -25,8 +25,8 @@ void Settings::updateSettingBase(PairString key, std::string value)
     }
     else
     {
-        _settings[key] = value;
-        _isDefault[key] = false;
+        settings[key] = value;
+        settingIsDefaultValue[key] = false;
 
         output->outputTrace(
             "Setting " + key.first + "." + key.second + " = " + oldvalue + " updated. New value = " + value + ".");
@@ -41,33 +41,33 @@ void Settings::createSetting(std::string name, std::string category, std::string
 void Settings::createSetting(
     std::string name, std::string category, std::string value, std::string description, bool isPrivate)
 {
-    PairString key = make_pair(name, category);
-    _settings[key] = value;
-    _settingsDesc[key] = description;
-    _settingsType[key] = E_SettingsType::String;
+    PairString key = make_pair(category, name);
+    settings[key] = value;
+    settingDescriptions[key] = description;
+    settingTypes[key] = E_SettingType::String;
     std::string test = name;
-    _isPrivate[key] = isPrivate;
-    _isDefault[key] = true;
+    settingIsPrivate[key] = isPrivate;
+    settingIsDefaultValue[key] = true;
 
-    output->outputTrace("Setting <" + name + "," + category + "> = " + value + " created.");
+    output->outputTrace("Setting " + category + "." + name + " = " + value + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, std::string value)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::String)
+    if(settingTypes[key] != E_SettingType::String)
     {
         output->outputError(
-            "Cannot update setting <" + name + "," + category + "> since it is of the wrong type. (Expected string).");
+            "Cannot update setting " + category + "." + name + " since it is of the wrong type. (Expected string).");
 
         throw SettingSetWrongTypeException(name, category);
     }
@@ -77,25 +77,25 @@ void Settings::updateSetting(std::string name, std::string category, std::string
 
 std::string Settings::getStringSetting(std::string name, std::string category)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::String)
+    if(settingTypes[key] != E_SettingType::String)
     {
         output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as string: Wrong type requested!");
+            "Cannot get value of setting " + category + "." + name + " as string: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
 
-    return _settings[key];
+    return settings[key];
 }
 
 // Integer settings ==============================================================
@@ -103,15 +103,15 @@ std::string Settings::getStringSetting(std::string name, std::string category)
 void Settings::createSetting(std::string name, std::string category, int value, std::string description, double minVal,
     double maxVal, bool isPrivate)
 {
-    PairString key = make_pair(name, category);
-    _settings[key] = std::to_string(value);
-    _settingsDesc[key] = description;
-    _settingsType[key] = E_SettingsType::Integer;
-    _settingsBounds[key] = std::make_pair(minVal, maxVal);
-    _isPrivate[key] = isPrivate;
-    _isDefault[key] = true;
+    PairString key = make_pair(category, name);
+    settings[key] = std::to_string(value);
+    settingDescriptions[key] = description;
+    settingTypes[key] = E_SettingType::Integer;
+    settingBounds[key] = std::make_pair(minVal, maxVal);
+    settingIsPrivate[key] = isPrivate;
+    settingIsDefaultValue[key] = true;
 
-    output->outputTrace("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
+    output->outputTrace("Setting " + category + "." + name + " = " + std::to_string(value) + " created.");
 }
 
 void Settings::createSetting(
@@ -127,30 +127,30 @@ void Settings::createSetting(std::string name, std::string category, int value, 
 
 void Settings::updateSetting(std::string name, std::string category, int value)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Integer)
+    if(settingTypes[key] != E_SettingType::Integer)
     {
-        output->outputError("Cannot set value of setting <" + name + "," + category + "> as integer: Wrong type!");
+        output->outputError("Cannot set value of setting " + category + "." + name + " as integer: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
 
-    if(_settingsBounds[key].first > value || _settingsBounds[key].second < value)
+    if(settingBounds[key].first > value || settingBounds[key].second < value)
     {
-        output->outputError("Cannot update setting <" + name + "," + category + ">: Not in interval ["
-            + std::to_string(_settingsBounds[key].first) + "," + std::to_string(_settingsBounds[key].second) + "].");
+        output->outputError("Cannot update setting " + category + "." + name + ": Not in interval ["
+            + std::to_string(settingBounds[key].first) + "," + std::to_string(settingBounds[key].second) + "].");
 
         throw SettingOutsideBoundsException(
-            name, category, (double)value, _settingsBounds[key].first, _settingsBounds[key].second);
+            name, category, (double)value, settingBounds[key].first, settingBounds[key].second);
     }
 
     updateSettingBase(key, std::to_string(value));
@@ -158,25 +158,25 @@ void Settings::updateSetting(std::string name, std::string category, int value)
 
 int Settings::getIntSetting(std::string name, std::string category)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Integer)
+    if(settingTypes[key] != E_SettingType::Integer)
     {
         output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+            "Cannot get value of setting " + category + "." + name + " as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
 
-    int intval = std::stoi(_settings[key]);
+    int intval = std::stoi(settings[key]);
     return intval;
 }
 
@@ -185,14 +185,14 @@ int Settings::getIntSetting(std::string name, std::string category)
 void Settings::createSetting(
     std::string name, std::string category, bool value, std::string description, bool isPrivate)
 {
-    PairString key = make_pair(name, category);
-    _settings[key] = std::to_string(value);
-    _settingsDesc[key] = description;
-    _settingsType[key] = E_SettingsType::Boolean;
-    _isPrivate[key] = isPrivate;
-    _isDefault[key] = true;
+    PairString key = make_pair(category, name);
+    settings[key] = std::to_string(value);
+    settingDescriptions[key] = description;
+    settingTypes[key] = E_SettingType::Boolean;
+    settingIsPrivate[key] = isPrivate;
+    settingIsDefaultValue[key] = true;
 
-    output->outputTrace("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
+    output->outputTrace("Setting " + category + "." + name + " = " + std::to_string(value) + " created.");
 }
 
 void Settings::createSetting(std::string name, std::string category, bool value, std::string description)
@@ -202,19 +202,19 @@ void Settings::createSetting(std::string name, std::string category, bool value,
 
 void Settings::updateSetting(std::string name, std::string category, bool value)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Boolean)
+    if(settingTypes[key] != E_SettingType::Boolean)
     {
-        output->outputError("Cannot set value of setting <" + name + "," + category + "> as bool: Wrong type!");
+        output->outputError("Cannot set value of setting " + category + "." + name + " as bool: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
@@ -226,43 +226,43 @@ void Settings::updateSetting(std::string name, std::string category, bool value)
 
 bool Settings::getBoolSetting(std::string name, std::string category)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Boolean)
+    if(settingTypes[key] != E_SettingType::Boolean)
     {
         output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as boolean: Wrong type requested!");
+            "Cannot get value of setting " + category + "." + name + " as boolean: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
 
-    bool boolval = (_settings[key] != "0");
+    bool boolval = (settings[key] != "0");
     return boolval;
 }
 
 // Enum settings ==================================================================
 
-void Settings::createSetting(std::string name, std::string category, int value, std::string description,
-    VectorString enumDescriptions, bool isPrivate)
+void Settings::createSetting(
+    std::string name, std::string category, int value, std::string description, VectorString enumDesc, bool isPrivate)
 {
     createSetting(name, category, value, description, SHOT_DBL_MIN, SHOT_DBL_MAX, isPrivate);
 
-    for(int i = 0; i < enumDescriptions.size(); i++)
+    for(int i = 0; i < enumDesc.size(); i++)
     {
-        _enumDescription[make_tuple(name, category, i)] = enumDescriptions.at(i);
+        enumDescriptions[make_tuple(category, name, i)] = enumDesc.at(i);
 
-        output->outputTrace(" Enum value " + std::to_string(i) + ": " + enumDescriptions.at(i));
+        output->outputTrace(" Enum value " + std::to_string(i) + ": " + enumDesc.at(i));
     }
 
-    _settingsEnum[make_pair(name, category)] = true;
+    settingEnums[make_pair(category, name)] = true;
 }
 
 void Settings::createSetting(
@@ -275,11 +275,11 @@ std::string Settings::getEnumDescriptionList(std::string name, std::string categ
 {
     std::stringstream desc;
 
-    for(EnumDescriptionIter iterator = _enumDescription.begin(); iterator != _enumDescription.end(); iterator++)
+    for(EnumDescriptionIter iterator = enumDescriptions.begin(); iterator != enumDescriptions.end(); iterator++)
     {
         std::tuple<std::string, std::string, int> t = iterator->first;
 
-        if(name == std::get<0>(t) && category == std::get<1>(t))
+        if(name == std::get<1>(t) && category == std::get<0>(t))
         {
             desc << std::get<2>(t) << ": " << iterator->second << ". ";
         }
@@ -290,28 +290,28 @@ std::string Settings::getEnumDescriptionList(std::string name, std::string categ
 
 std::string Settings::getEnumDescription(std::string name, std::string category)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Integer)
+    if(settingTypes[key] != E_SettingType::Integer)
     {
         output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as integer: Wrong type requested!");
+            "Cannot get value of setting " + category + "." + name + " as integer: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
 
-    int intval = std::stoi(_settings[key]);
-    std::tuple<std::string, std::string, int> tpl = make_tuple(name, category, intval);
+    int intval = std::stoi(settings[key]);
+    std::tuple<std::string, std::string, int> tpl = make_tuple(category, name, intval);
 
-    return _enumDescription[tpl];
+    return enumDescriptions[tpl];
 }
 
 // Double settings ================================================================
@@ -330,43 +330,42 @@ void Settings::createSetting(
 void Settings::createSetting(std::string name, std::string category, double value, std::string description,
     double minVal, double maxVal, bool isPrivate)
 {
-    PairString key = make_pair(name, category);
-    _settings[key] = std::to_string(value);
-    _settingsDesc[key] = description;
-    _settingsType[key] = E_SettingsType::Double;
-    _settingsBounds[key] = std::make_pair(minVal, maxVal);
-    _isPrivate[key] = isPrivate;
-    _isDefault[key] = true;
+    PairString key = make_pair(category, name);
+    settings[key] = std::to_string(value);
+    settingDescriptions[key] = description;
+    settingTypes[key] = E_SettingType::Double;
+    settingBounds[key] = std::make_pair(minVal, maxVal);
+    settingIsPrivate[key] = isPrivate;
+    settingIsDefaultValue[key] = true;
 
-    output->outputTrace("Setting <" + name + "," + category + "> = " + std::to_string(value) + " created.");
+    output->outputTrace("Setting " + category + "." + name + " = " + std::to_string(value) + " created.");
 }
 
 void Settings::updateSetting(std::string name, std::string category, double value)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot update setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Double)
+    if(settingTypes[key] != E_SettingType::Double)
     {
-        output->outputError("Cannot set value of setting <" + name + "," + category + "> as double: Wrong type!");
+        output->outputError("Cannot set value of setting " + category + "." + name + " as double: Wrong type!");
 
         throw SettingSetWrongTypeException(name, category);
     }
 
-    if(_settingsBounds[key].first > value || _settingsBounds[key].second < value)
+    if(settingBounds[key].first > value || settingBounds[key].second < value)
     {
-        output->outputError("Cannot update setting <" + name + "," + category + ">: Not in interval ["
-            + std::to_string(_settingsBounds[key].first) + "," + std::to_string(_settingsBounds[key].second) + "].");
+        output->outputError("Cannot update setting " + category + "." + name + ": Not in interval ["
+            + std::to_string(settingBounds[key].first) + "," + std::to_string(settingBounds[key].second) + "].");
 
-        throw SettingOutsideBoundsException(
-            name, category, value, _settingsBounds[key].first, _settingsBounds[key].second);
+        throw SettingOutsideBoundsException(name, category, value, settingBounds[key].first, settingBounds[key].second);
     }
 
     std::string newvalue = std::to_string(value);
@@ -376,25 +375,25 @@ void Settings::updateSetting(std::string name, std::string category, double valu
 
 double Settings::getDoubleSetting(std::string name, std::string category)
 {
-    PairString key = make_pair(name, category);
-    _settingsIter = _settings.find(key);
+    PairString key = make_pair(category, name);
+    settingsIterator = settings.find(key);
 
-    if(_settingsIter == _settings.end())
+    if(settingsIterator == settings.end())
     {
-        output->outputError("Cannot get setting <" + name + "," + category + "> since it has not been defined.");
+        output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
 
         throw SettingKeyNotFoundException(name, category);
     }
 
-    if(_settingsType[key] != E_SettingsType::Double)
+    if(settingTypes[key] != E_SettingType::Double)
     {
         output->outputError(
-            "Cannot get value of setting <" + name + "," + category + "> as double: Wrong type requested!");
+            "Cannot get value of setting " + category + "." + name + " as double: Wrong type requested!");
 
         throw SettingGetWrongTypeException(name, category);
     }
 
-    double intval = std::stod(_settings[key]);
+    double intval = std::stod(settings[key]);
     return intval;
 }
 
@@ -419,49 +418,49 @@ std::string Settings::getSettingsAsOSoL()
 
     solverOptionsNode->SetAttribute("numberOfSolverOptions", numberOfIncludedOptions);
 
-    for(SettingsIter iterator = _settings.begin(); iterator != _settings.end(); iterator++)
+    for(SettingsIter iterator = settings.begin(); iterator != settings.end(); iterator++)
     {
         auto p = iterator->first;
 
-        if(_isPrivate[p])
+        if(settingIsPrivate[p])
             continue; // Do not include an internal setting
 
         std::stringstream type;
 
-        switch(_settingsType[p])
+        switch(settingTypes[p])
         {
-        case E_SettingsType::String:
+        case E_SettingType::String:
             type << "string";
             break;
-        case E_SettingsType::Integer:
+        case E_SettingType::Integer:
             type << "integer";
             break;
-        case E_SettingsType::Boolean:
+        case E_SettingType::Boolean:
             type << "integer";
             break;
-        case E_SettingsType::Enum:
+        case E_SettingType::Enum:
             type << "integer";
             break;
-        case E_SettingsType::Double:
+        case E_SettingType::Double:
             type << "double";
         }
 
         std::stringstream desc;
 
-        if(_settingsEnum[p] == true)
+        if(settingEnums[p] == true)
         {
-            desc << _settingsDesc[p] << ": " << getEnumDescriptionList(p.first, p.second);
+            desc << settingDescriptions[p] << ": " << getEnumDescriptionList(p.second, p.first);
         }
         else
         {
-            desc << _settingsDesc[p] << ". ";
+            desc << settingDescriptions[p] << ". ";
         }
 
         auto solverOptionNode = osolDocument.NewElement("solverOption");
-        solverOptionNode->SetAttribute("name", p.first.c_str());
+        solverOptionNode->SetAttribute("name", p.second.c_str());
         solverOptionNode->SetAttribute("value", iterator->second.c_str());
         solverOptionNode->SetAttribute("solver", std::string("SHOT").c_str());
-        solverOptionNode->SetAttribute("category", p.second.c_str());
+        solverOptionNode->SetAttribute("category", p.first.c_str());
         solverOptionNode->SetAttribute("value", type.str().c_str());
         solverOptionNode->SetAttribute("description", desc.str().c_str());
         solverOptionsNode->InsertEndChild(solverOptionNode);
@@ -482,40 +481,42 @@ std::string Settings::getSettingsAsOSoL()
     return (printer.CStr());
 }
 
+bool operator<(const PairString& lhs, const PairString& rhs) { return lhs.first < rhs.first; }
+
 std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideDescriptions = false)
 {
     std::stringstream ss;
 
-    for(SettingsIter iterator = _settings.begin(); iterator != _settings.end(); iterator++)
+    for(SettingsIter iterator = settings.begin(); iterator != settings.end(); iterator++)
     {
         auto p = iterator->first;
 
-        if(_isPrivate[p])
+        if(settingIsPrivate[p])
             continue; // Do not include an internal setting
 
-        if(hideUnchanged && _isDefault[p])
-            continue;
+        if(hideUnchanged && settingIsDefaultValue[p])
+            continue; // Hide setting with default value
 
         if(!hideDescriptions)
         {
             std::stringstream desc;
 
-            if(_settingsEnum[p] == true)
+            if(settingEnums[p] == true)
             {
-                desc << _settingsDesc[p] << ": " << getEnumDescriptionList(p.first, p.second);
+                desc << settingDescriptions[p] << ": " << getEnumDescriptionList(p.second, p.first);
             }
             else
             {
-                desc << _settingsDesc[p] << ". ";
+                desc << settingDescriptions[p] << ". ";
             }
 
             if(((int)desc.tellp()) != 0)
             {
-                ss << fmt::format("* {}", desc.str());
+                ss << fmt::format("* {}\n", desc.str());
             }
         }
 
-        ss << fmt::format("{}.{} = {}", p.second, p.first, iterator->second);
+        ss << fmt::format("{}.{} = {}\n\n", p.first, p.second, iterator->second);
     }
 
     return (ss.str());
@@ -565,35 +566,35 @@ void Settings::readSettingsFromOSoL(std::string osol)
 
             std::string category = N->Attribute("category");
 
-            PairString key = make_pair(name, category);
-            _settingsIter = _settings.find(key);
+            PairString key = make_pair(category, name);
+            settingsIterator = settings.find(key);
 
-            if(_settingsIter == _settings.end())
+            if(settingsIterator == settings.end())
             {
                 output->outputError(
-                    "Cannot update setting <" + name + "," + category + "> since it has not been defined.");
+                    "Cannot update setting <" + category + "," + name + "> since it has not been defined.");
 
                 throw SettingKeyNotFoundException(name, category);
             }
 
             std::string::size_type convertedChars = value.length();
 
-            switch(_settingsType[key])
+            switch(settingTypes[key])
             {
-            case E_SettingsType::String:
+            case E_SettingType::String:
                 updateSetting(name, category, value);
                 break;
-            case E_SettingsType::Enum:
-            case E_SettingsType::Integer:
+            case E_SettingType::Enum:
+            case E_SettingType::Integer:
                 updateSetting(name, category, std::stoi(value, &convertedChars));
                 break;
-            case E_SettingsType::Boolean:
+            case E_SettingType::Boolean:
             {
                 bool convertedValue = (value != "0");
                 updateSetting(name, category, convertedValue);
                 break;
             }
-            case E_SettingsType::Double:
+            case E_SettingType::Double:
                 updateSetting(name, category, std::stod(value));
                 break;
             default:
@@ -621,34 +622,32 @@ void Settings::readSettingsFromString(std::string options)
     while(std::getline(f, line))
     {
         // Ignore empty lines and comments (starting with an asterisk)
-        if(line == "" || boost::algorithm::starts_with(line, "*"))
+        if(line == "" || line.at(0) == '*')
             continue;
 
-        VectorString nameCategoryPair;
-        VectorString keyValuePair;
-        boost::split(keyValuePair, line, boost::is_any_of("="));
+        int equalitySignIndex = line.find('=');
 
-        int dotindex = line.find('.');
-        std::string category = keyValuePair.at(0).substr(0, dotindex);
-        std::string name = keyValuePair.at(0).substr(dotindex + 1, line.size());
+        std::string key = line.substr(0, equalitySignIndex);
+        std::string value = line.substr(equalitySignIndex + 1, line.size());
 
-        if(keyValuePair.size() != 2)
+        int dotIndex = line.find('.');
+        std::string category = key.substr(0, dotIndex);
+        std::string name = key.substr(dotIndex + 1, line.size());
+
+        if(key == "" || value == "")
         {
             output->outputError("Error when reading line \"" + line + "\" in the options file; ignoring the option.");
-
             continue;
         }
 
-        std::string value = keyValuePair.at(1);
+        category = UtilityFunctions::trim(category);
+        name = UtilityFunctions::trim(name);
+        value = UtilityFunctions::trim(value);
 
-        boost::trim(category);
-        boost::trim(name);
-        boost::trim(value);
+        PairString keyCategory = make_pair(category, name);
+        settingsIterator = settings.find(keyCategory);
 
-        PairString key = make_pair(name, category);
-        _settingsIter = _settings.find(key);
-
-        if(_settingsIter == _settings.end())
+        if(settingsIterator == settings.end())
         {
             output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
@@ -657,22 +656,22 @@ void Settings::readSettingsFromString(std::string options)
 
         std::string::size_type convertedChars = value.length();
 
-        switch(_settingsType[key])
+        switch(settingTypes[keyCategory])
         {
-        case E_SettingsType::String:
+        case E_SettingType::String:
             updateSetting(name, category, value);
             break;
-        case E_SettingsType::Enum:
-        case E_SettingsType::Integer:
+        case E_SettingType::Enum:
+        case E_SettingType::Integer:
             updateSetting(name, category, std::stoi(value, &convertedChars));
             break;
-        case E_SettingsType::Boolean:
+        case E_SettingType::Boolean:
         {
             bool convertedValue = (value != "0");
             updateSetting(name, category, convertedValue);
             break;
         }
-        case E_SettingsType::Double:
+        case E_SettingType::Double:
             updateSetting(name, category, std::stod(value));
             break;
         default:
@@ -683,5 +682,4 @@ void Settings::readSettingsFromString(std::string options)
             output->outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
     }
 }
-
 } // namespace SHOT
