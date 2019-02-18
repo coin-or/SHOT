@@ -23,12 +23,17 @@ option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are 
 option (HAS_GUROBI "Is Gurobi available" OFF)
 option (HAS_GAMS "Is GAMS available" ON)
 option (HAS_OS "Is COIN-OR Optimization Services available" ON)
+option (HAS_CBC "Is Cbc available" ON)
+option (HAS_IPOPT "Is Ipopt available" ON)
 
 # Sets the paths required. Edit these to suit your system:
-set(COINOS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
-set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
+set(CBC_DIR "/opt/OS-2.10" CACHE STRING "The base directory where Cbc is located (if available)")
 set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
 set(GAMS_DIR "/opt/gams/gams25.1.2"  CACHE STRING "The base directory where GAMS is located (if available)")
+set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
+set(IPOPT_DIR "/opt/OS-2.10" CACHE STRING "The base directory where Ipopt is located (if available)")
+set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
+
 
 # These are included in SHOT's the source tree, and should not need to be modified
 set(MCPP_DIR ThirdParty/mc++)
@@ -40,6 +45,11 @@ set(TINYXML2_DIR ThirdParty/tinyxml2)
 #set(Boost_LIBRARY_DIR /usr/lib)
 
 # Passes the parameters to the compiler
+
+if(HAS_CBC)
+  add_definitions(-DHAS_CBC)
+endif()
+
 if(HAS_CPLEX)
   add_definitions(-DHAS_CPLEX)
 
@@ -58,6 +68,10 @@ endif()
 
 if(HAS_GAMS)
   add_definitions(-DHAS_GAMS)
+endif()
+
+if(HAS_IPOPT)
+  add_definitions(-DHAS_IPOPT)
 endif()
 
 if(HAS_OS)
@@ -94,24 +108,17 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.cpp"
   "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp"
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp"
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPIpoptSolver.cpp"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.cpp"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp"
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
@@ -148,8 +155,6 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/UtilityFunctions.h"
   "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"  
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h" 
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/ILinesearchMethod.h"
   "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.h"
@@ -160,22 +165,24 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPIpoptSolver.h"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h"
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
   "${PROJECT_SOURCE_DIR}/src/Settings.h"
   "${TINYXML2_DIR}/tinyxml2.h"
   )
+
+if (HAS_CBC)
+  include_directories("${GUROBI_DIR}/linux64/include")
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.h")
+endif (HAS_CBC)  
 
 if (HAS_CPLEX)
   include_directories("${CPLEX_DIR}/cplex/include")
@@ -185,13 +192,13 @@ if (HAS_CPLEX)
 
   if (HAS_CPLEX_NEW_CALLBACK)
     set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.cpp")
-    set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
   endif (HAS_CPLEX_NEW_CALLBACK)
 
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.cpp")
-  set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
-  set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
-  set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
 endif (HAS_CPLEX)
 
 if (HAS_GUROBI)
@@ -199,9 +206,9 @@ if (HAS_GUROBI)
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.cpp")
-  set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
-  set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
-  set(HEADERS ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.h")
 endif (HAS_GUROBI)
 
 if (HAS_GAMS)
@@ -209,10 +216,25 @@ if (HAS_GAMS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp")
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.cpp")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GamsNLinstr.h")
 endif (HAS_GAMS)
+
+if (HAS_IPOPT)
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
+endif (HAS_IPOPT)
+
+if (HAS_OS)
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h")
+endif (HAS_OS)
 
 # Finding out link directories
 set (INCLUDE_DIRS "")
@@ -229,9 +251,9 @@ include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
 
 if(HAS_OS)
-    include_directories("${COINOS_DIR}/include/coin")
-    include_directories("${COINOS_DIR}/include/cppad")
-    include_directories("${COINOS_DIR}/include")
+    include_directories("${OS_DIR}/include/coin")
+    include_directories("${OS_DIR}/include/cppad")
+    include_directories("${OS_DIR}/include")
 endif()
 
 include_directories("${MCPP_DIR}/include")
@@ -246,7 +268,6 @@ add_library (SHOTSolver SHARED ${SOURCES})
 add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
 target_link_libraries (${PROJECT_NAME} SHOTSolver)
 #cotire(${PROJECT_NAME})
-
 
 if (HAS_CPLEX)
   target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
@@ -280,15 +301,15 @@ if (HAS_GAMS)
 endif (HAS_GAMS)
 
 if (HAS_OS)
-  #target_link_libraries (SHOTSolver ${COINOS_DIR}/lib/libOS.so )
+  #target_link_libraries (SHOTSolver ${OS_DIR}/lib/libOS.so )
 
   # add libraries from os_addlibs_cpp.txt
   # TODO should probably use pkg-config instead
-  file(READ ${COINOS_DIR}/share/coin/doc/OS/os_addlibs.txt OS_LINKFLAGS)
+  file(READ ${OS_DIR}/share/coin/doc/OS/os_addlibs.txt OS_LINKFLAGS)
   string(STRIP ${OS_LINKFLAGS} OS_LINKFLAGS)
   target_link_libraries(SHOTSolver ${OS_LINKFLAGS})
   if (UNIX)
-    target_link_libraries(SHOTSolver -Wl,-rpath,${COINOS_DIR}/lib)
+    target_link_libraries(SHOTSolver -Wl,-rpath,${OS_DIR}/lib)
   endif (UNIX)
 endif (HAS_OS)
 
