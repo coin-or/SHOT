@@ -87,7 +87,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         {
             std::string fileContents = UtilityFunctions::getFileAsString(buffer);
 
-            settings->readSettingsFromGAMSOptFormat(fileContents);
+            settings->readSettingsFromString(fileContents);
         }
         catch(std::exception& e)
         {

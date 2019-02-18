@@ -9,7 +9,7 @@
 */
 
 #include "Shared.h"
-#include "SHOTSettings.h"
+#include "Settings.h"
 #include "SHOTSolver.h"
 
 using namespace SHOT;
@@ -82,14 +82,14 @@ bool SettingsTestOptions(bool useOSiL)
     {
         if(useOSiL)
         {
-            if(!UtilityFunctions::writeStringToFile(filename, solver->getOSoL()))
+            if(!UtilityFunctions::writeStringToFile(filename, solver->getOptionsOSoL()))
             {
                 passed = false;
             }
         }
         else
         {
-            if(!UtilityFunctions::writeStringToFile(filename, solver->getGAMSOptFile()))
+            if(!UtilityFunctions::writeStringToFile(filename, solver->getOptions()))
             {
                 passed = false;
             }

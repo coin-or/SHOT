@@ -52,7 +52,6 @@ public:
     inline EnvironmentPtr getEnvironment() { return env; };
 
     bool setOptions(std::string fileName);
-    bool setOptions(OSOption* osOptions);
 
     bool setProblem(std::string fileName);
     bool setProblem(ProblemPtr problem, ModelingSystemPtr modelingSystem);
@@ -71,8 +70,8 @@ public:
     std::string getOSoL();
     std::string getGAMSOptFile();
 
-    std::string getOSrL();
-    std::string getTraceResult();
+    std::string getResultsOSrL();
+    std::string getResultsTrace();
 
     void updateSetting(std::string name, std::string category, std::string value);
     void updateSetting(std::string name, std::string category, int value);

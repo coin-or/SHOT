@@ -8,7 +8,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SHOT", "SHOT.vcxproj", "{65
 		{8067250A-B10B-4DCC-B6F4-2372F1CA0DDD} = {8067250A-B10B-4DCC-B6F4-2372F1CA0DDD}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SHOTSettings", "SHOTSettings.vcxproj", "{8067250A-B10B-4DCC-B6F4-2372F1CA0DDD}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Settings", "Settings.vcxproj", "{8067250A-B10B-4DCC-B6F4-2372F1CA0DDD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -9,7 +9,7 @@
 */
 
 #pragma once
-#include <SHOTSettings.h>
+#include <Settings.h>
 #include "../Results.h"
 #include "IMIPSolver.h"
 

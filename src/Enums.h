@@ -162,6 +162,15 @@ enum class E_ProblemType
     None
 };
 
+enum E_SettingType
+{
+    String,
+    Integer,
+    Double,
+    Enum,
+    Boolean
+};
+
 enum class E_SolutionStrategy
 {
     SingleTree,

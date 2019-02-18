@@ -59,6 +59,8 @@ typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;
 
 typedef std::pair<int, int> PairInteger;
 typedef std::pair<double, double> PairDouble;
+typedef std::pair<std::string, std::string> PairString;
+
 typedef std::vector<double> VectorDouble;
 typedef std::vector<int> VectorInteger;
 typedef std::vector<std::string> VectorString;

@@ -77,7 +77,7 @@
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Andreas\boost_1_64_0;E:\Program Files %28x86%29\IBM\ILOG\CPLEX_Studio1261\cplex\include;E:\Program Files %28x86%29\IBM\ILOG\CPLEX_Studio1261\concert\include;e:\Program Files (x86)\COIN-OR\1.7.4\win32-msvc11\include\coin\ThirdParty;e:\Program Files %28x86%29\COIN-OR\1.7.4\win32-msvc11\include\coin;e:\Program Files %28x86%29\COIN-OR\1.7.3\win32-msvc11\include\;E:\gurobi563\win32\include;..\src\SHOTSettings;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Andreas\boost_1_64_0;E:\Program Files %28x86%29\IBM\ILOG\CPLEX_Studio1261\cplex\include;E:\Program Files %28x86%29\IBM\ILOG\CPLEX_Studio1261\concert\include;e:\Program Files (x86)\COIN-OR\1.7.4\win32-msvc11\include\coin\ThirdParty;e:\Program Files %28x86%29\COIN-OR\1.7.4\win32-msvc11\include\coin;e:\Program Files %28x86%29\COIN-OR\1.7.3\win32-msvc11\include\;E:\gurobi563\win32\include;..\src\Settings;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
@@ -175,7 +175,7 @@
     <ClCompile Include="..\src\PrimalSolutionStrategy\PrimalSolutionStrategyFixedNLP.cpp" />
     <ClCompile Include="..\src\ProcessInfo.cpp" />
     <ClCompile Include="..\src\SHOT.cpp" />
-    <ClCompile Include="..\src\SHOTSettings\SHOTSettings.cpp" />
+    <ClCompile Include="..\src\Settings\Settings.cpp" />
     <ClCompile Include="..\src\SHOTSolver.cpp" />
     <ClCompile Include="..\src\SolutionStrategy.cpp" />
     <ClCompile Include="..\src\SolutionStrategy\ISolutionStrategy.cpp" />
@@ -275,7 +275,7 @@
     <ClInclude Include="..\src\PrimalSolutionStrategy\PrimalSolutionStrategyBase.h" />
     <ClInclude Include="..\src\PrimalSolutionStrategy\PrimalSolutionStrategyFixedNLP.h" />
     <ClInclude Include="..\src\ProcessInfo.h" />
-    <ClInclude Include="..\src\SHOTSettings\SHOTSettings.h" />
+    <ClInclude Include="..\src\Settings\Settings.h" />
     <ClInclude Include="..\src\SHOTSolver.h" />
     <ClInclude Include="..\src\SolutionStrategy.h" />
     <ClInclude Include="..\src\SolutionStrategy\ISolutionStrategy.h" />

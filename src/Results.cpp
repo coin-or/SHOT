@@ -132,7 +132,7 @@ void Results::initializeResults(int numObj, int numVar, int numConstr)
     osResult->setConstraintNumber(numConstr);
 }
 
-std::string Results::getOSrl()
+std::string Results::getResultsOSrL()
 {
     using namespace tinyxml2;
 
@@ -165,7 +165,7 @@ std::string Results::getOSrl()
     otherResultsNode->SetAttribute("numberOfOtherResults", "1");
     auto otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "UsedOptions");
-    otherNode->SetText(env->settings->getSettingsInGAMSOptFormat(false).c_str());
+    otherNode->SetText(env->settings->getSettingsAsString(false, true).c_str());
     otherResultsNode->InsertFirstChild(otherNode);
 
     otherNode = osrlDocument.NewElement("other");
@@ -559,7 +559,7 @@ std::string Results::getOSrl()
     return (printer.CStr());
 }
 
-std::string Results::getTraceResult()
+std::string Results::getResultsTrace()
 {
     std::stringstream ss;
     ss << env->problem->name << ",";

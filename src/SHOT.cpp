@@ -8,8 +8,6 @@
    Please see the README and LICENSE files for more information.
 */
 #include "Shared.h"
-#include "SHOTSettings.h"
-#include "Report.h"
 #include "SHOTSolver.h"
 
 using namespace SHOT;
@@ -51,7 +49,7 @@ int main(int argc, char* argv[])
             // Create OSoL-file
             optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
 
-            if(!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
+            if(!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOptionsOSoL()))
             {
                 env->output->outputError(" Error when writing OSoL file: " + optionsFile.string());
             }
@@ -59,7 +57,7 @@ int main(int argc, char* argv[])
             // Create GAMS option file
             optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
 
-            if(!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
+            if(!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOptions()))
             {
                 env->output->outputError(" Error when writing options file: " + optionsFile.string());
             }
@@ -161,7 +159,7 @@ int main(int argc, char* argv[])
         return (0);
     }
 
-    std::string osrl = solver->getOSrL();
+    std::string osrl = solver->getResultsOSrL();
 
     if(resultFile.empty())
     {
@@ -185,7 +183,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    std::string trace = solver->getTraceResult();
+    std::string trace = solver->getResultsTrace();
 
     if(traceFile.empty())
     {
