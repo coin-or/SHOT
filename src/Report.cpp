@@ -100,7 +100,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         std::string combCurrSol;
 
-        if(UtilityFunctions::isnan(currentObjectiveValue))
+        if(std::isnan(currentObjectiveValue))
         {
             combCurrSol = "            inf.";
         }

@@ -51,7 +51,7 @@ void TaskCalculateSolutionChangeNorm::run()
 
             distance = sqrt(distance + 0.001);
 
-            if(OSIsnan(distance)) // Checks for INF, do not remove!
+            if(std::isnan(distance)) // Checks for INF, do not remove!
             {
                 currIter->boundaryDistance = SHOT_DBL_MAX;
             }

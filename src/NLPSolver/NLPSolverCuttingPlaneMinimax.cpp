@@ -187,7 +187,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             UtilityFunctions::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
         }
 
-        if(isnan(LPObjVar))
+        if(std::isnan(LPObjVar))
         {
             statusCode = E_NLPSolutionStatus::Error;
             continue;

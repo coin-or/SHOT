@@ -44,8 +44,6 @@
 #include <boost/format.hpp>
 #include "boost/math/tools/minima.hpp"
 
-#include <boost/math/special_functions/fpclassify.hpp> // isnan
-
 #include "ffunc.hpp"
 
 #include "Enums.h"

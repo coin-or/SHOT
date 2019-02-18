@@ -15,17 +15,6 @@ namespace SHOT::UtilityFunctions
 
 int round(double d) { return static_cast<int>(d + 0.5); };
 
-bool isnan(double val)
-{
-    /*#if defined(_WIN64)
-         // x64 version
-         return _isnanf(val) != 0;
-         #else
-         return _isnan(val) != 0;
-         #endif*/
-    return boost::math::isnan(val);
-};
-
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName)
 {

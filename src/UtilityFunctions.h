@@ -24,8 +24,6 @@ namespace SHOT::UtilityFunctions
 {
 int round(double d);
 
-bool isnan(double val);
-
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName);
 void saveVariablePointVectorToFile(const VectorDouble& point, const Variables& variables, const std::string& fileName);

@@ -91,7 +91,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     continue;
 
                 // Do not add hyperplane if there are numerical errors
-                if(isnan(NCV.error) || isnan(NCV.normalizedValue))
+                if(std::isnan(NCV.error) || std::isnan(NCV.normalizedValue))
                 {
                     continue;
                 }
