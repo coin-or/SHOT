@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "SHOTSolver.h"
+#include "Solver.h"
 
 #include <iostream>
 
@@ -62,7 +62,7 @@ bool GurobiTest1(std::string filename)
     env->settings = SettingsPtr(new Settings(env->output));
     env->tasks = TaskHandlerPtr(new TaskHandler(env));
     env->report = ReportPtr(new Report(env));
-    std::unique_ptr<SHOTSolver> solver(new SHOTSolver(env));
+    std::unique_ptr<Solver> solver(new Solver(env));
 
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 

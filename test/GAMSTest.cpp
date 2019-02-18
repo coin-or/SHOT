@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "SHOTSolver.h"
+#include "Solver.h"
 #include "ModelingSystemGAMS.h"
 
 using namespace SHOT;
@@ -17,7 +17,7 @@ bool ReadProblemGAMS(std::string filename)
 {
     bool passed = true;
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     try
@@ -44,7 +44,7 @@ bool SolveProblemGAMS(std::string filename)
 {
     bool passed = true;
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     try
@@ -95,7 +95,7 @@ bool TestRootsearchGAMS(const std::string& problemFile)
 {
     bool passed = true;
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
@@ -181,7 +181,7 @@ bool TestGradientGAMS(const std::string& problemFile)
 {
     bool passed = true;
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
@@ -237,7 +237,7 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
 {
     bool passed = true;
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
@@ -277,7 +277,7 @@ bool TestCallbackGAMS(std::string filename)
     std::cout << "The following test will solve a problem, and terminate as soon as the first primal solution has been "
                  "found.\n";
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {

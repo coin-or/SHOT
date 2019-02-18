@@ -8,13 +8,13 @@
    Please see the README and LICENSE files for more information.
 */
 #include "Shared.h"
-#include "SHOTSolver.h"
+#include "Solver.h"
 
 using namespace SHOT;
 
 int main(int argc, char* argv[])
 {
-    std::unique_ptr<SHOTSolver> solver = std::make_unique<SHOTSolver>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
     if(argc == 1)

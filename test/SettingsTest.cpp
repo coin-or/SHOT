@@ -10,7 +10,7 @@
 
 #include "Shared.h"
 #include "Settings.h"
-#include "SHOTSolver.h"
+#include "Solver.h"
 
 using namespace SHOT;
 
@@ -62,7 +62,7 @@ bool SettingsTestOptions(bool useOSiL)
 {
     bool passed = true;
 
-    std::unique_ptr<SHOTSolver> solver = std::make_unique<SHOTSolver>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
 
     std::string filename;
 

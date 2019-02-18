@@ -176,7 +176,7 @@
     <ClCompile Include="..\src\ProcessInfo.cpp" />
     <ClCompile Include="..\src\SHOT.cpp" />
     <ClCompile Include="..\src\Settings\Settings.cpp" />
-    <ClCompile Include="..\src\SHOTSolver.cpp" />
+    <ClCompile Include="..\src\Solver.cpp" />
     <ClCompile Include="..\src\SolutionStrategy.cpp" />
     <ClCompile Include="..\src\SolutionStrategy\ISolutionStrategy.cpp" />
     <ClCompile Include="..\src\SolutionStrategy\SolutionStrategySHOT.cpp" />
@@ -276,7 +276,7 @@
     <ClInclude Include="..\src\PrimalSolutionStrategy\PrimalSolutionStrategyFixedNLP.h" />
     <ClInclude Include="..\src\ProcessInfo.h" />
     <ClInclude Include="..\src\Settings\Settings.h" />
-    <ClInclude Include="..\src\SHOTSolver.h" />
+    <ClInclude Include="..\src\Solver.h" />
     <ClInclude Include="..\src\SolutionStrategy.h" />
     <ClInclude Include="..\src\SolutionStrategy\ISolutionStrategy.h" />
     <ClInclude Include="..\src\SolutionStrategy\SolutionStrategySHOT.h" />

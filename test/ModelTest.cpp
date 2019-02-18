@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "SHOTSolver.h"
+#include "Solver.h"
 
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"

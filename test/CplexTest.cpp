@@ -6,7 +6,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "SHOTSolver.h"
+#include "Solver.h"
 
 using namespace SHOT;
 
@@ -51,7 +51,7 @@ bool CplexTest1(std::string filename)
 {
     bool passed = true;
 
-    auto solver = std::make_unique<SHOT::SHOTSolver>();
+    auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));

@@ -9,7 +9,7 @@
    Please see the README and LICENSE files for more information.
  */
 
-#include "SHOTSolver.h"
+#include "Solver.h"
 #include "ModelingSystemGAMS.h"
 
 #include "gmomcc.h"
@@ -135,7 +135,7 @@ extern "C"
         assert(gs->opt == NULL); /* we don't process GAMS options objects so far */
 
         // create solver, direct SHOT console output to GAMS log and status file
-        SHOTSolver solver(std::make_shared<GamsOutputSink>((gevHandle_t)gmoEnvironment(gs->gmo)));
+        Solver solver(std::make_shared<GamsOutputSink>((gevHandle_t)gmoEnvironment(gs->gmo)));
 
         auto env = solver.getEnvironment();
 
@@ -160,10 +160,11 @@ extern "C"
             /* correct to call this here? */
             modelingSystem->updateSettings(env->settings);
 
-            solver.registerCallback(E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t) gmoEnvironment(gs->gmo)] {
-                if(gevTerminateGet(gev))
-                    env->tasks->terminate();
-            });
+            solver.registerCallback(
+                E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)] {
+                    if(gevTerminateGet(gev))
+                        env->tasks->terminate();
+                });
 
             solver.setProblem(problem, modelingSystem);
 

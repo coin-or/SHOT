@@ -162,7 +162,7 @@
     <ClCompile Include="..\src\Settings\Settings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SHOTSolver.cpp">
+    <ClCompile Include="..\src\Solver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SolutionStrategy\ISolutionStrategy.cpp">
@@ -458,7 +458,7 @@
     <ClInclude Include="..\src\Settings\Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SHOTSolver.h">
+    <ClInclude Include="..\src\Solver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SolutionStrategy\ISolutionStrategy.h">
