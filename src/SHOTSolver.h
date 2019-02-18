@@ -67,8 +67,8 @@ public:
 
     // extern template void registerCallback(const E_EventType& event, std::function&& callback);
 
-    std::string getOSoL();
-    std::string getGAMSOptFile();
+    std::string getOptionsOSoL();
+    std::string getOptions();
 
     std::string getResultsOSrL();
     std::string getResultsTrace();
