@@ -23,6 +23,8 @@ TaskAddPrimalReductionCut::~TaskAddPrimalReductionCut() {}
 
 void TaskAddPrimalReductionCut::run()
 {
+    if(env->tasks->isTerminated())
+        return;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
     {

@@ -54,6 +54,7 @@
 #include "Environment.h"
 #include "Output.h"
 #include "Settings.h"
+#include "EventHandler.h"
 
 #include "ModelShared.h"
 #include "UtilityFunctions.h"

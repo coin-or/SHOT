@@ -58,6 +58,9 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
+    TaskBase* tCheckUserTerm = new TaskCheckUserTermination(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
+
     TaskBase* tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 

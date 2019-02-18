@@ -191,6 +191,13 @@ void InfoCallbackI::main() // Called at each node...
         this->abort();
         return;
     }
+    else if(checkUserTermination())
+    {
+        env->output->outputCritical("     Terminated due to termination by user.");
+
+        this->abort();
+        return;
+    }
 
     return;
 }
@@ -368,6 +375,15 @@ void CtCallbackI::main()
     if(checkIterationLimit())
     {
         env->output->outputCritical("     Terminated by iteration limit in lazy callback");
+
+        solution.clear();
+        abort();
+        return;
+    }
+
+    if(checkUserTermination())
+    {
+        env->output->outputCritical("     Terminated by user in lazy callback");
 
         solution.clear();
         abort();

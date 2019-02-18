@@ -60,8 +60,15 @@ public:
 
     bool solveProblem();
 
-    std::string getOptionsOSoL();
-    std::string getOptions();
+    template <typename Callback> inline void registerCallback(const E_EventType& event, Callback&& callback)
+    {
+        env->events->registerCallback(event, callback);
+    }
+
+    // extern template void registerCallback(const E_EventType& event, std::function&& callback);
+
+    std::string getOSoL();
+    std::string getGAMSOptFile();
 
     std::string getResultsOSrL();
     std::string getResultsTrace();

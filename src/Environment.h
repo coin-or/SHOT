@@ -33,6 +33,7 @@ public:
     ReportPtr report;
     TaskHandlerPtr tasks;
     TimingPtr timing;
+    EventHandlerPtr events;
 
     std::shared_ptr<ILinesearchMethod> rootsearchMethod;
 

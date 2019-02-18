@@ -44,6 +44,7 @@
 #include "../Tasks/TaskCheckConstraintTolerance.h"
 #include "../Tasks/TaskCheckRelativeGap.h"
 #include "../Tasks/TaskCheckTimeLimit.h"
+#include "../Tasks/TaskCheckUserTermination.h"
 
 #include "../Tasks/TaskInitializeLinesearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"

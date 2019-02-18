@@ -31,6 +31,9 @@ public:
 
     TaskBase* getTask(std::string taskID);
 
+    void terminate() { terminated = true; }
+    inline bool isTerminated() { return terminated; }
+
 private:
     std::list<std::pair<std::string, TaskBase*>>::iterator nextTask;
     std::string nextTaskID;
@@ -38,5 +41,7 @@ private:
     std::list<TaskBase*> allTasks;
 
     EnvironmentPtr env;
+
+    bool terminated = false;
 };
 }
