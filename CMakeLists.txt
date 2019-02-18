@@ -1,3 +1,7 @@
+#For cotire, experimental...
+#set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMake")
+#include(cotire)
+
 cmake_minimum_required (VERSION 2.8)
 project (SHOT)
 set(CMAKE_CXX_STANDARD 17 )
@@ -5,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17 )
 # Sets the release types, e.g. Release, Debug
 set(CMAKE_BUILD_TYPE Debug)
 
-option (COMPILE_TESTS "Should the automated tests be compiled" ON)
+option (COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # Sets version number.
 set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
@@ -241,6 +245,8 @@ add_library (SHOTSolver SHARED ${SOURCES})
 
 add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
 target_link_libraries (${PROJECT_NAME} SHOTSolver)
+#cotire(${PROJECT_NAME})
+
 
 if (HAS_CPLEX)
   target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
