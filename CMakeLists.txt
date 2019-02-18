@@ -111,7 +111,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
-  "${PROJECT_SOURCE_DIR}/src/SHOTSettings/*.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
   "${TINYXML2_DIR}/tinyxml2.cpp"
   )
 
@@ -168,7 +168,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
-  "${PROJECT_SOURCE_DIR}/src/SHOTSettings/*.h"
+  "${PROJECT_SOURCE_DIR}/src/Settings.h"
   "${TINYXML2_DIR}/tinyxml2.h"
   )
 

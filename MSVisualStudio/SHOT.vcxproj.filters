@@ -159,7 +159,7 @@
     <ClCompile Include="..\src\SHOT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\SHOTSettings\SHOTSettings.cpp">
+    <ClCompile Include="..\src\Settings\Settings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\SHOTSolver.cpp">
@@ -455,7 +455,7 @@
     <ClInclude Include="..\src\ProcessInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\SHOTSettings\SHOTSettings.h">
+    <ClInclude Include="..\src\Settings\Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\SHOTSolver.h">

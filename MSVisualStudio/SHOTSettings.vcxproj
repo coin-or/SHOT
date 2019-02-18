@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{8067250A-B10B-4DCC-B6F4-2372F1CA0DDD}</ProjectGuid>
-    <RootNamespace>SHOTSettings</RootNamespace>
+    <RootNamespace>Settings</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -114,18 +114,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="..\src\SHOTSettings\CMakeLists.txt" />
+    <Text Include="..\src\Settings\CMakeLists.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\SHOTSettings\SHOTSettings.cpp" />
+    <ClCompile Include="..\src\Settings\Settings.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\SHOTSettings\SHOTSettings.h" />
+    <ClInclude Include="..\src\Settings\Settings.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\src\SHOTSettings\SHOTSettings.vcxproj" />
-    <None Include="..\src\SHOTSettings\SHOTSettings.vcxproj.filters" />
-    <None Include="..\src\SHOTSettings\SHOTSettings.vcxproj.vspscc" />
+    <None Include="..\src\Settings\Settings.vcxproj" />
+    <None Include="..\src\Settings\Settings.vcxproj.filters" />
+    <None Include="..\src\Settings\Settings.vcxproj.vspscc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

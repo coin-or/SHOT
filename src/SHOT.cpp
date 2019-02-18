@@ -8,8 +8,6 @@
    Please see the README and LICENSE files for more information.
 */
 #include "Shared.h"
-#include "SHOTSettings.h"
-#include "Report.h"
 #include "SHOTSolver.h"
 
 using namespace SHOT;

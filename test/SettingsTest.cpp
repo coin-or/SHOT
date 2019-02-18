@@ -9,7 +9,7 @@
 */
 
 #include "Shared.h"
-#include "SHOTSettings.h"
+#include "Settings.h"
 #include "SHOTSolver.h"
 
 using namespace SHOT;

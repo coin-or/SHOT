@@ -53,7 +53,7 @@
 
 #include "Environment.h"
 #include "Output.h"
-#include "SHOTSettings.h"
+#include "Settings.h"
 
 #include "ModelShared.h"
 #include "UtilityFunctions.h"
