@@ -44,7 +44,6 @@ protected:
     void callback();
 
 private:
-    int numVar = 0;
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
 

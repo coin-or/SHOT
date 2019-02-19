@@ -119,13 +119,6 @@ void TaskSolveIteration::run()
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
-    /*if(solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error
-        || solStatus == E_ProblemSolutionStatus::Abort || solStatus == E_ProblemSolutionStatus::CutOff
-        || solStatus == E_ProblemSolutionStatus::Numeric || solStatus == E_ProblemSolutionStatus::Unbounded)
-    {
-    }
-    else*/
-
     if(sols.size() == 0)
     {
         // Will try to get atleast a dual bound

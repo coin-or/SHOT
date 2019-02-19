@@ -70,14 +70,12 @@ void HCallbackI::main() // Called at each node...
 
         for(auto& V : env->reformulatedProblem->auxilliaryVariables)
         {
-            // std::cout << "calculated value for auxilliary variable " << V->name << " " <<
-            // V->calculateValue(primalSol) << '\n';
             tmpVals.add(V->calculateValue(primalSol));
         }
 
         try
         {
-            // setSolution(cplexVars, tmpVals);
+            setSolution(cplexVars, tmpVals);
         }
         catch(IloException& e)
         {

@@ -85,9 +85,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             context.getIncumbent(cplexVars, tmpPrimalVals);
 
-            VectorDouble primalSolution(tmpPrimalVals.getSize());
+            int numberOfVariables = env->problem->properties.numberOfVariables;
 
-            for(int i = 0; i < tmpPrimalVals.getSize(); i++)
+            VectorDouble primalSolution(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
             {
                 primalSolution.at(i) = tmpPrimalVals[i];
             }
@@ -130,9 +132,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 context.getRelaxationPoint(cplexVars, tmpVals);
 
-                VectorDouble solution(tmpVals.getSize());
+                int numberOfVariables = env->reformulatedProblem->properties.numberOfVariables;
 
-                for(int i = 0; i < tmpVals.getSize(); i++)
+                VectorDouble solution(numberOfVariables);
+
+                for(int i = 0; i < numberOfVariables; i++)
                 {
                     solution.at(i) = tmpVals[i];
                 }
@@ -189,9 +193,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             context.getCandidatePoint(cplexVars, tmpVals);
 
-            VectorDouble solution(tmpVals.getSize());
+            int numberOfVariables = env->reformulatedProblem->properties.numberOfVariables;
 
-            for(int i = 0; i < tmpVals.getSize(); i++)
+            VectorDouble solution(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
             {
                 solution.at(i) = tmpVals[i];
             }
@@ -295,9 +301,9 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 tmpVals.add(primalSol.at(i));
             }
 
-            if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
+            for(auto& V : env->reformulatedProblem->auxilliaryVariables)
             {
-                tmpVals.add(env->results->getPrimalBound());
+                tmpVals.add(V->calculateValue(primalSol));
             }
 
             context.postHeuristicSolution(

@@ -44,6 +44,7 @@ public:
     virtual bool finalizeProblem();
 
     virtual void initializeSolverSettings();
+    
     virtual void writeProblemToFile(std::string filename);
     virtual void writePresolvedToFile(std::string filename);
 
@@ -57,9 +58,7 @@ public:
 
     virtual void createHyperplane(Hyperplane hyperplane) { MIPSolverBase::createHyperplane(hyperplane); }
 
-    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
-    { /*MIPSolverBase::createIntegerCut(binaryIndexes); TODO*/
-    }
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane)
     {
@@ -160,7 +159,6 @@ protected:
     void callback();
 
 private:
-    int numVar = 0;
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
     EnvironmentPtr env;

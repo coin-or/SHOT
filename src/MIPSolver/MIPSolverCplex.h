@@ -62,10 +62,6 @@ public:
 
     virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
-    /*virtual void createIntegerCut(
-        VectorInteger& binaryIndexes, std::function<IloConstraint(IloRange)> addConstraintFunction);
-*/
-
     virtual void createHyperplane(Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane)

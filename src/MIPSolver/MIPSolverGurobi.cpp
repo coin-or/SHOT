@@ -373,6 +373,37 @@ int MIPSolverGurobi::addLinearConstraint(
     return (gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
 }
 
+
+void MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+{
+    try
+    {
+        GRBLinExpr expr = 0;
+
+        for(int i = 0; i < binaryIndexesOnes.size(); i++)
+        {
+            auto variable = gurobiModel->getVar(binaryIndexesOnes.at(i));
+            expr += 1.0 * variable;
+        }
+
+        for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+        {
+            auto variable = gurobiModel->getVar(binaryIndexesZeroes.at(i));
+            expr += (1.0 - 1.0 * variable);
+        }
+
+        gurobiModel->addConstr(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
+
+        gurobiModel->update();
+
+        env->solutionStatistics.numberOfIntegerCuts++;
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("Gurobi error when adding lazy integer cut", e.getMessage());
+    }
+}
+
 VectorDouble MIPSolverGurobi::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
@@ -615,12 +646,9 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff) {}
 
 void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
-    int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
-    VectorDouble solution(numVar);
-
     try
     {
-        for(int i = 0; i < numVar; i++)
+        for(int i = 0; i < point.size(); i++)
         {
             GRBVar tmpVar = gurobiModel->getVar(i);
             tmpVar.set(GRB_DoubleAttr_Start, point.at(i));
@@ -701,7 +729,6 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 void MIPSolverGurobi::deleteMIPStarts()
 {
     int numVar = gurobiModel->get(GRB_IntAttr_NumVars);
-    VectorDouble solution(numVar);
 
     try
     {
