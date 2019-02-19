@@ -20,8 +20,8 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
 
     try
     {
-        gurobiEnv = std::make_unique<GRBEnv>();
-        gurobiModel = std::make_unique<GRBModel>(gurobiEnv.get());
+        gurobiEnv = std::make_shared<GRBEnv>();
+        gurobiModel =  std::make_shared<GRBModel>(*gurobiEnv.get());
     }
     catch(GRBException& e)
     {
@@ -350,7 +350,7 @@ void GurobiCallback::callback()
 
                 if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
                 {
-                    tmpVals.add(env->results->getPrimalBound());
+                    primalSolution.push_back(env->results->getPrimalBound());
                 }
 
                 lastUpdatedPrimal = primalBound;
@@ -396,7 +396,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
             return;
         }
 
-        auto tmpPair = optional.get();
+        auto tmpPair = optional.value();
 
         bool hyperplaneIsOk = true;
 
@@ -496,18 +496,23 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
         = (static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get()))->gurobiModel->get(GRB_IntAttr_NumVars);
 }
 
-void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexes)
+void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
     try
     {
         GRBLinExpr expr = 0;
 
-        for(int i = 0; i < binaryIndexes.size(); i++)
+        for(int i = 0; i < binaryIndexesOnes.size(); i++)
         {
-            expr += vars[binaryIndexes.at(i)];
+            expr += 1.0 * vars[binaryIndexesOnes.at(i)];
         }
 
-        addLazy(expr <= binaryIndexes.size() - 1.0);
+        for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+        {
+            expr += (1 - 1.0 * vars[binaryIndexesZeroes.at(i)]);
+        }
+
+        addLazy(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
 
         env->solutionStatistics.numberOfIntegerCuts++;
     }

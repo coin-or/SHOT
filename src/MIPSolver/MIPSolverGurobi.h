@@ -51,6 +51,7 @@ public:
     {
         return (addLinearConstraint(elements, constant, name, false));
     }
+    
     virtual int addLinearConstraint(
         const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
 
@@ -140,8 +141,8 @@ public:
         return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
     }
 
-    std::unique_ptr<GRBEnv> gurobiEnv;
-    std::unique_ptr<GRBModel> gurobiModel;
+    std::shared_ptr<GRBEnv> gurobiEnv;
+    std::shared_ptr<GRBModel> gurobiModel;
     GRBLinExpr objectiveLinearExpression;
     GRBQuadExpr objectiveQuadraticExpression;
     GRBLinExpr constraintLinearExpression;

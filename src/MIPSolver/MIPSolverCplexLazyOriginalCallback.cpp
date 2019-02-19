@@ -477,6 +477,7 @@ void CtCallbackI::main()
 void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
     auto optional = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
+    
     if(!optional)
     {
         return;

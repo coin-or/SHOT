@@ -34,8 +34,8 @@ bool MIPSolverGurobi::initializeProblem()
 
     try
     {
-        gurobiEnv = std::make_unique<GRBEnv>();
-        gurobiModel = std::make_unique<GRBModel>(gurobiEnv.get());
+        gurobiEnv = std::make_shared<GRBEnv>();
+        gurobiModel =  std::make_shared<GRBModel>(*gurobiEnv.get());
     }
     catch(GRBException& e)
     {
@@ -99,6 +99,7 @@ bool MIPSolverGurobi::initializeObjective()
 {
     try
     {
+        gurobiModel->update();
         objectiveQuadraticExpression = GRBQuadExpr(0);
         objectiveLinearExpression = GRBLinExpr(0);
     }
@@ -348,16 +349,16 @@ int MIPSolverGurobi::addLinearConstraint(
         for(int i = 0; i < elements.size(); i++)
         {
             auto variable = gurobiModel->getVar(elements.at(i).index);
-            expr.get() = expr.get() + elements.at(i).value * variable;
+            *expr.get() = *expr.get() + elements.at(i).value * variable;
         }
 
         if(isGreaterThan)
         {
-            gurobiModel->addConstr(-constant >= expr.get(), "");
+            gurobiModel->addConstr(-constant >= *expr);
         }
         else
         {
-            gurobiModel->addConstr(expr.get() <= -constant, "");
+            gurobiModel->addConstr(*expr <= -constant);
         }
 
         gurobiModel->update();
@@ -828,8 +829,8 @@ void MIPSolverGurobi::checkParameters() {}
 
 std::pair<VectorDouble, VectorDouble> MIPSolverGurobi::presolveAndGetNewBounds()
 {
-    GRBModel m = gurobiModel->presolve();
-    m.printStats();
+    // TODO
+    //auto m = gurobiModel->presolve();
 
     return (std::make_pair(variableLowerBounds, variableUpperBounds));
 }
