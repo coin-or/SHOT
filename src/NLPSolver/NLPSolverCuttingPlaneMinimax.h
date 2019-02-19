@@ -21,7 +21,7 @@
 #include "MIPSolver/MIPSolverGurobi.h"
 #endif
 
-#ifdef HAS_OS
+#ifdef HAS_CBC
 #include "MIPSolver/MIPSolverOsiCbc.h"
 #endif
 

@@ -60,6 +60,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         }
 #endif
 
+#ifdef HAS_CBC
         if(solver == ES_MIPSolver::Cbc)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
@@ -68,6 +69,8 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             solverSelected = true;
         }
     }
+#endif
+
     else
     {
 
@@ -90,6 +93,8 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             solverSelected = true;
         }
 #endif
+
+#ifdef HAS_CBC
         if(solver == ES_MIPSolver::Cbc)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
@@ -97,14 +102,29 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             env->output->outputDebug("Cbc selected as MIP solver.");
             solverSelected = true;
         }
+
+#endif
     }
 
     if(!solverSelected)
     {
+        env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
+
+#ifdef HAS_CBC
         env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverOsiCbc>(env));
         env->results->usedMIPSolver = ES_MIPSolver::Cbc;
-        env->output->outputError("Cbc selected as MIP solver since no other solver is available.");
         solverSelected = true;
+#elif HAS_GUROBI
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
+            solverSelected = true;
+#elif HAS_CPLEX
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplex>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::Cplex;
+            solverSelected = true;
+#else
+            env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
+#endif
     }
 
     env->timing->stopTimer("DualStrategy");

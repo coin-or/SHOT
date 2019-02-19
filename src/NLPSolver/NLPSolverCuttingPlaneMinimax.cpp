@@ -73,7 +73,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     }
 #endif
 
-#ifdef HAS_OS
+#ifdef HAS_CBC
     if(solver == ES_MIPSolver::Cbc)
     {
         LPSolver = std::make_unique<MIPSolverOsiCbc>(env);
