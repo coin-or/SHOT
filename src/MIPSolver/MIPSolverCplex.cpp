@@ -606,21 +606,19 @@ bool MIPSolverCplex::repairInfeasibility()
 
         IloNumArray relax(cplexEnv);
 
-        // setCutOffAsConstraint(env->results->getPrimalBound());
         cplexInstance.extract(cplexModel);
 
-        int rows = cplexConstrs.getSize();
+        int numCurrConstraints = cplexConstrs.getSize();
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
 
         relax.add(numOrigConstraints, 0.0);
 
-        for(int i = numOrigConstraints; i < rows; i++)
+        for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
                 relax.add(0.0);
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                // std::cout << "Not repairing integer cut: " << i << '\n';
                 relax.add(0);
             }
             else
@@ -635,17 +633,6 @@ bool MIPSolverCplex::repairInfeasibility()
             IloNumArray vals(cplexEnv);
 
             cplexInstance.getInfeasibilities(infeas, cplexConstrs);
-            /* std::cout << "*** Suggested bound changes = " << infeas << std::endl;
-             std::cout << "*** Feasible objective value would be = " << cplexInstance.getObjValue() << std::endl;
-             std::cout << "Solution status    = " << cplexInstance.getStatus() << std::endl;
-             std::cout << "Solution obj value = " << cplexInstance.getObjValue() << std::endl;
-             cplexInstance.getValues(vals, cplexVars);
-             std::cout << "Values             = " << vals << std::endl;
-             std::cout << std::endl;*/
-
-            /*IloNumArray slacks(cplexEnv);
-            cplexInstance.getSlacks(slacks, cplexConstrs);
-            std::cout << "slacks: " << slacks << std::endl;*/
 
             int numRepairs = 0;
 
@@ -669,8 +656,7 @@ bool MIPSolverCplex::repairInfeasibility()
 
             if(numRepairs == 0)
             {
-
-                env->output->outputCritical("        No constraints modified during repair");
+                env->output->outputCritical("        Could not repair the infeasible dual problem.");
                 return (false);
             }
 
@@ -688,14 +674,10 @@ bool MIPSolverCplex::repairInfeasibility()
                 env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
             }
 
-            // cplexInstance.getValues(vals, cplexVars);
-            // std::cout << "Values             = " << vals << std::endl;
-
-            // MIPSolutionStatus = getSolutionStatus();
             return (true);
         }
 
-        env->output->outputCritical("        Could not repair the infeasiblity");
+        env->output->outputCritical("        Could not repair the infeasible dual problem.");
     }
     catch(IloException& e)
     {

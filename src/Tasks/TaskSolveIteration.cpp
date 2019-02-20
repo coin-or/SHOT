@@ -122,13 +122,14 @@ void TaskSolveIteration::run()
     if(sols.size() == 0)
     {
         // Will try to get atleast a dual bound
-        double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+
+        /*double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
 
         if(env->results->iterations.size() > 1)
         {
             if(env->results->getPreviousIteration()->currentObjectiveBounds.first == currentDualBound)
                 env->results->setDualBound(currentDualBound);
-        }
+        }*/
     }
     else
     {

@@ -35,7 +35,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             hyperplaneSolutionPointStrategyInitialized = true;
         }
 
-        env->output->outputWarning("     Adding cutting plane since no interior point is known.");
+        env->output->outputWarning("        Adding cutting plane since no interior point is known.");
         tSelectHPPts->run(solPoints);
 
         env->timing->stopTimer("DualCutGenerationRootSearch");

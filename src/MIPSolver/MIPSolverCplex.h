@@ -157,7 +157,5 @@ protected:
 
     IloExpr objExpression;
     IloExpr constrExpression;
-
-    std::vector<int> integerCuts;
 };
 } // namespace SHOT

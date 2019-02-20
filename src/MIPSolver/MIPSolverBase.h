@@ -96,6 +96,8 @@ public:
         auxilliaryObjectiveVariableDefined = true;
     };
 
+    std::vector<int> integerCuts; // Contains the constraint indexes that are integerCuts
+
     int prevSolutionLimit = 1;
 
     bool discreteVariablesActivated;
