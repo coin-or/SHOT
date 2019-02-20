@@ -629,18 +629,20 @@ bool MIPSolverGurobi::repairInfeasibility()
         auto feasModel = GRBModel(*gurobiModel);
 
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
-        int numOrigVariables = env->reformulatedProblem->properties.numberOfVariables;
-
+        int numOrigVariables = gurobiModel->get(GRB_IntAttr_NumVars);
         int numCurrConstraints = feasModel.get(GRB_IntAttr_NumConstrs);
 
         std::vector<GRBConstr> repairConstraints;
+        std::vector<GRBConstr> originalConstraints;
         VectorDouble relaxParameters;
         int numConstraintsToRepair = 0;
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
+            {
                 continue;
+            }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
                 continue;
@@ -648,18 +650,18 @@ bool MIPSolverGurobi::repairInfeasibility()
             else
             {
                 repairConstraints.push_back(feasModel.getConstr(i));
+                originalConstraints.push_back(gurobiModel->getConstr(i));
                 relaxParameters.push_back(1 / (((double)i) + 1.0));
                 numConstraintsToRepair++;
             }
         }
 
-        int numConstraintsToRepairOrig
-            = numConstraintsToRepair; // Gurobi modifies the value when running feasModel.optimize()
+        // Gurobi modifies the value when running feasModel.optimize()
+        int numConstraintsToRepairOrig = numConstraintsToRepair;
 
-        double status = feasModel.feasRelax(GRB_FEASRELAX_LINEAR, false, 0, NULL, NULL, NULL, numConstraintsToRepair,
-            &repairConstraints[0], &relaxParameters[0]);
-
-        if(status < 0)
+        if(feasModel.feasRelax(GRB_FEASRELAX_LINEAR, false, 0, NULL, NULL, NULL, numConstraintsToRepair,
+               &repairConstraints[0], &relaxParameters[0])
+            < 0)
         {
             env->output->outputCritical("        Could not repair the infeasible dual problem.");
             return (false);
@@ -667,20 +669,30 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         feasModel.optimize();
 
+        int status = feasModel.get(GRB_IntAttr_Status);
+
+        if(status != GRB_OPTIMAL)
+        {
+            env->output->outputCritical("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
         int numRepairs = 0;
+
+        auto vars = feasModel.getVars();
 
         for(int i = 0; i < numConstraintsToRepairOrig; i++)
         {
-            double slackValue = feasModel.getVar(numOrigVariables + i).get(GRB_DoubleAttr_X);
-            auto constraint = gurobiModel->getConstr(numOrigConstraints + i);
+            auto variable = feasModel.getVar(numOrigVariables + i);
+            double slackValue = variable.get(GRB_DoubleAttr_X);
+            auto constraint = originalConstraints.at(i);
             double oldRHS = constraint.get(GRB_DoubleAttr_RHS);
-
             constraint.set(GRB_DoubleAttr_RHS, oldRHS + 1.5 * slackValue);
 
             numRepairs++;
 
-            env->output->outputDebug("        Constraint: " + std::to_string(numOrigVariables + 1.5 * i)
-                + " repaired with infeasibility = " + std::to_string(slackValue));
+            env->output->outputDebug("        Constraint: " + constraint.get(GRB_StringAttr_ConstrName)
+                + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
         }
 
         env->output->outputCritical("        Number of constraints modified: " + std::to_string(numRepairs));
@@ -779,50 +791,46 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
         {
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
-                IloRange tmpRange(cplexEnv, cutOff, cplexObjectiveExpression);
-                tmpRange.setName("CUTOFF_C");
-                cplexConstrs.add(tmpRange);
-                cplexModel.add(tmpRange);
+                gurobiModel->addConstr(-objectiveLinearExpression <= -cutOff, "CUTOFF_C");
 
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputCritical("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for maximization.");
             }
             else
             {
-                IloRange tmpRange(cplexEnv, -IloInfinity, cplexObjectiveExpression, cutOff);
-                tmpRange.setName("CUTOFF_C");
-                cplexConstrs.add(tmpRange);
-                cplexModel.add(tmpRange);
+                gurobiModel->addConstr(objectiveLinearExpression <= cutOff, "CUTOFF_C");
 
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputCritical("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for minimization.");
             }
 
-            cutOffConstraintIndex = cplexConstrs.getSize() - 1;
-
-            modelUpdated = true;
+            gurobiModel->update();
+            modelUpdated = false;
 
             cutOffConstraintDefined = true;
+            cutOffConstraintIndex = gurobiModel->get(GRB_IntAttr_NumConstrs) - 1;
         }
         else
         {
+            auto constraint = gurobiModel->getConstr(cutOffConstraintIndex);
+
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
-                cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
-                env->output->outputDebug("        Setting cutoff constraint value to "
+                constraint.set(GRB_DoubleAttr_RHS, -cutOff);
+                env->output->outputCritical("        Setting cutoff constraint value to "
                     + UtilityFunctions::toString(cutOff) + " for maximization.");
             }
             else
             {
-                cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                constraint.set(GRB_DoubleAttr_RHS, cutOff);
+                env->output->outputCritical("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
                     + " for minimization.");
             }
 
             modelUpdated = true;
         }
     }
-    catch(IloException& e)
+    catch(GRBException& e)
     {
         env->output->outputError("        Error when setting cut off value through constraint", e.getMessage());
     }

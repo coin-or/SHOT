@@ -24,7 +24,16 @@ TaskAddPrimalReductionCut::~TaskAddPrimalReductionCut() {}
 void TaskAddPrimalReductionCut::run()
 {
     if(env->tasks->isTerminated())
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
         return;
+    }
+
+    if(env->results->primalSolutions.size() == 0)
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
+    }
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
     {
