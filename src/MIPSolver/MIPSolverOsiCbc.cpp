@@ -578,6 +578,11 @@ void MIPSolverOsiCbc::fixVariable(int varIndex, double value) { updateVariableBo
 
 void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, double upperBound)
 {
+    auto currentVariableBounds = getCurrentVariableBounds(varIndex);
+
+    if(currentVariableBounds.first == lowerBound && currentVariableBounds.second == upperBound)
+        return;
+
     try
     {
         osiInterface->setColBounds(varIndex, lowerBound, upperBound);
@@ -591,6 +596,11 @@ void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, doubl
 
 void MIPSolverOsiCbc::updateVariableLowerBound(int varIndex, double lowerBound)
 {
+    auto currentVariableBounds = getCurrentVariableBounds(varIndex);
+
+    if(currentVariableBounds.first == lowerBound)
+        return;
+
     try
     {
         osiInterface->setColLower(varIndex, lowerBound);
@@ -604,6 +614,11 @@ void MIPSolverOsiCbc::updateVariableLowerBound(int varIndex, double lowerBound)
 
 void MIPSolverOsiCbc::updateVariableUpperBound(int varIndex, double upperBound)
 {
+    auto currentVariableBounds = getCurrentVariableBounds(varIndex);
+
+    if(currentVariableBounds.second == upperBound)
+        return;
+
     try
     {
         osiInterface->setColUpper(varIndex, upperBound);

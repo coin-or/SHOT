@@ -158,11 +158,6 @@ protected:
     IloExpr objExpression;
     IloExpr constrExpression;
 
-    int prevSolutionLimit = 1;
-
     std::vector<int> integerCuts;
-
-    bool modelUpdated /*= true*/;
-    bool alreadyInitialized = false;
 };
 } // namespace SHOT

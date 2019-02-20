@@ -401,8 +401,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     primalSol.point = tmpPoint;
     primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
-    auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
-    env->output->outputDebug(tmpLine.str());
+    auto tmpLine = boost::format("        New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
+    env->output->outputCritical(tmpLine.str());
 
     env->results->addPrimalSolution(primalSol);
 

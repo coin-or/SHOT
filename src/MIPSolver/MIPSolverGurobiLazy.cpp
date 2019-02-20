@@ -21,7 +21,7 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
     try
     {
         gurobiEnv = std::make_shared<GRBEnv>();
-        gurobiModel =  std::make_shared<GRBModel>(*gurobiEnv.get());
+        gurobiModel = std::make_shared<GRBModel>(*gurobiEnv.get());
     }
     catch(GRBException& e)
     {
@@ -252,7 +252,7 @@ void GurobiCallback::callback()
                 // Remove??
                 if(maxDev.normalizedValue <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
                 {
-                    //return;
+                    // return;
                 }
 
                 solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
@@ -288,7 +288,6 @@ void GurobiCallback::callback()
                 env->primalSolver->addFixedNLPCandidate(candidatePoints.at(0).point, E_PrimalNLPSource::FirstSolution,
                     getDoubleInfo(GRB_CB_MIPSOL_OBJ), env->results->getCurrentIteration()->iterationNumber,
                     candidatePoints.at(0).maxDeviation);
-
                 tSelectPrimNLP.get()->run();
 
                 env->primalSolver->checkPrimalSolutionCandidates();
@@ -348,7 +347,8 @@ void GurobiCallback::callback()
 
                 for(int i = 0; i < env->reformulatedProblem->auxilliaryVariables.size(); i++)
                 {
-                    setSolution(vars[i+primalSol.size()], env->reformulatedProblem->auxilliaryVariables.at(i)->calculateValue(primalSol));
+                    setSolution(vars[i + primalSol.size()],
+                        env->reformulatedProblem->auxilliaryVariables.at(i)->calculateValue(primalSol));
                 }
 
                 lastUpdatedPrimal = primalBound;

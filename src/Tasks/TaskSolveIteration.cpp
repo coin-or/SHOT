@@ -99,19 +99,19 @@ void TaskSolveIteration::run()
     auto solStatus = env->dualSolver->MIPSolver->solveProblem();
     env->output->outputDebug("     Dual problem solved.");
 
-    // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been
-    // created when solving
+    // Must update the pointer to the current iteration if we use the lazy
+    // strategy since new iterations have been created when solving
     if(static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual"))
         == ES_TreeStrategy::SingleTree)
     {
         currIter = env->results->getCurrentIteration();
     }
-    else // Must update the node stats if multi-tree strategy (otherwise it is done in the callbacks)
+    else // Must update the node stats if multi-tree strategy (otherwise it is
+         // done in the callbacks)
     {
         currIter->numberOfExploredNodes = env->dualSolver->MIPSolver->getNumberOfExploredNodes();
         env->solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
         env->solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
-        // std::cout << "Nodes: " << env->solutionStatistics.numberOfExploredNodes << std::endl;
     }
 
     currIter->solutionStatus = solStatus;

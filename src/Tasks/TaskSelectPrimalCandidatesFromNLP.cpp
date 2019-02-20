@@ -30,7 +30,7 @@ void TaskSelectPrimalCandidatesFromNLP::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if(currIter->isMIP() && env->results->getRelativeObjectiveGap() > 1e-10)
+    if(env->results->getRelativeObjectiveGap() > 1e-10)
     {
         env->timing->startTimer("PrimalStrategy");
         env->timing->startTimer("PrimalBoundStrategyNLP");

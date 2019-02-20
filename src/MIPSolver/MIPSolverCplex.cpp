@@ -441,6 +441,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 {
     try
     {
+
         for(int i = 0; i < cplexVarConvers.size(); i++)
         {
             cplexVarConvers.at(i).end();
@@ -450,6 +451,8 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
         if(activate)
         {
+            env->output->outputDebug("        Activating MIP strategy.");
+
             for(int i = 0; i < numberOfVariables; i++)
             {
                 if(variableTypes.at(i) == E_VariableType::Integer)
@@ -472,6 +475,7 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
         }
         else
         {
+            env->output->outputDebug("        Activating LP strategy.");
             for(int i = 0; i < numberOfVariables; i++)
             {
                 if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
@@ -485,6 +489,8 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
 
             discreteVariablesActivated = false;
         }
+
+        modelUpdated = true;
     }
     catch(IloException& e)
     {
@@ -571,36 +577,12 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         if(modelUpdated)
         {
             cplexInstance.extract(cplexModel);
-
             modelUpdated = false;
         }
 
         cplexInstance.solve();
 
         MIPSolutionStatus = getSolutionStatus();
-
-        /*if(MIPSolutionStatus != E_ProblemSolutionStatus::Infeasible && env->reformulatedProblem->properties.isDiscrete
-            && discreteVariablesActivated)
-            cplexInstance.populate();
-*/
-        /*
-                if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
-                {
-                    repairInfeasibility();
-
-                    // writeProblemToFile("test.lp");
-
-                    cplexInstance.extract(cplexModel);
-
-                    // std::cout << cplexModel << '\n';
-
-                    cplexInstance.solve();
-
-                    // cplexInstance.getValues(vals, cplexVars);
-                    // std::cout << "Values             = " << vals << std::endl;
-
-                    MIPSolutionStatus = getSolutionStatus();
-                }*/
     }
     catch(IloException& e)
     {
@@ -1056,6 +1038,11 @@ void MIPSolverCplex::fixVariable(int varIndex, double value) { updateVariableBou
 
 void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double upperBound)
 {
+    auto currentVariableBounds = getCurrentVariableBounds(varIndex);
+
+    if(currentVariableBounds.first == lowerBound && currentVariableBounds.second == upperBound)
+        return;
+
     try
     {
         cplexVars[varIndex].setBounds(lowerBound, upperBound);
@@ -1071,6 +1058,11 @@ void MIPSolverCplex::updateVariableBound(int varIndex, double lowerBound, double
 
 void MIPSolverCplex::updateVariableLowerBound(int varIndex, double lowerBound)
 {
+    auto currentVariableBounds = getCurrentVariableBounds(varIndex);
+
+    if(currentVariableBounds.first == lowerBound)
+        return;
+
     try
     {
         cplexVars[varIndex].setLB(lowerBound);
@@ -1086,6 +1078,11 @@ void MIPSolverCplex::updateVariableLowerBound(int varIndex, double lowerBound)
 
 void MIPSolverCplex::updateVariableUpperBound(int varIndex, double upperBound)
 {
+    auto currentVariableBounds = getCurrentVariableBounds(varIndex);
+
+    if(currentVariableBounds.second == upperBound)
+        return;
+
     try
     {
         cplexVars[varIndex].setUB(upperBound);
@@ -1139,7 +1136,6 @@ double MIPSolverCplex::getDualObjectiveValue()
     }
     catch(IloException& e)
     {
-        // env->output->outputError("        Error when obtaining dual objective value", e.getMessage());
         // Happens for infeasible LP
         if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
             return (SHOT_DBL_MIN);
@@ -1319,34 +1315,6 @@ void MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
 
     expr.end();
 }
-
-/*
-void MIPSolverCplex::createIntegerCut(
-    VectorInteger& binaryIndexes, std::function<IloConstraint(IloRange)> addConstraintFunction)
-{
-    IloExpr expr(cplexEnv);
-
-    for(int i = 0; i < binaryIndexes.size(); i++)
-    {
-        expr += 1.0 * cplexVars[binaryIndexes.at(i)];
-    }
-
-    IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexes.size() - 1.0);
-
-    env->solutionStatistics.numberOfIntegerCuts++;
-
-    integerCuts.push_back(cplexConstrs.getSize());
-
-    std::cout << "Integer cut " << tmpRange << " added: " << cplexConstrs.getSize() << '\n';
-    env->solutionStatistics.numberOfIntegerCuts++;
-
-    cplexConstrs.add(tmpRange);
-
-    auto addedConstr = addConstraintFunction(tmpRange);
-    // cplexModel.add(tmpRange);
-
-    expr.end();
-}*/
 
 int MIPSolverCplex::getNumberOfExploredNodes()
 {

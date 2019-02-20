@@ -96,10 +96,14 @@ public:
         auxilliaryObjectiveVariableDefined = true;
     };
 
+    int prevSolutionLimit = 1;
+
     bool discreteVariablesActivated;
     bool cachedSolutionHasChanged;
+    bool modelUpdated = true;
 
-    bool isVariablesFixed;
+    bool isVariablesFixed = false;
+    bool alreadyInitialized = false;
 
     std::vector<SolutionPoint> lastSolutions;
 
