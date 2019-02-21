@@ -20,7 +20,7 @@ mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
 # Activates extra functionality, note that corresponding libraries are needed
 option (HAS_CPLEX "Is Cplex available" ON)
 option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON)
-option (HAS_GUROBI "Is Gurobi available" OFF)
+option (HAS_GUROBI "Is Gurobi available" ON)
 option (HAS_GAMS "Is GAMS available" ON)
 option (HAS_OS "Is COIN-OR Optimization Services available" ON)
 
@@ -28,7 +28,7 @@ option (HAS_OS "Is COIN-OR Optimization Services available" ON)
 set(COINOS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
 set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
-set(GAMS_DIR "/opt/gams/gams25.1.2"  CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
 
 # These are included in SHOT's the source tree, and should not need to be modified
 set(MCPP_DIR ThirdParty/mc++)
@@ -112,7 +112,6 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp"
-  "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
   "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
@@ -170,7 +169,6 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h"
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h"
-  "${PROJECT_SOURCE_DIR}/src/PrimalSolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
   "${PROJECT_SOURCE_DIR}/src/Settings.h"
