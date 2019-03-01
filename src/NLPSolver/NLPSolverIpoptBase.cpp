@@ -353,7 +353,7 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         lowerBoundsBeforeFix.push_back(currLB);
         upperBoundsBeforeFix.push_back(currUB);
 
-        currPt = UtilityFunctions::round(currPt);
+        currPt = std::round(currPt);
 
         // Fix for negative zero
         if(currPt >= (0.0 - std::numeric_limits<double>::epsilon())

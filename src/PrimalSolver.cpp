@@ -91,7 +91,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     VectorDouble tmpPoint(primalSol.point);
     double tmpObjVal = primalSol.objValue;
 
-    bool isVariableBoundsFulfilled = false;
+    bool isVariableBoundsFulfilled = true;
 
     switch(primalSol.sourceType)
     {
@@ -217,7 +217,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto value = V->calculate(tmpPoint);
             int index = V->index;
 
-            double rounded = UtilityFunctions::round(value);
+            double rounded = std::round(value);
             double error = std::abs(rounded - value);
 
             maxIntegerError = std::max(maxIntegerError, error);
@@ -234,7 +234,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto value = V->calculate(tmpPoint);
             int index = V->index;
 
-            double rounded = UtilityFunctions::round(value);
+            double rounded = std::round(value);
             double error = std::abs(rounded - value);
 
             maxIntegerError = std::max(maxIntegerError, error);

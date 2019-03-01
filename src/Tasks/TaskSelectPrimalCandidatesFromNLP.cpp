@@ -186,7 +186,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         {
             int currVarIndex = discreteVariableIndexes.at(k);
 
-            auto tmpSolPt = UtilityFunctions::round(testPts.at(j).point.at(currVarIndex));
+            auto tmpSolPt = std::round(testPts.at(j).point.at(currVarIndex));
 
             fixedVariableValues.at(k) = tmpSolPt;
 

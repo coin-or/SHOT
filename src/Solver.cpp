@@ -655,17 +655,17 @@ void Solver::initializeSettings()
         "Reinitialize the dual model in the subsolver each iteration");
 
     // Optimization model settings
-    env->settings->createSetting("ContinuousVariable.EmptyLowerBound", "Model", -9999999999.0,
-        "Lower bound for continuous variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -9999999999.0,
+        "Minimum lower bound for continuous variables", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.EmptyUpperBound", "Model", 9999999999.0,
-        "Upper bound for continuous variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 9999999999.0,
+        "Maximum upper bound for continuous variables", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0,
-        "Lower bound for integer variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("IntegerVariable.MinimumLowerBound", "Model", -2.0e9,
+        "Minimum lower bound for integer variables", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9,
-        "Upper bound for integer variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("IntegerVariable.MaximumUpperBound", "Model", 2.0e9,
+        "Maximum upper bound for integer variables", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0,
         "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
