@@ -46,7 +46,10 @@ void TaskSolveIteration::run()
         }
 
         env->dualSolver->MIPSolver->setCutOff(cutOffValue);
-        env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
+
+        if(env->reformulatedProblem->objectiveFunction->properties.classification
+            < E_ObjectiveFunctionClassification::Quadratic)
+            env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
 
     if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()
