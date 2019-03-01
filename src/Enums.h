@@ -13,7 +13,7 @@
 namespace SHOT
 {
 
-enum class E_AuxilliaryVariableType
+enum class E_AuxiliaryVariableType
 {
     None,
     NonlinearObjectiveFunction, // From epigraph formulation of (nonlinear) objective function

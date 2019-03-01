@@ -325,20 +325,20 @@ void Problem::add(VariablePtr variable)
     env->output->outputTrace("Added variable to problem: " + variable->name);
 };
 
-void Problem::add(AuxilliaryVariables variables)
+void Problem::add(AuxiliaryVariables variables)
 {
     for(auto& V : variables)
         add(V);
 }
 
-void Problem::add(AuxilliaryVariablePtr variable)
+void Problem::add(AuxiliaryVariablePtr variable)
 {
     allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
 
-    if(variable->auxilliaryType == E_AuxilliaryVariableType::NonlinearObjectiveFunction)
-        auxilliaryObjectiveVariable = variable;
+    if(variable->auxiliaryType == E_AuxiliaryVariableType::NonlinearObjectiveFunction)
+        auxiliaryObjectiveVariable = variable;
     else
-        auxilliaryVariables.push_back(variable);
+        auxiliaryVariables.push_back(variable);
 
     switch(variable->type)
     {
@@ -515,13 +515,13 @@ VectorDouble Problem::getVariableUpperBounds()
     return variableUpperBounds;
 };
 
-AuxilliaryVariables Problem::getAuxiliaryVariablesOfType(E_AuxilliaryVariableType type)
+AuxiliaryVariables Problem::getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type)
 {
-    AuxilliaryVariables variables;
+    AuxiliaryVariables variables;
 
-    for(auto& V : auxilliaryVariables)
+    for(auto& V : auxiliaryVariables)
     {
-        if(V->auxilliaryType == type)
+        if(V->auxiliaryType == type)
             variables.push_back(V);
     }
 

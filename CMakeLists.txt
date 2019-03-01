@@ -128,7 +128,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Model/ModelShared.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/AuxilliaryVariables.h"
+  "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"
   "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.h"
   "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Constraints.h"

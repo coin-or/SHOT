@@ -19,7 +19,7 @@ struct Reformulation
     QuadraticConstraints quadraticConstraints;
     NonlinearConstraint nonlinearConstraint;
 
-    AuxilliaryVariables reformulationVariables;
+    AuxiliaryVariables reformulationVariables;
 };
 
 class TaskReformulateProblem : public TaskBase
@@ -63,17 +63,17 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
-    AuxilliaryVariablePtr getBilinearAuxilliaryVariable(VariablePtr firstVariable, VariablePtr secondVariable);
+    AuxiliaryVariablePtr getBilinearAuxiliaryVariable(VariablePtr firstVariable, VariablePtr secondVariable);
 
     void addBilinearMcCormickEnvelope(
-        AuxilliaryVariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
+        AuxiliaryVariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
 
     int auxVariableCounter = 0;
     int auxConstraintCounter = 0;
 
-    std::map<VariablePtr, Variables> integerAuxilliaryBinaryVariables;
+    std::map<VariablePtr, Variables> integerAuxiliaryBinaryVariables;
 
-    std::map<std::tuple<VariablePtr, VariablePtr>, AuxilliaryVariablePtr> bilinearAuxVariables;
+    std::map<std::tuple<VariablePtr, VariablePtr>, AuxiliaryVariablePtr> bilinearAuxVariables;
 
     ProblemPtr reformulatedProblem;
 };

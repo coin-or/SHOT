@@ -75,13 +75,13 @@ void HCallbackI::main() // Called at each node...
             tmpVals.add(primalSol.at(i));
         }
 
-        for(auto& V : env->reformulatedProblem->auxilliaryVariables)
+        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
         {
             tmpVals.add(V->calculateValue(primalSol));
         }
 
-        if(env->reformulatedProblem->auxilliaryObjectiveVariable)
-            tmpVals.add(env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(primalSol));
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
 
         try
         {
@@ -282,7 +282,7 @@ void CtCallbackI::main()
     this->getValues(tmpVals, cplexVars);
 
     int size
-        = (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+        = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
     VectorDouble solution(size);
 

@@ -74,9 +74,9 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
             = variablesInitialized && destination->addVariable(V->name.c_str(), V->type, V->lowerBound, V->upperBound);
     }
 
-    if(sourceProblem->auxilliaryObjectiveVariable)
+    if(sourceProblem->auxiliaryObjectiveVariable)
     {
-        destination->setAuxilliaryObjectiveVariableIndex(sourceProblem->auxilliaryObjectiveVariable->index);
+        destination->setAuxiliaryObjectiveVariableIndex(sourceProblem->auxiliaryObjectiveVariable->index);
     }
 
     if(!variablesInitialized)
@@ -88,10 +88,10 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     objectiveInitialized = objectiveInitialized && destination->initializeObjective();
 
-    if(destination->hasAuxilliaryObjectiveVariable())
+    if(destination->hasAuxiliaryObjectiveVariable())
     {
         objectiveInitialized = objectiveInitialized
-            && destination->addLinearTermToObjective(1.0, destination->getAuxilliaryObjectiveVariableIndex());
+            && destination->addLinearTermToObjective(1.0, destination->getAuxiliaryObjectiveVariableIndex());
 
         objectiveInitialized = objectiveInitialized
             && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize);

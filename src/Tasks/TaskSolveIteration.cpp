@@ -52,19 +52,19 @@ void TaskSolveIteration::run()
             env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
 
-    if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()
+    if(env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()
         && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
         auto newLB = env->results->getDualBound();
         auto newUB = env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(
-            env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex());
+            env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex());
 
         if(newLB > currBounds.first || newUB < currBounds.second)
         {
             env->dualSolver->MIPSolver->updateVariableBound(
-                env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex(), newLB, newUB);
+                env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex(), newLB, newUB);
             env->output->outputDebug("     Bounds for nonlinear objective function updated to "
                 + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
         }
@@ -131,7 +131,7 @@ void TaskSolveIteration::run()
                 sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
         }
 
-        if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
         {
             for(auto& S : sols)
             {

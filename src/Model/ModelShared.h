@@ -23,9 +23,9 @@ typedef std::shared_ptr<Variable> VariablePtr;
 typedef std::map<VariablePtr, double> SparseVariableVector;
 typedef std::vector<VariablePtr> Variables;
 
-class AuxilliaryVariable;
-typedef std::shared_ptr<AuxilliaryVariable> AuxilliaryVariablePtr;
-typedef std::vector<AuxilliaryVariablePtr> AuxilliaryVariables;
+class AuxiliaryVariable;
+typedef std::shared_ptr<AuxiliaryVariable> AuxiliaryVariablePtr;
+typedef std::vector<AuxiliaryVariablePtr> AuxiliaryVariables;
 
 class ObjectiveFunction;
 typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;

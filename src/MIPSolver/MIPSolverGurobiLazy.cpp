@@ -185,7 +185,7 @@ void GurobiCallback::callback()
                                        ->gurobiModel->get(GRB_IntAttr_NumVars);
 
                 int numberOfVariables
-                    = (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
+                    = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
 
                 VectorDouble solution(numberOfVariables);
 
@@ -238,7 +238,7 @@ void GurobiCallback::callback()
                                    ->gurobiModel->get(GRB_IntAttr_NumVars);
 
             int numberOfVariables
-                = (env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
+                = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
 
             VectorDouble solution(numberOfVariables);
 
@@ -353,15 +353,15 @@ void GurobiCallback::callback()
                     setSolution(vars[i], primalSol.at(i));
                 }
 
-                for(int i = 0; i < env->reformulatedProblem->auxilliaryVariables.size(); i++)
+                for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
                 {
                     setSolution(vars[i + primalSol.size()],
-                        env->reformulatedProblem->auxilliaryVariables.at(i)->calculateValue(primalSol));
+                        env->reformulatedProblem->auxiliaryVariables.at(i)->calculateValue(primalSol));
                 }
 
-                if(env->reformulatedProblem->auxilliaryObjectiveVariable)
-                    setSolution(vars[env->reformulatedProblem->auxilliaryVariables.size() + primalSol.size()],
-                        env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(primalSol));
+                if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+                    setSolution(vars[env->reformulatedProblem->auxiliaryVariables.size() + primalSol.size()],
+                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
 
                 lastUpdatedPrimal = primalBound;
             }

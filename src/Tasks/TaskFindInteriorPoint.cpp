@@ -99,7 +99,7 @@ void TaskFindInteriorPoint::run()
                 + UtilityFunctions::toString(maxDev.normalizedValue) + " found.");
 
             // Remove the variable from the epigraph formulation
-            if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
                 tmpIP->point.pop_back();
 
             env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);

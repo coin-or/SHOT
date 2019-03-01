@@ -173,7 +173,7 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
         }
 
         PairIndexValue pair;
-        pair.index = auxilliaryObjectiveVariableIndex;
+        pair.index = auxiliaryObjectiveVariableIndex;
         pair.value = -1.0;
 
         elements.push_back(pair);

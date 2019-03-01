@@ -332,15 +332,15 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 tmpSolPt.objectiveValue = env->problem->objectiveFunction->calculateValue(variableSolution);
                 tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-                for(auto& V : env->reformulatedProblem->auxilliaryVariables)
+                for(auto& V : env->reformulatedProblem->auxiliaryVariables)
                 {
                     tmpSolPt.point.push_back(V->calculate(variableSolution));
                 }
 
-                if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+                if(env->reformulatedProblem->auxiliaryObjectiveVariable)
                 {
                     tmpSolPt.point.push_back(
-                        env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(variableSolution));
+                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(variableSolution));
                 }
 
                 std::vector<SolutionPoint> solutionPoints(1);
@@ -381,7 +381,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
                 tmpSolPt.maxDeviation = PairIndexValue(mostDevConstr.constraint->index, mostDevConstr.normalizedValue);
 
-                for(auto& V : env->reformulatedProblem->auxilliaryVariables)
+                for(auto& V : env->reformulatedProblem->auxiliaryVariables)
                 {
                     tmpSolPt.point.push_back(V->calculate(variableSolution));
                 }

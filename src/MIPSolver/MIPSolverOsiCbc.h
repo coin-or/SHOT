@@ -127,13 +127,13 @@ public:
 
     virtual int getNumberOfOpenNodes() { return (MIPSolverBase::getNumberOfOpenNodes()); }
 
-    virtual bool hasAuxilliaryObjectiveVariable() { return (MIPSolverBase::hasAuxilliaryObjectiveVariable()); }
+    virtual bool hasAuxiliaryObjectiveVariable() { return (MIPSolverBase::hasAuxiliaryObjectiveVariable()); }
 
-    virtual int getAuxilliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxilliaryObjectiveVariableIndex()); }
+    virtual int getAuxiliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxiliaryObjectiveVariableIndex()); }
 
-    virtual void setAuxilliaryObjectiveVariableIndex(int index)
+    virtual void setAuxiliaryObjectiveVariableIndex(int index)
     {
-        return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
+        return (MIPSolverBase::setAuxiliaryObjectiveVariableIndex(index));
     }
 
     virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
