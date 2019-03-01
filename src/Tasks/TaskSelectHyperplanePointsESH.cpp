@@ -25,6 +25,9 @@ void TaskSelectHyperplanePointsESH::run() { this->run(env->results->getPreviousI
 
 void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 {
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        return;
+
     env->timing->startTimer("DualCutGenerationRootSearch");
 
     if(env->dualSolver->MIPSolver->interiorPts.size() == 0)
@@ -73,7 +76,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         if(numericConstraintValues.size() == 0)
         {
             env->output->outputInfo("        All nonlinear constraints fulfilled, so no constraint cuts added.");
-            return;
+            continue;
         }
 
         for(auto& NCV : numericConstraintValues)
@@ -83,7 +86,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 if(addedHyperplanes >= maxHyperplanesPerIter)
                 {
                     env->timing->stopTimer("DualCutGenerationRootSearch");
-                    return;
+                    break;
                 }
 
                 // Do not add hyperplane if one has been added for this constraint already
@@ -155,6 +158,15 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(externalConstraintValue.normalizedValue >= 0)
         {
+            size_t hash = UtilityFunctions::calculateHash(externalPoint);
+
+            if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->index))
+            {
+                env->output->outputDebug("    Hyperplane already added for constraint "
+                    + std::to_string(externalConstraintValue.constraint->index) + " and hash " + std::to_string(hash));
+                continue;
+            }
+
             Hyperplane hyperplane;
             hyperplane.sourceConstraint = externalConstraintValue.constraint;
             hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;

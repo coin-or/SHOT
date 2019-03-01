@@ -85,22 +85,34 @@ void TaskFindInteriorPoint::run()
         {
             env->output->outputWarning("\n Maximum deviation in interior point is too large: "
                 + UtilityFunctions::toString(maxDev.normalizedValue));
+
+            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            {
+                std::string filename = env->settings->getStringSetting("Debug.Path", "Output")
+                    + "/interiorpoint_notused_" + std::to_string(i) + ".txt";
+                UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
+            }
         }
         else
         {
             env->output->outputInfo("\n Valid interior point with constraint deviation "
                 + UtilityFunctions::toString(maxDev.normalizedValue) + " found.");
+
+            // Remove the variable from the epigraph formulation
+            if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+                tmpIP->point.pop_back();
+
             env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
+
+            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            {
+                std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/interiorpoint_"
+                    + std::to_string(i) + ".txt";
+                UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
+            }
         }
 
         foundNLPPoint = (foundNLPPoint || (maxDev.normalizedValue <= 0));
-
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
-        {
-            std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/interiorpoint_"
-                + std::to_string(i) + ".txt";
-            UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
-        }
 
         if(tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptMinimax
             || tmpIP->NLPSolver == ES_InteriorPointStrategy::IpoptRelaxed

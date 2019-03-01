@@ -28,8 +28,6 @@ private:
     int auxilliaryObjectiveVariableIndex;
 
 protected:
-    std::vector<GeneratedHyperplane> generatedHyperplanes;
-
     int numberOfVariables = 0;
     int numberOfConstraints = 0;
     bool isMinimizationProblem;
@@ -68,8 +66,6 @@ public:
     virtual void presolveAndUpdateBounds();
     virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes();
-
     virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
@@ -95,6 +91,52 @@ public:
         auxilliaryObjectiveVariableIndex = index;
         auxilliaryObjectiveVariableDefined = true;
     };
+
+    virtual inline std::string getConstraintIdentifier(E_HyperplaneSource source)
+    {
+        std::string identifier = "";
+
+        switch(source)
+        {
+        case E_HyperplaneSource::MIPOptimalLinesearch:
+            identifier = "H_LS_I";
+            break;
+        case E_HyperplaneSource::LPRelaxedLinesearch:
+            identifier = "H_LS_R";
+            break;
+        case E_HyperplaneSource::MIPOptimalSolutionPoint:
+            identifier = "H_OPT_I";
+            break;
+        case E_HyperplaneSource::MIPSolutionPoolSolutionPoint:
+            identifier = "H_SP_I";
+            break;
+        case E_HyperplaneSource::LPRelaxedSolutionPoint:
+            identifier = "H_OPT_R";
+            break;
+        case E_HyperplaneSource::LPFixedIntegers:
+            identifier = "H_FI_R";
+            break;
+        case E_HyperplaneSource::PrimalSolutionSearch:
+            identifier = "H_PH";
+            break;
+        case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
+            identifier = "H_PH_IO";
+            break;
+        case E_HyperplaneSource::InteriorPointSearch:
+            identifier = "H_IP";
+            break;
+        case E_HyperplaneSource::MIPCallbackRelaxed:
+            identifier = "H_CB_R";
+            break;
+        case E_HyperplaneSource::ObjectiveLinesearch:
+            identifier = "H_LS_OBJ";
+            break;
+        default:
+            break;
+        }
+
+        return (identifier);
+    }
 
     std::vector<int> integerCuts; // Contains the constraint indexes that are integerCuts
 

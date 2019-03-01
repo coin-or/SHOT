@@ -50,9 +50,10 @@ public:
 
     virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name)
     {
-        return (addLinearConstraint(elements, constant,name , false));
+        return (addLinearConstraint(elements, constant, name, false));
     }
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
+    virtual int addLinearConstraint(
+        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
 
     virtual void createHyperplane(Hyperplane hyperplane) { MIPSolverBase::createHyperplane(hyperplane); }
 
@@ -122,11 +123,6 @@ public:
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
-    {
-        return (MIPSolverBase::getGeneratedHyperplanes());
-    }
-
     virtual int getNumberOfExploredNodes();
 
     virtual int getNumberOfOpenNodes() { return (MIPSolverBase::getNumberOfOpenNodes()); }
@@ -139,6 +135,11 @@ public:
     {
         return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
     }
+
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
+    {
+        return (MIPSolverBase::getConstraintIdentifier(source));
+    };
 
 private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;

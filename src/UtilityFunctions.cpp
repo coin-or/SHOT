@@ -18,7 +18,7 @@ int round(double d) { return static_cast<int>(d + 0.5); };
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName)
 {
-    if(point.size() != variables.size())
+    if(point.size() > variables.size())
     {
         std::cout << "Error when saving variable point to file. Sizes mismatch!" << point.size()
                   << "!=" << variables.size() << '\n';
@@ -570,6 +570,16 @@ std::string getFileAsString(const std::string& fileName)
 
     throw(errno);
 };
+
+std::size_t calculateHash(VectorDouble const& point)
+{
+    std::size_t seed = 0;
+
+    for(auto& X : point)
+        boost::hash_combine(seed, X);
+
+    return (seed);
+}
 
 bool isAlmostEqual(double x, double y, const double epsilon) { return std::abs(x - y) <= epsilon * std::abs(x); }
 

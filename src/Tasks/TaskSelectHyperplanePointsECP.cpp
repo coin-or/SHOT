@@ -24,6 +24,9 @@ void TaskSelectHyperplanePointsECP::run() { this->run(env->results->getPreviousI
 
 void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
 {
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        return;
+
     env->timing->startTimer("DualCutGenerationRootSearch");
 
     int addedHyperplanes = 0;
@@ -75,6 +78,15 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             if(NCV.constraint->properties.curvature == E_Curvature::Nonconvex)
             {
                 nonconvexSelectedNumericValues.push_back(std::make_tuple(i, NCV));
+                continue;
+            }
+
+            size_t hash = UtilityFunctions::calculateHash(solPoints.at(i).point);
+
+            if(env->dualSolver->hasHyperplaneBeenAdded(hash, NCV.constraint->index))
+            {
+                env->output->outputDebug("    Hyperplane already added for constraint "
+                    + std::to_string(NCV.constraint->index) + " and hash " + std::to_string(hash));
                 continue;
             }
 

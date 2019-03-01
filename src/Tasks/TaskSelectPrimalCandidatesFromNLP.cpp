@@ -337,6 +337,12 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     tmpSolPt.point.push_back(V->calculate(variableSolution));
                 }
 
+                if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+                {
+                    tmpSolPt.point.push_back(
+                        env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(variableSolution));
+                }
+
                 std::vector<SolutionPoint> solutionPoints(1);
                 solutionPoints.at(0) = tmpSolPt;
 

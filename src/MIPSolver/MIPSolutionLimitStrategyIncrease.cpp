@@ -61,6 +61,8 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
     if(prevIter->isMIP() && prevIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit)
     {
+        if(prevIter->numHyperplanesAdded == 0)
+            return (true);
 
         if(prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
             return (true);

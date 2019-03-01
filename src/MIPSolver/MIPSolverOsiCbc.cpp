@@ -317,6 +317,10 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::NodeLimit;
     }
+    else if(cbcModel->isAbandoned())
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+    }
     else
     {
         env->output->outputError("MIP solver return status unknown.");
@@ -337,12 +341,19 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
         initializeSolverSettings();
 
         // Adding the MIP starts provided
-        for(auto it = MIPStarts.begin(); it != MIPStarts.end(); ++it)
+        try
         {
-            cbcModel->setMIPStart(*it);
-        }
+            for(auto it = MIPStarts.begin(); it != MIPStarts.end(); ++it)
+            {
+                cbcModel->setMIPStart(*it);
+            }
 
-        MIPStarts.clear();
+            MIPStarts.clear();
+        }
+        catch(std::exception& e)
+        {
+            env->output->outputError("Error when adding MIP start to Cbc", e.what());
+        }
 
         CbcMain0(*cbcModel);
 
@@ -426,7 +437,7 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {
     std::vector<std::pair<std::string, double>> variableValues;
 
-    for(int i = 0; i < point.size(); i++)
+    for(int i = 0; i < numberOfVariables; i++)
     {
         std::pair<std::string, double> tmpPair;
 
@@ -435,24 +446,28 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 
         variableValues.push_back(tmpPair);
     }
-    try
+
+    for(auto& V : env->reformulatedProblem->auxilliaryVariables)
     {
-        if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
-        {
-            std::pair<std::string, double> tmpPair;
+        std::pair<std::string, double> tmpPair;
 
-            tmpPair.first = variableNames.back();
-            tmpPair.second = env->results->getPrimalBound();
+        tmpPair.first = V->name;
+        tmpPair.second = V->calculateValue(point);
 
-            variableValues.push_back(tmpPair);
-        }
-
-        MIPStarts.push_back(variableValues);
+        variableValues.push_back(tmpPair);
     }
-    catch(std::exception& e)
+
+    if(env->reformulatedProblem->auxilliaryObjectiveVariable)
     {
-        env->output->outputError("Error when adding MIP start to Cbc", e.what());
+        std::pair<std::string, double> tmpPair;
+
+        tmpPair.first = env->reformulatedProblem->auxilliaryObjectiveVariable->name;
+        tmpPair.second = env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(point);
+
+        variableValues.push_back(tmpPair);
     }
+
+    MIPStarts.push_back(variableValues);
 }
 
 void MIPSolverOsiCbc::writeProblemToFile(std::string filename)
@@ -515,10 +530,7 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
     return (objVal);
 }
 
-void MIPSolverOsiCbc::deleteMIPStarts()
-{
-    // Not implemented
-}
+void MIPSolverOsiCbc::deleteMIPStarts() { MIPStarts.clear(); }
 
 VectorDouble MIPSolverOsiCbc::getVariableSolution(int solIdx)
 {
@@ -564,7 +576,9 @@ int MIPSolverOsiCbc::getNumberOfSolutions()
         if(isMIP)
             numSols = cbcModel->getSolutionCount();
         else
-            numSols = 1;
+        {
+            numSols = cbcModel->numberSavedSolutions();
+        }
     }
     catch(std::exception& e)
     {

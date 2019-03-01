@@ -132,73 +132,13 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     if(hyperplaneIsOk)
     {
-        std::string source = "";
+        std::string identifier = getConstraintIdentifier(hyperplane.source);
 
-        switch(hyperplane.source)
-        {
-        case E_HyperplaneSource::MIPOptimalLinesearch:
-            source = "MIP linesearch";
-            constraintName = "H_LS_I_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::LPRelaxedLinesearch:
-            source = "LP linesearch";
-            constraintName = "H_LS_R_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::MIPOptimalSolutionPoint:
-            source = "MIP optimal solution";
-            constraintName = "H_OPT_I_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::MIPSolutionPoolSolutionPoint:
-            source = "MIP solution pool";
-            constraintName = "H_SP_I_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::LPRelaxedSolutionPoint:
-            source = "LP solution";
-            constraintName = "H_OPT_R_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::LPFixedIntegers:
-            source = "LP fixed integer";
-            constraintName = "H_FI_R_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::PrimalSolutionSearch:
-            source = "primal heuristic";
-            constraintName = "H_PH_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
-            source = "primal heuristic (interior objective)";
-            constraintName = "H_PH_IO_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::InteriorPointSearch:
-            source = "interior point search";
-            constraintName = "H_IP_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::MIPCallbackRelaxed:
-            source = "MIP callback relaxed";
-            constraintName = "H_CB_R_" + hyperplane.sourceConstraint->name;
-            break;
-        case E_HyperplaneSource::ObjectiveLinesearch:
-            source = "objective linesearch";
-            constraintName = "H_LS_OBJ";
-            break;
-        default:
-            break;
-        }
+        if(hyperplane.sourceConstraint != nullptr)
+            identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
-        GeneratedHyperplane genHyperplane;
-
-        env->output->outputTrace("     Hyperplane generated from: " + source);
-
-        int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second, constraintName);
-
-        /*genHyperplane.generatedConstraintIndex = constrIndex;
-        genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-        genHyperplane.generatedPoint = hyperplane.generatedPoint;
-        genHyperplane.source = hyperplane.source;
-        genHyperplane.generatedIter = currIter->iterationNumber;
-        genHyperplane.isLazy = false;
-        genHyperplane.isRemoved = false;
-
-        generatedHyperplanes.push_back(genHyperplane);*/
+        int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
+        env->dualSolver->addGeneratedHyperplane(hyperplane);
 
         currIter->numHyperplanesAdded++;
         currIter->totNumHyperplanes++;
@@ -393,8 +333,6 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
     currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes +
     currIter->numHyperplanesAdded;*/
 }
-
-std::vector<GeneratedHyperplane>* MIPSolverBase::getGeneratedHyperplanes() { return (&generatedHyperplanes); }
 
 void MIPSolverBase::presolveAndUpdateBounds()
 {

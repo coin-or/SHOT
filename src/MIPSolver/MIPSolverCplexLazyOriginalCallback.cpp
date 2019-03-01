@@ -35,6 +35,12 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     else
     {
         taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+
+        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+        {
+            taskSelectHPPtsByObjectiveLinesearch
+                = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
+        }
     }
 }
 
@@ -55,9 +61,10 @@ void HCallbackI::main() // Called at each node...
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    if((env->results->primalSolutions.size() > 0)
-        && ((isMinimization && this->getIncumbentObjValue() > env->results->getPrimalBound())
-               || (!isMinimization && this->getIncumbentObjValue() < env->results->getPrimalBound())))
+    auto primalBound = env->results->getPrimalBound();
+
+    if(env->results->primalSolutions.size() > 0
+        && ((isMinimization && lastUpdatedPrimal < primalBound) || (!isMinimization && primalBound > primalBound)))
     {
         auto primalSol = env->results->primalSolution;
 
@@ -73,6 +80,9 @@ void HCallbackI::main() // Called at each node...
             tmpVals.add(V->calculateValue(primalSol));
         }
 
+        if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+            tmpVals.add(env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(primalSol));
+
         try
         {
             setSolution(cplexVars, tmpVals);
@@ -84,6 +94,8 @@ void HCallbackI::main() // Called at each node...
         }
 
         tmpVals.end();
+
+        lastUpdatedPrimal = primalBound;
     }
 
     if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
@@ -117,7 +129,7 @@ void HCallbackI::main() // Called at each node...
 
         tmpSolPt.point = solution;
         tmpSolPt.objectiveValue = getObjValue();
-        tmpSolPt.iterFound = 0;
+        tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
         tmpSolPt.isRelaxedPoint = true;
 
         solutionPoints.at(0) = tmpSolPt;
@@ -281,20 +293,20 @@ void CtCallbackI::main()
 
     tmpVals.end();
 
-    SolutionPoint tmpSolPt;
+    SolutionPoint solutionCandidate;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             solution, env->reformulatedProblem->nonlinearConstraints);
-        tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
     }
 
     double tmpDualObjBound = this->getBestObjValue();
 
-    tmpSolPt.point = solution;
-    tmpSolPt.objectiveValue = getObjValue();
-    tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
+    solutionCandidate.point = solution;
+    solutionCandidate.objectiveValue = getObjValue();
+    solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
     // Check if better dual bound
     if((isMinimization && tmpDualObjBound > env->results->getDualBound())
@@ -341,7 +353,7 @@ void CtCallbackI::main()
 
     std::vector<SolutionPoint> candidatePoints(1);
 
-    candidatePoints.at(0) = tmpSolPt;
+    candidatePoints.at(0) = solutionCandidate;
 
     auto threadId = std::to_string(this->getMyThreadNum());
 
@@ -394,10 +406,10 @@ void CtCallbackI::main()
         taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
     }
 
-    if(checkFixedNLPStrategy(tmpSolPt))
+    if(checkFixedNLPStrategy(solutionCandidate))
     {
         env->primalSolver->addFixedNLPCandidate(solution, E_PrimalNLPSource::FirstSolution, this->getObjValue(),
-            env->results->getCurrentIteration()->iterationNumber, tmpSolPt.maxDeviation);
+            env->results->getCurrentIteration()->iterationNumber, solutionCandidate.maxDeviation);
 
         tSelectPrimNLP.get()->run();
 
@@ -475,7 +487,7 @@ void CtCallbackI::main()
 void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
     auto optional = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
-    
+
     if(!optional)
     {
         return;
@@ -499,8 +511,6 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
 
     if(hyperplaneIsOk)
     {
-        // GeneratedHyperplane genHyperplane;
-
         IloExpr expr(this->getEnv());
 
         for(int i = 0; i < tmpPair.first.size(); i++)
@@ -523,16 +533,12 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
             add(tmpRange, IloCplex::CutManagement::UseCutPurge).end();
         }
 
-        // int constrIndex = 0;
-        /*genHyperplane.generatedConstraintIndex = constrIndex;
-                genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-                genHyperplane.generatedPoint = hyperplane.generatedPoint;
-                genHyperplane.source = hyperplane.source;
-                genHyperplane.generatedIter = currIter->iterationNumber;
-                genHyperplane.isLazy = false;
-                genHyperplane.isRemoved = false;*/
+        std::string identifier = env->dualSolver->MIPSolver->getConstraintIdentifier(hyperplane.source);
 
-        // env->dualSolver->MIPSolver->generatedHyperplanes.push_back(genHyperplane);
+        if(hyperplane.sourceConstraint != nullptr)
+            identifier = identifier + "_" + hyperplane.sourceConstraint->name;
+
+        env->dualSolver->addGeneratedHyperplane(hyperplane);
 
         currIter->numHyperplanesAdded++;
         currIter->totNumHyperplanes++;
@@ -575,7 +581,6 @@ MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(Environme
 
     cplexVars = IloNumVarArray(cplexEnv);
     cplexConstrs = IloRangeArray(cplexEnv);
-    cplexLazyConstrs = IloRangeArray(cplexEnv);
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
@@ -584,7 +589,7 @@ MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(Environme
     modelUpdated = false;
 }
 
-MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback() { cplexLazyConstrs.end(); }
+MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback() {}
 
 void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
 {

@@ -947,16 +947,9 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
     IloNumArray startVal(cplexEnv);
 
-    int numVar = cplexVars.getSize();
-
     for(int i = 0; i < point.size(); i++)
     {
         startVal.add(point.at(i));
-    }
-
-    if(this->hasAuxilliaryObjectiveVariable() && numVar == point.size() + 1)
-    {
-        startVal.add(env->results->getPrimalBound());
     }
 
     for(auto& V : env->reformulatedProblem->auxilliaryVariables)
@@ -964,9 +957,12 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
         startVal.add(V->calculate(point));
     }
 
+    if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+        startVal.add(env->reformulatedProblem->auxilliaryObjectiveVariable->calculate(point));
+
     try
     {
-        // cplexInstance.addMIPStart(cplexVars, startVal);
+        cplexInstance.addMIPStart(cplexVars, startVal);
     }
     catch(IloException& e)
     {
@@ -1240,8 +1236,6 @@ void MIPSolverCplex::createHyperplane(
 
     if(hyperplaneIsOk)
     {
-        GeneratedHyperplane genHyperplane;
-
         IloExpr expr(cplexEnv);
 
         for(int i = 0; i < tmpPair.first.size(); i++)
@@ -1252,18 +1246,6 @@ void MIPSolverCplex::createHyperplane(
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
 
         auto addedConstr = addConstraintFunction(tmpRange);
-
-        int constrIndex = 0;
-
-        genHyperplane.generatedConstraintIndex = constrIndex;
-        genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-        genHyperplane.generatedPoint = hyperplane.generatedPoint;
-        genHyperplane.source = hyperplane.source;
-        genHyperplane.generatedIter = currIter->iterationNumber;
-        genHyperplane.isLazy = false;
-        genHyperplane.isRemoved = false;
-
-        generatedHyperplanes.push_back(genHyperplane);
 
         currIter->numHyperplanesAdded++;
         currIter->totNumHyperplanes++;

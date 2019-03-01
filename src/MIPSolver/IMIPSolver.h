@@ -102,14 +102,14 @@ public:
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes() = 0;
-
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;
 
     virtual bool hasAuxilliaryObjectiveVariable() = 0;
     virtual int getAuxilliaryObjectiveVariableIndex() = 0;
     virtual void setAuxilliaryObjectiveVariableIndex(int index) = 0;
+
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source) = 0;
 
     // First is binaries = 1, second is binaries = 0
     std::vector<std::pair<VectorInteger, VectorInteger>> integerCutWaitingList;

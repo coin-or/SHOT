@@ -80,6 +80,7 @@ public:
     Variables nonlinearVariables;
 
     AuxilliaryVariables auxilliaryVariables;
+    AuxilliaryVariablePtr auxilliaryObjectiveVariable;
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
@@ -126,6 +127,8 @@ public:
 
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();
+
+    AuxilliaryVariables getAuxiliaryVariablesOfType(E_AuxilliaryVariableType type);
 
     void setVariableLowerBound(int variableIndex, double bound);
 

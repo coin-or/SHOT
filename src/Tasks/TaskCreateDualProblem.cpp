@@ -74,15 +74,9 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
             = variablesInitialized && destination->addVariable(V->name.c_str(), V->type, V->lowerBound, V->upperBound);
     }
 
-    // Nonlinear objective variable
-    if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    if(sourceProblem->auxilliaryObjectiveVariable)
     {
-        double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
-
-        destination->setAuxilliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
-
-        variablesInitialized = variablesInitialized
-            && destination->addVariable("shot_objvar", E_VariableType::Real, -objVarBound, objVarBound);
+        destination->setAuxilliaryObjectiveVariableIndex(sourceProblem->auxilliaryObjectiveVariable->index);
     }
 
     if(!variablesInitialized)

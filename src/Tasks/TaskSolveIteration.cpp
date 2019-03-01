@@ -71,12 +71,6 @@ void TaskSolveIteration::run()
     {
         auto tmpPrimal = env->results->primalSolution;
 
-        if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
-        {
-            tmpPrimal.push_back(
-                env->reformulatedProblem->objectiveFunction->calculateValue(env->results->primalSolution));
-        }
-
         env->dualSolver->MIPSolver->addMIPStart(tmpPrimal);
     }
 
@@ -119,22 +113,8 @@ void TaskSolveIteration::run()
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
-    if(sols.size() == 0)
+    if(sols.size() > 0)
     {
-        // Will try to get atleast a dual bound
-
-        /*double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
-
-        if(env->results->iterations.size() > 1)
-        {
-            if(env->results->getPreviousIteration()->currentObjectiveBounds.first == currentDualBound)
-                env->results->setDualBound(currentDualBound);
-        }*/
-    }
-    else
-    {
-        currIter->solutionPoints = sols;
-
         env->output->outputDebug("        Number of solutions in solution pool: " + std::to_string(sols.size()));
 
         if(env->settings->getBoolSetting("Debug.Enable", "Output"))
@@ -147,6 +127,16 @@ void TaskSolveIteration::run()
             UtilityFunctions::saveVariablePointVectorToFile(
                 sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
         }
+
+        if(env->reformulatedProblem->auxilliaryObjectiveVariable)
+        {
+            for(auto& S : sols)
+            {
+                S.point.pop_back();
+            }
+        }
+
+        currIter->solutionPoints = sols;
 
         currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
 

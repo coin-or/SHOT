@@ -127,11 +127,6 @@ public:
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
-    {
-        return (MIPSolverBase::getGeneratedHyperplanes());
-    }
-
     virtual int getNumberOfExploredNodes();
     virtual int getNumberOfOpenNodes();
 
@@ -143,6 +138,11 @@ public:
     {
         return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
     }
+
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
+    {
+        return (MIPSolverBase::getConstraintIdentifier(source));
+    };
 
     IloModel cplexModel;
     IloCplex cplexInstance;

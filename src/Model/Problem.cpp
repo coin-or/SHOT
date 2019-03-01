@@ -334,7 +334,11 @@ void Problem::add(AuxilliaryVariables variables)
 void Problem::add(AuxilliaryVariablePtr variable)
 {
     allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
-    auxilliaryVariables.push_back(variable);
+
+    if(variable->auxilliaryType == E_AuxilliaryVariableType::NonlinearObjectiveFunction)
+        auxilliaryObjectiveVariable = variable;
+    else
+        auxilliaryVariables.push_back(variable);
 
     switch(variable->type)
     {
@@ -510,6 +514,19 @@ VectorDouble Problem::getVariableUpperBounds()
 
     return variableUpperBounds;
 };
+
+AuxilliaryVariables Problem::getAuxiliaryVariablesOfType(E_AuxilliaryVariableType type)
+{
+    AuxilliaryVariables variables;
+
+    for(auto& V : auxilliaryVariables)
+    {
+        if(V->auxilliaryType == type)
+            variables.push_back(V);
+    }
+
+    return (variables);
+}
 
 void Problem::setVariableLowerBound(int variableIndex, double bound)
 {

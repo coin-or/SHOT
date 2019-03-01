@@ -44,7 +44,7 @@ public:
     virtual bool finalizeProblem();
 
     virtual void initializeSolverSettings();
-    
+
     virtual void writeProblemToFile(std::string filename);
     virtual void writePresolvedToFile(std::string filename);
 
@@ -52,7 +52,7 @@ public:
     {
         return (addLinearConstraint(elements, constant, name, false));
     }
-    
+
     virtual int addLinearConstraint(
         const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
 
@@ -122,11 +122,6 @@ public:
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
-    {
-        return (MIPSolverBase::getGeneratedHyperplanes());
-    }
-
     virtual int getNumberOfExploredNodes();
 
     virtual int getNumberOfOpenNodes() { return (MIPSolverBase::getNumberOfOpenNodes()); }
@@ -139,6 +134,11 @@ public:
     {
         return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
     }
+
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
+    {
+        return (MIPSolverBase::getConstraintIdentifier(source));
+    };
 
     std::shared_ptr<GRBEnv> gurobiEnv;
     std::shared_ptr<GRBModel> gurobiModel;

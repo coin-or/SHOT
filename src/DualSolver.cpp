@@ -13,12 +13,7 @@
 namespace SHOT
 {
 
-DualSolver::DualSolver(EnvironmentPtr envPtr)
-{
-    env = envPtr;
-
-    // cutOffToUse = env->reformulatedProblem->objectiveFunction->properties.isMinimize ? SHOT_DBL_MAX : SHOT_DBL_MIN;
-}
+DualSolver::DualSolver(EnvironmentPtr envPtr) { env = envPtr; }
 
 void DualSolver::addDualSolutionCandidate(DualSolution solution)
 {
@@ -107,4 +102,73 @@ void DualSolver::checkDualSolutionCandidates()
 
     this->dualSolutionCandidates.clear();
 }
+
+void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
+{
+    std::string source = "";
+
+    switch(hyperplane.source)
+    {
+    case E_HyperplaneSource::MIPOptimalLinesearch:
+        source = "MIP linesearch";
+        break;
+    case E_HyperplaneSource::LPRelaxedLinesearch:
+        source = "LP linesearch";
+        break;
+    case E_HyperplaneSource::MIPOptimalSolutionPoint:
+        source = "MIP optimal solution";
+        break;
+    case E_HyperplaneSource::MIPSolutionPoolSolutionPoint:
+        source = "MIP solution pool";
+        break;
+    case E_HyperplaneSource::LPRelaxedSolutionPoint:
+        source = "LP solution";
+        break;
+    case E_HyperplaneSource::LPFixedIntegers:
+        source = "LP fixed integer";
+        break;
+    case E_HyperplaneSource::PrimalSolutionSearch:
+        source = "primal heuristic";
+        break;
+    case E_HyperplaneSource::PrimalSolutionSearchInteriorObjective:
+        source = "primal heuristic (interior objective)";
+        break;
+    case E_HyperplaneSource::InteriorPointSearch:
+        source = "interior point search";
+        break;
+    case E_HyperplaneSource::MIPCallbackRelaxed:
+        source = "MIP callback relaxed";
+        break;
+    case E_HyperplaneSource::ObjectiveLinesearch:
+        source = "objective linesearch";
+        break;
+    default:
+        break;
+    }
+
+    GeneratedHyperplane genHyperplane;
+
+    genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
+    genHyperplane.source = hyperplane.source;
+    genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
+    genHyperplane.isLazy = false;
+
+    genHyperplane.pointHash = UtilityFunctions::calculateHash(hyperplane.generatedPoint);
+
+    generatedHyperplanes.push_back(genHyperplane);
+
+    env->output->outputTrace("     Hyperplane generated from: " + source);
+}
+
+bool DualSolver::hasHyperplaneBeenAdded(size_t hash, int constraintIndex)
+{
+    for(auto& H : generatedHyperplanes)
+    {
+        if(H.sourceConstraintIndex == constraintIndex && H.pointHash == hash)
+            return (true);
+    }
+
+    return (false);
+}
+
 } // namespace SHOT

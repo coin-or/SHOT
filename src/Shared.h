@@ -43,6 +43,7 @@
 #include "boost/filesystem.hpp"
 #include <boost/format.hpp>
 #include "boost/math/tools/minima.hpp"
+#include <boost/functional/hash/hash.hpp>
 
 #include "ffunc.hpp"
 
