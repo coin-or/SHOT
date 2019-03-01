@@ -118,14 +118,18 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
-    env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
+    if(env->settings->getIntSetting("Convexity", "Strategy")
+        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    {
+        TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
+        env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    TaskBase* tCheckPrimalStag = new TaskCheckPrimalStagnation(env, "AddObjectiveCut", "CheckDualStag");
-    env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
+        TaskBase* tCheckPrimalStag = new TaskCheckPrimalStagnation(env, "AddObjectiveCut", "CheckDualStag");
+        env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
-    TaskBase* tAddObjectiveCut = new TaskAddPrimalReductionCut(env, "CheckDualStag", "CheckDualStag");
-    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+        TaskBase* tAddObjectiveCut = new TaskAddPrimalReductionCut(env, "CheckDualStag", "CheckDualStag");
+        env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+    }
 
     TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");

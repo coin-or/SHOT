@@ -566,7 +566,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("HyperplaneCuts.MaxPerIteration", "Dual", 200,
         "Maximal number of hyperplanes to add per iteration", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true,
+    env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
     env->settings->createSetting(
@@ -1097,7 +1097,6 @@ void Solver::verifySettings()
 
     if(env->settings->getBoolSetting("UseRecommendedSettings", "Strategy"))
     {
-
         switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getIntSetting("Convexity", "Strategy")))
         {
         case(ES_ConvexityIdentificationStrategy::Automatically):
@@ -1107,10 +1106,12 @@ void Solver::verifySettings()
             break;
 
         case(ES_ConvexityIdentificationStrategy::AssumeNonconvex):
-            // env->settings->updateSetting("CutStrategy", "Dual", 1);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
+
+            env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
+
             env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
@@ -1124,8 +1125,9 @@ void Solver::verifySettings()
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            // env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
+
             env->settings->updateSetting("Linesearch.Use", "Primal", false);
+
             env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
             env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
