@@ -13,8 +13,6 @@
 namespace SHOT::UtilityFunctions
 {
 
-int round(double d) { return static_cast<int>(d + 0.5); };
-
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName)
 {
