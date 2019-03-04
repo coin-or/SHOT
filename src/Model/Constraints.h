@@ -215,6 +215,7 @@ public:
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
+    std::vector<std::tuple<VariablePtr, VariablePtr, FactorableFunction>> symbolicSparseHessian;
 
     NonlinearConstraint(){};
 

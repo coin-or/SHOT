@@ -71,7 +71,7 @@ TestObjective::~TestObjective() {}
 
 double TestObjective::operator()(const double x)
 {
-    // Change the value of the auxilliary objective function variable
+    // Change the value of the auxiliary objective function variable
     double ptNew = x * firstPt + (1 - x) * secondPt;
 
     double calculatedValue = cachedObjectiveValue - ptNew;

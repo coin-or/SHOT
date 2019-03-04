@@ -21,6 +21,7 @@ typedef std::shared_ptr<Problem> ProblemPtr;
 class Variable;
 typedef std::shared_ptr<Variable> VariablePtr;
 typedef std::map<VariablePtr, double> SparseVariableVector;
+typedef std::map<std::pair<VariablePtr, VariablePtr>, double> SparseVariableMatrix;
 typedef std::vector<VariablePtr> Variables;
 
 class AuxiliaryVariable;
