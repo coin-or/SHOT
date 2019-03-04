@@ -703,13 +703,13 @@ void Solver::initializeSettings()
 
     // Reformulations for objective functions
     env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false,
-        "Reformulates a nonlinear objective as an auxilliary constraint");
+        "Reformulates a nonlinear objective as an auxiliary constraint");
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", false,
-        "Partition nonlinear terms as auxilliary constraints");
+        "Partition nonlinear terms as auxiliary constraints");
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false,
-        "Partition quadratic terms as auxilliary constraints");
+        "Partition quadratic terms as auxiliary constraints");
 
     // Reformulations for quadratic objective and constraints
     VectorString enumQPStrategy;
