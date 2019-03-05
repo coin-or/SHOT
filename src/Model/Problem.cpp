@@ -273,6 +273,8 @@ void Problem::updateFactorableFunctions()
             {
                 auto firstNonlinearVariable = nonlinearVariables[std::get<1>(hessian)[i]];
                 auto secondNonlinearVariable = nonlinearVariables[std::get<2>(hessian)[i]];
+                std::cout << "1: " << std::get<1>(hessian)[i] << " 2: " << std::get<2>(hessian)[i]
+                          << " 3: " << std::get<3>(hessian)[i] << '\n';
                 auto hessianElement = std::get<3>(hessian)[i];
 
                 C->symbolicSparseHessian.push_back(

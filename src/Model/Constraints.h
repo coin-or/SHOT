@@ -85,6 +85,7 @@ public:
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector) = 0;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
 
@@ -130,6 +131,7 @@ public:
     virtual bool isFulfilled(const VectorDouble& point) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
@@ -197,6 +199,7 @@ public:
     virtual bool isFulfilled(const VectorDouble& point) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
@@ -294,6 +297,7 @@ public:
     virtual double calculateFunctionValue(const VectorDouble& point) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
 
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
 

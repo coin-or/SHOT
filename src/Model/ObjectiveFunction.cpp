@@ -115,6 +115,13 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
     return gradient;
 };
 
+SparseVariableMatrix LinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    return hessian;
+};
+
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
     if(properties.isMinimize)
@@ -261,6 +268,59 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
     return gradient;
 };
 
+SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(T->firstVariable == T->secondVariable) // variable squared
+        {
+            auto value = 2 * T->coefficient;
+            auto element = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value;
+            }
+        }
+        else
+        {
+            // Only save elements above the diagonal since the Hessian is symmetric
+            if(T->firstVariable->index < T->secondVariable->index)
+            {
+                auto value = T->coefficient;
+                auto element
+                    = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+            else
+            {
+                auto value = T->coefficient;
+                auto element
+                    = hessian.insert(std::make_pair(std::make_pair(T->secondVariable, T->firstVariable), value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+        }
+    }
+
+    return hessian;
+};
+
 std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
 {
     LinearObjectiveFunction::print(stream);
@@ -371,6 +431,67 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
+};
+
+SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    try
+    {
+        for(auto& E : symbolicSparseHessian)
+        {
+            auto factorableFunction = std::get<2>(E);
+
+            double value[1];
+            value[0];
+
+            if(auto sharedOwnerProblem = ownerProblem.lock())
+            {
+                // Collecting the values corresponding to nonlinear variables from the point
+                VectorDouble newPoint;
+                newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
+
+                for(auto& V : sharedOwnerProblem->nonlinearVariables)
+                {
+                    newPoint.push_back(point.at(V->index));
+                }
+
+                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &factorableFunction, value,
+                    sharedOwnerProblem->factorableFunctionVariables.size(),
+                    &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
+            }
+
+            if(value[0] != value[0])
+            {
+                std::cout << "nan" << std::endl;
+                value[0] = 0.0;
+            }
+
+            if(value[0] == 0.0)
+                continue;
+
+            auto firstVariable = (std::get<0>(E)->index < std::get<1>(E)->index) ? std::get<0>(E) : std::get<1>(E);
+            auto secondVariable = (std::get<0>(E)->index < std::get<1>(E)->index) ? std::get<1>(E) : std::get<0>(E);
+
+            auto element = hessian.insert(std::make_pair(std::make_pair(firstVariable, secondVariable), value[0]));
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value[0];
+            }
+        }
+
+        if(eraseZeroes)
+            UtilityFunctions::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+    }
+    catch(mc::FFGraph::Exceptions& e)
+    {
+        std::cout << "Error when evaluating hessian: " << e.what();
+    }
+
+    return hessian;
 };
 
 std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const

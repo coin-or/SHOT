@@ -80,6 +80,7 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) = 0;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
 
     virtual std::ostream& print(std::ostream&) const = 0;
 };
@@ -127,6 +128,7 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 };
@@ -191,6 +193,7 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 };
@@ -279,7 +282,8 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
-
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+    
     std::ostream& print(std::ostream& stream) const override;
 };
 

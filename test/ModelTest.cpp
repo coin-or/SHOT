@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Solver.h"
+#include "../Solver.h"
 
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
@@ -73,21 +73,6 @@ int ModelTest(int argc, char* argv[])
     case 6:
         passed = ModelTestCreateProblem();
         break;
-    /*case 7:
-        passed = ModelTestReadOSiLProblem("data/tls2.osil");
-        break;
-    case 8:
-        passed = ModelTestReadNLProblem("data/tls2.nl");
-        break;
-    case 9:
-        passed = ModelTestRootsearch("data/shot_ex_jogo.gms");
-        break;
-    case 10:
-        passed = ModelTestGradient("data/flay02h.gms");
-        break;
-    case 11:
-        passed = ModelTestReformulateProblem("data/synthes1.gms");
-        break;*/
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";
@@ -510,12 +495,35 @@ bool ModelTestCreateProblem()
         std::cout << G.first->name << ": " << G.second << '\n';
     }
 
+    std::cout << "\nCalculating hessian for function in linear constraint:\n";
+    auto hessianLinear = linearConstraint->calculateHessian(point, true);
+
+    if(hessianLinear.size() > 0)
+    {
+        std::cout << "The number of hessian elements is: " << hessianLinear.size() << ". But there should be none!\n";
+
+        for(auto const& H : hessianLinear)
+        {
+            std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
+        }
+
+        passed = false;
+    }
+
     std::cout << "\nCalculating gradient for function in quadratic constraint:\n";
     auto gradientQuadratic = quadraticConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientQuadratic)
     {
         std::cout << G.first->name << ": " << G.second << '\n';
+    }
+
+    std::cout << "\nCalculating hessian for function in quadratic constraint:\n";
+    auto hessianQuadratic = quadraticConstraint->calculateHessian(point, true);
+
+    for(auto const& H : hessianQuadratic)
+    {
+        std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
     }
 
     std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
@@ -526,12 +534,28 @@ bool ModelTestCreateProblem()
         std::cout << G.first->name << ":  " << G.second << '\n';
     }
 
+    std::cout << "\nCalculating hessian for function in first nonlinear constraint:\n";
+    auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
+
+    for(auto const& H : hessianNonlinear)
+    {
+        std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
+    }
+
     std::cout << "\nCalculating gradient for function in second nonlinear constraint:\n";
     auto gradientNonlinear2 = nonlinearConstraint2->calculateGradient(point, true);
 
     for(auto const& G : gradientNonlinear2)
     {
         std::cout << G.first->name << ":  " << G.second << '\n';
+    }
+
+    std::cout << "\nCalculating hessian for function in second nonlinear constraint:\n";
+    auto hessianNonlinear2 = nonlinearConstraint2->calculateHessian(point, true);
+
+    for(auto const& H : hessianNonlinear2)
+    {
+        std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
     }
 
     SHOT::Interval X(1., 2.);
