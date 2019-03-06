@@ -10,7 +10,6 @@
 
 #pragma once
 #include "../Shared.h"
-#include "../UtilityFunctions.h"
 
 namespace SHOT
 {

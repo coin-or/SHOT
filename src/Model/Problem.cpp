@@ -236,7 +236,7 @@ void Problem::updateFactorableFunctions()
         objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
     }
 
-    auto jacobian = factorableFunctionsDAG->SBAD(factorableFunctions.size(), &factorableFunctions[0],
+    auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0],
         factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
     for(int i = 0; i < std::get<0>(jacobian); i++)
@@ -265,9 +265,8 @@ void Problem::updateFactorableFunctions()
             std::vector<FactorableFunction> jacobianElements;
 
             for(auto JE : C->symbolicSparseJacobian)
-            {
                 jacobianElements.push_back(JE.second);
-            }
+
             auto hessian = factorableFunctionsDAG->SFAD(jacobianElements.size(), &jacobianElements[0],
                 factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
