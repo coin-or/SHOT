@@ -147,9 +147,9 @@ public:
     VariablePtr firstVariable;
     VariablePtr secondVariable;
 
-    bool isBilinear = false;
-    bool isSquare = false;
-    bool isBinary = false;
+    bool isBilinear;
+    bool isSquare;
+    bool isBinary;
 
     std::weak_ptr<Problem> ownerProblem;
 
@@ -299,16 +299,24 @@ public:
     double coefficient;
     Variables variables;
 
-    bool isBilinear = false;
-    bool isSquare = false;
-    bool isBinary = false;
+    bool isBilinear;
+    bool isSquare;
+    bool isBinary;
 
     std::weak_ptr<Problem> ownerProblem;
 
-    MonomialTerm(){};
+    MonomialTerm()
+    {
+        isBilinear = false;
+        isSquare = false;
+        isBinary = false;
+    };
+
     MonomialTerm(double coeff, Variables variables) : coefficient(coeff), variables(variables)
     {
+        isBilinear = false;
         isBinary = true;
+        isSquare = false;
 
         for(auto& V : variables)
         {
@@ -389,7 +397,7 @@ public:
     inline double calculate(const VectorDouble& point)
     {
         double value = 0.0;
-         for(auto&T : (*this))
+        for(auto& T : (*this))
         {
             value += T->calculate(point);
         }
@@ -410,7 +418,7 @@ public:
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for(auto &T : (*this))
+        for(auto& T : (*this))
         {
             T->takeOwnership(owner);
         }

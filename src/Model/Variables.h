@@ -25,24 +25,42 @@ public:
 
     double upperBound;
     double lowerBound;
-    bool hasUpperBoundBeenTightened = false;
-    bool hasLowerBoundBeenTightened = false;
+    bool hasUpperBoundBeenTightened;
+    bool hasLowerBoundBeenTightened;
 
-    bool isNonlinear = false;
-    bool isAuxiliary = false;
+    bool isNonlinear;
+    bool isAuxiliary;
     FactorableFunctionPtr factorableFunctionVariable;
 
-    Variable() : lowerBound(SHOT_DBL_MIN), upperBound(SHOT_DBL_MAX){};
+    Variable()
+        : lowerBound(SHOT_DBL_MIN)
+        , upperBound(SHOT_DBL_MAX)
+        , hasUpperBoundBeenTightened(false)
+        , hasLowerBoundBeenTightened(false)
+        , isNonlinear(false)
+        , isAuxiliary(false){};
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
-        : name(variableName), index(variableIndex), type(variableType), lowerBound(LB), upperBound(UB){};
+        : name(variableName)
+        , index(variableIndex)
+        , type(variableType)
+        , lowerBound(LB)
+        , upperBound(UB)
+        , hasUpperBoundBeenTightened(false)
+        , hasLowerBoundBeenTightened(false)
+        , isNonlinear(false)
+        , isAuxiliary(false){};
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType)
         : name(variableName)
         , index(variableIndex)
         , type(variableType)
         , lowerBound(SHOT_DBL_MIN)
-        , upperBound(SHOT_DBL_MAX){};
+        , upperBound(SHOT_DBL_MAX)
+        , hasUpperBoundBeenTightened(false)
+        , hasLowerBoundBeenTightened(false)
+        , isNonlinear(false)
+        , isAuxiliary(false){};
 
     inline double calculate(const VectorDouble& point) { return (point[index]); }
 

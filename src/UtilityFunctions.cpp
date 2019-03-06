@@ -593,4 +593,11 @@ std::string trim(const std::string& str)
     return str.substr(first, (last - first + 1));
 }
 
+bool isInteger(double value)
+{
+    double intpart;
+
+    return (std::modf(value, &intpart) == 0.0);
+}
+
 }; // namespace SHOT::UtilityFunctions

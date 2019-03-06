@@ -441,7 +441,7 @@ bool ModelTestCreateProblem()
 
     SHOT::NonlinearExpressionPtr exprPlus
         = std::make_shared<SHOT::ExpressionPlus>(expressionVariable_z, expressionVariable_x);
-    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
+    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(4);
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_z, exprConstant);
 

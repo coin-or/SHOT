@@ -10,6 +10,7 @@
 
 #pragma once
 #include "../Shared.h"
+#include "../UtilityFunctions.h"
 
 namespace SHOT
 {
@@ -683,7 +684,6 @@ public:
         auto firstChildValue = firstChild->calculate(point);
         auto secondChildValue = secondChild->calculate(point);
 
-        // if(UtilityFunctions::isAlmostEqual(firstChildValue, 0.0, 1e-10))
         if(std::abs(firstChildValue - 0.0) <= 1e-10 * std::abs(firstChildValue))
         {
             return 0.0;
@@ -704,7 +704,7 @@ public:
             return firstChildValue;
         }
 
-        return (pow(firstChild->calculate(point), secondChild->calculate(point)));
+        return (pow(firstChildValue, secondChildValue));
     }
 
     inline virtual Interval calculate(const IntervalVector& intervalVector) override
@@ -714,6 +714,29 @@ public:
 
     inline virtual FactorableFunction getFactorableFunction() override
     {
+        /*
+        // Special logic for integer powers
+        if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            auto constantValue = std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
+
+            double intpart;
+
+            if(std::modf(constantValue, &intpart) == 0.0)
+            {
+                int power = (int)constantValue;
+
+                FactorableFunction result = firstChild->getFactorableFunction();
+
+                for(int i = 1; i < power; i++)
+                {
+                    result *= firstChild->getFactorableFunction();
+                }
+
+                return (result);
+            }
+        }*/
+
         return (pow(firstChild->getFactorableFunction(), secondChild->getFactorableFunction()));
     }
 

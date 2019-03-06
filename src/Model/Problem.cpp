@@ -236,7 +236,7 @@ void Problem::updateFactorableFunctions()
         objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
     }
 
-    auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0],
+    auto jacobian = factorableFunctionsDAG->SBAD(factorableFunctions.size(), &factorableFunctions[0],
         factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
     for(int i = 0; i < std::get<0>(jacobian); i++)
@@ -251,21 +251,23 @@ void Problem::updateFactorableFunctions()
             objective->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
             continue;
         }
-
-        auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
-        nonlinearConstraint->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
+        else
+        {
+            auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
+            nonlinearConstraint->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
+        }
     }
 
     for(auto& C : nonlinearConstraints)
     {
         if(C->properties.hasNonlinearExpression)
         {
-            std::cout << "in constraint " << C->index << std::endl;
             std::vector<FactorableFunction> jacobianElements;
 
             for(auto JE : C->symbolicSparseJacobian)
+            {
                 jacobianElements.push_back(JE.second);
-
+            }
             auto hessian = factorableFunctionsDAG->SFAD(jacobianElements.size(), &jacobianElements[0],
                 factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
@@ -273,15 +275,10 @@ void Problem::updateFactorableFunctions()
             {
                 auto firstNonlinearVariable = nonlinearVariables[std::get<1>(hessian)[i]];
                 auto secondNonlinearVariable = nonlinearVariables[std::get<2>(hessian)[i]];
-                std::cout << "1: " << std::get<1>(hessian)[i] << " 2: " << std::get<2>(hessian)[i]
-                          << " 3: " << std::get<3>(hessian)[i] << '\n';
                 auto hessianElement = std::get<3>(hessian)[i];
 
                 C->symbolicSparseHessian.push_back(
                     std::make_tuple(firstNonlinearVariable, secondNonlinearVariable, hessianElement));
-
-                std::cout << firstNonlinearVariable->name << " " << secondNonlinearVariable->name << " "
-                          << hessianElement << std::endl;
             }
 
             delete[] std::get<1>(hessian);
@@ -292,7 +289,6 @@ void Problem::updateFactorableFunctions()
 
     if(objectiveFunction->properties.hasNonlinearExpression)
     {
-        std::cout << "in objective function " << std::endl;
         std::vector<FactorableFunction> jacobianElements;
 
         for(auto JE : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->symbolicSparseJacobian)
@@ -310,9 +306,6 @@ void Problem::updateFactorableFunctions()
             std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)
                 ->symbolicSparseHessian.push_back(
                     std::make_tuple(firstNonlinearVariable, secondNonlinearVariable, hessianElement));
-
-            std::cout << firstNonlinearVariable->name << " " << secondNonlinearVariable->name << " " << hessianElement
-                      << std::endl;
         }
 
         delete[] std::get<1>(hessian);
