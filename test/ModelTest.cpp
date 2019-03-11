@@ -487,6 +487,25 @@ bool ModelTestCreateProblem()
     point.push_back(3.0);
     point.push_back(1.0);
 
+    std::cout << '\n';
+    std::cout << "Jacobian sparsity pattern:\n\n";
+    auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
+
+    for(auto& E : *jacobianSparsityPattern)
+    {
+        for(auto& V : E.second)
+            std::cout << "Constraint " << E.first->index << ":" << V->index << '\n';
+    }
+
+    std::cout << '\n';
+    std::cout << "Hessian of the Lagrangian sparsity pattern:\n\n";
+    auto lagrangianSparsityPattern = problem->getLagrangianHessianSparsityPattern();
+
+    for(auto& E : *lagrangianSparsityPattern)
+    {
+        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+    }
+
     std::cout << "Calculating gradient for function in linear constraint:\n";
     auto gradientLinear = linearConstraint->calculateGradient(point, true);
 

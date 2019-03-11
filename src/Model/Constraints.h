@@ -81,11 +81,18 @@ public:
     double valueRHS = SHOT_DBL_MAX;
     double constant = 0.0;
 
+    std::shared_ptr<Variables> gradientSparsityPattern;
+    std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> hessianSparsityPattern;
+
     virtual double calculateFunctionValue(const VectorDouble& point) = 0;
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector) = 0;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
+    virtual std::shared_ptr<Variables> getGradientSparsityPattern();
+
+    // Returns the upper triagonal part of the Hessian matrix is sparse representation
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+    virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
 
@@ -94,6 +101,10 @@ public:
     virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
 
     virtual void updateProperties() = 0;
+
+protected:
+    virtual void initializeGradientSparsityPattern() = 0;
+    virtual void initializeHessianSparsityPattern() = 0;
 };
 
 class LinearConstraint : public NumericConstraint
@@ -131,6 +142,8 @@ public:
     virtual bool isFulfilled(const VectorDouble& point) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+
+    // Returns the upper triagonal part of the Hessian matrix is sparse representation
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
@@ -140,6 +153,10 @@ public:
     virtual void updateProperties() override;
 
     std::ostream& print(std::ostream& stream) const override;
+
+protected:
+    virtual void initializeGradientSparsityPattern();
+    virtual void initializeHessianSparsityPattern();
 };
 
 typedef std::shared_ptr<LinearConstraint> LinearConstraintPtr;
@@ -199,6 +216,8 @@ public:
     virtual bool isFulfilled(const VectorDouble& point) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+
+    // Returns the upper triagonal part of the Hessian matrix is sparse representation
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
@@ -208,6 +227,10 @@ public:
     virtual void updateProperties() override;
 
     std::ostream& print(std::ostream& stream) const override;
+
+protected:
+    virtual void initializeGradientSparsityPattern();
+    virtual void initializeHessianSparsityPattern();
 };
 
 std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint);
@@ -218,7 +241,7 @@ public:
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
-    std::vector<std::tuple<VariablePtr, VariablePtr, FactorableFunction>> symbolicSparseHessian;
+    std::vector<std::pair<std::pair<VariablePtr, VariablePtr>, FactorableFunction>> symbolicSparseHessian;
 
     NonlinearConstraint(){};
 
@@ -297,6 +320,8 @@ public:
     virtual double calculateFunctionValue(const VectorDouble& point) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+
+    // Returns the upper triagonal part of the Hessian matrix is sparse representation
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
 
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
@@ -310,6 +335,10 @@ public:
     virtual void updateProperties() override;
 
     std::ostream& print(std::ostream& stream) const override;
+
+protected:
+    virtual void initializeGradientSparsityPattern();
+    virtual void initializeHessianSparsityPattern();
 };
 
 std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint);

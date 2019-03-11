@@ -277,7 +277,7 @@ void Problem::updateFactorableFunctions()
                 auto hessianElement = std::get<3>(hessian)[i];
 
                 C->symbolicSparseHessian.push_back(
-                    std::make_tuple(firstNonlinearVariable, secondNonlinearVariable, hessianElement));
+                    std::make_pair(std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement));
             }
 
             delete[] std::get<1>(hessian);
@@ -304,7 +304,7 @@ void Problem::updateFactorableFunctions()
 
             std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)
                 ->symbolicSparseHessian.push_back(
-                    std::make_tuple(firstNonlinearVariable, secondNonlinearVariable, hessianElement));
+                    std::make_pair(std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement));
         }
 
         delete[] std::get<1>(hessian);
@@ -601,6 +601,51 @@ void Problem::setVariableBounds(int variableIndex, double lowerBound, double upp
     allVariables.at(variableIndex)->lowerBound = lowerBound;
     allVariables.at(variableIndex)->upperBound = upperBound;
     variablesUpdated = true;
+};
+
+std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
+    Problem::getConstraintsJacobianSparsityPattern()
+{
+    if(constraintGradientSparsityPattern)
+    {
+        // Already defined
+        return (constraintGradientSparsityPattern);
+    }
+
+    constraintGradientSparsityPattern = std::make_shared<std::vector<std::pair<NumericConstraintPtr, Variables>>>();
+
+    for(auto& C : numericConstraints)
+    {
+        constraintGradientSparsityPattern->push_back(std::make_pair(C, *C->getGradientSparsityPattern()));
+    }
+
+    return (constraintGradientSparsityPattern);
+};
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLagrangianHessianSparsityPattern()
+{
+    if(lagrangianHessianSparsityPattern)
+    {
+        // Already defined
+        return (lagrangianHessianSparsityPattern);
+    }
+
+    lagrangianHessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+
+    for(auto& E : *this->objectiveFunction->getHessianSparsityPattern())
+    {
+        lagrangianHessianSparsityPattern->push_back(E);
+    }
+
+    for(auto& C : this->numericConstraints)
+    {
+        for(auto& E : *C->getHessianSparsityPattern())
+        {
+            lagrangianHessianSparsityPattern->push_back(E);
+        }
+    }
+
+    return (lagrangianHessianSparsityPattern);
 };
 
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point)

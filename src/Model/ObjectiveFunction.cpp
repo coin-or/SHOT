@@ -31,6 +31,28 @@ void ObjectiveFunction::updateProperties()
     properties.curvature = checkConvexity();
 };
 
+std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
+{
+    if(gradientSparsityPattern)
+        return (gradientSparsityPattern);
+
+    gradientSparsityPattern = std::make_shared<Variables>();
+    initializeGradientSparsityPattern();
+
+    return (gradientSparsityPattern);
+};
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunction::getHessianSparsityPattern()
+{
+    if(hessianSparsityPattern)
+        return (hessianSparsityPattern);
+
+    hessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+    initializeHessianSparsityPattern();
+
+    return (hessianSparsityPattern);
+};
+
 std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
 {
     return objective.print(stream); // polymorphic print via reference
@@ -115,12 +137,27 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
     return gradient;
 };
 
+void LinearObjectiveFunction::initializeGradientSparsityPattern()
+{
+    for(auto& T : linearTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->variable);
+    }
+};
+
 SparseVariableMatrix LinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
 
     return hessian;
 };
+
+void LinearObjectiveFunction::initializeHessianSparsityPattern(){};
 
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
@@ -268,6 +305,25 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
     return gradient;
 };
 
+void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
+{
+    LinearObjectiveFunction::initializeGradientSparsityPattern();
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->firstVariable);
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->secondVariable);
+    }
+};
+
 SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
@@ -319,6 +375,28 @@ SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDo
     }
 
     return hessian;
+};
+
+void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
+{
+    LinearObjectiveFunction::initializeHessianSparsityPattern();
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        auto firstVariable
+            = (T->firstVariable->index < T->secondVariable->index) ? T->firstVariable : T->secondVariable;
+        auto secondVariable
+            = (T->firstVariable->index < T->secondVariable->index) ? T->secondVariable : T->firstVariable;
+
+        auto key = std::make_pair(firstVariable, secondVariable);
+
+        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), key)
+            == hessianSparsityPattern->end())
+            hessianSparsityPattern->push_back(key);
+    }
 };
 
 std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
@@ -433,6 +511,18 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
     return gradient;
 };
 
+void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
+{
+    QuadraticObjectiveFunction::initializeGradientSparsityPattern();
+
+    for(auto& E : symbolicSparseJacobian)
+    {
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E.first)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(E.first);
+    }
+};
+
 SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
@@ -441,7 +531,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
     {
         for(auto& E : symbolicSparseHessian)
         {
-            auto factorableFunction = std::get<2>(E);
+            auto factorableFunction = E.second;
 
             double value[1];
             value[0];
@@ -471,8 +561,8 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             if(value[0] == 0.0)
                 continue;
 
-            auto firstVariable = (std::get<0>(E)->index < std::get<1>(E)->index) ? std::get<0>(E) : std::get<1>(E);
-            auto secondVariable = (std::get<0>(E)->index < std::get<1>(E)->index) ? std::get<1>(E) : std::get<0>(E);
+            auto firstVariable = (E.first.first->index < E.first.second->index) ? E.first.first : E.first.second;
+            auto secondVariable = (E.first.first->index < E.first.second->index) ? E.first.second : E.first.first;
 
             auto element = hessian.insert(std::make_pair(std::make_pair(firstVariable, secondVariable), value[0]));
 
@@ -492,6 +582,18 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
     }
 
     return hessian;
+};
+
+void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
+{
+    QuadraticObjectiveFunction::initializeHessianSparsityPattern();
+
+    for(auto& E : symbolicSparseHessian)
+    {
+        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), E.first)
+            == hessianSparsityPattern->end())
+            hessianSparsityPattern->push_back(E.first);
+    }
 };
 
 std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
