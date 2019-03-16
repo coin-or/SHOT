@@ -58,6 +58,8 @@ public:
 
     virtual int getNumberOfChildren() const = 0;
 
+    virtual void appendNonlinearVariables(Variables& nonlinearVariables) = 0;
+
     inline friend std::ostream& operator<<(std::ostream& stream, const NonlinearExpression& expr)
     {
         return expr.print(stream); // polymorphic print via reference
@@ -103,6 +105,8 @@ public:
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Constant; };
 
     inline int getNumberOfChildren() const { return 0; }
+
+    inline void appendNonlinearVariables(Variables& nonlinearVariables) override{};
 };
 
 class ExpressionVariable : public NonlinearExpression
@@ -131,6 +135,12 @@ public:
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Variable; };
 
     inline int getNumberOfChildren() const { return 0; }
+
+    inline void appendNonlinearVariables(Variables& nonlinearVariables) override
+    {
+        if(std::find(nonlinearVariables.begin(), nonlinearVariables.end(), variable) == nonlinearVariables.end())
+            nonlinearVariables.push_back(variable);
+    };
 };
 
 class ExpressionUnary : public NonlinearExpression
@@ -144,6 +154,11 @@ public:
     virtual E_NonlinearExpressionTypes getType() = 0;
 
     inline int getNumberOfChildren() const { return 1; }
+
+    inline void appendNonlinearVariables(Variables& nonlinearVariables) override
+    {
+        child->appendNonlinearVariables(nonlinearVariables);
+    };
 };
 
 class ExpressionBinary : public NonlinearExpression
@@ -158,6 +173,12 @@ public:
     virtual E_NonlinearExpressionTypes getType() = 0;
 
     inline int getNumberOfChildren() const { return 2; }
+
+    inline void appendNonlinearVariables(Variables& nonlinearVariables) override
+    {
+        firstChild->appendNonlinearVariables(nonlinearVariables);
+        secondChild->appendNonlinearVariables(nonlinearVariables);
+    };
 };
 
 class ExpressionGeneral : public NonlinearExpression
@@ -171,6 +192,12 @@ public:
     virtual E_NonlinearExpressionTypes getType() = 0;
 
     inline int getNumberOfChildren() const { return children.size(); }
+
+    inline void appendNonlinearVariables(Variables& nonlinearVariables) override
+    {
+        for(auto& C : children.expressions)
+            C->appendNonlinearVariables(nonlinearVariables);
+    };
 };
 
 // Begin unary operations
@@ -713,7 +740,6 @@ public:
 
     inline virtual FactorableFunction getFactorableFunction() override
     {
-        /*
         // Special logic for integer powers
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
         {
@@ -734,7 +760,7 @@ public:
 
                 return (result);
             }
-        }*/
+        }
 
         return (pow(firstChild->getFactorableFunction(), secondChild->getFactorableFunction()));
     }

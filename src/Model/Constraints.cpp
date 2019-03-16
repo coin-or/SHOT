@@ -67,6 +67,16 @@ std::shared_ptr<Variables> NumericConstraint::getGradientSparsityPattern()
     gradientSparsityPattern = std::make_shared<Variables>();
     initializeGradientSparsityPattern();
 
+    // Sorts the variables
+    std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
+
+    // Remove duplicates
+    auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
+    gradientSparsityPattern->erase(last, gradientSparsityPattern->end());
+
     return (gradientSparsityPattern);
 }
 
@@ -77,6 +87,14 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
 
     hessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
     initializeHessianSparsityPattern();
+
+    // Sorts the elements
+    std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
+            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+            return (elementOne.first->index < elementTwo.first->index
+                || elementOne.second->index < elementTwo.second->index);
+        });
 
     return (hessianSparsityPattern);
 }
@@ -544,7 +562,7 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
 
 SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableMatrix hessian;
+    SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, eraseZeroes);
 
     try
     {
@@ -578,6 +596,10 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             }
 
             if(value[0] == 0.0)
+                continue;
+
+            if(E.first.first->index
+                < E.first.second->index) // Hessian is symmetric, so discard elements below the diagonal
                 continue;
 
             auto element = hessian.insert(std::make_pair(std::get<0>(E), value[0]));
@@ -632,6 +654,14 @@ void NonlinearConstraint::updateProperties()
     {
         properties.hasNonlinearExpression = true;
         properties.classification = E_ConstraintClassification::Nonlinear;
+
+        variablesInNonlinearExpression.clear();
+        nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
+
+        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+                return (variableOne->index < variableTwo->index);
+            });
     }
     else
     {

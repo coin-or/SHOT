@@ -26,8 +26,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     case(ES_PrimalNLPSolver::Ipopt):
     {
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
-        NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(
-            env, (std::dynamic_pointer_cast<ModelingSystemOS>(env->modelingSystem))->originalInstance);
+        NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, env->problem);
         break;
     }
 #ifdef HAS_GAMS

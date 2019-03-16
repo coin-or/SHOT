@@ -278,6 +278,7 @@ public:
     FactorableFunctionPtr factorableFunction;
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
     std::vector<std::pair<std::pair<VariablePtr, VariablePtr>, FactorableFunction>> symbolicSparseHessian;
+    Variables variablesInNonlinearExpression;
 
     int factorableFunctionIndex;
 

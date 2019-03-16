@@ -30,6 +30,8 @@ bool ModelTestNonlinearExpressions();
 bool ModelTestObjective();
 bool ModelTestConstraints();
 bool ModelTestCreateProblem();
+bool ModelTestCreateProblem2();
+bool ModelTestCreateProblem3();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -72,6 +74,12 @@ int ModelTest(int argc, char* argv[])
         break;
     case 6:
         passed = ModelTestCreateProblem();
+        break;
+    case 7:
+        passed = ModelTestCreateProblem2();
+        break;
+    case 8:
+        passed = ModelTestCreateProblem3();
         break;
     default:
         passed = false;
@@ -479,34 +487,33 @@ bool ModelTestCreateProblem()
     std::cout << problem << '\n';
 
     std::cout << '\n';
-    std::cout << "Nonlinear DAG:\n\n";
-    std::cout << problem->factorableFunctionsDAG << '\n';
+    std::cout << "Nonlinear DAG:\n";
+    std::cout << problem->factorableFunctionsDAG;
 
     SHOT::VectorDouble point;
     point.push_back(2.0);
     point.push_back(3.0);
     point.push_back(1.0);
 
-    std::cout << '\n';
-    std::cout << "Jacobian sparsity pattern:\n\n";
+    std::cout << "\nJacobian sparsity pattern:\n";
     auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
 
     for(auto& E : *jacobianSparsityPattern)
     {
         for(auto& V : E.second)
-            std::cout << "Constraint " << E.first->index << ":" << V->index << '\n';
+            std::cout << "(" << E.first->index << "," << V->index << ")\n";
     }
 
     std::cout << '\n';
-    std::cout << "Hessian of the Lagrangian sparsity pattern:\n\n";
-    auto lagrangianSparsityPattern = problem->getLagrangianHessianSparsityPattern();
+    std::cout << "Hessian of the Lagrangian sparsity pattern:\n";
+    auto lagrangianSparsityPattern = problem->getConstraintsHessianSparsityPattern();
 
     for(auto& E : *lagrangianSparsityPattern)
     {
         std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
     }
 
-    std::cout << "Calculating gradient for function in linear constraint:\n";
+    std::cout << "\nCalculating gradient for function in linear constraint:\n";
     auto gradientLinear = linearConstraint->calculateGradient(point, true);
 
     for(auto const& G : gradientLinear)
@@ -514,12 +521,12 @@ bool ModelTestCreateProblem()
         std::cout << G.first->name << ": " << G.second << '\n';
     }
 
-    std::cout << "\nCalculating hessian for function in linear constraint:\n";
+    std::cout << "\nCalculating Hessian for function in linear constraint (there should be none):\n";
     auto hessianLinear = linearConstraint->calculateHessian(point, true);
 
     if(hessianLinear.size() > 0)
     {
-        std::cout << "The number of hessian elements is: " << hessianLinear.size() << ". But there should be none!\n";
+        std::cout << "The number of Hessian elements is: " << hessianLinear.size() << ".\n";
 
         for(auto const& H : hessianLinear)
         {
@@ -553,7 +560,7 @@ bool ModelTestCreateProblem()
         std::cout << G.first->name << ":  " << G.second << '\n';
     }
 
-    std::cout << "\nCalculating hessian for function in first nonlinear constraint:\n";
+    std::cout << "\nCalculating hessian for function in first nonlinear constraint (there should be no elements):\n";
     auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear)
@@ -592,7 +599,7 @@ bool ModelTestCreateProblem()
     std::cout << "z = " << Z << '\n';
 
     auto linearIntervalValue = linearConstraint->calculateFunctionValue(vector);
-    std::cout << "\nValue for linear constraint is:\n";
+    std::cout << "\nValue for linear constraint is: ";
     std::cout << linearIntervalValue << '\n';
 
     if(abs(linearIntervalValue.l() - 0.4) > (1.0e-12) || abs(linearIntervalValue.u() - 2.6) > (1.0e-12))
@@ -602,7 +609,7 @@ bool ModelTestCreateProblem()
     }
 
     auto quadraticIntervalValue = quadraticConstraint->calculateFunctionValue(vector);
-    std::cout << "\nValue for quadratic constraint is:\n";
+    std::cout << "\nValue for quadratic constraint is: ";
     std::cout << quadraticIntervalValue << '\n';
 
     if(abs(quadraticIntervalValue.l() - 4) > (1.0e-12) || abs(quadraticIntervalValue.u() - 14) > (1.0e-12))
@@ -612,7 +619,7 @@ bool ModelTestCreateProblem()
     }
 
     auto nonlinearIntervalValue = nonlinearConstraint->calculateFunctionValue(vector);
-    std::cout << "\nValue for nonlinear constraint is:\n";
+    std::cout << "\nValue for nonlinear constraint is: ";
     std::cout << nonlinearIntervalValue << '\n';
 
     if(abs(nonlinearIntervalValue.l() - 31.4) > (1.0e-12) || abs(nonlinearIntervalValue.u() - 72.6) > (1.0e-12))
@@ -674,6 +681,243 @@ bool ModelTestCreateProblem()
     {
         std::cout << "Constraint found, something went wrong\n";
         passed = false;
+    }
+
+    return passed;
+}
+
+bool ModelTestCreateProblem2()
+{
+    // Nonlinear constraint with only one variable (out of a total of two)
+    bool passed = true;
+
+    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+    env->output = std::make_shared<SHOT::Output>();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    // Creating variables
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+
+    SHOT::Variables variables = { var_x, var_y };
+    problem->add(variables);
+
+    SHOT::LinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
+
+    SHOT::LinearTerms objLinearTerms;
+    objLinearTerms.add(objLinearTerm1);
+    objLinearTerms.add(objLinearTerm2);
+
+    objectiveFunction->add(objLinearTerms);
+    problem->add(objectiveFunction);
+
+    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
+    SHOT::NonlinearExpressionPtr exprPower
+        = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint
+        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    problem->add(nonlinearConstraint);
+
+    std::cout << '\n';
+    std::cout << "Finalizing problem:\n";
+    problem->finalize();
+
+    std::cout << '\n';
+    std::cout << "Problem created:\n\n";
+    std::cout << problem << '\n';
+
+    std::cout << '\n';
+    std::cout << "Nonlinear DAG:\n";
+    std::cout << problem->factorableFunctionsDAG << '\n';
+
+    SHOT::VectorDouble point;
+    point.push_back(2.0);
+    point.push_back(3.0);
+
+    std::cout << '\n';
+    std::cout << "Jacobian sparsity pattern:\n";
+    auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
+
+    for(auto& E : *jacobianSparsityPattern)
+    {
+        for(auto& V : E.second)
+            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+    }
+
+    if(!(jacobianSparsityPattern->at(0).first->index == 0 && jacobianSparsityPattern->at(0).second.at(0)->index == 1))
+    {
+        std::cout << "The sparsity pattern is wrong!\n";
+        passed = false;
+    }
+
+    std::cout << '\n';
+    std::cout << "Hessian of the Lagrangian sparsity pattern:\n";
+    auto lagrangianSparsityPattern = problem->getConstraintsHessianSparsityPattern();
+
+    for(auto& E : *lagrangianSparsityPattern)
+    {
+        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+    }
+
+    if(!(lagrangianSparsityPattern->at(0).first->index == 1 && lagrangianSparsityPattern->at(0).second->index == 1))
+    {
+        std::cout << "The sparsity pattern is wrong!\n";
+        passed = false;
+    }
+
+    std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
+    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point, true);
+
+    for(auto const& G : gradientNonlinear)
+    {
+        std::cout << G.first->name << ":  " << G.second << '\n';
+    }
+
+    std::cout << "\nCalculating Hessian for function in first nonlinear constraint:\n";
+    auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
+
+    for(auto const& H : hessianNonlinear)
+    {
+        std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
+    }
+
+    return passed;
+}
+
+bool ModelTestCreateProblem3()
+{
+    // Two nonlinear constraint with only one variable each
+    bool passed = true;
+
+    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+    env->output = std::make_shared<SHOT::Output>();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    // Creating variables
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+
+    SHOT::Variables variables = { var_x, var_y };
+    problem->add(variables);
+
+    SHOT::LinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
+
+    SHOT::LinearTerms objLinearTerms;
+    objLinearTerms.add(objLinearTerm1);
+    objLinearTerms.add(objLinearTerm2);
+
+    objectiveFunction->add(objLinearTerms);
+    problem->add(objectiveFunction);
+
+    SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
+    SHOT::NonlinearExpressionPtr exprPower
+        = std::make_shared<SHOT::ExpressionPower>(expressionVariable_y, exprConstant);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint
+        = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPower, -10.0, 20.0);
+    problem->add(nonlinearConstraint);
+
+    SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(4);
+    SHOT::NonlinearExpressionPtr exprPower2
+        = std::make_shared<SHOT::ExpressionPower>(expressionVariable_x, exprConstant2);
+
+    SHOT::NonlinearConstraintPtr nonlinearConstraint2
+        = std::make_shared<SHOT::NonlinearConstraint>(1, "nlconstr2", exprPower2, -10.0, 20.0);
+    problem->add(nonlinearConstraint2);
+
+    std::cout << '\n';
+    std::cout << "Finalizing problem:\n";
+    problem->finalize();
+
+    std::cout << '\n';
+    std::cout << "Problem created:\n\n";
+    std::cout << problem << '\n';
+
+    std::cout << '\n';
+    std::cout << "Nonlinear DAG:\n";
+    std::cout << problem->factorableFunctionsDAG << '\n';
+
+    SHOT::VectorDouble point;
+    point.push_back(2.0);
+    point.push_back(3.0);
+
+    std::cout << '\n';
+    std::cout << "Jacobian sparsity pattern:\n";
+    auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
+
+    for(auto& E : *jacobianSparsityPattern)
+    {
+        for(auto& V : E.second)
+            std::cout << "(" << E.first->index << "," << V->index << ")\n";
+    }
+
+    if(!(jacobianSparsityPattern->at(0).first->index == 0 && jacobianSparsityPattern->at(0).second.at(0)->index == 1
+           && jacobianSparsityPattern->at(1).first->index == 1
+           && jacobianSparsityPattern->at(1).second.at(0)->index == 0))
+    {
+        std::cout << "The sparsity pattern is wrong!\n";
+        passed = false;
+    }
+
+    std::cout << '\n';
+    std::cout << "Hessian of the Lagrangian sparsity pattern:\n";
+    auto lagrangianSparsityPattern = problem->getConstraintsHessianSparsityPattern();
+
+    for(auto& E : *lagrangianSparsityPattern)
+    {
+        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+    }
+
+    if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
+           && lagrangianSparsityPattern->at(1).first->index == 1
+           && lagrangianSparsityPattern->at(1).second->index == 1))
+    {
+        std::cout << "The sparsity pattern is wrong!\n";
+        passed = false;
+    }
+
+    std::cout << "\nCalculating gradient for function in first nonlinear constraint:\n";
+    auto gradientNonlinear = nonlinearConstraint->calculateGradient(point, true);
+
+    for(auto const& G : gradientNonlinear)
+    {
+        std::cout << G.first->name << ":  " << G.second << '\n';
+    }
+
+    std::cout << "\nCalculating Hessian for function in first nonlinear constraint:\n";
+    auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
+
+    for(auto const& H : hessianNonlinear)
+    {
+        std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
+    }
+
+    std::cout << "\nCalculating gradient for function in second nonlinear constraint:\n";
+    gradientNonlinear = nonlinearConstraint2->calculateGradient(point, true);
+
+    for(auto const& G : gradientNonlinear)
+    {
+        std::cout << G.first->name << ":  " << G.second << '\n';
+    }
+
+    std::cout << "\nCalculating hessian for function in second nonlinear constraint:\n";
+    hessianNonlinear = nonlinearConstraint2->calculateHessian(point, true);
+
+    for(auto const& H : hessianNonlinear)
+    {
+        std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
     }
 
     return passed;

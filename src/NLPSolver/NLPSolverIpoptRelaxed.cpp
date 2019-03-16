@@ -13,16 +13,17 @@
 namespace SHOT
 {
 
-NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, std::shared_ptr<OSInstance> instance)
-    : INLPSolver(envPtr)
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr)
 {
-    osInstance = instance;
-    osolwriter = std::make_unique<OSoLWriter>();
+    sourceProblem = source;
 
-    for(int i = 0; i < osInstance->getVariableNumber(); i++)
-    {
-        originalVariableType.push_back(osInstance->instanceData->variables->var[i]->type);
-    }
+    for(auto& V : sourceProblem->allVariables)
+        originalVariableType.push_back(V->type);
+
+    ipoptProblem = std::make_shared<IpoptProblem>(envPtr, source);
+
+    ipoptProblem->lowerBounds = sourceProblem->getVariableLowerBounds();
+    ipoptProblem->upperBounds = sourceProblem->getVariableUpperBounds();
 
     setInitialSettings();
 }
@@ -31,6 +32,7 @@ NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() {}
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
+    /*
     auto constrTol = env->settings->getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
     osOption->setAnotherSolverOption(
         "constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt", "", "double", "");
@@ -45,19 +47,8 @@ void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 
     auto timeLimit = env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal");
     osOption->setAnotherSolverOption(
-        "max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "", "number", "");
+        "max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "", "number", "");*/
 }
 
-VectorDouble NLPSolverIpoptRelaxed::getSolution()
-{
-    int numVar = osInstance->getVariableNumber();
-    VectorDouble tmpPoint(numVar);
-
-    for(int i = 0; i < numVar; i++)
-    {
-        tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
-    }
-
-    return (tmpPoint);
-}
+VectorDouble NLPSolverIpoptRelaxed::getSolution() { return (NLPSolverIpoptBase::getSolution()); }
 } // namespace SHOT
