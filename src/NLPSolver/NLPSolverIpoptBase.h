@@ -24,12 +24,6 @@ class NLPSolverIpoptBase;
 class IpoptProblem : public Ipopt::TNLP
 {
 public:
-    VectorDouble lowerBounds;
-    VectorDouble upperBounds;
-
-    VectorInteger startingPointVariableIndexes;
-    VectorDouble startingPointVariableValues;
-
     bool hasSolution = false;
     VectorDouble variableSolution;
     double objectiveValue;
@@ -38,7 +32,7 @@ public:
     std::string solutionDescription;
 
     /** the IpoptProblemclass constructor */
-    IpoptProblem(EnvironmentPtr envPtr, ProblemPtr originalProblem);
+    IpoptProblem(EnvironmentPtr envPtr, NLPSolverIpoptBase* ipoptSolver, ProblemPtr problem);
     virtual ~IpoptProblem() = default;
 
     /** IPOpt specific methods for defining the nlp problem */
@@ -92,16 +86,16 @@ private:
 
     EnvironmentPtr env;
 
-    std::map<std::pair<int, int>, int> objectiveHessianCounterPlacement;
-    std::map<std::pair<int, int>, int> constraintsHessianCounterPlacement;
+    NLPSolverIpoptBase* ipoptSolver;
 
-    // used to make sure no zero elements cause problems
-    VectorDouble iRowInternalJacobian;
-    VectorDouble jColInternalJacobian;
+    std::map<std::pair<int, int>, int> lagrangianHessianCounterPlacement;
+    std::map<std::pair<int, int>, int> jacobianCounterPlacement;
 };
 
 class NLPSolverIpoptBase : virtual public INLPSolver
 {
+    friend IpoptProblem;
+
 private:
 protected:
     std::shared_ptr<IpoptProblem> ipoptProblem;
@@ -111,6 +105,12 @@ protected:
 
     VectorInteger fixedVariableIndexes;
     VectorDouble fixedVariableValues;
+
+    VectorInteger startingPointVariableIndexes;
+    VectorDouble startingPointVariableValues;
+
+    VectorDouble lowerBounds;
+    VectorDouble upperBounds;
 
     virtual E_NLPSolutionStatus solveProblemInstance();
 

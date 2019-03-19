@@ -64,8 +64,11 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
         [](const std::pair<VariablePtr, VariablePtr>& elementOne,
             const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            return (elementOne.first->index < elementTwo.first->index
-                || elementOne.second->index < elementTwo.second->index);
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
         });
 
     return (hessianSparsityPattern);
@@ -584,7 +587,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
                 value[0] = 0.0;
             }
 
-            if(value[0] == 0.0)
+            if(eraseZeroes && value[0] == 0.0)
                 continue;
 
             // Hessian is symmetric, so discard elements below the diagonal

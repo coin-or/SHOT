@@ -74,8 +74,8 @@ std::shared_ptr<Variables> NumericConstraint::getGradientSparsityPattern()
         });
 
     // Remove duplicates
-    auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
-    gradientSparsityPattern->erase(last, gradientSparsityPattern->end());
+    // auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
+    // gradientSparsityPattern->erase(last, gradientSparsityPattern->end());
 
     return (gradientSparsityPattern);
 }
@@ -92,8 +92,11 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
         [](const std::pair<VariablePtr, VariablePtr>& elementOne,
             const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            return (elementOne.first->index < elementTwo.first->index
-                || elementOne.second->index < elementTwo.second->index);
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
         });
 
     return (hessianSparsityPattern);
@@ -339,6 +342,9 @@ void QuadraticConstraint::initializeGradientSparsityPattern()
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
             == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->firstVariable);
+
+        if(T->firstVariable == T->secondVariable)
+            continue;
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
             == gradientSparsityPattern->end())
@@ -598,8 +604,8 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             if(value[0] == 0.0)
                 continue;
 
-            if(E.first.first->index
-                < E.first.second->index) // Hessian is symmetric, so discard elements below the diagonal
+            if(E.first.first->index > E.first.second->index)
+                // Hessian is symmetric, so discard elements below the diagonal
                 continue;
 
             auto element = hessian.insert(std::make_pair(std::get<0>(E), value[0]));

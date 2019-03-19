@@ -20,34 +20,25 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     for(auto& V : sourceProblem->allVariables)
         originalVariableType.push_back(V->type);
 
-    ipoptProblem = std::make_shared<IpoptProblem>(envPtr, source);
-
-    ipoptProblem->lowerBounds = sourceProblem->getVariableLowerBounds();
-    ipoptProblem->upperBounds = sourceProblem->getVariableUpperBounds();
-
-    setInitialSettings();
+    lowerBounds = sourceProblem->getVariableLowerBounds();
+    upperBounds = sourceProblem->getVariableUpperBounds();
 }
 
 NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() {}
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
-    /*
-    auto constrTol = env->settings->getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
-    osOption->setAnotherSolverOption(
-        "constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt", "", "double", "");
+    ipoptApplication->Options()->SetNumericValue(
+        "constr_viol_tol", env->settings->getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver") + 1e-12);
 
-    osOption->setAnotherSolverOption("tol",
-        UtilityFunctions::toStringFormat(
-            env->settings->getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
-        "ipopt", "", "double", "");
+    ipoptApplication->Options()->SetNumericValue(
+        "tol", env->settings->getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver") + 1e-12);
 
-    osOption->setAnotherSolverOption("max_iter",
-        std::to_string(env->settings->getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "", "integer", "");
+    ipoptApplication->Options()->SetIntegerValue(
+        "max_iter", env->settings->getIntSetting("Ipopt.MaxIterations", "Subsolver"));
 
-    auto timeLimit = env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal");
-    osOption->setAnotherSolverOption(
-        "max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "", "number", "");*/
+    ipoptApplication->Options()->SetNumericValue(
+        "max_cpu_time", env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal"));
 }
 
 VectorDouble NLPSolverIpoptRelaxed::getSolution() { return (NLPSolverIpoptBase::getSolution()); }

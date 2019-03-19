@@ -669,8 +669,11 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getCo
     std::sort(constraintsHessianSparsityPattern->begin(), constraintsHessianSparsityPattern->end(),
         [](const std::pair<VariablePtr, VariablePtr>& elementOne,
             const std::pair<VariablePtr, VariablePtr>& elementTwo) {
-            return (elementOne.first->index < elementTwo.first->index
-                || elementOne.second->index < elementTwo.second->index);
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
         });
 
     // Remove duplicates
@@ -678,6 +681,47 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getCo
     constraintsHessianSparsityPattern->erase(last, constraintsHessianSparsityPattern->end());
 
     return (constraintsHessianSparsityPattern);
+};
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLagrangianHessianSparsityPattern()
+{
+    if(lagrangianHessianSparsityPattern)
+    {
+        // Already defined
+        return (lagrangianHessianSparsityPattern);
+    }
+
+    lagrangianHessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+
+    for(auto& E : *objectiveFunction->getHessianSparsityPattern())
+    {
+        lagrangianHessianSparsityPattern->push_back(E);
+    }
+
+    for(auto& C : numericConstraints)
+    {
+        for(auto& E : *C->getHessianSparsityPattern())
+        {
+            lagrangianHessianSparsityPattern->push_back(E);
+        }
+    }
+
+    // Sorts the elements
+    std::sort(lagrangianHessianSparsityPattern->begin(), lagrangianHessianSparsityPattern->end(),
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
+            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
+        });
+
+    // Remove duplicates
+    auto last = std::unique(lagrangianHessianSparsityPattern->begin(), lagrangianHessianSparsityPattern->end());
+    lagrangianHessianSparsityPattern->erase(last, lagrangianHessianSparsityPattern->end());
+
+    return (lagrangianHessianSparsityPattern);
 };
 
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point)
