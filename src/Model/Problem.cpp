@@ -229,6 +229,7 @@ void Problem::updateFactorableFunctions()
     if(objectiveFunction->properties.hasNonlinearExpression)
     {
         auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+
         objective->updateFactorableFunction();
         factorableFunctions.push_back(*objective->factorableFunction.get());
 
@@ -249,11 +250,91 @@ void Problem::updateFactorableFunctions()
         {
             auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
             objective->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
-            continue;
+        }
+        else
+        {
+            auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
+            nonlinearConstraint->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
+        }
+    }
+
+    for(auto& C : nonlinearConstraints)
+    {
+        if(C->properties.hasNonlinearExpression)
+        {
+            std::vector<FactorableFunction> jacobianElements;
+
+            for(auto JE : C->symbolicSparseJacobian)
+            {
+                jacobianElements.push_back(JE.second);
+            }
+
+            std::vector<FactorableFunction> tmpFactorableFunctions;
+
+            for(auto& V : C->variablesInNonlinearExpression)
+            {
+                tmpFactorableFunctions.push_back(*V->factorableFunctionVariable.get());
+            }
+
+            auto hessian = factorableFunctionsDAG->SFAD(jacobianElements.size(), &jacobianElements[0],
+                tmpFactorableFunctions.size(), &tmpFactorableFunctions[0]);
+
+            for(int i = 0; i < std::get<0>(hessian); i++)
+            {
+                auto firstNonlinearVariable = C->variablesInNonlinearExpression[std::get<1>(hessian)[i]];
+                auto secondNonlinearVariable = C->variablesInNonlinearExpression[std::get<2>(hessian)[i]];
+                auto hessianElement = std::get<3>(hessian)[i];
+
+                if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
+                {
+                    C->symbolicSparseHessian.push_back(std::make_pair(
+                        std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement));
+                }
+            }
+
+            delete[] std::get<1>(hessian);
+            delete[] std::get<2>(hessian);
+            delete[] std::get<3>(hessian);
+        }
+    }
+
+    if(objectiveFunction->properties.hasNonlinearExpression)
+    {
+        auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+
+        std::vector<FactorableFunction> jacobianElements;
+
+        for(auto JE : nonlinearObjective->symbolicSparseJacobian)
+        {
+            jacobianElements.push_back(JE.second);
         }
 
-        auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
-        nonlinearConstraint->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
+        std::vector<FactorableFunction> tmpFactorableFunctions;
+
+        for(auto& V : nonlinearObjective->variablesInNonlinearExpression)
+        {
+            tmpFactorableFunctions.push_back(*V->factorableFunctionVariable.get());
+        }
+
+        auto hessian = factorableFunctionsDAG->SFAD(
+            jacobianElements.size(), &jacobianElements[0], tmpFactorableFunctions.size(), &tmpFactorableFunctions[0]);
+
+        for(int i = 0; i < std::get<0>(hessian); i++)
+        {
+            auto firstNonlinearVariable = nonlinearObjective->variablesInNonlinearExpression[std::get<1>(hessian)[i]];
+            auto secondNonlinearVariable = nonlinearObjective->variablesInNonlinearExpression[std::get<2>(hessian)[i]];
+            auto hessianElement = std::get<3>(hessian)[i];
+
+            if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
+            {
+                nonlinearObjective->symbolicSparseHessian.push_back(
+                    std::make_pair(std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement));
+            }
+        }
+
+        delete[] std::get<1>(hessian);
+        delete[] std::get<2>(hessian);
+        delete[] std::get<3>(hessian);
     }
 
     delete[] std::get<1>(jacobian);
@@ -545,6 +626,102 @@ void Problem::setVariableBounds(int variableIndex, double lowerBound, double upp
     allVariables.at(variableIndex)->lowerBound = lowerBound;
     allVariables.at(variableIndex)->upperBound = upperBound;
     variablesUpdated = true;
+};
+
+std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
+    Problem::getConstraintsJacobianSparsityPattern()
+{
+    if(constraintGradientSparsityPattern)
+    {
+        // Already defined
+        return (constraintGradientSparsityPattern);
+    }
+
+    constraintGradientSparsityPattern = std::make_shared<std::vector<std::pair<NumericConstraintPtr, Variables>>>();
+
+    for(auto& C : numericConstraints)
+    {
+        constraintGradientSparsityPattern->push_back(std::make_pair(C, *C->getGradientSparsityPattern()));
+    }
+
+    return (constraintGradientSparsityPattern);
+};
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getConstraintsHessianSparsityPattern()
+{
+    if(constraintsHessianSparsityPattern)
+    {
+        // Already defined
+        return (constraintsHessianSparsityPattern);
+    }
+
+    constraintsHessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+
+    for(auto& C : this->numericConstraints)
+    {
+        for(auto& E : *C->getHessianSparsityPattern())
+        {
+            constraintsHessianSparsityPattern->push_back(E);
+        }
+    }
+
+    // Sorts the elements
+    std::sort(constraintsHessianSparsityPattern->begin(), constraintsHessianSparsityPattern->end(),
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
+            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
+        });
+
+    // Remove duplicates
+    auto last = std::unique(constraintsHessianSparsityPattern->begin(), constraintsHessianSparsityPattern->end());
+    constraintsHessianSparsityPattern->erase(last, constraintsHessianSparsityPattern->end());
+
+    return (constraintsHessianSparsityPattern);
+};
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLagrangianHessianSparsityPattern()
+{
+    if(lagrangianHessianSparsityPattern)
+    {
+        // Already defined
+        return (lagrangianHessianSparsityPattern);
+    }
+
+    lagrangianHessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+
+    for(auto& E : *objectiveFunction->getHessianSparsityPattern())
+    {
+        lagrangianHessianSparsityPattern->push_back(E);
+    }
+
+    for(auto& C : numericConstraints)
+    {
+        for(auto& E : *C->getHessianSparsityPattern())
+        {
+            lagrangianHessianSparsityPattern->push_back(E);
+        }
+    }
+
+    // Sorts the elements
+    std::sort(lagrangianHessianSparsityPattern->begin(), lagrangianHessianSparsityPattern->end(),
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
+            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
+        });
+
+    // Remove duplicates
+    auto last = std::unique(lagrangianHessianSparsityPattern->begin(), lagrangianHessianSparsityPattern->end());
+    lagrangianHessianSparsityPattern->erase(last, lagrangianHessianSparsityPattern->end());
+
+    return (lagrangianHessianSparsityPattern);
 };
 
 std::optional<NumericConstraintValue> Problem::getMostDeviatingNumericConstraint(const VectorDouble& point)

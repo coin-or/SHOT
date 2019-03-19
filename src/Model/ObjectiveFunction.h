@@ -70,6 +70,9 @@ public:
 
     std::weak_ptr<Problem> ownerProblem;
 
+    std::shared_ptr<Variables> gradientSparsityPattern;
+    std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> hessianSparsityPattern;
+
     void takeOwnership(ProblemPtr owner);
 
     virtual E_Curvature checkConvexity() = 0;
@@ -80,8 +83,16 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) = 0;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
+    virtual std::shared_ptr<Variables> getGradientSparsityPattern();
+
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) = 0;
+    virtual std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getHessianSparsityPattern();
 
     virtual std::ostream& print(std::ostream&) const = 0;
+
+protected:
+    virtual void initializeGradientSparsityPattern() = 0;
+    virtual void initializeHessianSparsityPattern() = 0;
 };
 
 typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;
@@ -128,7 +139,13 @@ public:
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+
     std::ostream& print(std::ostream& stream) const override;
+
+protected:
+    virtual void initializeGradientSparsityPattern();
+    virtual void initializeHessianSparsityPattern();
 };
 
 typedef std::shared_ptr<LinearObjectiveFunction> LinearObjectiveFunctionPtr;
@@ -191,8 +208,13 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
+
+protected:
+    virtual void initializeGradientSparsityPattern();
+    virtual void initializeHessianSparsityPattern();
 };
 
 typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPtr;
@@ -255,6 +277,8 @@ public:
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
+    std::vector<std::pair<std::pair<VariablePtr, VariablePtr>, FactorableFunction>> symbolicSparseHessian;
+    Variables variablesInNonlinearExpression;
 
     int factorableFunctionIndex;
 
@@ -278,8 +302,13 @@ public:
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
+
+protected:
+    virtual void initializeGradientSparsityPattern();
+    virtual void initializeHessianSparsityPattern();
 };
 
 std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective);

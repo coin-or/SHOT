@@ -97,5 +97,6 @@ std::size_t calculateHash(VectorDouble const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 
+bool isInteger(double value);
 std::string trim(const std::string& str);
 } // namespace SHOT::UtilityFunctions

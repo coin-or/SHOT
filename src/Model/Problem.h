@@ -60,6 +60,10 @@ private:
     bool constraintsUpdated = false;
     bool objectiveUpdated = false;
 
+    std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>> constraintGradientSparsityPattern;
+    std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> constraintsHessianSparsityPattern;
+    std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> lagrangianHessianSparsityPattern;
+
     void updateVariables();
 
     void updateFactorableFunctions();
@@ -134,6 +138,10 @@ public:
 
     void setVariableUpperBound(int variableIndex, double bound);
     void setVariableBounds(int variableIndex, double lowerBound, double upperBound);
+
+    std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>> getConstraintsJacobianSparsityPattern();
+    std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getConstraintsHessianSparsityPattern();
+    std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> getLagrangianHessianSparsityPattern();
 
     std::optional<NumericConstraintValue> getMostDeviatingNumericConstraint(const VectorDouble& point);
 

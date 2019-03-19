@@ -31,6 +31,49 @@ void ObjectiveFunction::updateProperties()
     properties.curvature = checkConvexity();
 };
 
+std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
+{
+    if(gradientSparsityPattern)
+        return (gradientSparsityPattern);
+
+    gradientSparsityPattern = std::make_shared<Variables>();
+    initializeGradientSparsityPattern();
+
+    // Sorts the variables
+    std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
+
+    // Remove duplicates
+    auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
+    gradientSparsityPattern->erase(last, gradientSparsityPattern->end());
+
+    return (gradientSparsityPattern);
+};
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunction::getHessianSparsityPattern()
+{
+    if(hessianSparsityPattern)
+        return (hessianSparsityPattern);
+
+    hessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+    initializeHessianSparsityPattern();
+
+    // Sorts the elements
+    std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
+            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
+        });
+
+    return (hessianSparsityPattern);
+};
+
 std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
 {
     return objective.print(stream); // polymorphic print via reference
@@ -114,6 +157,28 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
 
     return gradient;
 };
+
+void LinearObjectiveFunction::initializeGradientSparsityPattern()
+{
+    for(auto& T : linearTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->variable);
+    }
+};
+
+SparseVariableMatrix LinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    return hessian;
+};
+
+void LinearObjectiveFunction::initializeHessianSparsityPattern(){};
 
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
@@ -261,6 +326,100 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
     return gradient;
 };
 
+void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
+{
+    LinearObjectiveFunction::initializeGradientSparsityPattern();
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->firstVariable);
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->secondVariable);
+    }
+};
+
+SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(T->firstVariable == T->secondVariable) // variable squared
+        {
+            auto value = 2 * T->coefficient;
+            auto element = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value;
+            }
+        }
+        else
+        {
+            // Only save elements above the diagonal since the Hessian is symmetric
+            if(T->firstVariable->index < T->secondVariable->index)
+            {
+                auto value = T->coefficient;
+                auto element
+                    = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+            else
+            {
+                auto value = T->coefficient;
+                auto element
+                    = hessian.insert(std::make_pair(std::make_pair(T->secondVariable, T->firstVariable), value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+        }
+    }
+
+    return hessian;
+};
+
+void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
+{
+    LinearObjectiveFunction::initializeHessianSparsityPattern();
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        auto firstVariable
+            = (T->firstVariable->index < T->secondVariable->index) ? T->firstVariable : T->secondVariable;
+        auto secondVariable
+            = (T->firstVariable->index > T->secondVariable->index) ? T->secondVariable : T->firstVariable;
+
+        auto key = std::make_pair(firstVariable, secondVariable);
+
+        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), key)
+            == hessianSparsityPattern->end())
+            hessianSparsityPattern->push_back(key);
+    }
+};
+
 std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
 {
     LinearObjectiveFunction::print(stream);
@@ -305,6 +464,14 @@ void NonlinearObjectiveFunction::updateProperties()
     {
         properties.hasNonlinearExpression = true;
         properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+
+        variablesInNonlinearExpression.clear();
+        nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
+
+        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+                return (variableOne->index < variableTwo->index);
+            });
     }
     else
     {
@@ -371,6 +538,92 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
+};
+
+void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
+{
+    QuadraticObjectiveFunction::initializeGradientSparsityPattern();
+
+    for(auto& E : symbolicSparseJacobian)
+    {
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E.first)
+            != gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(E.first);
+    }
+};
+
+SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian = QuadraticObjectiveFunction::calculateHessian(point, eraseZeroes);
+
+    try
+    {
+        for(auto& E : symbolicSparseHessian)
+        {
+            auto factorableFunction = E.second;
+
+            double value[1];
+            value[0];
+
+            if(auto sharedOwnerProblem = ownerProblem.lock())
+            {
+                // Collecting the values corresponding to nonlinear variables from the point
+                VectorDouble newPoint;
+                newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
+
+                for(auto& V : sharedOwnerProblem->nonlinearVariables)
+                {
+                    newPoint.push_back(point.at(V->index));
+                }
+
+                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &factorableFunction, value,
+                    sharedOwnerProblem->factorableFunctionVariables.size(),
+                    &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
+            }
+
+            if(value[0] != value[0])
+            {
+                std::cout << "nan when calculating hessian" << std::endl;
+                value[0] = 0.0;
+            }
+
+            if(eraseZeroes && value[0] == 0.0)
+                continue;
+
+            // Hessian is symmetric, so discard elements below the diagonal
+            if(E.first.first->index > E.first.second->index)
+                continue;
+
+            auto element = hessian.insert(std::make_pair(std::get<0>(E), value[0]));
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value[0];
+            }
+        }
+
+        if(eraseZeroes)
+            UtilityFunctions::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+    }
+    catch(mc::FFGraph::Exceptions& e)
+    {
+        std::cout << "Error when evaluating hessian: " << e.what();
+    }
+
+    return hessian;
+};
+
+void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
+{
+    QuadraticObjectiveFunction::initializeHessianSparsityPattern();
+
+    for(auto& E : symbolicSparseHessian)
+    {
+        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), E.first)
+            == hessianSparsityPattern->end())
+            hessianSparsityPattern->push_back(E.first);
+    }
 };
 
 std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const

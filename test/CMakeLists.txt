@@ -4,10 +4,13 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp in the test directory
-set (cpptests Model Settings)
+set (cpptests Model Settings) 
 
-set (Model_parts 1 2 3 4 5 6)    # The different parts of each test (if any)
+set (Model_parts 1 2 3 4 5 6 7 8)    # The different parts of each test (if any)
 set (Settings_parts 1 2)   
+
+set(cpptests ${cpptests} Ipopt)
+set (Ipopt_parts 1 2)
 
 if(HAS_CPLEX)
     set(Cplex_parts 1)
@@ -62,7 +65,7 @@ if (HAS_CPLEX)
 endif (HAS_CPLEX)
 
 if (HAS_GUROBI)  
-  target_link_libraries (${TEST_EXE_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi80.so)
+  target_link_libraries (${TEST_EXE_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
   target_link_libraries (${TEST_EXE_NAME} ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
 endif (HAS_GUROBI)
 

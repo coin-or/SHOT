@@ -59,6 +59,49 @@ std::ostream& operator<<(std::ostream& stream, ConstraintPtr constraint)
     return stream;
 }
 
+std::shared_ptr<Variables> NumericConstraint::getGradientSparsityPattern()
+{
+    if(gradientSparsityPattern)
+        return (gradientSparsityPattern);
+
+    gradientSparsityPattern = std::make_shared<Variables>();
+    initializeGradientSparsityPattern();
+
+    // Sorts the variables
+    std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
+
+    // Remove duplicates
+    // auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
+    // gradientSparsityPattern->erase(last, gradientSparsityPattern->end());
+
+    return (gradientSparsityPattern);
+}
+
+std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstraint::getHessianSparsityPattern()
+{
+    if(hessianSparsityPattern)
+        return (hessianSparsityPattern);
+
+    hessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+    initializeHessianSparsityPattern();
+
+    // Sorts the elements
+    std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
+            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+            if(elementOne.first->index < elementTwo.first->index)
+                return (true);
+            if(elementOne.second->index == elementTwo.second->index)
+                return (elementOne.first->index < elementTwo.first->index);
+            return (false);
+        });
+
+    return (hessianSparsityPattern);
+}
+
 NumericConstraintValue NumericConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     double value = calculateFunctionValue(point) - correction;
@@ -131,6 +174,9 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& poi
 
     for(auto& T : linearTerms)
     {
+        if(T->coefficient == 0.0)
+            continue;
+
         auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
         if(!element.second)
         {
@@ -144,6 +190,28 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& poi
         UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
+};
+
+void LinearConstraint::initializeGradientSparsityPattern()
+{
+    for(auto& T : linearTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
+            == gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->variable);
+    }
+};
+
+void LinearConstraint::initializeHessianSparsityPattern(){};
+
+SparseVariableMatrix LinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    return hessian;
 };
 
 NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
@@ -219,6 +287,9 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
 
     for(auto& T : quadraticTerms)
     {
+        if(T->coefficient == 0.0)
+            continue;
+
         if(T->firstVariable == T->secondVariable) // variable squared
         {
             auto value = 2 * T->coefficient * point[T->firstVariable->index];
@@ -242,6 +313,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
             }
 
             value = T->coefficient * point[T->firstVariable->index];
+
             element = gradient.insert(std::make_pair(T->secondVariable, value));
 
             if(!element.second)
@@ -256,6 +328,103 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
         UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
+};
+
+void QuadraticConstraint::initializeGradientSparsityPattern()
+{
+    LinearConstraint::initializeGradientSparsityPattern();
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
+            == gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->firstVariable);
+
+        if(T->firstVariable == T->secondVariable)
+            continue;
+
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
+            == gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(T->secondVariable);
+    }
+};
+
+SparseVariableMatrix QuadraticConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian;
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        if(T->firstVariable == T->secondVariable) // variable squared
+        {
+            auto value = 2 * T->coefficient;
+            auto element = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value;
+            }
+        }
+        else
+        {
+            // Only save elements above the diagonal since the Hessian is symmetric
+            if(T->firstVariable->index < T->secondVariable->index)
+            {
+                auto value = T->coefficient;
+                auto element
+                    = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+            else
+            {
+                auto value = T->coefficient;
+                auto element
+                    = hessian.insert(std::make_pair(std::make_pair(T->secondVariable, T->firstVariable), value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+        }
+    }
+
+    return hessian;
+};
+
+void QuadraticConstraint::initializeHessianSparsityPattern()
+{
+    LinearConstraint::initializeHessianSparsityPattern();
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0.0)
+            continue;
+
+        auto firstVariable
+            = (T->firstVariable->index < T->secondVariable->index) ? T->firstVariable : T->secondVariable;
+        auto secondVariable
+            = (T->firstVariable->index < T->secondVariable->index) ? T->secondVariable : T->firstVariable;
+
+        auto key = std::make_pair(firstVariable, secondVariable);
+
+        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), key)
+            == hessianSparsityPattern->end())
+            hessianSparsityPattern->push_back(key);
+    }
 };
 
 NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble& point, double correction)
@@ -362,6 +531,9 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 value[0] = 0.0;
             }
 
+            if(eraseZeroes && value[0] == 0.0)
+                continue;
+
             auto element = gradient.insert(std::make_pair(E.first, value[0]));
 
             if(!element.second)
@@ -380,6 +552,92 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
     }
 
     return gradient;
+};
+
+void NonlinearConstraint::initializeGradientSparsityPattern()
+{
+    QuadraticConstraint::initializeGradientSparsityPattern();
+
+    for(auto& E : symbolicSparseJacobian)
+    {
+        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E.first)
+            == gradientSparsityPattern->end())
+            gradientSparsityPattern->push_back(E.first);
+    }
+};
+
+SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+{
+    SparseVariableMatrix hessian = QuadraticConstraint::calculateHessian(point, eraseZeroes);
+
+    try
+    {
+        for(auto& E : symbolicSparseHessian)
+        {
+            auto factorableFunction = std::get<1>(E);
+
+            double value[1];
+            value[0];
+
+            if(auto sharedOwnerProblem = ownerProblem.lock())
+            {
+                // Collecting the values corresponding to nonlinear variables from the point
+                VectorDouble newPoint;
+                newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
+
+                for(auto& V : sharedOwnerProblem->nonlinearVariables)
+                {
+                    newPoint.push_back(point.at(V->index));
+                }
+
+                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &factorableFunction, value,
+                    sharedOwnerProblem->factorableFunctionVariables.size(),
+                    &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
+            }
+
+            if(value[0] != value[0])
+            {
+                std::cout << "nan" << std::endl;
+                value[0] = 0.0;
+            }
+
+            if(value[0] == 0.0)
+                continue;
+
+            if(E.first.first->index > E.first.second->index)
+                // Hessian is symmetric, so discard elements below the diagonal
+                continue;
+
+            auto element = hessian.insert(std::make_pair(std::get<0>(E), value[0]));
+
+            if(!element.second)
+            {
+                // Element already exists for the variable
+                element.first->second += value[0];
+            }
+        }
+
+        if(eraseZeroes)
+            UtilityFunctions::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+    }
+    catch(mc::FFGraph::Exceptions& e)
+    {
+        std::cout << "Error when evaluating hessian: " << e.what();
+    }
+
+    return (hessian);
+};
+
+void NonlinearConstraint::initializeHessianSparsityPattern()
+{
+    QuadraticConstraint::initializeHessianSparsityPattern();
+
+    for(auto& E : symbolicSparseHessian)
+    {
+        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), E.first)
+            == hessianSparsityPattern->end())
+            hessianSparsityPattern->push_back(E.first);
+    }
 };
 
 bool NonlinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
@@ -402,6 +660,14 @@ void NonlinearConstraint::updateProperties()
     {
         properties.hasNonlinearExpression = true;
         properties.classification = E_ConstraintClassification::Nonlinear;
+
+        variablesInNonlinearExpression.clear();
+        nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
+
+        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+                return (variableOne->index < variableTwo->index);
+            });
     }
     else
     {
