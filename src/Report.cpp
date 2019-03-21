@@ -339,10 +339,12 @@ void Report::outputOptionsReport()
         }
 #endif
 
+#ifdef HAS_CBC
         if(solver == ES_MIPSolver::Cbc)
         {
             dualSolver = "Cbc";
         }
+#endif
     }
     else
     {
@@ -360,10 +362,13 @@ void Report::outputOptionsReport()
             dualSolver = "Gurobi";
         }
 #endif
+
+#ifdef HAS_CBC
         if(solver == ES_MIPSolver::Cbc)
         {
             dualSolver = "Cbc";
         }
+#endif
     }
 
     switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
@@ -463,9 +468,9 @@ void Report::outputProblemInstanceReport()
     bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
 
     report << "\r\n";
-    report
-        << "╶ Problem instance "
-           "───────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
+    report << "╶ Problem instance "
+              "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
+              "\r\n";
     report << "\r\n";
 
     std::string problemFile = env->settings->getStringSetting("ProblemFile", "Input");
@@ -759,9 +764,9 @@ void Report::outputSolutionReport()
     std::stringstream report;
 
     report << "\r\n\r\n";
-    report
-        << "╶ Solution report "
-           "────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n";
+    report << "╶ Solution report "
+              "────────────────────────────────────────────────────────────────────────────────────────────────────"
+              "╴\r\n";
     report << "\r\n";
 
     auto terminationReason = env->results->terminationReason;

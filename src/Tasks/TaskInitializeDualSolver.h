@@ -26,7 +26,9 @@
 #include "../MIPSolver/MIPSolverGurobiLazy.h"
 #endif
 
+#ifdef HAS_CBC
 #include "../MIPSolver/MIPSolverOsiCbc.h"
+#endif
 
 namespace SHOT
 {

@@ -1084,15 +1084,26 @@ void Solver::verifySettings()
     }
 #endif
 
+#ifdef HAS_CBC
     if(solver == ES_MIPSolver::Cbc)
     {
         correctSolverDefined = true;
     }
+#endif
 
     if(!correctSolverDefined)
     {
-        env->output->outputWarning(" SHOT has not been compiled with support selected MIP solver. Defaulting to Cbc.");
+        env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
+
+#ifdef HAS_CBC
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+#elif HAS_GUROBI
+        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Gurobi);
+#elif HAS_CPLEX
+        env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cplex);
+#else
+        env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
+#endif
     }
 
     if(env->settings->getBoolSetting("UseRecommendedSettings", "Strategy"))
