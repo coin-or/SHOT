@@ -264,14 +264,12 @@ void NLPSolverIpoptBase::setInitialSettings()
 
     switch(static_cast<E_LogLevel>(env->settings->getIntSetting("Console.LogLevel", "Output")))
     {
+    case E_LogLevel::Off:
+    case E_LogLevel::Critical:
     case E_LogLevel::Error:
-        osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
-        break;
     case E_LogLevel::Warning:
-        osOption->setAnotherSolverOption("print_level", "2", "ipopt", "", "integer", "");
-        break;
     case E_LogLevel::Info:
-        osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
+        osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
         break;
     case E_LogLevel::Debug:
         osOption->setAnotherSolverOption("print_level", "8", "ipopt", "", "integer", "");
@@ -284,7 +282,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     }
 
     // Suppress copyright message
-    if(env->settings->getIntSetting("Console.LogLevel", "Output") < 3)
+    if(env->settings->getIntSetting("Console.LogLevel", "Output") > (int)E_LogLevel::Debug)
     {
         osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
     }
@@ -355,7 +353,7 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         lowerBoundsBeforeFix.push_back(currLB);
         upperBoundsBeforeFix.push_back(currUB);
 
-        currPt = UtilityFunctions::round(currPt);
+        currPt = std::round(currPt);
 
         // Fix for negative zero
         if(currPt >= (0.0 - std::numeric_limits<double>::epsilon())

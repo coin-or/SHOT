@@ -377,10 +377,10 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
     if(numVariables > 0)
     {
-        double minLBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyLowerBound", "Model");
-        double maxUBCont = env->settings->getDoubleSetting("ContinuousVariable.EmptyUpperBound", "Model");
-        double minLBInt = env->settings->getDoubleSetting("IntegerVariable.EmptyLowerBound", "Model");
-        double maxUBInt = env->settings->getDoubleSetting("IntegerVariable.EmptyUpperBound", "Model");
+        double minLBCont = env->settings->getDoubleSetting("ContinuousVariable.MinimumLowerBound", "Model");
+        double maxUBCont = env->settings->getDoubleSetting("ContinuousVariable.MaximumUpperBound", "Model");
+        double minLBInt = env->settings->getDoubleSetting("IntegerVariable.MinimumLowerBound", "Model");
+        double maxUBInt = env->settings->getDoubleSetting("IntegerVariable.MaximumUpperBound", "Model");
 
         double* variableLBs = new double[numVariables];
         double* variableUBs = new double[numVariables];

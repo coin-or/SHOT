@@ -43,6 +43,7 @@
 #include "boost/filesystem.hpp"
 #include <boost/format.hpp>
 #include "boost/math/tools/minima.hpp"
+#include <boost/functional/hash/hash.hpp>
 
 #include "ffunc.hpp"
 
@@ -67,7 +68,7 @@
 #include "Model/Variables.h"
 #include "Model/Terms.h"
 #include "Model/NonlinearExpressions.h"
-#include "Model/AuxilliaryVariables.h"
+#include "Model/AuxiliaryVariables.h"
 #include "Model/ObjectiveFunction.h"
 #include "Model/Constraints.h"
 #include "Model/Problem.h"

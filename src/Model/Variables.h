@@ -29,7 +29,7 @@ public:
     bool hasLowerBoundBeenTightened = false;
 
     bool isNonlinear = false;
-    bool isAuxilliary = false;
+    bool isAuxiliary = false;
     FactorableFunctionPtr factorableFunctionVariable;
 
     Variable() : lowerBound(SHOT_DBL_MIN), upperBound(SHOT_DBL_MAX){};

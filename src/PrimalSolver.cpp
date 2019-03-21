@@ -91,7 +91,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     VectorDouble tmpPoint(primalSol.point);
     double tmpObjVal = primalSol.objValue;
 
-    bool isVariableBoundsFulfilled = false;
+    bool isVariableBoundsFulfilled = true;
 
     switch(primalSol.sourceType)
     {
@@ -217,7 +217,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto value = V->calculate(tmpPoint);
             int index = V->index;
 
-            double rounded = UtilityFunctions::round(value);
+            double rounded = std::round(value);
             double error = std::abs(rounded - value);
 
             maxIntegerError = std::max(maxIntegerError, error);
@@ -234,7 +234,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             auto value = V->calculate(tmpPoint);
             int index = V->index;
 
-            double rounded = UtilityFunctions::round(value);
+            double rounded = std::round(value);
             double error = std::abs(rounded - value);
 
             maxIntegerError = std::max(maxIntegerError, error);
@@ -401,8 +401,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     primalSol.point = tmpPoint;
     primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
-    auto tmpLine = boost::format("     New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
-    env->output->outputDebug(tmpLine.str());
+    auto tmpLine = boost::format("        New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
+    env->output->outputCritical(tmpLine.str());
 
     env->results->addPrimalSolution(primalSol);
 

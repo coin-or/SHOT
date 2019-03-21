@@ -566,7 +566,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("HyperplaneCuts.MaxPerIteration", "Dual", 200,
         "Maximal number of hyperplanes to add per iteration", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true,
+    env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
     env->settings->createSetting(
@@ -655,17 +655,17 @@ void Solver::initializeSettings()
         "Reinitialize the dual model in the subsolver each iteration");
 
     // Optimization model settings
-    env->settings->createSetting("ContinuousVariable.EmptyLowerBound", "Model", -9999999999.0,
-        "Lower bound for continuous variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -9999999999.0,
+        "Minimum lower bound for continuous variables", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.EmptyUpperBound", "Model", 9999999999.0,
-        "Upper bound for continuous variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 9999999999.0,
+        "Maximum upper bound for continuous variables", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.EmptyLowerBound", "Model", 0.0,
-        "Lower bound for integer variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("IntegerVariable.MinimumLowerBound", "Model", -2.0e9,
+        "Minimum lower bound for integer variables", 0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.EmptyUpperBound", "Model", 2.0e9,
-        "Upper bound for integer variables without bounds", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("IntegerVariable.MaximumUpperBound", "Model", 2.0e9,
+        "Maximum upper bound for integer variables", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0,
         "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
@@ -703,13 +703,13 @@ void Solver::initializeSettings()
 
     // Reformulations for objective functions
     env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false,
-        "Reformulates a nonlinear objective as an auxilliary constraint");
+        "Reformulates a nonlinear objective as an auxiliary constraint");
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", false,
-        "Partition nonlinear terms as auxilliary constraints");
+        "Partition nonlinear terms as auxiliary constraints");
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false,
-        "Partition quadratic terms as auxilliary constraints");
+        "Partition quadratic terms as auxiliary constraints");
 
     // Reformulations for quadratic objective and constraints
     VectorString enumQPStrategy;
@@ -1108,7 +1108,6 @@ void Solver::verifySettings()
 
     if(env->settings->getBoolSetting("UseRecommendedSettings", "Strategy"))
     {
-
         switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getIntSetting("Convexity", "Strategy")))
         {
         case(ES_ConvexityIdentificationStrategy::Automatically):
@@ -1118,10 +1117,12 @@ void Solver::verifySettings()
             break;
 
         case(ES_ConvexityIdentificationStrategy::AssumeNonconvex):
-            // env->settings->updateSetting("CutStrategy", "Dual", 1);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
+
+            env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
+
             env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
@@ -1135,8 +1136,9 @@ void Solver::verifySettings()
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
-            // env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
+
             env->settings->updateSetting("Linesearch.Use", "Primal", false);
+
             env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
             env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);

@@ -19,7 +19,7 @@ if(HAS_GUROBI)
 endif()
 
 if(HAS_GAMS)
-    set(GAMS_parts 1 2 3 4 5 6)
+    set(GAMS_parts 1 2 3 4 5 6 7)
     set(cpptests ${cpptests} GAMS)
 endif()
 

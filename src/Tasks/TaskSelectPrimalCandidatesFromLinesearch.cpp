@@ -44,6 +44,8 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
             {
                 auto xNLP = env->dualSolver->MIPSolver->interiorPts.at(j)->point;
 
+                auto solPoint = solPoints.at(i).point;
+
                 for(auto& V : env->problem->binaryVariables)
                 {
                     xNLP.at(V->index) = solPoints.at(i).point.at(V->index);

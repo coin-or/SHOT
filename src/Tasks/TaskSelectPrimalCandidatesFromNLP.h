@@ -11,7 +11,19 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../PrimalSolutionStrategy/PrimalSolutionStrategyFixedNLP.h"
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
+
+#ifdef HAS_GAMS
+#include "../NLPSolver/NLPSolverGAMS.h"
+#include "../ModelingSystem/ModelingSystemGAMS.h"
+#endif
+
+#ifdef HAS_OS
+#include "../ModelingSystem/ModelingSystemOS.h"
+#endif
+
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
 
 namespace SHOT
 {
@@ -24,6 +36,23 @@ public:
     virtual std::string getType();
 
 private:
-    std::unique_ptr<PrimalSolutionStrategyFixedNLP> primalStrategyFixedNLP;
+    virtual bool solveFixedNLP();
+
+    std::shared_ptr<INLPSolver> NLPSolver;
+
+    VectorInteger discreteVariableIndexes;
+    std::vector<VectorDouble> testedPoints;
+    VectorDouble fixPoint;
+
+    double originalNLPTime;
+    double originalNLPIter;
+
+    VectorDouble originalLBs;
+    VectorDouble originalUBs;
+
+    std::shared_ptr<TaskBase> taskSelectHPPts;
+
+    int originalIterFrequency;
+    double originalTimeFrequency;
 };
 } // namespace SHOT

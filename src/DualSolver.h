@@ -27,6 +27,11 @@ public:
     void addDualSolutionCandidate(DualSolution solution);
     void checkDualSolutionCandidates();
 
+    void addGeneratedHyperplane(const Hyperplane& hyperplane);
+    bool hasHyperplaneBeenAdded(size_t hash, int constraintIndex);
+
+    std::vector<GeneratedHyperplane> generatedHyperplanes;
+
     double cutOffToUse;
     bool useCutOff = false;
 

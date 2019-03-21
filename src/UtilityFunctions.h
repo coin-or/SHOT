@@ -19,11 +19,8 @@ static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
 #endif
 #endif
 
-// Fix for Visual Studio c++ compiler
 namespace SHOT::UtilityFunctions
 {
-int round(double d);
-
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName);
 void saveVariablePointVectorToFile(const VectorDouble& point, const Variables& variables, const std::string& fileName);
@@ -31,13 +28,6 @@ void saveVariablePointVectorToFile(const VectorDouble& point, const Variables& v
 void savePrimalSolutionToFile(
     const PrimalSolution& solution, const VectorString& variables, const std::string& fileName);
 void savePrimalSolutionToFile(const PrimalSolution& solution, const Variables& variables, const std::string& fileName);
-
-/*
-bool isObjectiveGenerallyNonlinear(OSInstance *instance);
-bool isObjectiveQuadratic(OSInstance *instance);
-bool areAllConstraintsLinear(OSInstance *instance);
-bool areAllConstraintsQuadratic(OSInstance *instance);
-bool areAllVariablesReal(OSInstance *instance);*/
 
 void displayVector(const VectorDouble& point);
 void displayVector(const VectorDouble& point1, const VectorDouble& point2);
@@ -102,6 +92,8 @@ template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElem
         }
     }
 }
+
+std::size_t calculateHash(VectorDouble const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 

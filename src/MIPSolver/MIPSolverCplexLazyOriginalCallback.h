@@ -41,8 +41,6 @@ public:
     std::mutex callbackMutex2;
 
 private:
-    IloRangeArray cplexLazyConstrs;
-
 protected:
 };
 

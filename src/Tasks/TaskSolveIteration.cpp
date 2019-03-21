@@ -46,22 +46,25 @@ void TaskSolveIteration::run()
         }
 
         env->dualSolver->MIPSolver->setCutOff(cutOffValue);
-        env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
+
+        if(env->reformulatedProblem->objectiveFunction->properties.classification
+            < E_ObjectiveFunctionClassification::Quadratic)
+            env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
 
-    if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable()
+    if(env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()
         && env->settings->getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
         auto newLB = env->results->getDualBound();
         auto newUB = env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(
-            env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex());
+            env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex());
 
         if(newLB > currBounds.first || newUB < currBounds.second)
         {
             env->dualSolver->MIPSolver->updateVariableBound(
-                env->dualSolver->MIPSolver->getAuxilliaryObjectiveVariableIndex(), newLB, newUB);
+                env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex(), newLB, newUB);
             env->output->outputDebug("     Bounds for nonlinear objective function updated to "
                 + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
         }
@@ -70,12 +73,6 @@ void TaskSolveIteration::run()
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->primalSolutions.size() > 0)
     {
         auto tmpPrimal = env->results->primalSolution;
-
-        if(env->dualSolver->MIPSolver->hasAuxilliaryObjectiveVariable())
-        {
-            tmpPrimal.push_back(
-                env->reformulatedProblem->objectiveFunction->calculateValue(env->results->primalSolution));
-        }
 
         env->dualSolver->MIPSolver->addMIPStart(tmpPrimal);
     }
@@ -99,19 +96,19 @@ void TaskSolveIteration::run()
     auto solStatus = env->dualSolver->MIPSolver->solveProblem();
     env->output->outputDebug("     Dual problem solved.");
 
-    // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been
-    // created when solving
+    // Must update the pointer to the current iteration if we use the lazy
+    // strategy since new iterations have been created when solving
     if(static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual"))
         == ES_TreeStrategy::SingleTree)
     {
         currIter = env->results->getCurrentIteration();
     }
-    else // Must update the node stats if multi-tree strategy (otherwise it is done in the callbacks)
+    else // Must update the node stats if multi-tree strategy (otherwise it is
+         // done in the callbacks)
     {
         currIter->numberOfExploredNodes = env->dualSolver->MIPSolver->getNumberOfExploredNodes();
         env->solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
         env->solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
-        // std::cout << "Nodes: " << env->solutionStatistics.numberOfExploredNodes << std::endl;
     }
 
     currIter->solutionStatus = solStatus;
@@ -119,28 +116,8 @@ void TaskSolveIteration::run()
 
     auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
 
-    /*if(solStatus == E_ProblemSolutionStatus::Infeasible || solStatus == E_ProblemSolutionStatus::Error
-        || solStatus == E_ProblemSolutionStatus::Abort || solStatus == E_ProblemSolutionStatus::CutOff
-        || solStatus == E_ProblemSolutionStatus::Numeric || solStatus == E_ProblemSolutionStatus::Unbounded)
+    if(sols.size() > 0)
     {
-    }
-    else*/
-
-    if(sols.size() == 0)
-    {
-        // Will try to get atleast a dual bound
-        double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
-
-        if(env->results->iterations.size() > 1)
-        {
-            if(env->results->getPreviousIteration()->currentObjectiveBounds.first == currentDualBound)
-                env->results->setDualBound(currentDualBound);
-        }
-    }
-    else
-    {
-        currIter->solutionPoints = sols;
-
         env->output->outputDebug("        Number of solutions in solution pool: " + std::to_string(sols.size()));
 
         if(env->settings->getBoolSetting("Debug.Enable", "Output"))
@@ -153,6 +130,16 @@ void TaskSolveIteration::run()
             UtilityFunctions::saveVariablePointVectorToFile(
                 sols.at(0).point, env->reformulatedProblem->allVariables, ss.str());
         }
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        {
+            for(auto& S : sols)
+            {
+                S.point.pop_back();
+            }
+        }
+
+        currIter->solutionPoints = sols;
 
         currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
 

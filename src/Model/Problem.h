@@ -79,7 +79,8 @@ public:
     Variables semicontinuousVariables;
     Variables nonlinearVariables;
 
-    AuxilliaryVariables auxilliaryVariables;
+    AuxiliaryVariables auxiliaryVariables;
+    AuxiliaryVariablePtr auxiliaryObjectiveVariable;
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
@@ -103,8 +104,8 @@ public:
     void add(VariablePtr variable);
     void add(Variables variables);
 
-    void add(AuxilliaryVariablePtr variable);
-    void add(AuxilliaryVariables variables);
+    void add(AuxiliaryVariablePtr variable);
+    void add(AuxiliaryVariables variables);
 
     void add(LinearConstraintPtr constraint);
     void add(QuadraticConstraintPtr constraint);
@@ -126,6 +127,8 @@ public:
 
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();
+
+    AuxiliaryVariables getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type);
 
     void setVariableLowerBound(int variableIndex, double bound);
 

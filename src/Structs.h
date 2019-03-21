@@ -143,45 +143,14 @@ struct Hyperplane
 
 struct GeneratedHyperplane
 {
-    int generatedConstraintIndex;
     int sourceConstraintIndex;
-    VectorDouble generatedPoint;
     E_HyperplaneSource source;
     bool isLazy;
     bool isRemoved;
-    int generatedIter;
-    int removedIter;
+    int iterationGenerated;
+
+    std::size_t pointHash;
 };
-
-/*
-struct ModelStatistics
-{
-    E_ProblemType problemType = E_ProblemType::None;
-    E_ObjectiveFunctionType objectiveFunctionType = E_ObjectiveFunctionType::None;
-
-    bool isMinimizationProblem = false;
-    bool isDiscreteProblem = false;
-
-    int numberOfConstraints = 0;
-    int numberOfLinearConstraints = 0;
-    int numberOfNonlinearConstraints = 0;
-    int numberOfQuadraticConstraints = 0;
-
-    bool quadraticTermsReformulatedAsNonlinear = false;
-    int numberOfQuadraticTerms = 0;
-
-    int numberOfVariables = 0;
-    int numberOfContinousVariables = 0;
-    int numberOfIntegerVariables = 0;
-    int numberOfBinaryVariables = 0;
-    int numberOfSemicontinuousVariables = 0;
-
-    bool isObjectiveNonlinear()
-    {
-        return (objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear || objectiveFunctionType ==
-E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
-    };
-}; */
 
 struct SolutionStatistics
 {

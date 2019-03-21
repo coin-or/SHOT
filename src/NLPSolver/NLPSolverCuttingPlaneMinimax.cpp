@@ -336,7 +336,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
         }
     }
 
-    // Auxilliary objective variable for minimax problem
+    // Auxiliary objective variable for minimax problem
     double objLowerBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
     double objUpperBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
@@ -385,34 +385,6 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
         constraintsInitialized
             = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
     }
-
-    /*
-        for(auto& C : env->problem->quadraticConstraints)
-        {
-            constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
-
-            if(C->properties.hasLinearTerms)
-            {
-                for(auto& T : C->linearTerms)
-                {
-                    constraintsInitialized = constraintsInitialized
-                        && destination->addLinearTermToConstraint(T->coefficient, T->variable->index);
-                }
-            }
-
-            if(C->properties.hasQuadraticTerms)
-            {
-                for(auto& T : C->quadraticTerms)
-                {
-                    constraintsInitialized = constraintsInitialized
-                        && destination->addQuadraticTermToConstraint(
-                               T->coefficient, T->firstVariable->index, T->secondVariable->index);
-                }
-            }
-
-            constraintsInitialized
-                = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
-        }*/
 
     if(!constraintsInitialized)
         return false;

@@ -55,7 +55,8 @@ void TaskRepairInfeasibleDualProblem::run()
         env->tasks->setNextTask(taskIDIfTrue);
         iterLastRepair = currIter->iterationNumber;
 
-        env->results->setDualBound(env->dualSolver->MIPSolver->getDualObjectiveValue());
+        // Does not work with Gurobi
+        // env->results->setDualBound(env->dualSolver->MIPSolver->getDualObjectiveValue());
 
         currIter->wasInfeasibilityRepairSuccessful = true;
     }

@@ -44,12 +44,12 @@ protected:
     void callback();
 
 private:
-    int numVar = 0;
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
 
     void createHyperplane(Hyperplane hyperplane);
-    void createIntegerCut(VectorInteger &binaryIndexes);
+
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 };

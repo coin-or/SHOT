@@ -62,10 +62,6 @@ public:
 
     virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
-    /*virtual void createIntegerCut(
-        VectorInteger& binaryIndexes, std::function<IloConstraint(IloRange)> addConstraintFunction);
-*/
-
     virtual void createHyperplane(Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane)
@@ -131,22 +127,22 @@ public:
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
-    {
-        return (MIPSolverBase::getGeneratedHyperplanes());
-    }
-
     virtual int getNumberOfExploredNodes();
     virtual int getNumberOfOpenNodes();
 
-    virtual bool hasAuxilliaryObjectiveVariable() { return (MIPSolverBase::hasAuxilliaryObjectiveVariable()); }
+    virtual bool hasAuxiliaryObjectiveVariable() { return (MIPSolverBase::hasAuxiliaryObjectiveVariable()); }
 
-    virtual int getAuxilliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxilliaryObjectiveVariableIndex()); }
+    virtual int getAuxiliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxiliaryObjectiveVariableIndex()); }
 
-    virtual void setAuxilliaryObjectiveVariableIndex(int index)
+    virtual void setAuxiliaryObjectiveVariableIndex(int index)
     {
-        return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
+        return (MIPSolverBase::setAuxiliaryObjectiveVariableIndex(index));
     }
+
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
+    {
+        return (MIPSolverBase::getConstraintIdentifier(source));
+    };
 
     IloModel cplexModel;
     IloCplex cplexInstance;
@@ -161,12 +157,5 @@ protected:
 
     IloExpr objExpression;
     IloExpr constrExpression;
-
-    int prevSolutionLimit = 1;
-
-    std::vector<int> integerCuts;
-
-    bool modelUpdated /*= true*/;
-    bool alreadyInitialized = false;
 };
 } // namespace SHOT

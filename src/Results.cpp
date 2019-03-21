@@ -84,7 +84,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
         env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
 
-        auto tmpLine = boost::format("     Primal objective cut added.");
+        auto tmpLine = boost::format("        Primal objective cut added.");
 
         env->output->outputCritical(tmpLine.str());
     }

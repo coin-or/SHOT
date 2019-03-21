@@ -111,6 +111,10 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
         throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
     }
 
+    /* if not run via GAMS, then uninstall GAMS SIGINT handler, as gevTerminateGet() is not checked (is only checked if called from GAMS) */
+    if( env->settings->getStringSetting("ProblemFile", "Input") != "" )
+        gevTerminateUninstall(modelingEnvironment);
+
     gmoAltBoundsSet(modelingObject, 0);
     gmoForceContSet(modelingObject, 0);
 

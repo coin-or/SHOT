@@ -14,11 +14,11 @@
 namespace SHOT
 {
 
-class AuxilliaryVariable : public Variable
+class AuxiliaryVariable : public Variable
 {
 public:
-    E_AuxilliaryVariableType auxilliaryType = E_AuxilliaryVariableType::None;
-    bool isAuxilliary = true;
+    E_AuxiliaryVariableType auxiliaryType = E_AuxiliaryVariableType::None;
+    bool isAuxiliary = true;
 
     // These are used to calculate the value of the variable
     double constant;
@@ -27,13 +27,13 @@ public:
     MonomialTerms monomialTerms;
     NonlinearExpressionPtr nonlinearExpression;
 
-    AuxilliaryVariable()
+    AuxiliaryVariable()
     {
         Variable::lowerBound = SHOT_DBL_MIN;
         Variable::upperBound = SHOT_DBL_MAX;
     }
 
-    AuxilliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
+    AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
     {
         Variable::name = variableName;
         Variable::index = variableIndex;
@@ -42,7 +42,7 @@ public:
         Variable::upperBound = UB;
     }
 
-    AuxilliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType)
+    AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType)
     {
         Variable::name = variableName;
         Variable::index = variableIndex;
@@ -66,7 +66,7 @@ public:
     }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, AuxilliaryVariablePtr var)
+inline std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 {
     stream << "[" << var->index << "]:\t";
 
@@ -96,22 +96,22 @@ inline std::ostream& operator<<(std::ostream& stream, AuxilliaryVariablePtr var)
         break;
     }
 
-    switch(var->auxilliaryType)
+    switch(var->auxiliaryType)
     {
-    case E_AuxilliaryVariableType::NonlinearObjectiveFunction:
-        stream << " (objective auxilliary variable)";
+    case E_AuxiliaryVariableType::NonlinearObjectiveFunction:
+        stream << " (objective auxiliary variable)";
         break;
 
-    case E_AuxilliaryVariableType::NonlinearExpressionPartitioning:
+    case E_AuxiliaryVariableType::NonlinearExpressionPartitioning:
         stream << " (partition reformulation for nonlinear sum)";
         break;
 
-    case E_AuxilliaryVariableType::BinaryBilinear:
+    case E_AuxiliaryVariableType::BinaryBilinear:
         stream << " (binary bilinear linearization)";
         break;
 
     default:
-        stream << " (unknown auxilliary variable)";
+        stream << " (unknown auxiliary variable)";
         break;
     }
 

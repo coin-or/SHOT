@@ -361,6 +361,11 @@ int GAMSTest(int argc, char* argv[])
     case 6:
         passed = TestCallbackGAMS("data/synthes1.gms");
         break;
+    case 7:
+        std::cout << "Starting test to solve a MILP problem in GAMS syntax:" << std::endl;
+        passed = SolveProblemGAMS("data/milp.gms");
+        std::cout << "Finished test to solve a MILP problem in GAMS syntax." << std::endl;
+        break;
     default:
         passed = false;
         std::cout << "Test #" << choice << " does not exist!\n";

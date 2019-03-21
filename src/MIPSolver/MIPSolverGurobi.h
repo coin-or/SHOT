@@ -44,6 +44,7 @@ public:
     virtual bool finalizeProblem();
 
     virtual void initializeSolverSettings();
+
     virtual void writeProblemToFile(std::string filename);
     virtual void writePresolvedToFile(std::string filename);
 
@@ -51,14 +52,13 @@ public:
     {
         return (addLinearConstraint(elements, constant, name, false));
     }
+
     virtual int addLinearConstraint(
         const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
 
     virtual void createHyperplane(Hyperplane hyperplane) { MIPSolverBase::createHyperplane(hyperplane); }
 
-    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
-    { /*MIPSolverBase::createIntegerCut(binaryIndexes); TODO*/
-    }
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane)
     {
@@ -122,26 +122,26 @@ public:
     virtual bool supportsQuadraticObjective();
     virtual bool supportsQuadraticConstraints();
 
-    virtual std::vector<GeneratedHyperplane>* getGeneratedHyperplanes()
-    {
-        return (MIPSolverBase::getGeneratedHyperplanes());
-    }
-
     virtual int getNumberOfExploredNodes();
 
     virtual int getNumberOfOpenNodes() { return (MIPSolverBase::getNumberOfOpenNodes()); }
 
-    virtual bool hasAuxilliaryObjectiveVariable() { return (MIPSolverBase::hasAuxilliaryObjectiveVariable()); }
+    virtual bool hasAuxiliaryObjectiveVariable() { return (MIPSolverBase::hasAuxiliaryObjectiveVariable()); }
 
-    virtual int getAuxilliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxilliaryObjectiveVariableIndex()); }
+    virtual int getAuxiliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxiliaryObjectiveVariableIndex()); }
 
-    virtual void setAuxilliaryObjectiveVariableIndex(int index)
+    virtual void setAuxiliaryObjectiveVariableIndex(int index)
     {
-        return (MIPSolverBase::setAuxilliaryObjectiveVariableIndex(index));
+        return (MIPSolverBase::setAuxiliaryObjectiveVariableIndex(index));
     }
 
-    std::unique_ptr<GRBEnv> gurobiEnv;
-    std::unique_ptr<GRBModel> gurobiModel;
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
+    {
+        return (MIPSolverBase::getConstraintIdentifier(source));
+    };
+
+    std::shared_ptr<GRBEnv> gurobiEnv;
+    std::shared_ptr<GRBModel> gurobiModel;
     GRBLinExpr objectiveLinearExpression;
     GRBQuadExpr objectiveQuadraticExpression;
     GRBLinExpr constraintLinearExpression;
@@ -159,7 +159,6 @@ protected:
     void callback();
 
 private:
-    int numVar = 0;
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
     EnvironmentPtr env;
