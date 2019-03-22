@@ -21,9 +21,12 @@ mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
 option (HAS_CPLEX "Is Cplex available" ON)
 option (HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON)
 option (HAS_GUROBI "Is Gurobi available" ON)
+option (HAS_CBC "Is Cbc available" ON)
+
+option (GENERATE_EXE "Should the SHOT executable be generated (requires atleast that either OS or GAMS is available)" ON)
 option (HAS_GAMS "Is GAMS available" ON)
 option (HAS_OS "Is COIN-OR Optimization Services available" ON)
-option (HAS_CBC "Is Cbc available" ON)
+
 option (HAS_IPOPT "Is Ipopt available" ON)
 
 # Sets the paths required. Edit these to suit your system:
@@ -75,18 +78,14 @@ endif()
 
 if(HAS_OS)
   add_definitions(-DHAS_OS)
-endif()
-
-INCLUDE(FindPkgConfig)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+endif(HAS_OS)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
-
-if(HAS_OS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
-endif()
-
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
+
+INCLUDE(FindPkgConfig)
 
 # For configuring version numbering
 configure_file ("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
@@ -179,30 +178,30 @@ file(GLOB_RECURSE HEADERS
   "${TINYXML2_DIR}/tinyxml2.h"
   )
 
-if (HAS_CBC)
+if(HAS_CBC)
   include_directories("${GUROBI_DIR}/linux64/include")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.h")
-endif (HAS_CBC)  
+endif(HAS_CBC)  
 
-if (HAS_CPLEX)
+if(HAS_CPLEX)
   include_directories("${CPLEX_DIR}/cplex/include")
   include_directories("${CPLEX_DIR}/concert/include")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
-  if (HAS_CPLEX_NEW_CALLBACK)
+  if(HAS_CPLEX_NEW_CALLBACK)
     set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.cpp")
     set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
-  endif (HAS_CPLEX_NEW_CALLBACK)
+  endif(HAS_CPLEX_NEW_CALLBACK)
 
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
-endif (HAS_CPLEX)
+endif(HAS_CPLEX)
 
-if (HAS_GUROBI)
+if(HAS_GUROBI)
   include_directories("${GUROBI_DIR}/linux64/include")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
@@ -210,9 +209,9 @@ if (HAS_GUROBI)
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.h")
-endif (HAS_GUROBI)
+endif(HAS_GUROBI)
 
-if (HAS_GAMS)
+if(HAS_GAMS)
   include_directories("${GAMS_DIR}/apifiles/C/api")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
@@ -223,19 +222,19 @@ if (HAS_GAMS)
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GamsNLinstr.h")
-endif (HAS_GAMS)
+endif(HAS_GAMS)
 
-if (HAS_IPOPT)
+if(HAS_IPOPT)
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
-endif (HAS_IPOPT)
+endif(HAS_IPOPT)
 
-if (HAS_OS)
+if(HAS_OS)
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h")
-endif (HAS_OS)
+endif(HAS_OS)
 
 # Finding out link directories
 set (INCLUDE_DIRS "")
@@ -255,7 +254,7 @@ if(HAS_OS)
     include_directories("${OS_DIR}/include/coin")
     include_directories("${OS_DIR}/include/cppad")
     include_directories("${OS_DIR}/include")
-endif()
+endif(HAS_OS)
 
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
@@ -266,21 +265,24 @@ include_directories("${TINYXML2_DIR}/")
 
 add_library (SHOTSolver SHARED ${SOURCES})
 
-add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
-target_link_libraries (${PROJECT_NAME} SHOTSolver)
+if(GENERATE_EXE)
+  add_executable (${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
+  target_link_libraries (${PROJECT_NAME} SHOTSolver)
+endif(GENERATE_EXE)
+
 #cotire(${PROJECT_NAME})
 
-if (HAS_CPLEX)
+if(HAS_CPLEX)
   target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
   target_link_libraries (SHOTSolver ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
   target_link_libraries (SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
-endif (HAS_CPLEX)
+endif(HAS_CPLEX)
 
-if (HAS_GUROBI)
+if(HAS_GUROBI)
   # Change the Gurobi library below to match the version on the system
   target_link_libraries (SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
   target_link_libraries (SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
-endif (HAS_GUROBI)
+endif(HAS_GUROBI)
 
 target_link_libraries (${PROJECT_NAME} pthread)
 target_link_libraries (${PROJECT_NAME} m)
@@ -291,17 +293,17 @@ target_link_libraries (${PROJECT_NAME} blas)
 target_link_libraries (${PROJECT_NAME} dl)
 target_link_libraries (${PROJECT_NAME} gomp)
 
-if (HAS_GAMS)
-  if (UNIX)
-    if (APPLE)
+if(HAS_GAMS)
+  if(UNIX)
+    if(APPLE)
       target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.6.dylib)
     else (APPLE)
       target_link_libraries (${PROJECT_NAME} ${GAMS_DIR}/libstdc++.so.6)
-    endif (APPLE)
-  endif (UNIX)
-endif (HAS_GAMS)
+    endif(APPLE)
+  endif(UNIX)
+endif(HAS_GAMS)
 
-if (HAS_OS)
+if(HAS_OS)
   #target_link_libraries (SHOTSolver ${OS_DIR}/lib/libOS.so )
 
   # add libraries from os_addlibs_cpp.txt
@@ -309,10 +311,10 @@ if (HAS_OS)
   file(READ ${OS_DIR}/share/coin/doc/OS/os_addlibs.txt OS_LINKFLAGS)
   string(STRIP ${OS_LINKFLAGS} OS_LINKFLAGS)
   target_link_libraries(SHOTSolver ${OS_LINKFLAGS})
-  if (UNIX)
+  if(UNIX)
     target_link_libraries(SHOTSolver -Wl,-rpath,${OS_DIR}/lib)
-  endif (UNIX)
-endif (HAS_OS)
+  endif(UNIX)
+endif(HAS_OS)
 
 target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
