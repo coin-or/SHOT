@@ -29,7 +29,7 @@ option(HAS_GUROBI "Is Gurobi available" ON)
 set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" OFF)
+option(HAS_CBC "Is Cbc available" ON)
 set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available)")
 
 # Ipopt
@@ -117,7 +117,7 @@ if(HAS_IPOPT)
 endif(HAS_IPOPT)
 
 if(HAS_OS)
-  set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig")
+  set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
   pkg_search_module(OS REQUIRED os)
   link_directories(${OS_LIBRARY_DIRS})
   include_directories(${OS_INCLUDE_DIRS})
