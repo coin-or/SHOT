@@ -11,7 +11,6 @@
 
 #pragma once
 
-#include "OSErrorClass.h"
 #include "OSiLReader.h"
 #include "OSiLWriter.h"
 #include "OSInstance.h"

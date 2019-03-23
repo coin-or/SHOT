@@ -10,14 +10,6 @@
 
 #include "../Solver.h"
 
-#ifdef HAS_GAMS
-#include "ModelingSystem/ModelingSystemGAMS.h"
-#endif
-
-#ifdef HAS_OS
-#include "ModelingSystem/ModelingSystemOS.h"
-#endif
-
 #include "LinesearchMethod/LinesearchMethodBoost.h"
 
 #include "Tasks/TaskReformulateProblem.h"

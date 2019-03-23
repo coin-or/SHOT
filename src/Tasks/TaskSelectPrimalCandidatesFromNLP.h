@@ -11,15 +11,13 @@
 #pragma once
 #include "TaskBase.h"
 
+#ifdef HAS_IPOPT
 #include "../NLPSolver/NLPSolverIpoptRelaxed.h"
+#endif
 
 #ifdef HAS_GAMS
 #include "../NLPSolver/NLPSolverGAMS.h"
 #include "../ModelingSystem/ModelingSystemGAMS.h"
-#endif
-
-#ifdef HAS_OS
-#include "../ModelingSystem/ModelingSystemOS.h"
 #endif
 
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
