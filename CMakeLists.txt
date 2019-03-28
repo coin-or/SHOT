@@ -19,6 +19,14 @@ option(COMPILE_TESTS "Should the automated tests be compiled" ON)
 
 # Activates extra functionality, note that corresponding libraries are needed
 
+# GAMS
+option(HAS_GAMS "Is GAMS available" ON)
+set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
+
+# COIN-OR Optimization Services
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
+set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
+
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
 cmake_dependent_option(HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON "HAS_CPLEX" OFF)
@@ -30,22 +38,14 @@ set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gu
 
 # Cbc
 option(HAS_CBC "Is Cbc available" ON)
-set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available)")
+set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" ON)
-set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available)")
-
-# GAMS
-option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
-
-# COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services available" ON)
-set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
+set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
 # Create also the executable
-option(GENERATE_EXE "Should the SHOT executable be generated (requires atleast that either OS or GAMS is available)" ON)
+option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(MCPP_DIR "ThirdParty/mc++")
@@ -81,6 +81,21 @@ find_package(PkgConfig REQUIRED)
 
 # Passes the parameters to the compiler
 
+if(HAS_GAMS)
+  add_definitions(-DHAS_GAMS)
+endif(HAS_GAMS)
+
+if(HAS_OS)
+  set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
+  pkg_search_module(OS REQUIRED os)
+  link_directories(${OS_LIBRARY_DIRS})
+  include_directories(${OS_INCLUDE_DIRS})
+  add_definitions(-DHAS_OS)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+endif(HAS_OS)
+
+# MIP solvers
+
 if(HAS_CBC)
   set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig")
   pkg_search_module(CBC REQUIRED cbc)
@@ -90,7 +105,6 @@ if(HAS_CBC)
 endif(HAS_CBC)
 
 if(HAS_CPLEX)
-  # To make Cplex build
   add_definitions(-DIL_STD)
   add_definitions(-LDFLAGS="-Wl,--no-as-needed")
 
@@ -101,29 +115,22 @@ if(HAS_CPLEX)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
+  # Note that you also may have to set the correct names of the Gurobi libraries below
   add_definitions(-DHAS_GUROBI)
 endif(HAS_GUROBI)
 
-if(HAS_GAMS)
-  add_definitions(-DHAS_GAMS)
-endif(HAS_GAMS)
+# NLP solvers
 
 if(HAS_IPOPT)
-  set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig")
+  set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig") 
   pkg_search_module(IPOPT REQUIRED ipopt)
   link_directories(${IPOPT_LIBRARY_DIRS})
   include_directories(${IPOPT_INCLUDE_DIRS})
   add_definitions(-DHAS_IPOPT)
 endif(HAS_IPOPT)
 
-if(HAS_OS)
-  set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
-  pkg_search_module(OS REQUIRED os)
-  link_directories(${OS_LIBRARY_DIRS})
-  include_directories(${OS_INCLUDE_DIRS})
-  add_definitions(-DHAS_OS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
-endif(HAS_OS)
+
+# Normally nothing should need to be modified below this point
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
@@ -217,7 +224,7 @@ file(GLOB_RECURSE HEADERS
 if(HAS_CBC)
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.h")
-endif(HAS_CBC)  
+endif(HAS_CBC)
 
 if(HAS_CPLEX)
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
