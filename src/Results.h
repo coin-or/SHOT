@@ -12,9 +12,6 @@
 #include "Shared.h"
 #include "SHOTConfig.h"
 
-#include "OSResult.h"
-#include "OSrLWriter.h"
-
 #include "tinyxml2.h"
 
 namespace SHOT
@@ -25,8 +22,6 @@ class Results
 public:
     Results(EnvironmentPtr envPtr);
     ~Results();
-
-    std::unique_ptr<OSResult> osResult;
 
     void initializeResults(int numObj, int numVar, int numConstr);
 

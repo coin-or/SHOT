@@ -23,12 +23,14 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     switch(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")))
     {
+#ifdef HAS_IPOPT
     case(ES_PrimalNLPSolver::Ipopt):
     {
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
         NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, env->problem);
         break;
     }
+#endif
 #ifdef HAS_GAMS
     case(ES_PrimalNLPSolver::GAMS):
     {
@@ -41,8 +43,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     default:
         env->output->outputError(
             "Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
-        throw ErrorClass(
-            "Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
+        throw Error("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
 
         throw std::logic_error("Unknown PrimalNLPSolver setting.");
     }

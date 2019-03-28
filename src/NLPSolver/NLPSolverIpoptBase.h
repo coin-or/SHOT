@@ -10,7 +10,6 @@
 
 #pragma once
 #include "NLPSolverBase.h"
-#include "../SharedOS.h"
 
 #include "IpTNLP.hpp"
 #include "IpIpoptApplication.hpp"

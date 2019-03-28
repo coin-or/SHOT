@@ -125,9 +125,9 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
     }
-    catch(const ErrorClass& eclass)
+    catch(const Error& eclass)
     {
-        env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.errormsg);
+        env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.message);
 
         return (E_ProblemCreationStatus::Error);
     }

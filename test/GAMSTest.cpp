@@ -20,21 +20,9 @@ bool ReadProblemGAMS(std::string filename)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    try
+    if(!solver->setProblem(filename))
     {
-        if(solver->setProblem(filename))
-        {
-            passed = true;
-        }
-        else
-        {
-            passed = false;
-        }
-    }
-    catch(ErrorClass& e)
-    {
-        std::cout << "Error: " << e.errormsg << std::endl;
-        return false;
+        return (false);
     }
 
     return passed;
@@ -47,21 +35,9 @@ bool SolveProblemGAMS(std::string filename)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    try
+    if(!solver->setProblem(filename))
     {
-        if(solver->setProblem(filename))
-        {
-            passed = true;
-        }
-        else
-        {
-            passed = false;
-        }
-    }
-    catch(ErrorClass& e)
-    {
-        std::cout << "Error: " << e.errormsg << std::endl;
-        return false;
+        return (false);
     }
 
     solver->solveProblem();
@@ -98,7 +74,7 @@ bool TestRootsearchGAMS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Debug));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -184,7 +160,7 @@ bool TestGradientGAMS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Debug));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -240,7 +216,7 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Debug));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -294,21 +270,9 @@ bool TestCallbackGAMS(std::string filename)
         }
     });
 
-    try
+    if(!solver->setProblem(filename))
     {
-        if(solver->setProblem(filename))
-        {
-            passed = true;
-        }
-        else
-        {
-            passed = false;
-        }
-    }
-    catch(ErrorClass& e)
-    {
-        std::cout << "Error: " << e.errormsg << std::endl;
-        return false;
+        return (false);
     }
 
     solver->solveProblem();

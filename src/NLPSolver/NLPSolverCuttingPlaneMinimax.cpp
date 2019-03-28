@@ -53,8 +53,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     {
         env->output->outputError(
             "Error in solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
-        throw ErrorClass(
-            "Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
+        throw Error("Error in MIP solver definition for cutting plane minimax solver. Check option 'Dual.MIP.Solver'.");
     }
 
 #ifdef HAS_CPLEX

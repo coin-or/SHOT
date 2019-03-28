@@ -124,13 +124,7 @@ Results::~Results()
     dualSolutions.clear();
 }
 
-void Results::initializeResults(int numObj, int numVar, int numConstr)
-{
-    osResult = std::make_unique<OSResult>();
-    osResult->setObjectiveNumber(numObj);
-    osResult->setVariableNumber(numVar);
-    osResult->setConstraintNumber(numConstr);
-}
+void Results::initializeResults(int numObj, int numVar, int numConstr) {}
 
 std::string Results::getResultsOSrL()
 {
@@ -743,7 +737,7 @@ IterationPtr Results::getPreviousIteration()
     if(iterations.size() > 1)
         return (iterations[iterations.size() - 2]);
     else
-        throw ErrorClass("Only one iteration!");
+        throw Error("Only one iteration!");
 }
 
 double Results::getPrimalBound() { return (this->currentPrimalBound); }

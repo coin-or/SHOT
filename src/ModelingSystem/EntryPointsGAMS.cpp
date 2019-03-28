@@ -186,9 +186,9 @@ extern "C"
             // pass solution info, etc. to GAMS
             modelingSystem->finalizeSolution();
         }
-        catch(const ErrorClass& eclass)
+        catch(const Error& eclass)
         {
-            env->output->outputError(eclass.errormsg);
+            env->output->outputError(eclass.message);
 
             gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
             gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);

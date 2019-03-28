@@ -208,4 +208,12 @@ struct SolutionStatistics
 
     int getNumberOfTotalNLPProblems() { return (numberOfProblemsNLPInteriorPointSearch + numberOfProblemsFixedNLP); };
 };
+
+class Error
+{
+public:
+    Error(std::string message) : message(message){};
+
+    std::string message;
+};
 }; // namespace SHOT

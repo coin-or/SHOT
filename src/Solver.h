@@ -13,7 +13,14 @@
 #include "Shared.h"
 
 #include "ModelingSystem/IModelingSystem.h"
+
+#ifdef HAS_OS
 #include "ModelingSystem/ModelingSystemOS.h"
+#endif
+
+#ifdef HAS_GAMS
+#include "ModelingSystem/ModelingSystemGAMS.h"
+#endif
 
 #include "SolutionStrategy/ISolutionStrategy.h"
 #include "SolutionStrategy/SolutionStrategySingleTree.h"
@@ -22,10 +29,6 @@
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
 #include "TaskHandler.h"
-
-#ifdef HAS_GAMS
-#include "ModelingSystem/ModelingSystemGAMS.h"
-#endif
 
 namespace SHOT
 {
