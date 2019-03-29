@@ -57,7 +57,7 @@ void TaskAddPrimalReductionCut::run()
         }*/
 
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
-        >= env->settings->getIntSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
+        >= env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
     {
         env->output->outputCritical("********No update since number of nonconvex objective cutoffs tried: "
             + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));
@@ -67,7 +67,7 @@ void TaskAddPrimalReductionCut::run()
     }
 
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
-        == env->settings->getIntSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination") - 1)
+        == env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination") - 1)
     {
         env->output->outputCritical("********Final update since number of nonconvex objective cutoffs tried: "
             + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));

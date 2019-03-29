@@ -9,25 +9,24 @@
 */
 
 #pragma once
-#include "Shared.h"
 
-// Fix for missing NAN i Visual Studio
-#ifdef WIN32
-#ifndef NAN
-static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
-#define NAN (*(const float*)__nan)
-#endif
-#endif
+#include <map>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
 
 namespace SHOT::UtilityFunctions
 {
+
+typedef std::pair<std::string, std::string> PairString;
+typedef std::pair<double, double> PairDouble;
+typedef std::vector<std::string> VectorString;
+typedef std::vector<double> VectorDouble;
+typedef std::vector<int> VectorInteger;
+
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName);
-void saveVariablePointVectorToFile(const VectorDouble& point, const Variables& variables, const std::string& fileName);
-
-void savePrimalSolutionToFile(
-    const PrimalSolution& solution, const VectorString& variables, const std::string& fileName);
-void savePrimalSolutionToFile(const PrimalSolution& solution, const Variables& variables, const std::string& fileName);
 
 void displayVector(const VectorDouble& point);
 void displayVector(const VectorDouble& point1, const VectorDouble& point2);
@@ -72,18 +71,18 @@ std::string getFileAsString(const std::string& fileName);
  * that entry and move to next.
  * From: https://thispointer.com/
  */
-template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElemen, V value)
+template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElement, V value)
 {
-    auto it = mapOfElemen.begin();
+    auto it = mapOfElement.begin();
     // Iterate through the map
-    while(it != mapOfElemen.end())
+    while(it != mapOfElement.end())
     {
         // Check if value of this entry matches with given value
         if(it->second == value)
         {
             // Erase the current element, erase() will return the
             // next iterator. So, don't need to increment
-            it = mapOfElemen.erase(it);
+            it = mapOfElement.erase(it);
         }
         else
         {

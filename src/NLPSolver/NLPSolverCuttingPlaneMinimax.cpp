@@ -47,7 +47,7 @@ public:
 NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem)
     : INLPSolver(envPtr), sourceProblem(problem)
 {
-    auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
 
     if(solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
@@ -97,16 +97,16 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
     int numVar = sourceProblem->properties.numberOfVariables;
 
     // Sets the maximal number of iterations
-    int maxIter = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
+    int maxIter = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual");
     double termObjTolAbs
-        = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
+        = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual");
     double termObjTolRel
-        = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
+        = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual");
     double constrSelFactor
-        = env->settings->getDoubleSetting("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
+        = env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.ConstraintSelectionFactor", "Dual");
     boost::uintmax_t maxIterSubsolver
-        = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
-    int bitPrecision = env->settings->getIntSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
+        = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.IterationLimitSubsolver", "Dual");
+    int bitPrecision = env->settings->getSetting<int>("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual");
 
     // currSol is the current LP solution, and prevSol the previous one
     VectorDouble currSol, prevSol;
@@ -130,10 +130,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         boost::uintmax_t maxIterSubsolverTmp = maxIterSubsolver;
 
         // Saves the LP problem to file if in debug mode
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::stringstream ss;
-            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
             ss << "/lpminimax";
             ss << i;
             ss << ".lp";
@@ -176,10 +176,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         LPObjVar = LPSolver->getObjectiveValue();
 
         // Saves the LP solution to file if in debug mode
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::stringstream ss;
-            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
             ss << "/lpminimaxsolpt";
             ss << i;
             ss << ".txt";
@@ -223,10 +223,10 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
 
             // Saves the LP solution to file if in debug mode
-            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
                 std::stringstream ss;
-                ss << env->settings->getStringSetting("Debug.Path", "Output");
+                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
                 ss << "/lpminimaxlinesearchsolpt";
                 ss << i;
                 ss << ".txt";
@@ -279,7 +279,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             numHyperTot++;
             numHyperAdded++;
 
-            if(mu >= 0 && env->settings->getBoolSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
+            if(mu >= 0 && env->settings->getSetting<bool>("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
             {
                 auto tmpPoint = currSol;
                 tmpPoint.pop_back();
@@ -329,20 +329,20 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
         variablesInitialized
             = variablesInitialized && destination->addVariable(V->name, V->type, V->lowerBound, V->upperBound);
 
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             variableNames.push_back(V->name);
         }
     }
 
     // Auxiliary objective variable for minimax problem
-    double objLowerBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
-    double objUpperBound = env->settings->getDoubleSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
+    double objLowerBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
+    double objUpperBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
     variablesInitialized = variablesInitialized
         && destination->addVariable("shot_mmobjvar", E_VariableType::Real, -1e+10 + 1, objUpperBound);
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         variableNames.push_back("shot_mmobjvar");
     }

@@ -127,8 +127,8 @@ int main(int argc, char* argv[])
             }
         }
 
-        env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getIntSetting("Console.LogLevel", "Output")),
-            static_cast<E_LogLevel>(env->settings->getIntSetting("File.LogLevel", "Output")));
+        env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
+            static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
         env->report->outputSolverHeader();
 
         if(!solver->setProblem(fileName))
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
     if(resultFile.empty())
     {
-        boost::filesystem::path resultPath(env->settings->getStringSetting("ResultPath", "Output"));
+        boost::filesystem::path resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
         resultPath /= env->problem->name;
         resultPath = resultPath.replace_extension(".osrl");
         env->output->outputInfo(" Results written to: " + resultPath.string());
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
 
     if(traceFile.empty())
     {
-        boost::filesystem::path tracePath(env->settings->getStringSetting("ResultPath", "Output"));
+        boost::filesystem::path tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
         tracePath /= env->problem->name;
         tracePath = tracePath.replace_extension(".trc");
         env->output->outputInfo("                     " + tracePath.string());

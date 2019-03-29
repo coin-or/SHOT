@@ -48,6 +48,8 @@ private:
     VectorDouble originalLBs;
     VectorDouble originalUBs;
 
+    VectorString variableNames;
+
     std::shared_ptr<TaskBase> taskSelectHPPts;
 
     int originalIterFrequency;

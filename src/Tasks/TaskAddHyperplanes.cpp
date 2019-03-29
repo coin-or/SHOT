@@ -29,14 +29,14 @@ void TaskAddHyperplanes::run()
 
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    if(!currIter->isMIP() || !env->settings->getBoolSetting("HyperplaneCuts.Delay", "Dual")
+    if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
         || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
     {
         int addedHyperplanes = 0;
 
         for(int k = env->dualSolver->MIPSolver->hyperplaneWaitingList.size(); k > 0; k--)
         {
-            if(addedHyperplanes >= env->settings->getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+            if(addedHyperplanes >= env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual"))
                 break;
 
             auto tmpItem = env->dualSolver->MIPSolver->hyperplaneWaitingList.at(k - 1);
@@ -55,7 +55,7 @@ void TaskAddHyperplanes::run()
             }
         }
 
-        if(!env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        if(!env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
         }

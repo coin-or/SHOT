@@ -176,7 +176,7 @@ void GurobiCallback::callback()
         if(where == GRB_CB_MIPNODE && getIntInfo(GRB_CB_MIPNODE_STATUS) == GRB_OPTIMAL)
         {
             if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-                < env->settings->getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
+                < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
             {
                 int waitingListSize = env->dualSolver->MIPSolver->hyperplaneWaitingList.size();
                 std::vector<SolutionPoint> solutionPoints(1);
@@ -209,7 +209,7 @@ void GurobiCallback::callback()
 
                 solutionPoints.at(0) = tmpSolPt;
 
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
                     == ES_HyperplaneCutStrategy::ESH)
                 {
                     static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(solutionPoints);
@@ -255,7 +255,7 @@ void GurobiCallback::callback()
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
                 // Remove??
-                if(maxDev.normalizedValue <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+                if(maxDev.normalizedValue <= env->settings->getSetting<double>("ConstraintTolerance", "Termination"))
                 {
                     // return;
                 }
@@ -284,7 +284,7 @@ void GurobiCallback::callback()
             auto bounds = std::make_pair(env->results->getDualBound(), env->results->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
-            if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+            if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
                 && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
                 taskSelectPrimalSolutionFromLinesearch.get()->run(candidatePoints);
@@ -301,7 +301,7 @@ void GurobiCallback::callback()
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
-            if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
+            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
             {
                 bool addedIntegerCut = false;
 
@@ -368,7 +368,7 @@ void GurobiCallback::callback()
 
             // Adds cutoff
 
-            /*double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
+            /*double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
 
             if(isMinimization)
             {
@@ -462,7 +462,7 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 
     cbCalls = 0;
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(std::make_shared<TaskUpdateInteriorPoint>(env));
@@ -486,7 +486,7 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
             std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env));
     }
 
-    if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(
@@ -528,7 +528,7 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
     {
         this->cbCalls++;
 
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
             == ES_HyperplaneCutStrategy::ESH)
         {
             tUpdateInteriorPoint->run();

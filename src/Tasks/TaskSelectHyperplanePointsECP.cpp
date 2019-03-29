@@ -33,11 +33,11 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto constraintSelectionFactor
-        = env->settings->getDoubleSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
-    bool useUniqueConstraints = env->settings->getBoolSetting("ESH.Linesearch.UniqueConstraints", "Dual");
+        = env->settings->getSetting<double>("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Linesearch.UniqueConstraints", "Dual");
 
-    int maxHyperplanesPerIter = env->settings->getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual");
-    double constraintMaxSelectionFactor = env->settings->getDoubleSetting("HyperplaneCuts.MaxConstraintFactor", "Dual");
+    int maxHyperplanesPerIter = env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual");
+    double constraintMaxSelectionFactor = env->settings->getSetting<double>("HyperplaneCuts.MaxConstraintFactor", "Dual");
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(

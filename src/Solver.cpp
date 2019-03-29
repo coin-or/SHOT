@@ -165,7 +165,7 @@ bool Solver::setProblem(std::string fileName)
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
 
-            if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
+            if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
                 == ES_PrimalNLPSolver::GAMS)
             {
                 env->output->outputError(
@@ -222,10 +222,10 @@ bool Solver::setProblem(std::string fileName)
         }
 #endif
 
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::stringstream problemFilename;
-            problemFilename << env->settings->getStringSetting("Debug.Path", "Output");
+            problemFilename << env->settings->getSetting<std::string>("Debug.Path", "Output");
             problemFilename << "/originalproblem.txt";
 
             std::stringstream problemText;
@@ -247,7 +247,7 @@ bool Solver::setProblem(std::string fileName)
     boost::filesystem::path problemName = problemFile.stem();
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
 
-    if(static_cast<ES_OutputDirectory>(env->settings->getIntSetting("OutputDirectory", "Output"))
+    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
         boost::filesystem::path debugPath(boost::filesystem::current_path());
@@ -265,12 +265,12 @@ bool Solver::setProblem(std::string fileName)
         env->settings->updateSetting("ResultPath", "Output", problemPath.string());
     }
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         initializeDebugMode();
 
         std::stringstream filename;
-        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
         filename << "/originalproblem";
         filename << ".txt";
 
@@ -295,7 +295,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
 
     env->settings->updateSetting("ProblemName", "Input", problem->name);
 
-    if(static_cast<ES_OutputDirectory>(env->settings->getIntSetting("OutputDirectory", "Output"))
+    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
         boost::filesystem::path debugPath(boost::filesystem::current_path());
@@ -305,12 +305,12 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
         env->settings->updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
     }
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         initializeDebugMode();
 
         std::stringstream filename;
-        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
         filename << "/originalproblem";
         filename << ".txt";
 
@@ -329,7 +329,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
 
 bool Solver::selectStrategy()
 {
-    if(static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
     {
         if(env->problem->properties.isNLPProblem)
         {
@@ -348,7 +348,7 @@ bool Solver::selectStrategy()
     }
 
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-        env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model"));
+        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
     bool useQuadraticConstraints = (quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained);
     bool useQuadraticObjective
         = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
@@ -377,7 +377,7 @@ bool Solver::selectStrategy()
     }
     else
     {
-        switch(static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual")))
+        switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual")))
         {
         case(ES_TreeStrategy::SingleTree):
             env->output->outputDebug(" Using single-tree solution strategy.");
@@ -401,10 +401,10 @@ bool Solver::selectStrategy()
 
 bool Solver::solveProblem()
 {
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         std::stringstream filename;
-        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
         filename << "/usedsettings";
         filename << ".opt";
 
@@ -508,7 +508,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceRel", "Dual", 1.0,
         "Relative termination tolerance between LP and linesearch objective", 0.0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -999999999999.0,
+    env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual", -1e12,
         "Lower bound for minimax objective variable", SHOT_DBL_MIN, 0);
 
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
@@ -659,20 +659,20 @@ void Solver::initializeSettings()
         "Reinitialize the dual model in the subsolver each iteration");
 
     // Optimization model settings
-    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -9999999999.0,
-        "Minimum lower bound for continuous variables", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -1e10,
+        "Minimum lower bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 9999999999.0,
-        "Maximum upper bound for continuous variables", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 1e10,
+        "Maximum upper bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     env->settings->createSetting("IntegerVariable.MinimumLowerBound", "Model", -2.0e9,
-        "Minimum lower bound for integer variables", 0, SHOT_DBL_MAX);
+        "Minimum lower bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     env->settings->createSetting("IntegerVariable.MaximumUpperBound", "Model", 2.0e9,
-        "Maximum upper bound for integer variables", 0, SHOT_DBL_MAX);
+        "Maximum upper bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 999999999999.0,
-        "Max absolute bound for the auxiliary nonlinear objective variable", 0, SHOT_DBL_MAX);
+    env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 1e12,
+        "Max absolute bound for the auxiliary nonlinear objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     // Reformulations for bilinears
     env->settings->createSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", false,
@@ -1015,7 +1015,7 @@ void Solver::initializeSettings()
 
 void Solver::initializeDebugMode()
 {
-    auto debugPath = env->settings->getStringSetting("Debug.Path", "Output");
+    auto debugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
     boost::filesystem::path debugDir(debugPath);
 
     if(boost::filesystem::exists(debugDir))
@@ -1034,17 +1034,17 @@ void Solver::initializeDebugMode()
         }
     }
 
-    boost::filesystem::path source(env->settings->getStringSetting("ProblemFile", "Input"));
+    boost::filesystem::path source(env->settings->getSetting<std::string>("ProblemFile", "Input"));
     boost::filesystem::copy_file(boost::filesystem::canonical(source), debugDir / source.filename(),
         boost::filesystem::copy_option::overwrite_if_exists);
 }
 
 void Solver::verifySettings()
 {
-    if(env->settings->getIntSetting("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
-        || env->settings->getIntSetting("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
+    if(env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
+        || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
     {
-        if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
+        if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
             == ES_PrimalNLPSolver::Ipopt)
         {
             env->output->outputWarning(" Using Ipopt as NLP solver since problem is given in OSiL or Ampl format.");
@@ -1052,7 +1052,7 @@ void Solver::verifySettings()
         }
     }
 
-    if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
+    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
         == ES_PrimalNLPSolver::GAMS)
     {
 #ifndef HAS_GAMS
@@ -1061,7 +1061,7 @@ void Solver::verifySettings()
 #endif
     }
 
-    auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
     bool correctSolverDefined = false;
 #ifdef HAS_CPLEX
     if(solver == ES_MIPSolver::Cplex)
@@ -1099,9 +1099,9 @@ void Solver::verifySettings()
 #endif
     }
 
-    if(env->settings->getBoolSetting("UseRecommendedSettings", "Strategy"))
+    if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
     {
-        switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getIntSetting("Convexity", "Strategy")))
+        switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getSetting<int>("Convexity", "Strategy")))
         {
         case(ES_ConvexityIdentificationStrategy::Automatically):
             break;

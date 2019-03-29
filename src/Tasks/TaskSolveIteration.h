@@ -25,5 +25,6 @@ public:
     virtual std::string getType();
 
 private:
+    VectorString variableNames;
 };
 } // namespace SHOT

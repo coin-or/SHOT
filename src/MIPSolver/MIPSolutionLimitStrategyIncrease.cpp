@@ -44,9 +44,9 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
     // Solution limit has not been updated in the maximal number of iterations
     if(prevIter->isMIP()
         && (currIter->iterationNumber - lastIterSolLimIncreased
-                   > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")
+                   > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual")
                && currIter->iterationNumber - lastIterOptimal
-                   > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual")))
+                   > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual")))
     {
         env->output->outputDebug("     Force solution limit update.");
         return (true);
@@ -64,14 +64,14 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
         if(prevIter->numHyperplanesAdded == 0)
             return (true);
 
-        if(prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual"))
+        if(prevIter->maxDeviation < env->settings->getSetting<double>("MIP.SolutionLimit.UpdateTolerance", "Dual"))
             return (true);
 
-        if(prevIter->maxDeviation < env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+        if(prevIter->maxDeviation < env->settings->getSetting<double>("ConstraintTolerance", "Termination"))
             return (true);
 
         if(prevIter->maxDeviationConstraint == -1
-            && prevIter->maxDeviation < env->settings->getDoubleSetting("MIP.SolutionLimit.UpdateTolerance", "Dual")
+            && prevIter->maxDeviation < env->settings->getSetting<double>("MIP.SolutionLimit.UpdateTolerance", "Dual")
                     * std::max(1.0, abs(prevIter->objectiveValue)))
         {
             return (true);
@@ -95,6 +95,6 @@ int MIPSolutionLimitStrategyIncrease::getNewLimit()
 
 int MIPSolutionLimitStrategyIncrease::getInitialLimit()
 {
-    return (env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual"));
+    return (env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual"));
 }
 } // namespace SHOT

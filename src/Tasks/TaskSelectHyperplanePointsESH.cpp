@@ -49,17 +49,17 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto constraintSelectionFactor
-        = env->settings->getDoubleSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
-    bool useUniqueConstraints = env->settings->getBoolSetting("ESH.Linesearch.UniqueConstraints", "Dual");
+        = env->settings->getSetting<double>("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Linesearch.UniqueConstraints", "Dual");
 
-    int rootMaxIter = env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver");
-    double rootTerminationTolerance = env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver");
+    int rootMaxIter = env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver");
+    double rootTerminationTolerance = env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver");
     double rootActiveConstraintTolerance
-        = env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver");
-    int maxHyperplanesPerIter = env->settings->getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual");
+        = env->settings->getSetting<double>("Rootsearch.ActiveConstraintTolerance", "Subsolver");
+    int maxHyperplanesPerIter = env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual");
     double rootsearchConstraintTolerance
-        = env->settings->getDoubleSetting("ESH.Linesearch.ConstraintTolerance", "Dual");
-    double constraintMaxSelectionFactor = env->settings->getDoubleSetting("HyperplaneCuts.MaxConstraintFactor", "Dual");
+        = env->settings->getSetting<double>("ESH.Linesearch.ConstraintTolerance", "Dual");
+    double constraintMaxSelectionFactor = env->settings->getSetting<double>("HyperplaneCuts.MaxConstraintFactor", "Dual");
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(

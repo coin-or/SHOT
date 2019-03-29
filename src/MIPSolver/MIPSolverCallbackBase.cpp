@@ -18,8 +18,8 @@ bool MIPSolverCallbackBase::checkIterationLimit()
     if(env->tasks->isTerminated())
         return (true);
 
-    auto relaxlimit = env->settings->getIntSetting("Relaxation.IterationLimit", "Dual");
-    auto mainlimit = env->settings->getIntSetting("IterationLimit", "Termination");
+    auto relaxlimit = env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual");
+    auto mainlimit = env->settings->getSetting<int>("IterationLimit", "Termination");
 
     if(relaxlimit == SHOT_INT_MAX || mainlimit == SHOT_INT_MAX)
         return (false);
@@ -44,7 +44,7 @@ bool MIPSolverCallbackBase::checkUserTermination()
 
 bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 {
-    if(!env->settings->getBoolSetting("FixedInteger.Use", "Primal"))
+    if(!env->settings->getSetting<bool>("FixedInteger.Use", "Primal"))
     {
         return (false);
     }
@@ -54,13 +54,13 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
     bool callNLPSolver = false;
 
-    auto userSettingStrategy = env->settings->getIntSetting("FixedInteger.CallStrategy", "Primal");
-    auto userSetting = env->settings->getIntSetting("FixedInteger.Source", "Primal");
+    auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
+    auto userSetting = env->settings->getSetting<int>("FixedInteger.Source", "Primal");
 
     auto dualBound = env->results->getDualBound();
 
     if(abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound))
-        < env->settings->getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
+        < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;
     }
@@ -72,14 +72,14 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
         || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
         if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
-            >= env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+            >= env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal"))
         {
             env->output->outputDebug(
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
         else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
-            > env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+            > env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"))
         {
             env->output->outputDebug(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");

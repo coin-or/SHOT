@@ -58,17 +58,17 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // TODO?? gevTryInt: handling of fractional values in initial solution for repair heuristics
 
         env->output->outputDebug("Time limit set to "
-            + UtilityFunctions::toString(env->settings->getDoubleSetting("TimeLimit", "Termination")) + " by GAMS");
+            + UtilityFunctions::toString(env->settings->getSetting<double>("TimeLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Iteration limit set to "
-            + UtilityFunctions::toString(env->settings->getIntSetting("IterationLimit", "Termination")) + " by GAMS");
+            + UtilityFunctions::toString(env->settings->getSetting<int>("IterationLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Absolute termination tolerance set to "
-            + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
             + " by GAMS");
         env->output->outputDebug("Relative termination tolerance set to "
-            + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
             + " by GAMS");
         env->output->outputDebug("MIP number of threads set to "
-            + UtilityFunctions::toString(env->settings->getIntSetting("MIP.NumberOfThreads", "Dual")) + " by GAMS");
+            + UtilityFunctions::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
     }
 
     // want to solve the NLP problems with GAMS
@@ -96,8 +96,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
     }
 
-    env->output->setLogLevels(static_cast<E_LogLevel>(settings->getIntSetting("Console.LogLevel", "Output")),
-        static_cast<E_LogLevel>(settings->getIntSetting("File.LogLevel", "Output")));
+    env->output->setLogLevels(static_cast<E_LogLevel>(settings->getSetting<int>("Console.LogLevel", "Output")),
+        static_cast<E_LogLevel>(settings->getSetting<int>("File.LogLevel", "Output")));
 }
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
@@ -377,10 +377,10 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
 
     if(numVariables > 0)
     {
-        double minLBCont = env->settings->getDoubleSetting("ContinuousVariable.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getDoubleSetting("ContinuousVariable.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getDoubleSetting("IntegerVariable.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getDoubleSetting("IntegerVariable.MaximumUpperBound", "Model");
+        double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+        double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+        double minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
+        double maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
 
         double* variableLBs = new double[numVariables];
         double* variableUBs = new double[numVariables];
@@ -533,7 +533,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
         break;
 
     case gmoorder_Q:
-        if(env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model")
+        if(env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model")
             >= static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective))
             objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
         else

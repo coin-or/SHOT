@@ -200,7 +200,7 @@ bool MIPSolverOsiCbc::finalizeProblem()
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
         CbcMain0(*cbcModel);
 
-        if(!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -221,13 +221,13 @@ void MIPSolverOsiCbc::initializeSolverSettings()
 {
     if(cbcModel->haveMultiThreadSupport())
     {
-        cbcModel->setNumberThreads(env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"));
+        cbcModel->setNumberThreads(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
     }
 
-    cbcModel->setAllowableGap(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
-    cbcModel->setAllowableFractionGap(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
+    cbcModel->setAllowableGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
+    cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setMaximumSolutions(solLimit);
-    cbcModel->setMaximumSavedSolutions(env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual"));
+    cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
 
     // Cbc has problems with too large cutoff values
     if(isMinimizationProblem && abs(this->cutOff) < 10e20)
@@ -357,7 +357,7 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
 
         CbcMain0(*cbcModel);
 
-        if(!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
             cbcModel->setLogLevel(0);
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
@@ -405,7 +405,7 @@ void MIPSolverOsiCbc::setTimeLimit(double seconds)
 
 void MIPSolverOsiCbc::setCutOff(double cutOff)
 {
-    double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
+    double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
 
     try
     {

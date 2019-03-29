@@ -28,7 +28,7 @@ void TaskCheckDualStagnation::run()
     }
 
     if(env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
-        <= env->settings->getIntSetting("DualObjectiveStagnation.IterationLimit", "Termination"))
+        <= env->settings->getSetting<int>("DualObjectiveStagnation.IterationLimit", "Termination"))
     {
         return;
     }
@@ -41,7 +41,7 @@ void TaskCheckDualStagnation::run()
     }
 
     if(env->solutionStatistics.numberOfIterationsWithDualStagnation
-        >= env->settings->getIntSetting("DualObjectiveStagnation.IterationLimit", "Termination"))
+        >= env->settings->getSetting<int>("DualObjectiveStagnation.IterationLimit", "Termination"))
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
         env->tasks->setNextTask(taskIDIfTrue);

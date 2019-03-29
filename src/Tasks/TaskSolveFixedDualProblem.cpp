@@ -49,7 +49,7 @@ void TaskSolveFixedDualProblem::run()
         return;
     }
 
-    if(currIter->maxDeviation <= env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual"))
+    if(currIter->maxDeviation <= env->settings->getSetting<double>("FixedInteger.ConstraintTolerance", "Dual"))
     {
         env->timing->stopTimer("DualProblemsIntegerFixed");
         return;
@@ -106,9 +106,9 @@ void TaskSolveFixedDualProblem::run()
     double prevObjVal = SHOT_DBL_MAX;
 
     int iterLastObjUpdate = 0;
-    int maxIter = env->settings->getIntSetting("FixedInteger.MaxIterations", "Dual");
-    double objTol = env->settings->getDoubleSetting("FixedInteger.ObjectiveTolerance", "Dual");
-    double constrTol = env->settings->getDoubleSetting("FixedInteger.ConstraintTolerance", "Dual");
+    int maxIter = env->settings->getSetting<int>("FixedInteger.MaxIterations", "Dual");
+    double objTol = env->settings->getSetting<double>("FixedInteger.ObjectiveTolerance", "Dual");
+    double constrTol = env->settings->getSetting<double>("FixedInteger.ConstraintTolerance", "Dual");
 
     bool isMIQP = env->reformulatedProblem->properties.isMIQPProblem;
     bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
@@ -166,9 +166,9 @@ void TaskSolveFixedDualProblem::run()
                 try
                 {
                     auto xNewc = env->rootsearchMethod->findZero(internalPoint, externalPoint,
-                        env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                        env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"),
-                        env->settings->getDoubleSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
+                        env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver"),
+                        env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"),
+                        env->settings->getSetting<double>("Rootsearch.ActiveConstraintTolerance", "Subsolver"),
                         env->reformulatedProblem->nonlinearConstraints, true);
 
                     env->timing->stopTimer("DualCutGenerationRootSearch");

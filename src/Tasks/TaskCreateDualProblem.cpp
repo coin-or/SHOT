@@ -24,10 +24,10 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 
     env->dualSolver->MIPSolver->initializeSolverSettings();
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         env->dualSolver->MIPSolver->writeProblemToFile(
-            env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+            env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
     }
 
     env->output->outputDebug("Dual problem created");
@@ -39,7 +39,7 @@ TaskCreateDualProblem::~TaskCreateDualProblem() {}
 void TaskCreateDualProblem::run()
 {
     // Only run this task after intialization if we want to rebuild the tree in the multi-tree strategy
-    if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+    if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
     {
         env->timing->startTimer("DualStrategy");
 
@@ -51,10 +51,10 @@ void TaskCreateDualProblem::run()
 
         env->dualSolver->MIPSolver->initializeSolverSettings();
 
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             env->dualSolver->MIPSolver->writeProblemToFile(
-                env->settings->getStringSetting("Debug.Path", "Output") + "/lp0.lp");
+                env->settings->getSetting<std::string>("Debug.Path", "Output") + "/lp0.lp");
         }
 
         env->output->outputDebug("Dual problem recreated");

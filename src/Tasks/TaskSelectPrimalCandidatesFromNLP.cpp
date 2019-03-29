@@ -18,10 +18,10 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     env->timing->startTimer("PrimalStrategy");
     env->timing->startTimer("PrimalBoundStrategyNLP");
 
-    originalNLPTime = env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
-    originalNLPIter = env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal");
+    originalNLPTime = env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
+    originalNLPIter = env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal");
 
-    switch(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal")))
+    switch(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal")))
     {
 #ifdef HAS_IPOPT
     case(ES_PrimalNLPSolver::Ipopt):
@@ -48,9 +48,9 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         throw std::logic_error("Unknown PrimalNLPSolver setting.");
     }
 
-    if(env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
+    if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
     {
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
             == ES_HyperplaneCutStrategy::ESH)
         {
             taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
@@ -61,8 +61,8 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         }
     }
 
-    this->originalIterFrequency = env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal");
-    this->originalTimeFrequency = env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
+    this->originalIterFrequency = env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal");
+    this->originalTimeFrequency = env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
 
     for(auto& V : env->problem->binaryVariables)
     {
@@ -72,6 +72,15 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     for(auto& V : env->problem->integerVariables)
     {
         discreteVariableIndexes.push_back(V->index);
+    }
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        for(auto& V : env->problem->allVariables)
+        {
+
+            variableNames.push_back(V->name);
+        }
     }
 
     env->timing->stopTimer("PrimalBoundStrategyNLP");
@@ -157,7 +166,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         int sizeOfVariableVector = env->problem->properties.numberOfVariables;
 
-        if(env->settings->getBoolSetting("FixedInteger.UsePresolveBounds", "Primal"))
+        if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal"))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
@@ -191,14 +200,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             fixedVariableValues.at(k) = tmpSolPt;
 
             // Sets the starting point to the fixed value
-            if(env->settings->getBoolSetting("FixedInteger.Warmstart", "Primal"))
+            if(env->settings->getSetting<bool>("FixedInteger.Warmstart", "Primal"))
             {
                 startingPointIndexes.at(currVarIndex) = currVarIndex;
                 startingPointValues.at(currVarIndex) = tmpSolPt;
             }
         }
 
-        if(env->settings->getBoolSetting("FixedInteger.Warmstart", "Primal"))
+        if(env->settings->getSetting<bool>("FixedInteger.Warmstart", "Primal"))
         {
             for(auto& V : env->problem->realVariables)
             {
@@ -206,13 +215,13 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 startingPointValues.at(V->index) = testPts.at(j).point.at(V->index);
             }
 
-            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/primalnlp_warmstart"
-                    + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j) + ".txt";
+                std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
+                    + "/primalnlp_warmstart" + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j)
+                    + ".txt";
 
-                UtilityFunctions::saveVariablePointVectorToFile(
-                    startingPointValues, env->problem->allVariables, filename);
+                UtilityFunctions::saveVariablePointVectorToFile(startingPointValues, variableNames, filename);
             }
 
             NLPSolver->setStartingPoint(startingPointIndexes, startingPointValues);
@@ -220,9 +229,9 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         NLPSolver->fixVariables(discreteVariableIndexes, fixedVariableValues);
 
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/primalnlp"
+            std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output") + "/primalnlp"
                 + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j);
             NLPSolver->saveProblemToFile(filename + ".txt");
             NLPSolver->saveOptionsToFile(filename + ".osrl");
@@ -262,17 +271,17 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             double tmpObj = NLPSolver->getObjectiveValue();
             auto variableSolution = NLPSolver->getSolution();
 
-            if(env->settings->getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
+            if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
             {
-                int iters
-                    = std::max(ceil(env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
-                        originalNLPIter);
+                int iters = std::max(
+                    ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
+                    originalNLPIter);
 
                 if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
                     env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
                 double interval = std::max(
-                    0.9 * env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal"), originalNLPTime);
+                    0.9 * env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"), originalNLPTime);
 
                 if(interval > 0.1 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
@@ -304,7 +313,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             }
 
             // Add integer cut.
-            if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual")
+            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && env->problem->properties.numberOfBinaryVariables > 0
                 && env->problem->properties.numberOfIntegerVariables == 0)
             {
@@ -325,7 +334,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
             }
 
-            if(env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
+            if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
             {
                 SolutionPoint tmpSolPt;
                 tmpSolPt.point = variableSolution;
@@ -346,7 +355,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 std::vector<SolutionPoint> solutionPoints(1);
                 solutionPoints.at(0) = tmpSolPt;
 
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
                     == ES_HyperplaneCutStrategy::ESH)
                 {
                     std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
@@ -375,7 +384,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 auto mostDevConstr
                     = env->problem->getMaxNumericConstraintValue(variableSolution, env->problem->nonlinearConstraints);
 
-                if(env->settings->getBoolSetting("FixedInteger.CreateInfeasibilityCut", "Primal"))
+                if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
                 {
                     SolutionPoint tmpSolPt;
                     tmpSolPt.point = variableSolution;
@@ -391,7 +400,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                     solutionPoints.at(0) = tmpSolPt;
 
-                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
                         == ES_HyperplaneCutStrategy::ESH)
                     {
                         std::dynamic_pointer_cast<TaskSelectHyperplanePointsESH>(taskSelectHPPts)->run(solutionPoints);
@@ -417,14 +426,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     E_IterationLineType::PrimalNLP);
             }
 
-            if(env->settings->getBoolSetting("FixedInteger.Frequency.Dynamic", "Primal"))
+            if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
             {
-                int iters = ceil(env->settings->getIntSetting("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
+                int iters = ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
 
                 if(iters < 10 * this->originalIterFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);
 
-                double interval = 1.1 * env->settings->getDoubleSetting("FixedInteger.Frequency.Time", "Primal");
+                double interval = 1.1 * env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal");
 
                 if(interval < 10 * this->originalTimeFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Time", "Primal", interval);
@@ -434,7 +443,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             }
 
             // Add integer cut.
-            if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual")
+            if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual")
                 && env->problem->properties.numberOfBinaryVariables > 0
                 && env->problem->properties.numberOfIntegerVariables == 0)
             {

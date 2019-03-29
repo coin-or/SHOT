@@ -15,7 +15,7 @@ namespace SHOT
 
 TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool useLazyStrategy) : TaskBase(envPtr)
 {
-    auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
 
     env->timing->startTimer("DualStrategy");
 
@@ -33,7 +33,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         if(solver == ES_MIPSolver::Cplex)
         {
 #ifdef HAS_CPLEX_NEW_CALLBACK
-            if(env->settings->getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
+            if(env->settings->getSetting<bool>("Cplex.UseNewCallbackType", "Subsolver"))
             {
                 env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexLazy>(env));
                 env->results->usedMIPSolver = ES_MIPSolver::Cplex;

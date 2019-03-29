@@ -45,7 +45,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         }
 
         switch(
-            static_cast<ES_IterationOutputDetail>(env->settings->getIntSetting("Console.Iteration.Detail", "Output")))
+            static_cast<ES_IterationOutputDetail>(env->settings->getSetting<int>("Console.Iteration.Detail", "Output")))
         {
         case ES_IterationOutputDetail::Full:
             printLine = true;
@@ -272,7 +272,7 @@ void Report::outputOptionsReport()
               "────╴\r\n";
     report << "\r\n";
 
-    std::string optionsFile = env->settings->getStringSetting("OptionsFile", "Input");
+    std::string optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input");
 
     if(optionsFile == "")
     {
@@ -299,10 +299,10 @@ void Report::outputOptionsReport()
     }
 
     std::string cutAlgorithm, dualSolver;
-    bool useSingleTree = (static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual"))
+    bool useSingleTree = (static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
         == ES_TreeStrategy::SingleTree);
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         cutAlgorithm = "ESH";
@@ -312,7 +312,7 @@ void Report::outputOptionsReport()
         cutAlgorithm = "ECP";
     }
 
-    auto solver = static_cast<ES_MIPSolver>(env->settings->getIntSetting("MIP.Solver", "Dual"));
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
 
     if(useSingleTree)
     {
@@ -320,7 +320,7 @@ void Report::outputOptionsReport()
         if(solver == ES_MIPSolver::Cplex)
         {
 #ifdef HAS_CPLEX_NEW_CALLBACK
-            if(env->settings->getBoolSetting("Cplex.UseNewCallbackType", "Subsolver"))
+            if(env->settings->getSetting<bool>("Cplex.UseNewCallbackType", "Subsolver"))
             {
                 dualSolver = "CPLEX with new callback functionality";
             }
@@ -411,13 +411,13 @@ void Report::outputOptionsReport()
         break;
     case(ES_PrimalNLPSolver::GAMS):
         report << "GAMS (";
-        report << env->settings->getStringSetting("GAMS.NLP.Solver", "Subsolver");
+        report << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
         report << ")\r\n";
         break;
     case(ES_PrimalNLPSolver::Ipopt):
         report << "Ipopt (";
 
-        switch(static_cast<ES_IpoptSolver>(env->settings->getIntSetting("Ipopt.LinearSolver", "Subsolver")))
+        switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
         {
         case(ES_IpoptSolver::ma27):
             report << "ma27";
@@ -451,10 +451,10 @@ void Report::outputOptionsReport()
 
     report << "\r\n";
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         report << " Debug directory:            ";
-        report << env->settings->getStringSetting("Debug.Path", "Output");
+        report << env->settings->getSetting<std::string>("Debug.Path", "Output");
         report << "\r\n";
     }
 
@@ -473,7 +473,7 @@ void Report::outputProblemInstanceReport()
               "\r\n";
     report << "\r\n";
 
-    std::string problemFile = env->settings->getStringSetting("ProblemFile", "Input");
+    std::string problemFile = env->settings->getSetting<std::string>("ProblemFile", "Input");
 
     report << " Problem read from file:     " << problemFile;
     report << "\r\n\r\n";
@@ -847,48 +847,48 @@ void Report::outputSolutionReport()
     {
         fulfilled << "  - absolute objective gap tolerance             ";
         fulfilled << env->results->getAbsoluteObjectiveGap() << " <= ";
-        fulfilled << env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
+        fulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - absolute objective gap tolerance             ";
         unfulfilled << env->results->getAbsoluteObjectiveGap() << " > ";
-        unfulfilled << env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") << "\r\n";
+        unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
         fulfilled << "  - relative objective gap tolerance             ";
         fulfilled << env->results->getRelativeObjectiveGap() << " <= ";
-        fulfilled << env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
+        fulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - relative objective gap tolerance             ";
         unfulfilled << env->results->getRelativeObjectiveGap() << " > ";
-        unfulfilled << env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") << "\r\n";
+        unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 
-    if(static_cast<ES_TreeStrategy>(env->settings->getIntSetting("TreeStrategy", "Dual"))
+    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
         != ES_TreeStrategy::SingleTree)
     {
         if(env->results->getCurrentIteration()->maxDeviation
-            <= env->settings->getDoubleSetting("ConstraintTolerance", "Termination"))
+            <= env->settings->getSetting<double>("ConstraintTolerance", "Termination"))
         {
             fulfilled << "  - maximal constraint tolerance                 ";
             fulfilled << env->results->getCurrentIteration()->maxDeviation << " <= ";
-            fulfilled << env->settings->getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+            fulfilled << env->settings->getSetting<double>("ConstraintTolerance", "Termination") << "\r\n";
         }
         else
         {
             unfulfilled << "  - maximal constraint tolerance                 ";
             unfulfilled << env->results->getCurrentIteration()->maxDeviation << " > ";
-            unfulfilled << env->settings->getDoubleSetting("ConstraintTolerance", "Termination") << "\r\n";
+            unfulfilled << env->settings->getSetting<double>("ConstraintTolerance", "Termination") << "\r\n";
         }
     }
 
-    int iterLim = env->settings->getIntSetting("Relaxation.IterationLimit", "Dual")
-        + env->settings->getIntSetting("IterationLimit", "Termination");
+    int iterLim = env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual")
+        + env->settings->getSetting<int>("IterationLimit", "Termination");
 
     if(env->results->getCurrentIteration()->iterationNumber > iterLim)
     {
@@ -903,17 +903,17 @@ void Report::outputSolutionReport()
         unfulfilled << iterLim << "\r\n";
     }
 
-    if(env->timing->getElapsedTime("Total") > env->settings->getDoubleSetting("TimeLimit", "Termination"))
+    if(env->timing->getElapsedTime("Total") > env->settings->getSetting<double>("TimeLimit", "Termination"))
     {
         fulfilled << "  - solution time limit (s)                      ";
         fulfilled << env->timing->getElapsedTime("Total") << " > ";
-        fulfilled << env->settings->getDoubleSetting("TimeLimit", "Termination") << "\r\n";
+        fulfilled << env->settings->getSetting<double>("TimeLimit", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - solution time limit (s)                      ";
         unfulfilled << env->timing->getElapsedTime("Total") << " <= ";
-        unfulfilled << env->settings->getDoubleSetting("TimeLimit", "Termination") << "\r\n";
+        unfulfilled << env->settings->getSetting<double>("TimeLimit", "Termination") << "\r\n";
     }
 
     report << " Fulfilled termination criteria: \r\n";
@@ -1032,7 +1032,7 @@ void Report::outputInteriorPointPreReport()
 
     report << " Strategy selected:          ";
 
-    switch(static_cast<ES_InteriorPointStrategy>(env->settings->getIntSetting("ESH.InteriorPoint.Solver", "Dual")))
+    switch(static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual")))
     {
     case(ES_InteriorPointStrategy::CuttingPlaneMiniMax):
         report << "cutting plane minimax";

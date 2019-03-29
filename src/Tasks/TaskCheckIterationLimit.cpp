@@ -24,8 +24,8 @@ void TaskCheckIterationLimit::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    auto relaxlimit = env->settings->getIntSetting("Relaxation.IterationLimit", "Dual");
-    auto mainlimit = env->settings->getIntSetting("IterationLimit", "Termination");
+    auto relaxlimit = env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual");
+    auto mainlimit = env->settings->getSetting<int>("IterationLimit", "Termination");
 
     if(relaxlimit == SHOT_INT_MAX || mainlimit == SHOT_INT_MAX)
         return;
