@@ -125,9 +125,9 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
     }
-    catch(const ErrorClass& eclass)
+    catch(const Error& eclass)
     {
-        env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.errormsg);
+        env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.message);
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -285,7 +285,7 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
         // TODO might we claim global optimal in some cases? we should not do this for nonconvex problems
         gmoModelStatSet(
-            modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Feasible : gmoModelStat_OptimalLocal);
+            modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
     }
     else
     {

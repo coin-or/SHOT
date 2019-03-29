@@ -9,6 +9,7 @@
 */
 
 #include "TaskInitializeDualSolver.h"
+
 namespace SHOT
 {
 
@@ -21,7 +22,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
     if(solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
     {
         env->output->outputError("Error in solver definition. Check option 'Dual.MIP.Solver'.");
-        throw ErrorClass("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
+        throw Error("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
     }
 
     bool solverSelected = false;
@@ -68,9 +69,8 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             env->output->outputDebug("Cbc selected as MIP solver.");
             solverSelected = true;
         }
-    }
 #endif
-
+    }
     else
     {
 
@@ -102,7 +102,6 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
             env->output->outputDebug("Cbc selected as MIP solver.");
             solverSelected = true;
         }
-
 #endif
     }
 
@@ -115,15 +114,15 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         env->results->usedMIPSolver = ES_MIPSolver::Cbc;
         solverSelected = true;
 #elif HAS_GUROBI
-            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));
-            env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
-            solverSelected = true;
+        env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));
+        env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
+        solverSelected = true;
 #elif HAS_CPLEX
-            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplex>(env));
-            env->results->usedMIPSolver = ES_MIPSolver::Cplex;
-            solverSelected = true;
+        env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplex>(env));
+        env->results->usedMIPSolver = ES_MIPSolver::Cplex;
+        solverSelected = true;
 #else
-            env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
+        env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
     }
 

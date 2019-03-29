@@ -9,26 +9,28 @@ set (cpptests Model Settings)
 set (Model_parts 1 2 3 4 5 6 7 8)    # The different parts of each test (if any)
 set (Settings_parts 1 2)   
 
-set(cpptests ${cpptests} Ipopt)
-set (Ipopt_parts 1 2)
-
 if(HAS_CPLEX)
-    set(Cplex_parts 1)
-    set(cpptests ${cpptests} Cplex)
+  set(Cplex_parts 1)
+  set(cpptests ${cpptests} Cplex)
 endif()
 
 if(HAS_GUROBI)
-    set(cpptests ${cpptests} Gurobi)
+  set(cpptests ${cpptests} Gurobi)
 endif()
 
 if(HAS_GAMS)
-    set(GAMS_parts 1 2 3 4 5 6 7)
-    set(cpptests ${cpptests} GAMS)
+  set(GAMS_parts 1 2 3 4 5 6 7)
+  set(cpptests ${cpptests} GAMS)
 endif()
 
 if(HAS_OS)
-    set(OS_parts 1 2 3 4 5)
-    set(cpptests ${cpptests} OS)
+  set(OS_parts 1 2 3 4 5)
+  set(cpptests ${cpptests} OS)
+endif()
+
+if(HAS_IPOPT)
+  set(cpptests ${cpptests} Ipopt)
+  set (Ipopt_parts 1 2)
 endif()
 
 # Adds a "1" to tests without parts

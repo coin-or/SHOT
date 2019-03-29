@@ -9,7 +9,6 @@
 */
 
 #include "Solver.h"
-#include "ModelingSystemOS.h"
 
 using namespace SHOT;
 

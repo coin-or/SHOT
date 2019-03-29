@@ -54,9 +54,9 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
     }
-    catch(const ErrorClass& eclass)
+    catch(const Error& eclass)
     {
-        env->output->outputError("Error when reading problem from \"" + filename + "\"", eclass.errormsg);
+        env->output->outputError("Error when reading problem from \"" + filename + "\"", eclass.message);
 
         return (E_ProblemCreationStatus::Error);
     }

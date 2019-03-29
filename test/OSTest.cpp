@@ -8,7 +8,9 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Solver.h"
+#include "../Solver.h"
+#include "../Structs.h"
+
 #include "ModelingSystemOS.h"
 
 using namespace SHOT;
@@ -31,9 +33,9 @@ bool ReadProblemOS(std::string filename)
             passed = false;
         }
     }
-    catch(ErrorClass& e)
+    catch(Error& e)
     {
-        std::cout << "Error: " << e.errormsg << std::endl;
+        std::cout << "Error: " << e.message << std::endl;
         return false;
     }
 
@@ -58,9 +60,9 @@ bool SolveProblemOS(std::string filename)
             passed = false;
         }
     }
-    catch(ErrorClass& e)
+    catch(Error& e)
     {
-        std::cout << "Error: " << e.errormsg << std::endl;
+        std::cout << "Error: " << e.message << std::endl;
         return false;
     }
 

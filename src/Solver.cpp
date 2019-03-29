@@ -45,8 +45,6 @@ Solver::~Solver() {}
 
 bool Solver::setOptions(std::string fileName)
 {
-    auto osolreader = std::make_unique<OSoLReader>();
-
     try
     {
         std::string fileContents;
@@ -88,9 +86,9 @@ bool Solver::setOptions(std::string fileName)
                 "Error when reading options from \"" + fileName + "\". File extension must be osol, xml or opt.");
         }
     }
-    catch(const ErrorClass& eclass)
+    catch(const Error& eclass)
     {
-        env->output->outputError("Error when reading options from \"" + fileName + "\"", eclass.errormsg);
+        env->output->outputError("Error when reading options from \"" + fileName + "\"", eclass.message);
         return (false);
     }
 
@@ -122,8 +120,32 @@ bool Solver::setProblem(std::string fileName)
     boost::filesystem::path problemExtension = problemFile.extension();
     boost::filesystem::path problemPath = problemFile.parent_path();
 
+#ifndef HAS_OS
+    if(problemExtension == ".osil" || problemExtension == ".xml")
+    {
+        env->output->outputError(" SHOT has not been compiled with support for OSiL files.");
+        return (false);
+    }
+
+    if(problemExtension == ".nl")
+    {
+        env->output->outputError(" SHOT has not been compiled with support for NL files.");
+        return (false);
+    }
+#endif
+
+#ifndef HAS_GAMS
+    if(problemExtension == ".gms")
+    {
+        env->output->outputError(" SHOT has not been compiled with support for GAMS files.");
+        return (false);
+    }
+#endif
+
     try
     {
+
+#ifdef HAS_OS
         if(problemExtension == ".osil" || problemExtension == ".xml")
         {
             auto modelingSystem = std::make_shared<ModelingSystemOS>(env);
@@ -132,6 +154,7 @@ bool Solver::setProblem(std::string fileName)
             if(modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::OSiL)
                 != E_ProblemCreationStatus::NormalCompletion)
             {
+                env->output->outputError(" Error while reading problem.");
                 return (false);
             }
 
@@ -158,9 +181,8 @@ bool Solver::setProblem(std::string fileName)
             if(modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::Ampl)
                 != E_ProblemCreationStatus::NormalCompletion)
             {
-            }
-            else
-            {
+                env->output->outputError(" Error while reading problem.");
+                return (false);
             }
 
             env->modelingSystem = modelingSystem;
@@ -168,9 +190,19 @@ bool Solver::setProblem(std::string fileName)
             env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
+
+            if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
+                == ES_PrimalNLPSolver::GAMS)
+            {
+                env->output->outputError(
+                    "Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
+                env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
+            }
         }
+#endif
+
 #ifdef HAS_GAMS
-        else if(problemExtension == ".gms")
+        if(problemExtension == ".gms")
         {
             auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -178,30 +210,8 @@ bool Solver::setProblem(std::string fileName)
             if(modelingSystem->createProblem(problem, fileName, E_GAMSInputSource::ProblemFile)
                 != E_ProblemCreationStatus::NormalCompletion)
             {
-                std::cout << "Error while reading problem";
-            }
-            else
-            {
-            }
-
-            env->modelingSystem = modelingSystem;
-            env->problem = problem;
-            env->reformulatedProblem = problem;
-
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
-        }
-        else if(problemExtension == ".dat")
-        {
-            auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
-            SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-            if(modelingSystem->createProblem(problem, fileName, E_GAMSInputSource::GAMSModel)
-                != E_ProblemCreationStatus::NormalCompletion)
-            {
-                std::cout << "Error while reading problem";
-            }
-            else
-            {
+                env->output->outputError(" Error while reading problem.");
+                return (false);
             }
 
             env->modelingSystem = modelingSystem;
@@ -211,12 +221,6 @@ bool Solver::setProblem(std::string fileName)
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
 #endif
-        else
-        {
-            env->output->outputError("Wrong filetype specified.");
-
-            return (false);
-        }
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
@@ -230,9 +234,9 @@ bool Solver::setProblem(std::string fileName)
             UtilityFunctions::writeStringToFile(problemFilename.str(), problemText.str());
         }
     }
-    catch(const ErrorClass& eclass)
+    catch(const Error& eclass)
     {
-        env->output->outputError("Error when reading problem from \"" + fileName + "\"", eclass.errormsg);
+        env->output->outputError("Error when reading problem from \"" + fileName + "\"", eclass.message);
 
         return (false);
     }
@@ -797,7 +801,6 @@ void Solver::initializeSettings()
         "FixedInteger.IterationLimit", "Primal", 10000000, "Max number of iterations per call", 0, SHOT_INT_MAX);
 
     VectorString enumPrimalNLPSolver;
-    enumPrimalNLPSolver.push_back("CuttingPlane");
     enumPrimalNLPSolver.push_back("Ipopt");
     enumPrimalNLPSolver.push_back("GAMS");
 
@@ -1038,16 +1041,6 @@ void Solver::initializeDebugMode()
 
 void Solver::verifySettings()
 {
-    if(env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::GAMS))
-    {
-        if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
-            == ES_PrimalNLPSolver::Ipopt)
-        {
-            env->output->outputWarning(" Changing to GAMS NLP solver since problem is given in GAMS format.");
-            env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
-        }
-    }
-
     if(env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
         || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
     {

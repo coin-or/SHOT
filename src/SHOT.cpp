@@ -7,6 +7,7 @@
    This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
+
 #include "Shared.h"
 #include "Solver.h"
 
@@ -152,9 +153,9 @@ int main(int argc, char* argv[])
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                                 "───────────────────────────────────╴\r\n");
     }
-    catch(const ErrorClass& eclass)
+    catch(const Error& eclass)
     {
-        env->output->outputError(eclass.errormsg);
+        env->output->outputError(eclass.message);
 
         return (0);
     }
