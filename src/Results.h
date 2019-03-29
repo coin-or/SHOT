@@ -37,7 +37,6 @@ public:
     double getDualBound();
     void setDualBound(double value);
 
-    // Contains the objective bounds. The first is the lower and the second is the upper bound.
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
     // for maximization problems, the lower bound is the primal while the upper bound is the dual objective value
     double currentDualBound;
