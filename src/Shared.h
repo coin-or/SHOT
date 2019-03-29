@@ -13,7 +13,6 @@
 
 #include <algorithm>
 #include <cerrno>
-#include <chrono>
 #include <cmath>
 #include <ctime>
 #include <exception>
@@ -35,15 +34,6 @@
 #include <typeinfo>
 #include <utility>
 #include <vector>
-
-#include <algorithm>
-#include <iostream>
-#include <map>
-
-#include "boost/filesystem.hpp"
-#include <boost/format.hpp>
-#include "boost/math/tools/minima.hpp"
-#include <boost/functional/hash/hash.hpp>
 
 #include "ffunc.hpp"
 

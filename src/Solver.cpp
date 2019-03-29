@@ -10,6 +10,8 @@
 
 #include "Solver.h"
 
+#include "boost/filesystem.hpp"
+
 namespace SHOT
 {
 
@@ -191,7 +193,7 @@ bool Solver::setProblem(std::string fileName)
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
 
-            if(static_cast<ES_PrimalNLPSolver>(env->settings->getIntSetting("FixedInteger.Solver", "Primal"))
+            if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
                 == ES_PrimalNLPSolver::GAMS)
             {
                 env->output->outputError(

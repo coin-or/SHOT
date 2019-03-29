@@ -12,6 +12,8 @@
 #include "Settings.h"
 #include "Solver.h"
 
+#include "boost/filesystem.hpp"
+
 using namespace SHOT;
 
 bool SettingsTestOptions(bool useOSiL);

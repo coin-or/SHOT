@@ -10,6 +10,8 @@
 
 #include "NLPSolverCuttingPlaneMinimax.h"
 
+#include "boost/math/tools/minima.hpp"
+
 namespace SHOT
 {
 

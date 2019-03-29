@@ -11,6 +11,8 @@
 
 #include "ModelingSystemGAMS.h"
 
+#include "boost/filesystem.hpp"
+
 namespace SHOT
 {
 

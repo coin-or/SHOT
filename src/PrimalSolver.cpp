@@ -10,6 +10,8 @@
 
 #include "PrimalSolver.h"
 
+#include <boost/format.hpp>
+
 namespace SHOT
 {
 

@@ -11,6 +11,8 @@
 #include "Shared.h"
 #include "Solver.h"
 
+#include "boost/filesystem.hpp"
+
 using namespace SHOT;
 
 int main(int argc, char* argv[])

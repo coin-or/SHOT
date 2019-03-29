@@ -10,6 +10,8 @@
 
 #include "Results.h"
 
+#include <boost/format.hpp>
+
 namespace SHOT
 {
 

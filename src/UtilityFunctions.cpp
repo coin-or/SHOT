@@ -8,8 +8,13 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include <chrono>
+
 #include "UtilityFunctions.h"
 #include "Shared.h"
+
+#include <boost/functional/hash/hash.hpp>
+#include <boost/format.hpp>
 
 namespace SHOT::UtilityFunctions
 {

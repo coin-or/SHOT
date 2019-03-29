@@ -10,6 +10,8 @@
 
 #include "ModelingSystemOS.h"
 
+#include "boost/filesystem.hpp"
+
 namespace SHOT
 {
 
