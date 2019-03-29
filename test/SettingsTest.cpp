@@ -97,7 +97,7 @@ bool SettingsTestOptions(bool useOSiL)
             }
         }
 
-        if(passed && !solver->setOptions(filename))
+        if(passed && !solver->setOptionsFromFile(filename))
         {
             std::cout << "Could not read OSoL file." << std::endl;
             passed = false;

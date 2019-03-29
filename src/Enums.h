@@ -97,6 +97,19 @@ enum class E_LogLevel
     Trace = 0
 };
 
+enum class E_ModelReturnStatus
+{
+    None,
+    LocallyOptimal,
+    GloballyOptimal,
+    IntegerSolution,
+    Infeasible,
+    Unbounded,
+    NoSolution,
+    ErrorUnknown,
+    ErrorNoSolution
+};
+
 enum class E_PrimalNLPSource
 {
     FirstSolution,

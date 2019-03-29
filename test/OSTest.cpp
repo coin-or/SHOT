@@ -81,7 +81,7 @@ bool SolveProblemOS(std::string filename)
         passed = false;
     }
 
-    if(solver->getNumberOfPrimalSolutions() > 0)
+    if(solver->getPrimalSolutions().size() > 0)
     {
         std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }

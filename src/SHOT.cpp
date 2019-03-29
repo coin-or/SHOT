@@ -30,8 +30,6 @@ int main(int argc, char* argv[])
 
     bool defaultOptionsGenerated = false;
 
-    solver->getEnvironment()->timing->startTimer("Total");
-
     boost::filesystem::path resultFile, optionsFile, traceFile;
 
     if(argc == 2) // No options file specified, use or create defaults
@@ -121,7 +119,7 @@ int main(int argc, char* argv[])
 
         if(!defaultOptionsGenerated)
         {
-            if(!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
+            if(!optionsFile.empty() && !solver->setOptionsFromFile(optionsFile.string()))
             {
                 env->report->outputSolverHeader();
                 std::cout << " Cannot set options!" << std::endl;
