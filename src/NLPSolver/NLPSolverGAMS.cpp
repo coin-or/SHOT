@@ -25,14 +25,14 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject)
     strcpy(nlpsolver, "conopt");
     *nlpsolveropt = '\0';
 
-    strcpy(nlpsolver, env->settings->getStringSetting("GAMS.NLP.Solver", "Subsolver").c_str());
-    strcpy(nlpsolveropt, env->settings->getStringSetting("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
+    strcpy(nlpsolver, env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver").c_str());
+    strcpy(nlpsolveropt, env->settings->getSetting<std::string>("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
 
-    timelimit = env->settings->getDoubleSetting("FixedInteger.TimeLimit", "Primal");
-    iterlimit = env->settings->getIntSetting("FixedInteger.IterationLimit", "Primal");
+    timelimit = env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal");
+    iterlimit = env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal");
 
     // TODO: showlog seems to have no effect...
-    showlog = env->settings->getBoolSetting("Console.GAMS.Show", "Output");
+    showlog = env->settings->getSetting<bool>("Console.GAMS.Show", "Output");
 }
 
 NLPSolverGAMS::~NLPSolverGAMS() {}
@@ -112,7 +112,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     }
 
     /* if not run via GAMS, then uninstall GAMS SIGINT handler, as gevTerminateGet() is not checked (is only checked if called from GAMS) */
-    if( env->settings->getStringSetting("ProblemFile", "Input") != "" )
+    if( env->settings->getSetting<std::string>("ProblemFile", "Input") != "" )
         gevTerminateUninstall(modelingEnvironment);
 
     gmoAltBoundsSet(modelingObject, 0);

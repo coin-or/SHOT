@@ -41,7 +41,7 @@ void TaskExecuteSolutionLimitStrategy::run()
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
 
-    if(env->settings->getIntSetting("Convexity", "Strategy")
+    if(env->settings->getSetting<int>("Convexity", "Strategy")
         == static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         if(temporaryOptLimitUsed)
@@ -51,7 +51,7 @@ void TaskExecuteSolutionLimitStrategy::run()
         }
 
         if(currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate
-                > env->settings->getIntSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
+                > env->settings->getSetting<int>("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
             && env->results->getDualBound() > SHOT_DBL_MIN)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit;
@@ -66,7 +66,7 @@ void TaskExecuteSolutionLimitStrategy::run()
         }
 
         if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate
-                > env->settings->getDoubleSetting("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
+                > env->settings->getSetting<double>("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
             && env->results->getDualBound() > SHOT_DBL_MIN)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit;

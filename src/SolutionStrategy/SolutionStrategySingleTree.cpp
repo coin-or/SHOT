@@ -39,7 +39,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
-    if(env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
+    if(env->settings->getSetting<int>("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         TaskBase* tFindIntPoint = new TaskFindInteriorPoint(env);
@@ -58,13 +58,13 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tAddHPs = new TaskAddHyperplanes(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    if(env->settings->getBoolSetting("Relaxation.Use", "Dual"))
+    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual"))
     {
         TaskBase* tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
     }
 
-    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual"))
+    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
         != ES_MIPPresolveStrategy::Never)
     {
         TaskBase* tPresolve = new TaskPresolve(env);
@@ -78,7 +78,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         TaskBase* tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch(env);
@@ -89,7 +89,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->settings->getIntSetting("Convexity", "Strategy")
+    if(env->settings->getSetting<int>("Convexity", "Strategy")
         != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
@@ -118,7 +118,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    if(env->settings->getIntSetting("Convexity", "Strategy")
+    if(env->settings->getSetting<int>("Convexity", "Strategy")
         != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
@@ -134,7 +134,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");
 
-    if(env->settings->getBoolSetting("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
+    if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
     {
         TaskBase* tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
@@ -150,13 +150,13 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tInitializeIteration, "InitIter2");
 
-    if(env->settings->getBoolSetting("Relaxation.Use", "Dual"))
+    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual"))
     {
         TaskBase* tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
     }
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         TaskBase* tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
@@ -177,7 +177,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
+    if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
         TaskBase* tAddICs = new TaskAddIntegerCuts(env);
         env->tasks->addTask(tAddICs, "AddICs");
@@ -190,7 +190,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->settings->getIntSetting("Convexity", "Strategy")
+    if(env->settings->getSetting<int>("Convexity", "Strategy")
         != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         TaskBase* tAddObjectiveCutFinal = new TaskAddPrimalReductionCut(env, "InitIter2", "Terminate");

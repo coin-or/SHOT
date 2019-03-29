@@ -24,7 +24,7 @@ void TaskCheckTimeLimit::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if(env->timing->getElapsedTime("Total") >= env->settings->getDoubleSetting("TimeLimit", "Termination"))
+    if(env->timing->getElapsedTime("Total") >= env->settings->getSetting<double>("TimeLimit", "Termination"))
     {
         env->results->terminationReason = E_TerminationReason::TimeLimit;
         env->tasks->setNextTask(taskIDIfTrue);

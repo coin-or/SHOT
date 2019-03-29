@@ -41,7 +41,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
     env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
-    if(env->settings->getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
+    if(env->settings->getSetting<int>("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         TaskBase* tFindIntPoint = new TaskFindInteriorPoint(env);
@@ -60,7 +60,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tAddHPs = new TaskAddHyperplanes(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getIntSetting("MIP.Presolve.Frequency", "Dual"))
+    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
         != ES_MIPPresolveStrategy::Never)
     {
         TaskBase* tPresolve = new TaskPresolve(env);
@@ -74,7 +74,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         TaskBase* tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch(env);
@@ -85,7 +85,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->settings->getIntSetting("Convexity", "Strategy")
+    if(env->settings->getSetting<int>("Convexity", "Strategy")
         != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
@@ -124,7 +124,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tInitializeIteration, "InitIter2");
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         TaskBase* tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
@@ -153,7 +153,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->settings->getIntSetting("Convexity", "Strategy")
+    if(env->settings->getSetting<int>("Convexity", "Strategy")
         != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
     {
         TaskBase* tAddObjectiveCutFinal = new TaskAddPrimalReductionCut(env, "InitIter2", "Terminate");

@@ -21,7 +21,7 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     std::lock_guard<std::mutex> lock(
         (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
@@ -99,7 +99,7 @@ void HCallbackI::main() // Called at each node...
     }
 
     if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-        < env->settings->getIntSetting("Relaxation.MaxLazyConstraints", "Dual"))
+        < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
     {
         int waitingListSize = env->dualSolver->MIPSolver->hyperplaneWaitingList.size();
 
@@ -134,7 +134,7 @@ void HCallbackI::main() // Called at each node...
 
         solutionPoints.at(0) = tmpSolPt;
 
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
             == ES_HyperplaneCutStrategy::ESH)
         {
             static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(solutionPoints);
@@ -180,7 +180,7 @@ void InfoCallbackI::main() // Called at each node...
     {
         env->output->outputCritical("     Terminated by relative objective gap tolerance in info callback: "
             + UtilityFunctions::toString(relObjGap) + " < "
-            + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination")));
+            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         this->abort();
         return;
@@ -189,7 +189,7 @@ void InfoCallbackI::main() // Called at each node...
     {
         env->output->outputCritical("     Terminated by absolute objective gap tolerance in info callback: "
             + UtilityFunctions::toString(absObjGap) + " < "
-            + UtilityFunctions::toString(env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination")));
+            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
         this->abort();
         return;
@@ -224,7 +224,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
     cbCalls = 0;
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
@@ -244,7 +244,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
         taskSelectHPPtsByObjectiveLinesearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
     }
 
-    if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromLinesearch = std::make_shared<TaskSelectPrimalCandidatesFromLinesearch>(env);
@@ -400,7 +400,7 @@ void CtCallbackI::main()
         return;
     }
 
-    if(env->settings->getBoolSetting("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
         taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
@@ -434,7 +434,7 @@ void CtCallbackI::main()
         }
     }
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getIntSetting("CutStrategy", "Dual"))
+    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
         tUpdateInteriorPoint->run();
@@ -460,7 +460,7 @@ void CtCallbackI::main()
 
     env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
 
-    if(env->settings->getBoolSetting("HyperplaneCuts.UseIntegerCuts", "Dual"))
+    if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
         bool addedIntegerCut = false;
 
@@ -523,7 +523,7 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
         tmpPair.first.clear();
         expr.end();
 
-        if(env->settings->getBoolSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver")
+        if(env->settings->getSetting<bool>("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver")
             && hyperplane.source == E_HyperplaneSource::MIPCallbackRelaxed)
         {
             addLocal(tmpRange).end();

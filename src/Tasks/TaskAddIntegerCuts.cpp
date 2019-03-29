@@ -26,7 +26,7 @@ void TaskAddIntegerCuts::run()
     if(env->dualSolver->MIPSolver->integerCutWaitingList.size() == 0)
         return;
 
-    if(!currIter->isMIP() || !env->settings->getBoolSetting("HyperplaneCuts.Delay", "Dual")
+    if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
         || !currIter->MIPSolutionLimitUpdated)
     {
 

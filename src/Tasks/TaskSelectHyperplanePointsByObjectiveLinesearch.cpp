@@ -47,8 +47,8 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
             try
             {
                 auto rootBound = env->rootsearchMethod->findZero(SOLPT.point, objectiveLB, objectiveUB,
-                    env->settings->getIntSetting("Rootsearch.MaxIterations", "Subsolver"),
-                    env->settings->getDoubleSetting("Rootsearch.TerminationTolerance", "Subsolver"), 0,
+                    env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver"),
+                    env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"), 0,
                     std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                         .get());
 

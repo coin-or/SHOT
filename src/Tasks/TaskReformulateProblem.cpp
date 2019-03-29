@@ -18,7 +18,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     env->timing->startTimer("ProblemReformulation");
 
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
-        env->settings->getIntSetting("Reformulation.Quadratics.Strategy", "Model"));
+        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
 
     useQuadraticConstraints = (quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained);
 
@@ -28,14 +28,14 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     quadraticObjectiveRegardedAsNonlinear = false;
 
     PartitionQuadraticTermsInObjective
-        = env->settings->getBoolSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model");
+        = env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model");
 
     PartitionQuadraticTermsInConstraint
-        = env->settings->getBoolSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model");
+        = env->settings->getSetting<bool>("Reformulation.Constraint.PartitionQuadraticTerms", "Model");
 
     int additionalNumberOfNonlinearConstraints = 0;
 
-    if(env->settings->getBoolSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
+    if(env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
     {
         additionalNumberOfNonlinearConstraints = 1;
     }
@@ -70,7 +70,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Reformulating objective function
     reformulateObjectiveFunction();
 
-    if(env->settings->getBoolSetting("Reformulation.Bilinear.AddConvexEnvelope",
+    if(env->settings->getSetting<bool>("Reformulation.Bilinear.AddConvexEnvelope",
            "Model")) // Also adds the McCormick envelopes to the dual model
     {
         for(auto& VAR : bilinearAuxVariables)
@@ -101,10 +101,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     env->reformulatedProblem = reformulatedProblem;
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         std::stringstream filename;
-        filename << env->settings->getStringSetting("Debug.Path", "Output");
+        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
         filename << "/reformulatedproblem";
         filename << ".txt";
 
@@ -171,8 +171,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        bool useEpigraph = env->settings->getBoolSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model");
-        double objVarBound = env->settings->getDoubleSetting("NonlinearObjectiveVariable.Bound", "Model");
+        bool useEpigraph = env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model");
+        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
 
         auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
             "shot_objvar", auxVariableCounter, E_VariableType::Real, -objVarBound, objVarBound);
@@ -299,7 +299,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction);
 
-        if(env->settings->getBoolSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model")
+        if(env->settings->getSetting<bool>("Reformulation.Constraint.PartitionNonlinearTerms", "Model")
             && sourceObjective->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             auto tmpLinearTerms = partitionNonlinearSum(
@@ -603,7 +603,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
-        if(env->settings->getBoolSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model")
+        if(env->settings->getSetting<bool>("Reformulation.Constraint.PartitionNonlinearTerms", "Model")
             && sourceConstraint->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             auto tmpLinearTerms = partitionNonlinearSum(
@@ -721,7 +721,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             auto optionalMonomialTerm = convertProductToMonomialTerm(std::dynamic_pointer_cast<ExpressionProduct>(T));
 
             if(optionalMonomialTerm
-                && env->settings->getIntSetting("Reformulation.Monomials.Formulation", "Model")
+                && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
                     != static_cast<int>(ES_ReformulationBinaryMonomials::None))
             // The product was a monomial term
             {
@@ -874,7 +874,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             && T->secondVariable->upperBound <= 100)
         // bilinear term i1*i2
         {
-            if(env->settings->getIntSetting("Reformulation.Bilinear.IntegerFormulation", "Model")
+            if(env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation", "Model")
                 == static_cast<int>(ES_ReformulatiomBilinearInteger::TwoDiscretization))
             {
                 auto auxVariable = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
@@ -979,7 +979,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 reformulatedProblem->add(std::move(auxSecondSum));
                 reformulatedProblem->add(std::move(auxSecondSumVarDef));
             }
-            else if(env->settings->getIntSetting("Reformulation.Bilinear.IntegerFormulation", "Model")
+            else if(env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation", "Model")
                 == static_cast<int>(ES_ReformulatiomBilinearInteger::OneDiscretization))
             {
                 VariablePtr discretizationVariable;
@@ -1160,7 +1160,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
     for(auto& T : monomialTerms)
     {
         if(T->isBinary
-            && env->settings->getIntSetting("Reformulation.Monomials.Formulation", "Model")
+            && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
                 == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
             double N = T->variables.size();
@@ -1195,7 +1195,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             reformulatedProblem->add(std::move(auxConstraint2));
         }
         else if(T->isBinary
-            && env->settings->getIntSetting("Reformulation.Monomials.Formulation", "Model")
+            && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
                 == static_cast<int>(ES_ReformulationBinaryMonomials::CostaLiberti))
         {
             int variableOffset = 0;

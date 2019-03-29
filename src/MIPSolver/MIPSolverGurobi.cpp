@@ -306,7 +306,7 @@ bool MIPSolverGurobi::finalizeProblem()
 {
     try
     {
-        if(env->settings->getBoolSetting("TreeStrategy.Multi.Reinitialize", "Dual"))
+        if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
@@ -318,7 +318,7 @@ bool MIPSolverGurobi::finalizeProblem()
             }
             else
             {
-                setSolLimit = env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
+                setSolLimit = env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual");
             }
 
             setSolutionLimit(setSolLimit);
@@ -344,23 +344,23 @@ void MIPSolverGurobi::initializeSolverSettings()
 {
     try
     {
-        if(!env->settings->getBoolSetting("Console.DualSolver.Show", "Output"))
+        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
         {
             gurobiModel->getEnv().set(GRB_IntParam_OutputFlag, 0);
         }
 
         gurobiModel->getEnv().set(
-            GRB_DoubleParam_MIPGap, env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination") / 1.0);
+            GRB_DoubleParam_MIPGap, env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") / 1.0);
         gurobiModel->getEnv().set(
-            GRB_DoubleParam_MIPGapAbs, env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination") / 1.0);
+            GRB_DoubleParam_MIPGapAbs, env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
 
         // Default 0 to fix som problems with some problems
         gurobiModel->getEnv().set(
-            GRB_IntParam_ScaleFlag, env->settings->getIntSetting("Gurobi.ScaleFlag", "Subsolver"));
+            GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Gurobi.ScaleFlag", "Subsolver"));
         gurobiModel->getEnv().set(
-            GRB_IntParam_NumericFocus, env->settings->getIntSetting("Gurobi.NumericFocus", "Subsolver"));
-        gurobiModel->getEnv().set(GRB_IntParam_MIPFocus, env->settings->getIntSetting("Gurobi.MIPFocus", "Subsolver"));
-        gurobiModel->getEnv().set(GRB_IntParam_Threads, env->settings->getIntSetting("MIP.NumberOfThreads", "Dual"));
+            GRB_IntParam_NumericFocus, env->settings->getSetting<int>("Gurobi.NumericFocus", "Subsolver"));
+        gurobiModel->getEnv().set(GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
+        gurobiModel->getEnv().set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
         // gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
         // gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
         // gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
@@ -368,7 +368,7 @@ void MIPSolverGurobi::initializeSolverSettings()
         // gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
         gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->getEnv().set(
-            GRB_IntParam_SolutionNumber, env->settings->getIntSetting("MIP.SolutionPool.Capacity", "Dual") + 1);
+            GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual") + 1);
     }
     catch(GRBException& e)
     {
@@ -697,10 +697,10 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         env->output->outputCritical("        Number of constraints modified: " + std::to_string(numRepairs));
 
-        if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::stringstream ss;
-            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
             ss << "/lp";
             ss << env->results->getCurrentIteration()->iterationNumber - 1;
             ss << "repaired.lp";
@@ -761,7 +761,7 @@ void MIPSolverGurobi::setCutOff(double cutOff)
     {
         // Gurobi has problems if not an epsilon value is added to the cutoff...
 
-        double cutOffTol = env->settings->getDoubleSetting("MIP.CutOffTolerance", "Dual");
+        double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
 
         if(isMinimizationProblem)
         {

@@ -27,7 +27,7 @@ void Results::addDualSolution(DualSolution solution)
 
 void Results::addPrimalSolution(PrimalSolution solution)
 {
-    if(env->settings->getIntSetting("SaveNumberOfSolutions", "Output") > 1)
+    if(env->settings->getSetting<int>("SaveNumberOfSolutions", "Output") > 1)
     {
         env->results->primalSolutions.insert(env->results->primalSolutions.begin(), solution);
     }
@@ -47,19 +47,19 @@ void Results::addPrimalSolution(PrimalSolution solution)
     env->results->setPrimalBound(solution.objValue);
 
     // Write the new primal point to a file
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         std::stringstream fileName;
-        fileName << env->settings->getStringSetting("Debug.Path", "Output");
+        fileName << env->settings->getSetting<std::string>("Debug.Path", "Output");
         fileName << "/primalpoint";
         fileName << env->results->primalSolutions.size();
         fileName << ".txt";
 
-        UtilityFunctions::savePrimalSolutionToFile(solution, env->problem->allVariables, fileName.str());
+        savePrimalSolutionToFile(solution, env->problem->allVariables, fileName.str());
     }
 
     // Add primal objective cut
-    if(env->settings->getBoolSetting("HyperplaneCuts.UsePrimalObjectiveCut", "Dual")
+    if(env->settings->getSetting<bool>("HyperplaneCuts.UsePrimalObjectiveCut", "Dual")
         && env->reformulatedProblem->objectiveFunction->properties.classification
             > E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -92,7 +92,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
-    if(this->getRelativeObjectiveGap() <= env->settings->getDoubleSetting("ObjectiveGap.Relative", "Termination"))
+    if(this->getRelativeObjectiveGap() <= env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
     {
         return (true);
     }
@@ -104,7 +104,7 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
-    if(this->getAbsoluteObjectiveGap() <= env->settings->getDoubleSetting("ObjectiveGap.Absolute", "Termination"))
+    if(this->getAbsoluteObjectiveGap() <= env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
     {
         return (true);
     }
@@ -149,7 +149,7 @@ std::string Results::getResultsOSrL()
     auto generalNode = osrlDocument.NewElement("general");
 
     auto instanceNameNode = osrlDocument.NewElement("instanceName");
-    instanceNameNode->SetText(env->settings->getStringSetting("ProblemName", "Input").c_str());
+    instanceNameNode->SetText(env->settings->getSetting<std::string>("ProblemName", "Input").c_str());
     generalNode->InsertFirstChild(instanceNameNode);
 
     std::stringstream ssSolver;
@@ -288,7 +288,7 @@ std::string Results::getResultsOSrL()
 
     int numPrimalSols = primalSolutions.size();
 
-    int numSaveSolutions = std::min(env->settings->getIntSetting("SaveNumberOfSolutions", "Output"), numPrimalSols);
+    int numSaveSolutions = std::min(env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"), numPrimalSols);
 
     auto statusNode = osrlDocument.NewElement("status");
 
@@ -593,7 +593,7 @@ std::string Results::getResultsTrace()
         ss << "SHOT";
         break;
     case(ES_PrimalNLPSolver::GAMS):
-        ss << env->settings->getStringSetting("GAMS.NLP.Solver", "Subsolver");
+        ss << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
         break;
     case(ES_PrimalNLPSolver::Ipopt):
         ss << "Ipopt";
@@ -782,5 +782,108 @@ double Results::getRelativeObjectiveGap()
 
     return (gap);
 }
+
+void Results::savePrimalSolutionToFile(
+    const PrimalSolution& solution, const VectorString& variables, const std::string& fileName)
+{
+    std::stringstream str;
+
+    str << "Source: " << solution.sourceDescription;
+    str << '\n';
+
+    str << "Iteration found: " << solution.iterFound;
+    str << '\n';
+
+    str << "Objective value: " << UtilityFunctions::toStringFormat(solution.objValue, "%.8f", false);
+    str << '\n';
+
+    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
+        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+    str << '\n';
+
+    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
+        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+    str << '\n';
+
+    str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
+    str << '\n';
+
+    str << "Integer rounding performed: " << (solution.integerRoundingPerformed ? "true" : "false");
+    str << '\n';
+
+    str << "Max integer rounding error: "
+        << UtilityFunctions::toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
+
+    str << '\n';
+    str << '\n';
+
+    str << "Solution point: ";
+    str << '\n';
+
+    str << std::setprecision(std::numeric_limits<double>::digits10);
+
+    for(int i = 0; i < solution.point.size(); i++)
+    {
+        str << variables.at(i);
+        str << "\t";
+        str << solution.point.at(i);
+        str << '\n';
+    }
+
+    UtilityFunctions::writeStringToFile(fileName, str.str());
+};
+
+void Results::savePrimalSolutionToFile(
+    const PrimalSolution& solution, const Variables& variables, const std::string& fileName)
+{
+    std::stringstream str;
+
+    str << "Source: " << solution.sourceDescription;
+    str << '\n';
+
+    str << "Iteration found: " << solution.iterFound;
+    str << '\n';
+
+    str << "Objective value: " << UtilityFunctions::toStringFormat(solution.objValue, "%.8f", false);
+    str << '\n';
+
+    str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
+        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+    str << '\n';
+
+    str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
+        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+    str << '\n';
+
+    str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
+    str << '\n';
+
+    str << "Integer rounding performed: " << (solution.integerRoundingPerformed ? "true" : "false");
+    str << '\n';
+
+    str << "Max integer rounding error: "
+        << UtilityFunctions::toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
+
+    str << '\n';
+    str << '\n';
+
+    str << "Solution point: ";
+    str << '\n';
+
+    str << std::setprecision(std::numeric_limits<double>::digits10);
+
+    for(int i = 0; i < solution.point.size(); i++)
+    {
+        if(i < variables.size())
+            str << variables.at(i)->name;
+        else
+            str << '\t';
+        str << '\t';
+        str << solution.point.at(i);
+        str << '\n';
+    }
+
+    UtilityFunctions::writeStringToFile(fileName, str.str());
+};
 
 } // namespace SHOT

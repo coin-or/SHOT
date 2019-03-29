@@ -34,7 +34,7 @@ void TaskRepairInfeasibleDualProblem::run()
     }
 
     if(env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate
-        >= env->settings->getIntSetting("InfeasibilityRepair.IterationLimit", "Termination"))
+        >= env->settings->getSetting<int>("InfeasibilityRepair.IterationLimit", "Termination"))
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
@@ -45,7 +45,7 @@ void TaskRepairInfeasibleDualProblem::run()
     currIter->hasInfeasibilityRepairBeenPerformed = true;
 
     env->dualSolver->MIPSolver->setTimeLimit(
-        env->settings->getDoubleSetting("InfeasibilityRepair.TimeLimit", "Termination"));
+        env->settings->getSetting<double>("InfeasibilityRepair.TimeLimit", "Termination"));
 
     // Otherwise repair problem might not be solved to optimality
     env->dualSolver->MIPSolver->setSolutionLimit(2100000000);

@@ -32,7 +32,7 @@ void TaskCheckPrimalStagnation::run()
     }*/
 
     if(env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
-        <= env->settings->getIntSetting("PrimalStagnation.IterationLimit", "Termination"))
+        <= env->settings->getSetting<int>("PrimalStagnation.IterationLimit", "Termination"))
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
@@ -47,7 +47,7 @@ void TaskCheckPrimalStagnation::run()
     }
 
     if(env->solutionStatistics.numberOfIterationsWithPrimalStagnation
-        >= env->settings->getIntSetting("PrimalStagnation.IterationLimit", "Termination"))
+        >= env->settings->getSetting<int>("PrimalStagnation.IterationLimit", "Termination"))
     {
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;

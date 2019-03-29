@@ -378,7 +378,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
             }
         }
 
-        if(env->settings->getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
+        if(env->settings->getSetting<bool>("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
         {
             updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
             env->output->outputDebug("     Bounds updated also in MIP problem");

@@ -154,10 +154,10 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
 
     if(source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
     {
-        double minLBCont = env->settings->getDoubleSetting("ContinuousVariable.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getDoubleSetting("ContinuousVariable.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getDoubleSetting("IntegerVariable.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getDoubleSetting("IntegerVariable.MaximumUpperBound", "Model");
+        double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+        double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+        double minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
+        double maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
 
         int numVariables = source->getVariableNumber();
 

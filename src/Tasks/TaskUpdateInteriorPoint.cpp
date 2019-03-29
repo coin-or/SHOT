@@ -60,7 +60,7 @@ void TaskUpdateInteriorPoint::run()
 
         env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
-    else if(env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
         && maxDevPrimal.value < 0)
     {
@@ -80,7 +80,7 @@ void TaskUpdateInteriorPoint::run()
             env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
         }
     }
-    else if(env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew)
         && maxDevPrimal.value < 0)
     {
@@ -94,7 +94,7 @@ void TaskUpdateInteriorPoint::run()
 
         env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }
-    else if(env->settings->getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
         && maxDevPrimal.value < 0)
     {

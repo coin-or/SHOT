@@ -696,7 +696,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     std::string subsolver = "";
 
     // Sets the linear solver used
-    switch(static_cast<ES_IpoptSolver>(env->settings->getIntSetting("Ipopt.LinearSolver", "Subsolver")))
+    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
     {
     case(ES_IpoptSolver::ma27):
         subsolver = "ma27";
@@ -725,7 +725,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
     ipoptApplication->Options()->SetStringValue("linear_solver", subsolver);
 
-    switch(static_cast<E_LogLevel>(env->settings->getIntSetting("Console.LogLevel", "Output")))
+    switch(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")))
     {
     case E_LogLevel::Off:
     case E_LogLevel::Critical:
@@ -745,7 +745,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     }
 
     // Suppress copyright message
-    if(env->settings->getIntSetting("Console.LogLevel", "Output") > (int)E_LogLevel::Debug)
+    if(env->settings->getSetting<int>("Console.LogLevel", "Output") > (int)E_LogLevel::Debug)
     {
         ipoptApplication->Options()->SetStringValue("sb", "yes");
     }

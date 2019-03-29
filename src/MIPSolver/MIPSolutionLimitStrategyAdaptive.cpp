@@ -40,7 +40,7 @@ bool MIPSolutionLimitStrategyAdaptive::updateLimit()
     // Solution limit has not been updated in the maximal number of iterations
     if(prevIter->isMIP()
         && currIter->iterationNumber - lastIterSolLimIncreased
-            > env->settings->getIntSetting("MIP.SolutionLimit.IncreaseIterations", "Dual"))
+            > env->settings->getSetting<int>("MIP.SolutionLimit.IncreaseIterations", "Dual"))
     {
         return true;
     }
@@ -68,6 +68,6 @@ int MIPSolutionLimitStrategyAdaptive::getNewLimit()
 
 int MIPSolutionLimitStrategyAdaptive::getInitialLimit()
 {
-    return env->settings->getIntSetting("MIP.SolutionLimit.Initial", "Dual");
+    return env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual");
 }
 } // namespace SHOT

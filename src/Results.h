@@ -70,6 +70,11 @@ public:
     std::string getResultsOSrL();
     std::string getResultsTrace();
 
+    void savePrimalSolutionToFile(
+        const PrimalSolution& solution, const VectorString& variables, const std::string& fileName);
+    void savePrimalSolutionToFile(
+        const PrimalSolution& solution, const Variables& variables, const std::string& fileName);
+
 private:
     EnvironmentPtr env;
 };

@@ -15,7 +15,7 @@ namespace SHOT
 
 TaskFindInteriorPoint::TaskFindInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         for(auto& V : env->reformulatedProblem->allVariables)
         {
@@ -35,7 +35,7 @@ void TaskFindInteriorPoint::run()
     env->output->outputDebug("Initializing NLP solver");
 
     auto solver
-        = static_cast<ES_InteriorPointStrategy>(env->settings->getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
+        = static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual"));
 
     if(solver == ES_InteriorPointStrategy::CuttingPlaneMiniMax)
     {
@@ -48,12 +48,12 @@ void TaskFindInteriorPoint::run()
         return;
     }
 
-    if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
         for(int i = 0; i < NLPSolvers.size(); i++)
         {
             std::stringstream ss;
-            ss << env->settings->getStringSetting("Debug.Path", "Output");
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
             ss << "/interiorpointnlp";
             ss << i;
             ss << ".txt";
@@ -73,7 +73,7 @@ void TaskFindInteriorPoint::run()
         auto tmpIP = std::make_shared<InteriorPoint>();
 
         tmpIP->NLPSolver
-            = static_cast<ES_InteriorPointStrategy>(env->settings->getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
+            = static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual"));
 
         tmpIP->point = NLPSolvers.at(i)->getSolution();
 
@@ -86,9 +86,9 @@ void TaskFindInteriorPoint::run()
             env->output->outputWarning("\n Maximum deviation in interior point is too large: "
                 + UtilityFunctions::toString(maxDev.normalizedValue));
 
-            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::string filename = env->settings->getStringSetting("Debug.Path", "Output")
+                std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
                     + "/interiorpoint_notused_" + std::to_string(i) + ".txt";
                 UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
             }
@@ -104,9 +104,9 @@ void TaskFindInteriorPoint::run()
 
             env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
 
-            if(env->settings->getBoolSetting("Debug.Enable", "Output"))
+            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::string filename = env->settings->getStringSetting("Debug.Path", "Output") + "/interiorpoint_"
+                std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output") + "/interiorpoint_"
                     + std::to_string(i) + ".txt";
                 UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
             }

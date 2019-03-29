@@ -25,9 +25,9 @@ void RelaxationStrategyStandard::setInitial()
 {
     LPFinished = false;
 
-    if(env->settings->getBoolSetting("Relaxation.Use", "Dual")
-        && env->settings->getIntSetting("Relaxation.IterationLimit", "Dual") > 0
-        && env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
+    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
+        && env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual") > 0
+        && env->settings->getSetting<double>("Relaxation.TimeLimit", "Dual") > 0)
     {
         this->setActive();
     }
@@ -39,7 +39,7 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
-    int iterInterval = env->settings->getIntSetting("Relaxation.Frequency", "Dual");
+    int iterInterval = env->settings->getSetting<int>("Relaxation.Frequency", "Dual");
     if(iterInterval != 0 && env->results->getCurrentIteration()->iterationNumber % iterInterval == 0)
     {
         return (this->setActive());
@@ -119,7 +119,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if(prevIter->iterationNumber < env->settings->getIntSetting("Relaxation.IterationLimit", "Dual"))
+    if(prevIter->iterationNumber < env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual"))
     {
         return (false);
     }
@@ -130,7 +130,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
     if(env->timing->getElapsedTime("DualProblemsRelaxed")
-        < env->settings->getDoubleSetting("Relaxation.TimeLimit", "Dual"))
+        < env->settings->getSetting<double>("Relaxation.TimeLimit", "Dual"))
     {
         return (false);
     }

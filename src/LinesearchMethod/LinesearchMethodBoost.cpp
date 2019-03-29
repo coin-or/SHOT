@@ -163,7 +163,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
 
     Result r1;
 
-    if(static_cast<ES_RootsearchMethod>(env->settings->getIntSetting("Rootsearch.Method", "Subsolver"))
+    if(static_cast<ES_RootsearchMethod>(env->settings->getSetting<int>("Rootsearch.Method", "Subsolver"))
         == ES_RootsearchMethod::BoostTOMS748)
     {
         r1 = boost::math::tools::toms748_solve(*test, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);
@@ -238,7 +238,7 @@ std::pair<double, double> LinesearchMethodBoost::findZero(const VectorDouble& pt
 
     Result r1;
 
-    if(static_cast<ES_RootsearchMethod>(env->settings->getIntSetting("Rootsearch.Method", "Subsolver"))
+    if(static_cast<ES_RootsearchMethod>(env->settings->getSetting<int>("Rootsearch.Method", "Subsolver"))
         == ES_RootsearchMethod::BoostTOMS748)
     {
         r1 = boost::math::tools::toms748_solve(*testObjective, 0.0, 1.0, TerminationCondition(lambdaTol), max_iter);

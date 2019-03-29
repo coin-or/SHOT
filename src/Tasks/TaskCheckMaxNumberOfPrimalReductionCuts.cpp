@@ -24,7 +24,7 @@ TaskCheckMaxNumberOfPrimalReductionCuts::~TaskCheckMaxNumberOfPrimalReductionCut
 void TaskCheckMaxNumberOfPrimalReductionCuts::run()
 {
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
-        >= env->settings->getIntSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
+        >= env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
     {
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
