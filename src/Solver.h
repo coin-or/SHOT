@@ -13,22 +13,7 @@
 #include "Shared.h"
 
 #include "ModelingSystem/IModelingSystem.h"
-
-#ifdef HAS_OS
-#include "ModelingSystem/ModelingSystemOS.h"
-#endif
-
-#ifdef HAS_GAMS
-#include "ModelingSystem/ModelingSystemGAMS.h"
-#endif
-
 #include "SolutionStrategy/ISolutionStrategy.h"
-#include "SolutionStrategy/SolutionStrategySingleTree.h"
-#include "SolutionStrategy/SolutionStrategyMultiTree.h"
-#include "SolutionStrategy/SolutionStrategyMIQCQP.h"
-#include "SolutionStrategy/SolutionStrategyNLP.h"
-
-#include "TaskHandler.h"
 
 namespace SHOT
 {
@@ -42,6 +27,8 @@ private:
 
     void initializeDebugMode();
 
+    bool selectStrategy();
+
     bool isProblemInitialized = false;
     bool isProblemSolved = false;
 
@@ -54,12 +41,12 @@ public:
 
     inline EnvironmentPtr getEnvironment() { return env; };
 
-    bool setOptions(std::string fileName);
+    bool setOptionsFromFile(std::string fileName);
+    bool setOptionsFromString(std::string options);
+    bool setOptionsFromOSoL(std::string options);
 
     bool setProblem(std::string fileName);
     bool setProblem(ProblemPtr problem, ModelingSystemPtr modelingSystem);
-
-    bool selectStrategy();
 
     bool solveProblem();
 
@@ -68,28 +55,23 @@ public:
         env->events->registerCallback(event, callback);
     }
 
-    // extern template void registerCallback(const E_EventType& event, std::function&& callback);
-
     std::string getOptionsOSoL();
     std::string getOptions();
 
     std::string getResultsOSrL();
     std::string getResultsTrace();
 
-    void updateSetting(std::string name, std::string category, std::string value);
-    void updateSetting(std::string name, std::string category, int value);
-    void updateSetting(std::string name, std::string category, bool value);
-    void updateSetting(std::string name, std::string category, double value);
+    template <typename T> void updateSetting(std::string name, std::string category, T value);
 
     double getDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();
 
-    int getNumberOfPrimalSolutions();
     PrimalSolution getPrimalSolution();
     std::vector<PrimalSolution> getPrimalSolutions();
 
     E_TerminationReason getTerminationReason();
+    E_ModelReturnStatus getModelReturnStatus();
 };
 } // namespace SHOT

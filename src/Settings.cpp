@@ -447,7 +447,7 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
     return (ss.str());
 }
 
-void Settings::readSettingsFromOSoL(std::string osol)
+bool Settings::readSettingsFromOSoL(std::string osol)
 {
     using namespace tinyxml2;
 
@@ -460,7 +460,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
     if(result != XML_SUCCESS)
     {
         output->outputError("Could not parse options in OSoL-format.", std::to_string(result));
-        return;
+        return (false);
     }
 
     auto osolNode
@@ -469,7 +469,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
     if(osolNode == nullptr)
     {
         output->outputError("No solver options specified in OSoL-file.");
-        return;
+        return (false);
     }
 
     for(auto N = osolNode->FirstChildElement("solverOption"); N != NULL; N = N->NextSiblingElement("solverOption"))
@@ -498,7 +498,7 @@ void Settings::readSettingsFromOSoL(std::string osol)
                 output->outputError(
                     "Cannot update setting <" + category + "," + name + "> since it has not been defined.");
 
-                throw SettingKeyNotFoundException(name, category);
+                return (false);
             }
 
             std::string::size_type convertedChars = value.length();
@@ -532,11 +532,14 @@ void Settings::readSettingsFromOSoL(std::string osol)
         catch(std::exception& e)
         {
             output->outputError("Error when reading OSoL line " + std::to_string(N->GetLineNum()));
+            return (false);
         }
     }
+
+    return (true);
 }
 
-void Settings::readSettingsFromString(std::string options)
+bool Settings::readSettingsFromString(std::string options)
 {
     output->outputTrace("Starting conversion of settings from GAMS options format.");
 
@@ -574,7 +577,7 @@ void Settings::readSettingsFromString(std::string options)
         {
             output->outputError("Cannot update setting <" + name + "," + category + "> since it has not been defined.");
 
-            throw SettingKeyNotFoundException(name, category);
+            return (false);
         }
 
         std::string::size_type convertedChars = value.length();
@@ -604,5 +607,7 @@ void Settings::readSettingsFromString(std::string options)
         if(convertedChars != value.length())
             output->outputError("Cannot update setting <" + name + "," + category + "> since it is of the wrong type.");
     }
+
+    return (true);
 }
 } // namespace SHOT
