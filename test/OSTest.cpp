@@ -69,13 +69,13 @@ bool SolveProblemOS(std::string filename)
     solver->solveProblem();
     std::string osrl = solver->getResultsOSrL();
     std::string trace = solver->getResultsTrace();
-    if(!SHOT::UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    if(!SHOT::Utilities::writeStringToFile("result.osrl", osrl))
     {
         std::cout << "Could not write results to OSrL file." << std::endl;
         passed = false;
     }
 
-    if(!SHOT::UtilityFunctions::writeStringToFile("trace.trc", trace))
+    if(!SHOT::Utilities::writeStringToFile("trace.trc", trace))
     {
         std::cout << "Could not write results to trace file." << std::endl;
         passed = false;
@@ -131,10 +131,10 @@ bool TestRootsearchOS(const std::string& problemFile)
     exteriorPoint.push_back(20.0);
 
     std::cout << "Interior point:\n";
-    UtilityFunctions::displayVector(interiorPoint);
+    Utilities::displayVector(interiorPoint);
 
     std::cout << "Exterior point:\n";
-    UtilityFunctions::displayVector(exteriorPoint);
+    Utilities::displayVector(exteriorPoint);
 
     auto rootsearch = std::make_unique<LinesearchMethodBoost>(env);
 
@@ -142,39 +142,39 @@ bool TestRootsearchOS(const std::string& problemFile)
         interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
-    UtilityFunctions::displayVector(root.first, root.second);
+    Utilities::displayVector(root.first, root.second);
 
     exteriorPoint.clear();
     exteriorPoint.push_back(8.47199);
     exteriorPoint.push_back(20.0);
 
     std::cout << "Interior point:\n";
-    UtilityFunctions::displayVector(interiorPoint);
+    Utilities::displayVector(interiorPoint);
 
     std::cout << "Exterior point:\n";
-    UtilityFunctions::displayVector(exteriorPoint);
+    Utilities::displayVector(exteriorPoint);
 
     root = rootsearch->findZero(
         interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
-    UtilityFunctions::displayVector(root.first, root.second);
+    Utilities::displayVector(root.first, root.second);
 
     exteriorPoint.clear();
     exteriorPoint.push_back(1.0);
     exteriorPoint.push_back(10.0);
 
     std::cout << "Interior point:\n";
-    UtilityFunctions::displayVector(interiorPoint);
+    Utilities::displayVector(interiorPoint);
 
     std::cout << "Exterior point:\n";
-    UtilityFunctions::displayVector(exteriorPoint);
+    Utilities::displayVector(exteriorPoint);
 
     root = rootsearch->findZero(
         interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);
 
     std::cout << "Root found:\n";
-    UtilityFunctions::displayVector(root.first, root.second);
+    Utilities::displayVector(root.first, root.second);
 
     return passed;
 }
@@ -215,7 +215,7 @@ bool TestGradientOS(const std::string& problemFile)
     }
 
     std::cout << "Point to evaluate gradients in:\n";
-    UtilityFunctions::displayVector(point);
+    Utilities::displayVector(point);
 
     for(auto& C : problem->numericConstraints)
     {

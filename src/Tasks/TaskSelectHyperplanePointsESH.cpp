@@ -158,7 +158,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(externalConstraintValue.normalizedValue >= 0)
         {
-            size_t hash = UtilityFunctions::calculateHash(externalPoint);
+            size_t hash = Utilities::calculateHash(externalPoint);
 
             if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->index))
             {
@@ -194,7 +194,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
 
             env->output->outputDebug("     Added hyperplane to waiting list with deviation: "
-                + UtilityFunctions::toString(externalConstraintValue.error));
+                + Utilities::toString(externalConstraintValue.error));
 
             hyperplane.generatedPoint.clear();
         }
@@ -273,7 +273,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
 
                 env->output->outputDebug("     Added hyperplane to waiting list with deviation: "
-                    + UtilityFunctions::toString(externalConstraintValue.error));
+                    + Utilities::toString(externalConstraintValue.error));
 
                 hyperplane.generatedPoint.clear();
             }

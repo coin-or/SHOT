@@ -1079,7 +1079,7 @@ void Problem::saveProblemToFile(std::string filename)
     std::stringstream stream;
     stream << this;
 
-    if(!UtilityFunctions::writeStringToFile(filename, stream.str()))
+    if(!Utilities::writeStringToFile(filename, stream.str()))
     {
         env->output->outputError("Error when writing to file " + filename);
     }

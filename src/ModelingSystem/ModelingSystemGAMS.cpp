@@ -60,17 +60,17 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // TODO?? gevTryInt: handling of fractional values in initial solution for repair heuristics
 
         env->output->outputDebug("Time limit set to "
-            + UtilityFunctions::toString(env->settings->getSetting<double>("TimeLimit", "Termination")) + " by GAMS");
+            + Utilities::toString(env->settings->getSetting<double>("TimeLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Iteration limit set to "
-            + UtilityFunctions::toString(env->settings->getSetting<int>("IterationLimit", "Termination")) + " by GAMS");
+            + Utilities::toString(env->settings->getSetting<int>("IterationLimit", "Termination")) + " by GAMS");
         env->output->outputDebug("Absolute termination tolerance set to "
-            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
+            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
             + " by GAMS");
         env->output->outputDebug("Relative termination tolerance set to "
-            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
+            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
             + " by GAMS");
         env->output->outputDebug("MIP number of threads set to "
-            + UtilityFunctions::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
+            + Utilities::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
     }
 
     // want to solve the NLP problems with GAMS
@@ -87,7 +87,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 
         try
         {
-            std::string fileContents = UtilityFunctions::getFileAsString(buffer);
+            std::string fileContents = Utilities::getFileAsString(buffer);
 
             settings->readSettingsFromString(fileContents);
         }

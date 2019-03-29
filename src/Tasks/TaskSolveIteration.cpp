@@ -78,7 +78,7 @@ void TaskSolveIteration::run()
             env->dualSolver->MIPSolver->updateVariableBound(
                 env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex(), newLB, newUB);
             env->output->outputDebug("     Bounds for nonlinear objective function updated to "
-                + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
+                + Utilities::toString(newLB) + " and " + Utilities::toString(newUB));
         }
     }
 
@@ -139,7 +139,7 @@ void TaskSolveIteration::run()
             ss << "/lpsolpt";
             ss << currIter->iterationNumber - 1;
             ss << ".txt";
-            UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
+            Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
         }
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
@@ -167,7 +167,7 @@ void TaskSolveIteration::run()
             ss << "/lpobjsol";
             ss << currIter->iterationNumber - 1;
             ss << ".txt";
-            UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
+            Utilities::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
         }
 
         if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -191,7 +191,7 @@ void TaskSolveIteration::run()
                 ss << "/lpmostdevm";
                 ss << currIter->iterationNumber - 1;
                 ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+                Utilities::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
             }
         }
 

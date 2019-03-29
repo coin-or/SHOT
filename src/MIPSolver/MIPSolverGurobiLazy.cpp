@@ -376,7 +376,7 @@ void GurobiCallback::callback()
                     ->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound + cutOffTol);
 
                 env->output->outputDebug("     Setting cutoff value to "
-                    + UtilityFunctions::toString(primalBound + cutOffTol) + " for minimization.");
+                    + Utilities::toString(primalBound + cutOffTol) + " for minimization.");
             }
             else
             {
@@ -384,7 +384,7 @@ void GurobiCallback::callback()
                     ->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound - cutOffTol);
 
                 env->output->outputDebug("     Setting cutoff value to "
-                    + UtilityFunctions::toString(-primalBound - cutOffTol) + " for minimization.");
+                    + Utilities::toString(-primalBound - cutOffTol) + " for minimization.");
             }*/
         }
     }

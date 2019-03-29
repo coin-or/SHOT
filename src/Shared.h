@@ -46,7 +46,7 @@
 #include "EventHandler.h"
 
 #include "ModelShared.h"
-#include "UtilityFunctions.h"
+#include "Utilities.h"
 
 #include "Report.h"
 #include "Timing.h"

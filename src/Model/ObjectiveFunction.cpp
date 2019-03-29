@@ -153,7 +153,7 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
     }
 
     if(eraseZeroes)
-        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -321,7 +321,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
     }
 
     if(eraseZeroes)
-        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -535,7 +535,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
     }
 
     if(eraseZeroes)
-        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -604,7 +604,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
         }
 
         if(eraseZeroes)
-            UtilityFunctions::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+            Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {

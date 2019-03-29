@@ -187,7 +187,7 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& poi
     }
 
     if(eraseZeroes)
-        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -325,7 +325,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
     }
 
     if(eraseZeroes)
-        UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
 };
@@ -544,7 +544,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
         }
 
         if(eraseZeroes)
-            UtilityFunctions::erase_if<VariablePtr, double>(gradient, 0.0);
+            Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {
@@ -618,7 +618,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
         }
 
         if(eraseZeroes)
-            UtilityFunctions::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
+            Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {

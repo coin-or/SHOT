@@ -84,14 +84,14 @@ bool SettingsTestOptions(bool useOSiL)
     {
         if(useOSiL)
         {
-            if(!UtilityFunctions::writeStringToFile(filename, solver->getOptionsOSoL()))
+            if(!Utilities::writeStringToFile(filename, solver->getOptionsOSoL()))
             {
                 passed = false;
             }
         }
         else
         {
-            if(!UtilityFunctions::writeStringToFile(filename, solver->getOptions()))
+            if(!Utilities::writeStringToFile(filename, solver->getOptions()))
             {
                 passed = false;
             }

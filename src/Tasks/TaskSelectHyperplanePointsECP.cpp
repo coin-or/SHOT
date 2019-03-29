@@ -81,7 +81,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            size_t hash = UtilityFunctions::calculateHash(solPoints.at(i).point);
+            size_t hash = Utilities::calculateHash(solPoints.at(i).point);
 
             if(env->dualSolver->hasHyperplaneBeenAdded(hash, NCV.constraint->index))
             {

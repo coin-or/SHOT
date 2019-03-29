@@ -76,13 +76,13 @@ bool CplexTest1(std::string filename)
     solver->solveProblem();
     std::string osrl = solver->getResultsOSrL();
     std::string trace = solver->getResultsTrace();
-    if(!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    if(!Utilities::writeStringToFile("result.osrl", osrl))
     {
         std::cout << "Could not write results to OSrL file." << std::endl;
         passed = false;
     }
 
-    if(!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    if(!Utilities::writeStringToFile("trace.trc", trace))
     {
         std::cout << "Could not write results to trace file." << std::endl;
         passed = false;

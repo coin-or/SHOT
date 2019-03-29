@@ -155,7 +155,7 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
     genHyperplane.isLazy = false;
 
-    genHyperplane.pointHash = UtilityFunctions::calculateHash(hyperplane.generatedPoint);
+    genHyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
 
     generatedHyperplanes.push_back(genHyperplane);
 

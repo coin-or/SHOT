@@ -619,7 +619,7 @@ std::string Results::getResultsTrace()
 
     ss << ",";
 
-    ss << UtilityFunctions::toStringFormat(UtilityFunctions::getJulianFractionalDate(), "%.5f", false);
+    ss << Utilities::toStringFormat(Utilities::getJulianFractionalDate(), "%.5f", false);
     ss << ",";
     ss << (env->problem->objectiveFunction->properties.isMinimize ? "0" : "1") << ",";
     ss << env->problem->properties.numberOfNumericConstraints << ",";
@@ -790,15 +790,15 @@ void Results::savePrimalSolutionToFile(
     str << "Iteration found: " << solution.iterFound;
     str << '\n';
 
-    str << "Objective value: " << UtilityFunctions::toStringFormat(solution.objValue, "%.8f", false);
+    str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "%.8f", false);
     str << '\n';
 
     str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
     str << '\n';
 
     str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -808,7 +808,7 @@ void Results::savePrimalSolutionToFile(
     str << '\n';
 
     str << "Max integer rounding error: "
-        << UtilityFunctions::toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
+        << Utilities::toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
 
     str << '\n';
     str << '\n';
@@ -826,7 +826,7 @@ void Results::savePrimalSolutionToFile(
         str << '\n';
     }
 
-    UtilityFunctions::writeStringToFile(fileName, str.str());
+    Utilities::writeStringToFile(fileName, str.str());
 };
 
 void Results::savePrimalSolutionToFile(
@@ -840,15 +840,15 @@ void Results::savePrimalSolutionToFile(
     str << "Iteration found: " << solution.iterFound;
     str << '\n';
 
-    str << "Objective value: " << UtilityFunctions::toStringFormat(solution.objValue, "%.8f", false);
+    str << "Objective value: " << Utilities::toStringFormat(solution.objValue, "%.8f", false);
     str << '\n';
 
     str << "Largest nonlinear error (in constraint " << solution.maxDevatingConstraintNonlinear.index
-        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
+        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintNonlinear.value, "%.8f", false);
     str << '\n';
 
     str << "Largest linear error (in constraint " << solution.maxDevatingConstraintLinear.index
-        << "): " << UtilityFunctions::toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
+        << "): " << Utilities::toStringFormat(solution.maxDevatingConstraintLinear.value, "%.8f", false);
     str << '\n';
 
     str << "Projection to variable bounds performed: " << (solution.boundProjectionPerformed ? "true" : "false");
@@ -858,7 +858,7 @@ void Results::savePrimalSolutionToFile(
     str << '\n';
 
     str << "Max integer rounding error: "
-        << UtilityFunctions::toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
+        << Utilities::toStringFormat(solution.maxIntegerToleranceError, "%.8f", false);
 
     str << '\n';
     str << '\n';
@@ -879,7 +879,7 @@ void Results::savePrimalSolutionToFile(
         str << '\n';
     }
 
-    UtilityFunctions::writeStringToFile(fileName, str.str());
+    Utilities::writeStringToFile(fileName, str.str());
 };
 
 } // namespace SHOT

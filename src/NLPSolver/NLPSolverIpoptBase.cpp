@@ -639,8 +639,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         if(currPt > currUB)
         {
             env->output->outputDebug("  Starting point value for variable " + std::to_string(currVarIndex)
-                + " is larger than ub: " + UtilityFunctions::toString(currPt) + " > "
-                + UtilityFunctions::toString(currUB) + "; resetting to ub.");
+                + " is larger than ub: " + Utilities::toString(currPt) + " > "
+                + Utilities::toString(currUB) + "; resetting to ub.");
             if(currUB == 1 && currPt > 1 && currPt < 1.00001)
             {
                 currPt = 1;
@@ -654,8 +654,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         if(currPt < currLB)
         {
             env->output->outputDebug("  Starting point value for variable " + std::to_string(currVarIndex)
-                + " is smaller than lb: " + UtilityFunctions::toString(currPt) + " < "
-                + UtilityFunctions::toString(currLB) + "; resetting to lb.");
+                + " is smaller than lb: " + Utilities::toString(currPt) + " < "
+                + Utilities::toString(currLB) + "; resetting to lb.");
 
             if(currLB == 0 && currPt < 0 && currPt > -0.00001)
             {
@@ -670,8 +670,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         startingPointVariableValues.at(k) = currPt;
 
         env->output->outputTrace("  Starting point value for " + std::to_string(currVarIndex)
-            + " set: " + UtilityFunctions::toString(currLB) + " < " + UtilityFunctions::toString(currPt) + " < "
-            + UtilityFunctions::toString(currUB));
+            + " set: " + Utilities::toString(currLB) + " < " + Utilities::toString(currPt) + " < "
+            + Utilities::toString(currUB));
     }
 
     env->output->outputDebug(" All starting points set.");
@@ -798,7 +798,7 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         if(currPt > currUB)
         {
             env->output->outputWarning("  Fixed value for variable " + std::to_string(currVarIndex)
-                + " is larger than ub: " + UtilityFunctions::toString(currPt) + " > " + std::to_string(currUB));
+                + " is larger than ub: " + Utilities::toString(currPt) + " > " + std::to_string(currUB));
             if(currUB == 1 && currPt > 1 && currPt < 1.00001)
             {
                 currPt = 1;
@@ -811,7 +811,7 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         else if(currPt < currLB)
         {
             env->output->outputWarning("  Fixed value for variable " + std::to_string(currVarIndex)
-                + " is smaller than lb: " + UtilityFunctions::toString(currPt) + " < " + std::to_string(currLB));
+                + " is smaller than lb: " + Utilities::toString(currPt) + " < " + std::to_string(currLB));
 
             if(currLB == 0 && currPt < 0 && currPt > -0.00001)
             {
@@ -824,8 +824,8 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         }
 
         env->output->outputTrace("  Setting fixed value for variable " + std::to_string(currVarIndex) + ": "
-            + UtilityFunctions::toString(currLB) + " <= " + UtilityFunctions::toString(currPt)
-            + " <= " + UtilityFunctions::toString(currUB));
+            + Utilities::toString(currLB) + " <= " + Utilities::toString(currPt)
+            + " <= " + Utilities::toString(currUB));
 
         if(currPt >= sourceProblem->getVariableLowerBound(currVarIndex)
             && currPt <= sourceProblem->getVariableUpperBound(currVarIndex))
@@ -837,9 +837,9 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         {
             env->output->outputWarning("     Cannot fix variable value for variable with index "
                 + std::to_string(currVarIndex) + ": not within bounds ("
-                + UtilityFunctions::toString(sourceProblem->getVariableLowerBound(currVarIndex)) + " < "
-                + UtilityFunctions::toString(currPt) + " < "
-                + UtilityFunctions::toString(sourceProblem->getVariableUpperBound(currVarIndex)));
+                + Utilities::toString(sourceProblem->getVariableLowerBound(currVarIndex)) + " < "
+                + Utilities::toString(currPt) + " < "
+                + Utilities::toString(sourceProblem->getVariableUpperBound(currVarIndex)));
         }
     }
 
@@ -860,7 +860,7 @@ void NLPSolverIpoptBase::unfixVariables()
         upperBounds[currVarIndex] = newUB;
 
         env->output->outputDebug("  Resetting initial bounds for variable " + std::to_string(currVarIndex)
-            + " lb = " + UtilityFunctions::toString(newLB) + " ub = " + UtilityFunctions::toString(newUB));
+            + " lb = " + Utilities::toString(newLB) + " ub = " + Utilities::toString(newUB));
     }
 
     fixedVariableIndexes.clear();

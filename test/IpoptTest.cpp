@@ -148,7 +148,7 @@ bool IpoptTest1()
 
     std::cout << '\n';
     std::cout << "The solution vector is:\n\n";
-    UtilityFunctions::displayVector(solution);
+    Utilities::displayVector(solution);
 
     return (passed);
 }
@@ -255,7 +255,7 @@ bool IpoptTest2()
 
     std::cout << '\n';
     std::cout << "The solution vector is:\n\n";
-    UtilityFunctions::displayVector(solution);
+    Utilities::displayVector(solution);
 
     return (passed);
 }

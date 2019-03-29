@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
             // Create OSoL-file
             optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
 
-            if(!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOptionsOSoL()))
+            if(!Utilities::writeStringToFile(optionsFile.string(), solver->getOptionsOSoL()))
             {
                 env->output->outputError(" Error when writing OSoL file: " + optionsFile.string());
             }
@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
             // Create GAMS option file
             optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
 
-            if(!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOptions()))
+            if(!Utilities::writeStringToFile(optionsFile.string(), solver->getOptions()))
             {
                 env->output->outputError(" Error when writing options file: " + optionsFile.string());
             }
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
         resultPath = resultPath.replace_extension(".osrl");
         env->output->outputInfo(" Results written to: " + resultPath.string());
 
-        if(!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
+        if(!Utilities::writeStringToFile(resultPath.string(), osrl))
         {
             env->output->outputError(" Error when writing OSrL file: " + resultPath.string());
         }
@@ -178,7 +178,7 @@ int main(int argc, char* argv[])
     {
         env->output->outputInfo(" Results written to: " + resultFile.string());
 
-        if(!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
+        if(!Utilities::writeStringToFile(resultFile.string(), osrl))
         {
             env->output->outputError(" Error when writing OSrL file: " + resultFile.string());
         }
@@ -193,14 +193,14 @@ int main(int argc, char* argv[])
         tracePath = tracePath.replace_extension(".trc");
         env->output->outputInfo("                     " + tracePath.string());
 
-        if(!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
+        if(!Utilities::writeStringToFile(tracePath.string(), trace))
         {
             env->output->outputError(" Error when writing trace file: " + tracePath.string());
         }
     }
     else
     {
-        if(!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
+        if(!Utilities::writeStringToFile(traceFile.string(), trace))
         {
             env->output->outputError(" Error when writing trace file: " + traceFile.string());
         }

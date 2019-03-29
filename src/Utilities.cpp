@@ -10,13 +10,13 @@
 
 #include <chrono>
 
-#include "UtilityFunctions.h"
+#include "Utilities.h"
 #include "Shared.h"
 
 #include <boost/functional/hash/hash.hpp>
 #include <boost/format.hpp>
 
-namespace SHOT::UtilityFunctions
+namespace SHOT::Utilities
 {
 
 void saveVariablePointVectorToFile(
@@ -482,4 +482,4 @@ bool isInteger(double value)
     return (std::modf(value, &intpart) == 0.0);
 }
 
-}; // namespace SHOT::UtilityFunctions
+}; // namespace SHOT::Utilities

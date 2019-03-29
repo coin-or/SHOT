@@ -135,7 +135,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         {
             for(int i = 0; i < testedPoints.size(); i++)
             {
-                if(UtilityFunctions::isDifferentRoundedSelectedElements(
+                if(Utilities::isDifferentRoundedSelectedElements(
                        env->primalSolver->fixedPrimalNLPCandidates.at(j).point, testedPoints.at(i),
                        discreteVariableIndexes))
                 {
@@ -221,7 +221,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     + "/primalnlp_warmstart" + std::to_string(currIter->iterationNumber) + "_" + std::to_string(j)
                     + ".txt";
 
-                UtilityFunctions::saveVariablePointVectorToFile(startingPointValues, variableNames, filename);
+                Utilities::saveVariablePointVectorToFile(startingPointValues, variableNames, filename);
             }
 
             NLPSolver->setStartingPoint(startingPointIndexes, startingPointValues);

@@ -111,7 +111,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         std::stringstream problem;
         problem << env->reformulatedProblem;
 
-        UtilityFunctions::writeStringToFile(filename.str(), problem.str());
+        Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
     env->timing->stopTimer("ProblemReformulation");

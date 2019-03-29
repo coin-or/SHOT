@@ -793,14 +793,14 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
             {
                 gurobiModel->addConstr(-objectiveLinearExpression <= -cutOff, "CUTOFF_C");
 
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
                     + " for maximization.");
             }
             else
             {
                 gurobiModel->addConstr(objectiveLinearExpression <= cutOff, "CUTOFF_C");
 
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
                     + " for minimization.");
             }
 
@@ -818,12 +818,12 @@ void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
             {
                 constraint.set(GRB_DoubleAttr_RHS, -cutOff);
                 env->output->outputCritical("        Setting cutoff constraint value to "
-                    + UtilityFunctions::toString(cutOff) + " for maximization.");
+                    + Utilities::toString(cutOff) + " for maximization.");
             }
             else
             {
                 constraint.set(GRB_DoubleAttr_RHS, cutOff);
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
                     + " for minimization.");
             }
 

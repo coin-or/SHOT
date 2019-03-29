@@ -80,10 +80,10 @@ void TaskSolveFixedDualProblem::run()
 
     auto currSolPt = prevIter->solutionPoints.at(0).point;
 
-    bool isDifferent1 = UtilityFunctions::isDifferentSelectedElements(
+    bool isDifferent1 = Utilities::isDifferentSelectedElements(
         currSolPt, prevIter2->solutionPoints.at(0).point, discreteVariableIndexes);
 
-    bool isDifferent2 = UtilityFunctions::isDifferentSelectedElements(
+    bool isDifferent2 = Utilities::isDifferentSelectedElements(
         currSolPt, prevIter3->solutionPoints.at(0).point, discreteVariableIndexes);
 
     if(isDifferent1 || isDifferent2)

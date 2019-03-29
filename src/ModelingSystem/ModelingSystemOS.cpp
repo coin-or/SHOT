@@ -123,7 +123,7 @@ OSInstance* ModelingSystemOS::readInstanceFromOSiL(const std::string& text)
 
 OSInstance* ModelingSystemOS::readInstanceFromOSiLFile(const std::string& filename)
 {
-    std::string fileContents = UtilityFunctions::getFileAsString(filename);
+    std::string fileContents = Utilities::getFileAsString(filename);
 
     return (readInstanceFromOSiL(fileContents));
 }

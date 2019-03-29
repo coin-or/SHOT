@@ -179,8 +179,8 @@ void InfoCallbackI::main() // Called at each node...
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
         env->output->outputCritical("     Terminated by relative objective gap tolerance in info callback: "
-            + UtilityFunctions::toString(relObjGap) + " < "
-            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
+            + Utilities::toString(relObjGap) + " < "
+            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         this->abort();
         return;
@@ -188,8 +188,8 @@ void InfoCallbackI::main() // Called at each node...
     else if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         env->output->outputCritical("     Terminated by absolute objective gap tolerance in info callback: "
-            + UtilityFunctions::toString(absObjGap) + " < "
-            + UtilityFunctions::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
+            + Utilities::toString(absObjGap) + " < "
+            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
         this->abort();
         return;

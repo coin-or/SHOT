@@ -864,20 +864,20 @@ void MIPSolverCplex::setCutOff(double cutOff)
         cplexInstance.setParam(IloCplex::CutUp, cutOff);
 
         env->output->outputDebug(
-            "        Setting cutoff value to " + UtilityFunctions::toString(cutOff) + " for minimization.");
+            "        Setting cutoff value to " + Utilities::toString(cutOff) + " for minimization.");
         /*
     if(isMinimizationProblem)
     {
         cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
 
         env->output->outputCritical("        Setting cutoff value to "
-            + UtilityFunctions::toStringFormat(cutOff, true) + " for minimization.");
+            + Utilities::toStringFormat(cutOff, true) + " for minimization.");
     }
     else
     {
         cplexInstance.setParam(IloCplex::CutLo, cutOff);
         env->output->outputCritical("        Setting cutoff value to "
-            + UtilityFunctions::toStringFormat(cutOff, true) + " for maximization.");
+            + Utilities::toStringFormat(cutOff, true) + " for maximization.");
     }*/
     }
     catch(IloException& e)
@@ -899,7 +899,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
                     + " for maximization.");
             }
             else
@@ -909,7 +909,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
                     + " for minimization.");
             }
 
@@ -925,12 +925,12 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             {
                 cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
                 env->output->outputDebug("        Setting cutoff constraint value to "
-                    + UtilityFunctions::toString(cutOff) + " for maximization.");
+                    + Utilities::toString(cutOff) + " for maximization.");
             }
             else
             {
                 cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
-                env->output->outputDebug("        Setting cutoff constraint to " + UtilityFunctions::toString(cutOff)
+                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
                     + " for minimization.");
             }
 

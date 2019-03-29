@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace SHOT::UtilityFunctions
+namespace SHOT::Utilities
 {
 
 typedef std::pair<std::string, std::string> PairString;
@@ -98,4 +98,4 @@ bool isAlmostEqual(double x, double y, const double epsilon);
 
 bool isInteger(double value);
 std::string trim(const std::string& str);
-} // namespace SHOT::UtilityFunctions
+} // namespace SHOT::Utilities

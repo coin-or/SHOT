@@ -185,7 +185,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             ss << "/lpminimaxsolpt";
             ss << i;
             ss << ".txt";
-            UtilityFunctions::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
+            Utilities::saveVariablePointVectorToFile(LPVarSol, variableNames, ss.str());
         }
 
         if(std::isnan(LPObjVar))
@@ -232,7 +232,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 ss << "/lpminimaxlinesearchsolpt";
                 ss << i;
                 ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(currSol, variableNames, ss.str());
+                Utilities::saveVariablePointVectorToFile(currSol, variableNames, ss.str());
             }
         }
 

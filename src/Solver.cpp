@@ -70,7 +70,7 @@ bool Solver::setOptionsFromFile(std::string fileName)
 
         if(fileExtension == ".xml" || fileExtension == ".osol")
         {
-            fileContents = UtilityFunctions::getFileAsString(fileName);
+            fileContents = Utilities::getFileAsString(fileName);
 
             result = env->settings->readSettingsFromOSoL(fileContents);
 
@@ -78,7 +78,7 @@ bool Solver::setOptionsFromFile(std::string fileName)
         }
         else if(fileExtension == ".opt")
         {
-            fileContents = UtilityFunctions::getFileAsString(fileName);
+            fileContents = Utilities::getFileAsString(fileName);
             result = env->settings->readSettingsFromString(fileContents);
         }
         else
@@ -253,7 +253,7 @@ bool Solver::setProblem(std::string fileName)
             std::stringstream problemText;
             problemText << env->reformulatedProblem;
 
-            UtilityFunctions::writeStringToFile(problemFilename.str(), problemText.str());
+            Utilities::writeStringToFile(problemFilename.str(), problemText.str());
         }
     }
     catch(const Error& eclass)
@@ -299,7 +299,7 @@ bool Solver::setProblem(std::string fileName)
         std::stringstream problem;
         problem << env->problem;
 
-        UtilityFunctions::writeStringToFile(filename.str(), problem.str());
+        Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
     verifySettings();
@@ -339,7 +339,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
         std::stringstream problem;
         problem << env->problem;
 
-        UtilityFunctions::writeStringToFile(filename.str(), problem.str());
+        Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
     verifySettings();
@@ -432,7 +432,7 @@ bool Solver::solveProblem()
 
         auto usedSettings = env->settings->getSettingsAsString(false, false);
 
-        UtilityFunctions::writeStringToFile(filename.str(), usedSettings);
+        Utilities::writeStringToFile(filename.str(), usedSettings);
     }
 
     if(env->problem->objectiveFunction->properties.isMinimize)

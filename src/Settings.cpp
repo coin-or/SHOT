@@ -9,7 +9,7 @@
 */
 
 #include "Settings.h"
-#include "UtilityFunctions.h"
+#include "Utilities.h"
 
 namespace SHOT
 {
@@ -30,7 +30,7 @@ void Settings::createBaseSetting(
     {
         stringSettings[key] = value;
         settingTypes[key] = E_SettingType::String;
-        tempValue = UtilityFunctions::trim(value);
+        tempValue = Utilities::trim(value);
         output->outputTrace("String setting " + category + "." + name + " = " + tempValue + " created.");
     }
     else if constexpr(std::is_same_v<T, int>)
@@ -125,7 +125,7 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
 
     if constexpr(std::is_same_v<T, std::string>)
     {
-        if(UtilityFunctions::trim(oldValue->second) == UtilityFunctions::trim(value))
+        if(Utilities::trim(oldValue->second) == Utilities::trim(value))
         {
             output->outputTrace(
                 "Setting " + key.first + "." + key.second + " not updated since the same value was given.");
@@ -144,7 +144,7 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
 
     if constexpr(std::is_same_v<T, std::string>)
     {
-        stringSettings[key] = UtilityFunctions::trim(value);
+        stringSettings[key] = Utilities::trim(value);
 
         output->outputTrace("Setting " + key.first + "." + key.second + " updated. New value = " + value + ".");
     }
@@ -567,9 +567,9 @@ bool Settings::readSettingsFromString(std::string options)
             continue;
         }
 
-        category = UtilityFunctions::trim(category);
-        name = UtilityFunctions::trim(name);
-        value = UtilityFunctions::trim(value);
+        category = Utilities::trim(category);
+        name = Utilities::trim(name);
+        value = Utilities::trim(value);
 
         PairString keyPair = make_pair(category, name);
 

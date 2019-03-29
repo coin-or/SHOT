@@ -84,19 +84,19 @@ void TaskFindInteriorPoint::run()
         if(maxDev.normalizedValue > 0)
         {
             env->output->outputWarning("\n Maximum deviation in interior point is too large: "
-                + UtilityFunctions::toString(maxDev.normalizedValue));
+                + Utilities::toString(maxDev.normalizedValue));
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
                 std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
                     + "/interiorpoint_notused_" + std::to_string(i) + ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
+                Utilities::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
             }
         }
         else
         {
             env->output->outputInfo("\n Valid interior point with constraint deviation "
-                + UtilityFunctions::toString(maxDev.normalizedValue) + " found.");
+                + Utilities::toString(maxDev.normalizedValue) + " found.");
 
             // Remove the variable from the epigraph formulation
             if(env->reformulatedProblem->auxiliaryObjectiveVariable)
@@ -108,7 +108,7 @@ void TaskFindInteriorPoint::run()
             {
                 std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output") + "/interiorpoint_"
                     + std::to_string(i) + ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
+                Utilities::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
             }
         }
 

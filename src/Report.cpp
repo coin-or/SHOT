@@ -91,13 +91,13 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         }
 
         std::string combObjectiveValue
-            = (boost::format("%|12s| | %|-12s|") % UtilityFunctions::toStringFormat(dualObjectiveValue, "%#g")
-                % UtilityFunctions::toStringFormat(primalObjectiveValue, "%#g"))
+            = (boost::format("%|12s| | %|-12s|") % Utilities::toStringFormat(dualObjectiveValue, "%#g")
+                % Utilities::toStringFormat(primalObjectiveValue, "%#g"))
                   .str();
 
         std::string combObjectiveGap
-            = (boost::format("%|8s| | %|-8s|") % UtilityFunctions::toStringFormat(absoluteObjectiveGap, "%#.1e")
-                % UtilityFunctions::toStringFormat(relativeObjectiveGap, "%#.1e"))
+            = (boost::format("%|8s| | %|-8s|") % Utilities::toStringFormat(absoluteObjectiveGap, "%#.1e")
+                % Utilities::toStringFormat(relativeObjectiveGap, "%#.1e"))
                   .str();
 
         std::string combCurrSol;
@@ -172,8 +172,8 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
         }
 
         std::string combObjectiveValue
-            = (boost::format("%|12s| | %|-12s|") % UtilityFunctions::toStringFormat(dualObjectiveValue, "%#g")
-                % UtilityFunctions::toStringFormat(primalObjectiveValue, "%#g"))
+            = (boost::format("%|12s| | %|-12s|") % Utilities::toStringFormat(dualObjectiveValue, "%#g")
+                % Utilities::toStringFormat(primalObjectiveValue, "%#g"))
                   .str();
 
         if(absoluteObjectiveGap != lastAbsoluteObjectiveGap)
@@ -187,8 +187,8 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
         }
 
         std::string combObjectiveGap
-            = (boost::format("%|8s| | %|-8s|") % UtilityFunctions::toStringFormat(absoluteObjectiveGap, "%#.1e")
-                % UtilityFunctions::toStringFormat(relativeObjectiveGap, "%#.1e"))
+            = (boost::format("%|8s| | %|-8s|") % Utilities::toStringFormat(absoluteObjectiveGap, "%#.1e")
+                % Utilities::toStringFormat(relativeObjectiveGap, "%#.1e"))
                   .str();
 
         auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|") % iterationNumber % iterationDesc
@@ -835,11 +835,11 @@ void Report::outputSolutionReport()
     report << "\r\n";
 
     report << " Objective bound [dual, primal]:                 ";
-    report << "[" << UtilityFunctions::toStringFormat(env->results->getDualBound(), "%g") << ", ";
-    report << UtilityFunctions::toStringFormat(env->results->getPrimalBound(), "%g") << "]\r\n";
+    report << "[" << Utilities::toStringFormat(env->results->getDualBound(), "%g") << ", ";
+    report << Utilities::toStringFormat(env->results->getPrimalBound(), "%g") << "]\r\n";
     report << " Objective gap absolute / relative:              ";
-    report << "" << UtilityFunctions::toStringFormat(env->results->getAbsoluteObjectiveGap(), "%g") << " / ";
-    report << UtilityFunctions::toStringFormat(env->results->getRelativeObjectiveGap(), "%g") << "\r\n";
+    report << "" << Utilities::toStringFormat(env->results->getAbsoluteObjectiveGap(), "%g") << " / ";
+    report << Utilities::toStringFormat(env->results->getRelativeObjectiveGap(), "%g") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
