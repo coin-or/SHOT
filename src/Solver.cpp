@@ -10,6 +10,21 @@
 
 #include "Solver.h"
 
+#include "TaskHandler.h"
+
+#ifdef HAS_OS
+#include "ModelingSystem/ModelingSystemOS.h"
+#endif
+
+#ifdef HAS_GAMS
+#include "ModelingSystem/ModelingSystemGAMS.h"
+#endif
+
+#include "SolutionStrategy/SolutionStrategySingleTree.h"
+#include "SolutionStrategy/SolutionStrategyMultiTree.h"
+#include "SolutionStrategy/SolutionStrategyMIQCQP.h"
+#include "SolutionStrategy/SolutionStrategyNLP.h"
+
 #include "boost/filesystem.hpp"
 
 namespace SHOT
@@ -45,8 +60,9 @@ Solver::Solver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
 
 Solver::~Solver() {}
 
-bool Solver::setOptions(std::string fileName)
+bool Solver::setOptionsFromFile(std::string fileName)
 {
+    bool result = true;
     try
     {
         std::string fileContents;
@@ -56,49 +72,53 @@ bool Solver::setOptions(std::string fileName)
         {
             fileContents = UtilityFunctions::getFileAsString(fileName);
 
-            // try
-            {
-                env->settings->readSettingsFromOSoL(fileContents);
-            }
-            /*catch(std::exception& e)
-            {
-                env->output->outputError("Error when reading OSoL options file " + fileName, e.what());
-                return (false);
-            }*/
+            result = env->settings->readSettingsFromOSoL(fileContents);
 
             verifySettings();
         }
         else if(fileExtension == ".opt")
         {
             fileContents = UtilityFunctions::getFileAsString(fileName);
-
-            // try
-            {
-                env->settings->readSettingsFromString(fileContents);
-            }
-            /*catch(std::exception& e)
-            {
-                env->output->outputError("Error when reading options file" + fileName);
-                return (false);
-            }*/
+            result = env->settings->readSettingsFromString(fileContents);
         }
         else
         {
             env->output->outputError(
                 "Error when reading options from \"" + fileName + "\". File extension must be osol, xml or opt.");
+            result = false;
         }
     }
     catch(const Error& eclass)
     {
         env->output->outputError("Error when reading options from \"" + fileName + "\"", eclass.message);
-        return (false);
+        result = false;
     }
 
     env->settings->updateSetting("OptionsFile", "Input", fileName);
 
     env->output->outputDebug("Options read from file \"" + fileName + "\"");
 
-    return (true);
+    return (result);
+}
+
+bool Solver::setOptionsFromString(std::string options)
+{
+    bool status = env->settings->readSettingsFromString(options);
+
+    env->output->outputDebug("Options read.");
+
+    return (status);
+}
+
+bool Solver::setOptionsFromOSoL(std::string options)
+{
+    bool status = env->settings->readSettingsFromOSoL(options);
+
+    verifySettings();
+
+    env->output->outputDebug("Options read.");
+
+    return (status);
 }
 
 bool Solver::setProblem(std::string fileName)
@@ -1043,6 +1063,9 @@ void Solver::initializeDebugMode()
 
 void Solver::verifySettings()
 {
+    env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
+        static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+
     if(env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
         || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
     {
@@ -1147,22 +1170,12 @@ void Solver::verifySettings()
     }
 }
 
-void Solver::updateSetting(std::string name, std::string category, std::string value)
-{
-    env->settings->updateSetting(name, category, value);
-}
+template void Solver::updateSetting(std::string name, std::string category, std::string value);
+template void Solver::updateSetting(std::string name, std::string category, double value);
+template void Solver::updateSetting(std::string name, std::string category, int value);
+template void Solver::updateSetting(std::string name, std::string category, bool value);
 
-void Solver::updateSetting(std::string name, std::string category, int value)
-{
-    env->settings->updateSetting(name, category, value);
-}
-
-void Solver::updateSetting(std::string name, std::string category, bool value)
-{
-    env->settings->updateSetting(name, category, value);
-}
-
-void Solver::updateSetting(std::string name, std::string category, double value)
+template <typename T> void Solver::updateSetting(std::string name, std::string category, T value)
 {
     env->settings->updateSetting(name, category, value);
 }
@@ -1174,8 +1187,6 @@ double Solver::getPrimalBound() { return (env->results->getPrimalBound()); }
 double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteObjectiveGap()); }
 
 double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeObjectiveGap()); }
-
-int Solver::getNumberOfPrimalSolutions() { return (env->results->primalSolutions.size() > 0); }
 
 PrimalSolution Solver::getPrimalSolution()
 {
@@ -1192,4 +1203,6 @@ PrimalSolution Solver::getPrimalSolution()
 std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results->primalSolutions); }
 
 E_TerminationReason Solver::getTerminationReason() { return (env->results->terminationReason); }
+
+E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->modelReturnStatus); }
 } // namespace SHOT
