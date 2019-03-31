@@ -24,6 +24,7 @@ bool ModelTestConstraints();
 bool ModelTestCreateProblem();
 bool ModelTestCreateProblem2();
 bool ModelTestCreateProblem3();
+bool ModelTestConvexity();
 
 bool TestReadProblem(const std::string& problemFile);
 bool TestRootsearch(const std::string& problemFile);
@@ -72,6 +73,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 8:
         passed = ModelTestCreateProblem3();
+        break;
+    case 9:
+        passed = ModelTestConvexity();
         break;
     default:
         passed = false;
@@ -910,6 +914,119 @@ bool ModelTestCreateProblem3()
     for(auto const& H : hessianNonlinear)
     {
         std::cout << "(" + H.first.first->name << "," << H.first.second->name << "): " << H.second << '\n';
+    }
+
+    return passed;
+}
+
+bool ModelTestConvexity()
+{
+    bool passed = true;
+
+    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+    env->output = std::make_shared<SHOT::Output>();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    // Creating variables
+
+    auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
+    SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);
+
+    auto var_y = std::make_shared<SHOT::Variable>("y", 1, SHOT::E_VariableType::Integer, 0.0, 1.0);
+    SHOT::ExpressionVariablePtr expressionVariable_y = std::make_shared<SHOT::ExpressionVariable>(var_y);
+
+    SHOT::Variables variables = { var_x, var_y };
+    problem->add(variables);
+
+    auto objectiveFunction
+        = std::make_shared<SHOT::QuadraticObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
+    SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
+
+    SHOT::LinearTerms objLinearTerms;
+    objLinearTerms.add(objLinearTerm1);
+    objLinearTerms.add(objLinearTerm2);
+
+    objectiveFunction->add(objLinearTerms);
+
+    SHOT::QuadraticTermPtr objQuadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_y);
+    SHOT::QuadraticTermPtr objQuadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_x);
+    SHOT::QuadraticTerms objQuadraticTerms;
+    objQuadraticTerms.add(objQuadraticTerm1);
+    objQuadraticTerms.add(objQuadraticTerm2);
+    objectiveFunction->add(objQuadraticTerms);
+
+    SHOT::QuadraticTermPtr quadraticTerm1 = std::make_shared<SHOT::QuadraticTerm>(1, var_x, var_x);
+    SHOT::QuadraticTermPtr quadraticTerm2 = std::make_shared<SHOT::QuadraticTerm>(2, var_x, var_y);
+    SHOT::QuadraticTermPtr quadraticTerm3 = std::make_shared<SHOT::QuadraticTerm>(1, var_y, var_y);
+    SHOT::QuadraticTerms quadraticTerms;
+    quadraticTerms.add(quadraticTerm1);
+    quadraticTerms.add(quadraticTerm2);
+    quadraticTerms.add(quadraticTerm3);
+
+    SHOT::QuadraticConstraintPtr quadraticConstraint
+        = std::make_shared<SHOT::QuadraticConstraint>(0, "quadconstr", quadraticTerms, -10.0, 20.0);
+
+    problem->add(objectiveFunction);
+
+    problem->finalize();
+
+    std::cout << "Objective function " << objectiveFunction << "created. ";
+
+    auto convexity = objQuadraticTerms.getConvexity();
+
+    switch(convexity)
+    {
+    case(E_Convexity::Convex):
+        std::cout << "Objective is convex\n";
+        break;
+
+    case(E_Convexity::Concave):
+        std::cout << "Objective is concave\n";
+        break;
+    case(E_Convexity::Linear):
+        std::cout << "Objective is linear\n";
+        break;
+    case(E_Convexity::Nonconvex):
+        std::cout << "Objective is nonconvex\n";
+        break;
+    case(E_Convexity::Unknown):
+        std::cout << "Convexity status of objective unknown\n";
+        break;
+    case(E_Convexity::NotSet):
+        std::cout << "Convexity status of objective not set\n";
+        break;
+    default:
+        break;
+    }
+
+    std::cout << "Constraint " << quadraticConstraint << "created. ";
+
+    convexity = quadraticTerms.getConvexity();
+
+    switch(convexity)
+    {
+    case(E_Convexity::Convex):
+        std::cout << "Constraint is convex\n";
+        break;
+
+    case(E_Convexity::Concave):
+        std::cout << "Constraint is concave\n";
+        break;
+    case(E_Convexity::Linear):
+        std::cout << "Constraint is linear\n";
+        break;
+    case(E_Convexity::Nonconvex):
+        std::cout << "Constraint is nonconvex\n";
+        break;
+    case(E_Convexity::Unknown):
+        std::cout << "Constraint status of objective unknown\n";
+        break;
+    case(E_Convexity::NotSet):
+        std::cout << "Constraint status of objective not set\n";
+        break;
+    default:
+        break;
     }
 
     return passed;

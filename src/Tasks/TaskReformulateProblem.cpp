@@ -1106,7 +1106,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
             auxConstraintCounter++;
 
-            if(coeffSign * signfactor > 0 && T->isConvex())
+            if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
             {
                 auxConstraint->properties.curvature = E_Curvature::Convex;
             }

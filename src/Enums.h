@@ -35,10 +35,12 @@ enum class E_AuxiliaryVariableType
 
 enum class E_Convexity
 {
+    NotSet,
     Unknown,
     Linear,
     Convex,
-    Concave
+    Concave,
+    Nonconvex
 };
 
 enum class E_Curvature
@@ -120,6 +122,7 @@ enum class E_ModelReturnStatus
 
 enum class E_Monotonicity
 {
+    NotSet,
     Unknown,
     Nondecreasing,
     Nonincreasing,
