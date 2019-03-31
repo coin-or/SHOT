@@ -14,16 +14,31 @@
 namespace SHOT
 {
 
-class LinearTerm
+class Term
 {
 public:
     double coefficient;
-    VariablePtr variable;
 
     std::weak_ptr<Problem> ownerProblem;
 
+    virtual double calculate(const VectorDouble& point) = 0;
+
+    virtual Interval calculate(const IntervalVector& intervalVector) = 0;
+
+    void inline takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
+};
+
+class LinearTerm : public Term
+{
+public:
+    VariablePtr variable;
+
     LinearTerm(){};
-    LinearTerm(double coeff, VariablePtr var) : coefficient(coeff), variable(var){};
+    LinearTerm(double coeff, VariablePtr var)
+    {
+        coefficient = coeff;
+        variable = var;
+    }
 
     inline double calculate(const VectorDouble& point)
     {
@@ -36,8 +51,6 @@ public:
         Interval value = coefficient * variable->calculate(intervalVector);
         return value;
     }
-
-    void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 };
 
 inline std::ostream& operator<<(std::ostream& stream, LinearTermPtr term)
@@ -67,39 +80,39 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTermPtr term)
     return stream;
 }
 
-class LinearTerms : private std::vector<LinearTermPtr>
+template <class T> class Terms : private std::vector<T>
 {
 public:
-    using std::vector<LinearTermPtr>::operator[];
+    using std::vector<T>::operator[];
 
-    using std::vector<LinearTermPtr>::at;
-    using std::vector<LinearTermPtr>::begin;
-    using std::vector<LinearTermPtr>::clear;
-    using std::vector<LinearTermPtr>::end;
-    using std::vector<LinearTermPtr>::erase;
-    using std::vector<LinearTermPtr>::push_back;
-    using std::vector<LinearTermPtr>::reserve;
-    using std::vector<LinearTermPtr>::resize;
-    using std::vector<LinearTermPtr>::size;
+    using std::vector<T>::at;
+    using std::vector<T>::begin;
+    using std::vector<T>::clear;
+    using std::vector<T>::end;
+    using std::vector<T>::erase;
+    using std::vector<T>::push_back;
+    using std::vector<T>::reserve;
+    using std::vector<T>::resize;
+    using std::vector<T>::size;
 
-    LinearTerms(){};
+    Terms(){};
 
-    void add(LinearTermPtr term) { (*this).push_back(term); }
+    void add(T term) { (*this).push_back(term); }
 
-    void add(LinearTerms linearTerms)
+    void add(Terms terms)
     {
-        for(auto& T : linearTerms)
+        for(auto& TERM : terms)
         {
-            (*this).push_back(T);
+            (*this).push_back(TERM);
         }
     }
 
     double calculate(const VectorDouble& point)
     {
         double value = 0.0;
-        for(auto& T : *this)
+        for(auto& TERM : *this)
         {
-            value += T->calculate(point);
+            value += TERM->calculate(point);
         }
 
         return value;
@@ -108,9 +121,9 @@ public:
     Interval calculate(const IntervalVector& intervalVector)
     {
         Interval value = Interval(0.0, 0.0);
-        for(auto& T : *this)
+        for(auto& TERM : *this)
         {
-            value += T->calculate(intervalVector);
+            value += TERM->calculate(intervalVector);
         }
 
         return value;
@@ -118,32 +131,31 @@ public:
 
     inline void takeOwnership(ProblemPtr owner)
     {
-        for(auto& T : *this)
+        for(auto& TERM : *this)
         {
-            T->takeOwnership(owner);
+            TERM->takeOwnership(owner);
         }
     }
 };
 
-inline std::ostream& operator<<(std::ostream& stream, LinearTerms linTerms)
+template <class T> inline std::ostream& operator<<(std::ostream& stream, Terms<T> terms)
 {
-    if(linTerms.size() == 0)
+    if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << linTerms.at(0);
+    stream << ' ' << terms.at(0);
 
-    for(int i = 1; i < linTerms.size(); i++)
+    for(int i = 1; i < terms.size(); i++)
     {
-        stream << linTerms.at(i);
+        stream << terms.at(i);
     }
 
     return stream;
 }
 
-class QuadraticTerm
+class QuadraticTerm : public Term
 {
 public:
-    double coefficient;
     VariablePtr firstVariable;
     VariablePtr secondVariable;
 
@@ -151,12 +163,13 @@ public:
     bool isSquare;
     bool isBinary;
 
-    std::weak_ptr<Problem> ownerProblem;
-
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2)
-        : coefficient(coeff), firstVariable(variable1), secondVariable(variable2)
     {
+        coefficient = coeff;
+        firstVariable = variable1;
+        secondVariable = variable2;
+
         if(firstVariable != secondVariable)
         {
             isBilinear = true;
@@ -185,8 +198,6 @@ public:
         return value;
     }
 
-    inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
-
     inline bool isConvex()
     {
         if(coefficient > 0 && firstVariable == secondVariable)
@@ -213,97 +224,14 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
     return stream;
 };
 
-class QuadraticTerms : private std::vector<QuadraticTermPtr>
+class MonomialTerm : public Term
 {
 public:
-    using std::vector<QuadraticTermPtr>::operator[];
-
-    using std::vector<QuadraticTermPtr>::at;
-    using std::vector<QuadraticTermPtr>::begin;
-    using std::vector<QuadraticTermPtr>::clear;
-    using std::vector<QuadraticTermPtr>::end;
-    using std::vector<QuadraticTermPtr>::erase;
-    using std::vector<QuadraticTermPtr>::push_back;
-    using std::vector<QuadraticTermPtr>::reserve;
-    using std::vector<QuadraticTermPtr>::resize;
-    using std::vector<QuadraticTermPtr>::size;
-
-    QuadraticTerms(){};
-
-    inline void add(QuadraticTermPtr term) { (*this).push_back(term); };
-
-    void add(QuadraticTerms quadraticTerms)
-    {
-        for(auto& T : quadraticTerms)
-        {
-            (*this).push_back(T);
-        }
-    }
-
-    inline double calculate(const VectorDouble& point)
-    {
-        double value = 0.0;
-        for(auto& T : (*this))
-        {
-            value += T->calculate(point);
-        }
-
-        return value;
-    };
-
-    inline Interval calculate(const IntervalVector& intervalVector)
-    {
-        Interval value = Interval(0.0, 0.0);
-        for(auto& T : (*this))
-        {
-            value += T->calculate(intervalVector);
-        }
-
-        return value;
-    }
-
-    inline void takeOwnership(ProblemPtr owner)
-    {
-        for(auto& T : (*this))
-        {
-            T->takeOwnership(owner);
-        }
-    }
-};
-
-inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms quadTerms)
-{
-    if(quadTerms.size() == 0)
-        return stream;
-
-    if(quadTerms.at(0)->coefficient > 0)
-    {
-        stream << " +" << quadTerms.at(0);
-    }
-    else
-    {
-        stream << ' ' << quadTerms.at(0);
-    }
-
-    for(int i = 1; i < quadTerms.size(); i++)
-    {
-        stream << " +" << quadTerms.at(i);
-    }
-
-    return stream;
-};
-
-class MonomialTerm
-{
-public:
-    double coefficient;
     Variables variables;
 
     bool isBilinear;
     bool isSquare;
     bool isBinary;
-
-    std::weak_ptr<Problem> ownerProblem;
 
     MonomialTerm()
     {
@@ -312,8 +240,11 @@ public:
         isBinary = false;
     };
 
-    MonomialTerm(double coeff, Variables variables) : coefficient(coeff), variables(variables)
+    MonomialTerm(double coeff, Variables vars)
     {
+        coefficient = coeff;
+        variables = vars;
+
         isBilinear = false;
         isBinary = true;
         isSquare = false;
@@ -351,8 +282,6 @@ public:
 
         return value;
     }
-
-    inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 };
 
 inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
@@ -367,85 +296,6 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
     return stream;
 };
 
-class MonomialTerms : private std::vector<MonomialTermPtr>
-{
-public:
-    using std::vector<MonomialTermPtr>::operator[];
-
-    using std::vector<MonomialTermPtr>::at;
-    using std::vector<MonomialTermPtr>::begin;
-    using std::vector<MonomialTermPtr>::clear;
-    using std::vector<MonomialTermPtr>::end;
-    using std::vector<MonomialTermPtr>::erase;
-    using std::vector<MonomialTermPtr>::push_back;
-    using std::vector<MonomialTermPtr>::reserve;
-    using std::vector<MonomialTermPtr>::resize;
-    using std::vector<MonomialTermPtr>::size;
-
-    MonomialTerms(){};
-
-    inline void add(MonomialTermPtr term) { (*this).push_back(term); };
-
-    void add(MonomialTerms monomialTerms)
-    {
-        for(auto& T : monomialTerms)
-        {
-            (*this).push_back(T);
-        }
-    }
-
-    inline double calculate(const VectorDouble& point)
-    {
-        double value = 0.0;
-        for(auto& T : (*this))
-        {
-            value += T->calculate(point);
-        }
-
-        return value;
-    };
-
-    inline Interval calculate(const IntervalVector& intervalVector)
-    {
-        Interval value = Interval(0.0, 0.0);
-        for(auto& T : (*this))
-        {
-            value += T->calculate(intervalVector);
-        }
-
-        return value;
-    }
-
-    inline void takeOwnership(ProblemPtr owner)
-    {
-        for(auto& T : (*this))
-        {
-            T->takeOwnership(owner);
-        }
-    }
-};
-
-inline std::ostream& operator<<(std::ostream& stream, MonomialTerms monomialTerms)
-{
-    if(monomialTerms.size() == 0)
-        return stream;
-
-    if(monomialTerms.at(0)->coefficient > 0)
-    {
-        stream << " +" << monomialTerms.at(0);
-    }
-    else
-    {
-        stream << ' ' << monomialTerms.at(0);
-    }
-
-    for(int i = 1; i < monomialTerms.size(); i++)
-    {
-        stream << " +" << monomialTerms.at(i);
-    }
-
-    return stream;
-};
 /*
 class SignomialElement
 {

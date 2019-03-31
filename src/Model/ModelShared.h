@@ -40,17 +40,22 @@ typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPt
 class NonlinearObjectiveFunction;
 typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
 
+class Term;
+
 class LinearTerm;
 typedef std::shared_ptr<LinearTerm> LinearTermPtr;
-class LinearTerms;
 
 class QuadraticTerm;
 typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
-class QuadraticTerms;
 
 class MonomialTerm;
 typedef std::shared_ptr<MonomialTerm> MonomialTermPtr;
-class MonomialTerms;
+
+template <class T> class Terms;
+
+typedef Terms<LinearTermPtr> LinearTerms;
+typedef Terms<QuadraticTermPtr> QuadraticTerms;
+typedef Terms<MonomialTermPtr> MonomialTerms;
 
 class NonlinearExpression;
 typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;

@@ -33,6 +33,14 @@ enum class E_AuxiliaryVariableType
     IntegerBilinear // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
 };
 
+enum class E_Convexity
+{
+    Unknown,
+    Linear,
+    Convex,
+    Concave
+};
+
 enum class E_Curvature
 {
     None,
@@ -108,6 +116,14 @@ enum class E_ModelReturnStatus
     NoSolution,
     ErrorUnknown,
     ErrorNoSolution
+};
+
+enum class E_Monotonicity
+{
+    Unknown,
+    Nondecreasing,
+    Nonincreasing,
+    Constant
 };
 
 enum class E_PrimalNLPSource
