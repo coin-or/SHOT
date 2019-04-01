@@ -508,7 +508,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         nonlinearConstraint->nonlinearExpression
             = std::make_shared<ExpressionSquare>(nonlinearConstraint->nonlinearExpression);
 
-        nonlinearConstraint->properties.curvature = E_Curvature::Nonconvex;
+        nonlinearConstraint->properties.convexity = E_Convexity::Nonconvex;
         return (NumericConstraints({ nonlinearConstraint }));
 
         auto auxConstraint2
@@ -1108,11 +1108,11 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
             if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
             {
-                auxConstraint->properties.curvature = E_Curvature::Convex;
+                auxConstraint->properties.convexity = E_Convexity::Convex;
             }
             else
             {
-                auxConstraint->properties.curvature = E_Curvature::Nonconvex;
+                auxConstraint->properties.convexity = E_Convexity::Nonconvex;
             }
 
             auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));

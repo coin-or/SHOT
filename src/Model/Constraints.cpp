@@ -45,8 +45,23 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
     if(constraint.name != "")
         stream << ' ' << constraint.name;
 
-    if(constraint.properties.curvature == E_Curvature::Nonconvex)
+    switch(constraint.properties.convexity)
+    {
+    case(E_Convexity::Linear):
+        stream << " (linear)";
+        break;
+    case(E_Convexity::Convex):
+        stream << " (convex)";
+        break;
+    case(E_Convexity::Nonconvex):
         stream << " (nonconvex)";
+        break;
+    case(E_Convexity::NotSet):
+    case(E_Convexity::Unknown):
+        break;
+    default:
+        break;
+    }
 
     stream << ":\t";
 
@@ -229,13 +244,14 @@ void LinearConstraint::updateProperties()
     if(linearTerms.size() > 0)
     {
         properties.hasLinearTerms = true;
-        properties.classification = E_ConstraintClassification::Linear;
     }
     else
     {
         properties.hasLinearTerms = false;
-        properties.classification = E_ConstraintClassification::Linear;
     }
+
+    properties.convexity = linearTerms.getConvexity();
+    properties.classification = E_ConstraintClassification::Linear;
 };
 
 void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
@@ -450,6 +466,8 @@ void QuadraticConstraint::updateProperties()
     {
         properties.hasQuadraticTerms = false;
     }
+
+    properties.convexity = quadraticTerms.getConvexity();
 };
 
 void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
@@ -668,6 +686,34 @@ void NonlinearConstraint::updateProperties()
             [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
                 return (variableOne->index < variableTwo->index);
             });
+
+        E_Convexity nonlinearConvexity = nonlinearExpression->getConvexity();
+
+        if(nonlinearConvexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown)
+        {
+            properties.convexity = E_Convexity::Unknown;
+        }
+        else if(nonlinearConvexity == E_Convexity::Linear)
+        {
+            // Does not need to change anything
+        }
+        else if(nonlinearConvexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+        {
+            properties.convexity = E_Convexity::Convex;
+        }
+        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+        {
+            properties.convexity = E_Convexity::Nonconvex;
+        }
+        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+        {
+            properties.convexity = E_Convexity::Nonconvex;
+            // TODO: might be able to do something here
+        }
+        else
+        {
+            properties.convexity = E_Convexity::Unknown;
+        }
     }
     else
     {

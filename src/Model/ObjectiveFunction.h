@@ -40,7 +40,7 @@ struct ObjectiveFunctionProperties
     bool isMinimize = false;
     bool isMaximize = false;
 
-    E_Curvature curvature = E_Curvature::Convex;
+    E_Convexity convexity = E_Convexity::Convex;
 
     bool isReformulated = false;
 
@@ -74,8 +74,6 @@ public:
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> hessianSparsityPattern;
 
     void takeOwnership(ProblemPtr owner);
-
-    virtual E_Curvature checkConvexity() = 0;
 
     virtual void updateProperties();
 
@@ -131,8 +129,6 @@ public:
 
     void add(LinearTermPtr term);
     virtual void updateProperties() override;
-
-    virtual E_Curvature checkConvexity() override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -201,8 +197,6 @@ public:
     void add(QuadraticTermPtr term);
 
     virtual void updateProperties() override;
-
-    virtual E_Curvature checkConvexity() override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -295,8 +289,6 @@ public:
     void updateFactorableFunction();
 
     virtual void updateProperties() override;
-
-    virtual E_Curvature checkConvexity() override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;

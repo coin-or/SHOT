@@ -56,6 +56,9 @@ public:
 
     virtual E_NonlinearExpressionTypes getType() = 0;
 
+    virtual E_Convexity getConvexity() = 0;
+    virtual E_Monotonicity getMonotonicity() = 0;
+
     virtual int getNumberOfChildren() const = 0;
 
     virtual void appendNonlinearVariables(Variables& nonlinearVariables) = 0;
@@ -104,6 +107,9 @@ public:
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Constant; };
 
+    inline E_Convexity getConvexity() override { return E_Convexity::Linear; };
+    inline E_Monotonicity getMonotonicity() override { return E_Monotonicity::Constant; };
+
     inline int getNumberOfChildren() const { return 0; }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override{};
@@ -133,6 +139,9 @@ public:
     inline std::ostream& print(std::ostream& stream) const override { return stream << variable->name; };
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Variable; };
+
+    inline E_Convexity getConvexity() override { return E_Convexity::Linear; };
+    inline E_Monotonicity getMonotonicity() override { return E_Monotonicity::Nondecreasing; };
 
     inline int getNumberOfChildren() const { return 0; }
 
@@ -225,6 +234,72 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Negate; }
+
+    inline E_Convexity getConvexity() override
+    {
+        auto childConvexity = child->getConvexity();
+        E_Convexity resultConvexity;
+
+        switch(childConvexity)
+        {
+        case(E_Convexity::Linear):
+            resultConvexity = E_Convexity::Linear;
+            break;
+
+        case(E_Convexity::Convex):
+            resultConvexity = E_Convexity::Concave;
+            break;
+
+        case(E_Convexity::Concave):
+            resultConvexity = E_Convexity::Convex;
+            break;
+
+        case(E_Convexity::Nonconvex):
+            resultConvexity = E_Convexity::Nonconvex;
+            break;
+
+        case(E_Convexity::Unknown):
+            resultConvexity = E_Convexity::Unknown;
+            break;
+
+        default:
+            resultConvexity = E_Convexity::NotSet;
+            break;
+        }
+
+        return resultConvexity;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        auto childMonotonicity = child->getMonotonicity();
+        E_Monotonicity resultMonotonicity;
+
+        switch(childMonotonicity)
+        {
+        case(E_Monotonicity::Constant):
+            resultMonotonicity = E_Monotonicity::Constant;
+            break;
+
+        case(E_Monotonicity::Nondecreasing):
+            resultMonotonicity = E_Monotonicity::Nonincreasing;
+            break;
+
+        case(E_Monotonicity::Nonincreasing):
+            resultMonotonicity = E_Monotonicity::Nondecreasing;
+            break;
+
+        case(E_Monotonicity::Unknown):
+            resultMonotonicity = E_Monotonicity::Unknown;
+            break;
+
+        default:
+            resultMonotonicity = E_Monotonicity::NotSet;
+            break;
+        }
+
+        return resultMonotonicity;
+    };
 };
 
 class ExpressionInvert : public ExpressionUnary
@@ -250,6 +325,16 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Invert; }
+
+    inline E_Convexity getConvexity() override
+    {
+        return E_Convexity::Unknown; // TODO
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        return E_Monotonicity::Unknown; // TODO
+    };
 };
 
 class ExpressionSquareRoot : public ExpressionUnary
@@ -278,6 +363,22 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::SquareRoot; }
+
+    inline E_Convexity getConvexity() override
+    {
+        auto childConvexity = child->getConvexity();
+
+        if(childConvexity == E_Convexity::Concave) // TODO: check that bounds are positive
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        auto childMonotonicity = child->getMonotonicity();
+        return childMonotonicity;
+    };
 };
 
 class ExpressionLog : public ExpressionUnary
@@ -303,6 +404,22 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Log; }
+
+    inline E_Convexity getConvexity() override
+    {
+        auto childConvexity = child->getConvexity();
+
+        if(childConvexity == E_Convexity::Concave) // TODO: check that bounds are positive
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        auto childMonotonicity = child->getMonotonicity();
+        return childMonotonicity;
+    };
 };
 
 class ExpressionExp : public ExpressionUnary
@@ -328,6 +445,22 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Exp; }
+
+    inline E_Convexity getConvexity() override
+    {
+        auto childConvexity = child->getConvexity();
+
+        if(childConvexity == E_Convexity::Convex || childConvexity == E_Convexity::Linear)
+            return E_Convexity::Convex;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        auto childMonotonicity = child->getMonotonicity();
+        return childMonotonicity;
+    };
 };
 
 class ExpressionSquare : public ExpressionUnary
@@ -361,6 +494,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Square; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionSin : public ExpressionUnary
@@ -386,6 +531,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Sin; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionCos : public ExpressionUnary
@@ -411,6 +568,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Cos; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionTan : public ExpressionUnary
@@ -436,6 +605,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Tan; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionArcSin : public ExpressionUnary
@@ -464,6 +645,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::ArcSin; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionArcCos : public ExpressionUnary
@@ -492,6 +685,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::ArcCos; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionArcTan : public ExpressionUnary
@@ -520,6 +725,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::ArcTan; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionAbs : public ExpressionUnary
@@ -548,6 +765,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Abs; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 // End unary operations
@@ -587,6 +816,50 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Plus; }
+
+    inline E_Convexity getConvexity() override
+    {
+        auto child1Convexity = firstChild->getConvexity();
+        auto child2Convexity = secondChild->getConvexity();
+        E_Convexity resultConvexity;
+
+        if(child1Convexity == E_Convexity::Linear)
+            return child2Convexity;
+
+        if(child2Convexity == E_Convexity::Linear)
+            return child1Convexity;
+
+        if(child1Convexity == E_Convexity::Convex)
+            return child2Convexity;
+
+        if(child2Convexity == E_Convexity::Convex)
+            return child1Convexity;
+
+        if(child1Convexity == E_Convexity::Nonconvex)
+            return child2Convexity;
+
+        if(child2Convexity == E_Convexity::Nonconvex)
+            return child1Convexity;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        auto child1Monotonicity = firstChild->getMonotonicity();
+        auto child2Monotonicity = secondChild->getMonotonicity();
+
+        if(child1Monotonicity == child2Monotonicity)
+            return child1Monotonicity;
+
+        if(child1Monotonicity == E_Monotonicity::Constant)
+            return child2Monotonicity;
+
+        if(child2Monotonicity == E_Monotonicity::Constant)
+            return child1Monotonicity;
+
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionMinus : public ExpressionBinary
@@ -622,6 +895,46 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Minus; }
+
+    inline E_Convexity getConvexity() override
+    {
+        auto child1Convexity = firstChild->getConvexity();
+        auto child2Convexity = secondChild->getConvexity();
+        E_Convexity resultConvexity;
+
+        if(child1Convexity == E_Convexity::Linear && child2Convexity == E_Convexity::Linear)
+            return E_Convexity::Linear;
+
+        if(child1Convexity == E_Convexity::Convex && child2Convexity == E_Convexity::Concave)
+            return E_Convexity::Convex;
+
+        if(child1Convexity == E_Convexity::Concave && child2Convexity == E_Convexity::Convex)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        auto child1Monotonicity = firstChild->getMonotonicity();
+        auto child2Monotonicity = secondChild->getMonotonicity();
+
+        if(child2Monotonicity == E_Monotonicity::Nondecreasing)
+            child2Monotonicity = E_Monotonicity::Nonincreasing;
+        else if(child2Monotonicity == E_Monotonicity::Nonincreasing)
+            child2Monotonicity = E_Monotonicity::Nondecreasing;
+
+        if(child1Monotonicity == child2Monotonicity)
+            return child1Monotonicity;
+
+        if(child1Monotonicity == E_Monotonicity::Constant)
+            return child2Monotonicity;
+
+        if(child2Monotonicity == E_Monotonicity::Constant)
+            return child1Monotonicity;
+
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionTimes : public ExpressionBinary
@@ -657,6 +970,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Times; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionDivide : public ExpressionBinary
@@ -692,6 +1017,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Divide; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionPower : public ExpressionBinary
@@ -772,6 +1109,18 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Power; }
+
+    inline E_Convexity getConvexity() override
+    {
+        // TODO
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 };
 
 // End binary operations
@@ -842,6 +1191,69 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Sum; }
+
+    inline E_Convexity getConvexity() override
+    {
+        E_Convexity resultConvexity;
+
+        bool areAllLinear = true;
+        bool areAllConvex = true;
+        bool areAllConcave = true;
+        bool areAllNonconvex = true;
+
+        for(auto& C : children.expressions)
+        {
+            auto childConvexity = C->getConvexity();
+            areAllLinear = areAllLinear && (C->getConvexity() == E_Convexity::Linear);
+            areAllConvex = areAllConvex && (C->getConvexity() == E_Convexity::Convex);
+            areAllConcave = areAllConcave && (C->getConvexity() == E_Convexity::Concave);
+            areAllNonconvex = areAllNonconvex && (C->getConvexity() == E_Convexity::Nonconvex);
+        }
+
+        if(areAllLinear)
+            return E_Convexity::Linear;
+
+        if(areAllConvex)
+            return E_Convexity::Convex;
+
+        if(areAllConcave)
+            return E_Convexity::Concave;
+
+        if(areAllNonconvex)
+            return E_Convexity::Nonconvex;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        E_Monotonicity resultMonotonicity;
+
+        bool areAllConstant = true;
+        bool areAllZeroOrNondecreasing = true;
+        bool areAllZeroOrNonincreasing = true;
+
+        for(auto& C : children.expressions)
+        {
+            auto childMonotonicity = C->getMonotonicity();
+            areAllConstant = areAllConstant && (C->getMonotonicity() == E_Monotonicity::Constant);
+            areAllZeroOrNondecreasing
+                = areAllZeroOrNondecreasing && (C->getMonotonicity() == E_Monotonicity::Nondecreasing);
+            areAllZeroOrNonincreasing
+                = areAllZeroOrNonincreasing && (C->getMonotonicity() == E_Monotonicity::Nonincreasing);
+        }
+
+        if(areAllConstant)
+            return E_Monotonicity::Constant;
+
+        if(areAllZeroOrNondecreasing)
+            return E_Monotonicity::Nondecreasing;
+
+        if(areAllZeroOrNonincreasing)
+            return E_Monotonicity::Nonincreasing;
+
+        return E_Monotonicity::Unknown;
+    };
 };
 
 class ExpressionProduct : public ExpressionGeneral
@@ -922,6 +1334,42 @@ public:
     }
 
     inline E_NonlinearExpressionTypes getType() override { return E_NonlinearExpressionTypes::Product; }
+
+    inline E_Convexity getConvexity() override
+    {
+        if(children.expressions.size() == 2
+            && children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            auto constant = std::dynamic_pointer_cast<ExpressionConstant>(children.expressions.at(0));
+            auto secondConvexity = children.expressions.at(1)->getConvexity();
+
+            if(secondConvexity == E_Convexity::Linear)
+                return E_Convexity::Linear;
+
+            if(secondConvexity == E_Convexity::Convex && constant->constant > 0)
+                return E_Convexity::Convex;
+
+            if(secondConvexity == E_Convexity::Convex && constant->constant < 0)
+                return E_Convexity::Concave;
+
+            if(secondConvexity == E_Convexity::Concave && constant->constant > 0)
+                return E_Convexity::Concave;
+
+            if(secondConvexity == E_Convexity::Concave && constant->constant < 0)
+                return E_Convexity::Convex;
+
+            if(secondConvexity == E_Convexity::Nonconvex)
+                return E_Convexity::Nonconvex;
+        }
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicity() override
+    {
+        // TODO
+        return E_Monotonicity::Unknown;
+    };
 
     inline bool isLinearTerm()
     {

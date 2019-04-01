@@ -43,15 +43,6 @@ enum class E_Convexity
     Nonconvex
 };
 
-enum class E_Curvature
-{
-    None,
-    Convex,
-    Concave,
-    Nonconvex,
-    Indeterminate
-};
-
 enum class E_DualSolutionSource
 {
     LPSolution,

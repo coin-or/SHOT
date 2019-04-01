@@ -28,7 +28,7 @@ void ObjectiveFunction::updateProperties()
         properties.isMaximize = true;
     }
 
-    properties.curvature = checkConvexity();
+    properties.convexity = E_Convexity::Linear;
 };
 
 std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
@@ -122,8 +122,6 @@ void LinearObjectiveFunction::updateProperties()
 
     ObjectiveFunction::updateProperties();
 };
-
-E_Curvature LinearObjectiveFunction::checkConvexity() { return E_Curvature::Convex; };
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
@@ -258,14 +256,14 @@ void QuadraticObjectiveFunction::updateProperties()
                 }
             }
         }
+
+        properties.convexity = quadraticTerms.getConvexity();
     }
     else
     {
         properties.hasQuadraticTerms = false;
     }
 };
-
-E_Curvature QuadraticObjectiveFunction::checkConvexity() { return E_Curvature::Convex; };
 
 double QuadraticObjectiveFunction::calculateValue(const VectorDouble& point)
 {
@@ -472,14 +470,40 @@ void NonlinearObjectiveFunction::updateProperties()
             [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
                 return (variableOne->index < variableTwo->index);
             });
+
+        E_Convexity nonlinearConvexity = nonlinearExpression->getConvexity();
+
+        if(nonlinearConvexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown)
+        {
+            properties.convexity = E_Convexity::Unknown;
+        }
+        else if(nonlinearConvexity == E_Convexity::Linear)
+        {
+            // Does not need to change anything
+        }
+        else if(nonlinearConvexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+        {
+            properties.convexity = E_Convexity::Convex;
+        }
+        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+        {
+            properties.convexity = E_Convexity::Nonconvex;
+        }
+        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+        {
+            properties.convexity = E_Convexity::Nonconvex;
+            // TODO: might be able to do something here
+        }
+        else
+        {
+            properties.convexity = E_Convexity::Unknown;
+        }
     }
     else
     {
         properties.hasNonlinearExpression = false;
     }
 }
-
-E_Curvature NonlinearObjectiveFunction::checkConvexity() { return E_Curvature::Convex; };
 
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {

@@ -108,7 +108,28 @@ protected:
     E_Monotonicity monotonicity = E_Monotonicity::NotSet;
 
     virtual void updateConvexity() = 0;
-    virtual void updateMonotonicity() = 0;
+
+    void updateMonotonicity()
+    {
+        bool areAllNonincreasing = true;
+        bool areAllNondecreasing = true;
+
+        for(auto& TERM : *this)
+        {
+            auto monotonicity = TERM->getMonotonicity();
+            areAllNonincreasing = areAllNonincreasing
+                && (monotonicity == E_Monotonicity::Nonincreasing || monotonicity == E_Monotonicity::Constant);
+            areAllNondecreasing = areAllNondecreasing
+                && (monotonicity == E_Monotonicity::Nondecreasing || monotonicity == E_Monotonicity::Constant);
+        }
+
+        if(areAllNonincreasing)
+            monotonicity = E_Monotonicity::Nonincreasing;
+        else if(areAllNondecreasing)
+            monotonicity = E_Monotonicity::Nondecreasing;
+        else
+            monotonicity = E_Monotonicity::Unknown;
+    };
 
 public:
     using std::vector<T>::operator[];
@@ -175,8 +196,7 @@ public:
 class LinearTerms : public Terms<LinearTermPtr>
 {
 private:
-    void updateConvexity() override{};
-    void updateMonotonicity() override{};
+    void updateConvexity() override { convexity = E_Convexity::Linear; };
 
 public:
     using std::vector<LinearTermPtr>::operator[];
@@ -292,16 +312,6 @@ public:
         else
             return (E_Monotonicity::Constant);
     };
-
-    /*inline bool isConvex()
-    {
-        if(coefficient > 0 && firstVariable == secondVariable)
-        {
-            return (true);
-        }
-
-        return (false);
-    }*/
 };
 
 inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
@@ -420,8 +430,6 @@ private:
             convexity = E_Convexity::Nonconvex;
     };
 
-    void updateMonotonicity() override{};
-
 public:
     using std::vector<QuadraticTermPtr>::operator[];
 
@@ -538,8 +546,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 class MonomialTerms : public Terms<MonomialTermPtr>
 {
 private:
-    void updateConvexity() override{};
-    void updateMonotonicity() override{};
+    void updateConvexity() override { convexity = E_Convexity::Nonconvex; };
 
 public:
     using std::vector<MonomialTermPtr>::operator[];

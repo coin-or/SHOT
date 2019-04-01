@@ -38,7 +38,7 @@ enum class E_ConstraintSignType
 struct ConstraintProperties
 {
     E_ConstraintClassification classification;
-    E_Curvature curvature;
+    E_Convexity convexity;
     E_ConstraintSignType type;
 
     bool isReformulated = false;
