@@ -65,6 +65,7 @@ public:
     inline double calculate(const VectorDouble& point) { return (point[index]); }
 
     inline Interval calculate(const IntervalVector& intervalVector) { return intervalVector[index]; }
+    inline Interval getBound() { return Interval(lowerBound, upperBound); }
 
     inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 };

@@ -40,6 +40,36 @@ enum class E_NonlinearExpressionTypes
     Product
 };
 
+inline E_Monotonicity negateMonotonicity(E_Monotonicity monotonicity)
+{
+    E_Monotonicity resultMonotonicity;
+
+    switch(monotonicity)
+    {
+    case(E_Monotonicity::Constant):
+        resultMonotonicity = E_Monotonicity::Constant;
+        break;
+
+    case(E_Monotonicity::Nondecreasing):
+        resultMonotonicity = E_Monotonicity::Nonincreasing;
+        break;
+
+    case(E_Monotonicity::Nonincreasing):
+        resultMonotonicity = E_Monotonicity::Nondecreasing;
+        break;
+
+    case(E_Monotonicity::Unknown):
+        resultMonotonicity = E_Monotonicity::Unknown;
+        break;
+
+    default:
+        resultMonotonicity = E_Monotonicity::NotSet;
+        break;
+    }
+
+    return resultMonotonicity;
+};
+
 class NonlinearExpression
 {
 public:
@@ -49,6 +79,7 @@ public:
 
     virtual double calculate(const VectorDouble& point) = 0;
     virtual Interval calculate(const IntervalVector& intervalVector) = 0;
+    virtual Interval getBounds() = 0;
 
     virtual FactorableFunction getFactorableFunction() = 0;
 
@@ -101,6 +132,8 @@ public:
 
     inline virtual Interval calculate(const IntervalVector& intervalVector) override { return (Interval(constant)); };
 
+    inline Interval getBounds() override { return Interval(constant); };
+
     inline virtual FactorableFunction getFactorableFunction() override { return constant; };
 
     inline std::ostream& print(std::ostream& stream) const override { return stream << constant; };
@@ -135,6 +168,8 @@ public:
     {
         return *(variable->factorableFunctionVariable.get());
     };
+
+    inline Interval getBounds() override { return (variable->getBound()); };
 
     inline std::ostream& print(std::ostream& stream) const override { return stream << variable->name; };
 
@@ -225,6 +260,8 @@ public:
         return (-child->calculate(intervalVector));
     }
 
+    inline Interval getBounds() override { return (-child->getBounds()); };
+
     inline virtual FactorableFunction getFactorableFunction() override { return (-child->getFactorableFunction()); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -273,30 +310,7 @@ public:
     inline E_Monotonicity getMonotonicity() override
     {
         auto childMonotonicity = child->getMonotonicity();
-        E_Monotonicity resultMonotonicity;
-
-        switch(childMonotonicity)
-        {
-        case(E_Monotonicity::Constant):
-            resultMonotonicity = E_Monotonicity::Constant;
-            break;
-
-        case(E_Monotonicity::Nondecreasing):
-            resultMonotonicity = E_Monotonicity::Nonincreasing;
-            break;
-
-        case(E_Monotonicity::Nonincreasing):
-            resultMonotonicity = E_Monotonicity::Nondecreasing;
-            break;
-
-        case(E_Monotonicity::Unknown):
-            resultMonotonicity = E_Monotonicity::Unknown;
-            break;
-
-        default:
-            resultMonotonicity = E_Monotonicity::NotSet;
-            break;
-        }
+        E_Monotonicity resultMonotonicity = negateMonotonicity(childMonotonicity);
 
         return resultMonotonicity;
     };
@@ -316,6 +330,8 @@ public:
         return (1.0 / child->calculate(intervalVector));
     }
 
+    inline virtual Interval getBounds() override { return (1.0 / child->getBounds()); }
+
     inline virtual FactorableFunction getFactorableFunction() override { return (1 / child->getFactorableFunction()); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -328,12 +344,42 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        return E_Convexity::Unknown; // TODO
+        auto childConvexity = child->getConvexity();
+        auto bounds = child->getBounds();
+
+        if((bounds.l() <= 0.0 && bounds.u() >= 0))
+            return E_Convexity::Unknown;
+
+        if(bounds.l() > 0 && childConvexity == E_Convexity::Concave)
+            return E_Convexity::Convex;
+
+        if(bounds.l() > 0 && childConvexity == E_Convexity::Linear)
+            return E_Convexity::Convex;
+
+        if(bounds.l() < 0 && childConvexity == E_Convexity::Convex)
+            return E_Convexity::Concave;
+
+        return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        return E_Monotonicity::Unknown; // TODO
+        auto childMonotonicity = child->getMonotonicity();
+        auto bounds = child->getBounds();
+
+        if(childMonotonicity == E_Monotonicity::Constant && (bounds.l() == 0.0 || bounds.u()))
+            return E_Monotonicity::Unknown;
+
+        if(childMonotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if(childMonotonicity == E_Monotonicity::Nonincreasing)
+            return E_Monotonicity::Nondecreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nondecreasing)
+            return E_Monotonicity::Nonincreasing;
+
+        return E_Monotonicity::Unknown;
     };
 };
 
@@ -351,6 +397,8 @@ public:
         return (sqrt(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (sqrt(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (sqrt(child->getFactorableFunction()));
@@ -367,8 +415,9 @@ public:
     inline E_Convexity getConvexity() override
     {
         auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
 
-        if(childConvexity == E_Convexity::Concave) // TODO: check that bounds are positive
+        if(childBounds.l() >= 0 && childConvexity == E_Convexity::Concave)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -395,6 +444,8 @@ public:
         return (log(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (log(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override { return (log(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -408,8 +459,9 @@ public:
     inline E_Convexity getConvexity() override
     {
         auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
 
-        if(childConvexity == E_Convexity::Concave) // TODO: check that bounds are positive
+        if(childBounds.l() >= 0 && childConvexity == E_Convexity::Concave)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -435,6 +487,8 @@ public:
     {
         return (exp(child->calculate(intervalVector)));
     }
+
+    inline virtual Interval getBounds() override { return (exp(child->getBounds())); }
 
     inline virtual FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }
 
@@ -482,6 +536,12 @@ public:
         return (value * value);
     }
 
+    inline virtual Interval getBounds() override
+    {
+        auto value = child->getBounds();
+        return (value * value);
+    }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (child->getFactorableFunction() * child->getFactorableFunction());
@@ -522,6 +582,8 @@ public:
         return (sin(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (sin(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override { return (sin(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -534,13 +596,64 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childBounds.u() > M_PI)
+            return E_Convexity::Unknown;
+
+        auto sinBounds = sin(childBounds);
+
+        if(sinBounds.l() * sinBounds.u() < 0)
+            return E_Convexity::Unknown;
+
+        auto cosBounds = cos(childBounds);
+
+        if(sinBounds.l() >= 0)
+        {
+            if(childConvexity == E_Convexity::Linear)
+                return E_Convexity::Concave;
+
+            if(childConvexity == E_Convexity::Convex && cosBounds.u() <= 0)
+                return E_Convexity::Concave;
+
+            if(childConvexity == E_Convexity::Concave && cosBounds.u() >= 0)
+                return E_Convexity::Concave;
+        }
+        else if(sinBounds.u() <= 0)
+        {
+            if(childConvexity == E_Convexity::Linear)
+                return E_Convexity::Convex;
+
+            if(childConvexity == E_Convexity::Concave && cosBounds.u() <= 0)
+                return E_Convexity::Convex;
+
+            if(childConvexity == E_Convexity::Convex && cosBounds.u() >= 0)
+                return E_Convexity::Convex;
+        }
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto childMonotonicity = child->getMonotonicity();
+        auto childBounds = child->getBounds();
+
+        auto cosBounds = cos(childBounds);
+
+        if(childMonotonicity == E_Monotonicity::Nondecreasing && cosBounds.l() >= 0)
+            return E_Monotonicity::Nondecreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nonincreasing && cosBounds.u() <= 0)
+            return E_Monotonicity::Nondecreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nonincreasing && cosBounds.l() >= 0)
+            return E_Monotonicity::Nonincreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nondecreasing && cosBounds.u() <= 0)
+            return E_Monotonicity::Nonincreasing;
+
         return E_Monotonicity::Unknown;
     };
 };
@@ -559,6 +672,8 @@ public:
         return (cos(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (cos(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override { return (cos(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -571,13 +686,64 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childBounds.u() > M_PI)
+            return E_Convexity::Unknown;
+
+        auto cosBounds = cos(childBounds);
+
+        if(cosBounds.l() * cosBounds.u() < 0)
+            return E_Convexity::Unknown;
+
+        auto sinBounds = sin(childBounds);
+
+        if(cosBounds.l() >= 0)
+        {
+            if(childConvexity == E_Convexity::Linear)
+                return E_Convexity::Concave;
+
+            if(childConvexity == E_Convexity::Convex && sinBounds.u() <= 0)
+                return E_Convexity::Concave;
+
+            if(childConvexity == E_Convexity::Concave && sinBounds.u() >= 0)
+                return E_Convexity::Concave;
+        }
+        else if(cosBounds.u() <= 0)
+        {
+            if(childConvexity == E_Convexity::Linear)
+                return E_Convexity::Convex;
+
+            if(childConvexity == E_Convexity::Concave && sinBounds.u() <= 0)
+                return E_Convexity::Convex;
+
+            if(childConvexity == E_Convexity::Convex && sinBounds.u() >= 0)
+                return E_Convexity::Convex;
+        }
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto childMonotonicity = child->getMonotonicity();
+        auto childBounds = child->getBounds();
+
+        auto sinBounds = sin(childBounds);
+
+        if(childMonotonicity == E_Monotonicity::Nonincreasing && sinBounds.l() >= 0)
+            return E_Monotonicity::Nondecreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nondecreasing && sinBounds.u() <= 0)
+            return E_Monotonicity::Nondecreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nondecreasing && sinBounds.l() >= 0)
+            return E_Monotonicity::Nonincreasing;
+
+        if(childMonotonicity == E_Monotonicity::Nonincreasing && sinBounds.u() <= 0)
+            return E_Monotonicity::Nonincreasing;
+
         return E_Monotonicity::Unknown;
     };
 };
@@ -596,6 +762,8 @@ public:
         return (tan(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (tan(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override { return (tan(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -608,14 +776,33 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childBounds.l() < SHOT_DBL_MIN && childBounds.u() < SHOT_DBL_MAX
+            || 2.0 * (childBounds.u() - childBounds.l()) > M_PI)
+            return E_Convexity::Unknown;
+
+        auto tanBounds = tan(childBounds);
+
+        if(tanBounds.l() * tanBounds.u() < 0)
+            return E_Convexity::Unknown;
+
+        if(tanBounds.l() >= 0 && childConvexity == E_Convexity::Convex)
+
+            return E_Convexity::Convex;
+
+        if(tanBounds.u() <= 0 && childConvexity == E_Convexity::Concave)
+
+            return E_Convexity::Concave;
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
-        return E_Monotonicity::Unknown;
+        auto childMonotonicity = child->getMonotonicity();
+        return childMonotonicity;
     };
 };
 
@@ -633,6 +820,8 @@ public:
         return (asin(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (asin(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (asin(child->getFactorableFunction()));
@@ -648,14 +837,22 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childConvexity == E_Convexity::Concave && childBounds.l() >= -1.0 && childBounds.u() <= 0.0)
+            return E_Convexity::Concave;
+
+        if(childConvexity == E_Convexity::Convex && childBounds.l() >= 0.0 && childBounds.u() <= 1.0)
+            return E_Convexity::Convex;
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
-        return E_Monotonicity::Unknown;
+        auto childMonotonicity = child->getMonotonicity();
+        return childMonotonicity;
     };
 };
 
@@ -673,6 +870,8 @@ public:
         return (acos(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (acos(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (acos(child->getFactorableFunction()));
@@ -688,14 +887,23 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childConvexity == E_Convexity::Convex && childBounds.l() >= -1.0 && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        if(childConvexity == E_Convexity::Concave && childBounds.l() >= 0.0 && childBounds.u() <= 1.0)
+            return E_Convexity::Concave;
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
-        return E_Monotonicity::Unknown;
+        auto childMonotonicity = child->getMonotonicity();
+        auto resultMonotonicity = negateMonotonicity(childMonotonicity);
+        return resultMonotonicity;
     };
 };
 
@@ -713,6 +921,8 @@ public:
         return (atan(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (atan(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (atan(child->getFactorableFunction()));
@@ -728,14 +938,22 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childConvexity == E_Convexity::Convex && childBounds.u() <= 0.0)
+            return E_Convexity::Convex;
+
+        if(childConvexity == E_Convexity::Concave && childBounds.l() >= 0.0)
+            return E_Convexity::Concave;
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
-        return E_Monotonicity::Unknown;
+        auto childMonotonicity = child->getMonotonicity();
+        return childMonotonicity;
     };
 };
 
@@ -753,6 +971,8 @@ public:
         return (abs(child->calculate(intervalVector)));
     }
 
+    inline virtual Interval getBounds() override { return (abs(child->getBounds())); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (fabs(child->getFactorableFunction()));
@@ -768,13 +988,46 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto childConvexity = child->getConvexity();
+        auto childBounds = child->getBounds();
+
+        if(childConvexity == E_Convexity::Linear)
+            return E_Convexity::Convex;
+
+        if(childConvexity == E_Convexity::Convex)
+        {
+            if(childBounds.l() >= 0)
+                return E_Convexity::Convex;
+
+            if(childBounds.u() <= 0)
+                return E_Convexity::Concave;
+        }
+        else if(childConvexity == E_Convexity::Concave)
+        {
+            if(childBounds.u() <= 0)
+                return E_Convexity::Convex;
+
+            if(childBounds.l() >= 0)
+                return E_Convexity::Concave;
+        }
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto childMonotonicity = child->getMonotonicity();
+        auto childBounds = child->getBounds();
+
+        if(childMonotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if(childBounds.l() >= 0.0)
+            return childMonotonicity;
+
+        if(childBounds.u() < 0.0)
+            return negateMonotonicity(childMonotonicity);
+
         return E_Monotonicity::Unknown;
     };
 };
@@ -803,6 +1056,8 @@ public:
     {
         return (firstChild->calculate(intervalVector) + secondChild->calculate(intervalVector));
     }
+
+    inline virtual Interval getBounds() override { return (firstChild->getBounds() + secondChild->getBounds()); }
 
     inline virtual FactorableFunction getFactorableFunction() override
     {
@@ -883,6 +1138,8 @@ public:
         return (firstChild->calculate(intervalVector) - secondChild->calculate(intervalVector));
     }
 
+    inline virtual Interval getBounds() override { return (firstChild->getBounds() - secondChild->getBounds()); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (firstChild->getFactorableFunction() - secondChild->getFactorableFunction());
@@ -958,6 +1215,8 @@ public:
         return (firstChild->calculate(intervalVector) * secondChild->calculate(intervalVector));
     }
 
+    inline virtual Interval getBounds() override { return (firstChild->getBounds() * secondChild->getBounds()); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (firstChild->getFactorableFunction() * secondChild->getFactorableFunction());
@@ -1005,6 +1264,8 @@ public:
         return (firstChild->calculate(intervalVector) / secondChild->calculate(intervalVector));
     }
 
+    inline virtual Interval getBounds() override { return (firstChild->getBounds() / secondChild->getBounds()); }
+
     inline virtual FactorableFunction getFactorableFunction() override
     {
         return (firstChild->getFactorableFunction() / secondChild->getFactorableFunction());
@@ -1020,13 +1281,103 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto child2Convexity = secondChild->getConvexity();
+
+        auto child1Monotonicity = firstChild->getMonotonicity();
+        auto child2Monotonicity = secondChild->getMonotonicity();
+
+        auto bounds1 = firstChild->getBounds();
+        auto bounds2 = secondChild->getBounds();
+
+        if(child2Monotonicity == E_Monotonicity::Constant)
+        {
+            auto child1Convexity = firstChild->getConvexity();
+
+            if(child1Convexity == E_Convexity::Convex && bounds2.l() > 0)
+                return E_Convexity::Convex;
+
+            if(child1Convexity == E_Convexity::Concave && bounds2.u() < 0)
+                return E_Convexity::Convex;
+
+            if(child1Convexity == E_Convexity::Concave && bounds2.l() > 0)
+                return E_Convexity::Concave;
+
+            if(child1Convexity == E_Convexity::Convex && bounds2.u() < 0)
+                return E_Convexity::Concave;
+        }
+
+        if(child1Monotonicity == E_Monotonicity::Constant)
+        {
+            auto child2Convexity = secondChild->getConvexity();
+
+            if(bounds1.l() >= 0)
+            {
+                if(bounds2.l() > 0 && child2Convexity == E_Convexity::Concave)
+                    return E_Convexity::Convex;
+
+                if(bounds2.u() < 0 && child2Convexity == E_Convexity::Convex)
+                    return E_Convexity::Concave;
+            }
+            else
+            {
+                if(bounds2.u() < 0 && child2Convexity == E_Convexity::Convex)
+                    return E_Convexity::Convex;
+
+                if(bounds2.l() > 0 && child2Convexity == E_Convexity::Concave)
+                    return E_Convexity::Concave;
+            }
+        }
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto child1Monotonicity = firstChild->getMonotonicity();
+        auto child2Monotonicity = secondChild->getMonotonicity();
+
+        auto bounds1 = firstChild->getBounds();
+        auto bounds2 = secondChild->getBounds();
+
+        if(child2Monotonicity == E_Monotonicity::Constant && (bounds2.l() == 0.0 || bounds2.u()))
+            return E_Monotonicity::Unknown;
+
+        if(child1Monotonicity == E_Monotonicity::Constant && child2Monotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if(child2Monotonicity == E_Monotonicity::Constant)
+        {
+            if(child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.l() >= 0)
+                return E_Monotonicity::Nondecreasing;
+
+            if(child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.u() <= 0)
+                return E_Monotonicity::Nondecreasing;
+
+            if(child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.u() <= 0)
+                return E_Monotonicity::Nonincreasing;
+
+            if(child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.l() >= 0)
+                return E_Monotonicity::Nonincreasing;
+        }
+
+        bool nonDecreasingCond1 = (child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.l() >= 0)
+            || (child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.u() <= 0);
+
+        bool nonDecreasingCond2 = (child2Monotonicity == E_Monotonicity::Nonincreasing && bounds1.l() >= 0)
+            || (child2Monotonicity == E_Monotonicity::Nondecreasing && bounds1.u() <= 0);
+
+        bool nonIncreasingCond1 = (child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.l() >= 0)
+            || (child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.u() <= 0);
+
+        bool nonIncreasingCond2 = (child2Monotonicity == E_Monotonicity::Nondecreasing && bounds1.l() >= 0)
+            || (child2Monotonicity == E_Monotonicity::Nonincreasing && bounds1.u() <= 0);
+
+        if(nonDecreasingCond1 && nonDecreasingCond2)
+            return E_Monotonicity::Nondecreasing;
+
+        if(nonIncreasingCond1 && nonIncreasingCond2)
+            return E_Monotonicity::Nonincreasing;
+
         return E_Monotonicity::Unknown;
     };
 };
@@ -1074,6 +1425,8 @@ public:
     {
         return (pow(firstChild->calculate(intervalVector), secondChild->calculate(intervalVector)));
     }
+
+    inline virtual Interval getBounds() override { return (pow(firstChild->getBounds(), secondChild->getBounds())); }
 
     inline virtual FactorableFunction getFactorableFunction() override
     {
@@ -1153,6 +1506,18 @@ public:
         for(auto& C : children.expressions)
         {
             tmpInterval += C->calculate(intervalVector);
+        }
+
+        return (tmpInterval);
+    }
+
+    inline virtual Interval getBounds() override
+    {
+        Interval tmpInterval(0.);
+
+        for(auto& C : children.expressions)
+        {
+            tmpInterval += C->getBounds();
         }
 
         return (tmpInterval);
@@ -1287,6 +1652,18 @@ public:
         for(auto& C : children.expressions)
         {
             tmpInterval = tmpInterval * C->calculate(intervalVector);
+        }
+
+        return (tmpInterval);
+    }
+
+    inline virtual Interval getBounds() override
+    {
+        Interval tmpInterval(0.);
+
+        for(auto& C : children.expressions)
+        {
+            tmpInterval = tmpInterval * C->getBounds();
         }
 
         return (tmpInterval);
