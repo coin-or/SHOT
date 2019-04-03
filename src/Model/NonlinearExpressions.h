@@ -3,6 +3,9 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
+   @note The monotonicity and convexity identification is strongly influenced by that of Suspect
+   (https://github.com/cog-imperial/suspect) by Francesco Ceccon, Imperial College London
+
    @section LICENSE
    This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
@@ -557,7 +560,18 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto baseBounds = child->getBounds();
+        auto baseConvexity = child->getConvexity();
+
+        if(baseConvexity == E_Convexity::Linear)
+            return E_Convexity::Convex;
+
+        if(baseConvexity == E_Convexity::Convex && baseBounds.l() >= 0)
+            return E_Convexity::Convex;
+
+        if(baseConvexity == E_Convexity::Concave && baseBounds.u() <= 0)
+            return E_Convexity::Convex;
+
         return E_Convexity::Unknown;
     };
 
@@ -1465,7 +1479,28 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto baseMonotonicity = firstChild->getMonotonicity();
+        auto exponentMonotonicity = secondChild->getMonotonicity();
+
+        if(exponentMonotonicity == E_Monotonicity::Constant)
+        {
+            auto baseBounds = firstChild->getBounds();
+            auto baseConvexity = firstChild->getConvexity();
+
+            double exponentValue = secondChild->getBounds.l();
+
+            getConvexityConstantExponent(exponentValue, baseConvexity, baseBounds);
+        }
+        else if(baseMonotonicity == E_Monotonicity::Constant)
+        {
+            auto exponentBounds = secondChild->getBounds();
+            auto exponentConvexity = secondChild->getConvexity();
+
+            double baseValue = firstChild->getBounds.l();
+
+            getConvexityConstantBase(baseValue, exponentConvexity);
+        }
+
         return E_Convexity::Unknown;
     };
 
@@ -1473,6 +1508,103 @@ public:
     {
         // TODO
         return E_Monotonicity::Unknown;
+    };
+
+private:
+    inline E_Convexity getConvexityConstantBase(double baseValue, E_Convexity exponentConvexity)
+    {
+        if(baseValue > 0.0 && baseValue < 1.0)
+        {
+            if(exponentConvexity == E_Convexity::Concave)
+                return E_Convexity::Convex;
+        }
+        else if(baseValue >= 1.0)
+            if(exponentConvexity == E_Convexity::Convex)
+                return E_Convexity::Convex;
+
+        return E_Convexity::Unknown;
+    };
+
+    inline E_Convexity getConvexityConstantExponent(
+        double exponentValue, E_Convexity baseConvexity, Interval baseBounds)
+    {
+        double intpart;
+        bool isInteger = (std::modf(exponentValue, &intpart) == 0.0);
+        bool integerValue = round(intpart);
+        bool isEven = (integerValue % 2 == 0);
+
+        if(std::abs(exponentValue - 0.0) <= 1e-10 * std::abs(exponentValue))
+            return E_Convexity::Linear;
+
+        if(std::abs(exponentValue - 1.0) <= 1e-10 * std::abs(exponentValue))
+            return baseConvexity;
+
+        if(isInteger && isEven)
+        {
+            if(exponentValue > 0)
+            {
+                if(baseConvexity == E_Convexity::Linear)
+                    return E_Convexity::Convex;
+
+                if(baseConvexity == E_Convexity::Convex && baseBounds.l() >= 0)
+                    return E_Convexity::Convex;
+
+                if(baseConvexity == E_Convexity::Concave && baseBounds.u() <= 0)
+                    return E_Convexity::Convex;
+            }
+            else
+            {
+                if(baseConvexity == E_Convexity::Convex && baseBounds.u() <= 0)
+                    return E_Convexity::Convex;
+
+                if(baseConvexity == E_Convexity::Concave && baseBounds.l() >= 0)
+                    return E_Convexity::Convex;
+
+                if(baseConvexity == E_Convexity::Convex && baseBounds.l() >= 0)
+                    return E_Convexity::Concave;
+
+                if(baseConvexity == E_Convexity::Concave && baseBounds.u() <= 0)
+                    return E_Convexity::Concave;
+            }
+        }
+        else if(isInteger)
+        {
+            if(exponentValue > 0)
+            {
+                if(baseConvexity == E_Convexity::Convex && baseBounds.l() >= 0)
+                    return E_Convexity::Convex;
+
+                if(baseConvexity == E_Convexity::Concave && baseBounds.u() <= 0)
+                    return E_Convexity::Concave;
+            }
+            else
+            {
+                if(baseConvexity == E_Convexity::Concave && baseBounds.l() >= 0)
+                    return E_Convexity::Convex;
+
+                if(baseConvexity == E_Convexity::Convex && baseBounds.u() <= 0)
+                    return E_Convexity::Concave;
+            }
+        }
+        else // Real exponent
+        {
+            if(!(baseBounds.l() >= 0))
+                return E_Convexity::Unknown;
+
+            if(baseConvexity == E_Convexity::Convex && exponentValue > 1.0)
+                return E_Convexity::Convex;
+
+            if(baseConvexity == E_Convexity::Concave && exponentValue < 0.0)
+                return E_Convexity::Convex;
+
+            if(baseConvexity == E_Convexity::Concave && exponentValue > 0.0 && exponentValue < 1.0)
+                return E_Convexity::Concave;
+
+            if(baseConvexity == E_Convexity::Convex && exponentValue < 0.0)
+                return E_Convexity::Concave;
+        }
+
+        return E_Convexity::Unknown;
     };
 };
 
