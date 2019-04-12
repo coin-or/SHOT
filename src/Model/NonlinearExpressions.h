@@ -73,6 +73,44 @@ inline E_Monotonicity negateMonotonicity(E_Monotonicity monotonicity)
     return resultMonotonicity;
 };
 
+inline E_Convexity getConvexityTimesWithConstantFunction(E_Convexity nonconstantConvexity, Interval constantBound)
+{
+    if(nonconstantConvexity == E_Convexity::Linear)
+        return E_Convexity::Linear;
+
+    if(nonconstantConvexity == E_Convexity::Convex && constantBound.l() >= 0.0)
+        return E_Convexity::Convex;
+
+    if(nonconstantConvexity == E_Convexity::Concave && constantBound.u() <= 0.0)
+        return E_Convexity::Convex;
+
+    if(nonconstantConvexity == E_Convexity::Concave && constantBound.l() >= 0.0)
+        return E_Convexity::Concave;
+
+    if(nonconstantConvexity == E_Convexity::Convex && constantBound.u() <= 0.0)
+        return E_Convexity::Concave;
+
+    return E_Convexity::Unknown;
+}
+
+inline E_Monotonicity getMonotonicityTimesWithConstantFunction(
+    E_Monotonicity nonconstantMonotonicity, Interval nonconstantBound, Interval constantBound)
+{
+    if(nonconstantMonotonicity == E_Monotonicity::Nondecreasing && constantBound.l() >= 0.0)
+        return E_Monotonicity::Nondecreasing;
+
+    if(nonconstantMonotonicity == E_Monotonicity::Nonincreasing && constantBound.u() <= 0.0)
+        return E_Monotonicity::Nondecreasing;
+
+    if(nonconstantMonotonicity == E_Monotonicity::Nondecreasing && constantBound.u() <= 0.0)
+        return E_Monotonicity::Nonincreasing;
+
+    if(nonconstantMonotonicity == E_Monotonicity::Nonincreasing && constantBound.l() >= 0.0)
+        return E_Monotonicity::Nonincreasing;
+
+    return E_Monotonicity::Unknown;
+};
+
 class NonlinearExpression
 {
 public:
@@ -101,6 +139,8 @@ public:
     {
         return expr.print(stream); // polymorphic print via reference
     };
+
+    virtual bool operator==(const NonlinearExpression& rhs) = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr expr)
@@ -149,6 +189,8 @@ public:
     inline int getNumberOfChildren() const { return 0; }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override{};
+
+    inline bool operator==(const ExpressionConstant& rhs) { return (rhs.constant == constant); };
 };
 
 class ExpressionVariable : public NonlinearExpression
@@ -188,6 +230,8 @@ public:
         if(std::find(nonlinearVariables.begin(), nonlinearVariables.end(), variable) == nonlinearVariables.end())
             nonlinearVariables.push_back(variable);
     };
+
+    inline bool operator==(const ExpressionVariable& rhs) { return (rhs.variable.get() == variable.get()); };
 };
 
 class ExpressionUnary : public NonlinearExpression
@@ -317,6 +361,14 @@ public:
 
         return resultMonotonicity;
     };
+
+    inline bool operator==(const ExpressionNegate& rhs)
+    {
+        if(rhs.getType() != getType())
+            return false;
+
+        return (rhs.child.get() == child.get());
+    };
 };
 
 class ExpressionInvert : public ExpressionUnary
@@ -384,6 +436,14 @@ public:
 
         return E_Monotonicity::Unknown;
     };
+
+    inline bool operator==(const ExpressionInvert& rhs)
+    {
+        if(rhs.getType() != getType())
+            return false;
+
+        return (rhs.child.get() == child.get());
+    };
 };
 
 class ExpressionSquareRoot : public ExpressionUnary
@@ -431,6 +491,14 @@ public:
         auto childMonotonicity = child->getMonotonicity();
         return childMonotonicity;
     };
+
+    inline bool operator==(const ExpressionSquareRoot& rhs)
+    {
+        if(rhs.getType() != getType())
+            return false;
+
+        return (rhs.child.get() == child.get());
+    };
 };
 
 class ExpressionLog : public ExpressionUnary
@@ -464,7 +532,7 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if(childBounds.l() >= 0 && childConvexity == E_Convexity::Concave)
+        if(childBounds.l() >= 0 && (childConvexity == E_Convexity::Concave || childConvexity == E_Convexity::Linear))
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -577,7 +645,21 @@ public:
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto childMonotonicity = child->getMonotonicity();
+
+        auto bounds = child->getBounds();
+
+        if(childMonotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if((childMonotonicity == E_Monotonicity::Nondecreasing && bounds.l() >= 0.0)
+            || (childMonotonicity == E_Monotonicity::Nonincreasing && bounds.u() <= 0.0))
+            return E_Monotonicity::Nondecreasing;
+
+        if((childMonotonicity == E_Monotonicity::Nonincreasing && bounds.l() >= 0.0)
+            || (childMonotonicity == E_Monotonicity::Nondecreasing && bounds.u() <= 0.0))
+            return E_Monotonicity::Nonincreasing;
+
         return E_Monotonicity::Unknown;
     };
 };
@@ -1246,13 +1328,59 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        // TODO
+        auto child1Monotonicity = firstChild->getMonotonicity();
+        auto child2Monotonicity = secondChild->getMonotonicity();
+
+        auto child1Convexity = firstChild->getConvexity();
+        auto bounds2 = secondChild->getBounds();
+
+        if(child2Monotonicity == E_Monotonicity::Constant)
+            return (getConvexityTimesWithConstantFunction(child1Convexity, bounds2));
+
+        auto child2Convexity = secondChild->getConvexity();
+        auto bounds1 = firstChild->getBounds();
+
+        if(child1Monotonicity == E_Monotonicity::Constant)
+            return (getConvexityTimesWithConstantFunction(child2Convexity, bounds1));
+
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto child1Monotonicity = firstChild->getMonotonicity();
+        auto child2Monotonicity = secondChild->getMonotonicity();
+
+        auto bounds1 = firstChild->getBounds();
+        auto bounds2 = secondChild->getBounds();
+
+        if(child1Monotonicity == E_Monotonicity::Constant && child2Monotonicity == E_Monotonicity::Constant)
+            return E_Monotonicity::Constant;
+
+        if(child2Monotonicity == E_Monotonicity::Constant)
+            return getMonotonicityTimesWithConstantFunction(child1Monotonicity, bounds1, bounds2);
+
+        if(child1Monotonicity == E_Monotonicity::Constant)
+            return getMonotonicityTimesWithConstantFunction(child2Monotonicity, bounds2, bounds1);
+
+        bool nondecreasingCondition1 = (child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.l() >= 0.0)
+            || (child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.u() <= 0.0);
+
+        bool nondecreasingCondition2 = (child2Monotonicity == E_Monotonicity::Nondecreasing && bounds1.l() >= 0.0)
+            || (child2Monotonicity == E_Monotonicity::Nonincreasing && bounds1.u() <= 0.0);
+
+        bool nonincreasingCondition1 = (child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.l() >= 0.0)
+            || (child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.u() <= 0.0);
+
+        bool nonincreasingCondition2 = (child2Monotonicity == E_Monotonicity::Nonincreasing && bounds1.l() >= 0.0)
+            || (child2Monotonicity == E_Monotonicity::Nondecreasing && bounds1.u() <= 0.0);
+
+        if(nondecreasingCondition1 && nondecreasingCondition2)
+            return E_Monotonicity::Nondecreasing;
+
+        if(nonincreasingCondition1 && nonincreasingCondition2)
+            return E_Monotonicity::Nonincreasing;
+
         return E_Monotonicity::Unknown;
     };
 };
@@ -1329,7 +1457,13 @@ public:
                 if(bounds2.l() > 0 && child2Convexity == E_Convexity::Concave)
                     return E_Convexity::Convex;
 
+                if(bounds2.l() > 0 && child2Convexity == E_Convexity::Linear)
+                    return E_Convexity::Convex;
+
                 if(bounds2.u() < 0 && child2Convexity == E_Convexity::Convex)
+                    return E_Convexity::Concave;
+
+                if(bounds2.u() < 0 && child2Convexity == E_Convexity::Linear)
                     return E_Convexity::Concave;
             }
             else
@@ -1337,7 +1471,13 @@ public:
                 if(bounds2.u() < 0 && child2Convexity == E_Convexity::Convex)
                     return E_Convexity::Convex;
 
+                if(bounds2.u() < 0 && child2Convexity == E_Convexity::Linear)
+                    return E_Convexity::Convex;
+
                 if(bounds2.l() > 0 && child2Convexity == E_Convexity::Concave)
+                    return E_Convexity::Concave;
+
+                if(bounds2.l() > 0 && child2Convexity == E_Convexity::Linear)
                     return E_Convexity::Concave;
             }
         }
@@ -1487,18 +1627,18 @@ public:
             auto baseBounds = firstChild->getBounds();
             auto baseConvexity = firstChild->getConvexity();
 
-            double exponentValue = secondChild->getBounds.l();
+            double exponentValue = secondChild->getBounds().l();
 
-            getConvexityConstantExponent(exponentValue, baseConvexity, baseBounds);
+            return getConvexityConstantExponent(exponentValue, baseConvexity, baseBounds);
         }
         else if(baseMonotonicity == E_Monotonicity::Constant)
         {
             auto exponentBounds = secondChild->getBounds();
             auto exponentConvexity = secondChild->getConvexity();
 
-            double baseValue = firstChild->getBounds.l();
+            double baseValue = firstChild->getBounds().l();
 
-            getConvexityConstantBase(baseValue, exponentConvexity);
+            return getConvexityConstantBase(baseValue, exponentConvexity);
         }
 
         return E_Convexity::Unknown;
@@ -1506,7 +1646,25 @@ public:
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        auto baseMonotonicity = firstChild->getMonotonicity();
+        auto exponentMonotonicity = secondChild->getMonotonicity();
+
+        if(exponentMonotonicity == E_Monotonicity::Constant)
+        {
+            double exponentValue = secondChild->getBounds().l();
+            auto baseBounds = firstChild->getBounds();
+
+            return getMonotonicityConstantExponent(exponentValue, baseMonotonicity, baseBounds);
+        }
+
+        if(baseMonotonicity == E_Monotonicity::Constant)
+        {
+            double baseValue = firstChild->getBounds().l();
+            auto exponentBounds = secondChild->getBounds();
+
+            return getMonotonicityConstantBase(baseValue, exponentMonotonicity, exponentBounds);
+        }
+
         return E_Monotonicity::Unknown;
     };
 
@@ -1528,16 +1686,16 @@ private:
     inline E_Convexity getConvexityConstantExponent(
         double exponentValue, E_Convexity baseConvexity, Interval baseBounds)
     {
-        double intpart;
-        bool isInteger = (std::modf(exponentValue, &intpart) == 0.0);
-        bool integerValue = round(intpart);
-        bool isEven = (integerValue % 2 == 0);
-
         if(std::abs(exponentValue - 0.0) <= 1e-10 * std::abs(exponentValue))
             return E_Convexity::Linear;
 
         if(std::abs(exponentValue - 1.0) <= 1e-10 * std::abs(exponentValue))
             return baseConvexity;
+
+        double intpart;
+        bool isInteger = (std::modf(exponentValue, &intpart) == 0.0);
+        bool integerValue = round(intpart);
+        bool isEven = (integerValue % 2 == 0);
 
         if(isInteger && isEven)
         {
@@ -1605,6 +1763,113 @@ private:
         }
 
         return E_Convexity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicityConstantExponent(
+        double exponentValue, E_Monotonicity baseMonotonicity, Interval baseBounds)
+    {
+        if(std::abs(exponentValue - 0.0) <= 1e-10 * std::abs(exponentValue))
+            return E_Monotonicity::Constant;
+
+        if(std::abs(exponentValue - 1.0) <= 1e-10 * std::abs(exponentValue))
+            return baseMonotonicity;
+
+        double intpart;
+        bool isInteger = (std::modf(exponentValue, &intpart) == 0.0);
+        bool integerValue = round(intpart);
+        bool isEven = (integerValue % 2 == 0);
+
+        if(isInteger && isEven)
+        {
+            if(exponentValue > 0)
+            {
+                if(baseMonotonicity == E_Monotonicity::Nondecreasing && baseBounds.l() >= 0)
+                    return E_Monotonicity::Nondecreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nonincreasing && baseBounds.u() <= 0)
+                    return E_Monotonicity::Nondecreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nondecreasing && baseBounds.u() <= 0)
+                    return E_Monotonicity::Nonincreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nonincreasing && baseBounds.l() >= 0)
+                    return E_Monotonicity::Nonincreasing;
+            }
+            else
+            {
+                if(baseMonotonicity == E_Monotonicity::Nonincreasing && baseBounds.l() >= 0)
+                    return E_Monotonicity::Nondecreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nonincreasing && baseBounds.u() <= 0)
+                    return E_Monotonicity::Nondecreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nonincreasing && baseBounds.u() <= 0)
+                    return E_Monotonicity::Nonincreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nondecreasing && baseBounds.l() >= 0)
+                    return E_Monotonicity::Nonincreasing;
+            }
+        }
+        else if(isInteger)
+        {
+            if(exponentValue > 0 && baseMonotonicity == E_Monotonicity::Nondecreasing)
+                return E_Monotonicity::Nondecreasing;
+
+            if(exponentValue < 0 && baseMonotonicity == E_Monotonicity::Nonincreasing)
+                return E_Monotonicity::Nondecreasing;
+
+            if(exponentValue > 0 && baseMonotonicity == E_Monotonicity::Nonincreasing)
+                return E_Monotonicity::Nonincreasing;
+
+            if(exponentValue < 0 && baseMonotonicity == E_Monotonicity::Nondecreasing)
+                return E_Monotonicity::Nonincreasing;
+        }
+        else // Real exponent
+        {
+            if(!(baseBounds.l() >= 0))
+                return E_Monotonicity::Unknown;
+
+            if(exponentValue > 0.0)
+                return baseMonotonicity;
+
+            if(exponentValue < 0.0)
+            {
+                if(baseMonotonicity == E_Monotonicity::Nondecreasing)
+                    return E_Monotonicity::Nonincreasing;
+
+                if(baseMonotonicity == E_Monotonicity::Nonincreasing)
+                    return E_Monotonicity::Nondecreasing;
+            }
+        }
+
+        return E_Monotonicity::Unknown;
+    };
+
+    inline E_Monotonicity getMonotonicityConstantBase(
+        double baseValue, E_Monotonicity exponentMonotonicity, Interval exponentBounds)
+    {
+        if(baseValue < 0.0)
+            return E_Monotonicity::Unknown;
+
+        if(std::abs(baseValue - 0.0) <= 1e-10 * std::abs(baseValue))
+            return E_Monotonicity::Constant;
+
+        if(baseValue > 0.0 && baseValue < 1.0)
+        {
+            if(exponentMonotonicity == E_Monotonicity::Nondecreasing && exponentBounds.u() <= 0.0)
+                return E_Monotonicity::Nondecreasing;
+
+            if(exponentMonotonicity == E_Monotonicity::Nonincreasing && exponentBounds.l() >= 0.0)
+                return E_Monotonicity::Nondecreasing;
+        }
+        else if(baseValue >= 1.0)
+            if(exponentMonotonicity == E_Monotonicity::Nondecreasing && exponentBounds.l() >= 0.0)
+                return E_Monotonicity::Nondecreasing;
+
+        if(exponentMonotonicity == E_Monotonicity::Nonincreasing && exponentBounds.u() <= 0.0)
+            return E_Monotonicity::Nondecreasing;
+
+        return E_Monotonicity::Unknown;
     };
 };
 
@@ -1846,37 +2111,184 @@ public:
 
     inline E_Convexity getConvexity() override
     {
-        if(children.expressions.size() == 2
-            && children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant)
+        int numberOfChildren = getNumberOfChildren();
+
+        if(numberOfChildren == 0)
+            return E_Convexity::Unknown;
+
+        if(numberOfChildren == 2)
         {
-            auto constant = std::dynamic_pointer_cast<ExpressionConstant>(children.expressions.at(0));
-            auto secondConvexity = children.expressions.at(1)->getConvexity();
+            if(children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                auto constant = std::dynamic_pointer_cast<ExpressionConstant>(children.expressions.at(0));
+                auto secondConvexity = children.expressions.at(1)->getConvexity();
 
-            if(secondConvexity == E_Convexity::Linear)
-                return E_Convexity::Linear;
+                if(secondConvexity == E_Convexity::Linear)
+                    return E_Convexity::Linear;
 
-            if(secondConvexity == E_Convexity::Convex && constant->constant > 0)
-                return E_Convexity::Convex;
+                if(secondConvexity == E_Convexity::Convex && constant->constant > 0)
+                    return E_Convexity::Convex;
 
-            if(secondConvexity == E_Convexity::Convex && constant->constant < 0)
-                return E_Convexity::Concave;
+                if(secondConvexity == E_Convexity::Convex && constant->constant < 0)
+                    return E_Convexity::Concave;
 
-            if(secondConvexity == E_Convexity::Concave && constant->constant > 0)
-                return E_Convexity::Concave;
+                if(secondConvexity == E_Convexity::Concave && constant->constant > 0)
+                    return E_Convexity::Concave;
 
-            if(secondConvexity == E_Convexity::Concave && constant->constant < 0)
-                return E_Convexity::Convex;
+                if(secondConvexity == E_Convexity::Concave && constant->constant < 0)
+                    return E_Convexity::Convex;
 
-            if(secondConvexity == E_Convexity::Nonconvex)
-                return E_Convexity::Nonconvex;
+                if(secondConvexity == E_Convexity::Nonconvex)
+                    return E_Convexity::Nonconvex;
+            }
+
+            if(children.expressions.at(0) == children.expressions.at(1))
+            {
+                // TODO implement equals for nonlinear expressions
+
+                auto firstConvexity = children.expressions.at(0)->getConvexity();
+                auto firstBounds = children.expressions.at(0)->getBounds();
+
+                if(firstConvexity == E_Convexity::Linear)
+                    return E_Convexity::Convex;
+
+                if(firstConvexity == E_Convexity::Convex && firstBounds.l() >= 0.0)
+                    return E_Convexity::Convex;
+
+                if(firstConvexity == E_Convexity::Concave && firstBounds.u() <= 0.0)
+                    return E_Convexity::Convex;
+            }
         }
+
+        /*
+        if(isSignomialTerm())
+        {
+            double constant = 1.0;
+            double sumPowers = 0.0;
+            int numberOfPositivePowers = 0;
+            int numberOfVariables = 0;
+
+            for(auto& C : children.expressions)
+            {
+                if(C->getType() == E_NonlinearExpressionTypes::Variable)
+                {
+                    numberOfPositivePowers++;
+                    numberOfVariables++;
+                    sumPowers += 1.0;
+                }
+                else if(C->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+                }
+                else if(C->getType() == E_NonlinearExpressionTypes::Square)
+                {
+                    auto child = std::dynamic_pointer_cast<ExpressionSquare>(C)->child;
+
+                    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+                    {
+                        constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+                    }
+                    else if(child->getType() == E_NonlinearExpressionTypes::Variable)
+                    {
+                        numberOfPositivePowers++;
+                        numberOfVariables++;
+                        sumPowers += 2.0;
+                    }
+                    else if(child->getType() == E_NonlinearExpressionTypes::Product)
+                    {
+                        // TODO
+                    }
+                }
+                else if(C->getType() == E_NonlinearExpressionTypes::SquareRoot)
+                {
+                    auto child = std::dynamic_pointer_cast<ExpressionSquare>(C)->child;
+
+                    if(child->getType() == E_NonlinearExpressionTypes::Constant)
+                    {
+                        constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+                    }
+                    else if(child->getType() == E_NonlinearExpressionTypes::Variable)
+                    {
+                        numberOfPositivePowers++;
+                        numberOfVariables++;
+                        sumPowers += 0.5;
+                    }
+                    else if(child->getType() == E_NonlinearExpressionTypes::Product)
+                    {
+                        // TODO
+                    }
+                    else
+                    {
+                        return (false);
+                    }
+                }
+                else
+                {
+                    return (false);
+                }
+            }
+        }*/
+
+        // TODO convexity for signomials
+        // TODO convexity for general products
 
         return E_Convexity::Unknown;
     };
 
     inline E_Monotonicity getMonotonicity() override
     {
-        // TODO
+        int numberOfChildren = getNumberOfChildren();
+
+        if(numberOfChildren == 0)
+            return E_Monotonicity::Unknown;
+
+        E_Monotonicity joinedMonotonicity = children.expressions.at(0)->getMonotonicity();
+
+        if(numberOfChildren == 1)
+            return joinedMonotonicity;
+
+        Interval joinedBounds = children.expressions.at(0)->getBounds();
+
+        for(int i = 1; i < numberOfChildren; i++)
+        {
+            auto nextMonotonicity = children.expressions.at(i)->getMonotonicity();
+            auto nextBounds = children.expressions.at(i)->getBounds();
+
+            if(joinedMonotonicity == E_Monotonicity::Constant && nextMonotonicity == E_Monotonicity::Constant)
+                return E_Monotonicity::Constant;
+
+            if(nextMonotonicity == E_Monotonicity::Constant)
+                return getMonotonicityTimesWithConstantFunction(joinedMonotonicity, joinedBounds, nextBounds);
+
+            if(joinedMonotonicity == E_Monotonicity::Constant)
+                return getMonotonicityTimesWithConstantFunction(nextMonotonicity, nextBounds, joinedBounds);
+
+            bool nondecreasingCondition1
+                = (joinedMonotonicity == E_Monotonicity::Nondecreasing && nextBounds.l() >= 0.0)
+                || (joinedMonotonicity == E_Monotonicity::Nonincreasing && nextBounds.u() <= 0.0);
+
+            bool nondecreasingCondition2
+                = (nextMonotonicity == E_Monotonicity::Nondecreasing && joinedBounds.l() >= 0.0)
+                || (nextMonotonicity == E_Monotonicity::Nonincreasing && joinedBounds.u() <= 0.0);
+
+            bool nonincreasingCondition1
+                = (joinedMonotonicity == E_Monotonicity::Nonincreasing && nextBounds.l() >= 0.0)
+                || (joinedMonotonicity == E_Monotonicity::Nondecreasing && nextBounds.u() <= 0.0);
+
+            bool nonincreasingCondition2
+                = (nextMonotonicity == E_Monotonicity::Nonincreasing && joinedBounds.l() >= 0.0)
+                || (nextMonotonicity == E_Monotonicity::Nondecreasing && joinedBounds.u() <= 0.0);
+
+            if(nondecreasingCondition1 && nondecreasingCondition2)
+                joinedMonotonicity = E_Monotonicity::Nondecreasing;
+            else if(nonincreasingCondition1 && nonincreasingCondition2)
+                joinedMonotonicity = E_Monotonicity::Nonincreasing;
+            else
+                return E_Monotonicity::Unknown;
+
+            joinedBounds = joinedBounds * nextBounds;
+        }
+
         return E_Monotonicity::Unknown;
     };
 
@@ -1968,6 +2380,97 @@ public:
 
         return (true);
     }
+
+    /*
+    inline bool isSignomialTerm()
+    {
+        for(auto& C : children.expressions)
+        {
+            if(C->getType() == E_NonlinearExpressionTypes::Variable)
+            {
+                // Not a signomial term if variable bounds are negative
+                if(std::dynamic_pointer_cast<ExpressionVariable>(C)->getBounds().l() < 0)
+                    return (false);
+            }
+            else if(C->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+            }
+            else if(C->getType() == E_NonlinearExpressionTypes::Square)
+            {
+                auto child = std::dynamic_pointer_cast<ExpressionSquare>(C)->child;
+
+                if(child->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                }
+                else if(child->getType() == E_NonlinearExpressionTypes::Variable)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(child)->getBounds().l() < 0)
+                        return (false);
+                }
+                else if(child->getType() == E_NonlinearExpressionTypes::Product)
+                {
+                    // TODO
+                    return (false);
+                }
+                else
+                {
+                    return (false);
+                }
+            }
+            else if(C->getType() == E_NonlinearExpressionTypes::SquareRoot)
+            {
+                auto child = std::dynamic_pointer_cast<ExpressionSquare>(C)->child;
+
+                if(child->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                }
+                else if(child->getType() == E_NonlinearExpressionTypes::Variable)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(child)->getBounds().l() < 0)
+                        return (false);
+                }
+                else if(child->getType() == E_NonlinearExpressionTypes::Product)
+                {
+                    // TODO
+                    return (false);
+                }
+                else
+                {
+                    return (false);
+                }
+            }
+            else if(C->getType() == E_NonlinearExpressionTypes::Divide)
+            {
+                auto exprDivide = std::dynamic_pointer_cast<ExpressionDivide>(C);
+
+                if (exprDivide->firstChild->getType() == E_NonlinearExpressionTypes::Product)
+
+                if(child->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                }
+                else if(child->getType() == E_NonlinearExpressionTypes::Variable)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(child)->getBounds().l() < 0)
+                        return (false);
+                }
+                else if(child->getType() == E_NonlinearExpressionTypes::Product)
+                {
+                    // TODO
+                    return (false);
+                }
+                else
+                {
+                    return (false);
+                }
+            }
+            else
+            {
+                return (false);
+            }
+        }
+
+        return (true);
+    }*/
 };
 
 // End general operations
