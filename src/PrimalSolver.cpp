@@ -12,6 +12,15 @@
 
 #include <boost/format.hpp>
 
+#include "Output.h"
+#include "Results.h"
+#include "Settings.h"
+#include "Timing.h"
+
+#include "Model/Problem.h"
+#include "Model/ObjectiveFunction.h"
+#include "Model/Constraints.h"
+
 namespace SHOT
 {
 

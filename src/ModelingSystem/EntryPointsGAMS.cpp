@@ -9,8 +9,16 @@
    Please see the README and LICENSE files for more information.
  */
 
-#include "Solver.h"
 #include "ModelingSystemGAMS.h"
+
+#include "../Output.h"
+#include "../Report.h"
+#include "../Settings.h"
+#include "../Solver.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"

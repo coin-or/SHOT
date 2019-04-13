@@ -12,6 +12,8 @@
 #include "MIPSolverCplex.h"
 #include "MIPSolverCallbackBase.h"
 
+#include <mutex>
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif

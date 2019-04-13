@@ -9,6 +9,14 @@
 */
 
 #include "DualSolver.h"
+#include "Output.h"
+#include "Settings.h"
+#include "Results.h"
+#include "Iteration.h"
+#include "Utilities.h"
+#include "Timing.h"
+#include "Problem.h"
+#include "ObjectiveFunction.h"
 
 #include <boost/format.hpp>
 

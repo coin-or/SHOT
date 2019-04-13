@@ -11,6 +11,8 @@
 #pragma once
 #include "TaskBase.h"
 
+#include <functional>
+
 namespace SHOT
 {
 class TaskSimple : public TaskBase

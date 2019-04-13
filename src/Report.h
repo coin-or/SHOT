@@ -9,7 +9,9 @@
 */
 
 #pragma once
-#include "Shared.h"
+#include "Environment.h"
+#include "Enums.h"
+#include "Structs.h"
 
 namespace SHOT
 {
@@ -47,9 +49,9 @@ public:
 private:
     EnvironmentPtr env;
 
-    double lastDualObjectiveValue = -DBL_MAX;
-    double lastPrimalObjectiveValue = DBL_MAX;
-    double lastAbsoluteObjectiveGap = DBL_MAX;
+    double lastDualObjectiveValue = SHOT_DBL_MIN;
+    double lastPrimalObjectiveValue = SHOT_DBL_MAX;
+    double lastAbsoluteObjectiveGap = SHOT_DBL_MAX;
     double lastRelativeObjectiveGap = 1.0;
     double lastIterationOutputTimeStamp = 0.0;
     int iterationsWithoutPrintoutCounter = 0;

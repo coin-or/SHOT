@@ -10,7 +10,17 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Environment.h"
+#include "../Enums.h"
+#include "../Structs.h"
+
+#include "../Model/Variables.h"
+#include "../Model/AuxiliaryVariables.h"
+#include "../Model/Terms.h"
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/ObjectiveFunction.h"
+#include "../Model/Constraints.h"
+#include "../Model/Problem.h"
 
 namespace SHOT
 {

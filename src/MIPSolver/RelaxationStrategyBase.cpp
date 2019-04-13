@@ -10,6 +10,13 @@
 
 #include "RelaxationStrategyBase.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

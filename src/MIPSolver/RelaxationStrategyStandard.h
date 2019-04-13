@@ -10,6 +10,8 @@
 
 #pragma once
 #include "RelaxationStrategyBase.h"
+#include "../Environment.h"
+#include "../Enums.h"
 
 namespace SHOT
 {

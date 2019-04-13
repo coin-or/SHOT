@@ -8,7 +8,19 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Solver.h"
+#include "../Solver.h"
+#include "../Environment.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../Model/Variables.h"
+#include "../Model/Terms.h"
+#include "../Model/Constraints.h"
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
+
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
 
 using namespace SHOT;
 

@@ -9,6 +9,11 @@
 */
 
 #include "MIPSolutionLimitStrategyIncrease.h"
+#include "../Settings.h"
+#include "../Results.h"
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Iteration.h"
 
 namespace SHOT
 {
@@ -72,7 +77,7 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
 
         if(prevIter->maxDeviationConstraint == -1
             && prevIter->maxDeviation < env->settings->getSetting<double>("MIP.SolutionLimit.UpdateTolerance", "Dual")
-                    * std::max(1.0, abs(prevIter->objectiveValue)))
+                    * std::max(1.0, std::abs(prevIter->objectiveValue)))
         {
             return (true);
         }

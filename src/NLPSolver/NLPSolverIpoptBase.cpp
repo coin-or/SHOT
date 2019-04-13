@@ -10,6 +10,10 @@
 
 #include "NLPSolverIpoptBase.h"
 
+#include "../Output.h"
+#include "../Settings.h"
+#include "../Utilities.h"
+
 namespace SHOT
 {
 
@@ -639,8 +643,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         if(currPt > currUB)
         {
             env->output->outputDebug("  Starting point value for variable " + std::to_string(currVarIndex)
-                + " is larger than ub: " + Utilities::toString(currPt) + " > "
-                + Utilities::toString(currUB) + "; resetting to ub.");
+                + " is larger than ub: " + Utilities::toString(currPt) + " > " + Utilities::toString(currUB)
+                + "; resetting to ub.");
             if(currUB == 1 && currPt > 1 && currPt < 1.00001)
             {
                 currPt = 1;
@@ -654,8 +658,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
         if(currPt < currLB)
         {
             env->output->outputDebug("  Starting point value for variable " + std::to_string(currVarIndex)
-                + " is smaller than lb: " + Utilities::toString(currPt) + " < "
-                + Utilities::toString(currLB) + "; resetting to lb.");
+                + " is smaller than lb: " + Utilities::toString(currPt) + " < " + Utilities::toString(currLB)
+                + "; resetting to lb.");
 
             if(currLB == 0 && currPt < 0 && currPt > -0.00001)
             {
@@ -669,9 +673,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
 
         startingPointVariableValues.at(k) = currPt;
 
-        env->output->outputTrace("  Starting point value for " + std::to_string(currVarIndex)
-            + " set: " + Utilities::toString(currLB) + " < " + Utilities::toString(currPt) + " < "
-            + Utilities::toString(currUB));
+        env->output->outputTrace("  Starting point value for " + std::to_string(currVarIndex) + " set: "
+            + Utilities::toString(currLB) + " < " + Utilities::toString(currPt) + " < " + Utilities::toString(currUB));
     }
 
     env->output->outputDebug(" All starting points set.");

@@ -9,8 +9,11 @@
 */
 
 #pragma once
-#include "unordered_map"
-#include "algorithm"
+
+#include <list>
+#include <string>
+#include <utility>
+
 #include "Tasks/TaskBase.h"
 #include "Tasks/TaskException.h"
 

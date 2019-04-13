@@ -25,6 +25,8 @@
 #include "MIPSolver/MIPSolverOsiCbc.h"
 #endif
 
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 class NLPSolverCuttingPlaneMinimax : public NLPSolverBase

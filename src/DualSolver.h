@@ -9,11 +9,11 @@
 */
 
 #pragma once
-#include "Shared.h"
+#include "Environment.h"
+#include "Structs.h"
 
 namespace SHOT
 {
-
 class DualSolver
 {
 public:

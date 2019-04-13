@@ -10,6 +10,10 @@
 
 #include "TaskCheckUserTermination.h"
 
+#include "../EventHandler.h"
+#include "../Results.h"
+#include "../TaskHandler.h"
+
 namespace SHOT
 {
 

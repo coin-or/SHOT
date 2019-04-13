@@ -9,11 +9,19 @@
 */
 
 #pragma once
-#include "../Shared.h"
+
+#include <string>
+#include <memory>
+
+#include "../Enums.h"
+#include "../Structs.h"
+
+#include "Variables.h"
+#include "Terms.h"
+#include "NonlinearExpressions.h"
 
 namespace SHOT
 {
-
 enum class E_ConstraintClassification
 {
     None,
@@ -71,8 +79,37 @@ public:
     virtual void updateProperties() = 0;
 };
 
+typedef std::shared_ptr<Constraint> ConstraintPtr;
+
 std::ostream& operator<<(std::ostream& stream, ConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint);
+
+class NumericConstraint;
+typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;
+typedef std::vector<NumericConstraintPtr> NumericConstraints;
+
+struct NumericConstraintValue
+{
+    NumericConstraintPtr constraint;
+
+    // Considering a constraint L <= f(x) <= U:
+    double functionValue; // This is the function value of f(x)
+    bool isFulfilledLHS; // Is L <= f(x)?
+    double normalizedLHSValue; // This is the value of L - f(x)
+    bool isFulfilledRHS; // Is f(x) <= U
+    double normalizedRHSValue; // This is the value of f(x) - U
+    bool isFulfilled; // Is L <= f(x) <= U?
+    double error; // max(0, max(L - f(x), f(x) - U)
+    double normalizedValue; // max(L - f(x), f(x)-U)
+
+    // Sorts in reverse order, i.e. so that larger errors are before smaller ones
+    bool operator>(const NumericConstraintValue& otherValue) const
+    {
+        return normalizedValue > otherValue.normalizedValue;
+    }
+};
+
+typedef std::vector<NumericConstraintValue> NumericConstraintValues;
 
 class NumericConstraint : public Constraint, public std::enable_shared_from_this<NumericConstraint>
 {
@@ -233,6 +270,9 @@ protected:
     virtual void initializeHessianSparsityPattern();
 };
 
+typedef std::shared_ptr<QuadraticConstraint> QuadraticConstraintPtr;
+typedef std::vector<QuadraticConstraintPtr> QuadraticConstraints;
+
 std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint);
 
 class NonlinearConstraint : public QuadraticConstraint
@@ -342,6 +382,9 @@ protected:
     virtual void initializeGradientSparsityPattern();
     virtual void initializeHessianSparsityPattern();
 };
+
+typedef std::shared_ptr<NonlinearConstraint> NonlinearConstraintPtr;
+typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint);

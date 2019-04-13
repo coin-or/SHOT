@@ -10,6 +10,12 @@
 
 #include "TaskSelectPrimalCandidatesFromSolutionPool.h"
 
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../PrimalSolver.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 

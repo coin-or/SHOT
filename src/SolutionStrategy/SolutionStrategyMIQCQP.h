@@ -11,6 +11,7 @@
 #pragma once
 
 #include "ISolutionStrategy.h"
+#include "../Environment.h"
 
 namespace SHOT
 {

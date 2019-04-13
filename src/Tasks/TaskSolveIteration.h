@@ -11,7 +11,7 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../MIPSolver/IMIPSolver.h"
+#include "../Structs.h"
 
 namespace SHOT
 {

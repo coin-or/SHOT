@@ -9,8 +9,10 @@
 */
 
 #pragma once
-#include "../Shared.h"
-#include "TaskException.h"
+
+#include "../Environment.h"
+
+#include <string>
 
 namespace SHOT
 {

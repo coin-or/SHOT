@@ -10,6 +10,30 @@
 
 #include "TaskSelectPrimalCandidatesFromNLP.h"
 
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Output.h"
+#include "../PrimalSolver.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../NLPSolver/INLPSolver.h"
+
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+
+#ifdef HAS_IPOPT
+#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
+#endif
+
+#ifdef HAS_GAMS
+#include "../NLPSolver/NLPSolverGAMS.h"
+#include "../ModelingSystem/ModelingSystemGAMS.h"
+#endif
+
 namespace SHOT
 {
 

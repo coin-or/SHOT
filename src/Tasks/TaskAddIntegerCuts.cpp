@@ -10,6 +10,12 @@
 
 #include "TaskAddIntegerCuts.h"
 
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 

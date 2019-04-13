@@ -10,8 +10,7 @@
 
 #pragma once
 #include <chrono>
-
-#include "Shared.h"
+#include <string>
 
 class Timer
 {

@@ -9,6 +9,14 @@
 */
 
 #include "TaskCreateDualProblem.h"
+
+#include "../DualSolver.h"
+#include "../Output.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
 namespace SHOT
 {
 

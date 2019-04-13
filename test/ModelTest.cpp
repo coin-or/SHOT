@@ -9,6 +9,14 @@
 */
 
 #include "../Solver.h"
+#include "../Environment.h"
+#include "../Settings.h"
+
+#include "../Model/Variables.h"
+#include "../Model/Terms.h"
+#include "../Model/Constraints.h"
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
 
 #include "LinesearchMethod/LinesearchMethodBoost.h"
 

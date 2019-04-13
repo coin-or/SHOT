@@ -10,6 +10,12 @@
 
 #include "TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../PrimalSolver.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 
@@ -127,7 +133,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         {
             auto tmpSol = allSolutions.at(i);
 
-            if(tmpSol.maxDeviation.value <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
+            if(tmpSol.maxDeviation.value
+                <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
                     tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
@@ -145,7 +152,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         {
             tmpSol = allSolutions.at(i);
 
-            if(tmpSol.maxDeviation.value <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
+            if(tmpSol.maxDeviation.value
+                <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
                     tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);

@@ -10,6 +10,16 @@
 
 #include "MIPSolverCplex.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -370,7 +380,8 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::Probe, env->settings->getSetting<int>("Cplex.Probe", "Subsolver"));
         cplexInstance.setParam(IloCplex::MIPEmphasis, env->settings->getSetting<int>("Cplex.MIPEmphasis", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::ParallelMode, env->settings->getSetting<int>("Cplex.ParallelMode", "Subsolver"));
+        cplexInstance.setParam(
+            IloCplex::ParallelMode, env->settings->getSetting<int>("Cplex.ParallelMode", "Subsolver"));
         cplexInstance.setParam(IloCplex::Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
 
         cplexInstance.setParam(
@@ -899,8 +910,8 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
-                    + " for maximization.");
+                env->output->outputDebug(
+                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for maximization.");
             }
             else
             {
@@ -909,8 +920,8 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                 cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
 
-                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
-                    + " for minimization.");
+                env->output->outputDebug(
+                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }
 
             cutOffConstraintIndex = cplexConstrs.getSize() - 1;
@@ -924,14 +935,14 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
             {
                 cplexConstrs[cutOffConstraintIndex].setLB(cutOff);
-                env->output->outputDebug("        Setting cutoff constraint value to "
-                    + Utilities::toString(cutOff) + " for maximization.");
+                env->output->outputDebug(
+                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
             }
             else
             {
                 cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
-                env->output->outputDebug("        Setting cutoff constraint to " + Utilities::toString(cutOff)
-                    + " for minimization.");
+                env->output->outputDebug(
+                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }
 
             modelUpdated = true;

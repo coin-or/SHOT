@@ -9,6 +9,13 @@
 */
 
 #include "MIPSolverCallbackBase.h"
+#include "../EventHandler.h"
+#include "../Iteration.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
 
 namespace SHOT
 {

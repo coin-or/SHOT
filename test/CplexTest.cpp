@@ -6,7 +6,10 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Solver.h"
+#include "../Solver.h"
+#include "../Utilities.h"
+
+#include <iostream>
 
 using namespace SHOT;
 

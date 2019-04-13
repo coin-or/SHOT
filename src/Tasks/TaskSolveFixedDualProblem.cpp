@@ -10,6 +10,21 @@
 
 #include "TaskSolveFixedDualProblem.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../LinesearchMethod/ILinesearchMethod.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

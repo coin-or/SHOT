@@ -10,6 +10,18 @@
 
 #include "TaskSolveIteration.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

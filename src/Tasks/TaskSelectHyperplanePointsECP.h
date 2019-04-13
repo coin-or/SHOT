@@ -11,6 +11,8 @@
 #pragma once
 #include "TaskBase.h"
 
+#include "../Structs.h"
+
 namespace SHOT
 {
 class TaskSelectHyperplanePointsECP : public TaskBase

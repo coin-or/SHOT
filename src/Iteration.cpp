@@ -9,6 +9,8 @@
 */
 
 #include "Iteration.h"
+#include "Results.h"
+#include "Settings.h"
 
 namespace SHOT
 {

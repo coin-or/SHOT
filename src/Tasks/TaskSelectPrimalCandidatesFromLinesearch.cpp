@@ -10,6 +10,18 @@
 
 #include "TaskSelectPrimalCandidatesFromLinesearch.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Results.h"
+#include "../PrimalSolver.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
+#include "../LinesearchMethod/ILinesearchMethod.h"
+
 namespace SHOT
 {
 

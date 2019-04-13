@@ -9,7 +9,10 @@
 */
 
 #pragma once
-#include "Shared.h"
+
+#include <memory>
+
+#include "Structs.h"
 
 namespace SHOT
 {
@@ -44,5 +47,3 @@ private:
 
 typedef std::shared_ptr<Environment> EnvironmentPtr;
 } // namespace SHOT
-
-#include "TaskHandler.h"

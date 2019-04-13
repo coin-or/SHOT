@@ -8,8 +8,16 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Solver.h"
-#include "ModelingSystemGAMS.h"
+#include "../Results.h"
+#include "../Solver.h"
+#include "../Utilities.h"
+#include "../TaskHandler.h"
+
+#include "../LinesearchMethod/LinesearchMethodBoost.h"
+
+#include "../ModelingSystem/ModelingSystemGAMS.h"
+
+#include "../Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
 

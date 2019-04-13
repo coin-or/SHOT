@@ -9,6 +9,8 @@
 */
 
 #include "Constraints.h"
+#include "../Utilities.h"
+#include "Problem.h"
 
 namespace SHOT
 {

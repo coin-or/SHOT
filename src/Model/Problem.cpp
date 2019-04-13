@@ -9,6 +9,9 @@
 */
 
 #include "Problem.h"
+#include "../Enums.h"
+#include "../Output.h"
+#include "../Utilities.h"
 
 namespace SHOT
 {

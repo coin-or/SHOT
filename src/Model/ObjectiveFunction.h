@@ -9,10 +9,19 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Structs.h"
+#include "../Enums.h"
+#include "Variables.h"
+#include "Terms.h"
+#include "NonlinearExpressions.h"
+
+#include <vector>
 
 namespace SHOT
 {
+
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
 
 enum class E_ObjectiveFunctionDirection
 {
@@ -302,6 +311,8 @@ protected:
     virtual void initializeGradientSparsityPattern();
     virtual void initializeHessianSparsityPattern();
 };
+
+typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective);
 

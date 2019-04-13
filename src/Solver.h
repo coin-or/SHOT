@@ -10,10 +10,20 @@
 
 #pragma once
 
-#include "Shared.h"
+#include <memory>
+#include <string>
+
+#include "Environment.h"
+#include "Enums.h"
+#include "EventHandler.h"
+#include "Structs.h"
 
 #include "ModelingSystem/IModelingSystem.h"
 #include "SolutionStrategy/ISolutionStrategy.h"
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 namespace SHOT
 {

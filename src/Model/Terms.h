@@ -9,14 +9,25 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Environment.h"
+#include "../Enums.h"
+#include "../Structs.h"
+
+#include "Variables.h"
+
+#include "ffunc.hpp"
+
 #include <Eigen/Sparse>
 #include <Eigen/Eigenvalues>
-
 #include "Eigen/src/SparseCore/SparseUtil.h"
+
+#include <vector>
 
 namespace SHOT
 {
+
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
 
 class Term
 {
@@ -73,6 +84,8 @@ public:
             return (E_Monotonicity::Constant);
     };
 };
+
+typedef std::shared_ptr<LinearTerm> LinearTermPtr;
 
 inline std::ostream& operator<<(std::ostream& stream, LinearTermPtr term)
 {
@@ -314,6 +327,8 @@ public:
     };
 };
 
+typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
+
 inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
 {
     if(term->coefficient != 1.0)
@@ -530,6 +545,8 @@ public:
 
     inline E_Monotonicity getMonotonicity() override { return E_Monotonicity::Unknown; };
 };
+
+typedef std::shared_ptr<MonomialTerm> MonomialTermPtr;
 
 inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {

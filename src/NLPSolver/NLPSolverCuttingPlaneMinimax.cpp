@@ -10,6 +10,16 @@
 
 #include "NLPSolverCuttingPlaneMinimax.h"
 
+#include "../Output.h"
+#include "../Report.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+
+#include <functional>
+
 #include "boost/math/tools/minima.hpp"
 
 namespace SHOT

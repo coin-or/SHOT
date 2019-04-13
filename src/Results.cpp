@@ -12,6 +12,22 @@
 
 #include <boost/format.hpp>
 
+#include <algorithm>
+#include <limits>
+
+#include "Iteration.h"
+#include "Output.h"
+#include "Results.h"
+#include "Settings.h"
+#include "Timing.h"
+#include "Utilities.h"
+
+#include "Model/ObjectiveFunction.h"
+#include "Model/Problem.h"
+
+#include "DualSolver.h"
+#include "MIPSolver/IMIPSolver.h"
+
 namespace SHOT
 {
 

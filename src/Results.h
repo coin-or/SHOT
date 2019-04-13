@@ -9,13 +9,23 @@
 */
 
 #pragma once
-#include "Shared.h"
+
+#include <memory>
+#include <vector>
+
+#include "Environment.h"
+#include "Iteration.h"
 #include "SHOTConfig.h"
+#include "Structs.h"
 
 #include "tinyxml2.h"
 
 namespace SHOT
 {
+
+class Variable;
+typedef std::shared_ptr<Variable> VariablePtr;
+typedef std::vector<VariablePtr> Variables;
 
 class Results
 {

@@ -10,7 +10,14 @@
 
 #include "Solver.h"
 
+#include "DualSolver.h"
+#include "PrimalSolver.h"
+#include "Report.h"
+#include "Results.h"
+#include "Settings.h"
 #include "TaskHandler.h"
+#include "Timing.h"
+#include "Utilities.h"
 
 #ifdef HAS_OS
 #include "ModelingSystem/ModelingSystemOS.h"

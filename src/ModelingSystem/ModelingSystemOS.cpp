@@ -10,6 +10,28 @@
 
 #include "ModelingSystemOS.h"
 
+#include "../Output.h"
+#include "../Settings.h"
+#include "../Utilities.h"
+
+#include "../Model/Simplifications.h"
+
+#include "OSIpoptSolver.h"
+#include "OSOption.h"
+#include "OSResult.h"
+
+#include "OSiLReader.h"
+#include "OSiLWriter.h"
+#include "OSInstance.h"
+#include "OSnl2OS.h"
+#include "OSoLReader.h"
+#include "OSrLWriter.h"
+
+#include "CoinHelperFunctions.hpp" // for CoinCopyOfArrayOrZero, maybe should eliminate this
+#include "CoinPackedMatrix.hpp"
+#include "CoinPackedVector.hpp"
+#include "CoinFinite.hpp"
+
 #include "boost/filesystem.hpp"
 
 namespace SHOT

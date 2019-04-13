@@ -9,9 +9,12 @@
 */
 
 #include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
 
 #include "Utilities.h"
-#include "Shared.h"
 
 #include <boost/functional/hash/hash.hpp>
 #include <boost/format.hpp>

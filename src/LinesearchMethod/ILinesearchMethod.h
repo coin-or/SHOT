@@ -9,19 +9,21 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Environment.h"
+#include "../Structs.h"
+
+#include "../Model/Constraints.h"
+#include "../Model/ObjectiveFunction.h"
 
 namespace SHOT
 {
+
 class ILinesearchMethod
 {
 public:
     ILinesearchMethod(){};
     ILinesearchMethod(EnvironmentPtr envPtr){};
     virtual ~ILinesearchMethod(){};
-
-    // virtual std::pair<VectorDouble, VectorDouble> findZero(VectorDouble ptA, VectorDouble ptB,
-    //                                                       int Nmax, double lambdaTol, double constrTol) = 0;
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
         double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate)

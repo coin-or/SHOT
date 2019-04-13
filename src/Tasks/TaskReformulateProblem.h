@@ -11,6 +11,16 @@
 #pragma once
 #include "TaskBase.h"
 
+#include <map>
+#include <tuple>
+
+#include "../Model/AuxiliaryVariables.h"
+#include "../Model/Constraints.h"
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
+#include "../Model/Terms.h"
+#include "../Model/Variables.h"
+
 namespace SHOT
 {
 struct Reformulation

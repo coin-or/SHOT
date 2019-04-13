@@ -145,6 +145,8 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Constraints.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Problem.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.cpp"
   "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
@@ -174,12 +176,10 @@ file(GLOB_RECURSE SOURCES
 
 # Adding header files
 file(GLOB_RECURSE HEADERS
-  "${PROJECT_SOURCE_DIR}/src/Shared.h"
   "${PROJECT_SOURCE_DIR}/src/Enums.h"
   "${PROJECT_SOURCE_DIR}/src/Structs.h"
   "${PROJECT_SOURCE_DIR}/src/Environment.h"
   "${PROJECT_SOURCE_DIR}/src/EventHandler.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/ModelShared.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
   "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"

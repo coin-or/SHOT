@@ -9,10 +9,27 @@
 */
 
 #pragma once
-#include "../Shared.h"
+
+#include "../Enums.h"
+#include "../Structs.h"
+
+#include <map>
+#include <memory>
+#include <ostream>
+#include <string>
+
+#include "ffunc.hpp"
 
 namespace SHOT
 {
+
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
+
+typedef mc::FFVar FactorableFunction;
+typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
 
 class Variable
 {
@@ -62,45 +79,18 @@ public:
         , isNonlinear(false)
         , isAuxiliary(false){};
 
-    inline double calculate(const VectorDouble& point) { return (point[index]); }
+    double calculate(const VectorDouble& point) const;
 
-    inline Interval calculate(const IntervalVector& intervalVector) { return intervalVector[index]; }
-    inline Interval getBound() { return Interval(lowerBound, upperBound); }
+    Interval calculate(const IntervalVector& intervalVector) const;
+    Interval getBound();
 
-    inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
+    void takeOwnership(ProblemPtr owner);
 };
 
-inline std::ostream& operator<<(std::ostream& stream, VariablePtr var)
-{
-    stream << "[" << var->index << "]:\t";
+typedef std::shared_ptr<Variable> VariablePtr;
+typedef std::map<VariablePtr, double> SparseVariableVector;
+typedef std::map<std::pair<VariablePtr, VariablePtr>, double> SparseVariableMatrix;
+typedef std::vector<VariablePtr> Variables;
 
-    switch(var->type)
-    {
-    case E_VariableType::Real:
-        stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
-        break;
-
-    case E_VariableType::Binary:
-        stream << var->name << " in {0,1}";
-        break;
-
-    case E_VariableType::Integer:
-        if(var->lowerBound == 0.0 && var->upperBound == 1.0)
-            stream << var->name << " in {0,1}";
-        else
-            stream << var->name << " in {" << var->lowerBound << ",...," << var->upperBound << "}";
-        break;
-
-    case E_VariableType::Semicontinuous:
-        stream << var->name << " in {0} or " << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
-        break;
-
-    default:
-        stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
-        break;
-    }
-
-    return stream;
-};
-
+std::ostream& operator<<(std::ostream& stream, VariablePtr var);
 } // namespace SHOT

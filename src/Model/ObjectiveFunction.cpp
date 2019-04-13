@@ -9,6 +9,8 @@
 */
 
 #include "ObjectiveFunction.h"
+#include "Problem.h"
+#include "../Utilities.h"
 
 namespace SHOT
 {

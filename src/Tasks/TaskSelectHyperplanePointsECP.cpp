@@ -9,6 +9,16 @@
 */
 #include "TaskSelectHyperplanePointsECP.h"
 
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Utilities.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

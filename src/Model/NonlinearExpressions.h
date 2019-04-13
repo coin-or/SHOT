@@ -12,10 +12,18 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Enums.h"
+#include "Variables.h"
+
+#include "ffunc.hpp"
 
 namespace SHOT
 {
+
+typedef mc::FFVar FactorableFunction;
+typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
 
 enum class E_NonlinearExpressionTypes
 {
@@ -143,6 +151,8 @@ public:
     virtual bool operator==(const NonlinearExpression& rhs) const = 0;
 };
 
+typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
+
 inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr expr)
 {
     if(expr != NULL)
@@ -248,6 +258,8 @@ public:
         return (static_cast<const ExpressionVariable&>(rhs).variable == variable);
     };
 };
+
+typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
 
 class ExpressionUnary : public NonlinearExpression
 {

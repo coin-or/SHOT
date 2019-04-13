@@ -10,6 +10,20 @@
 
 #include "TaskExecuteSolutionLimitStrategy.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../MIPSolver/IMIPSolutionLimitStrategy.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
+
 namespace SHOT
 {
 

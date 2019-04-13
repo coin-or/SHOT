@@ -9,6 +9,10 @@
 */
 
 #include "TaskGoto.h"
+
+#include "../Output.h"
+#include "../TaskHandler.h"
+
 namespace SHOT
 {
 

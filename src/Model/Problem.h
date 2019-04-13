@@ -10,7 +10,21 @@
 */
 
 #pragma once
-#include "../Shared.h"
+
+#include "../Structs.h"
+#include "../Environment.h"
+
+#include "Variables.h"
+#include "AuxiliaryVariables.h"
+
+#include "ObjectiveFunction.h"
+#include "Constraints.h"
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "ffunc.hpp"
 
 namespace SHOT
 {
@@ -51,6 +65,9 @@ struct ProblemProperties
     std::string name = "";
     std::string description = "";
 };
+
+typedef mc::FFGraph FactorableFunctionGraph;
+typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
 
 class Problem : public std::enable_shared_from_this<Problem>
 {

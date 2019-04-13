@@ -10,6 +10,15 @@
 
 #include "Report.h"
 
+#include "Iteration.h"
+#include "Output.h"
+#include "Results.h"
+#include "Settings.h"
+#include "Timing.h"
+#include "Utilities.h"
+
+#include "Model/Problem.h"
+
 #include <boost/format.hpp>
 
 namespace SHOT

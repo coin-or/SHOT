@@ -10,6 +10,13 @@
 
 #include "TaskCheckPrimalStagnation.h"
 
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -23,14 +30,6 @@ TaskCheckPrimalStagnation::~TaskCheckPrimalStagnation() {}
 
 void TaskCheckPrimalStagnation::run()
 {
-    /*
-    if(env->solutionStatistics.numberOfIterationsWithPrimalStagnation == 0) // First MIP solution
-    {
-        env->tasks->setNextTask(taskIDIfFalse);
-        env->solutionStatistics.numberOfIterationsWithPrimalStagnation++;
-        return;
-    }*/
-
     if(env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
         <= env->settings->getSetting<int>("PrimalStagnation.IterationLimit", "Termination"))
     {

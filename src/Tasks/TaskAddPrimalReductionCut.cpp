@@ -10,6 +10,16 @@
 
 #include "TaskAddPrimalReductionCut.h"
 
+#include "../DualSolver.h"
+#include "../Enums.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

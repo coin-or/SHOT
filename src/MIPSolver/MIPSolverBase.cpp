@@ -9,6 +9,13 @@
 */
 
 #include "MIPSolverBase.h"
+#include "../Model/Problem.h"
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Utilities.h"
 
 namespace SHOT
 {
@@ -354,8 +361,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
         {
             env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
             env->output->outputDebug("     Lower bound for variable (" + std::to_string(i) + ") updated from "
-                + Utilities::toString(currBounds.first) + " to "
-                + Utilities::toString(newBounds.first.at(i)));
+                + Utilities::toString(currBounds.first) + " to " + Utilities::toString(newBounds.first.at(i)));
 
             if(!env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened)
             {
@@ -368,8 +374,7 @@ void MIPSolverBase::presolveAndUpdateBounds()
         {
             env->reformulatedProblem->getVariable(i)->upperBound = newBounds.second.at(i);
             env->output->outputDebug("     Upper bound for variable (" + std::to_string(i) + ") updated from "
-                + Utilities::toString(currBounds.second) + " to "
-                + Utilities::toString(newBounds.second.at(i)));
+                + Utilities::toString(currBounds.second) + " to " + Utilities::toString(newBounds.second.at(i)));
 
             if(!env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened)
             {

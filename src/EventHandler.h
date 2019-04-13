@@ -9,7 +9,8 @@
 */
 
 #pragma once
-#include "Shared.h"
+#include "Environment.h"
+#include "Enums.h"
 
 #include <functional>
 #include <map>

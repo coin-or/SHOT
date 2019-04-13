@@ -11,9 +11,7 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../MIPSolver/IMIPSolver.h"
-
-#include "../LinesearchMethod/ILinesearchMethod.h"
+#include "../Structs.h"
 
 namespace SHOT
 {

@@ -11,10 +11,14 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+#include <memory>
+#include <vector>
 
 namespace SHOT
 {
+
+class INLPSolver;
+
 class TaskFindInteriorPoint : public TaskBase
 {
 public:

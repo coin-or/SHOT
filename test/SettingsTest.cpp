@@ -8,9 +8,11 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Shared.h"
-#include "Settings.h"
-#include "Solver.h"
+#include "../Settings.h"
+#include "../Solver.h"
+#include "../Utilities.h"
+
+#include <iostream>
 
 #include "boost/filesystem.hpp"
 

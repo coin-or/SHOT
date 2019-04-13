@@ -11,7 +11,19 @@
 
 #include "ModelingSystemGAMS.h"
 
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../Model/Simplifications.h"
+
 #include "boost/filesystem.hpp"
+
+//#include <cstdio>
+//#include <cstdlib>
+#include <sys/stat.h> // for mkdir
 
 namespace SHOT
 {

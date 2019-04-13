@@ -9,9 +9,21 @@
 */
 
 #include "../Solver.h"
+#include "../Environment.h"
 #include "../Structs.h"
+#include "../Utilities.h"
+
+#include "../Model/Variables.h"
+#include "../Model/Terms.h"
+#include "../Model/Constraints.h"
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
 
 #include "ModelingSystemOS.h"
+
+#include "LinesearchMethod/LinesearchMethodBoost.h"
+
+#include "Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
 
@@ -100,7 +112,7 @@ bool TestRootsearchOS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -186,7 +198,7 @@ bool TestGradientOS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -242,7 +254,7 @@ bool TestReformulateProblemOS(const std::string& problemFile)
     auto solver = std::make_unique<SHOT::Solver>();
     auto env = solver->getEnvironment();
 
-    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(ENUM_OUTPUT_LEVEL_debug));
+    solver->updateSetting("Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Error));
 
     env->modelingSystem = std::make_shared<SHOT::ModelingSystemOS>(env);
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
