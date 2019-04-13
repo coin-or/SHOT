@@ -16,6 +16,15 @@
 #include <string>
 #include <vector>
 
+#include "Structs.h"
+
+namespace SHOT
+{
+class Variable;
+typedef std::shared_ptr<Variable> VariablePtr;
+typedef std::map<VariablePtr, double> SparseVariableVector;
+}
+
 namespace SHOT::Utilities
 {
 
@@ -98,4 +107,10 @@ bool isAlmostEqual(double x, double y, const double epsilon);
 
 bool isInteger(double value);
 std::string trim(const std::string& str);
+
+SparseVariableVector combineSparseVariableVectors(
+    const SparseVariableVector& first, const SparseVariableVector& second);
+
+SparseVariableVector combineSparseVariableVectors(
+    const SparseVariableVector& first, const SparseVariableVector& second, const SparseVariableVector& third);
 } // namespace SHOT::Utilities

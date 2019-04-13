@@ -11,8 +11,6 @@
 #include "Variables.h"
 #include "ffunc.hpp"
 
-#include "Structs.h"
-
 namespace SHOT
 {
 

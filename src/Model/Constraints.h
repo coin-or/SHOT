@@ -52,8 +52,9 @@ struct ConstraintProperties
     bool isReformulated = false;
 
     bool hasLinearTerms = false;
-    bool hasSignomialTerms = false;
     bool hasQuadraticTerms = false;
+    bool hasMonomialTerms = false;
+    bool hasSignomialTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g. for external functions
 };
@@ -278,6 +279,9 @@ std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint
 class NonlinearConstraint : public QuadraticConstraint
 {
 public:
+    MonomialTerms monomialTerms;
+    SignomialTerms signomialTerms;
+
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
 
@@ -355,6 +359,10 @@ public:
     void add(LinearTermPtr term);
     void add(QuadraticTerms terms);
     void add(QuadraticTermPtr term);
+    void add(MonomialTerms terms);
+    void add(MonomialTermPtr term);
+    void add(SignomialTerms terms);
+    void add(SignomialTermPtr term);
     void add(NonlinearExpressionPtr expression);
 
     void updateFactorableFunction();

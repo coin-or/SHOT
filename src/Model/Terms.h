@@ -36,15 +36,15 @@ public:
 
     std::weak_ptr<Problem> ownerProblem;
 
-    virtual double calculate(const VectorDouble& point) = 0;
+    virtual double calculate(const VectorDouble& point) const = 0;
 
-    virtual Interval calculate(const IntervalVector& intervalVector) = 0;
+    virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
 
     void inline takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
-    virtual E_Convexity getConvexity() = 0;
+    virtual E_Convexity getConvexity() const = 0;
 
-    virtual E_Monotonicity getMonotonicity() = 0;
+    virtual E_Monotonicity getMonotonicity() const = 0;
 };
 
 class LinearTerm : public Term
@@ -60,21 +60,21 @@ public:
         variable = var;
     }
 
-    inline double calculate(const VectorDouble& point)
+    inline double calculate(const VectorDouble& point) const
     {
         double value = coefficient * variable->calculate(point);
         return value;
     }
 
-    inline Interval calculate(const IntervalVector& intervalVector)
+    inline Interval calculate(const IntervalVector& intervalVector) const
     {
         Interval value = coefficient * variable->calculate(intervalVector);
         return value;
     }
 
-    E_Convexity getConvexity() override { return E_Convexity::Linear; };
+    E_Convexity getConvexity() const override { return E_Convexity::Linear; };
 
-    E_Monotonicity getMonotonicity() override
+    E_Monotonicity getMonotonicity() const override
     {
         if(coefficient > 0)
             return (E_Monotonicity::Nondecreasing);
@@ -159,7 +159,7 @@ public:
 
     Terms(){};
 
-    double calculate(const VectorDouble& point)
+    double calculate(const VectorDouble& point) const
     {
         double value = 0.0;
         for(auto& TERM : *this)
@@ -170,7 +170,7 @@ public:
         return value;
     }
 
-    Interval calculate(const IntervalVector& intervalVector)
+    Interval calculate(const IntervalVector& intervalVector) const
     {
         Interval value = Interval(0.0, 0.0);
         for(auto& TERM : *this)
@@ -244,6 +244,27 @@ public:
             monotonicity = E_Monotonicity::NotSet;
         }
     }
+
+    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    {
+        SparseVariableVector gradient;
+
+        for(auto& T : (*this))
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
+            if(!element.second)
+            {
+                // Element already exists for the variable
+
+                element.second += T->coefficient;
+            }
+        }
+
+        return gradient;
+    };
 };
 
 class QuadraticTerm : public Term
@@ -278,20 +299,20 @@ public:
         }
     };
 
-    inline double calculate(const VectorDouble& point)
+    inline double calculate(const VectorDouble& point) const
     {
         double value = coefficient * firstVariable->calculate(point) * secondVariable->calculate(point);
         return value;
     };
 
-    inline Interval calculate(const IntervalVector& intervalVector)
+    inline Interval calculate(const IntervalVector& intervalVector) const
     {
         Interval value
             = coefficient * firstVariable->calculate(intervalVector) * secondVariable->calculate(intervalVector);
         return value;
     }
 
-    E_Convexity getConvexity() override
+    E_Convexity getConvexity() const override
     {
         if(firstVariable == secondVariable)
         {
@@ -312,7 +333,7 @@ public:
         return (E_Convexity::Nonconvex);
     }
 
-    E_Monotonicity getMonotonicity() override
+    E_Monotonicity getMonotonicity() const override
     {
         if(coefficient > 0)
         {
@@ -480,6 +501,52 @@ public:
             monotonicity = E_Monotonicity::NotSet;
         }
     }
+
+    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    {
+        SparseVariableVector gradient;
+
+        for(auto& T : (*this))
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            if(T->firstVariable == T->secondVariable) // variable squared
+            {
+                auto value = 2 * T->coefficient * point[T->firstVariable->index];
+                auto element = gradient.insert(std::make_pair(T->firstVariable, value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+            else
+            {
+                auto value = T->coefficient * point[T->secondVariable->index];
+                auto element = gradient.insert(std::make_pair(T->firstVariable, value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+
+                value = T->coefficient * point[T->firstVariable->index];
+
+                element = gradient.insert(std::make_pair(T->secondVariable, value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
+            }
+        }
+
+        return gradient;
+    };
 };
 
 class MonomialTerm : public Term
@@ -517,7 +584,7 @@ public:
         }
     };
 
-    inline double calculate(const VectorDouble& point)
+    inline double calculate(const VectorDouble& point) const
     {
         double value = coefficient;
 
@@ -529,7 +596,7 @@ public:
         return value;
     };
 
-    inline Interval calculate(const IntervalVector& intervalVector)
+    inline Interval calculate(const IntervalVector& intervalVector) const
     {
         Interval value(coefficient);
 
@@ -541,9 +608,9 @@ public:
         return value;
     }
 
-    inline E_Convexity getConvexity() override { return E_Convexity::Unknown; };
+    inline E_Convexity getConvexity() const override { return E_Convexity::Unknown; };
 
-    inline E_Monotonicity getMonotonicity() override { return E_Monotonicity::Unknown; };
+    inline E_Monotonicity getMonotonicity() const override { return E_Monotonicity::Unknown; };
 };
 
 typedef std::shared_ptr<MonomialTerm> MonomialTermPtr;
@@ -600,6 +667,301 @@ public:
             monotonicity = E_Monotonicity::NotSet;
         }
     }
+
+    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    {
+        SparseVariableVector gradient;
+
+        for(auto& T : (*this))
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& V1 : T->variables)
+            {
+                double value = 1.0;
+
+                for(auto& V2 : T->variables)
+                {
+                    if(V1 == V2)
+                        continue;
+
+                    value *= V2->calculate(point);
+                }
+
+                gradient.insert(std::make_pair(V1, value));
+            }
+        };
+
+        return gradient;
+    };
+};
+
+class SignomialElement
+{
+private:
+public:
+    VariablePtr variable;
+    double power;
+
+    inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
+
+    inline Interval calculate(const IntervalVector& intervalVector) const
+    {
+        return pow(variable->calculate(intervalVector), power);
+    }
+};
+
+typedef std::shared_ptr<SignomialElement> SignomialElementPtr;
+typedef std::vector<SignomialElementPtr> SignomialElements;
+
+inline std::ostream& operator<<(std::ostream& stream, SignomialElementPtr element)
+{
+    if(element->power == 1.0)
+        stream << element->variable->name;
+    else if(element->power > 0.0)
+        stream << element->variable->name << '^' << element->power;
+    else
+        stream << element->variable->name << "^(" << element->power << ')';
+
+    return stream;
+};
+
+class SignomialTerm : public Term
+{
+public:
+    SignomialElements elements;
+
+    SignomialTerm(){};
+
+    SignomialTerm(double coeff, SignomialElements elems)
+    {
+        coefficient = coeff;
+        elements = elems;
+    };
+
+    inline double calculate(const VectorDouble& point) const
+    {
+        double value = coefficient;
+
+        for(auto& E : elements)
+        {
+            value *= E->calculate(point);
+        }
+
+        return value;
+    };
+
+    inline Interval calculate(const IntervalVector& intervalVector) const
+    {
+        Interval value(coefficient);
+
+        for(auto& E : elements)
+        {
+            value *= E->calculate(intervalVector);
+        }
+
+        return value;
+    }
+
+    inline E_Convexity getConvexity() const override
+    {
+        int numberPositivePowers = 0;
+        double sumPowers = 0.0;
+
+        for(auto& E : elements)
+        {
+            if(E->power > 0)
+            {
+                numberPositivePowers++;
+            }
+
+            sumPowers += E->power;
+        }
+
+        if(elements.size() == 1 && sumPowers == 1.0)
+            return (E_Convexity::Linear);
+
+        if(coefficient > 0)
+        {
+            if(numberPositivePowers == 1 && sumPowers > 1.0)
+                return (E_Convexity::Convex);
+
+            if(elements.size() == 1 && sumPowers > 0.0 && sumPowers < 1.0)
+                return (E_Convexity::Concave);
+
+            if(numberPositivePowers == 0)
+                return (E_Convexity::Convex);
+
+            return (E_Convexity::Nonconvex);
+        }
+        else if(coefficient < 0)
+        {
+            if(numberPositivePowers == 1 && sumPowers > 1.0)
+                return (E_Convexity::Concave);
+
+            if(elements.size() == 1 && sumPowers > 0.0 && sumPowers < 1.0)
+                return (E_Convexity::Convex);
+
+            if(numberPositivePowers == 0)
+                return (E_Convexity::Concave);
+        }
+
+        return E_Convexity::Nonconvex;
+    };
+
+    inline E_Monotonicity getMonotonicity() const override
+    {
+        int numberPositivePowers = 0;
+        double sumPowers = 0.0;
+
+        if(coefficient == 0.0)
+            return (E_Monotonicity::Constant);
+
+        for(auto& E : elements)
+        {
+            if(E->power > 0)
+            {
+                numberPositivePowers++;
+            }
+
+            sumPowers += E->power;
+        }
+
+        if(coefficient > 0)
+        {
+            if(elements.size() == 1 && sumPowers == 0.0)
+                return (E_Monotonicity::Constant);
+
+            if(elements.size() == 1 && sumPowers > 0.0)
+                return (E_Monotonicity::Nondecreasing);
+
+            if(elements.size() == 1 && sumPowers < 0.0)
+                return (E_Monotonicity::Nonincreasing);
+
+            if(numberPositivePowers == 0)
+            {
+                return (E_Monotonicity::Nonincreasing);
+            }
+
+            if(numberPositivePowers == elements.size())
+            {
+                return (E_Monotonicity::Nondecreasing);
+            }
+        }
+        else if(coefficient < 0)
+        {
+            if(elements.size() == 1 && sumPowers == 0.0)
+                return (E_Monotonicity::Constant);
+
+            if(elements.size() == 1 && sumPowers > 0.0)
+                return (E_Monotonicity::Nonincreasing);
+
+            if(elements.size() == 1 && sumPowers < 0.0)
+                return (E_Monotonicity::Nondecreasing);
+
+            if(numberPositivePowers == 0)
+            {
+                return (E_Monotonicity::Nondecreasing);
+            }
+
+            if(numberPositivePowers == elements.size())
+            {
+                return (E_Monotonicity::Nonincreasing);
+            }
+        }
+
+        return E_Monotonicity::Unknown;
+    };
+};
+
+typedef std::shared_ptr<SignomialTerm> SignomialTermPtr;
+
+inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
+{
+    stream << term->coefficient;
+
+    for(auto& E : term->elements)
+    {
+        stream << '*' << E;
+    }
+
+    return stream;
+};
+
+class SignomialTerms : public Terms<SignomialTermPtr>
+{
+private:
+    void updateConvexity() override { convexity = E_Convexity::Unknown; };
+
+public:
+    using std::vector<SignomialTermPtr>::operator[];
+
+    using std::vector<SignomialTermPtr>::at;
+    using std::vector<SignomialTermPtr>::begin;
+    using std::vector<SignomialTermPtr>::clear;
+    using std::vector<SignomialTermPtr>::end;
+    using std::vector<SignomialTermPtr>::erase;
+    using std::vector<SignomialTermPtr>::push_back;
+    using std::vector<SignomialTermPtr>::reserve;
+    using std::vector<SignomialTermPtr>::resize;
+    using std::vector<SignomialTermPtr>::size;
+
+    SignomialTerms(){};
+
+    void add(SignomialTermPtr term)
+    {
+        (*this).push_back(term);
+        convexity = E_Convexity::NotSet;
+        monotonicity = E_Monotonicity::NotSet;
+    }
+
+    void add(SignomialTerms terms)
+    {
+        for(auto& TERM : terms)
+        {
+            (*this).push_back(TERM);
+        }
+
+        if(terms.size() > 0)
+        {
+            convexity = E_Convexity::NotSet;
+            monotonicity = E_Monotonicity::NotSet;
+        }
+    }
+
+    inline SparseVariableVector calculateGradient(const VectorDouble& point) const
+    {
+        SparseVariableVector gradient;
+
+        for(auto& T : (*this))
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& E1 : T->elements)
+            {
+                double value = 1.0;
+
+                for(auto& E2 : T->elements)
+                {
+                    if(E1 == E2)
+                    {
+                        if(E2->power != 1.0)
+                            value *= E2->power * pow(E2->variable->calculate(point), E2->power - 1.0);
+                    }
+                    else
+                    {
+                        value *= E2->calculate(point);
+                    }
+                }
+
+                gradient.insert(std::make_pair(E1->variable, value));
+            }
+        };
+
+        return gradient;
+    };
 };
 
 inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
@@ -647,75 +1009,18 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
     return stream;
 }
 
-/*
-class SignomialElement
+inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
 {
-  public:
-    VariablePtr variable;
-    double power;
+    if(terms.size() == 0)
+        return stream;
 
-    double calculate(const VectorDouble &point)
+    stream << ' ' << terms.at(0);
+
+    for(int i = 1; i < terms.size(); i++)
     {
-        double value = pow(variable->calculate(point), power);
-        return value;
-    }
-};
-
-typedef std::shared_ptr<SignomialElement> SignomialElementPtr;
-
-class SignomialElements
-{
-  public:
-    std::vector<SignomialElementPtr> elements;
-
-    double calculate(const VectorDouble &point)
-    {
-        double value = 1.0;
-        for (auto T : elements)
-        {
-            value *= T->calculate(point);
-        }
-
-        return value;
-    }
-};
-
-class SignomialTerm
-{
-  public:
-    double coefficient;
-    SignomialElements signomialElements;
-
-    double calculate(const VectorDouble &point)
-    {
-        double value = coefficient * signomialElements.calculate(point);
-
-        return value;
-    }
-};
-
-typedef std::shared_ptr<SignomialTerm> SignomialTermPtr;
-
-class SignomialTerms
-{
-  public:
-    std::vector<SignomialTermPtr> terms;
-
-    void add(SignomialTermPtr term)
-    {
-        terms.push_back(term);
+        stream << terms.at(i);
     }
 
-    double calculate(const VectorDouble &point)
-    {
-        double value = 0.0;
-
-        for (auto T : terms)
-        {
-            value += T->calculate(point);
-        }
-
-        return value;
-    }
-};*/
+    return stream;
+}
 } // namespace SHOT

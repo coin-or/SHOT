@@ -187,21 +187,7 @@ bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericCo
 
 SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient;
-
-    for(auto& T : linearTerms)
-    {
-        if(T->coefficient == 0.0)
-            continue;
-
-        auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
-        if(!element.second)
-        {
-            // Element already exists for the variable
-
-            element.second += T->coefficient;
-        }
-    }
+    SparseVariableVector gradient = linearTerms.calculateGradient(point);
 
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
@@ -301,51 +287,10 @@ bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return Numeri
 
 SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = LinearConstraint::calculateGradient(point, eraseZeroes);
+    SparseVariableVector linearGradient = LinearConstraint::calculateGradient(point, eraseZeroes);
+    SparseVariableVector quadraticGradient = quadraticTerms.calculateGradient(point);
 
-    for(auto& T : quadraticTerms)
-    {
-        if(T->coefficient == 0.0)
-            continue;
-
-        if(T->firstVariable == T->secondVariable) // variable squared
-        {
-            auto value = 2 * T->coefficient * point[T->firstVariable->index];
-            auto element = gradient.insert(std::make_pair(T->firstVariable, value));
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-        else
-        {
-            auto value = T->coefficient * point[T->secondVariable->index];
-            auto element = gradient.insert(std::make_pair(T->firstVariable, value));
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-
-            value = T->coefficient * point[T->firstVariable->index];
-
-            element = gradient.insert(std::make_pair(T->secondVariable, value));
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-    }
-
-    if(eraseZeroes)
-        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
-
-    return gradient;
+    return (Utilities::combineSparseVariableVectors(linearGradient, quadraticGradient));
 };
 
 void QuadraticConstraint::initializeGradientSparsityPattern()
@@ -480,6 +425,50 @@ void NonlinearConstraint::add(QuadraticTerms terms) { QuadraticConstraint::add(t
 
 void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(term); };
 
+void NonlinearConstraint::add(MonomialTerms terms)
+{
+    if(monomialTerms.size() == 0)
+    {
+        monomialTerms = terms;
+        properties.hasMonomialTerms = true;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+};
+
+void NonlinearConstraint::add(MonomialTermPtr term)
+{
+    monomialTerms.push_back(term);
+    properties.hasMonomialTerms = true;
+};
+
+void NonlinearConstraint::add(SignomialTerms terms)
+{
+    if(signomialTerms.size() == 0)
+    {
+        signomialTerms = terms;
+        properties.hasSignomialTerms = true;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+};
+
+void NonlinearConstraint::add(SignomialTermPtr term)
+{
+    signomialTerms.push_back(term);
+    properties.hasSignomialTerms = true;
+};
+
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
     if(nonlinearExpression.get() != nullptr)
@@ -503,6 +492,12 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
 {
     double value = QuadraticConstraint::calculateFunctionValue(point);
 
+    if(this->properties.hasMonomialTerms)
+        value += monomialTerms.calculate(point);
+
+    if(this->properties.hasSignomialTerms)
+        value += signomialTerms.calculate(point);
+
     if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(point);
 
@@ -512,6 +507,12 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
 Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = QuadraticConstraint::calculateFunctionValue(intervalVector);
+
+    if(this->properties.hasMonomialTerms)
+        value += monomialTerms.calculate(intervalVector);
+
+    if(this->properties.hasSignomialTerms)
+        value += signomialTerms.calculate(intervalVector);
 
     if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(intervalVector);
@@ -562,21 +563,69 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 element.first->second += value[0];
             }
         }
-
-        if(eraseZeroes)
-            Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {
         std::cout << "Error when evaluating gradient: " << e.what();
     }
 
-    return gradient;
+    SparseVariableVector monomialGradient;
+
+    if(this->properties.hasMonomialTerms)
+    {
+        monomialGradient = monomialTerms.calculateGradient(point);
+    }
+
+    SparseVariableVector signomialGradient;
+
+    if(this->properties.hasSignomialTerms)
+    {
+        signomialGradient = signomialTerms.calculateGradient(point);
+    }
+
+    auto result = Utilities::combineSparseVariableVectors(gradient, monomialGradient, signomialGradient);
+
+    if(eraseZeroes)
+        Utilities::erase_if<VariablePtr, double>(result, 0.0);
+
+    return result;
 };
 
 void NonlinearConstraint::initializeGradientSparsityPattern()
 {
     QuadraticConstraint::initializeGradientSparsityPattern();
+
+    if(this->properties.hasMonomialTerms)
+    {
+        for(auto& T : monomialTerms)
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& V : T->variables)
+            {
+                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
+                    == gradientSparsityPattern->end())
+                    gradientSparsityPattern->push_back(V);
+            }
+        }
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        for(auto& T : signomialTerms)
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& E : T->elements)
+            {
+                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
+                    == gradientSparsityPattern->end())
+                    gradientSparsityPattern->push_back(E->variable);
+            }
+        }
+    }
 
     for(auto& E : symbolicSparseJacobian)
     {
@@ -636,14 +685,24 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                 element.first->second += value[0];
             }
         }
-
-        if(eraseZeroes)
-            Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {
         std::cout << "Error when evaluating hessian: " << e.what();
     }
+
+    if(this->properties.hasMonomialTerms)
+    {
+        // TODO
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        // TODO
+    }
+
+    if(eraseZeroes)
+        Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
 
     return (hessian);
 };
@@ -651,6 +710,16 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
 void NonlinearConstraint::initializeHessianSparsityPattern()
 {
     QuadraticConstraint::initializeHessianSparsityPattern();
+
+    if(this->properties.hasMonomialTerms)
+    {
+        // TODO
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        // TODO
+    }
 
     for(auto& E : symbolicSparseHessian)
     {
@@ -803,6 +872,12 @@ std::ostream& NonlinearConstraint::print(std::ostream& stream) const
 
     if(quadraticTerms.size() > 0)
         stream << " +" << quadraticTerms;
+
+    if(monomialTerms.size() > 0)
+        stream << " +" << monomialTerms;
+
+    if(signomialTerms.size() > 0)
+        stream << " +" << signomialTerms;
 
     stream << " +" << nonlinearExpression;
 

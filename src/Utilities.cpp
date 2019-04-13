@@ -485,4 +485,74 @@ bool isInteger(double value)
     return (std::modf(value, &intpart) == 0.0);
 }
 
+SparseVariableVector combineSparseVariableVectors(const SparseVariableVector& first, const SparseVariableVector& second)
+{
+    SparseVariableVector result;
+
+    for(auto& G : first)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : second)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    return result;
+}
+
+SparseVariableVector combineSparseVariableVectors(
+    const SparseVariableVector& first, const SparseVariableVector& second, const SparseVariableVector& third)
+{
+    SparseVariableVector result;
+
+    for(auto& G : first)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : second)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : third)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    return result;
+}
+
 }; // namespace SHOT::Utilities
