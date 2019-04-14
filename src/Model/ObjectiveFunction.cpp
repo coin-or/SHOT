@@ -436,6 +436,50 @@ std::ostream& operator<<(std::ostream& stream, QuadraticObjectiveFunctionPtr obj
     return stream;
 };
 
+void NonlinearObjectiveFunction::add(MonomialTerms terms)
+{
+    if(monomialTerms.size() == 0)
+    {
+        monomialTerms = terms;
+        properties.isValid = false;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+}
+
+void NonlinearObjectiveFunction::add(MonomialTermPtr term)
+{
+    monomialTerms.push_back(term);
+    properties.isValid = false;
+}
+
+void NonlinearObjectiveFunction::add(SignomialTerms terms)
+{
+    if(signomialTerms.size() == 0)
+    {
+        signomialTerms = terms;
+        properties.isValid = false;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+}
+
+void NonlinearObjectiveFunction::add(SignomialTermPtr term)
+{
+    signomialTerms.push_back(term);
+    properties.isValid = false;
+}
+
 void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
 {
     if(nonlinearExpression.get() != nullptr)
@@ -460,38 +504,36 @@ void NonlinearObjectiveFunction::updateProperties()
 {
     QuadraticObjectiveFunction::updateProperties();
 
+    properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+    variablesInNonlinearExpression.clear();
+
     if(nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
-        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
 
-        variablesInNonlinearExpression.clear();
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-                return (variableOne->index < variableTwo->index);
-            });
+        auto convexity = nonlinearExpression->getConvexity();
 
-        E_Convexity nonlinearConvexity = nonlinearExpression->getConvexity();
-
-        if(nonlinearConvexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown)
-        {
-            properties.convexity = E_Convexity::Unknown;
-        }
-        else if(nonlinearConvexity == E_Convexity::Linear)
+        if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
+            || convexity == E_Convexity::Linear)
         {
             // Does not need to change anything
         }
-        else if(nonlinearConvexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+        else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
         {
             properties.convexity = E_Convexity::Convex;
         }
-        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
         {
             properties.convexity = E_Convexity::Nonconvex;
         }
-        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+        {
+            properties.convexity = E_Convexity::Nonconvex;
+            // TODO: might be able to do something here
+        }
+        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
         {
             properties.convexity = E_Convexity::Nonconvex;
             // TODO: might be able to do something here
@@ -505,6 +547,111 @@ void NonlinearObjectiveFunction::updateProperties()
     {
         properties.hasNonlinearExpression = false;
     }
+
+    if(monomialTerms.size() > 0)
+    {
+        properties.hasMonomialTerms = true;
+        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+
+        for(auto& T : monomialTerms)
+        {
+            for(auto& V : T->variables)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), V)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(V);
+            }
+
+            auto convexity = T->getConvexity();
+
+            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
+                || convexity == E_Convexity::Linear)
+            {
+                // Does not need to change anything
+            }
+            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Convex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else
+            {
+                properties.convexity = E_Convexity::Unknown;
+            }
+        }
+    }
+    else
+    {
+        properties.hasMonomialTerms = false;
+    }
+
+    if(signomialTerms.size() > 0)
+    {
+        properties.hasSignomialTerms = true;
+        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+
+        for(auto& T : signomialTerms)
+        {
+            for(auto& E : T->elements)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), E->variable)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(E->variable);
+            }
+
+            auto convexity = T->getConvexity();
+
+            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
+                || convexity == E_Convexity::Linear)
+            {
+                // Does not need to change anything
+            }
+            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Convex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else
+            {
+                properties.convexity = E_Convexity::Unknown;
+            }
+        }
+    }
+    else
+    {
+        properties.hasSignomialTerms = false;
+    }
+
+    std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
 }
 
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)

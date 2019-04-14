@@ -745,38 +745,36 @@ void NonlinearConstraint::updateProperties()
 {
     QuadraticConstraint::updateProperties();
 
+    properties.classification = E_ConstraintClassification::Nonlinear;
+    variablesInNonlinearExpression.clear();
+
     if(nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
-        properties.classification = E_ConstraintClassification::Nonlinear;
 
-        variablesInNonlinearExpression.clear();
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-                return (variableOne->index < variableTwo->index);
-            });
+        auto convexity = nonlinearExpression->getConvexity();
 
-        E_Convexity nonlinearConvexity = nonlinearExpression->getConvexity();
-
-        if(nonlinearConvexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown)
-        {
-            properties.convexity = E_Convexity::Unknown;
-        }
-        else if(nonlinearConvexity == E_Convexity::Linear)
+        if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
+            || convexity == E_Convexity::Linear)
         {
             // Does not need to change anything
         }
-        else if(nonlinearConvexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+        else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
         {
             properties.convexity = E_Convexity::Convex;
         }
-        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
         {
             properties.convexity = E_Convexity::Nonconvex;
         }
-        else if(nonlinearConvexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+        {
+            properties.convexity = E_Convexity::Nonconvex;
+            // TODO: might be able to do something here
+        }
+        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
         {
             properties.convexity = E_Convexity::Nonconvex;
             // TODO: might be able to do something here
@@ -789,8 +787,112 @@ void NonlinearConstraint::updateProperties()
     else
     {
         properties.hasNonlinearExpression = false;
-        properties.classification = E_ConstraintClassification::Nonlinear;
     }
+
+    if(monomialTerms.size() > 0)
+    {
+        properties.hasMonomialTerms = true;
+        properties.classification = E_ConstraintClassification::Nonlinear;
+
+        for(auto& T : monomialTerms)
+        {
+            for(auto& V : T->variables)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), V)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(V);
+            }
+
+            auto convexity = T->getConvexity();
+
+            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
+                || convexity == E_Convexity::Linear)
+            {
+                // Does not need to change anything
+            }
+            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Convex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else
+            {
+                properties.convexity = E_Convexity::Unknown;
+            }
+        }
+    }
+    else
+    {
+        properties.hasMonomialTerms = false;
+    }
+
+    if(signomialTerms.size() > 0)
+    {
+        properties.hasSignomialTerms = true;
+        properties.classification = E_ConstraintClassification::Nonlinear;
+
+        for(auto& T : signomialTerms)
+        {
+            for(auto& E : T->elements)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), E->variable)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(E->variable);
+            }
+
+            auto convexity = T->getConvexity();
+
+            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
+                || convexity == E_Convexity::Linear)
+            {
+                // Does not need to change anything
+            }
+            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Convex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
+            {
+                properties.convexity = E_Convexity::Nonconvex;
+                // TODO: might be able to do something here
+            }
+            else
+            {
+                properties.convexity = E_Convexity::Unknown;
+            }
+        }
+    }
+    else
+    {
+        properties.hasSignomialTerms = false;
+    }
+
+    std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
 };
 
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint)

@@ -18,38 +18,158 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
 {
     if(problem->objectiveFunction->properties.hasNonlinearExpression)
     {
-        auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(problem->objectiveFunction);
+        auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(problem->objectiveFunction);
 
-        auto nonlinearExpression = simplify(objective->nonlinearExpression);
+        auto nonlinearExpression = simplify(nonlinearObjective->nonlinearExpression);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant]
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
             = extractTermsAndConstant(nonlinearExpression);
 
-        if(tmpLinearTerms.size() > 0)
-            objective->add(tmpLinearTerms);
+        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && tmpNonlinearExpression == nullptr
+            && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
+        {
+            // The objective is no longer nonlinear
 
-        if(tmpQuadraticTerms.size() > 0)
-            objective->add(tmpQuadraticTerms);
+            if(tmpQuadraticTerms.size() > 0 || nonlinearObjective->quadraticTerms.size() > 0)
+            {
+                // The objective is quadratic
+                auto newObjective = std::make_shared<QuadraticObjectiveFunction>();
+                newObjective->constant = nonlinearObjective->constant;
+                newObjective->direction = nonlinearObjective->direction;
+                newObjective->linearTerms = nonlinearObjective->linearTerms;
+                newObjective->quadraticTerms = nonlinearObjective->quadraticTerms;
 
-        if(tmpNonlinearExpression != nullptr)
-            objective->nonlinearExpression = simplify(tmpNonlinearExpression);
+                if(tmpLinearTerms.size() > 0)
+                    newObjective->add(tmpLinearTerms);
+
+                if(tmpQuadraticTerms.size() > 0)
+                    newObjective->add(tmpQuadraticTerms);
+
+                if(tmpConstant != 0.0)
+                    newObjective->constant += tmpConstant;
+
+                problem->objectiveFunction = nonlinearObjective;
+            }
+            else
+            {
+                // The objective is linear
+                auto newObjective = std::make_shared<LinearObjectiveFunction>();
+                newObjective->constant = nonlinearObjective->constant;
+                newObjective->direction = nonlinearObjective->direction;
+                newObjective->linearTerms = nonlinearObjective->linearTerms;
+
+                if(tmpLinearTerms.size() > 0)
+                    newObjective->add(tmpLinearTerms);
+
+                if(tmpConstant != 0.0)
+                    newObjective->constant += tmpConstant;
+
+                problem->objectiveFunction = nonlinearObjective;
+            }
+        }
+        else
+        {
+            if(tmpLinearTerms.size() > 0)
+                nonlinearObjective->add(tmpLinearTerms);
+
+            if(tmpQuadraticTerms.size() > 0)
+                nonlinearObjective->add(tmpQuadraticTerms);
+
+            if(tmpMonomialTerms.size() > 0)
+                nonlinearObjective->add(std::move(tmpMonomialTerms));
+
+            if(tmpSignomialTerms.size() > 0)
+                nonlinearObjective->add(std::move(tmpSignomialTerms));
+
+            if(tmpNonlinearExpression != nullptr)
+                nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
+
+            if(tmpConstant != 0.0)
+                nonlinearObjective->constant += tmpConstant;
+        }
     }
 
-    for(auto& C : problem->nonlinearConstraints)
+    for(auto& C : problem->numericConstraints)
     {
-        auto nonlinearExpression = simplify(C->nonlinearExpression);
+        if(!C->properties.hasNonlinearExpression)
+            continue;
 
-        auto [tmpLinearTerms, tmpQuadraticTerms, tmpNonlinearExpression, tmpConstant]
+        auto nonlinearConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+        auto nonlinearExpression = simplify(nonlinearConstraint->nonlinearExpression);
+
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
             = extractTermsAndConstant(nonlinearExpression);
 
-        if(tmpLinearTerms.size() > 0)
-            C->add(tmpLinearTerms);
+        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && tmpNonlinearExpression == nullptr
+            && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)
+        {
+            // The constraint is no longer nonlinear
 
-        if(tmpQuadraticTerms.size() > 0)
-            C->add(tmpQuadraticTerms);
+            if(tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0)
+            {
+                // The constraint is quadratic
+                auto newConstraint = std::make_shared<QuadraticConstraint>();
+                newConstraint->index = nonlinearConstraint->index;
+                newConstraint->name = nonlinearConstraint->name;
+                newConstraint->valueLHS = nonlinearConstraint->valueLHS;
+                newConstraint->valueRHS = nonlinearConstraint->valueRHS;
+                newConstraint->constant = nonlinearConstraint->constant;
+                newConstraint->linearTerms = nonlinearConstraint->linearTerms;
+                newConstraint->quadraticTerms = nonlinearConstraint->quadraticTerms;
 
-        if(tmpNonlinearExpression != nullptr)
-            C->nonlinearExpression = simplify(tmpNonlinearExpression);
+                if(tmpLinearTerms.size() > 0)
+                    newConstraint->add(tmpLinearTerms);
+
+                if(tmpQuadraticTerms.size() > 0)
+                    newConstraint->add(tmpQuadraticTerms);
+
+                if(tmpConstant != 0.0)
+                    newConstraint->constant += tmpConstant;
+
+                C = newConstraint;
+            }
+            else
+            {
+                // The constraint is linear
+                auto newConstraint = std::make_shared<LinearConstraint>();
+                newConstraint->index = nonlinearConstraint->index;
+                newConstraint->name = nonlinearConstraint->name;
+                newConstraint->valueLHS = nonlinearConstraint->valueLHS;
+                newConstraint->valueRHS = nonlinearConstraint->valueRHS;
+                newConstraint->constant = nonlinearConstraint->constant;
+                newConstraint->linearTerms = nonlinearConstraint->linearTerms;
+
+                if(tmpLinearTerms.size() > 0)
+                    newConstraint->add(tmpLinearTerms);
+
+                if(tmpConstant != 0.0)
+                    newConstraint->constant += tmpConstant;
+
+                C = newConstraint;
+            }
+        }
+        else
+        {
+            if(tmpLinearTerms.size() > 0)
+                nonlinearConstraint->add(tmpLinearTerms);
+
+            if(tmpQuadraticTerms.size() > 0)
+                nonlinearConstraint->add(tmpQuadraticTerms);
+
+            if(tmpMonomialTerms.size() > 0)
+                nonlinearConstraint->add(std::move(tmpMonomialTerms));
+
+            if(tmpSignomialTerms.size() > 0)
+                nonlinearConstraint->add(std::move(tmpSignomialTerms));
+
+            if(tmpNonlinearExpression != nullptr)
+                nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;
+
+            if(tmpConstant != 0.0)
+                nonlinearConstraint->constant += tmpConstant;
+        }
     }
 
     for(auto& C : problem->nonlinearConstraints)

@@ -385,8 +385,10 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     double constant = std::dynamic_pointer_cast<NumericConstraint>(C)->constant;
 
     if(C->properties.classification == E_ConstraintClassification::Linear
-        || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms))
+        || (!C->properties.hasNonlinearExpression && !C->properties.hasQuadraticTerms && !C->properties.hasMonomialTerms
+               && !C->properties.hasSignomialTerms))
     {
+        // Linear constraint
         LinearConstraintPtr constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Linear;
         auto sourceConstraint = std::dynamic_pointer_cast<LinearConstraint>(C);
@@ -400,8 +402,10 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     if(useQuadraticConstraints
         && (C->properties.classification == E_ConstraintClassification::Quadratic
-               || !C->properties.hasNonlinearExpression))
+               || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
+                      && !C->properties.hasSignomialTerms)))
     {
+        // Quadratic constraint
         QuadraticConstraintPtr constraint
             = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Quadratic;
@@ -411,7 +415,6 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         copyQuadraticTermsToConstraint(sourceConstraint->quadraticTerms, constraint);
 
         constraint->constant = constant;
-        // reformulatedProblem->add(std::move(constraint));
 
         return (NumericConstraints({ constraint }));
     }
@@ -424,6 +427,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     // These will be added to the new constraint, and their signs have been altered
     LinearTerms destinationLinearTerms;
     QuadraticTerms destinationQuadraticTerms;
+    MonomialTerms destinationMonomialTerms;
+    SignomialTerms destinationSignomialTerms;
 
     bool isSignReversed = false;
 
@@ -450,6 +455,14 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         if(C->properties.hasQuadraticTerms)
             copyQuadraticTermsToConstraint(
                 std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms, auxConstraint1);
+
+        if(C->properties.hasMonomialTerms)
+            copyMonomialTermsToConstraint(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms, auxConstraint1);
+
+        if(C->properties.hasSignomialTerms)
+            copySignomialTermsToConstraint(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms, auxConstraint1);
 
         if(C->properties.hasNonlinearExpression)
             auxConstraint1->add(copyNonlinearExpression(
@@ -506,6 +519,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 nonlinearConstraint->add(std::make_shared<ExpressionProduct>(product));
             }
         }
+        // TODO add monomials and signomials
 
         if(reformulatedConstraint1.at(0)->properties.hasNonlinearExpression)
         {
@@ -520,80 +534,13 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         nonlinearConstraint->properties.convexity = E_Convexity::Nonconvex;
         return (NumericConstraints({ nonlinearConstraint }));
-
-        auto auxConstraint2
-            = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name + "_b", SHOT_DBL_MIN, -valueRHS);
-        auxConstraintCounter++;
-
-        auxConstraint2->constant = C->constant;
-
-        if(C->properties.hasLinearTerms)
-            copyLinearTermsToConstraint(
-                std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms, auxConstraint2, true);
-
-        if(C->properties.hasQuadraticTerms)
-            copyQuadraticTermsToConstraint(
-                std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms, auxConstraint2, true);
-
-        if(C->properties.hasNonlinearExpression)
-            auxConstraint2->add(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
-                std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), reformulatedProblem))));
-
-        auto reformulatedConstraint2 = reformulateConstraint(auxConstraint2);
-
-        /*
-        if(reformulatedConstraint1.size() == 1 && reformulatedConstraint2.size() == 1
-            && reformulatedConstraint1.at(0)->properties.classification == E_ConstraintClassification::Linear
-            && reformulatedConstraint2.at(0)->properties.classification == E_ConstraintClassification::Linear)
-        {
-            auto linearConstraint1 = std::dynamic_pointer_cast<LinearConstraint>(reformulatedConstraint1.at(0));
-            auto linearConstraint2 = std::dynamic_pointer_cast<LinearConstraint>(reformulatedConstraint2.at(0));
-
-            if(linearConstraint1->linearTerms.size() == linearConstraint2->linearTerms.size())
-            {
-                bool isEqual = true;
-
-                if(linearConstraint1->valueLHS == linearConstraint2->valueLHS
-                        && (abs(linearConstraint1->valueRHS) == 0.0 && abs(linearConstraint2->valueRHS == 0.0))
-                    || linearConstraint1->valueRHS == -linearConstraint2->valueRHS)
-                {
-                    for(int i = 0; i < linearConstraint1->linearTerms.size(); i++)
-                    {
-                        if(linearConstraint1->linearTerms.at(i)->variable->name
-                                != linearConstraint2->linearTerms.at(i)->variable->name
-                            || linearConstraint1->linearTerms.at(i)->coefficient
-                                != -linearConstraint2->linearTerms.at(i)->coefficient)
-                        {
-                            isEqual = false;
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    isEqual = false;
-                }
-
-                if(isEqual)
-                {
-                    reformulatedConstraint1.at(0)->valueLHS = reformulatedConstraint1.at(0)->valueRHS;
-
-                    return (reformulatedConstraint1);
-                }
-            }
-        }*/
-
-        for(auto& RC : reformulatedConstraint2)
-            reformulatedConstraint1.push_back(RC);
-
-        return (reformulatedConstraint1);
     }
     else if(valueLHS != SHOT_DBL_MIN && valueRHS != SHOT_DBL_MAX)
     {
         // Constraint is of type l <= g(x) <= u. Rewrite as -g(x) <= -l and g(x) <= u
 
         std::cout << "Can not reformulate constraint currently\n";
-    };
+    }
 
     if(C->properties.hasLinearTerms)
         copyOriginalLinearTerms = true;
@@ -607,6 +554,32 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
+    }
+
+    if(C->properties.hasMonomialTerms)
+    {
+        auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+        // auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+        //    sourceConstraint->quadraticTerms, isSignReversed, PartitionQuadraticTermsInConstraint);
+
+        // destinationLinearTerms.add(tmpLinearTerms);
+
+        for(auto& T : sourceConstraint->monomialTerms)
+            destinationMonomialTerms.add(T);
+    }
+
+    if(C->properties.hasSignomialTerms)
+    {
+        auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
+
+        // auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
+        //    sourceConstraint->quadraticTerms, isSignReversed, PartitionQuadraticTermsInConstraint);
+
+        // destinationLinearTerms.add(tmpLinearTerms);
+
+        for(auto& T : sourceConstraint->signomialTerms)
+            destinationSignomialTerms.add(T);
     }
 
     if(C->properties.hasNonlinearExpression)
@@ -628,7 +601,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     NumericConstraintPtr constraint;
 
-    if(copyOriginalNonlinearExpression)
+    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Nonlinear;
@@ -660,6 +633,12 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     if(destinationQuadraticTerms.size() > 0)
         std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->add(destinationQuadraticTerms);
+
+    if(destinationMonomialTerms.size() > 0)
+        std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(destinationMonomialTerms);
+
+    if(destinationSignomialTerms.size() > 0)
+        std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(destinationSignomialTerms);
 
     if(copyOriginalNonlinearExpression)
     {
@@ -1306,77 +1285,78 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 template <class T>
 void TaskReformulateProblem::copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns)
 {
-    if(reversedSigns)
-    {
-        for(auto& LT : terms)
-        {
-            auto variable = reformulatedProblem->getVariable(LT->variable->index);
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
-            std::dynamic_pointer_cast<LinearConstraint>(destination)
-                ->add(std::make_shared<LinearTerm>(-LT->coefficient, variable));
-        }
-    }
-    else
+    for(auto& LT : terms)
     {
-        for(auto& LT : terms)
-        {
-            auto variable = reformulatedProblem->getVariable(LT->variable->index);
+        auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
-            std::dynamic_pointer_cast<LinearConstraint>(destination)
-                ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
-        }
+        std::dynamic_pointer_cast<LinearConstraint>(destination)
+            ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
     }
 }
 
 template <class T>
 void TaskReformulateProblem::copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns)
 {
-    if(reversedSigns)
-    {
-        for(auto& QT : terms)
-        {
-            auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
-            auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
-            std::dynamic_pointer_cast<QuadraticConstraint>(destination)
-                ->add(std::make_shared<QuadraticTerm>(-QT->coefficient, firstVariable, secondVariable));
-        }
+    for(auto& QT : terms)
+    {
+        auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
+        auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+
+        std::dynamic_pointer_cast<QuadraticConstraint>(destination)
+            ->add(std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
     }
-    else
-    {
-        for(auto& QT : terms)
-        {
-            auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
-            auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+}
 
-            std::dynamic_pointer_cast<QuadraticConstraint>(destination)
-                ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
-        }
+template <class T>
+void TaskReformulateProblem::copyMonomialTermsToConstraint(MonomialTerms terms, T destination, bool reversedSigns)
+{
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+
+    for(auto& MT : terms)
+    {
+        Variables variables;
+
+        for(auto& V : MT->variables)
+            variables.push_back(reformulatedProblem->getVariable(V->index));
+
+        std::dynamic_pointer_cast<NonlinearConstraint>(destination)
+            ->add(std::make_shared<MonomialTerm>(signCoefficient * MT->coefficient, variables));
+    }
+}
+
+template <class T>
+void TaskReformulateProblem::copySignomialTermsToConstraint(SignomialTerms terms, T destination, bool reversedSigns)
+{
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+
+    for(auto& ST : terms)
+    {
+        SignomialElements elements;
+
+        for(auto& E : ST->elements)
+            elements.push_back(
+                std::make_shared<SignomialElement>(reformulatedProblem->getVariable(E->variable->index), E->power));
+
+        std::dynamic_pointer_cast<NonlinearConstraint>(destination)
+            ->add(std::make_shared<SignomialTerm>(signCoefficient * ST->coefficient, elements));
     }
 }
 
 template <class T>
 void TaskReformulateProblem::copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns)
 {
-    if(reversedSigns)
-    {
-        for(auto& LT : terms)
-        {
-            auto variable = reformulatedProblem->getVariable(LT->variable->index);
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)
-                ->add(std::make_shared<LinearTerm>(-LT->coefficient, variable));
-        }
-    }
-    else
+    for(auto& LT : terms)
     {
-        for(auto& LT : terms)
-        {
-            auto variable = reformulatedProblem->getVariable(LT->variable->index);
+        auto variable = reformulatedProblem->getVariable(LT->variable->index);
 
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)
-                ->add(std::make_shared<LinearTerm>(LT->coefficient, variable));
-        }
+        std::dynamic_pointer_cast<LinearObjectiveFunction>(destination)
+            ->add(std::make_shared<LinearTerm>(signCoefficient * LT->coefficient, variable));
     }
 }
 
@@ -1384,27 +1364,52 @@ template <class T>
 void TaskReformulateProblem::copyQuadraticTermsToObjectiveFunction(
     QuadraticTerms terms, T destination, bool reversedSigns)
 {
-    if(reversedSigns)
-    {
-        for(auto& QT : terms)
-        {
-            auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
-            auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
 
-            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination)
-                ->add(std::make_shared<QuadraticTerm>(-QT->coefficient, firstVariable, secondVariable));
-        }
+    for(auto& QT : terms)
+    {
+        auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
+        auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+
+        std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination)
+            ->add(std::make_shared<QuadraticTerm>(signCoefficient * QT->coefficient, firstVariable, secondVariable));
     }
-    else
-    {
-        for(auto& QT : terms)
-        {
-            auto firstVariable = reformulatedProblem->getVariable(QT->firstVariable->index);
-            auto secondVariable = reformulatedProblem->getVariable(QT->secondVariable->index);
+}
 
-            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destination)
-                ->add(std::make_shared<QuadraticTerm>(QT->coefficient, firstVariable, secondVariable));
-        }
+template <class T>
+void TaskReformulateProblem::copyMonomialTermsToObjectiveFunction(
+    MonomialTerms terms, T destination, bool reversedSigns)
+{
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+
+    for(auto& MT : terms)
+    {
+        Variables variables;
+
+        for(auto& V : MT->variables)
+            variables.push_back(reformulatedProblem->getVariable(V->index));
+
+        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
+            ->add(std::make_shared<MonomialTerm>(signCoefficient * MT->coefficient, variables));
+    }
+}
+
+template <class T>
+void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
+    SignomialTerms terms, T destination, bool reversedSigns)
+{
+    double signCoefficient = (reversedSigns) ? -1.0 : 1.0;
+
+    for(auto& ST : terms)
+    {
+        SignomialElements elements;
+
+        for(auto& E : ST->elements)
+            elements.push_back(
+                std::make_shared<SignomialElement>(reformulatedProblem->getVariable(E->variable->index), E->power));
+
+        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
+            ->add(std::make_shared<SignomialTerm>(signCoefficient * ST->coefficient, elements));
     }
 }
 

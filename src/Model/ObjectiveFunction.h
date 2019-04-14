@@ -56,12 +56,13 @@ struct ObjectiveFunctionProperties
     E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::None;
 
     bool hasLinearTerms = false;
-    bool hasSignomialTerms = false;
     bool hasQuadraticTerms = false;
     bool hasBinaryBilinearTerms = false;
     bool hasNonBinaryBilinearTerms = false;
     bool hasBinarySquareTerms = false;
     bool hasNonBinarySquareTerms = false;
+    bool hasMonomialTerms = false;
+    bool hasSignomialTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g for external functions
 };
@@ -277,6 +278,9 @@ public:
 
     virtual ~NonlinearObjectiveFunction(){};
 
+    MonomialTerms monomialTerms;
+    SignomialTerms signomialTerms;
+
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
@@ -292,6 +296,12 @@ public:
     void add(QuadraticTerms terms) { QuadraticObjectiveFunction::add(terms); }
 
     void add(QuadraticTermPtr term) { QuadraticObjectiveFunction::add(term); }
+
+    void add(MonomialTerms terms);
+    void add(MonomialTermPtr term);
+
+    void add(SignomialTerms terms);
+    void add(SignomialTermPtr term);
 
     void add(NonlinearExpressionPtr expression);
 

@@ -85,10 +85,8 @@ void Problem::updateProperties()
 
     for(auto& C : nonlinearConstraints)
     {
-        if(C->properties.hasNonlinearExpression)
-            numNonlinearConstraints++;
-
-        else if(C->properties.hasQuadraticTerms)
+        if(C->properties.hasQuadraticTerms || C->properties.hasMonomialTerms || C->properties.hasSignomialTerms
+            || C->properties.hasNonlinearExpression)
             numNonlinearConstraints++;
     }
 

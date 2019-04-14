@@ -894,7 +894,11 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 class SignomialTerms : public Terms<SignomialTermPtr>
 {
 private:
-    void updateConvexity() override { convexity = E_Convexity::Unknown; };
+    void updateConvexity() override
+    {
+        // TODO
+        convexity = E_Convexity::Unknown;
+    };
 
 public:
     using std::vector<SignomialTermPtr>::operator[];
@@ -958,7 +962,13 @@ public:
                     }
                 }
 
-                gradient.insert(std::make_pair(E1->variable, value));
+                auto element = gradient.insert(std::make_pair(E1->variable, T->coefficient * value));
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += value;
+                }
             }
         };
 
