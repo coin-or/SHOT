@@ -704,6 +704,8 @@ public:
     VariablePtr variable;
     double power;
 
+    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power){};
+
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
     inline Interval calculate(const IntervalVector& intervalVector) const

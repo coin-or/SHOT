@@ -22,6 +22,8 @@
 #include "../Model/Constraints.h"
 #include "../Model/Problem.h"
 
+#include <optional>
+
 namespace SHOT
 {
 
@@ -830,6 +832,297 @@ inline std::optional<MonomialTermPtr> convertProductToMonomialTerm(std::shared_p
     resultingMonomialTerm = std::make_shared<MonomialTerm>(coefficient, variables);
 
     return resultingMonomialTerm;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(NonlinearExpressionPtr expression)
+{
+    switch(expression->getType())
+    {
+    case E_NonlinearExpressionTypes::Constant:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionConstant>(expression));
+    case E_NonlinearExpressionTypes::Variable:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionVariable>(expression));
+    case E_NonlinearExpressionTypes::Negate:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionNegate>(expression));
+    case E_NonlinearExpressionTypes::Invert:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionInvert>(expression));
+    case E_NonlinearExpressionTypes::SquareRoot:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionSquareRoot>(expression));
+    case E_NonlinearExpressionTypes::Square:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionSquare>(expression));
+    case E_NonlinearExpressionTypes::Times:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionTimes>(expression));
+    case E_NonlinearExpressionTypes::Divide:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionDivide>(expression));
+    case E_NonlinearExpressionTypes::Power:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionPower>(expression));
+    case E_NonlinearExpressionTypes::Product:
+        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionProduct>(expression));
+    default:
+        break;
+    }
+
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+    return (resultingSignomialTerm);
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionConstant> expression)
+{
+    auto signomialTerm = std::make_shared<SignomialTerm>();
+    signomialTerm->coefficient = expression->constant;
+
+    std::optional<SignomialTermPtr> resultingSignomialTerm = signomialTerm;
+
+    return resultingSignomialTerm;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionVariable> expression)
+{
+    auto signomialTerm = std::make_shared<SignomialTerm>();
+    signomialTerm->coefficient = 1.0;
+    signomialTerm->elements.push_back(std::make_shared<SignomialElement>(expression->variable, 1.0));
+
+    std::optional<SignomialTermPtr> resultingSignomialTerm = signomialTerm;
+
+    return resultingSignomialTerm;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionNegate> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    auto childSignomial = convertExpressionToSignomialTerm(expression->child);
+
+    if(!childSignomial)
+        return resultingSignomialTerm;
+
+    childSignomial->get()->coefficient *= -1.0;
+
+    return childSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionInvert> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    auto childSignomial = convertExpressionToSignomialTerm(expression->child);
+
+    if(!childSignomial)
+        return resultingSignomialTerm;
+
+    for(auto& E : childSignomial->get()->elements)
+    {
+        E->power *= (-1.0);
+    }
+
+    childSignomial->get()->coefficient = 1.0 / childSignomial->get()->coefficient;
+
+    return childSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(
+    std::shared_ptr<ExpressionSquareRoot> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    auto childSignomial = convertExpressionToSignomialTerm(expression->child);
+
+    if(!childSignomial)
+        return resultingSignomialTerm;
+
+    for(auto& E : childSignomial->get()->elements)
+    {
+        E->power *= 0.5;
+    }
+
+    childSignomial->get()->coefficient = sqrt(childSignomial->get()->coefficient);
+
+    return childSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionSquare> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    auto childSignomial = convertExpressionToSignomialTerm(expression->child);
+
+    if(!childSignomial)
+        return resultingSignomialTerm;
+
+    for(auto& E : childSignomial->get()->elements)
+    {
+        E->power *= 2.0;
+    }
+
+    childSignomial->get()->coefficient = pow(childSignomial->get()->coefficient, 2.0);
+
+    return childSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionTimes> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    auto firstChildSignomial = convertExpressionToSignomialTerm(expression->firstChild);
+    auto secondChildSignomial = convertExpressionToSignomialTerm(expression->secondChild);
+
+    if(!firstChildSignomial || !secondChildSignomial)
+        return resultingSignomialTerm;
+
+    SignomialElements addedElements;
+
+    for(auto& E2 : secondChildSignomial->get()->elements)
+    {
+        bool added = false;
+
+        for(auto& E1 : firstChildSignomial->get()->elements)
+        {
+            if(E1->variable == E2->variable)
+            {
+                E1->power += E2->power;
+                added = true;
+                continue;
+            }
+        }
+
+        if(!added)
+            addedElements.push_back(E2);
+    }
+
+    for(auto& E : addedElements)
+        firstChildSignomial->get()->elements.push_back(E);
+
+    firstChildSignomial->get()->coefficient *= secondChildSignomial->get()->coefficient;
+
+    return firstChildSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionDivide> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    auto firstChildSignomial = convertExpressionToSignomialTerm(expression->firstChild);
+    auto secondChildSignomial = convertExpressionToSignomialTerm(expression->secondChild);
+
+    if(!firstChildSignomial || !secondChildSignomial)
+        return resultingSignomialTerm;
+
+    SignomialElements addedElements;
+
+    for(auto& E2 : secondChildSignomial->get()->elements)
+    {
+        bool added = false;
+
+        for(auto& E1 : firstChildSignomial->get()->elements)
+        {
+            if(E1->variable == E2->variable)
+            {
+                E1->power -= E2->power;
+                added = true;
+                continue;
+            }
+        }
+
+        if(!added)
+            addedElements.push_back(E2);
+    }
+
+    for(auto& E : addedElements)
+    {
+        E->power *= -1.0;
+        firstChildSignomial->get()->elements.push_back(E);
+    }
+
+    firstChildSignomial->get()->coefficient /= secondChildSignomial->get()->coefficient;
+
+    return firstChildSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionPower> expression)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(expression->getNumberOfChildren() == 0)
+        return resultingSignomialTerm;
+
+    if(expression->secondChild->getType() != E_NonlinearExpressionTypes::Constant) // Not a signomial term
+        return resultingSignomialTerm;
+
+    auto childSignomial = convertExpressionToSignomialTerm(expression->firstChild);
+
+    if(!childSignomial) // Not a signomial term
+        return resultingSignomialTerm;
+
+    double power = std::dynamic_pointer_cast<ExpressionConstant>(expression->secondChild)->constant;
+
+    for(auto& E : childSignomial->get()->elements)
+    {
+        E->power *= power;
+    }
+
+    childSignomial->get()->coefficient = pow(childSignomial->get()->coefficient, power);
+
+    return childSignomial;
+}
+
+inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionProduct> product)
+{
+    std::optional<SignomialTermPtr> resultingSignomialTerm;
+
+    if(product->getNumberOfChildren() == 0)
+    {
+        return resultingSignomialTerm;
+    }
+
+    auto signomialTerm = std::make_shared<SignomialTerm>();
+
+    for(auto& C : product->children.expressions)
+    {
+        auto childSignomial = convertExpressionToSignomialTerm(C);
+
+        if(!childSignomial) // Not a signomial term
+            return resultingSignomialTerm;
+
+        for(auto& E2 : childSignomial->get()->elements)
+        {
+            bool added = false;
+
+            for(auto& E1 : signomialTerm->elements)
+            {
+                if(E1->variable == E2->variable)
+                {
+                    E1->power += E2->power;
+                    added = true;
+                    break;
+                }
+            }
+
+            if(!added)
+                signomialTerm->elements.push_back(E2);
+        }
+    }
+
+    resultingSignomialTerm = signomialTerm;
+
+    return resultingSignomialTerm;
 }
 
 inline std::tuple<LinearTerms, QuadraticTerms, NonlinearExpressionPtr, double> extractTermsAndConstant(
