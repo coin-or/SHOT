@@ -10,8 +10,12 @@
 
 #include "TaskAddHyperplanes.h"
 
+#include "../Model/Constraints.h"
+#include "../Model/Problem.h"
+
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
+#include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../Timing.h"
@@ -56,6 +60,30 @@ void TaskAddHyperplanes::run()
                 env->dualSolver->MIPSolver->createHyperplane(tmpItem);
 
                 env->dualSolver->MIPSolver->addedHyperplanes.push_back(tmpItem);
+
+                if(tmpItem.isObjectiveHyperplane)
+                {
+                    bool isObjectiveConvex
+                        = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex
+                        || env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear;
+
+                    if(!isObjectiveConvex)
+                    {
+                        env->results->solutionIsGlobal = false;
+                        env->output->outputCritical("Solution is no longer global");
+                    }
+                }
+                else
+                {
+                    bool isConstraintConvex = tmpItem.sourceConstraint->properties.convexity == E_Convexity::Convex
+                        || tmpItem.sourceConstraint->properties.convexity == E_Convexity::Linear;
+
+                    if(!isConstraintConvex)
+                    {
+                        env->results->solutionIsGlobal = false;
+                        env->output->outputCritical("Solution is no longer global");
+                    }
+                }
 
                 addedHyperplanes++;
             }

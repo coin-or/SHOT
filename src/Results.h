@@ -73,6 +73,8 @@ public:
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
 
+    bool solutionIsGlobal = true;
+
     std::string getResultsOSrL();
     std::string getResultsTrace();
 

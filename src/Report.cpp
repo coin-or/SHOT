@@ -796,6 +796,16 @@ void Report::outputSolutionReport()
     if(env->results->terminationReasonDescription != "")
         report << " " << env->results->terminationReasonDescription << "\r\n\r\n";
 
+    if(env->results->solutionIsGlobal)
+    {
+        report << " Solution is global.\r\n";
+    }
+    else
+    {
+
+        report << " Solution is local.\r\n";
+    }
+
     if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
     {
         report << " Optimal primal solution found to given tolerances.\r\n";

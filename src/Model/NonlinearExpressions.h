@@ -15,6 +15,8 @@
 #include "../Enums.h"
 #include "Variables.h"
 
+#include "../Utilities.h"
+
 #include "ffunc.hpp"
 
 namespace SHOT
@@ -1300,27 +1302,11 @@ public:
     {
         auto child1Convexity = firstChild->getConvexity();
         auto child2Convexity = secondChild->getConvexity();
+
         E_Convexity resultConvexity;
+        resultConvexity = Utilities::combineConvexity(child1Convexity, child2Convexity);
 
-        if(child1Convexity == E_Convexity::Linear)
-            return child2Convexity;
-
-        if(child2Convexity == E_Convexity::Linear)
-            return child1Convexity;
-
-        if(child1Convexity == E_Convexity::Convex)
-            return child2Convexity;
-
-        if(child2Convexity == E_Convexity::Convex)
-            return child1Convexity;
-
-        if(child1Convexity == E_Convexity::Nonconvex)
-            return child2Convexity;
-
-        if(child2Convexity == E_Convexity::Nonconvex)
-            return child1Convexity;
-
-        return E_Convexity::Unknown;
+        return resultConvexity;
     };
 
     inline E_Monotonicity getMonotonicity() const override
@@ -2151,35 +2137,16 @@ public:
 
     inline E_Convexity getConvexity() const override
     {
-        E_Convexity resultConvexity;
-
-        bool areAllLinear = true;
-        bool areAllConvex = true;
-        bool areAllConcave = true;
-        bool areAllNonconvex = true;
+        E_Convexity resultConvexity = E_Convexity::Linear;
 
         for(auto& C : children.expressions)
         {
             auto childConvexity = C->getConvexity();
-            areAllLinear = areAllLinear && (C->getConvexity() == E_Convexity::Linear);
-            areAllConvex = areAllConvex && (C->getConvexity() == E_Convexity::Convex);
-            areAllConcave = areAllConcave && (C->getConvexity() == E_Convexity::Concave);
-            areAllNonconvex = areAllNonconvex && (C->getConvexity() == E_Convexity::Nonconvex);
+
+            resultConvexity = Utilities::combineConvexity(resultConvexity, childConvexity);
         }
 
-        if(areAllLinear)
-            return E_Convexity::Linear;
-
-        if(areAllConvex)
-            return E_Convexity::Convex;
-
-        if(areAllConcave)
-            return E_Convexity::Concave;
-
-        if(areAllNonconvex)
-            return E_Convexity::Nonconvex;
-
-        return E_Convexity::Unknown;
+        return resultConvexity;
     };
 
     inline E_Monotonicity getMonotonicity() const override
