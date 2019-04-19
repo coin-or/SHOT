@@ -520,9 +520,13 @@ void Report::outputProblemInstanceReport()
     else if(env->problem->properties.isMINLPProblem)
         problemClassificationOrig = "MINLP";
 
+    if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
+        problemClassificationOrig += ", convex";
+    else if(env->problem->properties.convexity == E_ProblemConvexity::Nonconvex)
+        problemClassificationOrig += ", nonconvex";
+
     if(isReformulated)
     {
-
         if(env->reformulatedProblem->properties.isLPProblem)
             problemClassificationRef = "LP";
         else if(env->reformulatedProblem->properties.isMILPProblem)
@@ -539,6 +543,11 @@ void Report::outputProblemInstanceReport()
             problemClassificationRef = "NLP";
         else if(env->reformulatedProblem->properties.isMINLPProblem)
             problemClassificationRef = "MINLP";
+
+        if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+            problemClassificationRef += ", convex";
+        else if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Nonconvex)
+            problemClassificationRef += ", nonconvex";
     }
 
     report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Problem classification:" % problemClassificationOrig

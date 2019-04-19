@@ -131,9 +131,6 @@ if(HAS_IPOPT)
   add_definitions(-DHAS_IPOPT)
 endif(HAS_IPOPT)
 
-
-# Normally nothing should need to be modified below this point
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
@@ -143,6 +140,7 @@ include(FindPkgConfig)
 # Adding source files
 file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Constraints.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Problem.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"

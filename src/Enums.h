@@ -135,6 +135,13 @@ enum class E_PrimalSolutionSource
     IncumbentCallback
 };
 
+enum class E_ProblemConvexity
+{
+    NotSet,
+    Convex,
+    Nonconvex
+};
+
 enum class E_NLPSolutionStatus
 {
     Feasible,

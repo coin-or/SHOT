@@ -113,4 +113,6 @@ SparseVariableVector combineSparseVariableVectors(
 
 SparseVariableVector combineSparseVariableVectors(
     const SparseVariableVector& first, const SparseVariableVector& second, const SparseVariableVector& third);
+
+E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second);
 } // namespace SHOT::Utilities

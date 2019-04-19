@@ -73,7 +73,7 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) = 0;
 
-    void takeOwnership(ProblemPtr owner);
+    virtual void takeOwnership(ProblemPtr owner) = 0;
 
     virtual std::ostream& print(std::ostream&) const = 0;
 
@@ -136,6 +136,8 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) override;
 
+    virtual void takeOwnership(ProblemPtr owner) = 0;
+
     virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
 
     virtual void updateProperties() = 0;
@@ -178,6 +180,8 @@ public:
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
 
     virtual bool isFulfilled(const VectorDouble& point) override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
@@ -252,6 +256,8 @@ public:
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
 
     virtual bool isFulfilled(const VectorDouble& point) override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
@@ -377,6 +383,8 @@ public:
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
 
     virtual bool isFulfilled(const VectorDouble& point) override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 

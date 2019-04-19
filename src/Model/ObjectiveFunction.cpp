@@ -29,8 +29,6 @@ void ObjectiveFunction::updateProperties()
         properties.isMinimize = false;
         properties.isMaximize = true;
     }
-
-    properties.convexity = E_Convexity::Linear;
 };
 
 std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
@@ -121,6 +119,7 @@ void LinearObjectiveFunction::updateProperties()
     }
 
     properties.classification = E_ObjectiveFunctionClassification::Linear;
+    properties.convexity = E_Convexity::Linear;
 
     ObjectiveFunction::updateProperties();
 };
@@ -183,9 +182,28 @@ void LinearObjectiveFunction::initializeHessianSparsityPattern(){};
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
     if(properties.isMinimize)
-        stream << "minimize: ";
+        stream << "minimize ";
     else if(properties.isMaximize)
-        stream << "maximize: ";
+        stream << "maximize ";
+
+    switch(properties.convexity)
+    {
+    case(E_Convexity::Linear):
+        stream << "(linear):";
+        break;
+
+    case(E_Convexity::Convex):
+        stream << "(convex):";
+        break;
+
+    case(E_Convexity::Concave):
+        stream << "(concave):";
+        break;
+
+    default:
+        stream << "(?):";
+        break;
+    }
 
     if(constant != 0.0)
         stream << constant;
@@ -259,7 +277,8 @@ void QuadraticObjectiveFunction::updateProperties()
             }
         }
 
-        properties.convexity = quadraticTerms.getConvexity();
+        auto convexity = quadraticTerms.getConvexity();
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
@@ -514,34 +533,7 @@ void NonlinearObjectiveFunction::updateProperties()
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
         auto convexity = nonlinearExpression->getConvexity();
-
-        if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
-            || convexity == E_Convexity::Linear)
-        {
-            // Does not need to change anything
-        }
-        else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
-        {
-            properties.convexity = E_Convexity::Convex;
-        }
-        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
-        {
-            properties.convexity = E_Convexity::Nonconvex;
-        }
-        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
-        {
-            properties.convexity = E_Convexity::Nonconvex;
-            // TODO: might be able to do something here
-        }
-        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
-        {
-            properties.convexity = E_Convexity::Nonconvex;
-            // TODO: might be able to do something here
-        }
-        else
-        {
-            properties.convexity = E_Convexity::Unknown;
-        }
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
@@ -563,34 +555,7 @@ void NonlinearObjectiveFunction::updateProperties()
             }
 
             auto convexity = T->getConvexity();
-
-            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
-                || convexity == E_Convexity::Linear)
-            {
-                // Does not need to change anything
-            }
-            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Convex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else
-            {
-                properties.convexity = E_Convexity::Unknown;
-            }
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
     }
     else
@@ -613,34 +578,7 @@ void NonlinearObjectiveFunction::updateProperties()
             }
 
             auto convexity = T->getConvexity();
-
-            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
-                || convexity == E_Convexity::Linear)
-            {
-                // Does not need to change anything
-            }
-            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Convex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else
-            {
-                properties.convexity = E_Convexity::Unknown;
-            }
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
     }
     else

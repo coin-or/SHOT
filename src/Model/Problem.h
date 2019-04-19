@@ -33,8 +33,7 @@ struct ProblemProperties
 {
     bool isValid = false; // Whether the values here are valid anymore
 
-    bool isConvex = false;
-    bool isNonconvex = false;
+    E_ProblemConvexity convexity = E_ProblemConvexity::NotSet;
 
     bool isNonlinear = false;
     bool isDiscrete = false;
@@ -72,7 +71,6 @@ typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
 class Problem : public std::enable_shared_from_this<Problem>
 {
 private:
-    EnvironmentPtr env;
     bool variablesUpdated = false;
     bool constraintsUpdated = false;
     bool objectiveUpdated = false;
@@ -86,6 +84,8 @@ private:
     void updateFactorableFunctions();
 
 public:
+    EnvironmentPtr env;
+
     Problem(EnvironmentPtr env);
 
     virtual ~Problem();

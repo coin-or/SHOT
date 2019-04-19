@@ -555,4 +555,27 @@ SparseVariableVector combineSparseVariableVectors(
     return result;
 }
 
+E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
+{
+    if(first == E_Convexity::Unknown || second == E_Convexity::Unknown)
+        return E_Convexity::Unknown;
+
+    if(first == E_Convexity::Nonconvex || second == E_Convexity::Nonconvex)
+        return E_Convexity::Nonconvex;
+
+    if(first == E_Convexity::Convex && second == E_Convexity::Concave)
+        return E_Convexity::Unknown;
+
+    if(first == E_Convexity::Concave && second == E_Convexity::Convex)
+        return E_Convexity::Unknown;
+
+    if(first == E_Convexity::Convex || second == E_Convexity::Convex)
+        return E_Convexity::Convex;
+
+    if(first == E_Convexity::Concave || second == E_Convexity::Concave)
+        return E_Convexity::Concave;
+
+    return E_Convexity::Linear;
+}
+
 }; // namespace SHOT::Utilities

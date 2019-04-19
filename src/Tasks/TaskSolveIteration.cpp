@@ -29,9 +29,8 @@ TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        for(auto& V : env->problem->allVariables)
+        for(auto& V : env->reformulatedProblem->allVariables)
         {
-
             variableNames.push_back(V->name);
         }
     }

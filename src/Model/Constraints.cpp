@@ -15,8 +15,6 @@
 namespace SHOT
 {
 
-void Constraint::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
-
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
     stream << "[" << constraint.index << "]";
@@ -32,9 +30,6 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
         break;
 
     case(E_ConstraintClassification::QuadraticConsideredAsNonlinear):
-        stream << "(QNL) ";
-        break;
-
     case(E_ConstraintClassification::Nonlinear):
         stream << "(NL)  ";
         break;
@@ -185,6 +180,12 @@ Interval LinearConstraint::calculateFunctionValue(const IntervalVector& interval
 
 bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
+void LinearConstraint::takeOwnership(ProblemPtr owner)
+{
+    ownerProblem = owner;
+    linearTerms.takeOwnership(owner);
+};
+
 SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableVector gradient = linearTerms.calculateGradient(point);
@@ -238,7 +239,7 @@ void LinearConstraint::updateProperties()
         properties.hasLinearTerms = false;
     }
 
-    properties.convexity = linearTerms.getConvexity();
+    properties.convexity = E_Convexity::Linear;
     properties.classification = E_ConstraintClassification::Linear;
 };
 
@@ -284,6 +285,12 @@ Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector& inter
 };
 
 bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
+
+void QuadraticConstraint::takeOwnership(ProblemPtr owner)
+{
+    LinearConstraint::takeOwnership(owner);
+    quadraticTerms.takeOwnership(owner);
+};
 
 SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -414,7 +421,8 @@ void QuadraticConstraint::updateProperties()
         properties.hasQuadraticTerms = false;
     }
 
-    properties.convexity = quadraticTerms.getConvexity();
+    auto convexity = quadraticTerms.getConvexity();
+    properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
 };
 
 void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
@@ -731,6 +739,15 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
 
 bool NonlinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
+void NonlinearConstraint::takeOwnership(ProblemPtr owner)
+{
+    QuadraticConstraint::takeOwnership(owner);
+    monomialTerms.takeOwnership(owner);
+    signomialTerms.takeOwnership(owner);
+    if(nonlinearExpression != nullptr)
+        nonlinearExpression->takeOwnership(owner);
+};
+
 NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
@@ -755,34 +772,7 @@ void NonlinearConstraint::updateProperties()
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
         auto convexity = nonlinearExpression->getConvexity();
-
-        if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
-            || convexity == E_Convexity::Linear)
-        {
-            // Does not need to change anything
-        }
-        else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
-        {
-            properties.convexity = E_Convexity::Convex;
-        }
-        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
-        {
-            properties.convexity = E_Convexity::Nonconvex;
-        }
-        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
-        {
-            properties.convexity = E_Convexity::Nonconvex;
-            // TODO: might be able to do something here
-        }
-        else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
-        {
-            properties.convexity = E_Convexity::Nonconvex;
-            // TODO: might be able to do something here
-        }
-        else
-        {
-            properties.convexity = E_Convexity::Unknown;
-        }
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
@@ -804,34 +794,7 @@ void NonlinearConstraint::updateProperties()
             }
 
             auto convexity = T->getConvexity();
-
-            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
-                || convexity == E_Convexity::Linear)
-            {
-                // Does not need to change anything
-            }
-            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Convex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else
-            {
-                properties.convexity = E_Convexity::Unknown;
-            }
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
     }
     else
@@ -854,34 +817,7 @@ void NonlinearConstraint::updateProperties()
             }
 
             auto convexity = T->getConvexity();
-
-            if(convexity == E_Convexity::Unknown || properties.convexity == E_Convexity::Unknown
-                || convexity == E_Convexity::Linear)
-            {
-                // Does not need to change anything
-            }
-            else if(convexity == E_Convexity::Convex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Convex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Linear)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Convex)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else if(convexity == E_Convexity::Nonconvex && properties.convexity == E_Convexity::Concave)
-            {
-                properties.convexity = E_Convexity::Nonconvex;
-                // TODO: might be able to do something here
-            }
-            else
-            {
-                properties.convexity = E_Convexity::Unknown;
-            }
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
     }
     else

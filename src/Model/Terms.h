@@ -17,10 +17,6 @@
 
 #include "ffunc.hpp"
 
-#include <Eigen/Sparse>
-#include <Eigen/Eigenvalues>
-#include "Eigen/src/SparseCore/SparseUtil.h"
-
 #include <vector>
 
 namespace SHOT
@@ -120,6 +116,8 @@ protected:
     E_Convexity convexity = E_Convexity::NotSet;
     E_Monotonicity monotonicity = E_Monotonicity::NotSet;
 
+    std::weak_ptr<Problem> ownerProblem;
+
     virtual void updateConvexity() = 0;
 
     void updateMonotonicity()
@@ -183,6 +181,8 @@ public:
 
     inline void takeOwnership(ProblemPtr owner)
     {
+        ownerProblem = owner;
+
         for(auto& TERM : *this)
         {
             TERM->takeOwnership(owner);
@@ -352,9 +352,25 @@ typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
 
 inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
 {
-    if(term->coefficient != 1.0)
+    if(term->coefficient == 1.0)
     {
-        stream << term->coefficient << '*';
+        stream << " +";
+    }
+    else if(term->coefficient == -1.0)
+    {
+        stream << " -";
+    }
+    else if(term->coefficient == 0.0)
+    {
+        stream << " +0.0*";
+    }
+    else if(term->coefficient > 0)
+    {
+        stream << " +" << term->coefficient;
+    }
+    else
+    {
+        stream << " " << term->coefficient;
     }
 
     if(term->firstVariable == term->secondVariable)
@@ -368,103 +384,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
 class QuadraticTerms : public Terms<QuadraticTermPtr>
 {
 private:
-    void updateConvexity()
-    {
-        if(size() == 0)
-        {
-            convexity = E_Convexity::Linear;
-            return;
-        }
-
-        std::vector<Eigen::Triplet<double>> elements;
-        elements.reserve(2 * size());
-
-        std::map<VariablePtr, bool> variableMap;
-
-        bool allSquares = true;
-        bool allPositive = true;
-        bool allNegative = true;
-
-        for(auto& T : (*this))
-        {
-            if(T->firstVariable == T->secondVariable)
-            {
-                variableMap.insert(std::make_pair(T->firstVariable, true));
-                allPositive = allPositive && T->coefficient >= 0;
-                allNegative = allNegative && T->coefficient <= 0;
-
-                elements.push_back(
-                    Eigen::Triplet<double>(T->firstVariable->index, T->firstVariable->index, T->coefficient));
-            }
-            else
-            {
-                variableMap.insert(std::make_pair(T->firstVariable, true));
-                variableMap.insert(std::make_pair(T->secondVariable, true));
-                allSquares = false;
-
-                // Matrix is self adjoint, so only need lower triangular elements
-                if(T->firstVariable->index > T->secondVariable->index)
-                {
-                    elements.push_back(Eigen::Triplet<double>(
-                        T->firstVariable->index, T->secondVariable->index, 0.5 * T->coefficient));
-                }
-                else
-                {
-                    elements.push_back(Eigen::Triplet<double>(
-                        T->secondVariable->index, T->firstVariable->index, 0.5 * T->coefficient));
-                }
-            }
-        }
-
-        if(allSquares && allPositive)
-        {
-            convexity = E_Convexity::Convex;
-            return;
-        }
-
-        if(allSquares && allNegative)
-        {
-            convexity = E_Convexity::Concave;
-            return;
-        }
-
-        int numberOfVariables = variableMap.size();
-
-        Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
-        matrix.setFromTriplets(elements.begin(), elements.end());
-
-        Eigen::SelfAdjointEigenSolver<Eigen::SparseMatrix<double>> eigenSolver(
-            matrix, Eigen::DecompositionOptions::EigenvaluesOnly);
-
-        std::cout << matrix << std::endl;
-
-        if(eigenSolver.info() != Eigen::Success)
-        {
-            // std::cout << "error" << std::endl;
-            convexity = E_Convexity::Unknown;
-            return;
-        }
-
-        bool areAllPositiveOrZero = true;
-        bool areAllNegativeOrZero = true;
-
-        for(int i = 0; i < numberOfVariables; i++)
-        {
-            double eigenvalue = eigenSolver.eigenvalues().col(0)[i];
-
-            areAllNegativeOrZero = areAllNegativeOrZero && eigenvalue < 0;
-            areAllPositiveOrZero = areAllPositiveOrZero && eigenvalue > 0;
-
-            // std::cout << "eigenvalue " << i << ":" << eigenvalue << std::endl
-        }
-
-        if(areAllPositiveOrZero)
-            convexity = E_Convexity::Convex;
-        else if(areAllNegativeOrZero)
-            convexity = E_Convexity::Concave;
-        else
-            convexity = E_Convexity::Nonconvex;
-    };
+    void updateConvexity();
 
 public:
     using std::vector<QuadraticTermPtr>::operator[];
@@ -617,7 +537,26 @@ typedef std::shared_ptr<MonomialTerm> MonomialTermPtr;
 
 inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {
-    stream << term->coefficient;
+    if(term->coefficient == 1.0)
+    {
+        stream << " +";
+    }
+    else if(term->coefficient == -1.0)
+    {
+        stream << " -";
+    }
+    else if(term->coefficient == 0.0)
+    {
+        stream << " +0.0";
+    }
+    else if(term->coefficient > 0)
+    {
+        stream << " +" << term->coefficient;
+    }
+    else
+    {
+        stream << " " << term->coefficient;
+    }
 
     for(auto& V : term->variables)
     {
@@ -802,7 +741,7 @@ public:
             if(numberPositivePowers == 1 && sumPowers > 1.0)
                 return (E_Convexity::Concave);
 
-            if(elements.size() == 1 && sumPowers > 0.0 && sumPowers < 1.0)
+            if(numberPositivePowers == elements.size() && sumPowers > 0.0 && sumPowers <= 1.0)
                 return (E_Convexity::Convex);
 
             if(numberPositivePowers == 0)
@@ -881,7 +820,26 @@ typedef std::shared_ptr<SignomialTerm> SignomialTermPtr;
 
 inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 {
-    stream << term->coefficient;
+    if(term->coefficient == 1.0)
+    {
+        stream << " +";
+    }
+    else if(term->coefficient == -1.0)
+    {
+        stream << " -";
+    }
+    else if(term->coefficient == 0.0)
+    {
+        stream << " +0.0";
+    }
+    else if(term->coefficient > 0)
+    {
+        stream << " +" << term->coefficient;
+    }
+    else
+    {
+        stream << " " << term->coefficient;
+    }
 
     for(auto& E : term->elements)
     {

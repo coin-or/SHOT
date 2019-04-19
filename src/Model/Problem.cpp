@@ -55,8 +55,50 @@ void Problem::updateProperties()
     if(!variablesUpdated)
         updateVariables();
 
-    properties.isConvex = true;
-    properties.isNonconvex = false;
+    if(objectiveFunction->properties.isMinimize
+        && (objectiveFunction->properties.convexity == E_Convexity::Linear
+               || objectiveFunction->properties.convexity == E_Convexity::Convex))
+    {
+        properties.convexity = E_ProblemConvexity::Convex;
+    }
+    else if(objectiveFunction->properties.isMaximize
+        && (objectiveFunction->properties.convexity == E_Convexity::Linear
+               || objectiveFunction->properties.convexity == E_Convexity::Concave))
+    {
+        properties.convexity = E_ProblemConvexity::Convex;
+    }
+    else if(objectiveFunction->properties.convexity == E_Convexity::Nonconvex)
+    {
+        properties.convexity = E_ProblemConvexity::Nonconvex;
+    }
+    else if(objectiveFunction->properties.convexity == E_Convexity::Unknown)
+    {
+        properties.convexity = E_ProblemConvexity::Nonconvex;
+    }
+
+    if(properties.convexity == E_ProblemConvexity::Convex)
+    {
+        for(auto& C : quadraticConstraints)
+        {
+            if(C->properties.convexity != E_Convexity::Linear || C->properties.convexity != E_Convexity::Convex)
+            {
+                properties.convexity = E_ProblemConvexity::Nonconvex;
+                break;
+            }
+        }
+
+        if(properties.convexity != E_ProblemConvexity::Nonconvex)
+        {
+            for(auto& C : nonlinearConstraints)
+            {
+                if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
+                {
+                    properties.convexity = E_ProblemConvexity::Nonconvex;
+                    break;
+                }
+            }
+        }
+    }
 
     properties.numberOfVariables = allVariables.size();
     properties.numberOfRealVariables = realVariables.size();
@@ -1103,6 +1145,19 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
     for(auto& V : problem.allVariables)
     {
         stream << V << '\n';
+    }
+
+    switch(problem.properties.convexity)
+    {
+    case E_ProblemConvexity::Nonconvex:
+        stream << "\nProblem does not seem to be convex.\n";
+        break;
+
+    case E_ProblemConvexity::Convex:
+        stream << "\nProblem is convex.\n";
+        break;
+    default:
+        break;
     }
 
     return stream;
