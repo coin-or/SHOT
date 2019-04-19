@@ -17,6 +17,8 @@
 #include "../Timing.h"
 #include "../Utilities.h"
 
+#include "../Model/Problem.h"
+
 #include "../MIPSolver/IMIPSolver.h"
 
 #include "../MIPSolver/IMIPSolutionLimitStrategy.h"
@@ -55,8 +57,9 @@ void TaskExecuteSolutionLimitStrategy::run()
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
 
-    if(env->settings->getSetting<int>("Convexity", "Strategy")
-        == static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    if((env->settings->getSetting<int>("Convexity", "Strategy")
+           == static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+        || env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
     {
         if(temporaryOptLimitUsed)
         {

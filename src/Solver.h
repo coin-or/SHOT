@@ -35,6 +35,8 @@ private:
     void initializeSettings();
     void verifySettings();
 
+    void setConvexityBasedSettings();
+
     void initializeDebugMode();
 
     bool selectStrategy();

@@ -26,7 +26,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
             tmpConstant]
             = extractTermsAndConstant(nonlinearExpression);
 
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && tmpNonlinearExpression == nullptr
+        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
             && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
         {
             // The objective is no longer nonlinear
@@ -82,7 +82,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
             if(tmpSignomialTerms.size() > 0)
                 nonlinearObjective->add(std::move(tmpSignomialTerms));
 
-            if(tmpNonlinearExpression != nullptr)
+            if(tmpNonlinearExpression)
                 nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
 
             if(tmpConstant != 0.0)
@@ -102,7 +102,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
             tmpConstant]
             = extractTermsAndConstant(nonlinearExpression);
 
-        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && tmpNonlinearExpression == nullptr
+        if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
             && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)
         {
             // The constraint is no longer nonlinear
@@ -164,8 +164,10 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
             if(tmpSignomialTerms.size() > 0)
                 nonlinearConstraint->add(std::move(tmpSignomialTerms));
 
-            if(tmpNonlinearExpression != nullptr)
+            if(tmpNonlinearExpression)
                 nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;
+            else
+                nonlinearConstraint->nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
 
             if(tmpConstant != 0.0)
                 nonlinearConstraint->constant += tmpConstant;

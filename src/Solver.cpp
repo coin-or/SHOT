@@ -32,6 +32,8 @@
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
 
+#include "../Tasks/TaskReformulateProblem.h"
+
 #include "boost/filesystem.hpp"
 
 namespace SHOT
@@ -52,6 +54,8 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
+
+    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -190,7 +194,10 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->reformulatedProblem = problem;
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
 
@@ -216,7 +223,11 @@ bool Solver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
-            env->reformulatedProblem = problem;
+
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
 
@@ -245,7 +256,11 @@ bool Solver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
-            env->reformulatedProblem = problem;
+
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -258,7 +273,7 @@ bool Solver::setProblem(std::string fileName)
             problemFilename << "/originalproblem.txt";
 
             std::stringstream problemText;
-            problemText << env->reformulatedProblem;
+            problemText << env->problem;
 
             Utilities::writeStringToFile(problemFilename.str(), problemText.str());
         }
@@ -310,8 +325,9 @@ bool Solver::setProblem(std::string fileName)
     }
 
     verifySettings();
+    setConvexityBasedSettings();
 
-    bool status = this->selectStrategy();
+    this->selectStrategy();
 
     return (true);
 }
@@ -320,7 +336,6 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
 {
     env->modelingSystem = modelingSystem;
     env->problem = problem;
-    env->reformulatedProblem = problem;
 
     env->settings->updateSetting("ProblemName", "Input", problem->name);
 
@@ -349,7 +364,11 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
         Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
+    auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+    taskReformulateProblem->run();
+
     verifySettings();
+    setConvexityBasedSettings();
 
     this->selectStrategy();
 
@@ -1134,18 +1153,22 @@ void Solver::verifySettings()
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
     }
+}
 
+void Solver::setConvexityBasedSettings()
+{
     if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
     {
-        switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getSetting<int>("Convexity", "Strategy")))
+        auto convexityStrategy
+            = static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getSetting<int>("Convexity", "Strategy"));
+
+        if((convexityStrategy == ES_ConvexityIdentificationStrategy::Automatically
+               && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+            || convexityStrategy == ES_ConvexityIdentificationStrategy::AssumeConvex)
         {
-        case(ES_ConvexityIdentificationStrategy::Automatically):
-            break;
-
-        case(ES_ConvexityIdentificationStrategy::AssumeConvex):
-            break;
-
-        case(ES_ConvexityIdentificationStrategy::AssumeNonconvex):
+        }
+        else
+        {
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
@@ -1172,11 +1195,6 @@ void Solver::verifySettings()
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
             env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
             env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
-
-            break;
-
-        default:
-            break;
         }
     }
 }

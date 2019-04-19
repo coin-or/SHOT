@@ -19,7 +19,6 @@
 #include "../Tasks/TaskGoto.h"
 #include "../Tasks/TaskConditional.h"
 
-#include "../Tasks/TaskReformulateProblem.h"
 #include "../Tasks/TaskInitializeIteration.h"
 #include "../Tasks/TaskTerminate.h"
 
@@ -75,7 +74,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("InteriorPointSearch", " - interior point search");
 
     env->timing->createTimer("DualStrategy", " - dual strategy");
@@ -87,9 +85,6 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
-
-    TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
-    env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
     TaskBase* tCreateDualProblem = new TaskCreateDualProblem(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
