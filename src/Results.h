@@ -23,9 +23,7 @@
 namespace SHOT
 {
 
-class Variable;
-typedef std::shared_ptr<Variable> VariablePtr;
-typedef std::vector<VariablePtr> Variables;
+class Variables;
 
 class Results
 {

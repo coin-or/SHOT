@@ -24,6 +24,7 @@
 
 #include "Model/ObjectiveFunction.h"
 #include "Model/Problem.h"
+#include "Model/Variables.h"
 
 #include "DualSolver.h"
 #include "MIPSolver/IMIPSolver.h"

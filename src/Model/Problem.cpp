@@ -165,6 +165,9 @@ void Problem::updateVariables()
             nonlinearVariables.push_back(allVariables[i]);
     }
 
+    allVariables.takeOwnership(shared_from_this());
+    auxiliaryVariables.takeOwnership(shared_from_this());
+
     variablesUpdated = true;
 };
 

@@ -59,7 +59,37 @@ public:
 };
 
 typedef std::shared_ptr<AuxiliaryVariable> AuxiliaryVariablePtr;
-typedef std::vector<AuxiliaryVariablePtr> AuxiliaryVariables;
+
+class AuxiliaryVariables : private std::vector<AuxiliaryVariablePtr>
+{
+protected:
+    std::weak_ptr<Problem> ownerProblem;
+
+public:
+    using std::vector<AuxiliaryVariablePtr>::operator[];
+
+    using std::vector<AuxiliaryVariablePtr>::at;
+    using std::vector<AuxiliaryVariablePtr>::begin;
+    using std::vector<AuxiliaryVariablePtr>::clear;
+    using std::vector<AuxiliaryVariablePtr>::end;
+    using std::vector<AuxiliaryVariablePtr>::erase;
+    using std::vector<AuxiliaryVariablePtr>::push_back;
+    using std::vector<AuxiliaryVariablePtr>::reserve;
+    using std::vector<AuxiliaryVariablePtr>::resize;
+    using std::vector<AuxiliaryVariablePtr>::size;
+
+    AuxiliaryVariables(){};
+
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        ownerProblem = owner;
+
+        for(auto& V : *this)
+        {
+            V->takeOwnership(owner);
+        }
+    }
+};
 
 std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var);
 

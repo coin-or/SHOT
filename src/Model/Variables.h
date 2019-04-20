@@ -90,7 +90,37 @@ public:
 typedef std::shared_ptr<Variable> VariablePtr;
 typedef std::map<VariablePtr, double> SparseVariableVector;
 typedef std::map<std::pair<VariablePtr, VariablePtr>, double> SparseVariableMatrix;
-typedef std::vector<VariablePtr> Variables;
+
+class Variables : private std::vector<VariablePtr>
+{
+protected:
+    std::weak_ptr<Problem> ownerProblem;
+
+public:
+    using std::vector<VariablePtr>::operator[];
+
+    using std::vector<VariablePtr>::at;
+    using std::vector<VariablePtr>::begin;
+    using std::vector<VariablePtr>::clear;
+    using std::vector<VariablePtr>::end;
+    using std::vector<VariablePtr>::erase;
+    using std::vector<VariablePtr>::push_back;
+    using std::vector<VariablePtr>::reserve;
+    using std::vector<VariablePtr>::resize;
+    using std::vector<VariablePtr>::size;
+
+    Variables(){};
+
+    inline void takeOwnership(ProblemPtr owner)
+    {
+        ownerProblem = owner;
+
+        for(auto& V : *this)
+        {
+            V->takeOwnership(owner);
+        }
+    }
+};
 
 std::ostream& operator<<(std::ostream& stream, VariablePtr var);
 } // namespace SHOT
