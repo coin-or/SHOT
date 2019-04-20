@@ -743,8 +743,19 @@ std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
 {
     QuadraticObjectiveFunction::print(stream);
 
-    if(properties.hasNonlinearExpression)
-        stream << " +(" << nonlinearExpression << ')';
+    if(monomialTerms.size() > 0)
+        stream << " +" << monomialTerms;
+
+    if(signomialTerms.size() > 0)
+        stream << " +" << signomialTerms;
+
+    stream << " +" << nonlinearExpression;
+
+    if(constant > 0)
+        stream << '+' << constant;
+
+    if(constant < 0)
+        stream << constant;
 
     return stream;
 };
