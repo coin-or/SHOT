@@ -299,4 +299,116 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
     }
 }
 
+NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination)
+{
+    return copyNonlinearExpression(expression, destination.get());
+}
+
+NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination)
+{
+    unsigned int i;
+    std::ostringstream outStr;
+    int numChildren;
+
+    // auto tmp = expression->getType();
+
+    switch(expression->getType())
+    {
+    case E_NonlinearExpressionTypes::Sum:
+        numChildren = ((ExpressionSum*)expression)->getNumberOfChildren();
+        switch(numChildren)
+        {
+        case 0:
+            return std::make_shared<ExpressionConstant>(0.);
+        case 1:
+            return copyNonlinearExpression(((ExpressionSum*)expression)->children[0].get(), destination);
+        default:
+            NonlinearExpressions terms;
+            for(i = 0; i < numChildren; i++)
+                terms.push_back(copyNonlinearExpression(((ExpressionSum*)expression)->children[i].get(), destination));
+            return std::make_shared<ExpressionSum>(terms);
+        }
+
+    case E_NonlinearExpressionTypes::Negate:
+        return std::make_shared<ExpressionNegate>(
+            copyNonlinearExpression(((ExpressionNegate*)expression)->child.get(), destination));
+
+    case E_NonlinearExpressionTypes::Divide:
+        return std::make_shared<ExpressionDivide>(
+            copyNonlinearExpression(((ExpressionDivide*)expression)->firstChild.get(), destination),
+            copyNonlinearExpression(((ExpressionDivide*)expression)->secondChild.get(), destination));
+
+    case E_NonlinearExpressionTypes::Power:
+        return std::make_shared<ExpressionPower>(
+            copyNonlinearExpression(((ExpressionPower*)expression)->firstChild.get(), destination),
+            copyNonlinearExpression(((ExpressionPower*)expression)->secondChild.get(), destination));
+
+    case E_NonlinearExpressionTypes::Product:
+        numChildren = ((ExpressionProduct*)expression)->getNumberOfChildren();
+        switch(numChildren)
+        {
+        case 0:
+            return std::make_shared<ExpressionConstant>(0.);
+        case 1:
+            return copyNonlinearExpression(((ExpressionProduct*)expression)->children[0].get(), destination);
+        default:
+            NonlinearExpressions factors;
+            for(i = 0; i < numChildren; i++)
+                factors.push_back(
+                    copyNonlinearExpression(((ExpressionProduct*)expression)->children[i].get(), destination));
+            return std::make_shared<ExpressionProduct>(factors);
+        }
+
+    case E_NonlinearExpressionTypes::Abs:
+        return std::make_shared<ExpressionAbs>(
+            copyNonlinearExpression((((ExpressionAbs*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Square:
+        return std::make_shared<ExpressionSquare>(
+            copyNonlinearExpression((((ExpressionSquare*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::SquareRoot:
+        return std::make_shared<ExpressionSquareRoot>(
+            copyNonlinearExpression((((ExpressionSquareRoot*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Invert:
+        return std::make_shared<ExpressionInvert>(
+            copyNonlinearExpression((((ExpressionInvert*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Log:
+        return std::make_shared<ExpressionLog>(
+            copyNonlinearExpression((((ExpressionLog*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Exp:
+        return std::make_shared<ExpressionExp>(
+            copyNonlinearExpression((((ExpressionExp*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Sin:
+        return std::make_shared<ExpressionSin>(
+            copyNonlinearExpression((((ExpressionSin*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Cos:
+        return std::make_shared<ExpressionCos>(
+            copyNonlinearExpression((((ExpressionCos*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Tan:
+        return std::make_shared<ExpressionTan>(
+            copyNonlinearExpression((((ExpressionTan*)expression)->child).get(), destination));
+
+    case E_NonlinearExpressionTypes::Constant:
+        return std::make_shared<ExpressionConstant>((((ExpressionConstant*)expression)->constant));
+
+    case E_NonlinearExpressionTypes::Variable:
+    {
+        int variableIndex = ((ExpressionVariable*)expression)->variable->index;
+        return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
+    }
+    default:
+        throw new OperationNotImplementedException(std::to_string((int)(expression->getType())));
+        break;
+    }
+
+    return nullptr;
+}
+
 } // namespace SHOT

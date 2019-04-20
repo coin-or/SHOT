@@ -1195,4 +1195,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
 
 void simplifyNonlinearExpressions(ProblemPtr problem);
 
+NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
+NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination);
+
 } // namespace SHOT

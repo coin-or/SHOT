@@ -80,7 +80,7 @@ private:
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> lagrangianHessianSparsityPattern;
 
     void updateVariables();
-
+    void updateConstraints();
     void updateFactorableFunctions();
 
 public:

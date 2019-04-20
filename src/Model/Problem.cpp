@@ -12,9 +12,134 @@
 #include "../Enums.h"
 #include "../Output.h"
 #include "../Utilities.h"
+#include "../Model/Simplifications.h"
+#include "../Tasks/TaskReformulateProblem.h"
 
 namespace SHOT
 {
+
+void Problem::updateConstraints()
+{
+    NumericConstraints auxConstraints;
+
+    for(auto& C : numericConstraints)
+    {
+        if(C->valueLHS > C->valueRHS)
+            std::swap(C->valueRHS, C->valueLHS);
+    }
+
+    for(auto& C : linearConstraints)
+    {
+        if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
+        {
+            C->valueRHS = -C->valueLHS;
+            C->valueLHS = SHOT_DBL_MIN;
+
+            for(auto& T : C->linearTerms)
+                T->coefficient *= -1.0;
+
+            C->constant *= -1.0;
+        }
+    }
+
+    for(auto& C : quadraticConstraints)
+    {
+        if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
+        {
+            C->valueRHS = -C->valueLHS;
+            C->valueLHS = SHOT_DBL_MIN;
+
+            for(auto& T : C->linearTerms)
+                T->coefficient *= -1.0;
+
+            for(auto& T : C->quadraticTerms)
+                T->coefficient *= -1.0;
+
+            C->constant *= -1.0;
+        }
+        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
+        {
+            double valueLHS = C->valueLHS;
+            C->valueLHS = SHOT_DBL_MIN;
+
+            NonlinearConstraintPtr auxConstraint;
+
+            auxConstraint->constant = -C->constant;
+            auxConstraint->valueRHS = -C->valueLHS;
+            auxConstraint->name = C->name + "_rf";
+            auxConstraint->ownerProblem = C->ownerProblem;
+
+            for(auto& T : C->linearTerms)
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
+
+            for(auto& T : C->quadraticTerms)
+                auxConstraint->add(
+                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
+
+            auxConstraints.push_back(auxConstraint);
+        }
+    }
+
+    for(auto& C : nonlinearConstraints)
+    {
+        if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
+        {
+            C->valueRHS = -C->valueLHS;
+            C->valueLHS = SHOT_DBL_MIN;
+
+            for(auto& T : C->linearTerms)
+                T->coefficient *= -1.0;
+
+            for(auto& T : C->quadraticTerms)
+                T->coefficient *= -1.0;
+
+            for(auto& T : C->monomialTerms)
+                T->coefficient *= -1.0;
+
+            for(auto& T : C->signomialTerms)
+                T->coefficient *= -1.0;
+
+            if(C->nonlinearExpression)
+                C->nonlinearExpression = simplify(std::make_shared<ExpressionNegate>(C->nonlinearExpression));
+
+            C->constant *= -1.0;
+        }
+        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
+        {
+            double valueLHS = C->valueLHS;
+            C->valueLHS = SHOT_DBL_MIN;
+
+            NonlinearConstraintPtr auxConstraint;
+
+            auxConstraint->constant = -C->constant;
+            auxConstraint->valueRHS = -C->valueLHS;
+            auxConstraint->name = C->name + "_rf";
+            auxConstraint->ownerProblem = C->ownerProblem;
+
+            for(auto& T : C->linearTerms)
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
+
+            for(auto& T : C->quadraticTerms)
+                auxConstraint->add(
+                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
+
+            for(auto& T : C->monomialTerms)
+                auxConstraint->add(std::make_shared<MonomialTerm>(-1.0 * T->coefficient, T->variables));
+
+            for(auto& T : C->signomialTerms)
+                auxConstraint->add(std::make_shared<SignomialTerm>(-1.0 * T->coefficient, T->elements));
+
+            if(C->nonlinearExpression)
+                auxConstraint->nonlinearExpression = simplify(
+                    std::make_shared<ExpressionNegate>(copyNonlinearExpression(C->nonlinearExpression.get(), this)));
+
+            auxConstraints.push_back(auxConstraint);
+        }
+    }
+
+    for(auto& C : auxConstraints)
+        this->add(C);
+};
 
 void Problem::updateVariables()
 {
@@ -411,6 +536,7 @@ Problem::~Problem()
 void Problem::finalize()
 {
     updateVariables();
+    updateConstraints();
     updateProperties();
     updateFactorableFunctions();
 }

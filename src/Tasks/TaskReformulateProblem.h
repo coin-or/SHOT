@@ -51,8 +51,6 @@ private:
     void reformulateObjectiveFunction();
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
 
-    NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
-
     template <class T> void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
 
     template <class T>
