@@ -9,6 +9,12 @@
 */
 
 #include "TaskInitializeIteration.h"
+
+#include "../DualSolver.h"
+#include "../Results.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
 namespace SHOT
 {
 

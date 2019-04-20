@@ -10,6 +10,18 @@
 
 #include "TaskSolveIteration.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -17,9 +29,8 @@ TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        for(auto& V : env->problem->allVariables)
+        for(auto& V : env->reformulatedProblem->allVariables)
         {
-
             variableNames.push_back(V->name);
         }
     }
@@ -67,7 +78,7 @@ void TaskSolveIteration::run()
     if(env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()
         && env->settings->getSetting<bool>("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
-        auto newLB = env->results->getDualBound();
+        auto newLB = env->results->getCurrentDualBound();
         auto newUB = env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(

@@ -10,6 +10,22 @@
 
 #include "TaskExecuteSolutionLimitStrategy.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../Model/Problem.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../MIPSolver/IMIPSolutionLimitStrategy.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
+#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
+
 namespace SHOT
 {
 
@@ -41,8 +57,9 @@ void TaskExecuteSolutionLimitStrategy::run()
     auto currIter = env->results->getCurrentIteration();
     auto prevIter = env->results->getPreviousIteration();
 
-    if(env->settings->getSetting<int>("Convexity", "Strategy")
-        == static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    if((env->settings->getSetting<int>("Convexity", "Strategy")
+           == static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+        || env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
     {
         if(temporaryOptLimitUsed)
         {
@@ -52,7 +69,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 
         if(currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate
                 > env->settings->getSetting<int>("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
-            && env->results->getDualBound() > SHOT_DBL_MIN)
+            && env->results->getCurrentDualBound() > SHOT_DBL_MIN)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit;
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
@@ -67,7 +84,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 
         if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate
                 > env->settings->getSetting<double>("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
-            && env->results->getDualBound() > SHOT_DBL_MIN)
+            && env->results->getCurrentDualBound() > SHOT_DBL_MIN)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit;
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);

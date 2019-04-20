@@ -10,6 +10,21 @@
 
 #include "TaskSolveFixedDualProblem.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../LinesearchMethod/ILinesearchMethod.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -143,9 +158,9 @@ void TaskSolveFixedDualProblem::run()
             tmpType << "-I";
 
             env->report->outputIterationDetail(totalIters, tmpType.str(), env->timing->getElapsedTime("Total"), 1,
-                currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), NAN, SHOT_INT_MAX,
-                NAN, E_IterationLineType::DualIntegerFixed);
+                currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
+                SHOT_INT_MAX, NAN, E_IterationLineType::DualIntegerFixed);
 
             break;
         }
@@ -234,8 +249,8 @@ void TaskSolveFixedDualProblem::run()
             }
 
             env->report->outputIterationDetail(totalIters, tmpType.str(), env->timing->getElapsedTime("Total"), 1,
-                currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), objVal,
+                currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), objVal,
                 mostDevConstraint.constraint->index, mostDevConstraint.normalizedValue,
                 E_IterationLineType::DualIntegerFixed);
 

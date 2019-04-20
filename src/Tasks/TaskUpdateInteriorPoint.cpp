@@ -10,6 +10,16 @@
 
 #include "TaskUpdateInteriorPoint.h"
 
+#include "../DualSolver.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -36,7 +46,7 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->maxDevatingConstraint = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
 
         env->output->outputDebug("     Interior point replaced with primal solution point since no interior point was "
-                                "previously available.");
+                                 "previously available.");
 
         env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
 
@@ -56,7 +66,8 @@ void TaskUpdateInteriorPoint::run()
         tmpIP->point = tmpPrimalPoint;
         tmpIP->maxDevatingConstraint = maxDevPrimal;
 
-        env->output->outputDebug("     Interior point replaced with primal solution point due to constraint deviation.");
+        env->output->outputDebug(
+            "     Interior point replaced with primal solution point due to constraint deviation.");
 
         env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
     }

@@ -10,14 +10,6 @@
 
 #pragma once
 
-// Fix for missing NAN i Visual Studio
-#ifdef WIN32
-#ifndef NAN
-static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
-#define NAN (*(const float*)__nan)
-#endif
-#endif
-
 namespace SHOT
 {
 
@@ -33,13 +25,14 @@ enum class E_AuxiliaryVariableType
     IntegerBilinear // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
 };
 
-enum class E_Curvature
+enum class E_Convexity
 {
-    None,
+    NotSet,
+    Unknown,
+    Linear,
     Convex,
     Concave,
-    Nonconvex,
-    Indeterminate
+    Nonconvex
 };
 
 enum class E_DualSolutionSource
@@ -110,6 +103,15 @@ enum class E_ModelReturnStatus
     ErrorNoSolution
 };
 
+enum class E_Monotonicity
+{
+    NotSet,
+    Unknown,
+    Nondecreasing,
+    Nonincreasing,
+    Constant
+};
+
 enum class E_PrimalNLPSource
 {
     FirstSolution,
@@ -131,6 +133,13 @@ enum class E_PrimalSolutionSource
     LazyConstraintCallback,
     HeuristicCallback,
     IncumbentCallback
+};
+
+enum class E_ProblemConvexity
+{
+    NotSet,
+    Convex,
+    Nonconvex
 };
 
 enum class E_NLPSolutionStatus

@@ -10,7 +10,14 @@
 
 #include "Solver.h"
 
+#include "DualSolver.h"
+#include "PrimalSolver.h"
+#include "Report.h"
+#include "Results.h"
+#include "Settings.h"
 #include "TaskHandler.h"
+#include "Timing.h"
+#include "Utilities.h"
 
 #ifdef HAS_OS
 #include "ModelingSystem/ModelingSystemOS.h"
@@ -24,6 +31,8 @@
 #include "SolutionStrategy/SolutionStrategyMultiTree.h"
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
 #include "SolutionStrategy/SolutionStrategyNLP.h"
+
+#include "../Tasks/TaskReformulateProblem.h"
 
 #include "boost/filesystem.hpp"
 
@@ -45,6 +54,8 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
+
+    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -142,6 +153,36 @@ bool Solver::setProblem(std::string fileName)
     boost::filesystem::path problemExtension = problemFile.extension();
     boost::filesystem::path problemPath = problemFile.parent_path();
 
+    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
+
+    // Removes path
+    boost::filesystem::path problemName = problemFile.stem();
+    env->settings->updateSetting("ProblemName", "Input", problemName.string());
+    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
+
+    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
+        == ES_OutputDirectory::Program)
+    {
+        boost::filesystem::path debugPath(boost::filesystem::current_path());
+        debugPath /= problemName;
+
+        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
+        env->settings->updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
+    }
+    else
+    {
+        boost::filesystem::path debugPath(problemPath);
+        debugPath /= problemName;
+
+        env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
+        env->settings->updateSetting("ResultPath", "Output", problemPath.string());
+    }
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        initializeDebugMode();
+    }
+
 #ifndef HAS_OS
     if(problemExtension == ".osil" || problemExtension == ".xml")
     {
@@ -183,7 +224,10 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            env->reformulatedProblem = problem;
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
 
@@ -209,7 +253,11 @@ bool Solver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
-            env->reformulatedProblem = problem;
+
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
 
@@ -238,7 +286,11 @@ bool Solver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
-            env->reformulatedProblem = problem;
+
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -251,7 +303,7 @@ bool Solver::setProblem(std::string fileName)
             problemFilename << "/originalproblem.txt";
 
             std::stringstream problemText;
-            problemText << env->reformulatedProblem;
+            problemText << env->problem;
 
             Utilities::writeStringToFile(problemFilename.str(), problemText.str());
         }
@@ -263,48 +315,10 @@ bool Solver::setProblem(std::string fileName)
         return (false);
     }
 
-    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
-
-    // Removes path
-    boost::filesystem::path problemName = problemFile.stem();
-    env->settings->updateSetting("ProblemName", "Input", problemName.string());
-
-    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
-        == ES_OutputDirectory::Program)
-    {
-        boost::filesystem::path debugPath(boost::filesystem::current_path());
-        debugPath /= problemName;
-
-        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
-        env->settings->updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
-    }
-    else
-    {
-        boost::filesystem::path debugPath(problemPath);
-        debugPath /= problemName;
-
-        env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
-        env->settings->updateSetting("ResultPath", "Output", problemPath.string());
-    }
-
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
-    {
-        initializeDebugMode();
-
-        std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/originalproblem";
-        filename << ".txt";
-
-        std::stringstream problem;
-        problem << env->problem;
-
-        Utilities::writeStringToFile(filename.str(), problem.str());
-    }
-
     verifySettings();
+    setConvexityBasedSettings();
 
-    bool status = this->selectStrategy();
+    this->selectStrategy();
 
     return (true);
 }
@@ -313,7 +327,6 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
 {
     env->modelingSystem = modelingSystem;
     env->problem = problem;
-    env->reformulatedProblem = problem;
 
     env->settings->updateSetting("ProblemName", "Input", problem->name);
 
@@ -342,7 +355,11 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
         Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
+    auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+    taskReformulateProblem->run();
+
     verifySettings();
+    setConvexityBasedSettings();
 
     this->selectStrategy();
 
@@ -681,6 +698,10 @@ void Solver::initializeSettings()
         "Reinitialize the dual model in the subsolver each iteration");
 
     // Optimization model settings
+
+    env->settings->createSetting("Convexity.Quadratics.EigenValueTolerance", "Model", 1e-5,
+        "Convexity tolerance for the eigenvalues of the Hessian matrix for quadratic terms", 0.0, SHOT_DBL_MAX);
+
     env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -1e10,
         "Minimum lower bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
@@ -901,7 +922,8 @@ void Solver::initializeSettings()
         "Sets the relative gap filter on objective values in the solution pool", 0, 1.0e+75);
 
     env->settings->createSetting("Cplex.SolnPoolIntensity", "Subsolver", 0,
-        "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. 2: "
+        "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. "
+        "2: "
         "Moderate. 3: Aggressive. 4: Very aggressive",
         0, 4);
 
@@ -1123,18 +1145,22 @@ void Solver::verifySettings()
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
     }
+}
 
+void Solver::setConvexityBasedSettings()
+{
     if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
     {
-        switch(static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getSetting<int>("Convexity", "Strategy")))
+        auto convexityStrategy
+            = static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getSetting<int>("Convexity", "Strategy"));
+
+        if((convexityStrategy == ES_ConvexityIdentificationStrategy::Automatically
+               && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+            || convexityStrategy == ES_ConvexityIdentificationStrategy::AssumeConvex)
         {
-        case(ES_ConvexityIdentificationStrategy::Automatically):
-            break;
-
-        case(ES_ConvexityIdentificationStrategy::AssumeConvex):
-            break;
-
-        case(ES_ConvexityIdentificationStrategy::AssumeNonconvex):
+        }
+        else
+        {
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
@@ -1161,11 +1187,6 @@ void Solver::verifySettings()
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
             env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
             env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
-
-            break;
-
-        default:
-            break;
         }
     }
 }
@@ -1180,13 +1201,13 @@ template <typename T> void Solver::updateSetting(std::string name, std::string c
     env->settings->updateSetting(name, category, value);
 }
 
-double Solver::getDualBound() { return (env->results->getDualBound()); }
+double Solver::getCurrentDualBound() { return (env->results->getCurrentDualBound()); }
 
 double Solver::getPrimalBound() { return (env->results->getPrimalBound()); }
 
-double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteObjectiveGap()); }
+double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteGlobalObjectiveGap()); }
 
-double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeObjectiveGap()); }
+double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeGlobalObjectiveGap()); }
 
 PrimalSolution Solver::getPrimalSolution()
 {

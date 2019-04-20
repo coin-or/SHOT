@@ -10,12 +10,26 @@
 
 #pragma once
 #include "IModelingSystem.h"
-#include "../SharedOS.h"
+
+#include "../Environment.h"
+#include "../Enums.h"
+#include "../Structs.h"
+
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
+
+#include <memory>
+#include <string>
+
+class OSiLReader;
+class OSiLWriter;
+class OSInstance;
+class OSnl2OS;
+class OSnLNode;
+class OSoLReader;
 
 namespace SHOT
 {
-
-// typedef std::shared_ptr<OSInstance> OSInstance *;
 
 enum class E_OSInputFileFormat
 {

@@ -8,7 +8,12 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Solver.h"
+#include "../Solver.h"
+#include "../Output.h"
+#include "../Settings.h"
+#include "../Utilities.h"
+
+#include "../Model/Problem.h"
 
 #include <iostream>
 
@@ -56,13 +61,14 @@ bool GurobiTest1(std::string filename)
 {
     bool passed = true;
 
-    EnvironmentPtr env(new Environment);
-    env->output = OutputPtr(new Output());
-    env->results = ResultsPtr(new Results(env));
-    env->settings = SettingsPtr(new Settings(env->output));
-    env->tasks = TaskHandlerPtr(new TaskHandler(env));
-    env->report = ReportPtr(new Report(env));
-    std::unique_ptr<Solver> solver(new Solver(env));
+    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+
+    env->output = std::make_shared<SHOT::Output>();
+    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+    env->settings = std::make_shared<Settings>(env->output);
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>(env);
 
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 

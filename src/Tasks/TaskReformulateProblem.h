@@ -11,6 +11,16 @@
 #pragma once
 #include "TaskBase.h"
 
+#include <map>
+#include <tuple>
+
+#include "../Model/AuxiliaryVariables.h"
+#include "../Model/Constraints.h"
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
+#include "../Model/Terms.h"
+#include "../Model/Variables.h"
+
 namespace SHOT
 {
 struct Reformulation
@@ -49,10 +59,22 @@ private:
     void copyQuadraticTermsToConstraint(QuadraticTerms terms, T destination, bool reversedSigns = false);
 
     template <class T>
+    void copyMonomialTermsToConstraint(MonomialTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
+    void copySignomialTermsToConstraint(SignomialTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
     void copyLinearTermsToObjectiveFunction(LinearTerms terms, T destination, bool reversedSigns = false);
 
     template <class T>
     void copyQuadraticTermsToObjectiveFunction(QuadraticTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
+    void copyMonomialTermsToObjectiveFunction(MonomialTerms terms, T destination, bool reversedSigns = false);
+
+    template <class T>
+    void copySignomialTermsToObjectiveFunction(SignomialTerms terms, T destination, bool reversedSigns = false);
 
     LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 

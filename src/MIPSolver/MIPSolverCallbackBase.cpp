@@ -9,6 +9,13 @@
 */
 
 #include "MIPSolverCallbackBase.h"
+#include "../EventHandler.h"
+#include "../Iteration.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
 
 namespace SHOT
 {
@@ -57,7 +64,7 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
     auto userSetting = env->settings->getSetting<int>("FixedInteger.Source", "Primal");
 
-    auto dualBound = env->results->getDualBound();
+    auto dualBound = env->results->getCurrentDualBound();
 
     if(abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound))
         < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
@@ -113,9 +120,9 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
     }
 
     env->report->outputIterationDetail(currIter->iterationNumber, tmpType.str(), env->timing->getElapsedTime("Total"),
-        this->lastNumAddedHyperplanes, currIter->totNumHyperplanes, env->results->getDualBound(),
-        env->results->getPrimalBound(), env->results->getAbsoluteObjectiveGap(),
-        env->results->getRelativeObjectiveGap(), solution.objectiveValue, solution.maxDeviation.index,
+        this->lastNumAddedHyperplanes, currIter->totNumHyperplanes, env->results->getCurrentDualBound(),
+        env->results->getPrimalBound(), env->results->getAbsoluteGlobalObjectiveGap(),
+        env->results->getRelativeGlobalObjectiveGap(), solution.objectiveValue, solution.maxDeviation.index,
         solution.maxDeviation.value, E_IterationLineType::DualCallback);
 
     this->lastNumAddedHyperplanes = 0;

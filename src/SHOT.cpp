@@ -8,8 +8,17 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "Shared.h"
+#include "Environment.h"
 #include "Solver.h"
+#include "Report.h"
+#include "Utilities.h"
+#include "Output.h"
+#include "Settings.h"
+#include "Problem.h"
+
+#include <iostream>
+#include <memory>
+#include <string>
 
 #include "boost/filesystem.hpp"
 

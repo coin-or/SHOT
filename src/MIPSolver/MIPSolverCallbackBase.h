@@ -9,12 +9,19 @@
 */
 
 #pragma once
+
+#include "../Environment.h"
+
 #include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
 #include "../Tasks/TaskSelectHyperplanePointsECP.h"
 #include "../Tasks/TaskUpdateInteriorPoint.h"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace SHOT
 {

@@ -10,7 +10,10 @@
 
 #pragma once
 #include "TaskBase.h"
-#include "../LinesearchMethod/ILinesearchMethod.h"
+
+#include "../Structs.h"
+
+#include <vector>
 
 namespace SHOT
 {

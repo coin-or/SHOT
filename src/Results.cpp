@@ -12,6 +12,22 @@
 
 #include <boost/format.hpp>
 
+#include <algorithm>
+#include <limits>
+
+#include "Iteration.h"
+#include "Output.h"
+#include "Results.h"
+#include "Settings.h"
+#include "Timing.h"
+#include "Utilities.h"
+
+#include "Model/ObjectiveFunction.h"
+#include "Model/Problem.h"
+
+#include "DualSolver.h"
+#include "MIPSolver/IMIPSolver.h"
+
 namespace SHOT
 {
 
@@ -94,7 +110,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
-    if(this->getRelativeObjectiveGap() <= env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
+    if(this->getRelativeGlobalObjectiveGap()
+        <= env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
     {
         return (true);
     }
@@ -106,7 +123,8 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
-    if(this->getAbsoluteObjectiveGap() <= env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
+    if(this->getAbsoluteGlobalObjectiveGap()
+        <= env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
     {
         return (true);
     }
@@ -184,13 +202,13 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "AbsoluteOptimalityGap");
-    otherNode->SetAttribute("value", getAbsoluteObjectiveGap());
+    otherNode->SetAttribute("value", getAbsoluteGlobalObjectiveGap());
     otherNode->SetAttribute("description", "The absolute optimality gap");
     otherResultsNode->InsertEndChild(otherNode);
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "RelativeOptimalityGap");
-    otherNode->SetAttribute("value", getRelativeObjectiveGap());
+    otherNode->SetAttribute("value", getRelativeGlobalObjectiveGap());
     otherNode->SetAttribute("description", "The relative optimality gap");
     otherResultsNode->InsertEndChild(otherNode);
 
@@ -718,7 +736,7 @@ std::string Results::getResultsTrace()
     ss << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     ss << this->getPrimalBound() << ",";
     ;
-    ss << this->getDualBound() << ",";
+    ss << this->getGlobalDualBound() << ",";
     ;
     ss << env->timing->getElapsedTime("Total") << ",";
     ss << env->solutionStatistics.numberOfIterations << ",";
@@ -755,26 +773,46 @@ void Results::setPrimalBound(double value)
     env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
 }
 
-double Results::getDualBound() { return (this->currentDualBound); }
+double Results::getCurrentDualBound() { return (this->currentDualBound); }
+
+double Results::getGlobalDualBound() { return (globalDualBound); }
 
 void Results::setDualBound(double value)
 {
     this->currentDualBound = value;
+
+    if(this->solutionIsGlobal)
+        this->globalDualBound = value;
+
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 
     env->solutionStatistics.lastIterationWithSignificantDualUpdate = iterations.size() - 1;
 }
 
-double Results::getAbsoluteObjectiveGap()
+double Results::getAbsoluteGlobalObjectiveGap()
 {
-    double gap = abs(getDualBound() - getPrimalBound());
+    double gap = abs(getGlobalDualBound() - getPrimalBound());
 
     return (gap);
 }
 
-double Results::getRelativeObjectiveGap()
+double Results::getRelativeGlobalObjectiveGap()
 {
-    double gap = abs(getDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+    double gap = abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+
+    return (gap);
+}
+
+double Results::getAbsoluteCurrentObjectiveGap()
+{
+    double gap = abs(getCurrentDualBound() - getPrimalBound());
+
+    return (gap);
+}
+
+double Results::getRelativeCurrentObjectiveGap()
+{
+    double gap = abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
 
     return (gap);
 }

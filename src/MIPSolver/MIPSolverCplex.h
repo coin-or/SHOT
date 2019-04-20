@@ -19,6 +19,8 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
+#include <functional>
+
 namespace SHOT
 {
 class MIPSolverCplex : public IMIPSolver, public MIPSolverBase

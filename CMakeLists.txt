@@ -49,6 +49,7 @@ set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is locat
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
+set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
@@ -130,9 +131,6 @@ if(HAS_IPOPT)
   add_definitions(-DHAS_IPOPT)
 endif(HAS_IPOPT)
 
-
-# Normally nothing should need to be modified below this point
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 set(Boost_USE_STATIC_LIBS OFF)
@@ -142,8 +140,11 @@ include(FindPkgConfig)
 # Adding source files
 file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Constraints.cpp"
   "${PROJECT_SOURCE_DIR}/src/Model/Problem.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.cpp"
   "${PROJECT_SOURCE_DIR}/src/Report.cpp"
   "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
   "${PROJECT_SOURCE_DIR}/src/Output.cpp"
@@ -173,12 +174,10 @@ file(GLOB_RECURSE SOURCES
 
 # Adding header files
 file(GLOB_RECURSE HEADERS
-  "${PROJECT_SOURCE_DIR}/src/Shared.h"
   "${PROJECT_SOURCE_DIR}/src/Enums.h"
   "${PROJECT_SOURCE_DIR}/src/Structs.h"
   "${PROJECT_SOURCE_DIR}/src/Environment.h"
   "${PROJECT_SOURCE_DIR}/src/EventHandler.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/ModelShared.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
   "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
   "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"
@@ -288,6 +287,7 @@ find_package(Boost 1.63.0 COMPONENTS system filesystem REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
 
+include_directories("${EIGEN_DIR}")
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories("${MCPP_DIR}/3rdparty/fadbad++")

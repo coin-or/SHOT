@@ -11,11 +11,12 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "TaskSelectHyperplanePointsECP.h"
-#include "../LinesearchMethod/ILinesearchMethod.h"
-
 namespace SHOT
 {
+
+class Constraint;
+class TaskSelectHyperplanePointsECP;
+
 class TaskSelectHyperplanePointsESH : public TaskBase
 {
 public:

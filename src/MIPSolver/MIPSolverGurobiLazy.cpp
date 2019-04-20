@@ -10,6 +10,17 @@
 
 #include "MIPSolverGurobiLazy.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../PrimalSolver.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -121,8 +132,8 @@ void GurobiCallback::callback()
                 break;
             }
 
-            if((isMinimization && tmpDualObjBound > env->results->getDualBound())
-                || (!isMinimization && tmpDualObjBound < env->results->getDualBound()))
+            if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+                || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
             {
                 VectorDouble doubleSolution; // Empty since we have no point
 
@@ -281,7 +292,7 @@ void GurobiCallback::callback()
             env->solutionStatistics.numberOfExploredNodes = lastExploredNodes;
             currIter->numberOfOpenNodes = lastOpenNodes;
 
-            auto bounds = std::make_pair(env->results->getDualBound(), env->results->getPrimalBound());
+            auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
             if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")

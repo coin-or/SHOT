@@ -10,6 +10,15 @@
 
 #include "TaskCheckConstraintTolerance.h"
 
+#include "../Enums.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -43,15 +52,15 @@ void TaskCheckConstraintTolerance::run()
     }
 
     // Checks if the quadratic constraints are fulfilled to tolerance
-    if(!env->problem->areQuadraticConstraintsFulfilled(
-           currIter->solutionPoints.at(0).point, env->settings->getSetting<double>("ConstraintTolerance", "Termination")))
+    if(!env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point,
+           env->settings->getSetting<double>("ConstraintTolerance", "Termination")))
     {
         return;
     }
 
     // Checks if the nonlinear constraints are fulfilled to tolerance
-    if(!env->problem->areNonlinearConstraintsFulfilled(
-           currIter->solutionPoints.at(0).point, env->settings->getSetting<double>("ConstraintTolerance", "Termination")))
+    if(!env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point,
+           env->settings->getSetting<double>("ConstraintTolerance", "Termination")))
     {
         return;
     }
@@ -63,7 +72,7 @@ void TaskCheckConstraintTolerance::run()
         {
             env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);
-             env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
+            env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
         }
     }
     else
@@ -72,7 +81,7 @@ void TaskCheckConstraintTolerance::run()
         {
             env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);
-             env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
+            env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
         }
     }
 

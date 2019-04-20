@@ -9,6 +9,7 @@
 */
 
 #include "TaskSimple.h"
+#include "TaskException.h"
 
 namespace SHOT
 {

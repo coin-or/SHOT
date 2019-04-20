@@ -11,8 +11,6 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../LinesearchMethod/LinesearchMethodBoost.h"
-
 namespace SHOT
 {
 class TaskInitializeLinesearch : public TaskBase

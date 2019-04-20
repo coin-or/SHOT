@@ -9,7 +9,9 @@
 */
 
 #pragma once
+
 #include "IMIPSolutionLimitStrategy.h"
+#include "Environment.h"
 
 namespace SHOT
 {

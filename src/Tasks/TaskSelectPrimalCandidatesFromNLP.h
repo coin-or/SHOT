@@ -11,20 +11,16 @@
 #pragma once
 #include "TaskBase.h"
 
-#ifdef HAS_IPOPT
-#include "../NLPSolver/NLPSolverIpoptRelaxed.h"
-#endif
+#include <memory>
+#include <string>
+#include <vector>
 
-#ifdef HAS_GAMS
-#include "../NLPSolver/NLPSolverGAMS.h"
-#include "../ModelingSystem/ModelingSystemGAMS.h"
-#endif
-
-#include "../Tasks/TaskSelectHyperplanePointsESH.h"
-#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Structs.h"
 
 namespace SHOT
 {
+class INLPSolver;
+
 class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
 public:

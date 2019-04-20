@@ -10,6 +10,11 @@
 
 #include "TaskCalculateSolutionChangeNorm.h"
 
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+
 namespace SHOT
 {
 

@@ -10,6 +10,13 @@
 
 #include "TaskCheckAbsoluteGap.h"
 
+#include "../Enums.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 
@@ -27,7 +34,7 @@ void TaskCheckAbsoluteGap::run()
         env->results->terminationReason = E_TerminationReason::AbsoluteGap;
         env->tasks->setNextTask(taskIDIfTrue);
 
-         env->results->terminationReasonDescription = "Terminated since absolute gap met requirements.";
+        env->results->terminationReasonDescription = "Terminated since absolute gap met requirements.";
     }
 }
 

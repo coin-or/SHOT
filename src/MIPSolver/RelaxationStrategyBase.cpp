@@ -10,6 +10,13 @@
 
 #include "RelaxationStrategyBase.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -68,13 +75,13 @@ bool RelaxationStrategyBase::isGapReached()
 
     auto prevIter = env->results->getPreviousIteration();
 
-    if(env->results->getAbsoluteObjectiveGap()
+    if(env->results->getAbsoluteGlobalObjectiveGap()
         < 2 * env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
     {
         return true;
     }
 
-    if(env->results->getRelativeObjectiveGap()
+    if(env->results->getRelativeGlobalObjectiveGap()
         < 2 * env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
     {
         return true;

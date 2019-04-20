@@ -10,6 +10,17 @@
 
 #include "MIPSolverCplexLazyOriginalCallback.h"
 
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../PrimalSolver.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -173,23 +184,23 @@ void InfoCallbackI::main() // Called at each node...
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    auto absObjGap = env->results->getAbsoluteObjectiveGap();
-    auto relObjGap = env->results->getRelativeObjectiveGap();
+    auto absObjGap = env->results->getAbsoluteGlobalObjectiveGap();
+    auto relObjGap = env->results->getRelativeGlobalObjectiveGap();
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
-        env->output->outputCritical("     Terminated by relative objective gap tolerance in info callback: "
-            + Utilities::toString(relObjGap) + " < "
-            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
+        env->output->outputCritical(
+            "     Terminated by relative objective gap tolerance in info callback: " + Utilities::toString(relObjGap)
+            + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination")));
 
         this->abort();
         return;
     }
     else if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
-        env->output->outputCritical("     Terminated by absolute objective gap tolerance in info callback: "
-            + Utilities::toString(absObjGap) + " < "
-            + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
+        env->output->outputCritical(
+            "     Terminated by absolute objective gap tolerance in info callback: " + Utilities::toString(absObjGap)
+            + " < " + Utilities::toString(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination")));
 
         this->abort();
         return;
@@ -309,8 +320,8 @@ void CtCallbackI::main()
     solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
     // Check if better dual bound
-    if((isMinimization && tmpDualObjBound > env->results->getDualBound())
-        || (!isMinimization && tmpDualObjBound < env->results->getDualBound()))
+    if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+        || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
     {
         DualSolution sol = { solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
             env->results->getCurrentIteration()->iterationNumber };

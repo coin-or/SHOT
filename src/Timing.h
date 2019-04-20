@@ -9,8 +9,11 @@
 */
 
 #pragma once
-#include "Shared.h"
+#include "Environment.h"
 #include "Timer.h"
+
+#include <algorithm>
+#include <vector>
 
 namespace SHOT
 {

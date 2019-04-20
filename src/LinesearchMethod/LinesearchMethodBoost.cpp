@@ -9,10 +9,17 @@
 */
 
 #include "LinesearchMethodBoost.h"
+#include "Output.h"
+#include "Settings.h"
+#include "Model/Problem.h"
+#include "Results.h"
+#include "PrimalSolver.h"
+#include "Iteration.h"
+
+#include "boost/math/tools/roots.hpp"
 
 namespace SHOT
 {
-// VectorInteger activeConstraints;
 std::vector<NumericConstraint*> activeConstraints;
 double lastActiveConstraintUpdateValue;
 

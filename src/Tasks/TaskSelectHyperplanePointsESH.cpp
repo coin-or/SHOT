@@ -10,6 +10,19 @@
 
 #include "TaskSelectHyperplanePointsESH.h"
 
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Utilities.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
+#include "TaskSelectHyperplanePointsECP.h"
+#include "../LinesearchMethod/ILinesearchMethod.h"
+
 namespace SHOT
 {
 
@@ -59,7 +72,8 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     int maxHyperplanesPerIter = env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual");
     double rootsearchConstraintTolerance
         = env->settings->getSetting<double>("ESH.Linesearch.ConstraintTolerance", "Dual");
-    double constraintMaxSelectionFactor = env->settings->getSetting<double>("HyperplaneCuts.MaxConstraintFactor", "Dual");
+    double constraintMaxSelectionFactor
+        = env->settings->getSetting<double>("HyperplaneCuts.MaxConstraintFactor", "Dual");
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(
@@ -111,7 +125,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     continue;
                 }
 
-                if(NCV.constraint->properties.curvature == E_Curvature::Nonconvex)
+                if(NCV.constraint->properties.convexity == E_Convexity::Nonconvex)
                 {
                     nonconvexSelectedNumericValues.push_back(std::make_tuple(i, j, NCV));
                     continue;

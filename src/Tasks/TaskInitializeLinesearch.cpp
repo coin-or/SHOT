@@ -10,6 +10,10 @@
 
 #include "TaskInitializeLinesearch.h"
 
+#include "../Timing.h"
+
+#include "../LinesearchMethod/LinesearchMethodBoost.h"
+
 namespace SHOT
 {
 

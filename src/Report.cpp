@@ -10,6 +10,15 @@
 
 #include "Report.h"
 
+#include "Iteration.h"
+#include "Output.h"
+#include "Results.h"
+#include "Settings.h"
+#include "Timing.h"
+#include "Utilities.h"
+
+#include "Model/Problem.h"
+
 #include <boost/format.hpp>
 
 namespace SHOT
@@ -511,9 +520,13 @@ void Report::outputProblemInstanceReport()
     else if(env->problem->properties.isMINLPProblem)
         problemClassificationOrig = "MINLP";
 
+    if(env->problem->properties.convexity == E_ProblemConvexity::Convex)
+        problemClassificationOrig += ", convex";
+    else if(env->problem->properties.convexity == E_ProblemConvexity::Nonconvex)
+        problemClassificationOrig += ", nonconvex";
+
     if(isReformulated)
     {
-
         if(env->reformulatedProblem->properties.isLPProblem)
             problemClassificationRef = "LP";
         else if(env->reformulatedProblem->properties.isMILPProblem)
@@ -530,6 +543,11 @@ void Report::outputProblemInstanceReport()
             problemClassificationRef = "NLP";
         else if(env->reformulatedProblem->properties.isMINLPProblem)
             problemClassificationRef = "MINLP";
+
+        if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+            problemClassificationRef += ", convex";
+        else if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Nonconvex)
+            problemClassificationRef += ", nonconvex";
     }
 
     report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Problem classification:" % problemClassificationOrig
@@ -778,6 +796,16 @@ void Report::outputSolutionReport()
     if(env->results->terminationReasonDescription != "")
         report << " " << env->results->terminationReasonDescription << "\r\n\r\n";
 
+    if(env->results->solutionIsGlobal)
+    {
+        report << " Solution is global.\r\n";
+    }
+    else
+    {
+
+        report << " Solution is local.\r\n";
+    }
+
     if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
     {
         report << " Optimal primal solution found to given tolerances.\r\n";
@@ -835,11 +863,11 @@ void Report::outputSolutionReport()
     report << "\r\n";
 
     report << " Objective bound [dual, primal]:                 ";
-    report << "[" << Utilities::toStringFormat(env->results->getDualBound(), "%g") << ", ";
+    report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "%g") << ", ";
     report << Utilities::toStringFormat(env->results->getPrimalBound(), "%g") << "]\r\n";
     report << " Objective gap absolute / relative:              ";
-    report << "" << Utilities::toStringFormat(env->results->getAbsoluteObjectiveGap(), "%g") << " / ";
-    report << Utilities::toStringFormat(env->results->getRelativeObjectiveGap(), "%g") << "\r\n";
+    report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "%g") << " / ";
+    report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "%g") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
@@ -848,26 +876,26 @@ void Report::outputSolutionReport()
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         fulfilled << "  - absolute objective gap tolerance             ";
-        fulfilled << env->results->getAbsoluteObjectiveGap() << " <= ";
+        fulfilled << env->results->getAbsoluteGlobalObjectiveGap() << " <= ";
         fulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - absolute objective gap tolerance             ";
-        unfulfilled << env->results->getAbsoluteObjectiveGap() << " > ";
+        unfulfilled << env->results->getAbsoluteGlobalObjectiveGap() << " > ";
         unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
         fulfilled << "  - relative objective gap tolerance             ";
-        fulfilled << env->results->getRelativeObjectiveGap() << " <= ";
+        fulfilled << env->results->getRelativeGlobalObjectiveGap() << " <= ";
         fulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - relative objective gap tolerance             ";
-        unfulfilled << env->results->getRelativeObjectiveGap() << " > ";
+        unfulfilled << env->results->getRelativeGlobalObjectiveGap() << " > ";
         unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 

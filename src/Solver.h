@@ -10,10 +10,20 @@
 
 #pragma once
 
-#include "Shared.h"
+#include <memory>
+#include <string>
+
+#include "Environment.h"
+#include "Enums.h"
+#include "EventHandler.h"
+#include "Structs.h"
 
 #include "ModelingSystem/IModelingSystem.h"
 #include "SolutionStrategy/ISolutionStrategy.h"
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 namespace SHOT
 {
@@ -24,6 +34,8 @@ private:
 
     void initializeSettings();
     void verifySettings();
+
+    void setConvexityBasedSettings();
 
     void initializeDebugMode();
 
@@ -63,7 +75,7 @@ public:
 
     template <typename T> void updateSetting(std::string name, std::string category, T value);
 
-    double getDualBound();
+    double getCurrentDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();

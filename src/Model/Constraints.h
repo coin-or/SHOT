@@ -9,11 +9,19 @@
 */
 
 #pragma once
-#include "../Shared.h"
+
+#include <string>
+#include <memory>
+
+#include "../Enums.h"
+#include "../Structs.h"
+
+#include "Variables.h"
+#include "Terms.h"
+#include "NonlinearExpressions.h"
 
 namespace SHOT
 {
-
 enum class E_ConstraintClassification
 {
     None,
@@ -38,14 +46,15 @@ enum class E_ConstraintSignType
 struct ConstraintProperties
 {
     E_ConstraintClassification classification;
-    E_Curvature curvature;
+    E_Convexity convexity;
     E_ConstraintSignType type;
 
     bool isReformulated = false;
 
     bool hasLinearTerms = false;
-    bool hasSignomialTerms = false;
     bool hasQuadraticTerms = false;
+    bool hasMonomialTerms = false;
+    bool hasSignomialTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g. for external functions
 };
@@ -64,15 +73,44 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) = 0;
 
-    void takeOwnership(ProblemPtr owner);
+    virtual void takeOwnership(ProblemPtr owner) = 0;
 
     virtual std::ostream& print(std::ostream&) const = 0;
 
     virtual void updateProperties() = 0;
 };
 
+typedef std::shared_ptr<Constraint> ConstraintPtr;
+
 std::ostream& operator<<(std::ostream& stream, ConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint);
+
+class NumericConstraint;
+typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;
+typedef std::vector<NumericConstraintPtr> NumericConstraints;
+
+struct NumericConstraintValue
+{
+    NumericConstraintPtr constraint;
+
+    // Considering a constraint L <= f(x) <= U:
+    double functionValue; // This is the function value of f(x)
+    bool isFulfilledLHS; // Is L <= f(x)?
+    double normalizedLHSValue; // This is the value of L - f(x)
+    bool isFulfilledRHS; // Is f(x) <= U
+    double normalizedRHSValue; // This is the value of f(x) - U
+    bool isFulfilled; // Is L <= f(x) <= U?
+    double error; // max(0, max(L - f(x), f(x) - U)
+    double normalizedValue; // max(L - f(x), f(x)-U)
+
+    // Sorts in reverse order, i.e. so that larger errors are before smaller ones
+    bool operator>(const NumericConstraintValue& otherValue) const
+    {
+        return normalizedValue > otherValue.normalizedValue;
+    }
+};
+
+typedef std::vector<NumericConstraintValue> NumericConstraintValues;
 
 class NumericConstraint : public Constraint, public std::enable_shared_from_this<NumericConstraint>
 {
@@ -97,6 +135,8 @@ public:
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
 
     virtual bool isFulfilled(const VectorDouble& point) override;
+
+    virtual void takeOwnership(ProblemPtr owner) = 0;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
 
@@ -140,6 +180,8 @@ public:
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
 
     virtual bool isFulfilled(const VectorDouble& point) override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
@@ -215,6 +257,8 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) override;
 
+    virtual void takeOwnership(ProblemPtr owner) override;
+
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
@@ -233,11 +277,17 @@ protected:
     virtual void initializeHessianSparsityPattern();
 };
 
+typedef std::shared_ptr<QuadraticConstraint> QuadraticConstraintPtr;
+typedef std::vector<QuadraticConstraintPtr> QuadraticConstraints;
+
 std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint);
 
 class NonlinearConstraint : public QuadraticConstraint
 {
 public:
+    MonomialTerms monomialTerms;
+    SignomialTerms signomialTerms;
+
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
 
@@ -315,6 +365,10 @@ public:
     void add(LinearTermPtr term);
     void add(QuadraticTerms terms);
     void add(QuadraticTermPtr term);
+    void add(MonomialTerms terms);
+    void add(MonomialTermPtr term);
+    void add(SignomialTerms terms);
+    void add(SignomialTermPtr term);
     void add(NonlinearExpressionPtr expression);
 
     void updateFactorableFunction();
@@ -330,6 +384,8 @@ public:
 
     virtual bool isFulfilled(const VectorDouble& point) override;
 
+    virtual void takeOwnership(ProblemPtr owner) override;
+
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() override;
@@ -342,6 +398,9 @@ protected:
     virtual void initializeGradientSparsityPattern();
     virtual void initializeHessianSparsityPattern();
 };
+
+typedef std::shared_ptr<NonlinearConstraint> NonlinearConstraintPtr;
+typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint);

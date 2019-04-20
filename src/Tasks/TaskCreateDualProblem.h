@@ -11,10 +11,12 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../MIPSolver/MIPSolverBase.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Model/Problem.h"
 
 namespace SHOT
 {
+
 class TaskCreateDualProblem : public TaskBase
 {
 public:

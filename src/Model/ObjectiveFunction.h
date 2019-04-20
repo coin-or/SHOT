@@ -9,10 +9,19 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Structs.h"
+#include "../Enums.h"
+#include "Variables.h"
+#include "Terms.h"
+#include "NonlinearExpressions.h"
+
+#include <vector>
 
 namespace SHOT
 {
+
+typedef mc::Interval Interval;
+typedef std::vector<Interval> IntervalVector;
 
 enum class E_ObjectiveFunctionDirection
 {
@@ -40,19 +49,20 @@ struct ObjectiveFunctionProperties
     bool isMinimize = false;
     bool isMaximize = false;
 
-    E_Curvature curvature = E_Curvature::Convex;
+    E_Convexity convexity = E_Convexity::Convex;
 
     bool isReformulated = false;
 
     E_ObjectiveFunctionClassification classification = E_ObjectiveFunctionClassification::None;
 
     bool hasLinearTerms = false;
-    bool hasSignomialTerms = false;
     bool hasQuadraticTerms = false;
     bool hasBinaryBilinearTerms = false;
     bool hasNonBinaryBilinearTerms = false;
     bool hasBinarySquareTerms = false;
     bool hasNonBinarySquareTerms = false;
+    bool hasMonomialTerms = false;
+    bool hasSignomialTerms = false;
     bool hasNonlinearExpression = false;
     bool hasNonalgebraicPart = false; // E.g for external functions
 };
@@ -74,8 +84,6 @@ public:
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> hessianSparsityPattern;
 
     void takeOwnership(ProblemPtr owner);
-
-    virtual E_Curvature checkConvexity() = 0;
 
     virtual void updateProperties();
 
@@ -131,8 +139,6 @@ public:
 
     void add(LinearTermPtr term);
     virtual void updateProperties() override;
-
-    virtual E_Curvature checkConvexity() override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -201,8 +207,6 @@ public:
     void add(QuadraticTermPtr term);
 
     virtual void updateProperties() override;
-
-    virtual E_Curvature checkConvexity() override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -274,6 +278,9 @@ public:
 
     virtual ~NonlinearObjectiveFunction(){};
 
+    MonomialTerms monomialTerms;
+    SignomialTerms signomialTerms;
+
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
@@ -290,13 +297,17 @@ public:
 
     void add(QuadraticTermPtr term) { QuadraticObjectiveFunction::add(term); }
 
+    void add(MonomialTerms terms);
+    void add(MonomialTermPtr term);
+
+    void add(SignomialTerms terms);
+    void add(SignomialTermPtr term);
+
     void add(NonlinearExpressionPtr expression);
 
     void updateFactorableFunction();
 
     virtual void updateProperties() override;
-
-    virtual E_Curvature checkConvexity() override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -310,6 +321,8 @@ protected:
     virtual void initializeGradientSparsityPattern();
     virtual void initializeHessianSparsityPattern();
 };
+
+typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective);
 

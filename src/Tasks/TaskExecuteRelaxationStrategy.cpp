@@ -10,6 +10,11 @@
 
 #include "TaskExecuteRelaxationStrategy.h"
 
+#include "../DualSolver.h"
+#include "../Timing.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
 namespace SHOT
 {
 

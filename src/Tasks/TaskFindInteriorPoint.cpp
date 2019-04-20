@@ -10,6 +10,17 @@
 
 #include "TaskFindInteriorPoint.h"
 
+#include "../DualSolver.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+
 namespace SHOT
 {
 
@@ -83,8 +94,8 @@ void TaskFindInteriorPoint::run()
 
         if(maxDev.normalizedValue > 0)
         {
-            env->output->outputWarning("\n Maximum deviation in interior point is too large: "
-                + Utilities::toString(maxDev.normalizedValue));
+            env->output->outputWarning(
+                "\n Maximum deviation in interior point is too large: " + Utilities::toString(maxDev.normalizedValue));
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
@@ -106,8 +117,8 @@ void TaskFindInteriorPoint::run()
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output") + "/interiorpoint_"
-                    + std::to_string(i) + ".txt";
+                std::string filename = env->settings->getSetting<std::string>("Debug.Path", "Output")
+                    + "/interiorpoint_" + std::to_string(i) + ".txt";
                 Utilities::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
             }
         }

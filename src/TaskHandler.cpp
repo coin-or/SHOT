@@ -10,6 +10,8 @@
 
 #include "TaskHandler.h"
 
+#include <algorithm>
+
 namespace SHOT
 {
 
@@ -22,7 +24,7 @@ TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 
 TaskHandler::~TaskHandler()
 {
-    for(auto &task : allTasks)
+    for(auto& task : allTasks)
     {
         delete task;
     }
@@ -80,7 +82,7 @@ void TaskHandler::setNextTask(std::string taskID)
 void TaskHandler::clearTasks()
 {
     taskIDMap.clear();
-    nextTask == taskIDMap.end();
+    nextTask = taskIDMap.end();
 }
 
 TaskBase* TaskHandler::getTask(std::string taskID)

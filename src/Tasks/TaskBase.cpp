@@ -9,7 +9,7 @@
 */
 
 #include "TaskBase.h"
-#include "../TaskHandler.h"
+#include "TaskException.h"
 
 namespace SHOT
 {
@@ -24,7 +24,7 @@ void TaskBase::deactivate() { m_isActive = false; }
 
 void TaskBase::initialize() {}
 
-void TaskBase::run() { std::cout << "What?!" << std::endl; }
+void TaskBase::run() {}
 
 std::string TaskBase::getType()
 {

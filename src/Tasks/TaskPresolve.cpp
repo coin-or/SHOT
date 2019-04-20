@@ -10,6 +10,15 @@
 
 #include "TaskPresolve.h"
 
+#include "../DualSolver.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -29,7 +38,8 @@ void TaskPresolve::run()
     env->timing->startTimer("DualStrategy");
     auto currIter = env->results->getCurrentIteration();
 
-    auto strategy = static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"));
+    auto strategy
+        = static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"));
 
     if(!currIter->isMIP())
     {

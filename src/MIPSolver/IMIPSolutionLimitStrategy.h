@@ -9,9 +9,7 @@
 */
 
 #pragma once
-#include <Settings.h>
-#include "../Results.h"
-#include "IMIPSolver.h"
+#include "../Environment.h"
 
 namespace SHOT
 {

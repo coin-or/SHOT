@@ -9,13 +9,23 @@
 */
 
 #pragma once
-#include "Shared.h"
+
+#include <memory>
+#include <vector>
+
+#include "Environment.h"
+#include "Iteration.h"
 #include "SHOTConfig.h"
+#include "Structs.h"
 
 #include "tinyxml2.h"
 
 namespace SHOT
 {
+
+class Variable;
+typedef std::shared_ptr<Variable> VariablePtr;
+typedef std::vector<VariablePtr> Variables;
 
 class Results
 {
@@ -34,7 +44,8 @@ public:
 
     std::vector<DualSolution> dualSolutions;
     void addDualSolution(DualSolution solution);
-    double getDualBound();
+    double getCurrentDualBound();
+    double getGlobalDualBound();
     void setDualBound(double value);
 
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
@@ -42,11 +53,16 @@ public:
     double currentDualBound;
     double currentPrimalBound;
 
+    double globalDualBound;
+
     bool isRelativeObjectiveGapToleranceMet();
     bool isAbsoluteObjectiveGapToleranceMet();
 
-    double getAbsoluteObjectiveGap();
-    double getRelativeObjectiveGap();
+    double getAbsoluteGlobalObjectiveGap();
+    double getRelativeGlobalObjectiveGap();
+
+    double getAbsoluteCurrentObjectiveGap();
+    double getRelativeCurrentObjectiveGap();
 
     void createIteration();
     IterationPtr getCurrentIteration();
@@ -62,6 +78,8 @@ public:
 
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
+
+    bool solutionIsGlobal = true;
 
     std::string getResultsOSrL();
     std::string getResultsTrace();

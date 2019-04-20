@@ -10,6 +10,10 @@
 
 #include "TaskSequential.h"
 
+#include <vector>
+
+#include "../Output.h"
+
 namespace SHOT
 {
 

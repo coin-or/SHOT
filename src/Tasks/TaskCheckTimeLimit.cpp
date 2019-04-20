@@ -10,6 +10,11 @@
 
 #include "TaskCheckTimeLimit.h"
 
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 

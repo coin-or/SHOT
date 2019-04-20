@@ -14,6 +14,8 @@
 #include "IpTNLP.hpp"
 #include "IpIpoptApplication.hpp"
 
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

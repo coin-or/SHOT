@@ -9,6 +9,14 @@
 */
 
 #include "DualSolver.h"
+#include "Output.h"
+#include "Settings.h"
+#include "Results.h"
+#include "Iteration.h"
+#include "Utilities.h"
+#include "Timing.h"
+#include "Problem.h"
+#include "ObjectiveFunction.h"
 
 #include <boost/format.hpp>
 
@@ -26,7 +34,7 @@ void DualSolver::addDualSolutionCandidate(DualSolution solution)
 
 void DualSolver::checkDualSolutionCandidates()
 {
-    double currDualBound = env->results->getDualBound();
+    double currDualBound = env->results->getCurrentDualBound();
     double currPrimalBound = env->results->getPrimalBound();
 
     double gapRelTolerance = env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination");

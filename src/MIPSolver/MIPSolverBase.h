@@ -9,12 +9,17 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Environment.h"
+#include "../Enums.h"
+#include "../Structs.h"
 #include "IMIPSolver.h"
 
 #include "IRelaxationStrategy.h"
 #include "RelaxationStrategyStandard.h"
 #include "RelaxationStrategyNone.h"
+
+#include <optional>
+#include <utility>
 
 namespace SHOT
 {

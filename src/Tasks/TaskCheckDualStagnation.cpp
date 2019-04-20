@@ -10,6 +10,14 @@
 
 #include "TaskCheckDualStagnation.h"
 
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 

@@ -11,13 +11,10 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../MIPSolver/IMIPSolutionLimitStrategy.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
-
 namespace SHOT
 {
+class IMIPSolutionLimitStrategy;
+
 class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
 public:

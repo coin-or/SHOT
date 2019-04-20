@@ -9,6 +9,8 @@
 */
 
 #include "ObjectiveFunction.h"
+#include "Problem.h"
+#include "../Utilities.h"
 
 namespace SHOT
 {
@@ -27,8 +29,6 @@ void ObjectiveFunction::updateProperties()
         properties.isMinimize = false;
         properties.isMaximize = true;
     }
-
-    properties.curvature = checkConvexity();
 };
 
 std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
@@ -119,11 +119,10 @@ void LinearObjectiveFunction::updateProperties()
     }
 
     properties.classification = E_ObjectiveFunctionClassification::Linear;
+    properties.convexity = E_Convexity::Linear;
 
     ObjectiveFunction::updateProperties();
 };
-
-E_Curvature LinearObjectiveFunction::checkConvexity() { return E_Curvature::Convex; };
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
@@ -183,9 +182,28 @@ void LinearObjectiveFunction::initializeHessianSparsityPattern(){};
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
     if(properties.isMinimize)
-        stream << "minimize: ";
+        stream << "minimize ";
     else if(properties.isMaximize)
-        stream << "maximize: ";
+        stream << "maximize ";
+
+    switch(properties.convexity)
+    {
+    case(E_Convexity::Linear):
+        stream << "(linear):";
+        break;
+
+    case(E_Convexity::Convex):
+        stream << "(convex):";
+        break;
+
+    case(E_Convexity::Concave):
+        stream << "(concave):";
+        break;
+
+    default:
+        stream << "(?):";
+        break;
+    }
 
     if(constant != 0.0)
         stream << constant;
@@ -258,14 +276,15 @@ void QuadraticObjectiveFunction::updateProperties()
                 }
             }
         }
+
+        auto convexity = quadraticTerms.getConvexity();
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
         properties.hasQuadraticTerms = false;
     }
 };
-
-E_Curvature QuadraticObjectiveFunction::checkConvexity() { return E_Curvature::Convex; };
 
 double QuadraticObjectiveFunction::calculateValue(const VectorDouble& point)
 {
@@ -436,12 +455,58 @@ std::ostream& operator<<(std::ostream& stream, QuadraticObjectiveFunctionPtr obj
     return stream;
 };
 
+void NonlinearObjectiveFunction::add(MonomialTerms terms)
+{
+    if(monomialTerms.size() == 0)
+    {
+        monomialTerms = terms;
+        properties.isValid = false;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+}
+
+void NonlinearObjectiveFunction::add(MonomialTermPtr term)
+{
+    monomialTerms.push_back(term);
+    properties.isValid = false;
+}
+
+void NonlinearObjectiveFunction::add(SignomialTerms terms)
+{
+    if(signomialTerms.size() == 0)
+    {
+        signomialTerms = terms;
+        properties.isValid = false;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+}
+
+void NonlinearObjectiveFunction::add(SignomialTermPtr term)
+{
+    signomialTerms.push_back(term);
+    properties.isValid = false;
+}
+
 void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
 {
-    if(nonlinearExpression.get() != nullptr)
+    if(nonlinearExpression)
     {
-        auto tmpExpr = nonlinearExpression;
-        auto nonlinearExpression(std::make_shared<ExpressionPlus>(tmpExpr, expression));
+        NonlinearExpressions terms;
+        terms.expressions.push_back(nonlinearExpression);
+        terms.expressions.push_back(expression);
+        nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else
     {
@@ -460,26 +525,74 @@ void NonlinearObjectiveFunction::updateProperties()
 {
     QuadraticObjectiveFunction::updateProperties();
 
+    properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+    variablesInNonlinearExpression.clear();
+
     if(nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
-        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
 
-        variablesInNonlinearExpression.clear();
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-                return (variableOne->index < variableTwo->index);
-            });
+        auto convexity = nonlinearExpression->getConvexity();
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
         properties.hasNonlinearExpression = false;
     }
-}
 
-E_Curvature NonlinearObjectiveFunction::checkConvexity() { return E_Curvature::Convex; };
+    if(monomialTerms.size() > 0)
+    {
+        properties.hasMonomialTerms = true;
+        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+
+        for(auto& T : monomialTerms)
+        {
+            for(auto& V : T->variables)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), V)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(V);
+            }
+
+            auto convexity = T->getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
+    }
+    else
+    {
+        properties.hasMonomialTerms = false;
+    }
+
+    if(signomialTerms.size() > 0)
+    {
+        properties.hasSignomialTerms = true;
+        properties.classification = E_ObjectiveFunctionClassification::Nonlinear;
+
+        for(auto& T : signomialTerms)
+        {
+            for(auto& E : T->elements)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), E->variable)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(E->variable);
+            }
+
+            auto convexity = T->getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
+    }
+    else
+    {
+        properties.hasSignomialTerms = false;
+    }
+
+    std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
+}
 
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {

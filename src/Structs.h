@@ -9,7 +9,24 @@
 */
 
 #pragma once
-#include "Shared.h"
+
+#include "Enums.h"
+
+#include <limits>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
+// Fix for missing NAN i Visual Studio
+#ifdef WIN32
+#ifndef NAN
+static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
+#define NAN (*(const float*)__nan)
+#endif
+#else
+#include <cmath> // For NAN
+#endif
 
 namespace SHOT
 {
@@ -215,5 +232,59 @@ public:
     Error(std::string message) : message(message){};
 
     std::string message;
+};
+
+class VariableNotFoundException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    VariableNotFoundException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw()
+    {
+        std::stringstream message;
+        message << "Could not find variable ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+
+class ConstraintNotFoundException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    ConstraintNotFoundException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw()
+    {
+        std::stringstream message;
+        message << "Could not find constraint ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+
+class OperationNotImplementedException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    OperationNotImplementedException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw()
+    {
+        std::stringstream message;
+        message << "The following operation is not implemented: ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
 };
 }; // namespace SHOT

@@ -9,6 +9,11 @@
 */
 
 #include "MIPSolutionLimitStrategyAdaptive.h"
+#include "../Settings.h"
+#include "../Results.h"
+#include "../Iteration.h"
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 
 namespace SHOT
 {

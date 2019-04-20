@@ -10,6 +10,66 @@
 
 #include "SolutionStrategySingleTree.h"
 
+#include "../TaskHandler.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+#include "../Tasks/TaskFindInteriorPoint.h"
+#include "../Tasks/TaskBase.h"
+#include "../Tasks/TaskSequential.h"
+#include "../Tasks/TaskGoto.h"
+#include "../Tasks/TaskConditional.h"
+
+#include "../Tasks/TaskInitializeIteration.h"
+#include "../Tasks/TaskTerminate.h"
+
+#include "../Tasks/TaskInitializeDualSolver.h"
+#include "../Tasks/TaskCreateDualProblem.h"
+
+#include "../Tasks/TaskExecuteSolutionLimitStrategy.h"
+#include "../Tasks/TaskExecuteRelaxationStrategy.h"
+
+#include "../Tasks/TaskPrintIterationReport.h"
+
+#include "../Tasks/TaskSolveIteration.h"
+#include "../Tasks/TaskPresolve.h"
+
+#include "../Tasks/TaskRepairInfeasibleDualProblem.h"
+
+#include "../Tasks/TaskCheckAbsoluteGap.h"
+#include "../Tasks/TaskCheckIterationError.h"
+#include "../Tasks/TaskCheckIterationLimit.h"
+#include "../Tasks/TaskCheckDualStagnation.h"
+#include "../Tasks/TaskCheckPrimalStagnation.h"
+#include "../Tasks/TaskCheckConstraintTolerance.h"
+#include "../Tasks/TaskCheckRelativeGap.h"
+#include "../Tasks/TaskCheckTimeLimit.h"
+#include "../Tasks/TaskCheckUserTermination.h"
+
+#include "../Tasks/TaskInitializeLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Tasks/TaskAddHyperplanes.h"
+#include "../Tasks/TaskAddPrimalReductionCut.h"
+#include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
+
+#include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+#include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+
+#include "../Tasks/TaskUpdateInteriorPoint.h"
+
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
+#include "../Tasks/TaskSolveFixedDualProblem.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+
+#include "../Output.h"
+#include "../Model/Problem.h"
+#include "../Model/ObjectiveFunction.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 
@@ -17,8 +77,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
-    env->timing->createTimer("ProblemInitialization", " - problem initialization");
-    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("InteriorPointSearch", " - interior point search");
 
     env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
@@ -35,9 +93,6 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, true);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
-
-    TaskBase* tReformulateProblem = new TaskReformulateProblem(env);
-    env->tasks->addTask(tReformulateProblem, "ReformulateProb");
 
     if(env->settings->getSetting<int>("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -89,8 +144,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if(env->settings->getSetting<int>("Convexity", "Strategy")
-        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    if((env->settings->getSetting<int>("Convexity", "Strategy")
+           != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
         TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
@@ -118,8 +174,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    if(env->settings->getSetting<int>("Convexity", "Strategy")
-        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    if((env->settings->getSetting<int>("Convexity", "Strategy")
+           != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
         TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
         env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
@@ -190,8 +247,9 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->settings->getSetting<int>("Convexity", "Strategy")
-        != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+    if((env->settings->getSetting<int>("Convexity", "Strategy")
+           != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
+        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
         TaskBase* tAddObjectiveCutFinal = new TaskAddPrimalReductionCut(env, "InitIter2", "Terminate");
         dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);

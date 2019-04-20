@@ -9,11 +9,11 @@
 */
 
 #include "Constraints.h"
+#include "../Utilities.h"
+#include "Problem.h"
 
 namespace SHOT
 {
-
-void Constraint::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
@@ -30,9 +30,6 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
         break;
 
     case(E_ConstraintClassification::QuadraticConsideredAsNonlinear):
-        stream << "(QNL) ";
-        break;
-
     case(E_ConstraintClassification::Nonlinear):
         stream << "(NL)  ";
         break;
@@ -45,8 +42,23 @@ std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
     if(constraint.name != "")
         stream << ' ' << constraint.name;
 
-    if(constraint.properties.curvature == E_Curvature::Nonconvex)
+    switch(constraint.properties.convexity)
+    {
+    case(E_Convexity::Linear):
+        stream << " (linear)";
+        break;
+    case(E_Convexity::Convex):
+        stream << " (convex)";
+        break;
+    case(E_Convexity::Nonconvex):
         stream << " (nonconvex)";
+        break;
+    case(E_Convexity::NotSet):
+    case(E_Convexity::Unknown):
+        break;
+    default:
+        break;
+    }
 
     stream << ":\t";
 
@@ -168,23 +180,15 @@ Interval LinearConstraint::calculateFunctionValue(const IntervalVector& interval
 
 bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
+void LinearConstraint::takeOwnership(ProblemPtr owner)
+{
+    ownerProblem = owner;
+    linearTerms.takeOwnership(owner);
+};
+
 SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient;
-
-    for(auto& T : linearTerms)
-    {
-        if(T->coefficient == 0.0)
-            continue;
-
-        auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
-        if(!element.second)
-        {
-            // Element already exists for the variable
-
-            element.second += T->coefficient;
-        }
-    }
+    SparseVariableVector gradient = linearTerms.calculateGradient(point);
 
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
@@ -229,13 +233,14 @@ void LinearConstraint::updateProperties()
     if(linearTerms.size() > 0)
     {
         properties.hasLinearTerms = true;
-        properties.classification = E_ConstraintClassification::Linear;
     }
     else
     {
         properties.hasLinearTerms = false;
-        properties.classification = E_ConstraintClassification::Linear;
     }
+
+    properties.convexity = E_Convexity::Linear;
+    properties.classification = E_ConstraintClassification::Linear;
 };
 
 void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
@@ -281,53 +286,18 @@ Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector& inter
 
 bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
 
+void QuadraticConstraint::takeOwnership(ProblemPtr owner)
+{
+    LinearConstraint::takeOwnership(owner);
+    quadraticTerms.takeOwnership(owner);
+};
+
 SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
-    SparseVariableVector gradient = LinearConstraint::calculateGradient(point, eraseZeroes);
+    SparseVariableVector linearGradient = LinearConstraint::calculateGradient(point, eraseZeroes);
+    SparseVariableVector quadraticGradient = quadraticTerms.calculateGradient(point);
 
-    for(auto& T : quadraticTerms)
-    {
-        if(T->coefficient == 0.0)
-            continue;
-
-        if(T->firstVariable == T->secondVariable) // variable squared
-        {
-            auto value = 2 * T->coefficient * point[T->firstVariable->index];
-            auto element = gradient.insert(std::make_pair(T->firstVariable, value));
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-        else
-        {
-            auto value = T->coefficient * point[T->secondVariable->index];
-            auto element = gradient.insert(std::make_pair(T->firstVariable, value));
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-
-            value = T->coefficient * point[T->firstVariable->index];
-
-            element = gradient.insert(std::make_pair(T->secondVariable, value));
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value;
-            }
-        }
-    }
-
-    if(eraseZeroes)
-        Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
-
-    return gradient;
+    return (Utilities::combineSparseVariableVectors(linearGradient, quadraticGradient));
 };
 
 void QuadraticConstraint::initializeGradientSparsityPattern()
@@ -450,6 +420,9 @@ void QuadraticConstraint::updateProperties()
     {
         properties.hasQuadraticTerms = false;
     }
+
+    auto convexity = quadraticTerms.getConvexity();
+    properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
 };
 
 void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
@@ -460,11 +433,58 @@ void NonlinearConstraint::add(QuadraticTerms terms) { QuadraticConstraint::add(t
 
 void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(term); };
 
+void NonlinearConstraint::add(MonomialTerms terms)
+{
+    if(monomialTerms.size() == 0)
+    {
+        monomialTerms = terms;
+        properties.hasMonomialTerms = true;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+};
+
+void NonlinearConstraint::add(MonomialTermPtr term)
+{
+    monomialTerms.push_back(term);
+    properties.hasMonomialTerms = true;
+};
+
+void NonlinearConstraint::add(SignomialTerms terms)
+{
+    if(signomialTerms.size() == 0)
+    {
+        signomialTerms = terms;
+        properties.hasSignomialTerms = true;
+    }
+    else
+    {
+        for(auto& T : terms)
+        {
+            add(T);
+        }
+    }
+};
+
+void NonlinearConstraint::add(SignomialTermPtr term)
+{
+    signomialTerms.push_back(term);
+    properties.hasSignomialTerms = true;
+};
+
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
-    if(nonlinearExpression.get() != nullptr)
+    if(nonlinearExpression)
     {
-        nonlinearExpression = std::make_shared<ExpressionPlus>(nonlinearExpression, expression);
+        NonlinearExpressions terms;
+        terms.expressions.push_back(nonlinearExpression);
+        terms.expressions.push_back(expression);
+        nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else
     {
@@ -483,6 +503,12 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
 {
     double value = QuadraticConstraint::calculateFunctionValue(point);
 
+    if(this->properties.hasMonomialTerms)
+        value += monomialTerms.calculate(point);
+
+    if(this->properties.hasSignomialTerms)
+        value += signomialTerms.calculate(point);
+
     if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(point);
 
@@ -492,6 +518,12 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
 Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = QuadraticConstraint::calculateFunctionValue(intervalVector);
+
+    if(this->properties.hasMonomialTerms)
+        value += monomialTerms.calculate(intervalVector);
+
+    if(this->properties.hasSignomialTerms)
+        value += signomialTerms.calculate(intervalVector);
 
     if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(intervalVector);
@@ -542,21 +574,69 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 element.first->second += value[0];
             }
         }
-
-        if(eraseZeroes)
-            Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {
         std::cout << "Error when evaluating gradient: " << e.what();
     }
 
-    return gradient;
+    SparseVariableVector monomialGradient;
+
+    if(this->properties.hasMonomialTerms)
+    {
+        monomialGradient = monomialTerms.calculateGradient(point);
+    }
+
+    SparseVariableVector signomialGradient;
+
+    if(this->properties.hasSignomialTerms)
+    {
+        signomialGradient = signomialTerms.calculateGradient(point);
+    }
+
+    auto result = Utilities::combineSparseVariableVectors(gradient, monomialGradient, signomialGradient);
+
+    if(eraseZeroes)
+        Utilities::erase_if<VariablePtr, double>(result, 0.0);
+
+    return result;
 };
 
 void NonlinearConstraint::initializeGradientSparsityPattern()
 {
     QuadraticConstraint::initializeGradientSparsityPattern();
+
+    if(this->properties.hasMonomialTerms)
+    {
+        for(auto& T : monomialTerms)
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& V : T->variables)
+            {
+                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
+                    == gradientSparsityPattern->end())
+                    gradientSparsityPattern->push_back(V);
+            }
+        }
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        for(auto& T : signomialTerms)
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& E : T->elements)
+            {
+                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
+                    == gradientSparsityPattern->end())
+                    gradientSparsityPattern->push_back(E->variable);
+            }
+        }
+    }
 
     for(auto& E : symbolicSparseJacobian)
     {
@@ -616,14 +696,24 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                 element.first->second += value[0];
             }
         }
-
-        if(eraseZeroes)
-            Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
     }
     catch(mc::FFGraph::Exceptions& e)
     {
         std::cout << "Error when evaluating hessian: " << e.what();
     }
+
+    if(this->properties.hasMonomialTerms)
+    {
+        // TODO
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        // TODO
+    }
+
+    if(eraseZeroes)
+        Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
 
     return (hessian);
 };
@@ -631,6 +721,16 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
 void NonlinearConstraint::initializeHessianSparsityPattern()
 {
     QuadraticConstraint::initializeHessianSparsityPattern();
+
+    if(this->properties.hasMonomialTerms)
+    {
+        // TODO
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        // TODO
+    }
 
     for(auto& E : symbolicSparseHessian)
     {
@@ -641,6 +741,15 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
 };
 
 bool NonlinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
+
+void NonlinearConstraint::takeOwnership(ProblemPtr owner)
+{
+    QuadraticConstraint::takeOwnership(owner);
+    monomialTerms.takeOwnership(owner);
+    signomialTerms.takeOwnership(owner);
+    if(nonlinearExpression != nullptr)
+        nonlinearExpression->takeOwnership(owner);
+};
 
 NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
@@ -656,24 +765,73 @@ void NonlinearConstraint::updateProperties()
 {
     QuadraticConstraint::updateProperties();
 
+    properties.classification = E_ConstraintClassification::Nonlinear;
+    variablesInNonlinearExpression.clear();
+
     if(nonlinearExpression != nullptr)
     {
         properties.hasNonlinearExpression = true;
-        properties.classification = E_ConstraintClassification::Nonlinear;
 
-        variablesInNonlinearExpression.clear();
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-            [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-                return (variableOne->index < variableTwo->index);
-            });
+        auto convexity = nonlinearExpression->getConvexity();
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
         properties.hasNonlinearExpression = false;
-        properties.classification = E_ConstraintClassification::Nonlinear;
     }
+
+    if(monomialTerms.size() > 0)
+    {
+        properties.hasMonomialTerms = true;
+        properties.classification = E_ConstraintClassification::Nonlinear;
+
+        for(auto& T : monomialTerms)
+        {
+            for(auto& V : T->variables)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), V)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(V);
+            }
+
+            auto convexity = T->getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
+    }
+    else
+    {
+        properties.hasMonomialTerms = false;
+    }
+
+    if(signomialTerms.size() > 0)
+    {
+        properties.hasSignomialTerms = true;
+        properties.classification = E_ConstraintClassification::Nonlinear;
+
+        for(auto& T : signomialTerms)
+        {
+            for(auto& E : T->elements)
+            {
+                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), E->variable)
+                    == variablesInNonlinearExpression.end())
+                    variablesInNonlinearExpression.push_back(E->variable);
+            }
+
+            auto convexity = T->getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
+    }
+    else
+    {
+        properties.hasSignomialTerms = false;
+    }
+
+    std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
 };
 
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint)
@@ -755,6 +913,12 @@ std::ostream& NonlinearConstraint::print(std::ostream& stream) const
 
     if(quadraticTerms.size() > 0)
         stream << " +" << quadraticTerms;
+
+    if(monomialTerms.size() > 0)
+        stream << " +" << monomialTerms;
+
+    if(signomialTerms.size() > 0)
+        stream << " +" << signomialTerms;
 
     stream << " +" << nonlinearExpression;
 

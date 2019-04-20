@@ -10,6 +10,12 @@
 
 #include "TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../PrimalSolver.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
 namespace SHOT
 {
 
@@ -50,10 +56,10 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
     auto userSetting = env->settings->getSetting<int>("FixedInteger.Source", "Primal");
 
-    auto dualBound = env->results->getDualBound();
+    auto dualBound = env->results->getCurrentDualBound();
 
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
-        && abs(allSolutions.at(0).objectiveValue - env->results->getDualBound()) / ((1e-10) + abs(dualBound))
+        && abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound()) / ((1e-10) + abs(dualBound))
             < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;
@@ -127,7 +133,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         {
             auto tmpSol = allSolutions.at(i);
 
-            if(tmpSol.maxDeviation.value <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
+            if(tmpSol.maxDeviation.value
+                <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
                     tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);
@@ -145,7 +152,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         {
             tmpSol = allSolutions.at(i);
 
-            if(tmpSol.maxDeviation.value <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
+            if(tmpSol.maxDeviation.value
+                <= env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"))
             {
                 env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FeasibleSolution,
                     tmpSol.objectiveValue, tmpSol.iterFound, tmpSol.maxDeviation);

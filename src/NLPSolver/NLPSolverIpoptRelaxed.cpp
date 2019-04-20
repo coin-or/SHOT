@@ -10,6 +10,10 @@
 
 #include "NLPSolverIpoptRelaxed.h"
 
+#include "../Settings.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -28,8 +32,8 @@ NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() {}
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
-    ipoptApplication->Options()->SetNumericValue(
-        "constr_viol_tol", env->settings->getSetting<double>("Ipopt.ConstraintViolationTolerance", "Subsolver") + 1e-12);
+    ipoptApplication->Options()->SetNumericValue("constr_viol_tol",
+        env->settings->getSetting<double>("Ipopt.ConstraintViolationTolerance", "Subsolver") + 1e-12);
 
     ipoptApplication->Options()->SetNumericValue(
         "tol", env->settings->getSetting<double>("Ipopt.RelativeConvergenceTolerance", "Subsolver") + 1e-12);

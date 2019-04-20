@@ -9,7 +9,10 @@
 */
 
 #pragma once
-#include "../Shared.h"
+#include "../Environment.h"
+
+#include <sstream>
+#include <string>
 
 namespace SHOT
 {

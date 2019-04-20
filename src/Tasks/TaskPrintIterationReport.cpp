@@ -10,6 +10,15 @@
 
 #include "TaskPrintIterationReport.h"
 
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
 namespace SHOT
 {
 
@@ -92,9 +101,9 @@ void TaskPrintIterationReport::run()
     }
 
     env->report->outputIterationDetail(currIter->iterationNumber, tmpType.str(), env->timing->getElapsedTime("Total"),
-        currIter->numHyperplanesAdded, currIter->totNumHyperplanes, env->results->getDualBound(),
-        env->results->getPrimalBound(), env->results->getAbsoluteObjectiveGap(),
-        env->results->getRelativeObjectiveGap(), currIter->objectiveValue, currIter->maxDeviationConstraint,
+        currIter->numHyperplanesAdded, currIter->totNumHyperplanes, env->results->getCurrentDualBound(),
+        env->results->getPrimalBound(), env->results->getAbsoluteCurrentObjectiveGap(),
+        env->results->getRelativeCurrentObjectiveGap(), currIter->objectiveValue, currIter->maxDeviationConstraint,
         currIter->maxDeviation, E_IterationLineType::DualSolution);
 }
 

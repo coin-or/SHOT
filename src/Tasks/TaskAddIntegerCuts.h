@@ -11,8 +11,6 @@
 #pragma once
 #include "TaskBase.h"
 
-#include "../MIPSolver/IMIPSolver.h"
-
 namespace SHOT
 {
 class TaskAddIntegerCuts : public TaskBase

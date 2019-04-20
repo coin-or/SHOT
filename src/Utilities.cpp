@@ -9,9 +9,12 @@
 */
 
 #include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
 
 #include "Utilities.h"
-#include "Shared.h"
 
 #include <boost/functional/hash/hash.hpp>
 #include <boost/format.hpp>
@@ -480,6 +483,99 @@ bool isInteger(double value)
     double intpart;
 
     return (std::modf(value, &intpart) == 0.0);
+}
+
+SparseVariableVector combineSparseVariableVectors(const SparseVariableVector& first, const SparseVariableVector& second)
+{
+    SparseVariableVector result;
+
+    for(auto& G : first)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : second)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    return result;
+}
+
+SparseVariableVector combineSparseVariableVectors(
+    const SparseVariableVector& first, const SparseVariableVector& second, const SparseVariableVector& third)
+{
+    SparseVariableVector result;
+
+    for(auto& G : first)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : second)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : third)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    return result;
+}
+
+E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
+{
+    if(first == E_Convexity::Unknown || second == E_Convexity::Unknown)
+        return E_Convexity::Unknown;
+
+    if(first == E_Convexity::Nonconvex || second == E_Convexity::Nonconvex)
+        return E_Convexity::Nonconvex;
+
+    if(first == E_Convexity::Convex && second == E_Convexity::Concave)
+        return E_Convexity::Unknown;
+
+    if(first == E_Convexity::Concave && second == E_Convexity::Convex)
+        return E_Convexity::Unknown;
+
+    if(first == E_Convexity::Convex || second == E_Convexity::Convex)
+        return E_Convexity::Convex;
+
+    if(first == E_Convexity::Concave || second == E_Convexity::Concave)
+        return E_Convexity::Concave;
+
+    return E_Convexity::Linear;
 }
 
 }; // namespace SHOT::Utilities

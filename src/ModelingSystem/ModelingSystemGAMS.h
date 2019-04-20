@@ -12,13 +12,15 @@
 #pragma once
 #include "IModelingSystem.h"
 
-#include <cstdio>
-#include <cstdlib>
-#include <sys/stat.h> // for mkdir
+#include "../Model/NonlinearExpressions.h"
+#include "../Model/Problem.h"
 
 #include "gmomcc.h"
 #include "gevmcc.h"
 #include "GamsNLinstr.h"
+
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
 namespace SHOT
 {
