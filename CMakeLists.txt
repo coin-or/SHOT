@@ -283,7 +283,7 @@ list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
 include_directories(${INCLUDE_DIRS})
 
-find_package(Boost 1.63.0 COMPONENTS system filesystem REQUIRED)
+find_package(Boost 1.63.0 COMPONENTS system REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
 
@@ -296,6 +296,9 @@ include_directories("${TINYXML2_DIR}/")
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
+
+# For gcc and C++ filesystem support; TODO, verify if needed for other compilers
+target_link_libraries(SHOTSolver stdc++fs)
 
 if(HAS_CPLEX)
   include_directories("${CPLEX_DIR}/cplex/include")

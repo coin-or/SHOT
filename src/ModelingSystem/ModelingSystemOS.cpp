@@ -32,7 +32,7 @@
 #include "CoinPackedVector.hpp"
 #include "CoinFinite.hpp"
 
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 namespace SHOT
 {
@@ -51,15 +51,15 @@ void ModelingSystemOS::updateSettings(SettingsPtr settings) {}
 E_ProblemCreationStatus ModelingSystemOS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& type)
 {
-    if(false && !boost::filesystem::exists(filename))
+    if(false && !std::filesystem::exists(std::filesystem::path(filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
-    boost::filesystem::path problemFile(filename);
-    boost::filesystem::path problemPath = problemFile.parent_path();
+    std::filesystem::path problemFile(filename);
+    std::filesystem::path problemPath = problemFile.parent_path();
 
     std::shared_ptr<OSInstance> instance;
 

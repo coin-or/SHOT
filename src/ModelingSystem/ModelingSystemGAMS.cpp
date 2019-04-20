@@ -19,11 +19,9 @@
 
 #include "../Model/Simplifications.h"
 
-#include "boost/filesystem.hpp"
-
-//#include <cstdio>
-//#include <cstdlib>
 #include <sys/stat.h> // for mkdir
+
+#include <filesystem>
 
 namespace SHOT
 {
@@ -94,7 +92,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         gevLogPChar(modelingEnvironment, "Reading options from ");
         gevLog(modelingEnvironment, buffer);
 
-        if(!boost::filesystem::exists(buffer))
+        if(!std::filesystem::exists(buffer))
             throw std::logic_error("Options file not found.");
 
         try
@@ -117,7 +115,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource)
 {
-    if(!boost::filesystem::exists(filename))
+    if(!std::filesystem::exists(filename))
     {
         env->output->outputError("File \"" + filename + "\" does not exist.");
 

@@ -12,9 +12,8 @@
 #include "../src/Solver.h"
 #include "../src/Utilities.h"
 
+#include <filesystem>
 #include <iostream>
-
-#include "boost/filesystem.hpp"
 
 using namespace SHOT;
 
@@ -79,7 +78,7 @@ bool SettingsTestOptions(bool useOSiL)
         filename = "options.opt";
     }
 
-    if(boost::filesystem::exists(filename))
+    if(std::filesystem::exists(filename))
         std::remove(filename.c_str());
 
     try
