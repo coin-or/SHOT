@@ -78,7 +78,7 @@ void TaskSolveIteration::run()
     if(env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()
         && env->settings->getSetting<bool>("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
-        auto newLB = env->results->getDualBound();
+        auto newLB = env->results->getCurrentDualBound();
         auto newUB = env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(

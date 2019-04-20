@@ -44,7 +44,8 @@ public:
 
     std::vector<DualSolution> dualSolutions;
     void addDualSolution(DualSolution solution);
-    double getDualBound();
+    double getCurrentDualBound();
+    double getGlobalDualBound();
     void setDualBound(double value);
 
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
@@ -52,11 +53,16 @@ public:
     double currentDualBound;
     double currentPrimalBound;
 
+    double globalDualBound;
+
     bool isRelativeObjectiveGapToleranceMet();
     bool isAbsoluteObjectiveGapToleranceMet();
 
-    double getAbsoluteObjectiveGap();
-    double getRelativeObjectiveGap();
+    double getAbsoluteGlobalObjectiveGap();
+    double getRelativeGlobalObjectiveGap();
+
+    double getAbsoluteCurrentObjectiveGap();
+    double getRelativeCurrentObjectiveGap();
 
     void createIteration();
     IterationPtr getCurrentIteration();

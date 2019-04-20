@@ -36,7 +36,7 @@ Iteration::Iteration(EnvironmentPtr envPtr)
     this->MIPSolutionLimitUpdated = false;
     this->solutionStatus = E_ProblemSolutionStatus::None;
 
-    currentObjectiveBounds.first = env->results->getDualBound();
+    currentObjectiveBounds.first = env->results->getCurrentDualBound();
     currentObjectiveBounds.second = env->results->getPrimalBound();
 }
 

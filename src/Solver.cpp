@@ -153,6 +153,36 @@ bool Solver::setProblem(std::string fileName)
     boost::filesystem::path problemExtension = problemFile.extension();
     boost::filesystem::path problemPath = problemFile.parent_path();
 
+    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
+
+    // Removes path
+    boost::filesystem::path problemName = problemFile.stem();
+    env->settings->updateSetting("ProblemName", "Input", problemName.string());
+    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
+
+    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
+        == ES_OutputDirectory::Program)
+    {
+        boost::filesystem::path debugPath(boost::filesystem::current_path());
+        debugPath /= problemName;
+
+        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
+        env->settings->updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
+    }
+    else
+    {
+        boost::filesystem::path debugPath(problemPath);
+        debugPath /= problemName;
+
+        env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
+        env->settings->updateSetting("ResultPath", "Output", problemPath.string());
+    }
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        initializeDebugMode();
+    }
+
 #ifndef HAS_OS
     if(problemExtension == ".osil" || problemExtension == ".xml")
     {
@@ -283,45 +313,6 @@ bool Solver::setProblem(std::string fileName)
         env->output->outputError("Error when reading problem from \"" + fileName + "\"", eclass.message);
 
         return (false);
-    }
-
-    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
-
-    // Removes path
-    boost::filesystem::path problemName = problemFile.stem();
-    env->settings->updateSetting("ProblemName", "Input", problemName.string());
-
-    if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
-        == ES_OutputDirectory::Program)
-    {
-        boost::filesystem::path debugPath(boost::filesystem::current_path());
-        debugPath /= problemName;
-
-        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
-        env->settings->updateSetting("ResultPath", "Output", boost::filesystem::current_path().string());
-    }
-    else
-    {
-        boost::filesystem::path debugPath(problemPath);
-        debugPath /= problemName;
-
-        env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
-        env->settings->updateSetting("ResultPath", "Output", problemPath.string());
-    }
-
-    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
-    {
-        initializeDebugMode();
-
-        std::stringstream filename;
-        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/originalproblem";
-        filename << ".txt";
-
-        std::stringstream problem;
-        problem << env->problem;
-
-        Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
     verifySettings();
@@ -931,7 +922,8 @@ void Solver::initializeSettings()
         "Sets the relative gap filter on objective values in the solution pool", 0, 1.0e+75);
 
     env->settings->createSetting("Cplex.SolnPoolIntensity", "Subsolver", 0,
-        "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. 2: "
+        "Controls how much time and memory should be used when filling the solution pool: 0: Automatic. 1: Mild. "
+        "2: "
         "Moderate. 3: Aggressive. 4: Very aggressive",
         0, 4);
 
@@ -1209,13 +1201,13 @@ template <typename T> void Solver::updateSetting(std::string name, std::string c
     env->settings->updateSetting(name, category, value);
 }
 
-double Solver::getDualBound() { return (env->results->getDualBound()); }
+double Solver::getCurrentDualBound() { return (env->results->getCurrentDualBound()); }
 
 double Solver::getPrimalBound() { return (env->results->getPrimalBound()); }
 
-double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteObjectiveGap()); }
+double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteGlobalObjectiveGap()); }
 
-double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeObjectiveGap()); }
+double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeGlobalObjectiveGap()); }
 
 PrimalSolution Solver::getPrimalSolution()
 {

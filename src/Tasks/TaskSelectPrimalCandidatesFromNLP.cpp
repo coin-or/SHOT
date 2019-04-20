@@ -1,4 +1,4 @@
-/**
+/** getCurrentDualBound() getCurrentDualBound() getCurrentDualBound()
    The Supporting Hyperplane Optimization Toolkit (SHOT).
 
    @author Andreas Lundell, Åbo Akademi University
@@ -121,7 +121,7 @@ void TaskSelectPrimalCandidatesFromNLP::run()
         return;
     }
 
-    if(env->results->getRelativeObjectiveGap() < 1e-10)
+    if(env->results->getRelativeGlobalObjectiveGap() < 1e-10)
     {
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
         return;
@@ -321,16 +321,18 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                    env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), tmpObj,
-                    mostDevConstr.constraint->index, mostDevConstr.normalizedValue, E_IterationLineType::PrimalNLP);
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                    env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
+                    tmpObj, mostDevConstr.constraint->index, mostDevConstr.normalizedValue,
+                    E_IterationLineType::PrimalNLP);
             }
             else
             {
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                    env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), tmpObj,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                    env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
+                    tmpObj,
                     -1, // Not shown
                     0.0, // Not shown
                     E_IterationLineType::PrimalNLP);
@@ -437,17 +439,18 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                    env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), tmpObj,
-                    mostDevConstr.constraint->index, mostDevConstr.normalizedValue, E_IterationLineType::PrimalNLP);
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                    env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
+                    tmpObj, mostDevConstr.constraint->index, mostDevConstr.normalizedValue,
+                    E_IterationLineType::PrimalNLP);
             }
             else
             {
                 env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
                     ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getDualBound(), env->results->getPrimalBound(),
-                    env->results->getAbsoluteObjectiveGap(), env->results->getRelativeObjectiveGap(), NAN, -1, NAN,
-                    E_IterationLineType::PrimalNLP);
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                    env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
+                    -1, NAN, E_IterationLineType::PrimalNLP);
             }
 
             if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))

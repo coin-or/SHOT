@@ -75,7 +75,7 @@ public:
 
     template <typename T> void updateSetting(std::string name, std::string category, T value);
 
-    double getDualBound();
+    double getCurrentDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();

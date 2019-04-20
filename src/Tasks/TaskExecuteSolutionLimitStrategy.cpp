@@ -69,7 +69,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 
         if(currIter->iterationNumber - env->solutionStatistics.iterationLastDualBoundUpdate
                 > env->settings->getSetting<int>("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual")
-            && env->results->getDualBound() > SHOT_DBL_MIN)
+            && env->results->getCurrentDualBound() > SHOT_DBL_MIN)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit;
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
@@ -84,7 +84,7 @@ void TaskExecuteSolutionLimitStrategy::run()
 
         if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastDualBoundUpdate
                 > env->settings->getSetting<double>("MIP.SolutionLimit.ForceOptimal.Time", "Dual")
-            && env->results->getDualBound() > SHOT_DBL_MIN)
+            && env->results->getCurrentDualBound() > SHOT_DBL_MIN)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit;
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);

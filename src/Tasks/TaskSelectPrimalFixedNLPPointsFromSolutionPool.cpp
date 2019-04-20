@@ -56,10 +56,10 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
     auto userSetting = env->settings->getSetting<int>("FixedInteger.Source", "Primal");
 
-    auto dualBound = env->results->getDualBound();
+    auto dualBound = env->results->getCurrentDualBound();
 
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
-        && abs(allSolutions.at(0).objectiveValue - env->results->getDualBound()) / ((1e-10) + abs(dualBound))
+        && abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound()) / ((1e-10) + abs(dualBound))
             < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;

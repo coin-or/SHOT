@@ -75,8 +75,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         // Check if better dual bound
         double tmpDualObjBound = context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound);
 
-        if((isMinimization && tmpDualObjBound > env->results->getDualBound())
-            || (!isMinimization && tmpDualObjBound < env->results->getDualBound()))
+        if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+            || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
         {
             VectorDouble doubleSolution; // Empty since we have no point
 
@@ -246,7 +246,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 = std::max(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount),
                     env->solutionStatistics.numberOfExploredNodes);
 
-            auto bounds = std::make_pair(env->results->getDualBound(), env->results->getPrimalBound());
+            auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
             if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")

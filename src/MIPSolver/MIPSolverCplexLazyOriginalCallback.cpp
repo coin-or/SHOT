@@ -184,8 +184,8 @@ void InfoCallbackI::main() // Called at each node...
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    auto absObjGap = env->results->getAbsoluteObjectiveGap();
-    auto relObjGap = env->results->getRelativeObjectiveGap();
+    auto absObjGap = env->results->getAbsoluteGlobalObjectiveGap();
+    auto relObjGap = env->results->getRelativeGlobalObjectiveGap();
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
@@ -320,8 +320,8 @@ void CtCallbackI::main()
     solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
     // Check if better dual bound
-    if((isMinimization && tmpDualObjBound > env->results->getDualBound())
-        || (!isMinimization && tmpDualObjBound < env->results->getDualBound()))
+    if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
+        || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
     {
         DualSolution sol = { solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
             env->results->getCurrentIteration()->iterationNumber };

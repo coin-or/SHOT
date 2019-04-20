@@ -863,11 +863,11 @@ void Report::outputSolutionReport()
     report << "\r\n";
 
     report << " Objective bound [dual, primal]:                 ";
-    report << "[" << Utilities::toStringFormat(env->results->getDualBound(), "%g") << ", ";
+    report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "%g") << ", ";
     report << Utilities::toStringFormat(env->results->getPrimalBound(), "%g") << "]\r\n";
     report << " Objective gap absolute / relative:              ";
-    report << "" << Utilities::toStringFormat(env->results->getAbsoluteObjectiveGap(), "%g") << " / ";
-    report << Utilities::toStringFormat(env->results->getRelativeObjectiveGap(), "%g") << "\r\n";
+    report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "%g") << " / ";
+    report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "%g") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
@@ -876,26 +876,26 @@ void Report::outputSolutionReport()
     if(env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         fulfilled << "  - absolute objective gap tolerance             ";
-        fulfilled << env->results->getAbsoluteObjectiveGap() << " <= ";
+        fulfilled << env->results->getAbsoluteGlobalObjectiveGap() << " <= ";
         fulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - absolute objective gap tolerance             ";
-        unfulfilled << env->results->getAbsoluteObjectiveGap() << " > ";
+        unfulfilled << env->results->getAbsoluteGlobalObjectiveGap() << " > ";
         unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") << "\r\n";
     }
 
     if(env->results->isRelativeObjectiveGapToleranceMet())
     {
         fulfilled << "  - relative objective gap tolerance             ";
-        fulfilled << env->results->getRelativeObjectiveGap() << " <= ";
+        fulfilled << env->results->getRelativeGlobalObjectiveGap() << " <= ";
         fulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
     else
     {
         unfulfilled << "  - relative objective gap tolerance             ";
-        unfulfilled << env->results->getRelativeObjectiveGap() << " > ";
+        unfulfilled << env->results->getRelativeGlobalObjectiveGap() << " > ";
         unfulfilled << env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") << "\r\n";
     }
 

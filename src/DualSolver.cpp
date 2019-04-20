@@ -34,7 +34,7 @@ void DualSolver::addDualSolutionCandidate(DualSolution solution)
 
 void DualSolver::checkDualSolutionCandidates()
 {
-    double currDualBound = env->results->getDualBound();
+    double currDualBound = env->results->getCurrentDualBound();
     double currPrimalBound = env->results->getPrimalBound();
 
     double gapRelTolerance = env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination");
