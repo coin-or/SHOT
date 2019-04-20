@@ -45,7 +45,7 @@
 #include "../Tasks/TaskCheckTimeLimit.h"
 #include "../Tasks/TaskCheckUserTermination.h"
 
-#include "../Tasks/TaskInitializeLinesearch.h"
+#include "../Tasks/TaskInitializeRootsearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
 #include "../Tasks/TaskSelectHyperplanePointsECP.h"
 #include "../Tasks/TaskAddHyperplanes.h"
@@ -53,13 +53,13 @@
 #include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
-#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
 #include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"
@@ -104,8 +104,8 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     TaskBase* tCreateDualProblem = new TaskCreateDualProblem(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase* tInitializeLinesearch = new TaskInitializeLinesearch(env);
-    env->tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
+    TaskBase* tInitializeRootsearch = new TaskInitializeRootsearch(env);
+    env->tasks->addTask(tInitializeRootsearch, "InitializeRootsearch");
 
     TaskBase* tInitializeIteration = new TaskInitializeIteration(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
@@ -133,12 +133,12 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
     dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase* tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch(env);
-        env->tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+        TaskBase* tSelectPrimRootsearch = new TaskSelectPrimalCandidatesFromRootsearch(env);
+        env->tasks->addTask(tSelectPrimRootsearch, "SelectPrimRootsearch");
+        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimRootsearch);
     }
 
     TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
@@ -230,7 +230,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        TaskBase* tSelectObjectiveHPPts = new TaskSelectHyperplanePointsByObjectiveLinesearch(env);
+        TaskBase* tSelectObjectiveHPPts = new TaskSelectHyperplanePointsByObjectiveRootsearch(env);
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 

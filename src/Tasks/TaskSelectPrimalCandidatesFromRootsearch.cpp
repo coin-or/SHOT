@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskSelectPrimalCandidatesFromLinesearch.h"
+#include "TaskSelectPrimalCandidatesFromRootsearch.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -20,27 +20,27 @@
 
 #include "../Model/Problem.h"
 
-#include "../LinesearchMethod/ILinesearchMethod.h"
+#include "../RootsearchMethod/IRootsearchMethod.h"
 
 namespace SHOT
 {
 
-TaskSelectPrimalCandidatesFromLinesearch::TaskSelectPrimalCandidatesFromLinesearch(EnvironmentPtr envPtr)
+TaskSelectPrimalCandidatesFromRootsearch::TaskSelectPrimalCandidatesFromRootsearch(EnvironmentPtr envPtr)
     : TaskBase(envPtr)
 {
 }
 
-TaskSelectPrimalCandidatesFromLinesearch::~TaskSelectPrimalCandidatesFromLinesearch() {}
+TaskSelectPrimalCandidatesFromRootsearch::~TaskSelectPrimalCandidatesFromRootsearch() {}
 
-void TaskSelectPrimalCandidatesFromLinesearch::run() { this->run(env->results->getCurrentIteration()->solutionPoints); }
+void TaskSelectPrimalCandidatesFromRootsearch::run() { this->run(env->results->getCurrentIteration()->solutionPoints); }
 
-std::string TaskSelectPrimalCandidatesFromLinesearch::getType()
+std::string TaskSelectPrimalCandidatesFromRootsearch::getType()
 {
     std::string type = typeid(this).name();
     return (type);
 }
 
-void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> solPoints)
+void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> solPoints)
 {
     auto currIter = env->results->getCurrentIteration();
 
@@ -86,12 +86,12 @@ void TaskSelectPrimalCandidatesFromLinesearch::run(std::vector<SolutionPoint> so
 
                         env->timing->stopTimer("PrimalBoundStrategyRootSearch");
 
-                        env->primalSolver->addPrimalSolutionCandidate(xNewc.first, E_PrimalSolutionSource::Linesearch,
+                        env->primalSolver->addPrimalSolutionCandidate(xNewc.first, E_PrimalSolutionSource::Rootsearch,
                             env->results->getCurrentIteration()->iterationNumber);
                     }
                     catch(std::exception& e)
                     {
-                        env->output->outputWarning("Cannot find solution with primal bound linesearch.");
+                        env->output->outputWarning("Cannot find solution with primal bound rootsearch.");
                     }
                 }
             }

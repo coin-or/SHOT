@@ -6,8 +6,8 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../Solver.h"
-#include "../Utilities.h"
+#include "../src/Solver.h"
+#include "../src/Utilities.h"
 
 #include <iostream>
 

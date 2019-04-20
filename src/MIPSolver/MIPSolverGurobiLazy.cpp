@@ -295,10 +295,10 @@ void GurobiCallback::callback()
             auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
-            if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+            if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
                 && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
-                taskSelectPrimalSolutionFromLinesearch.get()->run(candidatePoints);
+                taskSelectPrimalSolutionFromRootsearch.get()->run(candidatePoints);
             }
 
             if(checkFixedNLPStrategy(candidatePoints.at(0)))
@@ -493,15 +493,15 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskSelectHPPtsByObjectiveLinesearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch>(
-            std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env));
+        taskSelectHPPtsByObjectiveRootsearch = std::shared_ptr<TaskSelectHyperplanePointsByObjectiveRootsearch>(
+            std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env));
     }
 
-    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromLinesearch = std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch>(
-            std::make_shared<TaskSelectPrimalCandidatesFromLinesearch>(env));
+        taskSelectPrimalSolutionFromRootsearch = std::shared_ptr<TaskSelectPrimalCandidatesFromRootsearch>(
+            std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env));
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();
@@ -549,7 +549,7 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
             if(env->reformulatedProblem->objectiveFunction->properties.classification
                 > E_ObjectiveFunctionClassification::Quadratic)
             {
-                taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+                taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
             }
         }
         else
@@ -559,7 +559,7 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
             if(env->reformulatedProblem->objectiveFunction->properties.classification
                 > E_ObjectiveFunctionClassification::Quadratic)
             {
-                taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+                taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
             }
         }
 

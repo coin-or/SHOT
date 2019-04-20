@@ -50,9 +50,9 @@ enum class E_EventType
 
 enum class E_HyperplaneSource
 {
-    MIPOptimalLinesearch,
-    MIPSolutionPoolLinesearch,
-    LPRelaxedLinesearch,
+    MIPOptimalRootsearch,
+    MIPSolutionPoolRootsearch,
+    LPRelaxedRootsearch,
     MIPOptimalSolutionPoint,
     MIPSolutionPoolSolutionPoint,
     LPRelaxedSolutionPoint,
@@ -61,7 +61,7 @@ enum class E_HyperplaneSource
     PrimalSolutionSearchInteriorObjective,
     InteriorPointSearch,
     MIPCallbackRelaxed,
-    ObjectiveLinesearch
+    ObjectiveRootsearch
 };
 
 enum class E_IterationLineType
@@ -123,8 +123,8 @@ enum class E_PrimalNLPSource
 
 enum class E_PrimalSolutionSource
 {
-    Linesearch,
-    LinesearchFixedIntegers,
+    Rootsearch,
+    RootsearchFixedIntegers,
     NLPFixedIntegers,
     NLPRelaxed,
     MIPSolutionPool,

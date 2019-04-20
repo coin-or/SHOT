@@ -57,9 +57,9 @@ bool MIPSolutionLimitStrategyIncrease::updateLimit()
         return (true);
     }
 
-    bool useObjectiveLinesearchUpdate = true;
+    bool useObjectiveRootsearchUpdate = true;
 
-    if(prevIter->maxDeviationConstraint == -1 && useObjectiveLinesearchUpdate)
+    if(prevIter->maxDeviationConstraint == -1 && useObjectiveRootsearchUpdate)
     {
         return (false);
     }

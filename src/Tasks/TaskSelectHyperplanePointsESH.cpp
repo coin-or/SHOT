@@ -21,7 +21,7 @@
 #include "../Model/Problem.h"
 
 #include "TaskSelectHyperplanePointsECP.h"
-#include "../LinesearchMethod/ILinesearchMethod.h"
+#include "../RootsearchMethod/IRootsearchMethod.h"
 
 namespace SHOT
 {
@@ -63,7 +63,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
     auto constraintSelectionFactor
         = env->settings->getSetting<double>("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
-    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Linesearch.UniqueConstraints", "Dual");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Rootsearch.UniqueConstraints", "Dual");
 
     int rootMaxIter = env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver");
     double rootTerminationTolerance = env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver");
@@ -71,7 +71,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         = env->settings->getSetting<double>("Rootsearch.ActiveConstraintTolerance", "Subsolver");
     int maxHyperplanesPerIter = env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual");
     double rootsearchConstraintTolerance
-        = env->settings->getSetting<double>("ESH.Linesearch.ConstraintTolerance", "Dual");
+        = env->settings->getSetting<double>("ESH.Rootsearch.ConstraintTolerance", "Dual");
     double constraintMaxSelectionFactor
         = env->settings->getSetting<double>("HyperplaneCuts.MaxConstraintFactor", "Dual");
 
@@ -165,7 +165,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             env->timing->stopTimer("DualCutGenerationRootSearch");
             externalPoint = solPoints.at(i).point;
 
-            env->output->outputInfo("     Cannot find solution with linesearch, using solution point instead.");
+            env->output->outputInfo("     Cannot find solution with rootsearch, using solution point instead.");
         }
 
         auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
@@ -192,15 +192,15 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             }
             else if(i == 0 && currIter->isMIP())
             {
-                hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
+                hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
             }
             else if(currIter->isMIP())
             {
-                hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
+                hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
             }
             else
             {
-                hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
+                hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
             }
 
             env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
@@ -252,7 +252,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 externalPoint = solPoints.at(i).point;
 
-                env->output->outputInfo("     Cannot find solution with linesearch, using solution point instead.");
+                env->output->outputInfo("     Cannot find solution with rootsearch, using solution point instead.");
             }
 
             auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
@@ -270,15 +270,15 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 }
                 else if(i == 0 && currIter->isMIP())
                 {
-                    hyperplane.source = E_HyperplaneSource::MIPOptimalLinesearch;
+                    hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
                 }
                 else if(currIter->isMIP())
                 {
-                    hyperplane.source = E_HyperplaneSource::MIPSolutionPoolLinesearch;
+                    hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
                 }
                 else
                 {
-                    hyperplane.source = E_HyperplaneSource::LPRelaxedLinesearch;
+                    hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
                 }
 
                 env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);

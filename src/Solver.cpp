@@ -576,12 +576,12 @@ void Solver::initializeSettings()
     enumAddPrimalPointAsInteriorPoint.clear();
 
     env->settings->createSetting("HyperplaneCuts.MaxConstraintFactor", "Dual", 0.5,
-        "Linesearch performed on constraints with values larger than this factor times the maximum value", 1e-6, 1.0);
+        "Rootsearch performed on constraints with values larger than this factor times the maximum value", 1e-6, 1.0);
 
     env->settings->createSetting(
-        "ESH.Linesearch.UniqueConstraints", "Dual", false, "Allow only one hyperplane per constraint per iteration");
+        "ESH.Rootsearch.UniqueConstraints", "Dual", false, "Allow only one hyperplane per constraint per iteration");
 
-    env->settings->createSetting("ESH.Linesearch.ConstraintTolerance", "Dual", 1e-8,
+    env->settings->createSetting("ESH.Rootsearch.ConstraintTolerance", "Dual", 1e-8,
         "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
 
     // Dual strategy settings: Fixed integer (NLP) strategy
@@ -872,9 +872,9 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
-    // Primal settings: linesearch
+    // Primal settings: rootsearch
 
-    env->settings->createSetting("Linesearch.Use", "Primal", true, "Use a linesearch to find primal solutions");
+    env->settings->createSetting("Rootsearch.Use", "Primal", true, "Use a rootsearch to find primal solutions");
 
     // Primal settings: tolerances for accepting primal solutions
 
@@ -988,13 +988,13 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Rootsearch.MaxIterations", "Subsolver", 100, "Maximal root search iterations", 0, SHOT_INT_MAX);
 
-    VectorString enumLinesearchMethod;
-    enumLinesearchMethod.push_back("BoostTOMS748");
-    enumLinesearchMethod.push_back("BoostBisection");
-    enumLinesearchMethod.push_back("Bisection");
+    VectorString enumRootsearchMethod;
+    enumRootsearchMethod.push_back("BoostTOMS748");
+    enumRootsearchMethod.push_back("BoostBisection");
+    enumRootsearchMethod.push_back("Bisection");
     env->settings->createSetting("Rootsearch.Method", "Subsolver", static_cast<int>(ES_RootsearchMethod::BoostTOMS748),
-        "Root search method to use", enumLinesearchMethod);
-    enumLinesearchMethod.clear();
+        "Root search method to use", enumRootsearchMethod);
+    enumRootsearchMethod.clear();
 
     env->settings->createSetting("Rootsearch.TerminationTolerance", "Subsolver", 1e-16,
         "Epsilon lambda tolerance for root search", 0.0, SHOT_DBL_MAX);
@@ -1181,7 +1181,7 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
 
-            env->settings->updateSetting("Linesearch.Use", "Primal", false);
+            env->settings->updateSetting("Rootsearch.Use", "Primal", false);
 
             env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);

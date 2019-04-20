@@ -12,8 +12,8 @@
 
 #include "../Environment.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
-#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
 #include "../Tasks/TaskSelectHyperplanePointsECP.h"
@@ -43,8 +43,8 @@ protected:
 
     std::shared_ptr<TaskSelectPrimalCandidatesFromNLP> tSelectPrimNLP;
     std::shared_ptr<TaskBase> taskSelectHPPts;
-    std::shared_ptr<TaskSelectHyperplanePointsByObjectiveLinesearch> taskSelectHPPtsByObjectiveLinesearch;
-    std::shared_ptr<TaskSelectPrimalCandidatesFromLinesearch> taskSelectPrimalSolutionFromLinesearch;
+    std::shared_ptr<TaskSelectHyperplanePointsByObjectiveRootsearch> taskSelectHPPtsByObjectiveRootsearch;
+    std::shared_ptr<TaskSelectPrimalCandidatesFromRootsearch> taskSelectPrimalSolutionFromRootsearch;
     std::shared_ptr<TaskUpdateInteriorPoint> tUpdateInteriorPoint;
 
     bool checkFixedNLPStrategy(SolutionPoint point);

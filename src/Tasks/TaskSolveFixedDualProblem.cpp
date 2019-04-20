@@ -19,7 +19,7 @@
 #include "../Timing.h"
 #include "../Utilities.h"
 
-#include "../LinesearchMethod/ILinesearchMethod.h"
+#include "../RootsearchMethod/IRootsearchMethod.h"
 
 #include "../MIPSolver/IMIPSolver.h"
 
@@ -194,7 +194,7 @@ void TaskSolveFixedDualProblem::run()
                 {
 
                     env->output->outputWarning(
-                        "     Cannot find solution with linesearch for fixed LP, using solution point instead:");
+                        "     Cannot find solution with rootsearch for fixed LP, using solution point instead:");
                     env->output->outputWarning(e.what());
                 }
             }

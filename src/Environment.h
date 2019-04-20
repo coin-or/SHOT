@@ -17,7 +17,7 @@
 namespace SHOT
 {
 
-class ILinesearchMethod;
+class IRootsearchMethod;
 
 class Environment
 {
@@ -38,7 +38,7 @@ public:
     TimingPtr timing;
     EventHandlerPtr events;
 
-    std::shared_ptr<ILinesearchMethod> rootsearchMethod;
+    std::shared_ptr<IRootsearchMethod> rootsearchMethod;
 
     SolutionStatistics solutionStatistics;
 

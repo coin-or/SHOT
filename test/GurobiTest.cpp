@@ -8,12 +8,12 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../Solver.h"
-#include "../Output.h"
-#include "../Settings.h"
-#include "../Utilities.h"
+#include "../src/Solver.h"
+#include "../src/Output.h"
+#include "../src/Settings.h"
+#include "../src/Utilities.h"
 
-#include "../Model/Problem.h"
+#include "../src/Model/Problem.h"
 
 #include <iostream>
 

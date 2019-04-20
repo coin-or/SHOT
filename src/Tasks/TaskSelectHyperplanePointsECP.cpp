@@ -44,7 +44,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
 
     auto constraintSelectionFactor
         = env->settings->getSetting<double>("HyperplaneCuts.ConstraintSelectionFactor", "Dual");
-    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Linesearch.UniqueConstraints", "Dual");
+    bool useUniqueConstraints = env->settings->getSetting<bool>("ESH.Rootsearch.UniqueConstraints", "Dual");
 
     int maxHyperplanesPerIter = env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual");
     double constraintMaxSelectionFactor

@@ -45,7 +45,7 @@
 #include "../Tasks/TaskCheckTimeLimit.h"
 #include "../Tasks/TaskCheckUserTermination.h"
 
-#include "../Tasks/TaskInitializeLinesearch.h"
+#include "../Tasks/TaskInitializeRootsearch.h"
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
 #include "../Tasks/TaskSelectHyperplanePointsECP.h"
 #include "../Tasks/TaskAddHyperplanes.h"
@@ -53,13 +53,13 @@
 #include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
 
 #include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
-#include "../Tasks/TaskSelectPrimalCandidatesFromLinesearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
 #include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
 
 #include "../Tasks/TaskUpdateInteriorPoint.h"
 
-#include "../Tasks/TaskSelectHyperplanePointsByObjectiveLinesearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
 #include "../Tasks/TaskSolveFixedDualProblem.h"
 
 #include "../Tasks/TaskAddIntegerCuts.h"

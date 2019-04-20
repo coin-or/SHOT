@@ -13,18 +13,18 @@
 
 #include "../Structs.h"
 
-#include <vector>
-
 namespace SHOT
 {
-class TaskSelectHyperplanePointsByObjectiveLinesearch : public TaskBase
+class TaskSelectPrimalCandidatesFromRootsearch : public TaskBase
 {
 public:
-    TaskSelectHyperplanePointsByObjectiveLinesearch(EnvironmentPtr envPtr);
-    virtual ~TaskSelectHyperplanePointsByObjectiveLinesearch();
-
+    TaskSelectPrimalCandidatesFromRootsearch(EnvironmentPtr envPtr);
+    virtual ~TaskSelectPrimalCandidatesFromRootsearch();
     virtual void run();
     virtual void run(std::vector<SolutionPoint> solPoints);
+
     virtual std::string getType();
+
+private:
 };
 } // namespace SHOT

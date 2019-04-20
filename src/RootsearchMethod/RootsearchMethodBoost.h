@@ -9,8 +9,8 @@
 */
 
 #pragma once
-#include "ILinesearchMethod.h"
-#include "Environment.h"
+#include "IRootsearchMethod.h"
+#include "../Environment.h"
 
 namespace SHOT
 {
@@ -68,11 +68,11 @@ public:
     bool operator()(double min, double max) { return (abs(min - max) <= tol); }
 };
 
-class LinesearchMethodBoost : public ILinesearchMethod
+class RootsearchMethodBoost : public IRootsearchMethod
 {
 public:
-    LinesearchMethodBoost(EnvironmentPtr envPtr);
-    virtual ~LinesearchMethodBoost();
+    RootsearchMethodBoost(EnvironmentPtr envPtr);
+    virtual ~RootsearchMethodBoost();
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
         double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate);

@@ -103,10 +103,10 @@ public:
 
         switch(source)
         {
-        case E_HyperplaneSource::MIPOptimalLinesearch:
+        case E_HyperplaneSource::MIPOptimalRootsearch:
             identifier = "H_LS_I";
             break;
-        case E_HyperplaneSource::LPRelaxedLinesearch:
+        case E_HyperplaneSource::LPRelaxedRootsearch:
             identifier = "H_LS_R";
             break;
         case E_HyperplaneSource::MIPOptimalSolutionPoint:
@@ -133,7 +133,7 @@ public:
         case E_HyperplaneSource::MIPCallbackRelaxed:
             identifier = "H_CB_R";
             break;
-        case E_HyperplaneSource::ObjectiveLinesearch:
+        case E_HyperplaneSource::ObjectiveRootsearch:
             identifier = "H_LS_OBJ";
             break;
         default:

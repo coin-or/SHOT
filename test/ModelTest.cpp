@@ -8,19 +8,17 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../Solver.h"
-#include "../Environment.h"
-#include "../Settings.h"
+#include "../src/Solver.h"
+#include "../src/Environment.h"
+#include "../src/Settings.h"
 
-#include "../Model/Variables.h"
-#include "../Model/Terms.h"
-#include "../Model/Constraints.h"
-#include "../Model/NonlinearExpressions.h"
-#include "../Model/Problem.h"
+#include "../src/Model/Variables.h"
+#include "../src/Model/Terms.h"
+#include "../src/Model/Constraints.h"
+#include "../src/Model/NonlinearExpressions.h"
+#include "../src/Model/Problem.h"
 
-#include "LinesearchMethod/LinesearchMethodBoost.h"
-
-#include "Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
 

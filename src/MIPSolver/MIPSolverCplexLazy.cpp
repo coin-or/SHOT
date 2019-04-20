@@ -53,13 +53,13 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskSelectHPPtsByObjectiveLinesearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
+        taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
     }
 
-    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromLinesearch = std::make_shared<TaskSelectPrimalCandidatesFromLinesearch>(env);
+        taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();
@@ -182,7 +182,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
                     > E_ObjectiveFunctionClassification::Quadratic)
                 {
-                    taskSelectHPPtsByObjectiveLinesearch->run(solutionPoints);
+                    taskSelectHPPtsByObjectiveRootsearch->run(solutionPoints);
                 }
 
                 env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
@@ -249,10 +249,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             auto bounds = std::make_pair(env->results->getCurrentDualBound(), env->results->getPrimalBound());
             currIter->currentObjectiveBounds = bounds;
 
-            if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+            if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
                 && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
-                taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
+                taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
             }
 
             if(checkFixedNLPStrategy(candidatePoints.at(0)))
@@ -452,7 +452,7 @@ void CplexCallback::addLazyConstraint(
         if(env->reformulatedProblem->objectiveFunction->properties.classification
             > E_ObjectiveFunctionClassification::Quadratic)
         {
-            taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+            taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
         }
 
         for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)

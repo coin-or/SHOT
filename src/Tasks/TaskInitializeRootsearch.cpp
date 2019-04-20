@@ -8,29 +8,29 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskInitializeLinesearch.h"
+#include "TaskInitializeRootsearch.h"
 
 #include "../Timing.h"
 
-#include "../LinesearchMethod/LinesearchMethodBoost.h"
+#include "../RootsearchMethod/RootsearchMethodBoost.h"
 
 namespace SHOT
 {
 
-TaskInitializeLinesearch::TaskInitializeLinesearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
+TaskInitializeRootsearch::TaskInitializeRootsearch(EnvironmentPtr envPtr) : TaskBase(envPtr)
 {
     env->timing->startTimer("DualCutGenerationRootSearch");
 
-    env->rootsearchMethod = std::dynamic_pointer_cast<ILinesearchMethod>(std::make_shared<LinesearchMethodBoost>(env));
+    env->rootsearchMethod = std::dynamic_pointer_cast<IRootsearchMethod>(std::make_shared<RootsearchMethodBoost>(env));
 
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskInitializeLinesearch::~TaskInitializeLinesearch() {}
+TaskInitializeRootsearch::~TaskInitializeRootsearch() {}
 
-void TaskInitializeLinesearch::run() {}
+void TaskInitializeRootsearch::run() {}
 
-std::string TaskInitializeLinesearch::getType()
+std::string TaskInitializeRootsearch::getType()
 {
     std::string type = typeid(this).name();
     return (type);

@@ -18,12 +18,12 @@
 namespace SHOT
 {
 
-class ILinesearchMethod
+class IRootsearchMethod
 {
 public:
-    ILinesearchMethod(){};
-    ILinesearchMethod(EnvironmentPtr envPtr){};
-    virtual ~ILinesearchMethod(){};
+    IRootsearchMethod(){};
+    IRootsearchMethod(EnvironmentPtr envPtr){};
+    virtual ~IRootsearchMethod(){};
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
         double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate)

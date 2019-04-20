@@ -8,22 +8,22 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../Solver.h"
-#include "../Environment.h"
-#include "../Structs.h"
-#include "../Utilities.h"
+#include "../src/Solver.h"
+#include "../src/Environment.h"
+#include "../src/Structs.h"
+#include "../src/Utilities.h"
 
-#include "../Model/Variables.h"
-#include "../Model/Terms.h"
-#include "../Model/Constraints.h"
-#include "../Model/NonlinearExpressions.h"
-#include "../Model/Problem.h"
+#include "../src/Model/Variables.h"
+#include "../src/Model/Terms.h"
+#include "../src/Model/Constraints.h"
+#include "../src/Model/NonlinearExpressions.h"
+#include "../src/Model/Problem.h"
 
-#include "ModelingSystemOS.h"
+#include "../src/ModelingSystem/ModelingSystemOS.h"
 
-#include "LinesearchMethod/LinesearchMethodBoost.h"
+#include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
-#include "Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
 
@@ -148,7 +148,7 @@ bool TestRootsearchOS(const std::string& problemFile)
     std::cout << "Exterior point:\n";
     Utilities::displayVector(exteriorPoint);
 
-    auto rootsearch = std::make_unique<LinesearchMethodBoost>(env);
+    auto rootsearch = std::make_unique<RootsearchMethodBoost>(env);
 
     auto root = rootsearch->findZero(
         interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);

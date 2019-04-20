@@ -106,10 +106,10 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     switch(primalSol.sourceType)
     {
-    case E_PrimalSolutionSource::Linesearch:
+    case E_PrimalSolutionSource::Rootsearch:
         sourceDesc = "line search";
         break;
-    case E_PrimalSolutionSource::LinesearchFixedIntegers:
+    case E_PrimalSolutionSource::RootsearchFixedIntegers:
         sourceDesc = "line search fixed";
         break;
     case E_PrimalSolutionSource::NLPFixedIntegers:
@@ -300,7 +300,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         return (false);
     }
 
-    // For example linesearches may violate linear constraints
+    // For example rootsearches may violate linear constraints
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
         || primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed

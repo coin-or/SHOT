@@ -11,16 +11,20 @@
 #pragma once
 #include "TaskBase.h"
 
+#include "../Structs.h"
+
+#include <vector>
+
 namespace SHOT
 {
-class TaskInitializeLinesearch : public TaskBase
+class TaskSelectHyperplanePointsByObjectiveRootsearch : public TaskBase
 {
 public:
-    TaskInitializeLinesearch(EnvironmentPtr envPtr);
-    virtual ~TaskInitializeLinesearch();
+    TaskSelectHyperplanePointsByObjectiveRootsearch(EnvironmentPtr envPtr);
+    virtual ~TaskSelectHyperplanePointsByObjectiveRootsearch();
 
     virtual void run();
-
+    virtual void run(std::vector<SolutionPoint> solPoints);
     virtual std::string getType();
 };
 } // namespace SHOT

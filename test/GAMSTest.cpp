@@ -8,16 +8,18 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "../Results.h"
-#include "../Solver.h"
-#include "../Utilities.h"
-#include "../TaskHandler.h"
+#include "../src/Environment.h"
+#include "../src/Results.h"
+#include "../src/Solver.h"
+#include "../src/Structs.h"
+#include "../src/Utilities.h"
+#include "../src/TaskHandler.h"
 
-#include "../LinesearchMethod/LinesearchMethodBoost.h"
+#include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
-#include "../ModelingSystem/ModelingSystemGAMS.h"
+#include "../src/ModelingSystem/ModelingSystemGAMS.h"
 
-#include "../Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
 
@@ -118,7 +120,7 @@ bool TestRootsearchGAMS(const std::string& problemFile)
     std::cout << "Exterior point:\n";
     Utilities::displayVector(exteriorPoint);
 
-    auto rootsearch = std::make_unique<LinesearchMethodBoost>(env);
+    auto rootsearch = std::make_unique<RootsearchMethodBoost>(env);
 
     auto root = rootsearch->findZero(
         interiorPoint, exteriorPoint, 100, 10e-13, 10e-3, env->problem->nonlinearConstraints, false);

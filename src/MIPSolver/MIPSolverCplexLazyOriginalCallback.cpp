@@ -39,8 +39,8 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
 
         if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
         {
-            taskSelectHPPtsByObjectiveLinesearch
-                = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
+            taskSelectHPPtsByObjectiveRootsearch
+                = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
         }
     }
     else
@@ -49,8 +49,8 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
 
         if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
         {
-            taskSelectHPPtsByObjectiveLinesearch
-                = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
+            taskSelectHPPtsByObjectiveRootsearch
+                = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
         }
     }
 }
@@ -252,13 +252,13 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        taskSelectHPPtsByObjectiveLinesearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveLinesearch>(env);
+        taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
     }
 
-    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromLinesearch = std::make_shared<TaskSelectPrimalCandidatesFromLinesearch>(env);
+        taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 }
 
@@ -411,10 +411,10 @@ void CtCallbackI::main()
         return;
     }
 
-    if(env->settings->getSetting<bool>("Linesearch.Use", "Primal")
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromLinesearch->run(candidatePoints);
+        taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
     }
 
     if(checkFixedNLPStrategy(solutionCandidate))
@@ -459,7 +459,7 @@ void CtCallbackI::main()
 
     if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
     {
-        taskSelectHPPtsByObjectiveLinesearch->run(candidatePoints);
+        taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
     }
 
     for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)

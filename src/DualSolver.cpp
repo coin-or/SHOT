@@ -95,7 +95,7 @@ void DualSolver::checkDualSolutionCandidates()
                 sourceDesc = "MIP solution";
                 break;
             case E_DualSolutionSource::ObjectiveConstraint:
-                sourceDesc = "Obj. constr. linesearch";
+                sourceDesc = "Obj. constr. rootsearch";
                 break;
             case E_DualSolutionSource::MIPSolverBound:
                 sourceDesc = "MIP solver bound";
@@ -119,11 +119,11 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
     switch(hyperplane.source)
     {
-    case E_HyperplaneSource::MIPOptimalLinesearch:
-        source = "MIP linesearch";
+    case E_HyperplaneSource::MIPOptimalRootsearch:
+        source = "MIP rootsearch";
         break;
-    case E_HyperplaneSource::LPRelaxedLinesearch:
-        source = "LP linesearch";
+    case E_HyperplaneSource::LPRelaxedRootsearch:
+        source = "LP rootsearch";
         break;
     case E_HyperplaneSource::MIPOptimalSolutionPoint:
         source = "MIP optimal solution";
@@ -149,8 +149,8 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     case E_HyperplaneSource::MIPCallbackRelaxed:
         source = "MIP callback relaxed";
         break;
-    case E_HyperplaneSource::ObjectiveLinesearch:
-        source = "objective linesearch";
+    case E_HyperplaneSource::ObjectiveRootsearch:
+        source = "objective rootsearch";
         break;
     default:
         break;

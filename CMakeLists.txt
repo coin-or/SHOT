@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 17 )
 # Sets the release types, e.g. Release, Debug
 # set(CMAKE_BUILD_TYPE Debug)
 
-option(COMPILE_TESTS "Should the automated tests be compiled" ON)
+option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # Activates extra functionality, note that corresponding libraries are needed
 
@@ -155,7 +155,7 @@ file(GLOB_RECURSE SOURCES
   "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
   "${PROJECT_SOURCE_DIR}/src/Utilities.cpp"
   "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
-  "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.cpp"
+  "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp"
@@ -200,8 +200,8 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
   "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
   "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
-  "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/ILinesearchMethod.h"
-  "${PROJECT_SOURCE_DIR}/src/LinesearchMethod/LinesearchMethodBoost.h"
+  "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
+  "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolver.h"
   "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"

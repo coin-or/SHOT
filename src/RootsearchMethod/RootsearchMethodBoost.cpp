@@ -8,13 +8,13 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "LinesearchMethodBoost.h"
-#include "Output.h"
-#include "Settings.h"
-#include "Model/Problem.h"
-#include "Results.h"
-#include "PrimalSolver.h"
-#include "Iteration.h"
+#include "RootsearchMethodBoost.h"
+#include "../Output.h"
+#include "../Settings.h"
+#include "../Model/Problem.h"
+#include "../Results.h"
+#include "../PrimalSolver.h"
+#include "../Iteration.h"
 
 #include "boost/math/tools/roots.hpp"
 
@@ -86,15 +86,15 @@ double TestObjective::operator()(const double x)
     return (calculatedValue);
 }
 
-LinesearchMethodBoost::LinesearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr)
+RootsearchMethodBoost::RootsearchMethodBoost(EnvironmentPtr envPtr) : env(envPtr)
 {
     test = std::make_unique<Test>(env);
     testObjective = std::make_unique<TestObjective>(env);
 }
 
-LinesearchMethodBoost::~LinesearchMethodBoost() { activeConstraints.clear(); }
+RootsearchMethodBoost::~RootsearchMethodBoost() { activeConstraints.clear(); }
 
-std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
+std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
     int Nmax, double lambdaTol, double constrTol, const NonlinearConstraints constraints,
     bool addPrimalCandidate = true)
 {
@@ -106,10 +106,10 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
         tmpConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(C).get());
     }
 
-    return (LinesearchMethodBoost::findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpConstraints, addPrimalCandidate));
+    return (RootsearchMethodBoost::findZero(ptA, ptB, Nmax, lambdaTol, constrTol, tmpConstraints, addPrimalCandidate));
 }
 
-std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
+std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
     int Nmax, double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints,
     bool addPrimalCandidate = true)
 {
@@ -206,7 +206,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
         if(addPrimalCandidate)
         {
             env->primalSolver->addPrimalSolutionCandidate(
-                ptNew2, E_PrimalSolutionSource::Linesearch, env->results->getCurrentIteration()->iterationNumber);
+                ptNew2, E_PrimalSolutionSource::Rootsearch, env->results->getCurrentIteration()->iterationNumber);
         }
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew2, ptNew);
@@ -217,7 +217,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
         if(addPrimalCandidate)
         {
             env->primalSolver->addPrimalSolutionCandidate(
-                ptNew, E_PrimalSolutionSource::Linesearch, env->results->getCurrentIteration()->iterationNumber);
+                ptNew, E_PrimalSolutionSource::Rootsearch, env->results->getCurrentIteration()->iterationNumber);
         }
 
         std::pair<VectorDouble, VectorDouble> tmpPair(ptNew, ptNew2);
@@ -225,7 +225,7 @@ std::pair<VectorDouble, VectorDouble> LinesearchMethodBoost::findZero(const Vect
     }
 }
 
-std::pair<double, double> LinesearchMethodBoost::findZero(const VectorDouble& pt, double objectiveLB,
+std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt, double objectiveLB,
     double objectiveUB, int Nmax, double lambdaTol, double constrTol,
     const NonlinearObjectiveFunction* objectiveFunction)
 {

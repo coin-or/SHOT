@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "TaskSelectHyperplanePointsByObjectiveLinesearch.h"
+#include "TaskSelectHyperplanePointsByObjectiveRootsearch.h"
 
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
@@ -20,24 +20,24 @@
 
 #include "../Model/Problem.h"
 
-#include "../LinesearchMethod/ILinesearchMethod.h"
+#include "../RootsearchMethod/IRootsearchMethod.h"
 
 namespace SHOT
 {
 
-TaskSelectHyperplanePointsByObjectiveLinesearch::TaskSelectHyperplanePointsByObjectiveLinesearch(EnvironmentPtr envPtr)
+TaskSelectHyperplanePointsByObjectiveRootsearch::TaskSelectHyperplanePointsByObjectiveRootsearch(EnvironmentPtr envPtr)
     : TaskBase(envPtr)
 {
 }
 
-TaskSelectHyperplanePointsByObjectiveLinesearch::~TaskSelectHyperplanePointsByObjectiveLinesearch() {}
+TaskSelectHyperplanePointsByObjectiveRootsearch::~TaskSelectHyperplanePointsByObjectiveRootsearch() {}
 
-void TaskSelectHyperplanePointsByObjectiveLinesearch::run()
+void TaskSelectHyperplanePointsByObjectiveRootsearch::run()
 {
     this->run(env->results->getPreviousIteration()->solutionPoints);
 }
 
-void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPoint> sourcePoints)
+void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPoint> sourcePoints)
 {
     env->timing->startTimer("DualObjectiveRootSearch");
 
@@ -69,7 +69,7 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
 
                 Hyperplane hyperplane;
                 hyperplane.isObjectiveHyperplane = true;
-                hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
+                hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
                 hyperplane.sourceConstraintIndex = -1;
                 hyperplane.generatedPoint = SOLPT.point;
                 hyperplane.objectiveFunctionValue = rootBound.second;
@@ -92,7 +92,7 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
             hyperplane.isObjectiveHyperplane = true;
             hyperplane.sourceConstraintIndex = -1;
             hyperplane.generatedPoint = SOLPT.point;
-            hyperplane.source = E_HyperplaneSource::ObjectiveLinesearch;
+            hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
 
             if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
             {
@@ -114,7 +114,7 @@ void TaskSelectHyperplanePointsByObjectiveLinesearch::run(std::vector<SolutionPo
     env->timing->stopTimer("DualObjectiveRootSearch");
 }
 
-std::string TaskSelectHyperplanePointsByObjectiveLinesearch::getType()
+std::string TaskSelectHyperplanePointsByObjectiveRootsearch::getType()
 {
     std::string type = typeid(this).name();
     return (type);
