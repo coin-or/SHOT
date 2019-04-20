@@ -184,7 +184,7 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "DualObjectiveBound");
-    otherNode->SetAttribute("value", currentDualBound);
+    otherNode->SetAttribute("value", globalDualBound);
     otherNode->SetAttribute("description", "The dual bound for the objective");
     otherResultsNode->InsertEndChild(otherNode);
 
