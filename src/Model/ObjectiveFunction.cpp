@@ -504,8 +504,8 @@ void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
     if(nonlinearExpression)
     {
         NonlinearExpressions terms;
-        terms.expressions.push_back(nonlinearExpression);
-        terms.expressions.push_back(expression);
+        terms.push_back(nonlinearExpression);
+        terms.push_back(expression);
         nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else

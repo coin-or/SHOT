@@ -195,7 +195,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
         {
             // Removes linear terms, quadratics and constants
 
-            for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(C->nonlinearExpression)->children.expressions)
+            for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(C->nonlinearExpression)->children)
             {
                 if(T->getType() == E_NonlinearExpressionTypes::Constant)
                 {
@@ -214,41 +214,35 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
                 {
                     auto product = std::dynamic_pointer_cast<ExpressionProduct>(T);
 
-                    if(product->children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant
-                        && product->children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
+                    if(product->children.at(0)->getType() == E_NonlinearExpressionTypes::Constant
+                        && product->children.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
                     {
                         double constant
-                            = std::dynamic_pointer_cast<ExpressionConstant>(product->children.expressions.at(0))
-                                  ->constant;
+                            = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(0))->constant;
                         auto variable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(1))
-                                  ->variable;
+                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(1))->variable;
 
                         C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
-                    else if(product->children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Constant
-                        && product->children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
+                    else if(product->children.at(1)->getType() == E_NonlinearExpressionTypes::Constant
+                        && product->children.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
                     {
                         double constant
-                            = std::dynamic_pointer_cast<ExpressionConstant>(product->children.expressions.at(1))
-                                  ->constant;
+                            = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(1))->constant;
                         auto variable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(0))
-                                  ->variable;
+                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(0))->variable;
 
                         C->linearTerms.add(std::make_shared<LinearTerm>(constant, variable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
-                    else if(product->children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Variable
-                        && product->children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
+                    else if(product->children.at(1)->getType() == E_NonlinearExpressionTypes::Variable
+                        && product->children.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
                     {
                         auto firstVariable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(0))
-                                  ->variable;
+                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(0))->variable;
                         auto secondVariable
-                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.expressions.at(1))
-                                  ->variable;
+                            = std::dynamic_pointer_cast<ExpressionVariable>(product->children.at(1))->variable;
 
                         C->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
@@ -262,7 +256,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
                     int numVariables = 0;
                     int numConstants = 0;
 
-                    for(auto& E : product->children.expressions)
+                    for(auto& E : product->children)
                     {
                         if(E->getType() == E_NonlinearExpressionTypes::Constant)
                         {

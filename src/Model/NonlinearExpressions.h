@@ -165,16 +165,26 @@ inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr exp
     return stream;
 };
 
-class NonlinearExpressions
+class NonlinearExpressions : private std::vector<NonlinearExpressionPtr>
 {
 public:
-    std::vector<NonlinearExpressionPtr> expressions;
+    using std::vector<NonlinearExpressionPtr>::operator[];
 
-    inline void add(NonlinearExpressionPtr expression) { expressions.push_back(expression); };
+    using std::vector<NonlinearExpressionPtr>::at;
+    using std::vector<NonlinearExpressionPtr>::begin;
+    using std::vector<NonlinearExpressionPtr>::clear;
+    using std::vector<NonlinearExpressionPtr>::end;
+    using std::vector<NonlinearExpressionPtr>::erase;
+    using std::vector<NonlinearExpressionPtr>::push_back;
+    using std::vector<NonlinearExpressionPtr>::reserve;
+    using std::vector<NonlinearExpressionPtr>::resize;
+    using std::vector<NonlinearExpressionPtr>::size;
 
-    NonlinearExpressionPtr get(int i) { return expressions.at(i); };
+    inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
 
-    inline size_t size() const { return expressions.size(); };
+    // NonlinearExpressionPtr get(int i) { return expressions.at(i); };
+
+    // inline size_t size() const { return expressions.size(); };
 };
 
 class ExpressionConstant : public NonlinearExpression
@@ -318,7 +328,7 @@ public:
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override
     {
-        for(auto& C : children.expressions)
+        for(auto& C : children)
             C->appendNonlinearVariables(nonlinearVariables);
     };
 };
@@ -1790,8 +1800,8 @@ public:
     ExpressionSum(NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild)
     {
         NonlinearExpressions terms;
-        terms.expressions.push_back(firstChild);
-        terms.expressions.push_back(secondChild);
+        terms.push_back(firstChild);
+        terms.push_back(secondChild);
         children = terms;
     }
 
@@ -1799,7 +1809,7 @@ public:
     {
         double value = 0.0;
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             value += C->calculate(point);
         }
@@ -1811,7 +1821,7 @@ public:
     {
         Interval tmpInterval(0.);
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             tmpInterval += C->calculate(intervalVector);
         }
@@ -1823,7 +1833,7 @@ public:
     {
         Interval tmpInterval(0.);
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             tmpInterval += C->getBounds();
         }
@@ -1835,7 +1845,7 @@ public:
     {
         FactorableFunction funct;
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             funct += C->getFactorableFunction();
         }
@@ -1847,15 +1857,15 @@ public:
     {
         if(children.size() == 1)
         {
-            stream << children.expressions.at(0);
+            stream << children.at(0);
             return stream;
         }
 
-        stream << '(' << children.expressions.at(0);
+        stream << '(' << children.at(0);
 
-        for(int i = 1; i < children.expressions.size(); i++)
+        for(int i = 1; i < children.size(); i++)
         {
-            stream << '+' << children.expressions.at(i);
+            stream << '+' << children.at(i);
         }
 
         stream << ')';
@@ -1869,7 +1879,7 @@ public:
     {
         E_Convexity resultConvexity = E_Convexity::Linear;
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             auto childConvexity = C->getConvexity();
 
@@ -1887,7 +1897,7 @@ public:
         bool areAllZeroOrNondecreasing = true;
         bool areAllZeroOrNonincreasing = true;
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             auto childMonotonicity = C->getMonotonicity();
             areAllConstant = areAllConstant && (C->getMonotonicity() == E_Monotonicity::Constant);
@@ -1921,7 +1931,7 @@ public:
 
         for(int i = 0; i < getNumberOfChildren(); i++)
         {
-            if(children.expressions[i].get() != expression.children.expressions[i].get())
+            if(children[i].get() != expression.children[i].get())
                 return false;
         }
 
@@ -1939,8 +1949,8 @@ public:
     ExpressionProduct(NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild)
     {
         NonlinearExpressions terms;
-        terms.expressions.push_back(firstChild);
-        terms.expressions.push_back(secondChild);
+        terms.push_back(firstChild);
+        terms.push_back(secondChild);
         children = terms;
     }
 
@@ -1948,7 +1958,7 @@ public:
     {
         double value = 1.0;
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             double tmpValue = C->calculate(point);
 
@@ -1965,7 +1975,7 @@ public:
     {
         Interval tmpInterval(1., 1.);
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             tmpInterval = tmpInterval * C->calculate(intervalVector);
         }
@@ -1977,7 +1987,7 @@ public:
     {
         Interval tmpInterval(0.);
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             tmpInterval = tmpInterval * C->getBounds();
         }
@@ -1993,7 +2003,7 @@ public:
 
         for(int i = 0; i < children.size(); i++)
         {
-            factors[i] = children.expressions[i]->getFactorableFunction();
+            factors[i] = children[i]->getFactorableFunction();
         }
 
         funct = factors[0];
@@ -2010,15 +2020,15 @@ public:
     {
         if(children.size() == 1)
         {
-            stream << children.expressions.at(0);
+            stream << children.at(0);
             return stream;
         }
 
-        stream << '(' << children.expressions.at(0);
+        stream << '(' << children.at(0);
 
-        for(int i = 1; i < children.expressions.size(); i++)
+        for(int i = 1; i < children.size(); i++)
         {
-            stream << '*' << children.expressions.at(i);
+            stream << '*' << children.at(i);
         }
 
         stream << ')';
@@ -2037,10 +2047,10 @@ public:
 
         if(numberOfChildren == 2)
         {
-            if(children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant)
+            if(children.at(0)->getType() == E_NonlinearExpressionTypes::Constant)
             {
-                auto constant = std::dynamic_pointer_cast<ExpressionConstant>(children.expressions.at(0));
-                auto secondConvexity = children.expressions.at(1)->getConvexity();
+                auto constant = std::dynamic_pointer_cast<ExpressionConstant>(children.at(0));
+                auto secondConvexity = children.at(1)->getConvexity();
 
                 if(secondConvexity == E_Convexity::Linear)
                     return E_Convexity::Linear;
@@ -2061,10 +2071,10 @@ public:
                     return E_Convexity::Nonconvex;
             }
 
-            if(children.expressions.at(0).get() == children.expressions.at(1).get())
+            if(children.at(0).get() == children.at(1).get())
             {
-                auto firstConvexity = children.expressions.at(0)->getConvexity();
-                auto firstBounds = children.expressions.at(0)->getBounds();
+                auto firstConvexity = children.at(0)->getConvexity();
+                auto firstBounds = children.at(0)->getBounds();
 
                 if(firstConvexity == E_Convexity::Linear)
                     return E_Convexity::Convex;
@@ -2159,17 +2169,17 @@ public:
         if(numberOfChildren == 0)
             return E_Monotonicity::Unknown;
 
-        E_Monotonicity joinedMonotonicity = children.expressions.at(0)->getMonotonicity();
+        E_Monotonicity joinedMonotonicity = children.at(0)->getMonotonicity();
 
         if(numberOfChildren == 1)
             return joinedMonotonicity;
 
-        Interval joinedBounds = children.expressions.at(0)->getBounds();
+        Interval joinedBounds = children.at(0)->getBounds();
 
         for(int i = 1; i < numberOfChildren; i++)
         {
-            auto nextMonotonicity = children.expressions.at(i)->getMonotonicity();
-            auto nextBounds = children.expressions.at(i)->getBounds();
+            auto nextMonotonicity = children.at(i)->getMonotonicity();
+            auto nextBounds = children.at(i)->getBounds();
 
             if(joinedMonotonicity == E_Monotonicity::Constant && nextMonotonicity == E_Monotonicity::Constant)
                 return E_Monotonicity::Constant;
@@ -2221,7 +2231,7 @@ public:
 
         for(int i = 0; i < getNumberOfChildren(); i++)
         {
-            if(children.expressions[i].get() != expression.children.expressions[i].get())
+            if(children[i].get() != expression.children[i].get())
                 return false;
         }
 
@@ -2230,14 +2240,14 @@ public:
 
     inline bool isLinearTerm()
     {
-        assert(children.expressions.size() > 0);
+        assert(children.size() > 0);
 
-        if(children.expressions.size() > 2)
+        if(children.size() > 2)
             return (false);
 
-        if(children.expressions.size() == 1)
+        if(children.size() == 1)
         {
-            if(children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
+            if(children.at(0)->getType() == E_NonlinearExpressionTypes::Variable)
             {
                 return true;
             }
@@ -2249,14 +2259,14 @@ public:
 
         // Have two children
 
-        if(children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Constant
-            && children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
+        if(children.at(0)->getType() == E_NonlinearExpressionTypes::Constant
+            && children.at(1)->getType() == E_NonlinearExpressionTypes::Variable)
         {
             return (true);
         }
 
-        if(children.expressions.at(0)->getType() == E_NonlinearExpressionTypes::Variable
-            && children.expressions.at(1)->getType() == E_NonlinearExpressionTypes::Constant)
+        if(children.at(0)->getType() == E_NonlinearExpressionTypes::Variable
+            && children.at(1)->getType() == E_NonlinearExpressionTypes::Constant)
         {
             return (true);
         }
@@ -2268,7 +2278,7 @@ public:
     {
         int powerSum = 0;
 
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             if(C->getType() == E_NonlinearExpressionTypes::Square)
             {
@@ -2300,7 +2310,7 @@ public:
 
     inline bool isMonomialTerm()
     {
-        for(auto& C : children.expressions)
+        for(auto& C : children)
         {
             if(C->getType() == E_NonlinearExpressionTypes::Variable)
             {

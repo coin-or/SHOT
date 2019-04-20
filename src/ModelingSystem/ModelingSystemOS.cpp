@@ -591,7 +591,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
         default:
             NonlinearExpressions terms;
             for(i = 0; i < node->inumberOfChildren; i++)
-                terms.expressions.push_back(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[i]), destination));
+                terms.push_back(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[i]), destination));
             return std::make_shared<ExpressionSum>(terms);
         }
 
@@ -631,7 +631,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
         default:
             NonlinearExpressions factors;
             for(i = 0; i < node->inumberOfChildren; i++)
-                factors.expressions.push_back(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[i]), destination));
+                factors.push_back(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[i]), destination));
             return std::make_shared<ExpressionProduct>(factors);
         }
 

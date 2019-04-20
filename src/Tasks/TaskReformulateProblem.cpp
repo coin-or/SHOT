@@ -510,11 +510,11 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
                 if(QT->coefficient != 1.0)
                 {
-                    product.expressions.push_back(std::make_shared<ExpressionConstant>(QT->coefficient));
+                    product.push_back(std::make_shared<ExpressionConstant>(QT->coefficient));
                 }
 
-                product.expressions.push_back(std::make_shared<ExpressionVariable>(QT->firstVariable));
-                product.expressions.push_back(std::make_shared<ExpressionVariable>(QT->secondVariable));
+                product.push_back(std::make_shared<ExpressionVariable>(QT->firstVariable));
+                product.push_back(std::make_shared<ExpressionVariable>(QT->secondVariable));
 
                 nonlinearConstraint->add(std::make_shared<ExpressionProduct>(product));
             }
@@ -684,7 +684,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
     bool allNonlinearExpressionsReformulated = false;
 
-    for(auto& T : source->children.expressions)
+    for(auto& T : source->children)
     {
         if(T->getType() == E_NonlinearExpressionTypes::Product) // Might be able to reuse auxiliary variable
                                                                 // further if e.g. bilinear term
@@ -1431,12 +1431,11 @@ NonlinearExpressionPtr TaskReformulateProblem::copyNonlinearExpression(
         case 0:
             return std::make_shared<ExpressionConstant>(0.);
         case 1:
-            return copyNonlinearExpression(((ExpressionSum*)expression)->children.get(0).get(), destination);
+            return copyNonlinearExpression(((ExpressionSum*)expression)->children[0].get(), destination);
         default:
             NonlinearExpressions terms;
             for(i = 0; i < numChildren; i++)
-                terms.expressions.push_back(
-                    copyNonlinearExpression(((ExpressionSum*)expression)->children.get(i).get(), destination));
+                terms.push_back(copyNonlinearExpression(((ExpressionSum*)expression)->children[i].get(), destination));
             return std::make_shared<ExpressionSum>(terms);
         }
 
@@ -1461,12 +1460,12 @@ NonlinearExpressionPtr TaskReformulateProblem::copyNonlinearExpression(
         case 0:
             return std::make_shared<ExpressionConstant>(0.);
         case 1:
-            return copyNonlinearExpression(((ExpressionProduct*)expression)->children.get(0).get(), destination);
+            return copyNonlinearExpression(((ExpressionProduct*)expression)->children[0].get(), destination);
         default:
             NonlinearExpressions factors;
             for(i = 0; i < numChildren; i++)
-                factors.expressions.push_back(
-                    copyNonlinearExpression(((ExpressionProduct*)expression)->children.get(i).get(), destination));
+                factors.push_back(
+                    copyNonlinearExpression(((ExpressionProduct*)expression)->children[i].get(), destination));
             return std::make_shared<ExpressionProduct>(factors);
         }
 
