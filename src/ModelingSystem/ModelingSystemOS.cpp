@@ -578,7 +578,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
     switch(node->inodeInt)
     {
     case OS_PLUS:
-        return std::make_shared<ExpressionPlus>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+        return std::make_shared<ExpressionSum>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
             convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_SUM:
@@ -596,15 +596,16 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
         }
 
     case OS_MINUS:
-        return std::make_shared<ExpressionMinus>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
-            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
+        return std::make_shared<ExpressionSum>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+            std::make_shared<ExpressionNegate>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination)));
 
     case OS_NEGATE:
         return std::make_shared<ExpressionNegate>(
             convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_TIMES:
-        return std::make_shared<ExpressionTimes>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
+        return std::make_shared<ExpressionProduct>(
+            convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
             convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
 
     case OS_DIVIDE:
@@ -624,7 +625,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
         case 1:
             return convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination);
         case 2:
-            return std::make_shared<ExpressionTimes>(
+            return std::make_shared<ExpressionProduct>(
                 convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination),
                 convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[1]), destination));
         default:
@@ -682,7 +683,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
             return std::make_shared<ExpressionNegate>(
                 std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
 
-        return std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(varnode->coef),
+        return std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(varnode->coef),
             std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
     }
     default:

@@ -479,9 +479,12 @@ void NonlinearConstraint::add(SignomialTermPtr term)
 
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
-    if(nonlinearExpression.get() != nullptr)
+    if(nonlinearExpression)
     {
-        nonlinearExpression = std::make_shared<ExpressionPlus>(nonlinearExpression, expression);
+        NonlinearExpressions terms;
+        terms.expressions.push_back(nonlinearExpression);
+        terms.expressions.push_back(expression);
+        nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else
     {

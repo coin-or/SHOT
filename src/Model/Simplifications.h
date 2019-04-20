@@ -295,160 +295,6 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionAbs> 
     return expression;
 }
 
-inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPlus> expression)
-{
-    auto firstChild = simplify(expression->firstChild);
-    auto secondChild = simplify(expression->secondChild);
-
-    // Can asume that both children now are not of Plus or Minus type, but rather all sums are of Sum type
-
-    NonlinearExpressions terms;
-    double constant = 0.0;
-
-    if(firstChild->getType() == E_NonlinearExpressionTypes::Sum)
-    {
-        for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(firstChild)->children.expressions)
-        {
-            if(T->getType() == E_NonlinearExpressionTypes::Constant)
-            {
-                constant += std::dynamic_pointer_cast<ExpressionConstant>(T)->constant;
-            }
-            else
-            {
-                terms.add(T);
-            }
-        }
-    }
-    else
-    {
-        terms.add(firstChild);
-    }
-
-    if(secondChild->getType() == E_NonlinearExpressionTypes::Sum)
-    {
-        for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(secondChild)->children.expressions)
-        {
-            if(T->getType() == E_NonlinearExpressionTypes::Constant)
-            {
-                constant += std::dynamic_pointer_cast<ExpressionConstant>(T)->constant;
-            }
-            else
-            {
-                terms.add(T);
-            }
-        }
-    }
-    else
-    {
-        terms.add(secondChild);
-    }
-
-    if(constant != 0.0)
-        terms.add(std::make_shared<ExpressionConstant>(constant));
-
-    return (std::make_shared<ExpressionSum>(terms));
-}
-
-inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionMinus> expression)
-{
-    auto firstChild = simplify(expression->firstChild);
-    auto secondChild = simplify(expression->secondChild);
-
-    // Can asume that both children now are not of Plus or Minus type, but rather all sums are of Sum type
-
-    NonlinearExpressions terms;
-    double constant = 0.0;
-
-    if(firstChild->getType() == E_NonlinearExpressionTypes::Sum)
-    {
-        for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(firstChild)->children.expressions)
-        {
-            if(T->getType() == E_NonlinearExpressionTypes::Constant)
-            {
-                constant += std::dynamic_pointer_cast<ExpressionConstant>(T)->constant;
-            }
-            else
-            {
-                terms.add(T);
-            }
-        }
-    }
-    else
-    {
-        terms.add(firstChild);
-    }
-
-    if(secondChild->getType() == E_NonlinearExpressionTypes::Sum)
-    {
-        for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(secondChild)->children.expressions)
-        {
-            if(T->getType() == E_NonlinearExpressionTypes::Constant)
-            {
-                constant -= std::dynamic_pointer_cast<ExpressionConstant>(T)->constant;
-            }
-            else
-            {
-                // Simplify is needed to propagate negation
-                terms.add(simplify(std::make_shared<ExpressionNegate>(T)));
-            }
-        }
-    }
-    else
-    {
-        // Simplify is needed to propagate negation
-        terms.add(simplify(std::make_shared<ExpressionNegate>(secondChild)));
-    }
-
-    if(constant != 0.0)
-        terms.add(std::make_shared<ExpressionConstant>(constant));
-
-    return (std::make_shared<ExpressionSum>(terms));
-}
-
-inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTimes> expression)
-{
-    auto firstChild = simplify(expression->firstChild);
-    auto secondChild = simplify(expression->secondChild);
-
-    auto tmp = secondChild->getType();
-
-    if(firstChild->getType() == E_NonlinearExpressionTypes::Constant
-        && secondChild->getType() == E_NonlinearExpressionTypes::Constant)
-    {
-        double constant = std::dynamic_pointer_cast<ExpressionConstant>(firstChild)->constant
-            * std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
-        return std::make_shared<ExpressionConstant>(constant);
-    }
-
-    auto product = std::make_shared<ExpressionProduct>();
-
-    if(firstChild->getType() == E_NonlinearExpressionTypes::Product)
-    {
-        for(auto& C : std::dynamic_pointer_cast<ExpressionProduct>(firstChild)->children.expressions)
-        {
-            product->children.add(C);
-        }
-    }
-    else
-    {
-        product->children.add(firstChild);
-    }
-
-    if(secondChild->getType() == E_NonlinearExpressionTypes::Product)
-    {
-        for(auto& C : std::dynamic_pointer_cast<ExpressionProduct>(secondChild)->children.expressions)
-        {
-            product->children.add(C);
-        }
-    }
-    else
-    {
-        product->children.add(secondChild);
-    }
-
-    return simplify(product);
-}
-
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionDivide> expression)
 {
     auto firstChild = simplify(expression->firstChild);
@@ -697,12 +543,6 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionArcTan>(expression));
     case E_NonlinearExpressionTypes::Abs:
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionAbs>(expression));
-    case E_NonlinearExpressionTypes::Plus:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionPlus>(expression));
-    case E_NonlinearExpressionTypes::Minus:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionMinus>(expression));
-    case E_NonlinearExpressionTypes::Times:
-        return simplifyExpression(std::dynamic_pointer_cast<ExpressionTimes>(expression));
     case E_NonlinearExpressionTypes::Divide:
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionDivide>(expression));
     case E_NonlinearExpressionTypes::Power:
@@ -1012,47 +852,6 @@ inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::sha
     return childSignomial;
 }
 
-inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionTimes> expression)
-{
-    std::optional<SignomialTermPtr> resultingSignomialTerm;
-
-    if(expression->getNumberOfChildren() == 0)
-        return resultingSignomialTerm;
-
-    auto firstChildSignomial = convertToSignomialTerm(expression->firstChild);
-    auto secondChildSignomial = convertToSignomialTerm(expression->secondChild);
-
-    if(!firstChildSignomial || !secondChildSignomial)
-        return resultingSignomialTerm;
-
-    SignomialElements addedElements;
-
-    for(auto& E2 : secondChildSignomial->get()->elements)
-    {
-        bool added = false;
-
-        for(auto& E1 : firstChildSignomial->get()->elements)
-        {
-            if(E1->variable == E2->variable)
-            {
-                E1->power += E2->power;
-                added = true;
-                continue;
-            }
-        }
-
-        if(!added)
-            addedElements.push_back(E2);
-    }
-
-    for(auto& E : addedElements)
-        firstChildSignomial->get()->elements.push_back(E);
-
-    firstChildSignomial->get()->coefficient *= secondChildSignomial->get()->coefficient;
-
-    return firstChildSignomial;
-}
-
 inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::shared_ptr<ExpressionDivide> expression)
 {
     std::optional<SignomialTermPtr> resultingSignomialTerm;
@@ -1183,8 +982,6 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
         return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionSquareRoot>(expression));
     case E_NonlinearExpressionTypes::Square:
         return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionSquare>(expression));
-    case E_NonlinearExpressionTypes::Times:
-        return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionTimes>(expression));
     case E_NonlinearExpressionTypes::Divide:
         return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionDivide>(expression));
     case E_NonlinearExpressionTypes::Power:

@@ -200,7 +200,7 @@ bool ModelTestNonlinearExpressions()
     std::cout << "Creating plus expression\n";
 
     SHOT::NonlinearExpressionPtr exprPlus
-        = std::make_shared<SHOT::ExpressionPlus>(expressionVariable_x, expressionVariable_y);
+        = std::make_shared<SHOT::ExpressionSum>(expressionVariable_x, expressionVariable_y);
     std::cout << "Plus expression " << exprPlus << " created\n";
 
     value = exprPlus->calculate(point);
@@ -452,7 +452,7 @@ bool ModelTestCreateProblem()
     std::cout << "Quadratic constraint " << quadraticConstraint << " created\n";
 
     SHOT::NonlinearExpressionPtr exprPlus
-        = std::make_shared<SHOT::ExpressionPlus>(expressionVariable_z, expressionVariable_x);
+        = std::make_shared<SHOT::ExpressionSum>(expressionVariable_z, expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
     SHOT::NonlinearExpressionPtr exprPower
         = std::make_shared<SHOT::ExpressionPower>(expressionVariable_z, exprConstant);
@@ -472,8 +472,8 @@ bool ModelTestCreateProblem()
 
     SHOT::NonlinearExpressionPtr exprConstant2 = std::make_shared<SHOT::ExpressionConstant>(40.0);
     SHOT::NonlinearExpressionPtr exprTimes
-        = std::make_shared<SHOT::ExpressionTimes>(exprConstant2, expressionVariable_x);
-    SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionMinus>(exprTimes, expressionVariable_y);
+        = std::make_shared<SHOT::ExpressionProduct>(exprConstant2, expressionVariable_x);
+    SHOT::NonlinearExpressionPtr exprPlus2 = std::make_shared<SHOT::ExpressionProduct>(exprTimes, expressionVariable_y);
 
     SHOT::NonlinearConstraintPtr nonlinearConstraint2
         = std::make_shared<SHOT::NonlinearConstraint>(3, "nlconstr2", exprPlus2, -1000.0, 0);

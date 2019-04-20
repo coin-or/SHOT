@@ -495,7 +495,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 else
                 {
                     nonlinearConstraint->add(
-                        std::make_shared<ExpressionTimes>(std::make_shared<ExpressionConstant>(LT->coefficient),
+                        std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(LT->coefficient),
                             std::make_shared<ExpressionVariable>(LT->variable)));
                 }
             }
@@ -1424,11 +1424,6 @@ NonlinearExpressionPtr TaskReformulateProblem::copyNonlinearExpression(
 
     switch(expression->getType())
     {
-    case E_NonlinearExpressionTypes::Plus:
-        return std::make_shared<ExpressionPlus>(
-            copyNonlinearExpression(((ExpressionPlus*)expression)->firstChild.get(), destination),
-            copyNonlinearExpression(((ExpressionPlus*)expression)->secondChild.get(), destination));
-
     case E_NonlinearExpressionTypes::Sum:
         numChildren = ((ExpressionSum*)expression)->getNumberOfChildren();
         switch(numChildren)
@@ -1445,19 +1440,9 @@ NonlinearExpressionPtr TaskReformulateProblem::copyNonlinearExpression(
             return std::make_shared<ExpressionSum>(terms);
         }
 
-    case E_NonlinearExpressionTypes::Minus:
-        return std::make_shared<ExpressionMinus>(
-            copyNonlinearExpression(((ExpressionMinus*)expression)->firstChild.get(), destination),
-            copyNonlinearExpression(((ExpressionMinus*)expression)->secondChild.get(), destination));
-
     case E_NonlinearExpressionTypes::Negate:
         return std::make_shared<ExpressionNegate>(
             copyNonlinearExpression(((ExpressionNegate*)expression)->child.get(), destination));
-
-    case E_NonlinearExpressionTypes::Times:
-        return std::make_shared<ExpressionTimes>(
-            copyNonlinearExpression(((ExpressionTimes*)expression)->firstChild.get(), destination),
-            copyNonlinearExpression(((ExpressionTimes*)expression)->secondChild.get(), destination));
 
     case E_NonlinearExpressionTypes::Divide:
         return std::make_shared<ExpressionDivide>(

@@ -501,10 +501,12 @@ void NonlinearObjectiveFunction::add(SignomialTermPtr term)
 
 void NonlinearObjectiveFunction::add(NonlinearExpressionPtr expression)
 {
-    if(nonlinearExpression.get() != nullptr)
+    if(nonlinearExpression)
     {
-        auto tmpExpr = nonlinearExpression;
-        auto nonlinearExpression(std::make_shared<ExpressionPlus>(tmpExpr, expression));
+        NonlinearExpressions terms;
+        terms.expressions.push_back(nonlinearExpression);
+        terms.expressions.push_back(expression);
+        nonlinearExpression = std::make_shared<ExpressionSum>(std::move(terms));
     }
     else
     {

@@ -1259,284 +1259,6 @@ public:
 
 // Begin binary operations
 
-class ExpressionPlus : public ExpressionBinary
-{
-private:
-    bool isAssociative = true;
-
-public:
-    ExpressionPlus() {}
-
-    ExpressionPlus(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
-    {
-        firstChild = childExpression1;
-        secondChild = childExpression2;
-    }
-
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (firstChild->calculate(point) + secondChild->calculate(point));
-    }
-
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
-    {
-        return (firstChild->calculate(intervalVector) + secondChild->calculate(intervalVector));
-    }
-
-    inline virtual Interval getBounds() const override { return (firstChild->getBounds() + secondChild->getBounds()); }
-
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (firstChild->getFactorableFunction() + secondChild->getFactorableFunction());
-    }
-
-    inline std::ostream& print(std::ostream& stream) const override
-    {
-        stream << firstChild << '+' << secondChild;
-        return stream;
-    }
-
-    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Plus; }
-
-    inline E_Convexity getConvexity() const override
-    {
-        auto child1Convexity = firstChild->getConvexity();
-        auto child2Convexity = secondChild->getConvexity();
-
-        E_Convexity resultConvexity;
-        resultConvexity = Utilities::combineConvexity(child1Convexity, child2Convexity);
-
-        return resultConvexity;
-    };
-
-    inline E_Monotonicity getMonotonicity() const override
-    {
-        auto child1Monotonicity = firstChild->getMonotonicity();
-        auto child2Monotonicity = secondChild->getMonotonicity();
-
-        if(child1Monotonicity == child2Monotonicity)
-            return child1Monotonicity;
-
-        if(child1Monotonicity == E_Monotonicity::Constant)
-            return child2Monotonicity;
-
-        if(child2Monotonicity == E_Monotonicity::Constant)
-            return child1Monotonicity;
-
-        return E_Monotonicity::Unknown;
-    }
-
-    inline bool operator==(const NonlinearExpression& rhs) const
-    {
-        if(rhs.getType() != getType())
-            return (false);
-
-        auto expression = dynamic_cast<const ExpressionPlus&>(rhs);
-
-        return (expression.firstChild.get() == firstChild.get() && expression.secondChild.get() == secondChild.get()
-            || expression.firstChild.get() == secondChild.get() && expression.secondChild.get() == firstChild.get());
-    };
-};
-
-class ExpressionMinus : public ExpressionBinary
-{
-private:
-    bool isAssociative = false;
-
-public:
-    ExpressionMinus() {}
-
-    ExpressionMinus(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
-    {
-        firstChild = childExpression1;
-        secondChild = childExpression2;
-    }
-
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (firstChild->calculate(point) - secondChild->calculate(point));
-    }
-
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
-    {
-        return (firstChild->calculate(intervalVector) - secondChild->calculate(intervalVector));
-    }
-
-    inline virtual Interval getBounds() const override { return (firstChild->getBounds() - secondChild->getBounds()); }
-
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (firstChild->getFactorableFunction() - secondChild->getFactorableFunction());
-    }
-
-    inline std::ostream& print(std::ostream& stream) const override
-    {
-        stream << firstChild << '-' << secondChild;
-        return stream;
-    }
-
-    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Minus; }
-
-    inline E_Convexity getConvexity() const override
-    {
-        auto child1Convexity = firstChild->getConvexity();
-        auto child2Convexity = secondChild->getConvexity();
-        E_Convexity resultConvexity;
-
-        if(child1Convexity == E_Convexity::Linear && child2Convexity == E_Convexity::Linear)
-            return E_Convexity::Linear;
-
-        if(child1Convexity == E_Convexity::Convex && child2Convexity == E_Convexity::Concave)
-            return E_Convexity::Convex;
-
-        if(child1Convexity == E_Convexity::Concave && child2Convexity == E_Convexity::Convex)
-            return E_Convexity::Concave;
-
-        return E_Convexity::Unknown;
-    };
-
-    inline E_Monotonicity getMonotonicity() const override
-    {
-        auto child1Monotonicity = firstChild->getMonotonicity();
-        auto child2Monotonicity = secondChild->getMonotonicity();
-
-        if(child2Monotonicity == E_Monotonicity::Nondecreasing)
-            child2Monotonicity = E_Monotonicity::Nonincreasing;
-        else if(child2Monotonicity == E_Monotonicity::Nonincreasing)
-            child2Monotonicity = E_Monotonicity::Nondecreasing;
-
-        if(child1Monotonicity == child2Monotonicity)
-            return child1Monotonicity;
-
-        if(child1Monotonicity == E_Monotonicity::Constant)
-            return child2Monotonicity;
-
-        if(child2Monotonicity == E_Monotonicity::Constant)
-            return child1Monotonicity;
-
-        return E_Monotonicity::Unknown;
-    };
-
-    inline bool operator==(const NonlinearExpression& rhs) const
-    {
-        if(rhs.getType() != getType())
-            return (false);
-
-        auto expression = dynamic_cast<const ExpressionMinus&>(rhs);
-
-        return (expression.firstChild.get() == firstChild.get() && expression.secondChild.get() == secondChild.get());
-    };
-};
-
-class ExpressionTimes : public ExpressionBinary
-{
-private:
-    bool isAssociative = true;
-
-public:
-    ExpressionTimes() {}
-
-    ExpressionTimes(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
-    {
-        firstChild = childExpression1;
-        secondChild = childExpression2;
-    }
-
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (firstChild->calculate(point) * secondChild->calculate(point));
-    }
-
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
-    {
-        return (firstChild->calculate(intervalVector) * secondChild->calculate(intervalVector));
-    }
-
-    inline virtual Interval getBounds() const override { return (firstChild->getBounds() * secondChild->getBounds()); }
-
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (firstChild->getFactorableFunction() * secondChild->getFactorableFunction());
-    }
-
-    inline std::ostream& print(std::ostream& stream) const override
-    {
-        stream << firstChild << '*' << secondChild;
-        return stream;
-    }
-
-    inline E_NonlinearExpressionTypes getType() const override { return E_NonlinearExpressionTypes::Times; }
-
-    inline E_Convexity getConvexity() const override
-    {
-        auto child1Monotonicity = firstChild->getMonotonicity();
-        auto child2Monotonicity = secondChild->getMonotonicity();
-
-        auto child1Convexity = firstChild->getConvexity();
-        auto bounds2 = secondChild->getBounds();
-
-        if(child2Monotonicity == E_Monotonicity::Constant)
-            return (getConvexityTimesWithConstantFunction(child1Convexity, bounds2));
-
-        auto child2Convexity = secondChild->getConvexity();
-        auto bounds1 = firstChild->getBounds();
-
-        if(child1Monotonicity == E_Monotonicity::Constant)
-            return (getConvexityTimesWithConstantFunction(child2Convexity, bounds1));
-
-        return E_Convexity::Unknown;
-    };
-
-    inline E_Monotonicity getMonotonicity() const override
-    {
-        auto child1Monotonicity = firstChild->getMonotonicity();
-        auto child2Monotonicity = secondChild->getMonotonicity();
-
-        auto bounds1 = firstChild->getBounds();
-        auto bounds2 = secondChild->getBounds();
-
-        if(child1Monotonicity == E_Monotonicity::Constant && child2Monotonicity == E_Monotonicity::Constant)
-            return E_Monotonicity::Constant;
-
-        if(child2Monotonicity == E_Monotonicity::Constant)
-            return getMonotonicityTimesWithConstantFunction(child1Monotonicity, bounds1, bounds2);
-
-        if(child1Monotonicity == E_Monotonicity::Constant)
-            return getMonotonicityTimesWithConstantFunction(child2Monotonicity, bounds2, bounds1);
-
-        bool nondecreasingCondition1 = (child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.l() >= 0.0)
-            || (child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.u() <= 0.0);
-
-        bool nondecreasingCondition2 = (child2Monotonicity == E_Monotonicity::Nondecreasing && bounds1.l() >= 0.0)
-            || (child2Monotonicity == E_Monotonicity::Nonincreasing && bounds1.u() <= 0.0);
-
-        bool nonincreasingCondition1 = (child1Monotonicity == E_Monotonicity::Nonincreasing && bounds2.l() >= 0.0)
-            || (child1Monotonicity == E_Monotonicity::Nondecreasing && bounds2.u() <= 0.0);
-
-        bool nonincreasingCondition2 = (child2Monotonicity == E_Monotonicity::Nonincreasing && bounds1.l() >= 0.0)
-            || (child2Monotonicity == E_Monotonicity::Nondecreasing && bounds1.u() <= 0.0);
-
-        if(nondecreasingCondition1 && nondecreasingCondition2)
-            return E_Monotonicity::Nondecreasing;
-
-        if(nonincreasingCondition1 && nonincreasingCondition2)
-            return E_Monotonicity::Nonincreasing;
-
-        return E_Monotonicity::Unknown;
-    };
-
-    inline bool operator==(const NonlinearExpression& rhs) const
-    {
-        if(rhs.getType() != getType())
-            return (false);
-
-        auto expression = dynamic_cast<const ExpressionTimes&>(rhs);
-
-        return (expression.firstChild.get() == firstChild.get() && expression.secondChild.get() == secondChild.get()
-            || expression.firstChild.get() == secondChild.get() && expression.secondChild.get() == firstChild.get());
-    };
-};
-
 class ExpressionDivide : public ExpressionBinary
 {
 private:
@@ -2065,6 +1787,14 @@ public:
 
     ExpressionSum(NonlinearExpressions childExpressions) { children = childExpressions; }
 
+    ExpressionSum(NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild)
+    {
+        NonlinearExpressions terms;
+        terms.expressions.push_back(firstChild);
+        terms.expressions.push_back(secondChild);
+        children = terms;
+    }
+
     inline virtual double calculate(const VectorDouble& point) const override
     {
         double value = 0.0;
@@ -2205,6 +1935,14 @@ public:
     ExpressionProduct() {}
 
     ExpressionProduct(NonlinearExpressions childExpressions) { children = childExpressions; }
+
+    ExpressionProduct(NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild)
+    {
+        NonlinearExpressions terms;
+        terms.expressions.push_back(firstChild);
+        terms.expressions.push_back(secondChild);
+        children = terms;
+    }
 
     inline virtual double calculate(const VectorDouble& point) const override
     {

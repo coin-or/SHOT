@@ -76,15 +76,15 @@ bool IpoptTest1()
 
     SHOT::NonlinearExpressionPtr exprConstant1 = std::make_shared<SHOT::ExpressionConstant>(2);
 
-    SHOT::NonlinearExpressionPtr exprMinus
-        = std::make_shared<SHOT::ExpressionMinus>(expressionVariable_y, exprConstant1);
+    SHOT::NonlinearExpressionPtr exprMinus = std::make_shared<SHOT::ExpressionSum>(
+        expressionVariable_y, std::make_shared<ExpressionNegate>(exprConstant1));
     SHOT::NonlinearExpressionPtr exprSquared1 = std::make_shared<SHOT::ExpressionSquare>(exprMinus);
 
     objectiveFunction->add(exprSquared1);
     problem->add(objectiveFunction);
 
     SHOT::NonlinearExpressionPtr exprSquared2 = std::make_shared<SHOT::ExpressionSquare>(expressionVariable_x);
-    SHOT::NonlinearExpressionPtr exprPlus = std::make_shared<SHOT::ExpressionPlus>(exprSquared2, expressionVariable_y);
+    SHOT::NonlinearExpressionPtr exprPlus = std::make_shared<SHOT::ExpressionSum>(exprSquared2, expressionVariable_y);
     SHOT::NonlinearConstraintPtr nonlinearConstraint
         = std::make_shared<SHOT::NonlinearConstraint>(0, "nlconstr", exprPlus, 1.0, 1.0);
     problem->add(nonlinearConstraint);
@@ -206,10 +206,11 @@ bool IpoptTest2()
     SHOT::NonlinearObjectiveFunctionPtr objectiveFunction
         = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
 
-    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionTimes>(
+    SHOT::NonlinearExpressionPtr exprTimes = std::make_shared<SHOT::ExpressionProduct>(
         std::make_shared<SHOT::ExpressionConstant>(4.0), expressionVariable_y);
 
-    SHOT::NonlinearExpressionPtr exprMinus = std::make_shared<SHOT::ExpressionMinus>(expressionVariable_x, exprTimes);
+    SHOT::NonlinearExpressionPtr exprMinus
+        = std::make_shared<SHOT::ExpressionSum>(expressionVariable_x, std::make_shared<ExpressionNegate>(exprTimes));
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(2.0);
     SHOT::NonlinearExpressionPtr exprPower = std::make_shared<SHOT::ExpressionPower>(exprMinus, exprConstant);
 
