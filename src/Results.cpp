@@ -736,7 +736,7 @@ std::string Results::getResultsTrace()
     ss << std::setprecision(std::numeric_limits<double>::digits10 + 1);
     ss << this->getPrimalBound() << ",";
     ;
-    ss << this->getCurrentDualBound() << ",";
+    ss << this->getGlobalDualBound() << ",";
     ;
     ss << env->timing->getElapsedTime("Total") << ",";
     ss << env->solutionStatistics.numberOfIterations << ",";
