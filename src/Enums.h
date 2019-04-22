@@ -18,6 +18,8 @@ enum class E_AuxiliaryVariableType
     None,
     NonlinearObjectiveFunction, // From epigraph formulation of (nonlinear) objective function
     NonlinearExpressionPartitioning, // From reformulating nonlinear terms as constraints
+    MonomialTermsPartitioning, // From reformulating monoial terms as constraints
+    SignomialTermsPartitioning, // From reformulating signomial terms as constraints
     ContinuousBilinear, // From linearizing a bilinear term x1 * x2 where x1 and x2 are real
     BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
     BinaryContinuousOrIntegerBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or
@@ -352,6 +354,13 @@ enum class ES_ReformulatiomBilinearInteger
     None,
     OneDiscretization,
     TwoDiscretization
+};
+
+enum class ES_PartitionNonlinearSums
+{
+    Always,
+    IfConvex,
+    Never
 };
 
 enum class ES_QuadraticProblemStrategy

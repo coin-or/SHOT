@@ -120,4 +120,28 @@ void QuadraticTerms::updateConvexity()
     else
         convexity = E_Convexity::Nonconvex;
 };
+
+MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)
+{
+    this->coefficient = term->coefficient;
+    this->isBilinear = term->isBilinear;
+    this->isSquare = term->isSquare;
+    this->isBinary = term->isBinary;
+
+    for(auto& V : term->variables)
+    {
+        this->variables.push_back(destinationProblem->getVariable(V->index));
+    }
+};
+
+SignomialTerm::SignomialTerm(const SignomialTerm* term, ProblemPtr destinationProblem)
+{
+    this->coefficient = term->coefficient;
+
+    for(auto& E : term->elements)
+    {
+        this->elements.push_back(
+            std::make_shared<SignomialElement>(destinationProblem->getVariable(E->variable->index), E->power));
+    }
+};
 } // namespace SHOT

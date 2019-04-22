@@ -309,11 +309,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             for(auto& V : env->reformulatedProblem->auxiliaryVariables)
             {
-                tmpVals.add(V->calculateValue(primalSol));
+                tmpVals.add(V->calculateAuxiliaryValue(primalSol));
             }
 
             if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
+                tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
 
             lastUpdatedPrimal = primalBound;
 

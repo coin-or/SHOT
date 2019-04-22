@@ -29,6 +29,7 @@ public:
     LinearTerms linearTerms;
     QuadraticTerms quadraticTerms;
     MonomialTerms monomialTerms;
+    SignomialTerms signomialTerms;
     NonlinearExpressionPtr nonlinearExpression;
 
     AuxiliaryVariable()
@@ -55,7 +56,7 @@ public:
         Variable::upperBound = SHOT_DBL_MAX;
     }
 
-    double calculateValue(VectorDouble point);
+    double calculateAuxiliaryValue(VectorDouble point);
 };
 
 typedef std::shared_ptr<AuxiliaryVariable> AuxiliaryVariablePtr;

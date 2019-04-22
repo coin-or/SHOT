@@ -965,11 +965,11 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 
     for(auto& V : env->reformulatedProblem->auxiliaryVariables)
     {
-        startVal.add(V->calculate(point));
+        startVal.add(V->calculateAuxiliaryValue(point));
     }
 
     if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        startVal.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point));
+        startVal.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point));
 
     try
     {

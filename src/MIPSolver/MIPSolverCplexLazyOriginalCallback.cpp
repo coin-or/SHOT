@@ -88,11 +88,11 @@ void HCallbackI::main() // Called at each node...
 
         for(auto& V : env->reformulatedProblem->auxiliaryVariables)
         {
-            tmpVals.add(V->calculateValue(primalSol));
+            tmpVals.add(V->calculateAuxiliaryValue(primalSol));
         }
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-            tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
+            tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
 
         try
         {

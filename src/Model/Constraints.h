@@ -293,6 +293,9 @@ public:
 
     std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
     std::vector<std::pair<std::pair<VariablePtr, VariablePtr>, FactorableFunction>> symbolicSparseHessian;
+
+    Variables variablesInMonomialTerms;
+    Variables variablesInSignomialTerms;
     Variables variablesInNonlinearExpression;
 
     NonlinearConstraint(){};

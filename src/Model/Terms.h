@@ -204,6 +204,17 @@ public:
 
         return (monotonicity);
     }
+
+    inline bool checkAllForConvexityType(E_Convexity convexityType)
+    {
+        for(auto& TERM : (*this))
+        {
+            if(TERM->getConvexity() != convexityType)
+                return (false);
+        }
+
+        return (true);
+    }
 };
 
 class LinearTerms : public Terms<LinearTermPtr>
@@ -504,6 +515,9 @@ public:
         }
     };
 
+    // Creates a copy of the term, with variables from destinationProblem
+    MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem);
+
     inline double calculate(const VectorDouble& point) const
     {
         double value = coefficient;
@@ -680,6 +694,9 @@ public:
         coefficient = coeff;
         elements = elems;
     };
+
+    // Creates a copy of the term, with variables from destinationProblem
+    SignomialTerm(const SignomialTerm* term, ProblemPtr destinationProblem);
 
     inline double calculate(const VectorDouble& point) const
     {

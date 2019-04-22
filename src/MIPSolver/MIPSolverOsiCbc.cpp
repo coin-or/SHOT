@@ -463,7 +463,7 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
         std::pair<std::string, double> tmpPair;
 
         tmpPair.first = V->name;
-        tmpPair.second = V->calculateValue(point);
+        tmpPair.second = V->calculateAuxiliaryValue(point);
 
         variableValues.push_back(tmpPair);
     }
@@ -473,7 +473,7 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
         std::pair<std::string, double> tmpPair;
 
         tmpPair.first = env->reformulatedProblem->auxiliaryObjectiveVariable->name;
-        tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
+        tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point);
 
         variableValues.push_back(tmpPair);
     }

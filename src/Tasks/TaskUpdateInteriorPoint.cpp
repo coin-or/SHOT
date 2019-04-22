@@ -42,8 +42,17 @@ void TaskUpdateInteriorPoint::run()
     if(env->dualSolver->MIPSolver->interiorPts.size() == 0 && maxDevPrimal.value < 0)
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
-        tmpIP->point = env->results->primalSolutions.at(0).point;
-        tmpIP->maxDevatingConstraint = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
+
+        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+        {
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
+        }
+
+        tmpIP->point = tmpPrimalPoint;
+
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
         env->output->outputDebug("     Interior point replaced with primal solution point since no interior point was "
                                  "previously available.");
@@ -63,8 +72,17 @@ void TaskUpdateInteriorPoint::run()
     if(maxDevPrimal.value < env->dualSolver->MIPSolver->interiorPts.at(0)->maxDevatingConstraint.value)
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
+
+        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+        {
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
+        }
+
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = maxDevPrimal;
+
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
         env->output->outputDebug(
             "     Interior point replaced with primal solution point due to constraint deviation.");
@@ -77,8 +95,16 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
+        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+        {
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
+        }
+
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = maxDevPrimal;
+
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
         env->output->outputDebug("     Primal solution point used as additional interior point.");
 
@@ -97,9 +123,17 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
+        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+        {
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
+        }
+
         // Add the new point only
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = maxDevPrimal;
+
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
         env->output->outputDebug("     Interior point replaced with primal solution point.");
 
@@ -116,6 +150,11 @@ void TaskUpdateInteriorPoint::run()
         {
             tmpPrimalPoint.at(i)
                 = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->MIPSolver->interiorPts.at(0)->point.at(i));
+        }
+
+        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+        {
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
         }
 
         tmpIP->point = tmpPrimalPoint;

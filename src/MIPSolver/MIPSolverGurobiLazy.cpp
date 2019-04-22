@@ -367,12 +367,12 @@ void GurobiCallback::callback()
                 for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
                 {
                     setSolution(vars[i + primalSol.size()],
-                        env->reformulatedProblem->auxiliaryVariables.at(i)->calculateValue(primalSol));
+                        env->reformulatedProblem->auxiliaryVariables.at(i)->calculateAuxiliaryValue(primalSol));
                 }
 
                 if(env->reformulatedProblem->auxiliaryObjectiveVariable)
                     setSolution(vars[env->reformulatedProblem->auxiliaryVariables.size() + primalSol.size()],
-                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
+                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
 
                 lastUpdatedPrimal = primalBound;
             }

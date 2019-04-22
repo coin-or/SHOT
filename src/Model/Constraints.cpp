@@ -791,9 +791,9 @@ void NonlinearConstraint::updateProperties()
         {
             for(auto& V : T->variables)
             {
-                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), V)
-                    == variablesInNonlinearExpression.end())
-                    variablesInNonlinearExpression.push_back(V);
+                if(std::find(variablesInMonomialTerms.begin(), variablesInMonomialTerms.end(), V)
+                    == variablesInMonomialTerms.end())
+                    variablesInMonomialTerms.push_back(V);
             }
 
             auto convexity = T->getConvexity();
@@ -814,9 +814,9 @@ void NonlinearConstraint::updateProperties()
         {
             for(auto& E : T->elements)
             {
-                if(std::find(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(), E->variable)
-                    == variablesInNonlinearExpression.end())
-                    variablesInNonlinearExpression.push_back(E->variable);
+                if(std::find(variablesInSignomialTerms.begin(), variablesInSignomialTerms.end(), E->variable)
+                    == variablesInSignomialTerms.end())
+                    variablesInSignomialTerms.push_back(E->variable);
             }
 
             auto convexity = T->getConvexity();

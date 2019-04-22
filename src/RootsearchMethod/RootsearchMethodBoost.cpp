@@ -115,13 +115,13 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 {
     if(ptA.size() != ptB.size())
     {
-        env->output->outputError("     Line search error: sizes of points vary: " + std::to_string(ptA.size())
+        env->output->outputError("     Root search error: sizes of points vary: " + std::to_string(ptA.size())
             + " != " + std::to_string(ptB.size()));
     }
 
     if(constraints.size() == 0)
     {
-        env->output->outputError("     No constraints selected for line search");
+        env->output->outputError("     No constraints selected for root search");
     }
 
     if(auto sharedProblem = constraints[0]->ownerProblem.lock())

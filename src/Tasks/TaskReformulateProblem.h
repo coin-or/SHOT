@@ -75,6 +75,8 @@ private:
     void copySignomialTermsToObjectiveFunction(SignomialTerms terms, T destination, bool reversedSigns = false);
 
     LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
+    LinearTerms partitionMonomialTerms(const MonomialTerms sourceTerms, bool reversedSigns);
+    LinearTerms partitionSignomialTerms(const SignomialTerms sourceTerms, bool reversedSigns);
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 

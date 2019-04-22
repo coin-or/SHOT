@@ -1889,6 +1889,17 @@ public:
         return resultConvexity;
     };
 
+    inline bool checkAllForConvexityType(E_Convexity convexityType)
+    {
+        for(auto& C : children)
+        {
+            if(C->getConvexity() != convexityType)
+                return (false);
+        }
+
+        return (true);
+    }
+
     inline E_Monotonicity getMonotonicity() const override
     {
         E_Monotonicity resultMonotonicity;

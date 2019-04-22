@@ -409,6 +409,10 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
 
     primalSol.objValue = tmpObjVal;
+
+    if(tmpPoint.size() > env->problem->properties.numberOfVariables)
+        tmpPoint = std::vector(tmpPoint.begin(), tmpPoint.begin() + env->problem->properties.numberOfVariables);
+
     primalSol.point = tmpPoint;
     primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 

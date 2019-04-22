@@ -15,13 +15,14 @@
 namespace SHOT
 {
 
-double AuxiliaryVariable::calculateValue(VectorDouble point)
+double AuxiliaryVariable::calculateAuxiliaryValue(VectorDouble point)
 {
     double value = constant;
 
     value += linearTerms.calculate(point);
     value += quadraticTerms.calculate(point);
     value += monomialTerms.calculate(point);
+    value += signomialTerms.calculate(point);
 
     if(nonlinearExpression)
         value += nonlinearExpression->calculate(point);
@@ -67,6 +68,14 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 
     case E_AuxiliaryVariableType::NonlinearExpressionPartitioning:
         stream << " (partition reformulation for nonlinear sum)";
+        break;
+
+    case E_AuxiliaryVariableType::MonomialTermsPartitioning:
+        stream << " (partition reformulation for monomial sum)";
+        break;
+
+    case E_AuxiliaryVariableType::SignomialTermsPartitioning:
+        stream << " (partition reformulation for signomial sum)";
         break;
 
     case E_AuxiliaryVariableType::BinaryBilinear:

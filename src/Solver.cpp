@@ -732,8 +732,16 @@ void Solver::initializeSettings()
     enumBilinearIntegerReformulation.clear();
 
     // Reformulations for constraints
-    env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false,
-        "Partition nonlinear terms as auxiliary constraints");
+    VectorString enumNonlinearTermPartitioning;
+    enumNonlinearTermPartitioning.push_back("Always");
+    enumNonlinearTermPartitioning.push_back("If convex");
+    enumNonlinearTermPartitioning.push_back("Never");
+    env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "How to partition nonlinear sums in constraints",
+        enumNonlinearTermPartitioning);
+
+    // env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false,
+    //    "Partition nonlinear terms as auxiliary constraints");
 
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false,
         "Partition quadratic terms as auxiliary constraints");
@@ -752,8 +760,10 @@ void Solver::initializeSettings()
     env->settings->createSetting("Reformulation.ObjectiveFunction.Epigraph.Use", "Model", false,
         "Reformulates a nonlinear objective as an auxiliary constraint");
 
-    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", false,
-        "Partition nonlinear terms as auxiliary constraints");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "How to partition nonlinear sums in objective function",
+        enumNonlinearTermPartitioning);
+    enumNonlinearTermPartitioning.clear();
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false,
         "Partition quadratic terms as auxiliary constraints");
