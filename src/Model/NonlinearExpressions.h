@@ -126,7 +126,7 @@ class NonlinearExpression
 public:
     std::weak_ptr<Problem> ownerProblem;
 
-    inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
+    virtual inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
     virtual double calculate(const VectorDouble& point) const = 0;
     virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
@@ -278,6 +278,12 @@ class ExpressionUnary : public NonlinearExpression
 public:
     NonlinearExpressionPtr child;
 
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        ownerProblem = owner;
+        child->takeOwnership(owner);
+    }
+
     virtual double calculate(const VectorDouble& point) const = 0;
     virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
     virtual FactorableFunction getFactorableFunction() = 0;
@@ -300,6 +306,13 @@ public:
     NonlinearExpressionPtr firstChild;
     NonlinearExpressionPtr secondChild;
 
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        ownerProblem = owner;
+        firstChild->takeOwnership(owner);
+        secondChild->takeOwnership(owner);
+    }
+
     virtual double calculate(const VectorDouble& point) const = 0;
     virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
     virtual FactorableFunction getFactorableFunction() = 0;
@@ -318,6 +331,14 @@ class ExpressionGeneral : public NonlinearExpression
 {
 public:
     NonlinearExpressions children;
+
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        ownerProblem = owner;
+
+        for(auto& C : children)
+            C->takeOwnership(owner);
+    }
 
     virtual double calculate(const VectorDouble& point) const = 0;
     virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
@@ -2000,7 +2021,8 @@ public:
 
         for(auto& C : children)
         {
-            tmpInterval = tmpInterval * C->getBounds();
+            auto interval = C->getBounds();
+            tmpInterval = tmpInterval * interval;
         }
 
         return (tmpInterval);

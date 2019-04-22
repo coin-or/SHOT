@@ -83,7 +83,7 @@ public:
     std::shared_ptr<Variables> gradientSparsityPattern;
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> hessianSparsityPattern;
 
-    void takeOwnership(ProblemPtr owner);
+    virtual void takeOwnership(ProblemPtr owner) = 0;
 
     virtual void updateProperties();
 
@@ -139,6 +139,8 @@ public:
 
     void add(LinearTermPtr term);
     virtual void updateProperties() override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
@@ -210,6 +212,8 @@ public:
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
     virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
@@ -311,6 +315,8 @@ public:
     void updateFactorableFunction();
 
     virtual void updateProperties() override;
+
+    virtual void takeOwnership(ProblemPtr owner) override;
 
     virtual double calculateValue(const VectorDouble& point) override;
     virtual Interval calculateValue(const IntervalVector& intervalVector) override;

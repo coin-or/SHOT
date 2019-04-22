@@ -36,6 +36,8 @@ public:
 
     virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
 
+    virtual Interval getBounds();
+
     void inline takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
     virtual E_Convexity getConvexity() const = 0;

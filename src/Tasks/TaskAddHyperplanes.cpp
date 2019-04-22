@@ -70,7 +70,7 @@ void TaskAddHyperplanes::run()
                     if(!isObjectiveConvex)
                     {
                         env->results->solutionIsGlobal = false;
-                        env->output->outputCritical("Solution is no longer global");
+                        env->output->outputDebug("Solution is no longer global");
                     }
                 }
                 else
@@ -81,7 +81,7 @@ void TaskAddHyperplanes::run()
                     if(!isConstraintConvex)
                     {
                         env->results->solutionIsGlobal = false;
-                        env->output->outputCritical("Solution is no longer global");
+                        env->output->outputDebug("Solution is no longer global");
                     }
                 }
 

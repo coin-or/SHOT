@@ -156,8 +156,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     }
 
     if(useQuadraticObjective
-        && (env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
-               || !env->problem->objectiveFunction->properties.hasNonlinearExpression))
+        && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
     {
         // Quadratic objective function
         auto destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
@@ -858,8 +857,17 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
         if(!allNonlinearExpressionsReformulated)
         {
+            auto bounds = T->getBounds();
+
+            if(bounds.l() == bounds.u())
+            {
+                // TODO
+                bounds.l(-9999999999.0);
+                bounds.u(9999999999.0);
+            }
+
             auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pnl_" + std::to_string(auxVariableCounter + 1),
-                auxVariableCounter, E_VariableType::Real, -9999999999.0, 9999999999.0);
+                auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
             auxVariable->auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
             auxVariableCounter++;
 
@@ -901,8 +909,10 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
 
     for(auto& T : sourceTerms)
     {
+        auto bounds = T->getBounds();
+
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pmon_" + std::to_string(auxVariableCounter + 1),
-            auxVariableCounter, E_VariableType::Real, -9999999999.0, 9999999999.0);
+            auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariable->auxiliaryType = E_AuxiliaryVariableType::MonomialTermsPartitioning;
         auxVariableCounter++;
 
@@ -940,8 +950,10 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
     for(auto& T : sourceTerms)
     {
+        auto bounds = T->getBounds();
+
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_psig_" + std::to_string(auxVariableCounter + 1),
-            auxVariableCounter, E_VariableType::Real, -9999999999.0, 9999999999.0);
+            auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariable->auxiliaryType = E_AuxiliaryVariableType::SignomialTermsPartitioning;
         auxVariableCounter++;
 

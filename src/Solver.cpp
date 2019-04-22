@@ -1181,9 +1181,11 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
 
-            env->settings->updateSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", true);
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", true);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+                (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", true);
             env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 

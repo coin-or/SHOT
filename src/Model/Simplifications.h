@@ -468,7 +468,6 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     for(auto& C : expression->children)
     {
         C = simplify(C);
-        // Can now assume there are no Plus and Minus types in the child
 
         if(C->getType() == E_NonlinearExpressionTypes::Constant)
         {
@@ -1088,21 +1087,6 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             nonlinearExpression = expression;
         }
     }
-    /*
-    // This should not happen since simplification removes Times
-    else if(expression->getType() == E_NonlinearExpressionTypes::Times)
-    {
-        auto multiplication = std::dynamic_pointer_cast<ExpressionDivide>(expression);
-
-        if(auto optional = convertExpressionToSignomialTerm(multiplication); optional)
-        {
-            signomialTerms.add(optional.value());
-        }
-        else
-        {
-            nonlinearExpression = expression;
-        }
-    }*/
     else if(expression->getType() == E_NonlinearExpressionTypes::Power)
     {
         auto power = std::dynamic_pointer_cast<ExpressionPower>(expression);
@@ -1153,13 +1137,10 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
         {
-            // std::cout << "extracting from term in sum: " << *C << std::endl;
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
                 = extractTermsAndConstant(C);
 
-            // if (tmpNonlinearExpression != nullptr)
-            //    std::cout << "extracting results: " << *tmpNonlinearExpression << std::endl;
             linearTerms.add(tmpLinearTerms);
             quadraticTerms.add(tmpQuadraticTerms);
             monomialTerms.add(tmpMonomialTerms);
@@ -1176,19 +1157,33 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             }
         }
 
-        nonlinearExpression = expression;
+        bool areAllZero = true;
+
+        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
+        {
+            if(!(C->getType() == E_NonlinearExpressionTypes::Constant
+                   && std::dynamic_pointer_cast<ExpressionConstant>(C)->constant == 0.0))
+            {
+                areAllZero = false;
+                break;
+            }
+        }
+
+        if(areAllZero)
+            nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+        else
+            nonlinearExpression = expression;
     }
     else
     {
         nonlinearExpression = expression;
-
-        // std::cout << "no extraction from: " << *nonlinearExpression << std::endl;
     }
 
-    // if (nonlinearExpression != nullptr)
-    //    std::cout << "final extracting results nonlinear: " << *nonlinearExpression << std::endl;
-
-    // std::cout << "number of terms: " << linearTerms.size() << ", " << quadraticterms.size() << std::endl;
+    if(nonlinearExpression != nullptr && nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+        && std::dynamic_pointer_cast<ExpressionConstant>(nonlinearExpression)->constant == 0.0)
+    {
+        nonlinearExpression = nullptr;
+    }
 
     return std::make_tuple(linearTerms, quadraticTerms, monomialTerms, signomialTerms, nonlinearExpression, constant);
 }

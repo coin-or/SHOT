@@ -105,6 +105,7 @@ public:
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
+    IntervalVector variableBounds;
 
     ObjectiveFunctionPtr objectiveFunction;
 
@@ -148,6 +149,8 @@ public:
 
     VectorDouble getVariableLowerBounds();
     VectorDouble getVariableUpperBounds();
+
+    IntervalVector getVariableBounds();
 
     AuxiliaryVariables getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type);
 

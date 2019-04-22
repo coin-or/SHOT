@@ -18,6 +18,20 @@
 
 namespace SHOT
 {
+Interval Term::getBounds()
+{
+    IntervalVector variableBounds;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        variableBounds = sharedOwnerProblem->getVariableBounds();
+    }
+
+    auto interval = calculate(variableBounds);
+
+    return (interval);
+}
+
 void QuadraticTerms::updateConvexity()
 {
     if(size() == 0)

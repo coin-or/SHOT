@@ -139,6 +139,11 @@ void Problem::updateConstraints()
 
     for(auto& C : auxConstraints)
         this->add(C);
+
+    this->objectiveFunction->takeOwnership(shared_from_this());
+
+    for(auto& C : numericConstraints)
+        C->takeOwnership(shared_from_this());
 };
 
 void Problem::updateVariables()
@@ -152,6 +157,9 @@ void Problem::updateVariables()
     if(variableUpperBounds.size() != numVariables)
         variableUpperBounds.resize(numVariables);
 
+    if(variableBounds.size() != numVariables)
+        variableBounds.resize(numVariables);
+
     int numNonlinearVars = 0;
 
     nonlinearVariables.clear();
@@ -160,6 +168,7 @@ void Problem::updateVariables()
     {
         variableLowerBounds[i] = allVariables[i]->lowerBound;
         variableUpperBounds[i] = allVariables[i]->upperBound;
+        variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
 
         if(allVariables[i]->isNonlinear)
             nonlinearVariables.push_back(allVariables[i]);
@@ -767,6 +776,16 @@ VectorDouble Problem::getVariableUpperBounds()
 
     return variableUpperBounds;
 };
+
+IntervalVector Problem::getVariableBounds()
+{
+    if(!variablesUpdated)
+    {
+        updateVariables();
+    }
+
+    return variableBounds;
+}
 
 AuxiliaryVariables Problem::getAuxiliaryVariablesOfType(E_AuxiliaryVariableType type)
 {

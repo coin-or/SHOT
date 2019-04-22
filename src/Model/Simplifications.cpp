@@ -82,8 +82,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
             if(tmpSignomialTerms.size() > 0)
                 nonlinearObjective->add(std::move(tmpSignomialTerms));
 
-            if(tmpNonlinearExpression)
-                nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
+            nonlinearObjective->nonlinearExpression = tmpNonlinearExpression;
 
             if(tmpConstant != 0.0)
                 nonlinearObjective->constant += tmpConstant;

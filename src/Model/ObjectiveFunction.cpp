@@ -15,8 +15,6 @@
 namespace SHOT
 {
 
-void ObjectiveFunction::takeOwnership(ProblemPtr owner) { ownerProblem = owner; };
-
 void ObjectiveFunction::updateProperties()
 {
     if(direction == E_ObjectiveFunctionDirection::Minimize)
@@ -122,6 +120,12 @@ void LinearObjectiveFunction::updateProperties()
     properties.convexity = E_Convexity::Linear;
 
     ObjectiveFunction::updateProperties();
+};
+
+void LinearObjectiveFunction::takeOwnership(ProblemPtr owner)
+{
+    ownerProblem = owner;
+    linearTerms.takeOwnership(owner);
 };
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
@@ -284,6 +288,12 @@ void QuadraticObjectiveFunction::updateProperties()
     {
         properties.hasQuadraticTerms = false;
     }
+};
+
+void QuadraticObjectiveFunction::takeOwnership(ProblemPtr owner)
+{
+    LinearObjectiveFunction::takeOwnership(owner);
+    quadraticTerms.takeOwnership(owner);
 };
 
 double QuadraticObjectiveFunction::calculateValue(const VectorDouble& point)
@@ -593,6 +603,15 @@ void NonlinearObjectiveFunction::updateProperties()
             return (variableOne->index < variableTwo->index);
         });
 }
+
+void NonlinearObjectiveFunction::takeOwnership(ProblemPtr owner)
+{
+    QuadraticObjectiveFunction::takeOwnership(owner);
+    monomialTerms.takeOwnership(owner);
+    signomialTerms.takeOwnership(owner);
+    if(nonlinearExpression != nullptr)
+        nonlinearExpression->takeOwnership(owner);
+};
 
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
