@@ -448,7 +448,7 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {
     std::vector<std::pair<std::string, double>> variableValues;
 
-    for(int i = 0; i < numberOfVariables; i++)
+    for(int i = 0; i < env->problem->properties.numberOfVariables; i++)
     {
         std::pair<std::string, double> tmpPair;
 
@@ -464,16 +464,6 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 
         tmpPair.first = V->name;
         tmpPair.second = V->calculateAuxiliaryValue(point);
-
-        variableValues.push_back(tmpPair);
-    }
-
-    if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-    {
-        std::pair<std::string, double> tmpPair;
-
-        tmpPair.first = env->reformulatedProblem->auxiliaryObjectiveVariable->name;
-        tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point);
 
         variableValues.push_back(tmpPair);
     }
