@@ -600,7 +600,7 @@ public:
     using std::vector<MonomialTermPtr>::resize;
     using std::vector<MonomialTermPtr>::size;
 
-    MonomialTerms(){};
+    MonomialTerms() = default;
 
     void add(MonomialTermPtr term)
     {
@@ -689,7 +689,7 @@ class SignomialTerm : public Term
 public:
     SignomialElements elements;
 
-    SignomialTerm(){};
+    SignomialTerm() = default;
 
     SignomialTerm(double coeff, SignomialElements elems)
     {

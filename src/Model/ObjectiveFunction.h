@@ -234,12 +234,16 @@ public:
     {
         this->linearTerms = LinearTerms();
         this->quadraticTerms = QuadraticTerms();
+        this->monomialTerms = MonomialTerms();
+        this->signomialTerms = SignomialTerms();
     }
 
     NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
     {
         linearTerms = LinearTerms();
         quadraticTerms = QuadraticTerms();
+        this->monomialTerms = MonomialTerms();
+        this->signomialTerms = SignomialTerms();
 
         direction = objectiveDirection;
         updateProperties();
@@ -250,6 +254,8 @@ public:
     {
         linearTerms = LinearTerms();
         quadraticTerms = QuadraticTerms();
+        this->monomialTerms = MonomialTerms();
+        this->signomialTerms = SignomialTerms();
 
         direction = objectiveDirection;
         nonlinearExpression = nonlinExpr;
@@ -261,6 +267,8 @@ public:
         NonlinearExpressionPtr nonlinExpr, double constValue)
     {
         quadraticTerms = QuadraticTerms();
+        this->monomialTerms = MonomialTerms();
+        this->signomialTerms = SignomialTerms();
 
         direction = objectiveDirection;
         linearTerms = linTerms;
@@ -272,6 +280,9 @@ public:
     NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms,
         QuadraticTerms quadTerms, NonlinearExpressionPtr nonlinExpr, double constValue)
     {
+        this->monomialTerms = MonomialTerms();
+        this->signomialTerms = SignomialTerms();
+
         direction = objectiveDirection;
         linearTerms = linTerms;
         quadraticTerms = quadTerms;

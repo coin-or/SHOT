@@ -94,7 +94,9 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
             hyperplane.generatedPoint = SOLPT.point;
             hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
 
-            if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+            if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression
+                || env->reformulatedProblem->objectiveFunction->properties.hasMonomialTerms
+                || env->reformulatedProblem->objectiveFunction->properties.hasSignomialTerms)
             {
                 hyperplane.objectiveFunctionValue
                     = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)

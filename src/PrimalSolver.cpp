@@ -99,7 +99,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 {
     std::string sourceDesc;
 
-    VectorDouble tmpPoint(primalSol.point);
+    VectorDouble tmpPoint(
+        primalSol.point.begin(), primalSol.point.begin() + env->problem->properties.numberOfVariables);
+
     double tmpObjVal = primalSol.objValue;
 
     bool isVariableBoundsFulfilled = true;
@@ -308,7 +310,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
         || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
 
-    if(acceptableType && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
+    if(!primalSol.integerRoundingPerformed && acceptableType
+        && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
         auto tmpLine = boost::format(
             "       Assuming that linear constraints are fulfilled since solution is from a subsolver.");

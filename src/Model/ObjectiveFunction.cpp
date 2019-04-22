@@ -616,6 +616,8 @@ void NonlinearObjectiveFunction::takeOwnership(ProblemPtr owner)
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
     double value = QuadraticObjectiveFunction::calculateValue(point);
+    value += monomialTerms.calculate(point);
+    value += signomialTerms.calculate(point);
 
     if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(point);
@@ -626,6 +628,8 @@ double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
 Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& intervalVector)
 {
     Interval value = QuadraticObjectiveFunction::calculateValue(intervalVector);
+    value += monomialTerms.calculate(intervalVector);
+    value += signomialTerms.calculate(intervalVector);
 
     if(this->properties.hasNonlinearExpression)
         value += nonlinearExpression->calculate(intervalVector);
@@ -666,20 +670,68 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         }
     }
 
+    SparseVariableVector monomialGradient;
+
+    if(this->properties.hasMonomialTerms)
+    {
+        monomialGradient = monomialTerms.calculateGradient(point);
+    }
+
+    SparseVariableVector signomialGradient;
+
+    if(this->properties.hasSignomialTerms)
+    {
+        signomialGradient = signomialTerms.calculateGradient(point);
+    }
+
+    auto result = Utilities::combineSparseVariableVectors(gradient, monomialGradient, signomialGradient);
+
     if(eraseZeroes)
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
-    return gradient;
+    return result;
 };
 
 void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 {
     QuadraticObjectiveFunction::initializeGradientSparsityPattern();
 
+    if(this->properties.hasMonomialTerms)
+    {
+        for(auto& T : monomialTerms)
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& V : T->variables)
+            {
+                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
+                    == gradientSparsityPattern->end())
+                    gradientSparsityPattern->push_back(V);
+            }
+        }
+    }
+
+    if(this->properties.hasSignomialTerms)
+    {
+        for(auto& T : signomialTerms)
+        {
+            if(T->coefficient == 0.0)
+                continue;
+
+            for(auto& E : T->elements)
+            {
+                if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
+                    == gradientSparsityPattern->end())
+                    gradientSparsityPattern->push_back(E->variable);
+            }
+        }
+    }
+
     for(auto& E : symbolicSparseJacobian)
     {
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E.first)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(E.first);
     }
 };

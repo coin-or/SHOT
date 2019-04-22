@@ -42,9 +42,8 @@ void TaskCheckConstraintTolerance::run()
     auto constraintTolerance = env->settings->getSetting<double>("ConstraintTolerance", "Termination");
 
     // Checks it the nonlinear objective is fulfilled
-    if(env->reformulatedProblem->objectiveFunction->properties.classification
-            > E_ObjectiveFunctionClassification::Quadratic
-        && env->reformulatedProblem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point)
+    if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
+        && env->problem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point)
                 - currIter->objectiveValue
             > constraintTolerance)
     {

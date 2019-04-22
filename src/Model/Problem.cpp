@@ -281,8 +281,8 @@ void Problem::updateProperties()
     if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
 
-    if(objectiveFunction->properties.hasNonlinearExpression)
-        properties.numberOfNonlinearExpressions++;
+    // if(objectiveFunction->properties.hasNonlinearExpression)
+    //    properties.numberOfNonlinearExpressions++;
 
     if(properties.isDiscrete)
     {

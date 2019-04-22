@@ -411,7 +411,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     ObjectiveFunctionPtr objective;
 
-    if(copyOriginalNonlinearExpression)
+    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
     {
         objective = std::make_shared<NonlinearObjectiveFunction>();
     }
