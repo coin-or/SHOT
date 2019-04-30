@@ -203,33 +203,16 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
             constant = maxDev.normalizedRHSValue;
         }
 
-        if(hyperplane.sourceConstraint->properties.hasNonlinearExpression)
-        {
-            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
-                           ->calculateGradient(hyperplane.generatedPoint, true);
-        }
-        else
-        {
-            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
-                           ->calculateGradient(hyperplane.generatedPoint, true);
-        }
+        gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                       ->calculateGradient(hyperplane.generatedPoint, true);
 
         int nonzeroes
             = std::count_if(gradient.begin(), gradient.end(), [](auto element) { return (element.second != 0.0); });
 
         if(nonzeroes == 0)
         {
-            // Recalculate gradient without removing zeroes
-            if(hyperplane.sourceConstraint->properties.hasNonlinearExpression)
-            {
-                gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
-                               ->calculateGradient(hyperplane.generatedPoint, false);
-            }
-            else
-            {
-                gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
-                               ->calculateGradient(hyperplane.generatedPoint, false);
-            }
+            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                           ->calculateGradient(hyperplane.generatedPoint, false);
 
             double eps = 0.000001;
 
@@ -278,7 +261,8 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
     std::vector<PairIndexValue> elements;
 
-    double constant = env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
+    double constant =
+    env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
                                                                                     hyperplane.generatedPoint);
 
     auto tmpArray = env->model->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(

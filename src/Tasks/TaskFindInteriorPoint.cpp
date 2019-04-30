@@ -109,10 +109,6 @@ void TaskFindInteriorPoint::run()
             env->output->outputInfo("\n Valid interior point with constraint deviation "
                 + Utilities::toString(maxDev.normalizedValue) + " found.");
 
-            // Remove the variable from the epigraph formulation
-            if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                tmpIP->point.pop_back();
-
             env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))

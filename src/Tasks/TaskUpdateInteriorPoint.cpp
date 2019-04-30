@@ -78,6 +78,9 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
         }
 
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
         tmpIP->point = tmpPrimalPoint;
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
@@ -99,6 +102,9 @@ void TaskUpdateInteriorPoint::run()
         {
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
         }
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
 
@@ -127,6 +133,9 @@ void TaskUpdateInteriorPoint::run()
         {
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
         }
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         // Add the new point only
         tmpIP->point = tmpPrimalPoint;

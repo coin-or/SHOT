@@ -148,7 +148,18 @@ void Problem::updateConstraints()
 
 void Problem::updateVariables()
 {
-    auto numVariables = allVariables.size();
+    int numVariables = allVariables.size();
+    int numAuxiliaryVariables = auxiliaryVariables.size();
+
+    allVariables.sortByIndex();
+    allVariables.sortByIndex();
+    allVariables.sortByIndex();
+    realVariables.sortByIndex();
+    binaryVariables.sortByIndex();
+    integerVariables.sortByIndex();
+    semicontinuousVariables.sortByIndex();
+    nonlinearVariables.sortByIndex();
+    auxiliaryVariables.sortByIndex();
 
     // Update bound vectors
     if(variableLowerBounds.size() != numVariables)
@@ -170,9 +181,19 @@ void Problem::updateVariables()
         variableUpperBounds[i] = allVariables[i]->upperBound;
         variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
 
+        // allVariables[i]->index = i;
+
         if(allVariables[i]->isNonlinear)
             nonlinearVariables.push_back(allVariables[i]);
     }
+    /*
+        for(int i = 0; i < numAuxiliaryVariables; i++)
+        {
+            auxiliaryVariables[i]->index = numVariables + i;
+        }
+
+        if(auxiliaryObjectiveVariable)
+            auxiliaryObjectiveVariable->index = numVariables + numAuxiliaryVariables;*/
 
     allVariables.takeOwnership(shared_from_this());
     auxiliaryVariables.takeOwnership(shared_from_this());

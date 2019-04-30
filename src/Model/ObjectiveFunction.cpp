@@ -598,10 +598,7 @@ void NonlinearObjectiveFunction::updateProperties()
         properties.hasSignomialTerms = false;
     }
 
-    std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->index < variableTwo->index);
-        });
+    variablesInNonlinearExpression.sortByIndex();
 }
 
 void NonlinearObjectiveFunction::takeOwnership(ProblemPtr owner)

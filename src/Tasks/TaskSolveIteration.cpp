@@ -153,13 +153,13 @@ void TaskSolveIteration::run()
             Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
         }
 
-        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        /*if(env->reformulatedProblem->auxiliaryObjectiveVariable)
         {
             for(auto& S : sols)
             {
                 S.point.pop_back();
             }
-        }
+        }*/
 
         currIter->solutionPoints = sols;
 

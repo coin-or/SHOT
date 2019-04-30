@@ -120,6 +120,13 @@ public:
             V->takeOwnership(owner);
         }
     }
+
+    inline void sortByIndex()
+    {
+        std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
+            return (variableOne->index < variableTwo->index);
+        });
+    }
 };
 
 std::ostream& operator<<(std::ostream& stream, VariablePtr var);

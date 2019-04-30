@@ -43,13 +43,6 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     PartitionQuadraticTermsInConstraint
         = env->settings->getSetting<bool>("Reformulation.Constraint.PartitionQuadraticTerms", "Model");
 
-    int additionalNumberOfNonlinearConstraints = 0;
-
-    if(env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
-    {
-        additionalNumberOfNonlinearConstraints = 1;
-    }
-
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;
 
@@ -181,39 +174,62 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         bool useEpigraph = env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model");
-        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
-
-        auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
-            "shot_objvar", auxVariableCounter, E_VariableType::Real, -objVarBound, objVarBound);
-        objectiveVariable->auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
-
-        if(env->problem->objectiveFunction->properties.hasLinearTerms)
-        {
-            for(auto& T :
-                std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms)
-            {
-                objectiveVariable->linearTerms.add(T);
-            }
-        }
-
-        if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
-        {
-            for(auto& T :
-                std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms)
-            {
-                objectiveVariable->quadraticTerms.add(T);
-            }
-        }
-
-        if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
-        {
-            objectiveVariable->nonlinearExpression
-                = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                      ->nonlinearExpression;
-        }
 
         if(useEpigraph)
         {
+            double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+
+            auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
+                "shot_objvar", auxVariableCounter, E_VariableType::Real, -objVarBound, objVarBound);
+            objectiveVariable->auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
+
+            if(env->problem->objectiveFunction->properties.hasLinearTerms)
+            {
+                for(auto& T :
+                    std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms)
+                {
+                    objectiveVariable->linearTerms.add(std::make_shared<LinearTerm>(
+                        T->coefficient, reformulatedProblem->getVariable(T->variable->index)));
+                }
+            }
+
+            if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
+            {
+                for(auto& T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)
+                                  ->quadraticTerms)
+                {
+                    objectiveVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(T->coefficient,
+                        reformulatedProblem->getVariable(T->firstVariable->index),
+                        reformulatedProblem->getVariable(T->secondVariable->index)));
+                }
+            }
+
+            if(env->problem->objectiveFunction->properties.hasMonomialTerms)
+            {
+                for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                                  ->monomialTerms)
+                {
+                    objectiveVariable->monomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+                }
+            }
+
+            if(env->problem->objectiveFunction->properties.hasSignomialTerms)
+            {
+                for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                                  ->signomialTerms)
+                {
+                    objectiveVariable->signomialTerms.add(
+                        std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+                }
+            }
+
+            if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
+            {
+                objectiveVariable->nonlinearExpression
+                    = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                          ->nonlinearExpression;
+            }
+
             bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
             double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
 
@@ -232,10 +248,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             {
                 copyLinearTermsToConstraint(
                     std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms,
-                    constraint);
+                    constraint, isSignReversed);
             }
-
-            constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
 
             if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
             {
@@ -245,9 +259,24 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     constraint);
             }
 
+            if(env->problem->objectiveFunction->properties.hasMonomialTerms)
+            {
+                copyMonomialTermsToConstraint(
+                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                        ->monomialTerms,
+                    constraint, isSignReversed);
+            }
+
+            if(env->problem->objectiveFunction->properties.hasSignomialTerms)
+            {
+                copySignomialTermsToConstraint(
+                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                        ->signomialTerms,
+                    constraint, isSignReversed);
+            }
             if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
             {
-                if(signfactor == -1)
+                if(isSignReversed)
                 {
                     constraint->add(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
                         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
@@ -263,20 +292,20 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                 }
             }
 
-            reformulatedProblem->add(std::move(objective));
+            reformulatedProblem->add(objectiveVariable);
+            constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
             auto reformulatedConstraints = reformulateConstraint(constraint);
 
             for(auto& RC : reformulatedConstraints)
             {
                 reformulatedProblem->add(std::move(RC));
             }
-        }
 
-        reformulatedProblem->add(std::move(objectiveVariable));
+            objectiveVariable->index = auxVariableCounter;
+            reformulatedProblem->add(std::move(objective));
 
-        // If the epigraph reformulation has been performed, we are done
-        if(useEpigraph)
             return;
+        }
     }
 
     // Objective is to be regarded as nonlinear
@@ -911,6 +940,13 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     {
         auto bounds = T->getBounds();
 
+        if(bounds.l() == bounds.u())
+        {
+            // TODO
+            bounds.l(-9999999999.0);
+            bounds.u(9999999999.0);
+        }
+
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pmon_" + std::to_string(auxVariableCounter + 1),
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
         auxVariable->auxiliaryType = E_AuxiliaryVariableType::MonomialTermsPartitioning;
@@ -951,6 +987,13 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     for(auto& T : sourceTerms)
     {
         auto bounds = T->getBounds();
+
+        if(bounds.l() == bounds.u())
+        {
+            // TODO
+            bounds.l(-9999999999.0);
+            bounds.u(9999999999.0);
+        }
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_psig_" + std::to_string(auxVariableCounter + 1),
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
