@@ -414,23 +414,5 @@ void MIPSolverBase::unfixVariables()
     isVariablesFixed = false;
 }
 
-/*
-void MIPSolverBase::createIntegerCut(VectorInteger& binaryIndexes)
-{
-    std::vector<PairIndexValue> elements;
-
-    for(int i = 0; i < binaryIndexes.size(); i++)
-    {
-        PairIndexValue pair;
-        pair.index = binaryIndexes.at(i);
-        pair.value = 1.0;
-
-        elements.push_back(pair);
-    }
-
-    this->addLinearConstraint(elements, -(binaryIndexes.size() - 1.0));
-    env->solutionStatistics.numberOfIntegerCuts++;
-}*/
-
 int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
 } // namespace SHOT
