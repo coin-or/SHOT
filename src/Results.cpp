@@ -604,9 +604,6 @@ std::string Results::getResultsTrace()
     case(ES_PrimalNLPSolver::None):
         ss << "NONE";
         break;
-    case(ES_PrimalNLPSolver::CuttingPlane):
-        ss << "SHOT";
-        break;
     case(ES_PrimalNLPSolver::GAMS):
         ss << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
         break;

@@ -47,6 +47,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     switch(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal")))
     {
+
 #ifdef HAS_IPOPT
     case(ES_PrimalNLPSolver::Ipopt):
     {
@@ -55,6 +56,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         break;
     }
 #endif
+
 #ifdef HAS_GAMS
     case(ES_PrimalNLPSolver::GAMS):
     {
@@ -64,12 +66,11 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
         break;
     }
 #endif
-    default:
-        env->output->outputError(
-            "Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
-        throw Error("Error in solver definition for primal NLP solver. Check option 'Primal.FixedInteger.Solver'.");
 
-        throw std::logic_error("Unknown PrimalNLPSolver setting.");
+    default:
+        auto value = env->settings->getSetting<int>("FixedInteger.Solver", "Primal");
+        throw Error("Error in solver definition for primal NLP solver. Value '" + std::to_string(value)
+            + "' for setting 'Primal.FixedInteger.Solver' not valid.");
     }
 
     if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))

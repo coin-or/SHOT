@@ -329,7 +329,6 @@ enum class ES_PrimalNLPFixedPoint
 
 enum class ES_PrimalNLPSolver
 {
-    CuttingPlane,
     Ipopt,
     GAMS,
     None

@@ -227,17 +227,7 @@ bool Solver::setProblem(std::string fileName)
             auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
             taskReformulateProblem->run();
 
-            // env->reformulatedProblem = problem;
-
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
-
-            if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
-                == ES_PrimalNLPSolver::GAMS)
-            {
-                env->output->outputError(
-                    "Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
-                env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
-            }
         }
         else if(problemExtension == ".nl")
         {
@@ -257,17 +247,7 @@ bool Solver::setProblem(std::string fileName)
             auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
             taskReformulateProblem->run();
 
-            // env->reformulatedProblem = problem;
-
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
-
-            if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
-                == ES_PrimalNLPSolver::GAMS)
-            {
-                env->output->outputError(
-                    "Cannot use GAMS NLP solvers in combination with OSiL-files. Switching to Ipopt");
-                env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
-            }
         }
 #endif
 
@@ -289,8 +269,6 @@ bool Solver::setProblem(std::string fileName)
 
             auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
             taskReformulateProblem->run();
-
-            // env->reformulatedProblem = problem;
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
@@ -1098,50 +1076,79 @@ void Solver::verifySettings()
     env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
         static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
 
-    if(env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
-        || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
-    {
-        if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
-            == ES_PrimalNLPSolver::Ipopt)
-        {
-            env->output->outputWarning(" Using Ipopt as NLP solver since problem is given in OSiL or Ampl format.");
-            env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
-        }
-    }
+    // Checking for errors in NLP solver selection
 
+    bool NLPSolverDefined = true;
+
+#ifndef HAS_IPOPT
+    if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+        == ES_PrimalNLPSolver::Ipopt)
+    {
+        env->output->outputWarning(" SHOT has not been compiled with support for Ipopt NLP solver.");
+        NLPSolverDefined = false;
+    }
+#endif
+
+#ifndef HAS_GAMS
     if(static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
         == ES_PrimalNLPSolver::GAMS)
     {
-#ifndef HAS_GAMS
         env->output->outputWarning(" SHOT has not been compiled with support for GAMS NLP solvers.");
+        NLPSolverDefined = false;
+    }
+#endif
+
+    if((env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::OSiL)
+           || env->settings->getSetting<int>("SourceFormat", "Input") == static_cast<int>(ES_SourceFormat::NL))
+        && static_cast<ES_PrimalNLPSolver>(env->settings->getSetting<int>("FixedInteger.Solver", "Primal"))
+            == ES_PrimalNLPSolver::GAMS)
+    {
+        env->output->outputWarning(" Cannot use GAMS NLP solvers with problem files in OSiL or nl formats.");
+        NLPSolverDefined = false;
+    }
+
+    if(!NLPSolverDefined)
+    {
+#ifdef HAS_IPOPT
         env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::Ipopt);
+        env->output->outputWarning(" Using Ipopt as NLP solver instead.");
+
+#elif HAS_GAMS
+        env->settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
+        env->output->outputWarning(" Using GAMS NLP solvers instead.");
+
+#else
+        env->settings->updateSetting("FixedInteger.Use", "Primal", false);
+        env->output->outputWarning(" No NLP solver available. Disabling primal strategy!");
 #endif
     }
 
+    // Checking for errors in MIP solver selection
+
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
-    bool correctSolverDefined = false;
+    bool MIPSolverDefined = false;
 #ifdef HAS_CPLEX
     if(solver == ES_MIPSolver::Cplex)
     {
-        correctSolverDefined = true;
+        MIPSolverDefined = true;
     }
 #endif
 
 #ifdef HAS_GUROBI
     if(solver == ES_MIPSolver::Gurobi)
     {
-        correctSolverDefined = true;
+        MIPSolverDefined = true;
     }
 #endif
 
 #ifdef HAS_CBC
     if(solver == ES_MIPSolver::Cbc)
     {
-        correctSolverDefined = true;
+        MIPSolverDefined = true;
     }
 #endif
 
-    if(!correctSolverDefined)
+    if(!MIPSolverDefined)
     {
         env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
 

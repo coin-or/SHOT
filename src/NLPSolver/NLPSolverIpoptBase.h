@@ -134,7 +134,7 @@ protected:
     std::vector<E_VariableType> originalVariableType;
 
 public:
-    virtual ~NLPSolverIpoptBase(){};
+    virtual ~NLPSolverIpoptBase() = default;
 
     virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
     virtual void clearStartingPoint();

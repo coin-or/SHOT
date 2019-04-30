@@ -28,7 +28,7 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     upperBounds = sourceProblem->getVariableUpperBounds();
 }
 
-NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() {}
+NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() = default;
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {

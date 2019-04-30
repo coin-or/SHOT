@@ -417,9 +417,6 @@ void Report::outputOptionsReport()
     case(ES_PrimalNLPSolver::None):
         report << "none";
         break;
-    case(ES_PrimalNLPSolver::CuttingPlane):
-        report << "cutting plane";
-        break;
     case(ES_PrimalNLPSolver::GAMS):
         report << "GAMS (";
         report << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");

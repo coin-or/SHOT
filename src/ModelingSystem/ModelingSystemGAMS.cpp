@@ -83,9 +83,6 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
             + Utilities::toString(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual")) + " by GAMS");
     }
 
-    // want to solve the NLP problems with GAMS
-    settings->updateSetting("FixedInteger.Solver", "Primal", (int)ES_PrimalNLPSolver::GAMS);
-
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
