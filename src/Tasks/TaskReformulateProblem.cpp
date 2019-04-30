@@ -274,6 +274,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                         ->signomialTerms,
                     constraint, isSignReversed);
             }
+
             if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
             {
                 if(isSignReversed)

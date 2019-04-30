@@ -651,22 +651,18 @@ void Problem::add(NumericConstraintPtr constraint)
 {
     numericConstraints.push_back(constraint);
 
-    if(constraint->properties.classification == E_ConstraintClassification::Linear)
-    {
-        linearConstraints.push_back(std::dynamic_pointer_cast<LinearConstraint>(constraint));
-    }
-    else if(constraint->properties.classification == E_ConstraintClassification::Quadratic)
-    {
-        quadraticConstraints.push_back(std::dynamic_pointer_cast<QuadraticConstraint>(constraint));
-    }
-    else if(constraint->properties.classification > E_ConstraintClassification::Quadratic)
+    if(constraint->properties.hasNonlinearExpression || constraint->properties.hasMonomialTerms
+        || constraint->properties.hasSignomialTerms)
     {
         nonlinearConstraints.push_back(std::dynamic_pointer_cast<NonlinearConstraint>(constraint));
     }
+    else if(constraint->properties.hasQuadraticTerms)
+    {
+        quadraticConstraints.push_back(std::dynamic_pointer_cast<QuadraticConstraint>(constraint));
+    }
     else
     {
-        env->output->outputError("Error: Trying to add constraint of unknown type "
-            + std::to_string((int)constraint->properties.classification) + " to problem.");
+        linearConstraints.push_back(std::dynamic_pointer_cast<LinearConstraint>(constraint));
     }
 
     constraint->takeOwnership(shared_from_this());
