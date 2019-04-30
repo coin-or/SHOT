@@ -88,7 +88,7 @@ struct PairIndexValue
     double value;
 
 public:
-    PairIndexValue(){};
+    PairIndexValue() = default;
     PairIndexValue(int index, double value) : index(index), value(value){};
 };
 

@@ -17,7 +17,7 @@ namespace SHOT
 class IRelaxationStrategy
 {
 public:
-    virtual ~IRelaxationStrategy(){};
+    virtual ~IRelaxationStrategy() = default;
 
     virtual void executeStrategy() = 0;
 

@@ -20,7 +20,7 @@ class TaskException : public std::exception
 {
 public:
     TaskException(EnvironmentPtr envPtr, std::string msg) : message(msg) {}
-    TaskException();
+    TaskException() = default;
 
     const char* what() const throw()
     {

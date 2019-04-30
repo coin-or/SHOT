@@ -55,7 +55,7 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     }
 }
 
-HCallbackI::~HCallbackI() {}
+HCallbackI::~HCallbackI() = default;
 
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
 
@@ -168,7 +168,7 @@ InfoCallbackI::InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArra
     env = envPtr;
 }
 
-InfoCallbackI::~InfoCallbackI() {}
+InfoCallbackI::~InfoCallbackI() = default;
 
 IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const { return (new(getEnv()) InfoCallbackI(*this)); }
 
@@ -262,7 +262,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     }
 }
 
-CtCallbackI::~CtCallbackI() {}
+CtCallbackI::~CtCallbackI() = default;
 
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
 
@@ -600,7 +600,7 @@ MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(Environme
     modelUpdated = false;
 }
 
-MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback() {}
+MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback() = default;
 
 void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
 {

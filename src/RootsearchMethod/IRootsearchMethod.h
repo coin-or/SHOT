@@ -21,9 +21,9 @@ namespace SHOT
 class IRootsearchMethod
 {
 public:
-    IRootsearchMethod(){};
+    IRootsearchMethod() = default;
     IRootsearchMethod(EnvironmentPtr envPtr){};
-    virtual ~IRootsearchMethod(){};
+    virtual ~IRootsearchMethod() = default;
 
     virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
         double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate)

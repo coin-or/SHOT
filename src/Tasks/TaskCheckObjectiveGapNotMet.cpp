@@ -24,7 +24,7 @@ TaskCheckObjectiveGapNotMet::TaskCheckObjectiveGapNotMet(EnvironmentPtr envPtr, 
 {
 }
 
-TaskCheckObjectiveGapNotMet::~TaskCheckObjectiveGapNotMet() {}
+TaskCheckObjectiveGapNotMet::~TaskCheckObjectiveGapNotMet() = default;
 
 void TaskCheckObjectiveGapNotMet::run()
 {

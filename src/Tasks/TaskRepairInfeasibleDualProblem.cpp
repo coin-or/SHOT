@@ -29,7 +29,7 @@ TaskRepairInfeasibleDualProblem::TaskRepairInfeasibleDualProblem(
 {
 }
 
-TaskRepairInfeasibleDualProblem::~TaskRepairInfeasibleDualProblem() {}
+TaskRepairInfeasibleDualProblem::~TaskRepairInfeasibleDualProblem() = default;
 
 void TaskRepairInfeasibleDualProblem::run()
 {

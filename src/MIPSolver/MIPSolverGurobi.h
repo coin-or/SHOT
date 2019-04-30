@@ -26,9 +26,6 @@ public:
 
     virtual void checkParameters();
 
-    // virtual bool createLinearProblem(OptProblem *origProblem);
-    // virtual bool createLinearProblem(ProblemPtr sourceProblem){};
-
     virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound);
 
     virtual bool initializeObjective();

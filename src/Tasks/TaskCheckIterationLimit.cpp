@@ -24,7 +24,7 @@ TaskCheckIterationLimit::TaskCheckIterationLimit(EnvironmentPtr envPtr, std::str
 {
 }
 
-TaskCheckIterationLimit::~TaskCheckIterationLimit() {}
+TaskCheckIterationLimit::~TaskCheckIterationLimit() = default;
 
 void TaskCheckIterationLimit::run()
 {

@@ -129,7 +129,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
-SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP() {}
+SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP() = default;
 
 bool SolutionStrategyMIQCQP::solveProblem()
 {

@@ -349,7 +349,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 }
 
 /// Destructor
-CplexCallback::~CplexCallback() {}
+CplexCallback::~CplexCallback() = default;
 
 void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context& context)
 {
@@ -487,7 +487,7 @@ MIPSolverCplexLazy::MIPSolverCplexLazy(EnvironmentPtr envPtr)
     modelUpdated = false;
 }
 
-MIPSolverCplexLazy::~MIPSolverCplexLazy() {}
+MIPSolverCplexLazy::~MIPSolverCplexLazy() = default;
 
 void MIPSolverCplexLazy::initializeSolverSettings()
 {

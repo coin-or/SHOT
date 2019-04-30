@@ -27,8 +27,6 @@ MIPSolutionLimitStrategyIncrease::MIPSolutionLimitStrategyIncrease(EnvironmentPt
     lastIterOptimal = 1;
 }
 
-MIPSolutionLimitStrategyIncrease::~MIPSolutionLimitStrategyIncrease() {}
-
 bool MIPSolutionLimitStrategyIncrease::updateLimit()
 {
     auto currIter = env->results->getCurrentIteration();

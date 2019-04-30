@@ -31,7 +31,7 @@ TaskPresolve::TaskPresolve(EnvironmentPtr envPtr) : TaskBase(envPtr)
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskPresolve::~TaskPresolve() {}
+TaskPresolve::~TaskPresolve() = default;
 
 void TaskPresolve::run()
 {

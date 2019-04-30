@@ -26,7 +26,7 @@ TaskCheckPrimalStagnation::TaskCheckPrimalStagnation(
 {
 }
 
-TaskCheckPrimalStagnation::~TaskCheckPrimalStagnation() {}
+TaskCheckPrimalStagnation::~TaskCheckPrimalStagnation() = default;
 
 void TaskCheckPrimalStagnation::run()
 {

@@ -20,7 +20,7 @@ namespace SHOT
 
 TaskExecuteRelaxationStrategy::TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy() {}
+TaskExecuteRelaxationStrategy::~TaskExecuteRelaxationStrategy() = default;
 
 void TaskExecuteRelaxationStrategy::run()
 {

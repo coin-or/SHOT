@@ -31,7 +31,7 @@ TaskAddHyperplanes::TaskAddHyperplanes(EnvironmentPtr envPtr) : TaskBase(envPtr)
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskAddHyperplanes::~TaskAddHyperplanes() {}
+TaskAddHyperplanes::~TaskAddHyperplanes() = default;
 
 void TaskAddHyperplanes::run()
 {

@@ -32,7 +32,7 @@ MIPSolverOsiCbc::MIPSolverOsiCbc(EnvironmentPtr envPtr)
     checkParameters();
 }
 
-MIPSolverOsiCbc::~MIPSolverOsiCbc() {}
+MIPSolverOsiCbc::~MIPSolverOsiCbc() = default;
 
 bool MIPSolverOsiCbc::initializeProblem()
 {

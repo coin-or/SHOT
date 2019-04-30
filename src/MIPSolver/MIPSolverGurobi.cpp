@@ -36,7 +36,7 @@ MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
     initializeProblem();
 }
 
-MIPSolverGurobi::~MIPSolverGurobi() {}
+MIPSolverGurobi::~MIPSolverGurobi() = default;
 
 bool MIPSolverGurobi::initializeProblem()
 {

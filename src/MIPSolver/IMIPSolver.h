@@ -24,7 +24,7 @@ namespace SHOT
 class IMIPSolver
 {
 public:
-    virtual ~IMIPSolver(){};
+    virtual ~IMIPSolver() = default;
 
     virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;

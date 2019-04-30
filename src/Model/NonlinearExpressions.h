@@ -359,7 +359,7 @@ public:
 class ExpressionNegate : public ExpressionUnary
 {
 public:
-    ExpressionNegate() {}
+    ExpressionNegate() = default;
 
     ExpressionNegate(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -437,7 +437,7 @@ public:
 class ExpressionInvert : public ExpressionUnary
 {
 public:
-    ExpressionInvert() {}
+    ExpressionInvert() = default;
 
     ExpressionInvert(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -515,7 +515,7 @@ public:
 class ExpressionSquareRoot : public ExpressionUnary
 {
 public:
-    ExpressionSquareRoot() {}
+    ExpressionSquareRoot() = default;
 
     ExpressionSquareRoot(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -573,7 +573,7 @@ public:
 class ExpressionLog : public ExpressionUnary
 {
 public:
-    ExpressionLog() {}
+    ExpressionLog() = default;
 
     ExpressionLog(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -625,7 +625,7 @@ public:
 class ExpressionExp : public ExpressionUnary
 {
 public:
-    ExpressionExp() {}
+    ExpressionExp() = default;
 
     ExpressionExp(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -676,7 +676,7 @@ public:
 class ExpressionSquare : public ExpressionUnary
 {
 public:
-    ExpressionSquare() {}
+    ExpressionSquare() = default;
 
     ExpressionSquare(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -760,7 +760,7 @@ public:
 class ExpressionSin : public ExpressionUnary
 {
 public:
-    ExpressionSin() {}
+    ExpressionSin() = default;
 
     ExpressionSin(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -858,7 +858,7 @@ public:
 class ExpressionCos : public ExpressionUnary
 {
 public:
-    ExpressionCos() {}
+    ExpressionCos() = default;
 
     ExpressionCos(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -956,7 +956,7 @@ public:
 class ExpressionTan : public ExpressionUnary
 {
 public:
-    ExpressionTan() {}
+    ExpressionTan() = default;
 
     ExpressionTan(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -1022,7 +1022,7 @@ public:
 class ExpressionArcSin : public ExpressionUnary
 {
 public:
-    ExpressionArcSin() {}
+    ExpressionArcSin() = default;
 
     ExpressionArcSin(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -1083,7 +1083,7 @@ public:
 class ExpressionArcCos : public ExpressionUnary
 {
 public:
-    ExpressionArcCos() {}
+    ExpressionArcCos() = default;
 
     ExpressionArcCos(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -1145,7 +1145,7 @@ public:
 class ExpressionArcTan : public ExpressionUnary
 {
 public:
-    ExpressionArcTan() {}
+    ExpressionArcTan() = default;
 
     ExpressionArcTan(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -1206,7 +1206,7 @@ public:
 class ExpressionAbs : public ExpressionUnary
 {
 public:
-    ExpressionAbs() {}
+    ExpressionAbs() = default;
 
     ExpressionAbs(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
@@ -1296,7 +1296,7 @@ private:
     bool isAssociative = false;
 
 public:
-    ExpressionDivide() {}
+    ExpressionDivide() = default;
 
     ExpressionDivide(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
     {
@@ -1460,7 +1460,7 @@ private:
     bool isAssociative = false;
 
 public:
-    ExpressionPower() {}
+    ExpressionPower() = default;
 
     ExpressionPower(NonlinearExpressionPtr childExpression1, NonlinearExpressionPtr childExpression2)
     {
@@ -1814,7 +1814,7 @@ private:
 class ExpressionSum : public ExpressionGeneral
 {
 public:
-    ExpressionSum() {}
+    ExpressionSum() = default;
 
     ExpressionSum(NonlinearExpressions childExpressions) { children = childExpressions; }
 
@@ -1974,7 +1974,7 @@ public:
 class ExpressionProduct : public ExpressionGeneral
 {
 public:
-    ExpressionProduct() {}
+    ExpressionProduct() = default;
 
     ExpressionProduct(NonlinearExpressions childExpressions) { children = childExpressions; }
 

@@ -23,7 +23,7 @@ TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string ta
 {
 }
 
-TaskCheckRelativeGap::~TaskCheckRelativeGap() {}
+TaskCheckRelativeGap::~TaskCheckRelativeGap() = default;
 
 void TaskCheckRelativeGap::run()
 {

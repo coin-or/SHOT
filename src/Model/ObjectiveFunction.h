@@ -71,7 +71,7 @@ class ObjectiveFunction
 {
 
 public:
-    ~ObjectiveFunction() {}
+    ~ObjectiveFunction() = default;
 
     ObjectiveFunctionProperties properties;
 
@@ -133,7 +133,7 @@ public:
         updateProperties();
     }
 
-    virtual ~LinearObjectiveFunction(){};
+    virtual ~LinearObjectiveFunction() = default;
 
     LinearTerms linearTerms;
 
@@ -199,7 +199,7 @@ public:
         updateProperties();
     }
 
-    virtual ~QuadraticObjectiveFunction(){};
+    virtual ~QuadraticObjectiveFunction() = default;
 
     QuadraticTerms quadraticTerms;
 
@@ -293,7 +293,7 @@ public:
         updateProperties();
     }
 
-    virtual ~NonlinearObjectiveFunction(){};
+    virtual ~NonlinearObjectiveFunction() = default;
 
     MonomialTerms monomialTerms;
     SignomialTerms signomialTerms;

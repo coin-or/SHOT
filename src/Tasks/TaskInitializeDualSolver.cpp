@@ -155,7 +155,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskInitializeDualSolver::~TaskInitializeDualSolver() {}
+TaskInitializeDualSolver::~TaskInitializeDualSolver() = default;
 
 void TaskInitializeDualSolver::run() {}
 std::string TaskInitializeDualSolver::getType()

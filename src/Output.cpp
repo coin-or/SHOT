@@ -27,7 +27,7 @@ Output::Output()
     setLogLevels(E_LogLevel::Info, E_LogLevel::Info);
 }
 
-Output::~Output() {}
+Output::~Output() = default;
 
 void Output::outputCritical(std::string message) { logger->critical(message); }
 

@@ -46,7 +46,7 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
     checkParameters();
 }
 
-MIPSolverGurobiLazy::~MIPSolverGurobiLazy() {}
+MIPSolverGurobiLazy::~MIPSolverGurobiLazy() = default;
 
 void MIPSolverGurobiLazy::initializeSolverSettings()
 {

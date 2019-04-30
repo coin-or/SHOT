@@ -23,7 +23,7 @@ TaskCheckTimeLimit::TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskID
 {
 }
 
-TaskCheckTimeLimit::~TaskCheckTimeLimit() {}
+TaskCheckTimeLimit::~TaskCheckTimeLimit() = default;
 
 void TaskCheckTimeLimit::run()
 {

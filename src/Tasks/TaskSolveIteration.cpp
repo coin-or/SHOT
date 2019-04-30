@@ -36,7 +36,7 @@ TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
     }
 }
 
-TaskSolveIteration::~TaskSolveIteration() {}
+TaskSolveIteration::~TaskSolveIteration() = default;
 
 void TaskSolveIteration::run()
 {

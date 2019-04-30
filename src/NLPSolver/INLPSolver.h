@@ -20,7 +20,7 @@ class INLPSolver
 public:
     INLPSolver(EnvironmentPtr envPtr) : env(envPtr){};
 
-    virtual ~INLPSolver(){};
+    virtual ~INLPSolver() = default;
 
     EnvironmentPtr env;
 

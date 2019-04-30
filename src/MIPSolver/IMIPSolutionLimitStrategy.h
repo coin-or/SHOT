@@ -16,7 +16,7 @@ namespace SHOT
 class IMIPSolutionLimitStrategy
 {
 public:
-    virtual ~IMIPSolutionLimitStrategy(){};
+    virtual ~IMIPSolutionLimitStrategy() = default;
 
     virtual bool updateLimit() = 0;
 

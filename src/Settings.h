@@ -59,7 +59,7 @@ public:
 
     Settings(OutputPtr outputPtr) { output = outputPtr.get(); }
 
-    ~Settings() {}
+    ~Settings() = default;
 
     template <typename T> void updateSetting(std::string name, std::string category, T value);
 

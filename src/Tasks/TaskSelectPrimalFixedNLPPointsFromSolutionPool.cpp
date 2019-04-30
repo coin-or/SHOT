@@ -24,7 +24,7 @@ TaskSelectPrimalFixedNLPPointsFromSolutionPool::TaskSelectPrimalFixedNLPPointsFr
 {
 }
 
-TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsFromSolutionPool() {}
+TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsFromSolutionPool() = default;
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {

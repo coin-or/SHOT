@@ -69,7 +69,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 
 Solver::Solver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
 
-Solver::~Solver() {}
+Solver::~Solver() = default;
 
 bool Solver::setOptionsFromFile(std::string fileName)
 {

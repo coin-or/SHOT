@@ -29,7 +29,7 @@ TaskAddPrimalReductionCut::TaskAddPrimalReductionCut(
 {
 }
 
-TaskAddPrimalReductionCut::~TaskAddPrimalReductionCut() {}
+TaskAddPrimalReductionCut::~TaskAddPrimalReductionCut() = default;
 
 void TaskAddPrimalReductionCut::run()
 {

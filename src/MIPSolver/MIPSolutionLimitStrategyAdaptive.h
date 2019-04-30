@@ -19,7 +19,7 @@ class MIPSolutionLimitStrategyAdaptive : public IMIPSolutionLimitStrategy
 {
 public:
     MIPSolutionLimitStrategyAdaptive(EnvironmentPtr envPtr);
-    ~MIPSolutionLimitStrategyAdaptive();
+    ~MIPSolutionLimitStrategyAdaptive() = default;
 
     virtual bool updateLimit();
     virtual int getNewLimit();

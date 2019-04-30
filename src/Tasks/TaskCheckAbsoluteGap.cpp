@@ -25,7 +25,7 @@ TaskCheckAbsoluteGap::TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string ta
 {
 }
 
-TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap() {}
+TaskCheckAbsoluteGap::~TaskCheckAbsoluteGap() = default;
 
 void TaskCheckAbsoluteGap::run()
 {

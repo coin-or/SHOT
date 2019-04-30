@@ -30,7 +30,7 @@ TaskSelectPrimalCandidatesFromRootsearch::TaskSelectPrimalCandidatesFromRootsear
 {
 }
 
-TaskSelectPrimalCandidatesFromRootsearch::~TaskSelectPrimalCandidatesFromRootsearch() {}
+TaskSelectPrimalCandidatesFromRootsearch::~TaskSelectPrimalCandidatesFromRootsearch() = default;
 
 void TaskSelectPrimalCandidatesFromRootsearch::run() { this->run(env->results->getCurrentIteration()->solutionPoints); }
 

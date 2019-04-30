@@ -218,7 +218,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     env->tasks->addTask(tTerminate, "Terminate");
 }
 
-SolutionStrategyNLP::~SolutionStrategyNLP() {}
+SolutionStrategyNLP::~SolutionStrategyNLP() = default;
 
 bool SolutionStrategyNLP::solveProblem()
 {

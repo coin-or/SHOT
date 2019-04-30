@@ -42,7 +42,7 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskCreateDualProblem::~TaskCreateDualProblem() {}
+TaskCreateDualProblem::~TaskCreateDualProblem() = default;
 
 void TaskCreateDualProblem::run()
 {

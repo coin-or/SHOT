@@ -74,7 +74,7 @@ double Test::operator()(const double x)
 
 TestObjective::TestObjective(EnvironmentPtr envPtr) : env(envPtr) {}
 
-TestObjective::~TestObjective() {}
+TestObjective::~TestObjective() = default;
 
 double TestObjective::operator()(const double x)
 {

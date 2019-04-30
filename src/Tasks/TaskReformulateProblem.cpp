@@ -120,7 +120,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     env->timing->stopTimer("ProblemReformulation");
 }
 
-TaskReformulateProblem::~TaskReformulateProblem() {}
+TaskReformulateProblem::~TaskReformulateProblem() = default;
 
 void TaskReformulateProblem::run() {}
 

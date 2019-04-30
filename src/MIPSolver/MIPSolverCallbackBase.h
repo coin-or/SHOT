@@ -28,7 +28,7 @@ namespace SHOT
 class MIPSolverCallbackBase
 {
 public:
-    virtual ~MIPSolverCallbackBase();
+    virtual ~MIPSolverCallbackBase() = default;
 
 private:
 protected:

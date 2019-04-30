@@ -128,5 +128,4 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
     this->lastNumAddedHyperplanes = 0;
 }
 
-MIPSolverCallbackBase::~MIPSolverCallbackBase() {}
 } // namespace SHOT

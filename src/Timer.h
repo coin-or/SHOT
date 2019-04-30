@@ -15,9 +15,8 @@
 class Timer
 {
 public:
-    Timer(){};
-
-    ~Timer(){};
+    Timer() = delete;
+    ~Timer() = default;
 
     Timer(std::string timerName)
     {

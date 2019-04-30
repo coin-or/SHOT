@@ -62,7 +62,7 @@ struct ConstraintProperties
 class Constraint
 {
 public:
-    virtual ~Constraint(){};
+    virtual ~Constraint() = default;
 
     int index = -1;
     std::string name;
@@ -152,7 +152,7 @@ class LinearConstraint : public NumericConstraint
 public:
     LinearTerms linearTerms;
 
-    LinearConstraint(){};
+    LinearConstraint() = default;
 
     LinearConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
     {
@@ -298,7 +298,7 @@ public:
     Variables variablesInSignomialTerms;
     Variables variablesInNonlinearExpression;
 
-    NonlinearConstraint(){};
+    NonlinearConstraint() = default;
 
     NonlinearConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
     {

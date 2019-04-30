@@ -26,7 +26,7 @@ TaskCheckDualStagnation::TaskCheckDualStagnation(EnvironmentPtr envPtr, std::str
 {
 }
 
-TaskCheckDualStagnation::~TaskCheckDualStagnation() {}
+TaskCheckDualStagnation::~TaskCheckDualStagnation() = default;
 
 void TaskCheckDualStagnation::run()
 {

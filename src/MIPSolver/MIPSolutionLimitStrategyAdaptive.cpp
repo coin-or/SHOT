@@ -25,8 +25,6 @@ MIPSolutionLimitStrategyAdaptive::MIPSolutionLimitStrategyAdaptive(EnvironmentPt
     numSolLimIncremented = 1;
 }
 
-MIPSolutionLimitStrategyAdaptive::~MIPSolutionLimitStrategyAdaptive() {}
-
 bool MIPSolutionLimitStrategyAdaptive::updateLimit()
 {
     auto currIter = env->results->getCurrentIteration();

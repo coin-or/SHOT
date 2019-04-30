@@ -24,7 +24,7 @@ TaskSequential::TaskSequential(EnvironmentPtr envPtr, int numberOfTasks) : TaskB
     m_tasks.reserve(numberOfTasks);
 }
 
-TaskSequential::~TaskSequential() {}
+TaskSequential::~TaskSequential() = default;
 
 void TaskSequential::run()
 {

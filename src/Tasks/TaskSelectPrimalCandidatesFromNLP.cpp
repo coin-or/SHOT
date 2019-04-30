@@ -112,7 +112,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     env->timing->stopTimer("PrimalStrategy");
 }
 
-TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP() {}
+TaskSelectPrimalCandidatesFromNLP::~TaskSelectPrimalCandidatesFromNLP() = default;
 
 void TaskSelectPrimalCandidatesFromNLP::run()
 {

@@ -25,7 +25,7 @@ TaskConditional::TaskConditional(
     taskFalseIsSet = true;
 }
 
-TaskConditional::~TaskConditional() {}
+TaskConditional::~TaskConditional() = default;
 
 void TaskConditional::setCondition(std::function<bool()> conditionFunct) { condition = conditionFunct; }
 

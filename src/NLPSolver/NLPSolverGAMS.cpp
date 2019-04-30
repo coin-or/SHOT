@@ -41,7 +41,7 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject)
     showlog = env->settings->getSetting<bool>("Console.GAMS.Show", "Output");
 }
 
-NLPSolverGAMS::~NLPSolverGAMS() {}
+NLPSolverGAMS::~NLPSolverGAMS() = default;
 
 void NLPSolverGAMS::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
 {

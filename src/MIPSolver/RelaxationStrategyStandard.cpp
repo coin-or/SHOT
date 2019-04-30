@@ -27,7 +27,7 @@ RelaxationStrategyStandard::RelaxationStrategyStandard(EnvironmentPtr envPtr)
     setInitial();
 }
 
-RelaxationStrategyStandard::~RelaxationStrategyStandard() {}
+RelaxationStrategyStandard::~RelaxationStrategyStandard() = default;
 
 void RelaxationStrategyStandard::setInitial()
 {

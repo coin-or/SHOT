@@ -21,7 +21,7 @@ namespace SHOT
 
 TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-TaskAddIntegerCuts::~TaskAddIntegerCuts() {}
+TaskAddIntegerCuts::~TaskAddIntegerCuts() = default;
 
 void TaskAddIntegerCuts::run()
 {

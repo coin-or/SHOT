@@ -22,8 +22,8 @@ class IRootsearchMethod;
 class Environment
 {
 public:
-    inline Environment(){};
-    inline ~Environment(){};
+    inline Environment() = default;
+    inline ~Environment() = default;
 
     ResultsPtr results;
     SettingsPtr settings;

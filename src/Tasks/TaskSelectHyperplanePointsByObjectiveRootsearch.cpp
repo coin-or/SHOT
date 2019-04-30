@@ -30,7 +30,7 @@ TaskSelectHyperplanePointsByObjectiveRootsearch::TaskSelectHyperplanePointsByObj
 {
 }
 
-TaskSelectHyperplanePointsByObjectiveRootsearch::~TaskSelectHyperplanePointsByObjectiveRootsearch() {}
+TaskSelectHyperplanePointsByObjectiveRootsearch::~TaskSelectHyperplanePointsByObjectiveRootsearch() = default;
 
 void TaskSelectHyperplanePointsByObjectiveRootsearch::run()
 {

@@ -42,7 +42,7 @@ ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envP
     std::shared_ptr<OSiLWriter> osilWriter();
 }
 
-ModelingSystemOS::~ModelingSystemOS() {}
+ModelingSystemOS::~ModelingSystemOS() = default;
 
 void ModelingSystemOS::augmentSettings(SettingsPtr settings) {}
 

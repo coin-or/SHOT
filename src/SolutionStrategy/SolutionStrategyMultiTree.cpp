@@ -282,7 +282,7 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tTerminate, "Terminate");
 }
 
-SolutionStrategyMultiTree::~SolutionStrategyMultiTree() {}
+SolutionStrategyMultiTree::~SolutionStrategyMultiTree() = default;
 
 bool SolutionStrategyMultiTree::solveProblem()
 {

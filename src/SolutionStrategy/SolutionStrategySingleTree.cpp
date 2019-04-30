@@ -259,7 +259,7 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->tasks->addTask(tTerminate, "Terminate");
 }
 
-SolutionStrategySingleTree::~SolutionStrategySingleTree() {}
+SolutionStrategySingleTree::~SolutionStrategySingleTree() = default;
 
 bool SolutionStrategySingleTree::solveProblem()
 {

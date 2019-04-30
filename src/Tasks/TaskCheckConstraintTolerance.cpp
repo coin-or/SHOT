@@ -27,7 +27,7 @@ TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(EnvironmentPtr envPtr
 {
 }
 
-TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() {}
+TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() = default;
 
 void TaskCheckConstraintTolerance::run()
 {

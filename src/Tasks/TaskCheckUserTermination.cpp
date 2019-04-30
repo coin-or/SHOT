@@ -22,7 +22,7 @@ TaskCheckUserTermination::TaskCheckUserTermination(EnvironmentPtr envPtr, std::s
 {
 }
 
-TaskCheckUserTermination::~TaskCheckUserTermination() {}
+TaskCheckUserTermination::~TaskCheckUserTermination() = default;
 
 void TaskCheckUserTermination::run()
 {

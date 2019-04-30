@@ -26,7 +26,7 @@ namespace SHOT
 
 Report::Report(EnvironmentPtr envPtr) : env(envPtr) {}
 
-Report::~Report() {}
+Report::~Report() = default;
 
 void Report::outputIterationDetail(int iterationNumber, std::string iterationDesc, double totalTime, int dualCutsAdded,
     int dualCutsTotal, double dualObjectiveValue, double primalObjectiveValue, double absoluteObjectiveGap,

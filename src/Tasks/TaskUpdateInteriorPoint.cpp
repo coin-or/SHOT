@@ -25,7 +25,7 @@ namespace SHOT
 
 TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() {}
+TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() = default;
 
 void TaskUpdateInteriorPoint::run()
 {

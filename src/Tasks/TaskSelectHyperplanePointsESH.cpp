@@ -32,7 +32,7 @@ TaskSelectHyperplanePointsESH::TaskSelectHyperplanePointsESH(EnvironmentPtr envP
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskSelectHyperplanePointsESH::~TaskSelectHyperplanePointsESH() {}
+TaskSelectHyperplanePointsESH::~TaskSelectHyperplanePointsESH() = default;
 
 void TaskSelectHyperplanePointsESH::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 

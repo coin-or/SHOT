@@ -30,7 +30,7 @@ public:
     virtual void run();
 
     TaskBase(EnvironmentPtr envPtr);
-    virtual ~TaskBase(){};
+    virtual ~TaskBase() = default;
 
 protected:
     EnvironmentPtr env;

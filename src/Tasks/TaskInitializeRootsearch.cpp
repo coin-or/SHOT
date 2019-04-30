@@ -26,7 +26,7 @@ TaskInitializeRootsearch::TaskInitializeRootsearch(EnvironmentPtr envPtr) : Task
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskInitializeRootsearch::~TaskInitializeRootsearch() {}
+TaskInitializeRootsearch::~TaskInitializeRootsearch() = default;
 
 void TaskInitializeRootsearch::run() {}
 

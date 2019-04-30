@@ -44,7 +44,7 @@ TaskExecuteSolutionLimitStrategy::TaskExecuteSolutionLimitStrategy(EnvironmentPt
     env->timing->stopTimer("DualStrategy");
 }
 
-TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy() {}
+TaskExecuteSolutionLimitStrategy::~TaskExecuteSolutionLimitStrategy() = default;
 
 void TaskExecuteSolutionLimitStrategy::run()
 {

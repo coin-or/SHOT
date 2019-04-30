@@ -21,7 +21,7 @@ TaskSimple::TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction
     task = taskFunction;
 }
 
-TaskSimple::~TaskSimple() {}
+TaskSimple::~TaskSimple() = default;
 
 void TaskSimple::setFunction(std::function<bool()> taskFunction) { task = taskFunction; }
 

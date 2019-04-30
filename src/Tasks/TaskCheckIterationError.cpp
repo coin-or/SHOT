@@ -24,7 +24,7 @@ TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::str
 {
 }
 
-TaskCheckIterationError::~TaskCheckIterationError() {}
+TaskCheckIterationError::~TaskCheckIterationError() = default;
 
 void TaskCheckIterationError::run()
 {

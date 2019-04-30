@@ -27,7 +27,7 @@ RelaxationStrategyNone::RelaxationStrategyNone(EnvironmentPtr envPtr)
     setInitial();
 }
 
-RelaxationStrategyNone::~RelaxationStrategyNone() {}
+RelaxationStrategyNone::~RelaxationStrategyNone() = default;
 
 void RelaxationStrategyNone::setInitial() { setInactive(); }
 

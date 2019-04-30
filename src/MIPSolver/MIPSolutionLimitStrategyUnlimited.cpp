@@ -17,8 +17,6 @@ namespace SHOT
 
 MIPSolutionLimitStrategyUnlimited::MIPSolutionLimitStrategyUnlimited(EnvironmentPtr envPtr) { env = envPtr; }
 
-MIPSolutionLimitStrategyUnlimited::~MIPSolutionLimitStrategyUnlimited() {}
-
 bool MIPSolutionLimitStrategyUnlimited::updateLimit() { return false; }
 
 int MIPSolutionLimitStrategyUnlimited::getNewLimit() { return env->dualSolver->MIPSolver->getSolutionLimit(); }

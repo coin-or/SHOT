@@ -24,7 +24,7 @@ TaskCheckMaxNumberOfPrimalReductionCuts::TaskCheckMaxNumberOfPrimalReductionCuts
 {
 }
 
-TaskCheckMaxNumberOfPrimalReductionCuts::~TaskCheckMaxNumberOfPrimalReductionCuts() {}
+TaskCheckMaxNumberOfPrimalReductionCuts::~TaskCheckMaxNumberOfPrimalReductionCuts() = default;
 
 void TaskCheckMaxNumberOfPrimalReductionCuts::run()
 {

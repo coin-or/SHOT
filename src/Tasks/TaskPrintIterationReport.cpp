@@ -24,7 +24,7 @@ namespace SHOT
 
 TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr) : TaskBase(envPtr) { lastNumHyperplane = 0; }
 
-TaskPrintIterationReport::~TaskPrintIterationReport() {}
+TaskPrintIterationReport::~TaskPrintIterationReport() = default;
 
 void TaskPrintIterationReport::run()
 {

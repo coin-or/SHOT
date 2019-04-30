@@ -79,7 +79,7 @@ public:
     using std::vector<AuxiliaryVariablePtr>::resize;
     using std::vector<AuxiliaryVariablePtr>::size;
 
-    AuxiliaryVariables(){};
+    AuxiliaryVariables() = default;
 
     inline void takeOwnership(ProblemPtr owner)
     {

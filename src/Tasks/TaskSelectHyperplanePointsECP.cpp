@@ -28,7 +28,7 @@ TaskSelectHyperplanePointsECP::TaskSelectHyperplanePointsECP(EnvironmentPtr envP
     env->timing->stopTimer("DualCutGenerationRootSearch");
 }
 
-TaskSelectHyperplanePointsECP::~TaskSelectHyperplanePointsECP() {}
+TaskSelectHyperplanePointsECP::~TaskSelectHyperplanePointsECP() = default;
 
 void TaskSelectHyperplanePointsECP::run() { this->run(env->results->getPreviousIteration()->solutionPoints); }
 

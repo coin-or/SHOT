@@ -51,7 +51,8 @@ private:
 public:
     VariablePtr variable;
 
-    LinearTerm(){};
+    LinearTerm() = default;
+    ;
     LinearTerm(double coeff, VariablePtr var)
     {
         coefficient = coeff;
@@ -157,7 +158,8 @@ public:
     using std::vector<T>::resize;
     using std::vector<T>::size;
 
-    Terms(){};
+    Terms() = default;
+    ;
 
     double calculate(const VectorDouble& point) const
     {
@@ -237,7 +239,8 @@ public:
     using std::vector<LinearTermPtr>::resize;
     using std::vector<LinearTermPtr>::size;
 
-    LinearTerms(){};
+    LinearTerms() = default;
+    ;
 
     void add(LinearTermPtr term)
     {
@@ -290,7 +293,8 @@ public:
     bool isSquare = false;
     bool isBinary = false;
 
-    QuadraticTerm(){};
+    QuadraticTerm() = default;
+    ;
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2)
     {
         coefficient = coeff;
@@ -412,7 +416,8 @@ public:
     using std::vector<QuadraticTermPtr>::resize;
     using std::vector<QuadraticTermPtr>::size;
 
-    QuadraticTerms(){};
+    QuadraticTerms() = default;
+    ;
 
     void add(QuadraticTermPtr term)
     {
@@ -890,7 +895,8 @@ public:
     using std::vector<SignomialTermPtr>::resize;
     using std::vector<SignomialTermPtr>::size;
 
-    SignomialTerms(){};
+    SignomialTerms() = default;
+    ;
 
     void add(SignomialTermPtr term)
     {

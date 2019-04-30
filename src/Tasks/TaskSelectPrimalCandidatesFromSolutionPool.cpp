@@ -24,7 +24,7 @@ TaskSelectPrimalCandidatesFromSolutionPool::TaskSelectPrimalCandidatesFromSoluti
 {
 }
 
-TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolutionPool() {}
+TaskSelectPrimalCandidatesFromSolutionPool::~TaskSelectPrimalCandidatesFromSolutionPool() = default;
 
 void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {

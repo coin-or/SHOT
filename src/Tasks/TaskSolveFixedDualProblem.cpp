@@ -45,7 +45,7 @@ TaskSolveFixedDualProblem::TaskSolveFixedDualProblem(EnvironmentPtr envPtr) : Ta
     env->timing->stopTimer("DualProblemsIntegerFixed");
 }
 
-TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem() {}
+TaskSolveFixedDualProblem::~TaskSolveFixedDualProblem() = default;
 
 void TaskSolveFixedDualProblem::run()
 {

@@ -15,7 +15,7 @@ namespace SHOT
 
 TaskTerminate::TaskTerminate(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-TaskTerminate::~TaskTerminate() {}
+TaskTerminate::~TaskTerminate() = default;
 
 void TaskTerminate::run() {}
 
