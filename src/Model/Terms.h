@@ -286,9 +286,9 @@ public:
     VariablePtr firstVariable;
     VariablePtr secondVariable;
 
-    bool isBilinear;
-    bool isSquare;
-    bool isBinary;
+    bool isBilinear = false;
+    bool isSquare = false;
+    bool isBinary = false;
 
     QuadraticTerm(){};
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2)

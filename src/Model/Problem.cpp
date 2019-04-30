@@ -11,6 +11,7 @@
 #include "Problem.h"
 #include "../Enums.h"
 #include "../Output.h"
+#include "../Settings.h"
 #include "../Utilities.h"
 #include "../Model/Simplifications.h"
 #include "../Tasks/TaskReformulateProblem.h"
@@ -651,8 +652,17 @@ void Problem::add(NumericConstraintPtr constraint)
 {
     numericConstraints.push_back(constraint);
 
+    auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
+        env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
+
+    bool useQuadraticConstraints = (quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained);
+
     if(constraint->properties.hasNonlinearExpression || constraint->properties.hasMonomialTerms
         || constraint->properties.hasSignomialTerms)
+    {
+        nonlinearConstraints.push_back(std::dynamic_pointer_cast<NonlinearConstraint>(constraint));
+    }
+    else if(constraint->properties.hasQuadraticTerms && !useQuadraticConstraints)
     {
         nonlinearConstraints.push_back(std::dynamic_pointer_cast<NonlinearConstraint>(constraint));
     }
