@@ -93,8 +93,10 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     {
         double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
 
+        auto objectiveBound = sourceProblem->objectiveFunction->getBounds();
+
         destination->setAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
-        destination->addVariable("shot_dual_objvar", E_VariableType::Real, -objVarBound, objVarBound);
+        destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
     }
 
     // Now creating the objective function

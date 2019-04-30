@@ -90,6 +90,8 @@ public:
     virtual double calculateValue(const VectorDouble& point) = 0;
     virtual Interval calculateValue(const IntervalVector& intervalVector) = 0;
 
+    virtual Interval getBounds();
+
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 

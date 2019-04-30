@@ -29,6 +29,20 @@ void ObjectiveFunction::updateProperties()
     }
 };
 
+Interval ObjectiveFunction::getBounds()
+{
+    IntervalVector variableBounds;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        variableBounds = sharedOwnerProblem->getVariableBounds();
+    }
+
+    auto interval = calculateValue(variableBounds);
+
+    return (interval);
+}
+
 std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
 {
     if(gradientSparsityPattern)

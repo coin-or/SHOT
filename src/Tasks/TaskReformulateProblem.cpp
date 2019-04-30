@@ -179,8 +179,10 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         {
             double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
 
+            auto objectiveBound = env->problem->objectiveFunction->getBounds();
+
             auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
-                "shot_objvar", auxVariableCounter, E_VariableType::Real, -objVarBound, objVarBound);
+                "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
             objectiveVariable->auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
 
             if(env->problem->objectiveFunction->properties.hasLinearTerms)
