@@ -510,7 +510,15 @@ bool Settings::readSettingsFromOSoL(std::string osol)
                 break;
             case E_SettingType::Enum:
             case E_SettingType::Integer:
-                updateSetting(name, category, std::stoi(value, &convertedChars));
+                try
+                {
+                    updateSetting(name, category, std::stoi(value, &convertedChars));
+                }
+                catch(...)
+                {
+                    output->outputError("Cannot update setting <" + category + "," + name
+                        + "> since the value is of the wrong format.");
+                }
                 break;
             case E_SettingType::Boolean:
             {
@@ -519,7 +527,15 @@ bool Settings::readSettingsFromOSoL(std::string osol)
                 break;
             }
             case E_SettingType::Double:
-                updateSetting(name, category, std::stod(value));
+                try
+                {
+                    updateSetting(name, category, std::stod(value));
+                }
+                catch(...)
+                {
+                    output->outputError("Cannot update setting <" + category + "," + name
+                        + "> since the value is of the wrong format.");
+                }
                 break;
             default:
                 break;
@@ -589,7 +605,15 @@ bool Settings::readSettingsFromString(std::string options)
             break;
         case E_SettingType::Enum:
         case E_SettingType::Integer:
-            updateSetting(name, category, std::stoi(value, &convertedChars));
+            try
+            {
+                updateSetting(name, category, std::stoi(value, &convertedChars));
+            }
+            catch(...)
+            {
+                output->outputError(
+                    "Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
+            }
             break;
         case E_SettingType::Boolean:
         {
@@ -598,7 +622,15 @@ bool Settings::readSettingsFromString(std::string options)
             break;
         }
         case E_SettingType::Double:
-            updateSetting(name, category, std::stod(value));
+            try
+            {
+                updateSetting(name, category, std::stod(value));
+            }
+            catch(...)
+            {
+                output->outputError(
+                    "Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
+            }
             break;
         default:
             break;
