@@ -71,10 +71,25 @@ if(GENERATE_EXE AND NOT(HAS_GAMS OR HAS_OS))
 endif()
 
 # Sets version number
-set(SHOT_VERSION_MAJOR   0   CACHE STRING "Project major version number.")
-set(SHOT_VERSION_MINOR   9   CACHE STRING "Project minor version number.")
-set(SHOT_VERSION_PATCH   2   CACHE STRING "Project patch version number.")
-mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH)
+set(SHOT_VERSION_MAJOR 0)
+set(SHOT_VERSION_MINOR 9)
+set(SHOT_VERSION_PATCH 2)
+
+# Try to find the Git
+find_program(GIT git)
+
+if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
+    execute_process(
+        COMMAND ${GIT} describe --always --dirty
+        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+        OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+else()
+    set(GITHASH "n/a")
+endif()
+message(STATUS "Git hash: " ${GITHASH})
+
+mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH GITHASH)
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
 include_directories("${PROJECT_BINARY_DIR}")
 

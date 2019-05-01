@@ -259,8 +259,18 @@ void Report::outputSolverHeader()
         header << SHOT_VERSION_PATCH;
     }
 
-    header << ", released ";
+    header << ". ";
+
+    if(SHOT_GITHASH != "")
+    {
+        header << "Git hash: ";
+        header << SHOT_GITHASH;
+        header << ". ";
+    }
+
+    header << "Released ";
     header << __DATE__;
+    header << ". ";
     header << "\r\n";
 
     env->output->outputInfo(header.str());
