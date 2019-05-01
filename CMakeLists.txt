@@ -49,6 +49,7 @@ set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is locat
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
+set(ARGH_DIR "ThirdParty/argh")
 set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
@@ -302,6 +303,7 @@ find_package(Boost 1.63.0 COMPONENTS system REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIR})
 
+include_directories("${ARGH_DIR}")
 include_directories("${EIGEN_DIR}")
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
