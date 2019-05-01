@@ -556,6 +556,77 @@ SparseVariableVector combineSparseVariableVectors(
     return result;
 }
 
+SparseVariableMatrix combineSparseVariableMatrices(
+    const SparseVariableMatrix& first, const SparseVariableMatrix& second)
+{
+    SparseVariableMatrix result;
+
+    for(auto& G : first)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : second)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    return result;
+}
+
+SparseVariableMatrix combineSparseVariableMatrices(
+    const SparseVariableMatrix& first, const SparseVariableMatrix& second, const SparseVariableMatrix& third)
+{
+    SparseVariableMatrix result;
+
+    for(auto& G : first)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : second)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    for(auto& G : third)
+    {
+        auto element = result.insert(std::make_pair(G.first, G.second));
+
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += G.second;
+        }
+    }
+
+    return result;
+}
+
 E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
 {
     if(first == E_Convexity::Unknown || second == E_Convexity::Unknown)

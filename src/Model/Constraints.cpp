@@ -702,14 +702,14 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
         std::cout << "Error when evaluating hessian: " << e.what();
     }
 
-    if(this->properties.hasMonomialTerms)
+    if(properties.hasMonomialTerms)
     {
-        // TODO
+        hessian = Utilities::combineSparseVariableMatrices(monomialTerms.calculateHessian(point), hessian);
     }
 
-    if(this->properties.hasSignomialTerms)
+    if(properties.hasSignomialTerms)
     {
-        // TODO
+        hessian = Utilities::combineSparseVariableMatrices(signomialTerms.calculateHessian(point), hessian);
     }
 
     if(eraseZeroes)
@@ -722,14 +722,60 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
 {
     QuadraticConstraint::initializeHessianSparsityPattern();
 
-    if(this->properties.hasMonomialTerms)
+    for(auto& T : this->monomialTerms)
     {
-        // TODO
+        if(T->coefficient == 0)
+            continue;
+
+        for(auto& V1 : T->variables)
+        {
+            for(auto& V2 : T->variables)
+            {
+                if(V1 == V2)
+                    continue;
+
+                std::pair<VariablePtr, VariablePtr> variablePair;
+
+                if(V1->index < V2->index)
+                    variablePair = std::make_pair(V1, V2);
+                else
+                {
+                    variablePair = std::make_pair(V2, V1);
+                }
+
+                if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
+                    == hessianSparsityPattern->end())
+                    hessianSparsityPattern->push_back(variablePair);
+            }
+        }
     }
 
-    if(this->properties.hasSignomialTerms)
+    for(auto& T : this->signomialTerms)
     {
-        // TODO
+        if(T->coefficient == 0)
+            continue;
+
+        for(auto& E1 : T->elements)
+        {
+            for(auto& E2 : T->elements)
+            {
+                if(E1 == E2)
+                    continue;
+
+                std::pair<VariablePtr, VariablePtr> variablePair;
+
+                if(E1->variable->index < E2->variable->index)
+                    variablePair = std::make_pair(E1->variable, E2->variable);
+                else
+                {
+                    variablePair = std::make_pair(E2->variable, E1->variable);
+                }
+
+                if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
+                    == hessianSparsityPattern->end())
+                    hessianSparsityPattern->push_back(variablePair);
+            }
+        }
     }
 
     for(auto& E : symbolicSparseHessian)
@@ -795,10 +841,10 @@ void NonlinearConstraint::updateProperties()
                     == variablesInMonomialTerms.end())
                     variablesInMonomialTerms.push_back(V);
             }
-
-            auto convexity = T->getConvexity();
-            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
+
+        auto convexity = monomialTerms.getConvexity();
+        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
     }
     else
     {
@@ -819,7 +865,7 @@ void NonlinearConstraint::updateProperties()
                     variablesInSignomialTerms.push_back(E->variable);
             }
 
-            auto convexity = T->getConvexity();
+            auto convexity = signomialTerms.getConvexity();
             properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
         }
     }

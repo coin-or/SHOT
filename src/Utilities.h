@@ -23,6 +23,7 @@ namespace SHOT
 class Variable;
 typedef std::shared_ptr<Variable> VariablePtr;
 typedef std::map<VariablePtr, double> SparseVariableVector;
+typedef std::map<std::pair<VariablePtr, VariablePtr>, double> SparseVariableMatrix;
 }
 
 namespace SHOT::Utilities
@@ -113,6 +114,12 @@ SparseVariableVector combineSparseVariableVectors(
 
 SparseVariableVector combineSparseVariableVectors(
     const SparseVariableVector& first, const SparseVariableVector& second, const SparseVariableVector& third);
+
+SparseVariableMatrix combineSparseVariableMatrices(
+    const SparseVariableMatrix& first, const SparseVariableMatrix& second);
+
+SparseVariableMatrix combineSparseVariableMatrices(
+    const SparseVariableMatrix& first, const SparseVariableMatrix& second, const SparseVariableMatrix& third);
 
 E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second);
 } // namespace SHOT::Utilities

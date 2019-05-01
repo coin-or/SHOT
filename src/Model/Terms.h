@@ -12,6 +12,7 @@
 #include "../Environment.h"
 #include "../Enums.h"
 #include "../Structs.h"
+#include "../Utilities.h"
 
 #include "Variables.h"
 
@@ -159,7 +160,6 @@ public:
     using std::vector<T>::size;
 
     Terms() = default;
-    ;
 
     double calculate(const VectorDouble& point) const
     {
@@ -590,7 +590,15 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 class MonomialTerms : public Terms<MonomialTermPtr>
 {
 private:
-    void updateConvexity() override { convexity = E_Convexity::Nonconvex; };
+    void updateConvexity() override
+    {
+        auto resultConvexity = E_Convexity::Linear;
+
+        for(auto& T : *this)
+            resultConvexity = Utilities::combineConvexity(resultConvexity, T->getConvexity());
+
+        convexity = resultConvexity;
+    };
 
 public:
     using std::vector<MonomialTermPtr>::operator[];
@@ -654,6 +662,48 @@ public:
         };
 
         return gradient;
+    };
+
+    SparseVariableMatrix calculateHessian(const VectorDouble& point) const
+    {
+        SparseVariableMatrix hessian;
+
+        for(auto& T : (*this))
+        {
+            if(T->coefficient == 0)
+                continue;
+
+            for(auto& V1 : T->variables)
+            {
+                for(auto& V2 : T->variables)
+                {
+                    if(V1->index >= V2->index)
+                        continue;
+
+                    double value = T->coefficient;
+
+                    for(auto& V3 : T->variables)
+                    {
+                        if(V3 == V1 || V3 == V2)
+                            continue;
+
+                        value *= V3->calculate(point);
+                    }
+
+                    std::pair<VariablePtr, VariablePtr> variablePair = std::make_pair(V1, V2);
+
+                    auto element = hessian.insert(std::make_pair(variablePair, value));
+
+                    if(!element.second)
+                    {
+                        // Element already exists for the variable
+                        element.first->second += value;
+                    }
+                }
+            }
+        }
+
+        return hessian;
     };
 };
 
@@ -878,8 +928,12 @@ class SignomialTerms : public Terms<SignomialTermPtr>
 private:
     void updateConvexity() override
     {
-        // TODO
-        convexity = E_Convexity::Unknown;
+        auto resultConvexity = E_Convexity::Linear;
+
+        for(auto& T : *this)
+            resultConvexity = Utilities::combineConvexity(resultConvexity, T->getConvexity());
+
+        convexity = resultConvexity;
     };
 
 public:
@@ -956,6 +1010,53 @@ public:
         };
 
         return gradient;
+    };
+
+    SparseVariableMatrix calculateHessian(const VectorDouble& point) const
+    {
+        SparseVariableMatrix hessian;
+
+        for(auto& T : (*this))
+        {
+            if(T->coefficient == 0)
+                continue;
+
+            auto value = T->calculate(point);
+
+            for(auto& E1 : T->elements)
+            {
+                for(auto& E2 : T->elements)
+                {
+                    if(E1->variable->index > E2->variable->index)
+                        continue;
+
+                    double corrFactor;
+
+                    if(E1->variable->index == E2->variable->index)
+                    {
+                        corrFactor = E1->power * (E1->power - 1.0)
+                            / (E1->variable->calculate(point) * E1->variable->calculate(point));
+                    }
+                    else
+                    {
+                        corrFactor
+                            = E1->power * E2->power / (E1->variable->calculate(point) * E2->variable->calculate(point));
+                    }
+
+                    std::pair<VariablePtr, VariablePtr> variablePair = std::make_pair(E1->variable, E2->variable);
+
+                    auto element = hessian.insert(std::make_pair(variablePair, corrFactor * value));
+
+                    if(!element.second)
+                    {
+                        // Element already exists for the variable
+                        element.first->second += corrFactor * value;
+                    }
+                }
+            }
+        }
+
+        return hessian;
     };
 };
 
