@@ -239,7 +239,7 @@ void Problem::updateProperties()
     {
         for(auto& C : quadraticConstraints)
         {
-            if(C->properties.convexity != E_Convexity::Linear || C->properties.convexity != E_Convexity::Convex)
+            if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
             {
                 properties.convexity = E_ProblemConvexity::Nonconvex;
                 break;
