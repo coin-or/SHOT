@@ -19,8 +19,6 @@
 
 #include "Model/Problem.h"
 
-#include <boost/format.hpp>
-
 namespace SHOT
 {
 
@@ -96,40 +94,37 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(dualCutsAdded > 0)
         {
-            combDualCuts = (boost::format("%|4i| | %|-6i|") % dualCutsAdded % dualCutsTotal).str();
+            combDualCuts = fmt::format("{:>4d} | {:<6d}", dualCutsAdded, dualCutsTotal);
         }
 
         std::string combObjectiveValue
-            = (boost::format("%|12s| | %|-12s|") % Utilities::toStringFormat(dualObjectiveValue, "%#g")
-                % Utilities::toStringFormat(primalObjectiveValue, "%#g"))
-                  .str();
+            = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(dualObjectiveValue, "{:g}"),
+                Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
 
         std::string combObjectiveGap
-            = (boost::format("%|8s| | %|-8s|") % Utilities::toStringFormat(absoluteObjectiveGap, "%#.1e")
-                % Utilities::toStringFormat(relativeObjectiveGap, "%#.1e"))
-                  .str();
+            = fmt::format("{:>8s} | {:<8s}", Utilities::toStringFormat(absoluteObjectiveGap, "{:.1e}"),
+                Utilities::toStringFormat(relativeObjectiveGap, "{:.1e}"));
 
         std::string combCurrSol;
 
         if(std::isnan(currentObjectiveValue))
         {
-            combCurrSol = "            inf.";
+            combCurrSol = fmt::format("{:>12s} | {}", "", "inf.");
         }
         else if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
         {
-            combCurrSol = (boost::format("%|#12g| | %|+.1e|") % currentObjectiveValue % 0.0).str();
+            combCurrSol = fmt::format("{:>12.2g} | {}", currentObjectiveValue, 0.0);
         }
         else
         {
-            combCurrSol = (boost::format("%|#12g| | %|+.1e| (%|i|)") % currentObjectiveValue % maxConstraintError
-                % maxConstraintIndex)
-                              .str();
+            combCurrSol
+                = fmt::format("{:>12g} | {}: {:.2e}", currentObjectiveValue, maxConstraintIndex, maxConstraintError);
         }
 
-        auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|%|-32s|") % iterationNumber
-            % iterationDesc % totalTime % combDualCuts % combObjectiveValue % combObjectiveGap % combCurrSol;
+        auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+            iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
 
-        env->output->outputInfo(tmpLine.str());
+        env->output->outputInfo(tmpLine);
 
         std::stringstream nodes;
 
@@ -167,7 +162,7 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
 
         if(dualCutsAdded > 0)
         {
-            combDualCuts = (boost::format("%|4i| | %|-6i|") % dualCutsAdded % dualCutsTotal).str();
+            combDualCuts = fmt::format("{:>4d} | {:<6d}", dualCutsAdded, dualCutsTotal);
         }
 
         if(dualObjectiveValue != lastDualObjectiveValue)
@@ -181,9 +176,8 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
         }
 
         std::string combObjectiveValue
-            = (boost::format("%|12s| | %|-12s|") % Utilities::toStringFormat(dualObjectiveValue, "%#g")
-                % Utilities::toStringFormat(primalObjectiveValue, "%#g"))
-                  .str();
+            = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(dualObjectiveValue, "{:g}"),
+                Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
 
         if(absoluteObjectiveGap != lastAbsoluteObjectiveGap)
         {
@@ -196,14 +190,13 @@ void Report::outputIterationDetailMinimax(int iterationNumber, std::string itera
         }
 
         std::string combObjectiveGap
-            = (boost::format("%|8s| | %|-8s|") % Utilities::toStringFormat(absoluteObjectiveGap, "%#.1e")
-                % Utilities::toStringFormat(relativeObjectiveGap, "%#.1e"))
-                  .str();
+            = fmt::format("{:>8s} | {:<8s}", Utilities::toStringFormat(absoluteObjectiveGap, "{:.1e}"),
+                Utilities::toStringFormat(relativeObjectiveGap, "{:.1e}"));
 
-        auto tmpLine = boost::format("%|6i|: %|-10s|%|#=10.2f|%|13s|%|27s|%|19s|") % iterationNumber % iterationDesc
-            % totalTime % combDualCuts % combObjectiveValue % combObjectiveGap;
+        auto tmpLine = fmt::format("{:6d}: {:<10s}{:^10.2f}{:13s}{:27s}{:19s}", iterationNumber, iterationDesc,
+            totalTime, combDualCuts, combObjectiveValue, combObjectiveGap);
 
-        env->output->outputInfo(tmpLine.str());
+        env->output->outputInfo(tmpLine);
     }
     catch(...)
     {
@@ -488,11 +481,11 @@ void Report::outputProblemInstanceReport()
 
     if(isReformulated)
     {
-        report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "" % "Original" % "Reformulated").str() << "\r\n";
+        report << fmt::format(" {:28s}{:21s}{:s}", "", "Original", "Reformulated") << "\r\n";
     }
     else
     {
-        report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "" % "Original" % "").str() << "\r\n";
+        report << fmt::format(" {:28s}{:21s}{:s}", "", "Original", "") << "\r\n";
     }
 
     report << "\r\n";
@@ -547,9 +540,8 @@ void Report::outputProblemInstanceReport()
             problemClassificationRef += ", nonconvex";
     }
 
-    report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Problem classification:" % problemClassificationOrig
-                  % problemClassificationRef)
-                  .str()
+    report << fmt::format(
+                  " {:28s}{:21s}{:s}", "Problem classification:", problemClassificationOrig, problemClassificationRef)
            << "\r\n";
 
     std::string objectiveClassificationOrig;
@@ -629,9 +621,8 @@ void Report::outputProblemInstanceReport()
         }
     }
 
-    report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Objective function type:"
-                  % objectiveClassificationOrig % objectiveClassificationRef)
-                  .str()
+    report << fmt::format(" {:28s}{:21s}{:s}", "Objective function type:", objectiveClassificationOrig,
+                  objectiveClassificationRef)
            << "\r\n";
 
     report << "\r\n";
@@ -640,60 +631,54 @@ void Report::outputProblemInstanceReport()
     {
         if(env->problem->properties.numberOfNumericConstraints > 0
             || env->reformulatedProblem->properties.numberOfNumericConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of constraints:"
-                          % env->problem->properties.numberOfNumericConstraints
-                          % env->reformulatedProblem->properties.numberOfNumericConstraints)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          "Number of constraints:", env->problem->properties.numberOfNumericConstraints,
+                          env->reformulatedProblem->properties.numberOfNumericConstraints)
                    << "\r\n";
 
         if(env->problem->properties.numberOfLinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfLinearConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - linear:"
-                          % env->problem->properties.numberOfLinearConstraints
-                          % env->reformulatedProblem->properties.numberOfLinearConstraints)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - linear:", env->problem->properties.numberOfLinearConstraints,
+                          env->reformulatedProblem->properties.numberOfLinearConstraints)
+
                    << "\r\n";
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0
             || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - quadratic:"
-                          % env->problem->properties.numberOfQuadraticConstraints
-                          % env->reformulatedProblem->properties.numberOfQuadraticConstraints)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - quadratic:", env->problem->properties.numberOfQuadraticConstraints,
+                          env->reformulatedProblem->properties.numberOfQuadraticConstraints)
+
                    << "\r\n";
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - nonlinear:"
-                          % env->problem->properties.numberOfNonlinearConstraints
-                          % env->reformulatedProblem->properties.numberOfNonlinearConstraints)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints,
+                          env->reformulatedProblem->properties.numberOfNonlinearConstraints)
                    << "\r\n";
     }
     else
     {
         if(env->problem->properties.numberOfNumericConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of constraints:"
-                          % env->problem->properties.numberOfNumericConstraints % "")
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          "Number of constraints:", env->problem->properties.numberOfNumericConstraints, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - linear:"
-                          % env->problem->properties.numberOfLinearConstraints % "")
-                          .str()
+            report << fmt::format(
+                          " {:28s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - quadratic:"
-                          % env->problem->properties.numberOfQuadraticConstraints % "")
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - quadratic:", env->problem->properties.numberOfQuadraticConstraints, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - nonlinear:"
-                          % env->problem->properties.numberOfNonlinearConstraints % "")
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, "")
                    << "\r\n";
     }
 
@@ -702,74 +687,61 @@ void Report::outputProblemInstanceReport()
     if(isReformulated)
     {
         if(env->problem->properties.numberOfVariables > 0 || env->reformulatedProblem->properties.numberOfVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of variables:"
-                          % env->problem->properties.numberOfVariables
-                          % env->reformulatedProblem->properties.numberOfVariables)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          "Number of variables:", env->problem->properties.numberOfVariables,
+                          env->reformulatedProblem->properties.numberOfVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfRealVariables > 0
             || env->reformulatedProblem->properties.numberOfRealVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - real:"
-                          % env->problem->properties.numberOfRealVariables
-                          % env->reformulatedProblem->properties.numberOfRealVariables)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables,
+                          env->reformulatedProblem->properties.numberOfRealVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfBinaryVariables > 0
             || env->reformulatedProblem->properties.numberOfBinaryVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - binary:"
-                          % env->problem->properties.numberOfBinaryVariables
-                          % env->reformulatedProblem->properties.numberOfBinaryVariables)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables,
+                          env->reformulatedProblem->properties.numberOfBinaryVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfIntegerVariables > 0
             || env->reformulatedProblem->properties.numberOfIntegerVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - integer:"
-                          % env->problem->properties.numberOfIntegerVariables
-                          % env->reformulatedProblem->properties.numberOfIntegerVariables)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - integer:", env->problem->properties.numberOfIntegerVariables,
+                          env->reformulatedProblem->properties.numberOfIntegerVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0
             || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - semicontinuous:"
-                          % env->problem->properties.numberOfSemicontinuousVariables
-                          % env->reformulatedProblem->properties.numberOfSemicontinuousVariables)
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables,
+                          env->reformulatedProblem->properties.numberOfSemicontinuousVariables)
                    << "\r\n";
     }
     else
     {
         if(env->problem->properties.numberOfVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % "Number of variables:"
-                          % env->problem->properties.numberOfVariables % "")
-                          .str()
+            report << fmt::format(
+                          " {:28s}{:<21d}{:d}", "Number of variables:", env->problem->properties.numberOfVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfRealVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - real:"
-                          % env->problem->properties.numberOfRealVariables % "")
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfBinaryVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - binary:"
-                          % env->problem->properties.numberOfBinaryVariables % "")
-                          .str()
+            report << fmt::format(
+                          " {:28s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfIntegerVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - integer:"
-                          % env->problem->properties.numberOfIntegerVariables % "")
-                          .str()
+            report << fmt::format(
+                          " {:28s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0)
-            report << (boost::format("%|-1t|%1% %|-29t|%2% %|-50t|%3%") % " - semicontinuous:"
-                          % env->problem->properties.numberOfSemicontinuousVariables % "")
-                          .str()
+            report << fmt::format(" {:28s}{:<21d}{:d}",
+                          " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, "")
                    << "\r\n";
     }
 
@@ -860,11 +832,11 @@ void Report::outputSolutionReport()
     report << "\r\n";
 
     report << " Objective bound [dual, primal]:                 ";
-    report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "%g") << ", ";
-    report << Utilities::toStringFormat(env->results->getPrimalBound(), "%g") << "]\r\n";
+    report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << ", ";
+    report << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << "]\r\n";
     report << " Objective gap absolute / relative:              ";
-    report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "%g") << " / ";
-    report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "%g") << "\r\n";
+    report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "{:g}") << " / ";
+    report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "{:g}") << "\r\n";
     report << "\r\n";
 
     std::stringstream fulfilled;
@@ -1041,7 +1013,7 @@ void Report::outputSolutionReport()
 
         if(elapsed > 0)
         {
-            report << boost::format(" %1%: %|49t|%2%") % T.description % elapsed << "\r\n";
+            report << fmt::format(" {:<48}{:g}", T.description + ':', elapsed) << "\r\n";
         }
     }
 

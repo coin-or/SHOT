@@ -17,7 +17,8 @@
 #include "Utilities.h"
 
 #include <boost/functional/hash/hash.hpp>
-#include <boost/format.hpp>
+
+#include "spdlog/fmt/fmt.h"
 
 namespace SHOT::Utilities
 {
@@ -348,13 +349,13 @@ std::string toStringFormat(double value, const std::string& format, const bool u
     }
     else
     {
-        str = ((boost::format(format) % value).str());
+        str = fmt::format(format, value);
     }
 
     return (str);
 };
 
-std::string toString(double value) { return (toStringFormat(value, "%.3f", true)); }
+std::string toString(double value) { return (toStringFormat(value, "{:.3f}", true)); }
 
 void displayVector(const VectorInteger& point1, const VectorInteger& point2)
 {

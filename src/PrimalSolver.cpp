@@ -10,8 +10,6 @@
 
 #include "PrimalSolver.h"
 
-#include <boost/format.hpp>
-
 #include "Output.h"
 #include "Results.h"
 #include "Settings.h"
@@ -203,14 +201,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if(!isVariableBoundsFulfilled)
     {
         reCalculateObjective = true;
-        auto tmpLine = boost::format("       Variable bounds not fulfilled. Projection to bounds performed.");
-        env->output->outputDebug(tmpLine.str());
+        env->output->outputDebug("       Variable bounds not fulfilled. Projection to bounds performed.");
         primalSol.boundProjectionPerformed = true;
     }
     else
     {
-        auto tmpLine = boost::format("       All variable bounds fulfilled.");
-        env->output->outputDebug(tmpLine.str());
+        env->output->outputDebug("       All variable bounds fulfilled.");
         primalSol.boundProjectionPerformed = false;
     }
 
@@ -264,15 +260,14 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             reCalculateObjective = true;
             tmpPoint = ptRounded;
 
-            auto tmpLine
-                = boost::format("       Discrete variables were not fulfilled to tolerance %1%. Rounding performed...")
-                % integerTol;
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = fmt::format(
+                "       Discrete variables were not fulfilled to tolerance {}. Rounding performed...", integerTol);
+            env->output->outputDebug(tmpLine);
         }
         else
         {
-            auto tmpLine = boost::format("       All discrete variables are fulfilled to tolerance %1%.") % integerTol;
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = fmt::format("       All discrete variables are fulfilled to tolerance %1%.", integerTol);
+            env->output->outputDebug(tmpLine);
         }
 
         primalSol.integerRoundingPerformed = isRounded;
@@ -289,15 +284,14 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if((env->problem->objectiveFunction->properties.isMinimize && tmpObjVal < env->results->getPrimalBound())
         || (!env->problem->objectiveFunction->properties.isMinimize && tmpObjVal > env->results->getPrimalBound()))
     {
-        auto tmpLine = boost::format("     Testing primal bound %1% found from %2%:") % tmpObjVal % sourceDesc;
-        env->output->outputDebug(tmpLine.str());
+        auto tmpLine = fmt::format("     Testing primal bound {} found from {}:", tmpObjVal, sourceDesc);
+        env->output->outputDebug(tmpLine);
     }
     else
     {
-        auto tmpLine
-            = boost::format("     Primal bound candidate (%1%) from %2% is not an improvement over current (%3%).")
-            % tmpObjVal % sourceDesc % env->results->getPrimalBound();
-        env->output->outputDebug(tmpLine.str());
+        auto tmpLine = fmt::format("     Primal bound candidate ({}) from {} is not an improvement over current ({}).",
+            tmpObjVal, sourceDesc, env->results->getPrimalBound());
+        env->output->outputDebug(tmpLine);
 
         return (false);
     }
@@ -313,9 +307,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     if(!primalSol.integerRoundingPerformed && acceptableType
         && env->settings->getSetting<bool>("Tolerance.TrustLinearConstraintValues", "Primal"))
     {
-        auto tmpLine = boost::format(
+        env->output->outputDebug(
             "       Assuming that linear constraints are fulfilled since solution is from a subsolver.");
-        env->output->outputDebug(tmpLine.str());
     }
     else
     {
@@ -333,18 +326,17 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
             if(maxLinearConstraintValue.error > linTol)
             {
-                auto tmpLine
-                    = boost::format("       Linear constraints are not fulfilled. Most deviating %3%: %2% > %1%.")
-                    % linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
-                env->output->outputDebug(tmpLine.str());
+                auto tmpLine = fmt::format("       Linear constraints are not fulfilled. Most deviating {}: {} > {}.",
+                    maxLinearConstraintValue.constraint->name, maxLinearConstraintValue.error, linTol);
+                env->output->outputDebug(tmpLine);
 
                 return (false);
             }
             else
             {
-                auto tmpLine = boost::format("       Linear constraints are fulfilled. Most deviating %3%: %2% < %1%.")
-                    % linTol % maxLinearConstraintValue.error % maxLinearConstraintValue.constraint->name;
-                env->output->outputDebug(tmpLine.str());
+                auto tmpLine = fmt::format("       Linear constraints are fulfilled. Most deviating {}: {} > {}.",
+                    maxLinearConstraintValue.constraint->name, maxLinearConstraintValue.error, linTol);
+                env->output->outputDebug(tmpLine);
             }
         }
 
@@ -365,18 +357,17 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         if(mostDevQuadraticConstraints.value > nonlinTol)
         {
-            auto tmpLine
-                = boost::format("       Quadratic constraints are not fulfilled. Most deviating %3%: %2% > %1%.")
-                % nonlinTol % mostDevQuadraticConstraints.value % maxQuadraticConstraintValue.constraint->name;
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = fmt::format("       Quadratic constraints are not fulfilled. Most deviating {}: {} > {}.",
+                maxQuadraticConstraintValue.constraint->name, maxQuadraticConstraintValue.error, nonlinTol);
+            env->output->outputDebug(tmpLine);
 
             return (false);
         }
         else
         {
-            auto tmpLine = boost::format("       Quadratic constraints are fulfilled. Most deviating %3%: %2% < %1%.")
-                % nonlinTol % mostDevQuadraticConstraints.value % maxQuadraticConstraintValue.constraint->name;
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = fmt::format("       Quadratic constraints are fulfilled. Most deviating {}: {} > {}.",
+                maxQuadraticConstraintValue.constraint->name, maxQuadraticConstraintValue.error, nonlinTol);
+            env->output->outputDebug(tmpLine);
         }
     }
 
@@ -396,18 +387,17 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         if(mostDevNonlinearConstraints.value > nonlinTol)
         {
-            auto tmpLine
-                = boost::format("       Nonlinear constraints are not fulfilled. Most deviating %3%: %2% > %1%.")
-                % nonlinTol % mostDevNonlinearConstraints.value % maxNonlinearConstraintValue.constraint->name;
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = fmt::format("       Nonlinear constraints are not fulfilled. Most deviating {}: {} > {}.",
+                maxNonlinearConstraintValue.constraint->name, mostDevNonlinearConstraints.value, nonlinTol);
+            env->output->outputDebug(tmpLine);
 
             return (false);
         }
         else
         {
-            auto tmpLine = boost::format("       Nonlinear constraints are fulfilled. Most deviating %3%: %2% < %1%.")
-                % nonlinTol % mostDevNonlinearConstraints.value % maxNonlinearConstraintValue.constraint->name;
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = fmt::format("       Nonlinear constraints are fulfilled. Most deviating {}: {} > {}.",
+                maxNonlinearConstraintValue.constraint->name, mostDevNonlinearConstraints.value, nonlinTol);
+            env->output->outputDebug(tmpLine);
         }
     }
 
@@ -419,8 +409,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     primalSol.point = tmpPoint;
     primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
-    auto tmpLine = boost::format("        New primal bound %1% from %2% accepted.") % tmpObjVal % sourceDesc;
-    env->output->outputCritical(tmpLine.str());
+    auto tmpLine = fmt::format("        New primal bound {} from {} accepted.", tmpObjVal, sourceDesc);
+    env->output->outputCritical(tmpLine);
 
     env->results->addPrimalSolution(primalSol);
 

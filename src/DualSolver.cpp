@@ -18,8 +18,6 @@
 #include "Problem.h"
 #include "ObjectiveFunction.h"
 
-#include <boost/format.hpp>
-
 namespace SHOT
 {
 
@@ -104,9 +102,8 @@ void DualSolver::checkDualSolutionCandidates()
                 break;
             }
 
-            auto tmpLine = boost::format("     New dual bound %1% (%2%) ") % C.objValue % sourceDesc;
-
-            env->output->outputDebug(tmpLine.str());
+            auto tmpLine = "     New dual bound " + std::to_string(C.objValue) + "(" + sourceDesc + ") ";
+            env->output->outputDebug(tmpLine);
         }
     }
 
