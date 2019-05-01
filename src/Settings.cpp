@@ -447,6 +447,51 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
     return (ss.str());
 }
 
+VectorString Settings::getChangedSettings()
+{
+    VectorString result;
+
+    for(auto& T : settingTypes)
+    {
+        auto key = T.first;
+        std::string name = T.first.second;
+        std::string category = T.first.first;
+
+        if(settingIsPrivate[key])
+            continue; // Do not include an internal setting
+
+        if(settingIsDefaultValue[key])
+            continue; // Hide setting with default value
+
+        switch(T.second)
+        {
+        case(E_SettingType::String):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<std::string>(name, category)));
+            break;
+
+        case(E_SettingType::Double):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<double>(name, category)));
+            break;
+
+        case(E_SettingType::Integer):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<int>(name, category)));
+            break;
+
+        case(E_SettingType::Enum):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<int>(name, category)));
+            break;
+
+        case(E_SettingType::Boolean):
+            result.push_back(fmt::format("{}.{} = {}", category, name, getSetting<bool>(name, category)));
+            break;
+        default:
+            break;
+        }
+    }
+
+    return (result);
+}
+
 bool Settings::readSettingsFromOSoL(std::string osol)
 {
     using namespace tinyxml2;

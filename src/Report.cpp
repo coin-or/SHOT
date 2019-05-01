@@ -291,13 +291,17 @@ void Report::outputOptionsReport()
 
     report << "\r\n";
 
-    std::string nonDefaultOptions = env->settings->getSettingsAsString(true, true);
+    auto nonDefaultSettings = env->settings->getChangedSettings();
 
-    if(nonDefaultOptions != "")
+    if(nonDefaultSettings.size() > 0)
     {
         report << " Nondefault options used:\r\n";
         report << "\r\n";
-        report << nonDefaultOptions;
+
+        for(auto& S : nonDefaultSettings)
+        {
+            report << "  - " << S << "\r\n";
+        }
 
         report << "\r\n";
     }
