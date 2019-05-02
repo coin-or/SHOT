@@ -24,7 +24,7 @@ TaskHandler::TaskHandler(EnvironmentPtr envPtr)
 
 void TaskHandler::addTask(TaskPtr task, std::string taskID)
 {
-    taskIDMap.push_back(std::make_pair(taskID, task));
+    taskIDMap.emplace_back(taskID, task);
 
     if(nextTask == taskIDMap.end())
     {

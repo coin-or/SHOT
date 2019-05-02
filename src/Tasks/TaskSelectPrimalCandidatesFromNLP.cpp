@@ -358,7 +358,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     }
                 }
 
-                env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
+                env->dualSolver->MIPSolver->integerCutWaitingList.emplace_back(ones, zeroes);
             }
 
             if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
@@ -489,7 +489,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                     }
                 }
 
-                env->dualSolver->MIPSolver->integerCutWaitingList.push_back(std::make_pair(ones, zeroes));
+                env->dualSolver->MIPSolver->integerCutWaitingList.emplace_back(ones, zeroes);
             }
         }
 

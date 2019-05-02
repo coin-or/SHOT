@@ -88,7 +88,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
 
             if(NCV.constraint->properties.convexity == E_Convexity::Nonconvex)
             {
-                nonconvexSelectedNumericValues.push_back(std::make_tuple(i, NCV));
+                nonconvexSelectedNumericValues.emplace_back(i, NCV);
                 continue;
             }
 
@@ -101,7 +101,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            selectedNumericValues.push_back(std::make_tuple(i, NCV));
+            selectedNumericValues.emplace_back(i, NCV);
             addedHyperplanes++;
         }
     }

@@ -57,8 +57,7 @@ void QuadraticTerms::updateConvexity()
             allPositive = allPositive && T->coefficient >= 0;
             allNegative = allNegative && T->coefficient <= 0;
 
-            elements.push_back(
-                Eigen::Triplet<double>(T->firstVariable->index, T->firstVariable->index, T->coefficient));
+            elements.emplace_back(T->firstVariable->index, T->firstVariable->index, T->coefficient);
         }
         else
         {
@@ -69,13 +68,11 @@ void QuadraticTerms::updateConvexity()
             // Matrix is self adjoint, so only need lower triangular elements
             if(T->firstVariable->index > T->secondVariable->index)
             {
-                elements.push_back(
-                    Eigen::Triplet<double>(T->firstVariable->index, T->secondVariable->index, 0.5 * T->coefficient));
+                elements.emplace_back(T->firstVariable->index, T->secondVariable->index, 0.5 * T->coefficient);
             }
             else
             {
-                elements.push_back(
-                    Eigen::Triplet<double>(T->secondVariable->index, T->firstVariable->index, 0.5 * T->coefficient));
+                elements.emplace_back(T->secondVariable->index, T->firstVariable->index, 0.5 * T->coefficient);
             }
         }
     }

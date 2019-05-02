@@ -25,7 +25,7 @@ public:
 
     inline ~Timing() { timers.clear(); }
 
-    inline void createTimer(std::string name, std::string description) { timers.push_back(Timer(name, description)); }
+    inline void createTimer(std::string name, std::string description) { timers.emplace_back(name, description); }
 
     inline void startTimer(std::string name)
     {

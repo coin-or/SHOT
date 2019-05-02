@@ -451,12 +451,12 @@ void Problem::updateFactorableFunctions()
             && std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
         {
             auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
-            objective->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
+            objective->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
         }
         else
         {
             auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
-            nonlinearConstraint->symbolicSparseJacobian.push_back(std::make_pair(nonlinearVariable, jacobianElement));
+            nonlinearConstraint->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
         }
     }
 
@@ -489,8 +489,8 @@ void Problem::updateFactorableFunctions()
 
                 if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
                 {
-                    C->symbolicSparseHessian.push_back(std::make_pair(
-                        std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement));
+                    C->symbolicSparseHessian.emplace_back(
+                        std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement);
                 }
             }
 
@@ -529,8 +529,7 @@ void Problem::updateFactorableFunctions()
 
             if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
             {
-                nonlinearObjective->symbolicSparseHessian.push_back(
-                    std::make_pair(std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement));
+                nonlinearObjective->symbolicSparseHessian.emplace_back(std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement);
             }
         }
 

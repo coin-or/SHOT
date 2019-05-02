@@ -127,11 +127,11 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(NCV.constraint->properties.convexity == E_Convexity::Nonconvex)
                 {
-                    nonconvexSelectedNumericValues.push_back(std::make_tuple(i, j, NCV));
+                    nonconvexSelectedNumericValues.emplace_back(i, j, NCV);
                     continue;
                 }
 
-                selectedNumericValues.push_back(std::make_tuple(i, j, NCV));
+                selectedNumericValues.emplace_back(i, j, NCV);
                 addedHyperplanes++;
             }
         }
