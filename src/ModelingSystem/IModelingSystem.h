@@ -32,7 +32,7 @@ class IModelingSystem
 {
 public:
     IModelingSystem(EnvironmentPtr envPtr) : env(envPtr){};
-    virtual ~IModelingSystem(){};
+    virtual ~IModelingSystem()= default;;
 
     // Adds modeling system specific settings
     virtual void augmentSettings(SettingsPtr settings) = 0;

@@ -100,7 +100,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
     LPSolver->initializeSolverSettings();
 }
 
-NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax() {}
+NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax() = default;
 
 void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName) {}
 

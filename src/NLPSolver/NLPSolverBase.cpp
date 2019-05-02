@@ -13,7 +13,7 @@
 namespace SHOT
 {
 
-NLPSolverBase::NLPSolverBase() {}
+NLPSolverBase::NLPSolverBase() = default;
 
 E_NLPSolutionStatus NLPSolverBase::solveProblem()
 {
