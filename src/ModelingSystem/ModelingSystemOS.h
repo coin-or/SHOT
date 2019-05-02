@@ -79,17 +79,10 @@ private:
     std::vector<std::shared_ptr<OSiLReader>> osilReaders;
     std::shared_ptr<OSnl2OS> nl2os;
 
-    // bool areAllConstraintsLinear(OSInstance* instance);
-    // bool areAllConstraintsQuadratic(OSInstance* instance);
-    // bool areAllVariablesReal(OSInstance* instance);
-
-    // bool isConstraintNonlinear(OSInstance* instance);
-    // bool isConstraintQuadratic(OSInstance* instance);
-
     // Determines whether all individual constraints are linear, quadratic or nonlinear
     std::vector<E_ConstraintClassification> getConstraintClassifications(OSInstance* instance);
 };
 
-typedef std::shared_ptr<ModelingSystemOS> ModelingSystemOSPtr;
+using ModelingSystemOSPtr = std::shared_ptr<ModelingSystemOS>;
 
 } // namespace SHOT

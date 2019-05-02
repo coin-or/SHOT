@@ -59,7 +59,7 @@ public:
     double calculateAuxiliaryValue(VectorDouble point);
 };
 
-typedef std::shared_ptr<AuxiliaryVariable> AuxiliaryVariablePtr;
+using AuxiliaryVariablePtr = std::shared_ptr<AuxiliaryVariable>;
 
 class AuxiliaryVariables : private std::vector<AuxiliaryVariablePtr>
 {

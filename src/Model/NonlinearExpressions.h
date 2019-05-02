@@ -22,10 +22,10 @@
 namespace SHOT
 {
 
-typedef mc::FFVar FactorableFunction;
-typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
-typedef mc::Interval Interval;
-typedef std::vector<Interval> IntervalVector;
+using FactorableFunction = mc::FFVar;
+using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
+using Interval = mc::Interval;
+using IntervalVector = std::vector<Interval>;
 
 enum class E_NonlinearExpressionTypes
 {
@@ -150,7 +150,7 @@ public:
     virtual bool operator==(const NonlinearExpression& rhs) const = 0;
 };
 
-typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
+using NonlinearExpressionPtr = std::shared_ptr<NonlinearExpression>;
 
 inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr expr)
 {
@@ -265,7 +265,7 @@ public:
     };
 };
 
-typedef std::shared_ptr<ExpressionVariable> ExpressionVariablePtr;
+using ExpressionVariablePtr = std::shared_ptr<ExpressionVariable> ;
 
 class ExpressionUnary : public NonlinearExpression
 {

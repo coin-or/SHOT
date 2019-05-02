@@ -55,32 +55,32 @@ class PrimalSolver;
 class Constraint;
 class NumericConstraint;
 
-typedef std::shared_ptr<Results> ResultsPtr;
-typedef std::shared_ptr<Settings> SettingsPtr;
-typedef std::shared_ptr<Model> ModelPtr;
-typedef std::shared_ptr<Problem> ProblemPtr;
-typedef std::shared_ptr<ReformulatedProblem> ReformulatedProblemPtr;
-typedef std::shared_ptr<IModelingSystem> ModelingSystemPtr;
-typedef std::shared_ptr<IMIPSolver> MIPSolverPtr;
-typedef std::shared_ptr<Output> OutputPtr;
-typedef std::shared_ptr<EventHandler> EventHandlerPtr;
-typedef std::shared_ptr<Report> ReportPtr;
-typedef std::shared_ptr<TaskHandler> TaskHandlerPtr;
-typedef std::shared_ptr<Timing> TimingPtr;
-typedef std::shared_ptr<DualSolver> DualSolverPtr;
-typedef std::shared_ptr<PrimalSolver> PrimalSolverPtr;
-typedef std::shared_ptr<Iteration> IterationPtr;
+using ResultsPtr = std::shared_ptr<Results>;
+using SettingsPtr = std::shared_ptr<Settings> ;
+using ModelPtr = std::shared_ptr<Model>;
+using ProblemPtr = std::shared_ptr<Problem> ;
+using ReformulatedProblemPtr = std::shared_ptr<ReformulatedProblem>;
+using ModelingSystemPtr = std::shared_ptr<IModelingSystem> ;
+using MIPSolverPtr = std::shared_ptr<IMIPSolver> ;
+using OutputPtr = std::shared_ptr<Output> ;
+using EventHandlerPtr = std::shared_ptr<EventHandler>;
+using ReportPtr = std::shared_ptr<Report> ;
+using  TaskHandlerPtr= std::shared_ptr<TaskHandler> ;
+using TimingPtr = std::shared_ptr<Timing> ;
+using DualSolverPtr = std::shared_ptr<DualSolver> ;
+using PrimalSolverPtr  = std::shared_ptr<PrimalSolver> ;
+using IterationPtr = std::shared_ptr<Iteration> ;
 
-typedef std::shared_ptr<Constraint> ConstraintPtr;
-typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;
+using ConstraintPtr = std::shared_ptr<Constraint> ;
+using NumericConstraintPtr = std::shared_ptr<NumericConstraint>;
 
-typedef std::pair<int, int> PairInteger;
-typedef std::pair<double, double> PairDouble;
-typedef std::pair<std::string, std::string> PairString;
+using PairInteger = std::pair<int, int> ;
+using PairDouble = std::pair<double, double>;
+using  PairString= std::pair<std::string, std::string> ;
 
-typedef std::vector<double> VectorDouble;
-typedef std::vector<int> VectorInteger;
-typedef std::vector<std::string> VectorString;
+using VectorDouble = std::vector<double> ;
+using VectorInteger = std::vector<int>;
+using VectorString = std::vector<std::string> ;
 
 struct PairIndexValue
 {

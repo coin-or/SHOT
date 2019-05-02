@@ -65,8 +65,8 @@ struct ProblemProperties
     std::string description = "";
 };
 
-typedef mc::FFGraph FactorableFunctionGraph;
-typedef std::shared_ptr<FactorableFunctionGraph> FactorableFunctionGraphPtr;
+using FactorableFunctionGraph = mc::FFGraph;
+using FactorableFunctionGraphPtr = std::shared_ptr<FactorableFunctionGraph>;
 
 class Problem : public std::enable_shared_from_this<Problem>
 {

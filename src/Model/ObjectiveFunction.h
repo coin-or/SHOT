@@ -20,8 +20,8 @@
 namespace SHOT
 {
 
-typedef mc::Interval Interval;
-typedef std::vector<Interval> IntervalVector;
+using Interval = mc::Interval;
+using IntervalVector = std::vector<Interval>;
 
 enum class E_ObjectiveFunctionDirection
 {
@@ -105,7 +105,7 @@ protected:
     virtual void initializeHessianSparsityPattern() = 0;
 };
 
-typedef std::shared_ptr<ObjectiveFunction> ObjectiveFunctionPtr;
+using ObjectiveFunctionPtr = std::shared_ptr<ObjectiveFunction>;
 
 std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective);
 
@@ -158,7 +158,7 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-typedef std::shared_ptr<LinearObjectiveFunction> LinearObjectiveFunctionPtr;
+using LinearObjectiveFunctionPtr = std::shared_ptr<LinearObjectiveFunction>;
 
 class QuadraticObjectiveFunction : public LinearObjectiveFunction
 {
@@ -227,7 +227,7 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPtr;
+using QuadraticObjectiveFunctionPtr =std::shared_ptr<QuadraticObjectiveFunction>;
 
 class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 {
@@ -344,7 +344,7 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;
+using NonlinearObjectiveFunctionPtr =std::shared_ptr<NonlinearObjectiveFunction> ;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective);
 

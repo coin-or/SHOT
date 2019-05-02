@@ -83,7 +83,7 @@ private:
         const ProblemPtr& destination);
 };
 
-typedef std::shared_ptr<ModelingSystemGAMS> ModelingSystemGAMSPtr;
+using ModelingSystemGAMSPtr = std::shared_ptr<ModelingSystemGAMS>;
 
 class GamsOutputSink : public spdlog::sinks::base_sink<std::mutex>
 {

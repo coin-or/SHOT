@@ -23,8 +23,8 @@
 namespace SHOT
 {
 
-typedef mc::Interval Interval;
-typedef std::vector<Interval> IntervalVector;
+using Interval = mc::Interval;
+using IntervalVector = std::vector<Interval>;
 
 class Term
 {
@@ -85,7 +85,7 @@ public:
     };
 };
 
-typedef std::shared_ptr<LinearTerm> LinearTermPtr;
+using LinearTermPtr = std::shared_ptr<LinearTerm>;
 
 inline std::ostream& operator<<(std::ostream& stream, LinearTermPtr term)
 {
@@ -365,7 +365,7 @@ public:
     };
 };
 
-typedef std::shared_ptr<QuadraticTerm> QuadraticTermPtr;
+using QuadraticTermPtr = std::shared_ptr<QuadraticTerm>;
 
 inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
 {
@@ -554,7 +554,7 @@ public:
     inline E_Monotonicity getMonotonicity() const override { return E_Monotonicity::Unknown; };
 };
 
-typedef std::shared_ptr<MonomialTerm> MonomialTermPtr;
+using MonomialTermPtr = std::shared_ptr<MonomialTerm>;
 
 inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {
@@ -724,8 +724,8 @@ public:
     }
 };
 
-typedef std::shared_ptr<SignomialElement> SignomialElementPtr;
-typedef std::vector<SignomialElementPtr> SignomialElements;
+using SignomialElementPtr = std::shared_ptr<SignomialElement>;
+using SignomialElements = std::vector<SignomialElementPtr>;
 
 inline std::ostream& operator<<(std::ostream& stream, SignomialElementPtr element)
 {
@@ -890,7 +890,7 @@ public:
     };
 };
 
-typedef std::shared_ptr<SignomialTerm> SignomialTermPtr;
+using SignomialTermPtr = std::shared_ptr<SignomialTerm>;
 
 inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 {

@@ -80,14 +80,14 @@ public:
     virtual void updateProperties() = 0;
 };
 
-typedef std::shared_ptr<Constraint> ConstraintPtr;
+using ConstraintPtr = std::shared_ptr<Constraint>;
 
 std::ostream& operator<<(std::ostream& stream, ConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint);
 
 class NumericConstraint;
-typedef std::shared_ptr<NumericConstraint> NumericConstraintPtr;
-typedef std::vector<NumericConstraintPtr> NumericConstraints;
+using NumericConstraintPtr = std::shared_ptr<NumericConstraint>;
+using NumericConstraints = std::vector<NumericConstraintPtr>;
 
 struct NumericConstraintValue
 {
@@ -110,7 +110,7 @@ struct NumericConstraintValue
     }
 };
 
-typedef std::vector<NumericConstraintValue> NumericConstraintValues;
+using NumericConstraintValues = std::vector<NumericConstraintValue>;
 
 class NumericConstraint : public Constraint, public std::enable_shared_from_this<NumericConstraint>
 {
@@ -201,8 +201,8 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-typedef std::shared_ptr<LinearConstraint> LinearConstraintPtr;
-typedef std::vector<LinearConstraintPtr> LinearConstraints;
+using LinearConstraintPtr = std::shared_ptr<LinearConstraint>;
+using LinearConstraints = std::vector<LinearConstraintPtr>;
 
 std::ostream& operator<<(std::ostream& stream, LinearConstraintPtr constraint);
 
@@ -277,8 +277,8 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-typedef std::shared_ptr<QuadraticConstraint> QuadraticConstraintPtr;
-typedef std::vector<QuadraticConstraintPtr> QuadraticConstraints;
+using QuadraticConstraintPtr = std::shared_ptr<QuadraticConstraint>;
+using QuadraticConstraints = std::vector<QuadraticConstraintPtr>;
 
 std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint);
 
@@ -402,8 +402,8 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-typedef std::shared_ptr<NonlinearConstraint> NonlinearConstraintPtr;
-typedef std::vector<NonlinearConstraintPtr> NonlinearConstraints;
+using NonlinearConstraintPtr= std::shared_ptr<NonlinearConstraint> ;
+using NonlinearConstraints = std::vector<NonlinearConstraintPtr> ;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint);

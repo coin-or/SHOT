@@ -22,14 +22,13 @@
 
 namespace SHOT
 {
+using Interval = mc::Interval;
+using IntervalVector = std::vector<Interval>;
 
-typedef mc::Interval Interval;
-typedef std::vector<Interval> IntervalVector;
-
-typedef mc::FFVar FactorableFunction;
-typedef std::shared_ptr<FactorableFunction> FactorableFunctionPtr;
-typedef mc::Interval Interval;
-typedef std::vector<Interval> IntervalVector;
+using FactorableFunction = mc::FFVar;
+using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
+using Interval = mc::Interval;
+using IntervalVector = std::vector<Interval>;
 
 class Variable
 {
@@ -87,9 +86,9 @@ public:
     void takeOwnership(ProblemPtr owner);
 };
 
-typedef std::shared_ptr<Variable> VariablePtr;
-typedef std::map<VariablePtr, double> SparseVariableVector;
-typedef std::map<std::pair<VariablePtr, VariablePtr>, double> SparseVariableMatrix;
+using VariablePtr= std::shared_ptr<Variable> ;
+using SparseVariableVector = std::map<VariablePtr, double>;
+using SparseVariableMatrix= std::map<std::pair<VariablePtr, VariablePtr>, double> ;
 
 class Variables : private std::vector<VariablePtr>
 {

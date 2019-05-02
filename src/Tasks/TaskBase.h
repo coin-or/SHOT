@@ -40,6 +40,6 @@ private:
     bool m_isActive;
 };
 
-typedef std::shared_ptr<TaskBase> TaskPtr;
+using TaskPtr =std::shared_ptr<TaskBase> ;
 
 } // namespace SHOT

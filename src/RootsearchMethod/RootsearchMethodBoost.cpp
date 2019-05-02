@@ -133,7 +133,6 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
     VectorDouble ptNew(length);
     VectorDouble ptNew2(length);
 
-    typedef PairDouble Result;
     boost::uintmax_t max_iter = Nmax;
 
     test->firstPt = ptA;
@@ -168,7 +167,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 
     int tempFEvals = env->solutionStatistics.numberOfFunctionEvalutions;
 
-    Result r1;
+    PairDouble r1;
 
     if(static_cast<ES_RootsearchMethod>(env->settings->getSetting<int>("Rootsearch.Method", "Subsolver"))
         == ES_RootsearchMethod::BoostTOMS748)
@@ -238,12 +237,11 @@ std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt
         testObjective->cachedObjectiveValue = sharedProblem->objectiveFunction->calculateValue(pt);
     }
 
-    typedef PairDouble Result;
     boost::uintmax_t max_iter = Nmax;
 
     int tempFEvals = env->solutionStatistics.numberOfFunctionEvalutions;
 
-    Result r1;
+    PairDouble r1;
 
     if(static_cast<ES_RootsearchMethod>(env->settings->getSetting<int>("Rootsearch.Method", "Subsolver"))
         == ES_RootsearchMethod::BoostTOMS748)

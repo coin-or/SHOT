@@ -32,12 +32,12 @@ private:
     void createBaseSetting(
         std::string name, std::string category, T value, std::string description, bool isPrivate = false);
 
-    Output* output;
-    typedef std::shared_ptr<Output> OutputPtr;
+    using OutputPtr = std::shared_ptr<Output>;
+    OutputPtr output;
 
-    typedef std::pair<std::string, std::string> PairString;
-    typedef std::pair<double, double> PairDouble;
-    typedef std::vector<std::string> VectorString;
+    using PairString = std::pair<std::string, std::string>;
+    using PairDouble = std::pair<double, double>;
+    using VectorString = std::vector<std::string>;
 
     std::map<PairString, std::string> stringSettings;
     std::map<PairString, double> doubleSettings;
@@ -51,13 +51,13 @@ private:
     std::map<PairString, PairDouble> settingBounds;
     std::map<PairString, bool> settingEnums;
 
-    typedef std::tuple<std::string, std::string, int> TupleStringPairInt;
+    using TupleStringPairInt = std::tuple<std::string, std::string, int>;
     std::map<TupleStringPairInt, std::string> enumDescriptions;
 
 public:
     bool settingsInitialized = false;
 
-    Settings(OutputPtr outputPtr) { output = outputPtr.get(); }
+    Settings(OutputPtr outputPtr) : output(outputPtr) {}
 
     ~Settings() = default;
 

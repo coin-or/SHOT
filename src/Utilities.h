@@ -21,19 +21,19 @@
 namespace SHOT
 {
 class Variable;
-typedef std::shared_ptr<Variable> VariablePtr;
-typedef std::map<VariablePtr, double> SparseVariableVector;
-typedef std::map<std::pair<VariablePtr, VariablePtr>, double> SparseVariableMatrix;
+using VariablePtr = std::shared_ptr<Variable>;
+using SparseVariableVector = std::map<VariablePtr, double>;
+using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
 }
 
 namespace SHOT::Utilities
 {
 
-typedef std::pair<std::string, std::string> PairString;
-typedef std::pair<double, double> PairDouble;
-typedef std::vector<std::string> VectorString;
-typedef std::vector<double> VectorDouble;
-typedef std::vector<int> VectorInteger;
+using PairString = std::pair<std::string, std::string>;
+using PairDouble = std::pair<double, double>;
+using VectorString = std::vector<std::string>;
+using VectorDouble = std::vector<double>;
+using VectorInteger = std::vector<int>;
 
 void saveVariablePointVectorToFile(
     const VectorDouble& point, const VectorString& variables, const std::string& fileName);

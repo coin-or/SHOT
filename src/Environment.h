@@ -45,5 +45,5 @@ public:
 private:
 };
 
-typedef std::shared_ptr<Environment> EnvironmentPtr;
+using EnvironmentPtr = std::shared_ptr<Environment>;
 } // namespace SHOT
