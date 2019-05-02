@@ -900,8 +900,7 @@ void Report::outputSolutionReport()
         }
     }
 
-    int iterLim = env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual")
-        + env->settings->getSetting<int>("IterationLimit", "Termination");
+    int iterLim = env->settings->getSetting<int>("IterationLimit", "Termination");
 
     if(env->results->getCurrentIteration()->iterationNumber > iterLim)
     {

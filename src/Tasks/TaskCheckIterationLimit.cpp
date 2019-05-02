@@ -30,13 +30,12 @@ void TaskCheckIterationLimit::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    auto relaxlimit = env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual");
     auto mainlimit = env->settings->getSetting<int>("IterationLimit", "Termination");
 
-    if(relaxlimit == SHOT_INT_MAX || mainlimit == SHOT_INT_MAX)
+    if(mainlimit == SHOT_INT_MAX)
         return;
 
-    if(currIter->iterationNumber >= relaxlimit + mainlimit)
+    if(currIter->iterationNumber >= mainlimit)
     {
         env->results->terminationReason = E_TerminationReason::IterationLimit;
         env->tasks->setNextTask(taskIDIfTrue);

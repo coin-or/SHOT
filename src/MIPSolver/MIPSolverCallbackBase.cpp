@@ -25,15 +25,14 @@ bool MIPSolverCallbackBase::checkIterationLimit()
     if(env->tasks->isTerminated())
         return (true);
 
-    auto relaxlimit = env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual");
     auto mainlimit = env->settings->getSetting<int>("IterationLimit", "Termination");
 
-    if(relaxlimit == SHOT_INT_MAX || mainlimit == SHOT_INT_MAX)
+    if(mainlimit == SHOT_INT_MAX)
         return (false);
 
     auto currIter = env->results->getCurrentIteration();
 
-    if(currIter->iterationNumber >= relaxlimit + mainlimit)
+    if(currIter->iterationNumber >= mainlimit)
         return (true);
 
     return (false);
