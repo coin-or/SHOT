@@ -21,12 +21,12 @@ class TaskSelectHyperplanePointsESH : public TaskBase
 {
 public:
     TaskSelectHyperplanePointsESH(EnvironmentPtr envPtr);
-    virtual ~TaskSelectHyperplanePointsESH();
+    ~TaskSelectHyperplanePointsESH() override;
 
-    virtual void run();
+    void run() override;
     virtual void run(std::vector<SolutionPoint> solPoints);
 
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
     std::unique_ptr<TaskSelectHyperplanePointsECP> tSelectHPPts;

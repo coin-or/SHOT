@@ -28,17 +28,17 @@ class MIPSolverCplexLazy : public MIPSolverCplex
 {
 public:
     MIPSolverCplexLazy(EnvironmentPtr envPtr);
-    virtual ~MIPSolverCplexLazy();
+    ~MIPSolverCplexLazy() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual E_ProblemSolutionStatus solveProblem();
+    E_ProblemSolutionStatus solveProblem() override;
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
 private:
 protected:
@@ -70,9 +70,9 @@ public:
 
     // This is the function that we have to implement and that Cplex will call
     // during the solution process at the places that we asked for.
-    virtual void invoke(const IloCplex::Callback::Context& context);
+    void invoke(const IloCplex::Callback::Context& context) override;
 
     /// Destructor
-    virtual ~CplexCallback();
+    ~CplexCallback() override;
 };
 } // namespace SHOT

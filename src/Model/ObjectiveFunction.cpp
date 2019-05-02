@@ -758,7 +758,6 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             auto factorableFunction = E.second;
 
             double value[1];
-            value[0];
 
             if(auto sharedOwnerProblem = ownerProblem.lock())
             {

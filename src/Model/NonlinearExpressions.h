@@ -44,9 +44,6 @@ enum class E_NonlinearExpressionTypes
     ArcSin,
     ArcTan,
     Abs,
-    Plus,
-    Minus,
-    Times,
     Divide,
     Power,
     Sum,
@@ -193,16 +190,13 @@ public:
     double constant = 0;
     ExpressionConstant(double constant) : constant(constant){};
 
-    inline virtual double calculate(const VectorDouble& point) const override { return constant; };
+    inline double calculate(const VectorDouble& point) const override { return constant; };
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
-    {
-        return (Interval(constant));
-    };
+    inline Interval calculate(const IntervalVector& intervalVector) const override { return (Interval(constant)); };
 
     inline Interval getBounds() const override { return Interval(constant); };
 
-    inline virtual FactorableFunction getFactorableFunction() override { return constant; };
+    inline FactorableFunction getFactorableFunction() override { return constant; };
 
     inline std::ostream& print(std::ostream& stream) const override { return stream << constant; };
 
@@ -211,11 +205,11 @@ public:
     inline E_Convexity getConvexity() const override { return E_Convexity::Linear; };
     inline E_Monotonicity getMonotonicity() const override { return E_Monotonicity::Constant; };
 
-    inline int getNumberOfChildren() const { return 0; }
+    inline int getNumberOfChildren() const override { return 0; }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override{};
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -233,14 +227,14 @@ public:
 
     ExpressionVariable(VariablePtr variable) : variable(variable) { variable->isNonlinear = true; };
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
+    inline double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (variable->calculate(intervalVector));
     };
 
-    inline virtual FactorableFunction getFactorableFunction() override
+    inline FactorableFunction getFactorableFunction() override
     {
         return *(variable->factorableFunctionVariable.get());
     };
@@ -254,7 +248,7 @@ public:
     inline E_Convexity getConvexity() const override { return E_Convexity::Linear; };
     inline E_Monotonicity getMonotonicity() const override { return E_Monotonicity::Nondecreasing; };
 
-    inline int getNumberOfChildren() const { return 0; }
+    inline int getNumberOfChildren() const override { return 0; }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override
     {
@@ -262,7 +256,7 @@ public:
             nonlinearVariables.push_back(variable);
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -284,12 +278,12 @@ public:
         child->takeOwnership(owner);
     }
 
-    virtual double calculate(const VectorDouble& point) const = 0;
-    virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
-    virtual FactorableFunction getFactorableFunction() = 0;
-    virtual E_NonlinearExpressionTypes getType() const = 0;
+    double calculate(const VectorDouble& point) const override = 0;
+    Interval calculate(const IntervalVector& intervalVector) const override = 0;
+    FactorableFunction getFactorableFunction() override = 0;
+    E_NonlinearExpressionTypes getType() const override = 0;
 
-    inline int getNumberOfChildren() const { return 1; }
+    inline int getNumberOfChildren() const override { return 1; }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override
     {
@@ -313,12 +307,12 @@ public:
         secondChild->takeOwnership(owner);
     }
 
-    virtual double calculate(const VectorDouble& point) const = 0;
-    virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
-    virtual FactorableFunction getFactorableFunction() = 0;
-    virtual E_NonlinearExpressionTypes getType() const = 0;
+    double calculate(const VectorDouble& point) const override = 0;
+    Interval calculate(const IntervalVector& intervalVector) const override = 0;
+    FactorableFunction getFactorableFunction() override = 0;
+    E_NonlinearExpressionTypes getType() const override = 0;
 
-    inline int getNumberOfChildren() const { return 2; }
+    inline int getNumberOfChildren() const override { return 2; }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override
     {
@@ -340,12 +334,12 @@ public:
             C->takeOwnership(owner);
     }
 
-    virtual double calculate(const VectorDouble& point) const = 0;
-    virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
-    virtual FactorableFunction getFactorableFunction() = 0;
-    virtual E_NonlinearExpressionTypes getType() const = 0;
+    double calculate(const VectorDouble& point) const override = 0;
+    Interval calculate(const IntervalVector& intervalVector) const override = 0;
+    FactorableFunction getFactorableFunction() override = 0;
+    E_NonlinearExpressionTypes getType() const override = 0;
 
-    inline int getNumberOfChildren() const { return children.size(); }
+    inline int getNumberOfChildren() const override { return children.size(); }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override
     {
@@ -363,16 +357,16 @@ public:
 
     ExpressionNegate(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (-child->calculate(point)); }
+    inline double calculate(const VectorDouble& point) const override { return (-child->calculate(point)); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (-child->calculate(intervalVector));
     }
 
     inline Interval getBounds() const override { return (-child->getBounds()); };
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (-child->getFactorableFunction()); }
+    inline FactorableFunction getFactorableFunction() override { return (-child->getFactorableFunction()); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -425,7 +419,7 @@ public:
         return resultMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -441,19 +435,16 @@ public:
 
     ExpressionInvert(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (1.0 / child->calculate(point));
-    }
+    inline double calculate(const VectorDouble& point) const override { return (1.0 / child->calculate(point)); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (1.0 / child->calculate(intervalVector));
     }
 
-    inline virtual Interval getBounds() const override { return (1.0 / child->getBounds()); }
+    inline Interval getBounds() const override { return (1.0 / child->getBounds()); }
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (1 / child->getFactorableFunction()); }
+    inline FactorableFunction getFactorableFunction() override { return (1 / child->getFactorableFunction()); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -503,7 +494,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -519,22 +510,16 @@ public:
 
     ExpressionSquareRoot(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (sqrt(child->calculate(point)));
-    }
+    inline double calculate(const VectorDouble& point) const override { return (sqrt(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (sqrt(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (sqrt(child->getBounds())); }
+    inline Interval getBounds() const override { return (sqrt(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (sqrt(child->getFactorableFunction()));
-    }
+    inline FactorableFunction getFactorableFunction() override { return (sqrt(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -561,7 +546,7 @@ public:
         return childMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -577,16 +562,16 @@ public:
 
     ExpressionLog(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (log(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (log(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (log(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (log(child->getBounds())); }
+    inline Interval getBounds() const override { return (log(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (log(child->getFactorableFunction())); }
+    inline FactorableFunction getFactorableFunction() override { return (log(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -613,7 +598,7 @@ public:
         return childMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -629,16 +614,16 @@ public:
 
     ExpressionExp(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (exp(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (exp(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (exp(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (exp(child->getBounds())); }
+    inline Interval getBounds() const override { return (exp(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }
+    inline FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -664,7 +649,7 @@ public:
         return childMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -680,25 +665,25 @@ public:
 
     ExpressionSquare(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override
+    inline double calculate(const VectorDouble& point) const override
     {
         auto value = child->calculate(point);
         return (value * value);
     }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         auto value = child->calculate(intervalVector);
         return (value * value);
     }
 
-    inline virtual Interval getBounds() const override
+    inline Interval getBounds() const override
     {
         auto value = child->getBounds();
         return (value * value);
     }
 
-    inline virtual FactorableFunction getFactorableFunction() override
+    inline FactorableFunction getFactorableFunction() override
     {
         return (child->getFactorableFunction() * child->getFactorableFunction());
     }
@@ -748,7 +733,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -764,16 +749,16 @@ public:
 
     ExpressionSin(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (sin(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (sin(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (sin(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (sin(child->getBounds())); }
+    inline Interval getBounds() const override { return (sin(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (sin(child->getFactorableFunction())); }
+    inline FactorableFunction getFactorableFunction() override { return (sin(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -846,7 +831,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -862,16 +847,16 @@ public:
 
     ExpressionCos(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (cos(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (cos(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (cos(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (cos(child->getBounds())); }
+    inline Interval getBounds() const override { return (cos(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (cos(child->getFactorableFunction())); }
+    inline FactorableFunction getFactorableFunction() override { return (cos(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -944,7 +929,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -960,16 +945,16 @@ public:
 
     ExpressionTan(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (tan(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (tan(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (tan(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (tan(child->getBounds())); }
+    inline Interval getBounds() const override { return (tan(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override { return (tan(child->getFactorableFunction())); }
+    inline FactorableFunction getFactorableFunction() override { return (tan(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -984,8 +969,7 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if(childBounds.l() < SHOT_DBL_MIN && childBounds.u() < SHOT_DBL_MAX
-            || 2.0 * (childBounds.u() - childBounds.l()) > M_PI)
+        if(2.0 * (childBounds.u() - childBounds.l()) > M_PI)
             return E_Convexity::Unknown;
 
         auto tanBounds = tan(childBounds);
@@ -1010,7 +994,7 @@ public:
         return childMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1026,22 +1010,16 @@ public:
 
     ExpressionArcSin(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (asin(child->calculate(point)));
-    }
+    inline double calculate(const VectorDouble& point) const override { return (asin(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (asin(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (asin(child->getBounds())); }
+    inline Interval getBounds() const override { return (asin(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (asin(child->getFactorableFunction()));
-    }
+    inline FactorableFunction getFactorableFunction() override { return (asin(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -1071,7 +1049,7 @@ public:
         return childMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1087,22 +1065,16 @@ public:
 
     ExpressionArcCos(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (acos(child->calculate(point)));
-    }
+    inline double calculate(const VectorDouble& point) const override { return (acos(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (acos(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (acos(child->getBounds())); }
+    inline Interval getBounds() const override { return (acos(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (acos(child->getFactorableFunction()));
-    }
+    inline FactorableFunction getFactorableFunction() override { return (acos(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -1133,7 +1105,7 @@ public:
         return resultMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1149,22 +1121,16 @@ public:
 
     ExpressionArcTan(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override
-    {
-        return (atan(child->calculate(point)));
-    }
+    inline double calculate(const VectorDouble& point) const override { return (atan(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (atan(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (atan(child->getBounds())); }
+    inline Interval getBounds() const override { return (atan(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (atan(child->getFactorableFunction()));
-    }
+    inline FactorableFunction getFactorableFunction() override { return (atan(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -1194,7 +1160,7 @@ public:
         return childMonotonicity;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1210,19 +1176,16 @@ public:
 
     ExpressionAbs(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline virtual double calculate(const VectorDouble& point) const override { return (abs(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (abs(child->calculate(point))); }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (abs(child->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override { return (abs(child->getBounds())); }
+    inline Interval getBounds() const override { return (abs(child->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
-    {
-        return (fabs(child->getFactorableFunction()));
-    }
+    inline FactorableFunction getFactorableFunction() override { return (fabs(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
     {
@@ -1277,7 +1240,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1304,19 +1267,19 @@ public:
         secondChild = childExpression2;
     }
 
-    inline virtual double calculate(const VectorDouble& point) const override
+    inline double calculate(const VectorDouble& point) const override
     {
         return (firstChild->calculate(point) / secondChild->calculate(point));
     }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (firstChild->calculate(intervalVector) / secondChild->calculate(intervalVector));
     }
 
-    inline virtual Interval getBounds() const override { return (firstChild->getBounds() / secondChild->getBounds()); }
+    inline Interval getBounds() const override { return (firstChild->getBounds() / secondChild->getBounds()); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
+    inline FactorableFunction getFactorableFunction() override
     {
         return (firstChild->getFactorableFunction() / secondChild->getFactorableFunction());
     }
@@ -1443,7 +1406,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1468,7 +1431,7 @@ public:
         secondChild = childExpression2;
     }
 
-    inline virtual double calculate(const VectorDouble& point) const override
+    inline double calculate(const VectorDouble& point) const override
     {
         auto firstChildValue = firstChild->calculate(point);
         auto secondChildValue = secondChild->calculate(point);
@@ -1496,17 +1459,14 @@ public:
         return (pow(firstChildValue, secondChildValue));
     }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         return (pow(firstChild->calculate(intervalVector), secondChild->calculate(intervalVector)));
     }
 
-    inline virtual Interval getBounds() const override
-    {
-        return (pow(firstChild->getBounds(), secondChild->getBounds()));
-    }
+    inline Interval getBounds() const override { return (pow(firstChild->getBounds(), secondChild->getBounds())); }
 
-    inline virtual FactorableFunction getFactorableFunction() override
+    inline FactorableFunction getFactorableFunction() override
     {
         // Special logic for integer powers
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
@@ -1592,7 +1552,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return (false);
@@ -1826,7 +1786,7 @@ public:
         children = terms;
     }
 
-    inline virtual double calculate(const VectorDouble& point) const override
+    inline double calculate(const VectorDouble& point) const override
     {
         double value = 0.0;
 
@@ -1838,7 +1798,7 @@ public:
         return (value);
     }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         Interval tmpInterval(0.);
 
@@ -1850,7 +1810,7 @@ public:
         return (tmpInterval);
     }
 
-    inline virtual Interval getBounds() const override
+    inline Interval getBounds() const override
     {
         Interval tmpInterval(0.);
 
@@ -1862,7 +1822,7 @@ public:
         return (tmpInterval);
     }
 
-    inline virtual FactorableFunction getFactorableFunction() override
+    inline FactorableFunction getFactorableFunction() override
     {
         FactorableFunction funct;
 
@@ -1951,7 +1911,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return false;
@@ -1986,7 +1946,7 @@ public:
         children = terms;
     }
 
-    inline virtual double calculate(const VectorDouble& point) const override
+    inline double calculate(const VectorDouble& point) const override
     {
         double value = 1.0;
 
@@ -2003,7 +1963,7 @@ public:
         return (value);
     }
 
-    inline virtual Interval calculate(const IntervalVector& intervalVector) const override
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         Interval tmpInterval(1., 1.);
 
@@ -2015,7 +1975,7 @@ public:
         return (tmpInterval);
     }
 
-    inline virtual Interval getBounds() const override
+    inline Interval getBounds() const override
     {
         Interval tmpInterval(0.);
 
@@ -2028,7 +1988,7 @@ public:
         return (tmpInterval);
     }
 
-    inline virtual FactorableFunction getFactorableFunction() override
+    inline FactorableFunction getFactorableFunction() override
     {
         FactorableFunction funct;
 
@@ -2180,7 +2140,7 @@ public:
         return E_Monotonicity::Unknown;
     };
 
-    inline bool operator==(const NonlinearExpression& rhs) const
+    inline bool operator==(const NonlinearExpression& rhs) const override
     {
         if(rhs.getType() != getType())
             return false;

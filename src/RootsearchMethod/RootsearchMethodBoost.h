@@ -72,16 +72,16 @@ class RootsearchMethodBoost : public IRootsearchMethod
 {
 public:
     RootsearchMethodBoost(EnvironmentPtr envPtr);
-    virtual ~RootsearchMethodBoost();
-
-    virtual std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate);
+    ~RootsearchMethodBoost() override;
 
     std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
-        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate);
+        double lambdaTol, double constrTol, const NonlinearConstraints constraints, bool addPrimalCandidate) override;
 
-    virtual std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
-        double lambdaTol, double constrTol, const NonlinearObjectiveFunction* objectiveFunction);
+    std::pair<VectorDouble, VectorDouble> findZero(const VectorDouble& ptA, const VectorDouble& ptB, int Nmax,
+        double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints, bool addPrimalCandidate) override;
+
+    std::pair<double, double> findZero(const VectorDouble& pt, double objectiveLB, double objectiveUB, int Nmax,
+        double lambdaTol, double constrTol, const NonlinearObjectiveFunction* objectiveFunction) override;
 
 private:
     std::unique_ptr<Test> test;

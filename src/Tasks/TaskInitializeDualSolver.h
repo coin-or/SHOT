@@ -17,10 +17,10 @@ class TaskInitializeDualSolver : public TaskBase
 {
 public:
     TaskInitializeDualSolver(EnvironmentPtr envPtr, bool useLazyStrategy);
-    virtual ~TaskInitializeDualSolver();
+    ~TaskInitializeDualSolver() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };

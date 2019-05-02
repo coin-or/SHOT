@@ -65,7 +65,7 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 
     auto dualBound = env->results->getCurrentDualBound();
 
-    if(abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound))
+    if(std::abs(point.objectiveValue - dualBound) / ((1e-10) + std::abs(dualBound))
         < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;

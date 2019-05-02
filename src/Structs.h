@@ -242,7 +242,7 @@ private:
 public:
     VariableNotFoundException(std::string message) : errorMessage(message) {}
 
-    inline const char* what() const throw()
+    inline const char* what() const throw() override
     {
         std::stringstream message;
         message << "Could not find variable ";
@@ -260,7 +260,7 @@ private:
 public:
     ConstraintNotFoundException(std::string message) : errorMessage(message) {}
 
-    inline const char* what() const throw()
+    inline const char* what() const throw() override
     {
         std::stringstream message;
         message << "Could not find constraint ";
@@ -278,7 +278,7 @@ private:
 public:
     OperationNotImplementedException(std::string message) : errorMessage(message) {}
 
-    inline const char* what() const throw()
+    inline const char* what() const throw() override
     {
         std::stringstream message;
         message << "The following operation is not implemented: ";

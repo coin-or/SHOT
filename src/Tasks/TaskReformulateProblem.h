@@ -36,10 +36,10 @@ class TaskReformulateProblem : public TaskBase
 {
 public:
     TaskReformulateProblem(EnvironmentPtr envPtr);
-    virtual ~TaskReformulateProblem();
+    ~TaskReformulateProblem() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     bool useQuadraticConstraints = false;

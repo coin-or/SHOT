@@ -17,10 +17,10 @@ class TaskInitializeIteration : public TaskBase
 {
 public:
     TaskInitializeIteration(EnvironmentPtr envPtr);
-    virtual ~TaskInitializeIteration();
+    ~TaskInitializeIteration() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };

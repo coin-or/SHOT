@@ -21,10 +21,10 @@ class TaskSelectHyperplanePointsByObjectiveRootsearch : public TaskBase
 {
 public:
     TaskSelectHyperplanePointsByObjectiveRootsearch(EnvironmentPtr envPtr);
-    virtual ~TaskSelectHyperplanePointsByObjectiveRootsearch();
+    ~TaskSelectHyperplanePointsByObjectiveRootsearch() override;
 
-    virtual void run();
+    void run() override;
     virtual void run(std::vector<SolutionPoint> solPoints);
-    virtual std::string getType();
+    std::string getType() override;
 };
 } // namespace SHOT

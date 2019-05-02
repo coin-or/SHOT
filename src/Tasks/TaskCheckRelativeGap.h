@@ -17,10 +17,10 @@ class TaskCheckRelativeGap : public TaskBase
 {
 public:
     TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskCheckRelativeGap();
+    ~TaskCheckRelativeGap() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

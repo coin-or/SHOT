@@ -17,10 +17,10 @@ class TaskRepairInfeasibleDualProblem : public TaskBase
 {
 public:
     TaskRepairInfeasibleDualProblem(EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse);
-    virtual ~TaskRepairInfeasibleDualProblem();
+    ~TaskRepairInfeasibleDualProblem() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

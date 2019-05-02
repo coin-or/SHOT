@@ -140,22 +140,22 @@ public:
     void add(LinearTerms terms);
 
     void add(LinearTermPtr term);
-    virtual void updateProperties() override;
+    void updateProperties() override;
 
-    virtual void takeOwnership(ProblemPtr owner) override;
+    void takeOwnership(ProblemPtr owner) override;
 
-    virtual double calculateValue(const VectorDouble& point) override;
-    virtual Interval calculateValue(const IntervalVector& intervalVector) override;
+    double calculateValue(const VectorDouble& point) override;
+    Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
-    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
-    virtual void initializeGradientSparsityPattern();
-    virtual void initializeHessianSparsityPattern();
+    void initializeGradientSparsityPattern() override;
+    void initializeHessianSparsityPattern() override;
 };
 
 typedef std::shared_ptr<LinearObjectiveFunction> LinearObjectiveFunctionPtr;
@@ -199,7 +199,7 @@ public:
         updateProperties();
     }
 
-    virtual ~QuadraticObjectiveFunction() = default;
+    ~QuadraticObjectiveFunction() override = default;
 
     QuadraticTerms quadraticTerms;
 
@@ -210,21 +210,21 @@ public:
     void add(QuadraticTerms terms);
     void add(QuadraticTermPtr term);
 
-    virtual void updateProperties() override;
+    void updateProperties() override;
 
-    virtual double calculateValue(const VectorDouble& point) override;
-    virtual Interval calculateValue(const IntervalVector& intervalVector) override;
+    double calculateValue(const VectorDouble& point) override;
+    Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual void takeOwnership(ProblemPtr owner) override;
+    void takeOwnership(ProblemPtr owner) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
-    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+    SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
-    virtual void initializeGradientSparsityPattern();
-    virtual void initializeHessianSparsityPattern();
+    void initializeGradientSparsityPattern() override;
+    void initializeHessianSparsityPattern() override;
 };
 
 typedef std::shared_ptr<QuadraticObjectiveFunction> QuadraticObjectiveFunctionPtr;
@@ -293,7 +293,7 @@ public:
         updateProperties();
     }
 
-    virtual ~NonlinearObjectiveFunction() = default;
+    ~NonlinearObjectiveFunction() override = default;
 
     MonomialTerms monomialTerms;
     SignomialTerms signomialTerms;
@@ -327,21 +327,21 @@ public:
 
     void updateFactorableFunction();
 
-    virtual void updateProperties() override;
+    void updateProperties() override;
 
-    virtual void takeOwnership(ProblemPtr owner) override;
+    void takeOwnership(ProblemPtr owner) override;
 
-    virtual double calculateValue(const VectorDouble& point) override;
-    virtual Interval calculateValue(const IntervalVector& intervalVector) override;
+    double calculateValue(const VectorDouble& point) override;
+    Interval calculateValue(const IntervalVector& intervalVector) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
-    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
+    SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
-    virtual void initializeGradientSparsityPattern();
-    virtual void initializeHessianSparsityPattern();
+    void initializeGradientSparsityPattern() override;
+    void initializeHessianSparsityPattern() override;
 };
 
 typedef std::shared_ptr<NonlinearObjectiveFunction> NonlinearObjectiveFunctionPtr;

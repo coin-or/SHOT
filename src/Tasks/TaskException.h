@@ -22,7 +22,7 @@ public:
     TaskException(EnvironmentPtr envPtr, std::string msg) : message(msg) {}
     TaskException() = default;
 
-    const char* what() const throw()
+    const char* what() const throw() override
     {
         if(message == "")
             return "Unspecified task exception occurred!";
@@ -45,7 +45,7 @@ class TaskExceptionFunctionNotDefined : public std::exception
 public:
     TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task) : taskName(task) {}
 
-    const char* what() const throw()
+    const char* what() const throw() override
     {
         std::stringstream message;
         message << "Exception: task function in ";
@@ -64,7 +64,7 @@ class TaskExceptionNotFound : public std::exception
 public:
     TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task) : taskID(task) {}
 
-    const char* what() const throw()
+    const char* what() const throw() override
     {
         std::stringstream message;
         message << "Exception: task with ID ";

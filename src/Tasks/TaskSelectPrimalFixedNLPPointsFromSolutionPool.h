@@ -17,10 +17,10 @@ class TaskSelectPrimalFixedNLPPointsFromSolutionPool : public TaskBase
 {
 public:
     TaskSelectPrimalFixedNLPPointsFromSolutionPool(EnvironmentPtr envPtr);
-    virtual ~TaskSelectPrimalFixedNLPPointsFromSolutionPool();
+    ~TaskSelectPrimalFixedNLPPointsFromSolutionPool() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };

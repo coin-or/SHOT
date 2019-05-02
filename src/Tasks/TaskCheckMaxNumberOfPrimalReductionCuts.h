@@ -17,10 +17,10 @@ class TaskCheckMaxNumberOfPrimalReductionCuts : public TaskBase
 {
 public:
     TaskCheckMaxNumberOfPrimalReductionCuts(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskCheckMaxNumberOfPrimalReductionCuts();
+    ~TaskCheckMaxNumberOfPrimalReductionCuts() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

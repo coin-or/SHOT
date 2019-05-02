@@ -134,13 +134,13 @@ public:
 
     virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0);
 
-    virtual bool isFulfilled(const VectorDouble& point) override;
+    bool isFulfilled(const VectorDouble& point) override;
 
-    virtual void takeOwnership(ProblemPtr owner) = 0;
+    void takeOwnership(ProblemPtr owner) override = 0;
 
     virtual std::shared_ptr<NumericConstraint> getPointer() = 0;
 
-    virtual void updateProperties() = 0;
+    void updateProperties() override = 0;
 
 protected:
     virtual void initializeGradientSparsityPattern() = 0;
@@ -176,29 +176,29 @@ public:
     void add(LinearTerms terms);
     void add(LinearTermPtr term);
 
-    virtual double calculateFunctionValue(const VectorDouble& point) override;
-    virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
+    double calculateFunctionValue(const VectorDouble& point) override;
+    Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
-    virtual bool isFulfilled(const VectorDouble& point) override;
+    bool isFulfilled(const VectorDouble& point) override;
 
-    virtual void takeOwnership(ProblemPtr owner) override;
+    void takeOwnership(ProblemPtr owner) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+    SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
-    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
+    NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
-    virtual std::shared_ptr<NumericConstraint> getPointer() override;
+    std::shared_ptr<NumericConstraint> getPointer() override;
 
-    virtual void updateProperties() override;
+    void updateProperties() override;
 
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
-    virtual void initializeGradientSparsityPattern();
-    virtual void initializeHessianSparsityPattern();
+    void initializeGradientSparsityPattern() override;
+    void initializeHessianSparsityPattern() override;
 };
 
 typedef std::shared_ptr<LinearConstraint> LinearConstraintPtr;
@@ -252,29 +252,29 @@ public:
     void add(QuadraticTerms terms);
     void add(QuadraticTermPtr term);
 
-    virtual double calculateFunctionValue(const VectorDouble& point) override;
-    virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
+    double calculateFunctionValue(const VectorDouble& point) override;
+    Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
-    virtual bool isFulfilled(const VectorDouble& point) override;
+    bool isFulfilled(const VectorDouble& point) override;
 
-    virtual void takeOwnership(ProblemPtr owner) override;
+    void takeOwnership(ProblemPtr owner) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+    SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
-    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
+    NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
-    virtual std::shared_ptr<NumericConstraint> getPointer() override;
+    std::shared_ptr<NumericConstraint> getPointer() override;
 
-    virtual void updateProperties() override;
+    void updateProperties() override;
 
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
-    virtual void initializeGradientSparsityPattern();
-    virtual void initializeHessianSparsityPattern();
+    void initializeGradientSparsityPattern() override;
+    void initializeHessianSparsityPattern() override;
 };
 
 typedef std::shared_ptr<QuadraticConstraint> QuadraticConstraintPtr;
@@ -376,30 +376,30 @@ public:
 
     void updateFactorableFunction();
 
-    virtual double calculateFunctionValue(const VectorDouble& point) override;
+    double calculateFunctionValue(const VectorDouble& point) override;
 
-    virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes);
+    SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
-    virtual SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes);
+    SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
-    virtual Interval calculateFunctionValue(const IntervalVector& intervalVector);
+    Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
 
-    virtual bool isFulfilled(const VectorDouble& point) override;
+    bool isFulfilled(const VectorDouble& point) override;
 
-    virtual void takeOwnership(ProblemPtr owner) override;
+    void takeOwnership(ProblemPtr owner) override;
 
-    virtual NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
+    NumericConstraintValue calculateNumericValue(const VectorDouble& point, double correction = 0.0) override;
 
-    virtual std::shared_ptr<NumericConstraint> getPointer() override;
+    std::shared_ptr<NumericConstraint> getPointer() override;
 
-    virtual void updateProperties() override;
+    void updateProperties() override;
 
     std::ostream& print(std::ostream& stream) const override;
 
 protected:
-    virtual void initializeGradientSparsityPattern();
-    virtual void initializeHessianSparsityPattern();
+    void initializeGradientSparsityPattern() override;
+    void initializeHessianSparsityPattern() override;
 };
 
 typedef std::shared_ptr<NonlinearConstraint> NonlinearConstraintPtr;

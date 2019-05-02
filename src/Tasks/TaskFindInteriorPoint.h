@@ -23,10 +23,10 @@ class TaskFindInteriorPoint : public TaskBase
 {
 public:
     TaskFindInteriorPoint(EnvironmentPtr envPtr);
-    virtual ~TaskFindInteriorPoint();
+    ~TaskFindInteriorPoint() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::vector<std::unique_ptr<INLPSolver>> NLPSolvers;

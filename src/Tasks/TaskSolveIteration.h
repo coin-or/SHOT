@@ -19,10 +19,10 @@ class TaskSolveIteration : public TaskBase
 {
 public:
     TaskSolveIteration(EnvironmentPtr envPtr);
-    virtual ~TaskSolveIteration();
+    ~TaskSolveIteration() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     VectorString variableNames;

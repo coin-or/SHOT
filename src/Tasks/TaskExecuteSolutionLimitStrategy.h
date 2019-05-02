@@ -19,10 +19,10 @@ class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
 public:
     TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr);
-    virtual ~TaskExecuteSolutionLimitStrategy();
+    ~TaskExecuteSolutionLimitStrategy() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::unique_ptr<IMIPSolutionLimitStrategy> solutionLimitStrategy;

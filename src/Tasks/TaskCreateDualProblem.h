@@ -21,10 +21,10 @@ class TaskCreateDualProblem : public TaskBase
 {
 public:
     TaskCreateDualProblem(EnvironmentPtr envPtr);
-    virtual ~TaskCreateDualProblem();
+    ~TaskCreateDualProblem() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr sourceProblem);

@@ -21,14 +21,14 @@ public:
     TaskConditional(
         EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskPtr taskIfTrue, TaskPtr taskIfFalse);
     TaskConditional(EnvironmentPtr envPtr);
-    virtual ~TaskConditional();
+    ~TaskConditional() override;
 
     void setTaskIfTrue(TaskPtr task);
     void setTaskIfFalse(TaskPtr task);
     void setCondition(std::function<bool()> conditionFunct);
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::function<bool()> condition;

@@ -31,32 +31,32 @@ private:
 public:
     NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject);
 
-    virtual ~NLPSolverGAMS();
+    ~NLPSolverGAMS() override;
 
-    void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
-    void clearStartingPoint();
+    void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
+    void clearStartingPoint() override;
 
-    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) override;
 
-    void unfixVariables();
+    void unfixVariables() override;
 
-    void saveOptionsToFile(std::string fileName);
+    void saveOptionsToFile(std::string fileName) override;
 
-    void saveProblemToFile(std::string fileName);
+    void saveProblemToFile(std::string fileName) override;
 
-    VectorDouble getSolution();
-    double getSolution(int i);
+    VectorDouble getSolution() override;
+    double getSolution(int i) override;
 
-    virtual double getObjectiveValue();
+    double getObjectiveValue() override;
 
-    virtual void updateVariableLowerBound(int variableIndex, double bound);
-    virtual void updateVariableUpperBound(int variableIndex, double bound);
+    void updateVariableLowerBound(int variableIndex, double bound) override;
+    void updateVariableUpperBound(int variableIndex, double bound) override;
 
 protected:
-    E_NLPSolutionStatus solveProblemInstance();
+    E_NLPSolutionStatus solveProblemInstance() override;
 
-    VectorDouble getVariableLowerBounds();
-    VectorDouble getVariableUpperBounds();
+    VectorDouble getVariableLowerBounds() override;
+    VectorDouble getVariableUpperBounds() override;
 
 private:
 };

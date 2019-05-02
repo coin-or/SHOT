@@ -17,12 +17,12 @@ class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
 public:
     NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr source);
-    virtual ~NLPSolverIpoptRelaxed();
+    ~NLPSolverIpoptRelaxed() override;
 
-    virtual VectorDouble getSolution();
+    VectorDouble getSolution() override;
 
 protected:
-    virtual void setSolverSpecificInitialSettings();
+    void setSolverSpecificInitialSettings() override;
 
 private:
 };

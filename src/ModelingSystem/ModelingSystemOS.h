@@ -22,7 +22,6 @@
 #include <string>
 
 class OSiLReader;
-class OSiLWriter;
 class OSInstance;
 class OSnl2OS;
 class OSnLNode;
@@ -41,13 +40,13 @@ class ModelingSystemOS : public IModelingSystem
 {
 public:
     ModelingSystemOS(EnvironmentPtr envPtr);
-    virtual ~ModelingSystemOS();
+    ~ModelingSystemOS() override;
 
     // Adds modeling system specific settings
-    virtual void augmentSettings(SettingsPtr settings);
+    void augmentSettings(SettingsPtr settings) override;
 
     // Get specific settings from modeling system
-    virtual void updateSettings(SettingsPtr settings);
+    void updateSettings(SettingsPtr settings) override;
 
     // Create the optimization problem by filename in either OSiL or Ampl format
     E_ProblemCreationStatus createProblem(
@@ -57,7 +56,7 @@ public:
     E_ProblemCreationStatus createProblem(ProblemPtr& problem, std::shared_ptr<OSInstance> instance);
 
     // Move the solution and statistics from SHOT to the modeling system
-    virtual void finalizeSolution();
+    void finalizeSolution() override;
 
     std::shared_ptr<OSInstance> originalInstance;
 
@@ -78,7 +77,6 @@ private:
     bool isObjectiveQuadratic(OSInstance* instance);
 
     std::vector<std::shared_ptr<OSiLReader>> osilReaders;
-    std::shared_ptr<OSiLWriter> osilWriter;
     std::shared_ptr<OSnl2OS> nl2os;
 
     // bool areAllConstraintsLinear(OSInstance* instance);

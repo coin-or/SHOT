@@ -20,6 +20,6 @@ protected:
     NLPSolverBase();
 
 public:
-    virtual E_NLPSolutionStatus solveProblem();
+    E_NLPSolutionStatus solveProblem() override;
 };
 } // namespace SHOT

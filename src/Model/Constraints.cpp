@@ -657,7 +657,6 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             auto factorableFunction = std::get<1>(E);
 
             double value[1];
-            value[0];
 
             if(auto sharedOwnerProblem = ownerProblem.lock())
             {

@@ -17,10 +17,10 @@ class TaskSelectPrimalCandidatesFromSolutionPool : public TaskBase
 {
 public:
     TaskSelectPrimalCandidatesFromSolutionPool(EnvironmentPtr envPtr);
-    virtual ~TaskSelectPrimalCandidatesFromSolutionPool();
+    ~TaskSelectPrimalCandidatesFromSolutionPool() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };

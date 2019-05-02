@@ -17,10 +17,10 @@ class TaskAddIntegerCuts : public TaskBase
 {
 public:
     TaskAddIntegerCuts(EnvironmentPtr envPtr);
-    virtual ~TaskAddIntegerCuts();
+    ~TaskAddIntegerCuts() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };

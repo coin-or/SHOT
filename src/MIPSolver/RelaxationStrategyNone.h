@@ -19,17 +19,17 @@ class RelaxationStrategyNone : public IRelaxationStrategy, public RelaxationStra
 {
 public:
     RelaxationStrategyNone(EnvironmentPtr envPtr);
-    virtual ~RelaxationStrategyNone();
+    ~RelaxationStrategyNone() override;
 
-    virtual void executeStrategy();
+    void executeStrategy() override;
 
-    virtual void setActive();
+    void setActive() override;
 
-    virtual void setInactive();
+    void setInactive() override;
 
-    virtual void setInitial();
+    void setInitial() override;
 
-    virtual E_IterationProblemType getProblemType();
+    E_IterationProblemType getProblemType() override;
 
 private:
 };

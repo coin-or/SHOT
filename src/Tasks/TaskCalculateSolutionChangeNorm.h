@@ -17,11 +17,11 @@ class TaskCalculateSolutionChangeNorm : public TaskBase
 {
 public:
     TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr);
-    virtual ~TaskCalculateSolutionChangeNorm();
+    ~TaskCalculateSolutionChangeNorm() override;
 
-    virtual void run();
+    void run() override;
 
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
 };

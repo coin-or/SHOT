@@ -19,17 +19,17 @@ class MIPSolverGurobiLazy : public MIPSolverGurobi
 {
 public:
     MIPSolverGurobiLazy(EnvironmentPtr envPtr);
-    virtual ~MIPSolverGurobiLazy();
+    ~MIPSolverGurobiLazy() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
-    E_ProblemSolutionStatus solveProblem();
+    E_ProblemSolutionStatus solveProblem() override;
 
 private:
 };
@@ -41,7 +41,7 @@ public:
     GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr);
 
 protected:
-    void callback();
+    void callback() override;
 
 private:
     int lastExploredNodes = 0;

@@ -17,9 +17,9 @@ class TaskUpdateInteriorPoint : public TaskBase
 {
 public:
     TaskUpdateInteriorPoint(EnvironmentPtr envPtr);
-    virtual ~TaskUpdateInteriorPoint();
-    virtual void run();
-    virtual std::string getType();
+    ~TaskUpdateInteriorPoint() override;
+    void run() override;
+    std::string getType() override;
 
 private:
 };

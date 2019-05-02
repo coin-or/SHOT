@@ -17,10 +17,10 @@ class TaskExecuteRelaxationStrategy : public TaskBase
 {
 public:
     TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr);
-    virtual ~TaskExecuteRelaxationStrategy();
+    ~TaskExecuteRelaxationStrategy() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };

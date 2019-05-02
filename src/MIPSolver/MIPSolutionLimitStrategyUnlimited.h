@@ -17,10 +17,10 @@ class MIPSolutionLimitStrategyUnlimited : public IMIPSolutionLimitStrategy
 {
 public:
     MIPSolutionLimitStrategyUnlimited(EnvironmentPtr envPtr);
-    ~MIPSolutionLimitStrategyUnlimited() = default;
+    ~MIPSolutionLimitStrategyUnlimited() override = default;
 
-    virtual bool updateLimit();
-    virtual int getNewLimit();
-    virtual int getInitialLimit();
+    bool updateLimit() override;
+    int getNewLimit() override;
+    int getInitialLimit() override;
 };
 } // namespace SHOT

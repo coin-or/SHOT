@@ -17,10 +17,10 @@ class TaskGoto : public TaskBase
 {
 public:
     TaskGoto(EnvironmentPtr envPtr, std::string taskID);
-    virtual ~TaskGoto();
+    ~TaskGoto() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string gotoTaskID;

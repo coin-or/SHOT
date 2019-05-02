@@ -19,13 +19,13 @@ public:
     TaskSequential(EnvironmentPtr envPtr);
     TaskSequential(EnvironmentPtr envPtr, int numberOfTasks);
 
-    virtual ~TaskSequential();
+    ~TaskSequential() override;
 
     void addTasks(std::vector<TaskPtr> tasks);
     void addTask(TaskPtr task);
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::vector<TaskPtr> m_tasks;

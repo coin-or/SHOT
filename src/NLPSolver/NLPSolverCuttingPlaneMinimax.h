@@ -33,38 +33,38 @@ class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 {
 public:
     NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem);
-    virtual ~NLPSolverCuttingPlaneMinimax();
+    ~NLPSolverCuttingPlaneMinimax() override;
 
-    virtual void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues);
-    virtual void clearStartingPoint();
+    void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
+    void clearStartingPoint() override;
 
     virtual bool isObjectiveFunctionNonlinear();
     virtual int getObjectiveFunctionVariableIndex();
 
-    virtual VectorDouble getVariableLowerBounds();
-    virtual VectorDouble getVariableUpperBounds();
+    VectorDouble getVariableLowerBounds() override;
+    VectorDouble getVariableUpperBounds() override;
 
-    virtual void updateVariableLowerBound(int variableIndex, double bound);
-    virtual void updateVariableUpperBound(int variableIndex, double bound);
+    void updateVariableLowerBound(int variableIndex, double bound) override;
+    void updateVariableUpperBound(int variableIndex, double bound) override;
 
-    virtual void saveProblemToFile(std::string fileName);
+    void saveProblemToFile(std::string fileName) override;
 
 private:
     std::unique_ptr<IMIPSolver> LPSolver;
     ProblemPtr sourceProblem;
     VectorString variableNames;
 
-    virtual double getSolution(int i);
-    virtual VectorDouble getSolution();
-    virtual double getObjectiveValue();
+    double getSolution(int i) override;
+    VectorDouble getSolution() override;
+    double getObjectiveValue() override;
 
-    virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues);
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) override;
 
-    virtual void unfixVariables();
+    void unfixVariables() override;
 
-    virtual E_NLPSolutionStatus solveProblemInstance();
+    E_NLPSolutionStatus solveProblemInstance() override;
 
-    virtual void saveOptionsToFile(std::string fileName);
+    void saveOptionsToFile(std::string fileName) override;
 
     bool isProblemCreated;
 

@@ -17,11 +17,11 @@ class TaskCheckAbsoluteGap : public TaskBase
 {
 public:
     TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskCheckAbsoluteGap();
+    ~TaskCheckAbsoluteGap() override;
 
-    virtual void run();
+    void run() override;
 
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

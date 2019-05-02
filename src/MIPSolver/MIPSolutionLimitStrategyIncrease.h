@@ -19,11 +19,11 @@ class MIPSolutionLimitStrategyIncrease : public IMIPSolutionLimitStrategy
 {
 public:
     MIPSolutionLimitStrategyIncrease(EnvironmentPtr envPtr);
-    ~MIPSolutionLimitStrategyIncrease() = default;
+    ~MIPSolutionLimitStrategyIncrease() override = default;
 
-    virtual bool updateLimit();
-    virtual int getNewLimit();
-    virtual int getInitialLimit();
+    bool updateLimit() override;
+    int getNewLimit() override;
+    int getInitialLimit() override;
 
     int lastIterSolLimIncreased;
     int numSolLimIncremented;

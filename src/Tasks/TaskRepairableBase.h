@@ -15,10 +15,10 @@ namespace SHOT
 class TaskRepairableBase : public TaskBase
 {
 public:
-    virtual ~TaskRepairableBase();
+    ~TaskRepairableBase() override;
 
     virtual void repair();
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
 };

@@ -28,17 +28,17 @@ class MIPSolverCplexLazyOriginalCallback : public MIPSolverCplex
 {
 public:
     MIPSolverCplexLazyOriginalCallback(EnvironmentPtr envPtr);
-    virtual ~MIPSolverCplexLazyOriginalCallback();
+    ~MIPSolverCplexLazyOriginalCallback() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual E_ProblemSolutionStatus solveProblem();
+    E_ProblemSolutionStatus solveProblem() override;
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
     std::mutex callbackMutex2;
 
@@ -52,11 +52,11 @@ class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallback
 
 private:
 public:
-    IloCplex::CallbackI* duplicateCallback() const;
+    IloCplex::CallbackI* duplicateCallback() const override;
     HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
-    void main();
+    void main() override;
 
-    virtual ~HCallbackI();
+    ~HCallbackI() override;
 };
 
 class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbackBase
@@ -65,11 +65,11 @@ class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbac
 
 private:
 public:
-    IloCplex::CallbackI* duplicateCallback() const;
+    IloCplex::CallbackI* duplicateCallback() const override;
     InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
-    void main();
+    void main() override;
 
-    virtual ~InfoCallbackI();
+    ~InfoCallbackI() override;
 };
 
 class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCallbackBase
@@ -83,11 +83,11 @@ class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCa
     void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
 public:
-    IloCplex::CallbackI* duplicateCallback() const;
+    IloCplex::CallbackI* duplicateCallback() const override;
 
     CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
-    void main();
+    void main() override;
 
-    virtual ~CtCallbackI();
+    ~CtCallbackI() override;
 };
 } // namespace SHOT

@@ -20,119 +20,119 @@ class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 public:
     MIPSolverGurobi();
     MIPSolverGurobi(EnvironmentPtr envPtr);
-    virtual ~MIPSolverGurobi();
+    ~MIPSolverGurobi() override;
 
-    virtual bool initializeProblem();
+    bool initializeProblem() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound);
+    bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound) override;
 
-    virtual bool initializeObjective();
-    virtual bool addLinearTermToObjective(double coefficient, int variableIndex);
-    virtual bool addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex);
-    virtual bool finalizeObjective(bool isMinimize, double constant = 0.0);
+    bool initializeObjective() override;
+    bool addLinearTermToObjective(double coefficient, int variableIndex) override;
+    bool addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex) override;
+    bool finalizeObjective(bool isMinimize, double constant = 0.0) override;
 
-    virtual bool initializeConstraint();
-    virtual bool addLinearTermToConstraint(double coefficient, int variableIndex);
-    virtual bool addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex);
-    virtual bool finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0);
+    bool initializeConstraint() override;
+    bool addLinearTermToConstraint(double coefficient, int variableIndex) override;
+    bool addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex) override;
+    bool finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0) override;
 
-    virtual bool finalizeProblem();
+    bool finalizeProblem() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual void writeProblemToFile(std::string filename);
-    virtual void writePresolvedToFile(std::string filename);
+    void writeProblemToFile(std::string filename) override;
+    void writePresolvedToFile(std::string filename) override;
 
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name)
+    int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) override
     {
         return (addLinearConstraint(elements, constant, name, false));
     }
 
-    virtual int addLinearConstraint(
-        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan);
+    int addLinearConstraint(
+        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan) override;
 
-    virtual void createHyperplane(Hyperplane hyperplane) { MIPSolverBase::createHyperplane(hyperplane); }
+    void createHyperplane(Hyperplane hyperplane) override { MIPSolverBase::createHyperplane(hyperplane); }
 
-    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
+    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) override;
 
-    virtual void createInteriorHyperplane(Hyperplane hyperplane)
+    void createInteriorHyperplane(Hyperplane hyperplane) override
     {
         MIPSolverBase::createInteriorHyperplane(hyperplane);
     }
 
-    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane)
+    std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
     }
 
-    virtual void fixVariable(int varIndex, double value);
+    void fixVariable(int varIndex, double value) override;
 
-    virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) override
     {
         MIPSolverBase::fixVariables(variableIndexes, variableValues);
     }
 
-    virtual void unfixVariables() { MIPSolverBase::unfixVariables(); }
+    void unfixVariables() override { MIPSolverBase::unfixVariables(); }
 
-    virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound);
-    virtual void updateVariableLowerBound(int varIndex, double lowerBound);
-    virtual void updateVariableUpperBound(int varIndex, double upperBound);
+    void updateVariableBound(int varIndex, double lowerBound, double upperBound) override;
+    void updateVariableLowerBound(int varIndex, double lowerBound) override;
+    void updateVariableUpperBound(int varIndex, double upperBound) override;
 
-    virtual PairDouble getCurrentVariableBounds(int varIndex);
+    PairDouble getCurrentVariableBounds(int varIndex) override;
 
-    virtual void presolveAndUpdateBounds() { return (MIPSolverBase::presolveAndUpdateBounds()); }
+    void presolveAndUpdateBounds() override { return (MIPSolverBase::presolveAndUpdateBounds()); }
 
-    virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds();
+    std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() override;
 
-    virtual void activateDiscreteVariables(bool activate);
-    virtual bool getDiscreteVariableStatus() { return (MIPSolverBase::getDiscreteVariableStatus()); }
+    void activateDiscreteVariables(bool activate) override;
+    bool getDiscreteVariableStatus() override { return (MIPSolverBase::getDiscreteVariableStatus()); }
 
-    virtual E_IterationProblemType getCurrentProblemType() { return (MIPSolverBase::getCurrentProblemType()); }
+    E_IterationProblemType getCurrentProblemType() override { return (MIPSolverBase::getCurrentProblemType()); }
 
-    virtual void executeRelaxationStrategy() { MIPSolverBase::executeRelaxationStrategy(); }
+    void executeRelaxationStrategy() override { MIPSolverBase::executeRelaxationStrategy(); }
 
-    virtual E_ProblemSolutionStatus solveProblem();
-    virtual bool repairInfeasibility();
+    E_ProblemSolutionStatus solveProblem() override;
+    bool repairInfeasibility() override;
 
-    virtual E_ProblemSolutionStatus getSolutionStatus();
-    virtual int getNumberOfSolutions();
-    virtual VectorDouble getVariableSolution(int solIdx);
-    virtual std::vector<SolutionPoint> getAllVariableSolutions() { return (MIPSolverBase::getAllVariableSolutions()); }
-    virtual double getDualObjectiveValue();
-    virtual double getObjectiveValue(int solIdx);
-    virtual double getObjectiveValue() { return (MIPSolverBase::getObjectiveValue()); }
+    E_ProblemSolutionStatus getSolutionStatus() override;
+    int getNumberOfSolutions() override;
+    VectorDouble getVariableSolution(int solIdx) override;
+    std::vector<SolutionPoint> getAllVariableSolutions() override { return (MIPSolverBase::getAllVariableSolutions()); }
+    double getDualObjectiveValue() override;
+    double getObjectiveValue(int solIdx) override;
+    double getObjectiveValue() override { return (MIPSolverBase::getObjectiveValue()); }
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
-    virtual void setTimeLimit(double seconds);
+    void setTimeLimit(double seconds) override;
 
-    virtual void setCutOff(double cutOff);
-    virtual void setCutOffAsConstraint(double cutOff);
+    void setCutOff(double cutOff) override;
+    void setCutOffAsConstraint(double cutOff) override;
 
-    virtual void addMIPStart(VectorDouble point);
-    virtual void deleteMIPStarts();
+    void addMIPStart(VectorDouble point) override;
+    void deleteMIPStarts() override;
 
-    virtual bool supportsQuadraticObjective();
-    virtual bool supportsQuadraticConstraints();
+    bool supportsQuadraticObjective() override;
+    bool supportsQuadraticConstraints() override;
 
-    virtual int getNumberOfExploredNodes();
+    int getNumberOfExploredNodes() override;
 
-    virtual int getNumberOfOpenNodes() { return (MIPSolverBase::getNumberOfOpenNodes()); }
+    int getNumberOfOpenNodes() override { return (MIPSolverBase::getNumberOfOpenNodes()); }
 
-    virtual bool hasAuxiliaryObjectiveVariable() { return (MIPSolverBase::hasAuxiliaryObjectiveVariable()); }
+    bool hasAuxiliaryObjectiveVariable() override { return (MIPSolverBase::hasAuxiliaryObjectiveVariable()); }
 
-    virtual int getAuxiliaryObjectiveVariableIndex() { return (MIPSolverBase::getAuxiliaryObjectiveVariableIndex()); }
+    int getAuxiliaryObjectiveVariableIndex() override { return (MIPSolverBase::getAuxiliaryObjectiveVariableIndex()); }
 
-    virtual void setAuxiliaryObjectiveVariableIndex(int index)
+    void setAuxiliaryObjectiveVariableIndex(int index) override
     {
         return (MIPSolverBase::setAuxiliaryObjectiveVariableIndex(index));
     }
 
-    virtual std::string getConstraintIdentifier(E_HyperplaneSource source)
+    std::string getConstraintIdentifier(E_HyperplaneSource source) override
     {
         return (MIPSolverBase::getConstraintIdentifier(source));
     };
@@ -153,7 +153,7 @@ public:
     GurobiInfoCallback(EnvironmentPtr envPtr);
 
 protected:
-    void callback();
+    void callback() override;
 
 private:
     int lastExploredNodes = 0;

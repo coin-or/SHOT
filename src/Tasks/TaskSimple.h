@@ -20,12 +20,12 @@ class TaskSimple : public TaskBase
 public:
     TaskSimple(EnvironmentPtr envPtr, std::function<bool()> taskFunction);
     TaskSimple(EnvironmentPtr envPtr);
-    virtual ~TaskSimple();
+    ~TaskSimple() override;
 
     void setFunction(std::function<bool()> taskFunction);
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::function<bool()> task;

@@ -20,9 +20,9 @@ class TaskSolveFixedDualProblem : public TaskBase
 {
 public:
     TaskSolveFixedDualProblem(EnvironmentPtr envPtr);
-    virtual ~TaskSolveFixedDualProblem();
-    virtual void run();
-    virtual std::string getType();
+    ~TaskSolveFixedDualProblem() override;
+    void run() override;
+    std::string getType() override;
 
 private:
     VectorInteger discreteVariableIndexes;

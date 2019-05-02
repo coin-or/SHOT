@@ -25,9 +25,9 @@ class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
 public:
     TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr);
-    virtual ~TaskSelectPrimalCandidatesFromNLP();
-    virtual void run();
-    virtual std::string getType();
+    ~TaskSelectPrimalCandidatesFromNLP() override;
+    void run() override;
+    std::string getType() override;
 
 private:
     virtual bool solveFixedNLP();

@@ -17,10 +17,10 @@ class TaskCheckPrimalStagnation : public TaskBase
 {
 public:
     TaskCheckPrimalStagnation(EnvironmentPtr envPtr, std::string taskIDTrue, std::string taskIDFalse);
-    virtual ~TaskCheckPrimalStagnation();
+    ~TaskCheckPrimalStagnation() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

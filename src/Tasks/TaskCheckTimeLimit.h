@@ -17,10 +17,10 @@ class TaskCheckTimeLimit : public TaskBase
 {
 public:
     TaskCheckTimeLimit(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskCheckTimeLimit();
+    ~TaskCheckTimeLimit() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

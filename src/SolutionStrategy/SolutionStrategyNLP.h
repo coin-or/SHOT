@@ -21,8 +21,8 @@ public:
     SolutionStrategyNLP(EnvironmentPtr envPtr);
     virtual ~SolutionStrategyNLP();
 
-    virtual bool solveProblem();
-    virtual void initializeStrategy();
+    bool solveProblem() override;
+    void initializeStrategy() override;
 
 protected:
 };

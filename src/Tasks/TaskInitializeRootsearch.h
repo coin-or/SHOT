@@ -17,10 +17,10 @@ class TaskInitializeRootsearch : public TaskBase
 {
 public:
     TaskInitializeRootsearch(EnvironmentPtr envPtr);
-    virtual ~TaskInitializeRootsearch();
+    ~TaskInitializeRootsearch() override;
 
-    virtual void run();
+    void run() override;
 
-    virtual std::string getType();
+    std::string getType() override;
 };
 } // namespace SHOT

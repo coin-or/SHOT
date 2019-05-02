@@ -17,11 +17,11 @@ class TaskCheckObjectiveGapNotMet : public TaskBase
 {
 public:
     TaskCheckObjectiveGapNotMet(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskCheckObjectiveGapNotMet();
+    ~TaskCheckObjectiveGapNotMet() override;
 
-    virtual void run();
+    void run() override;
 
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

@@ -21,8 +21,8 @@ public:
     SolutionStrategySingleTree(EnvironmentPtr envPtr);
     virtual ~SolutionStrategySingleTree();
 
-    virtual bool solveProblem();
-    virtual void initializeStrategy();
+    bool solveProblem() override;
+    void initializeStrategy() override;
 
 protected:
 };

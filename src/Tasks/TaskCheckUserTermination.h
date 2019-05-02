@@ -17,10 +17,10 @@ class TaskCheckUserTermination : public TaskBase
 {
 public:
     TaskCheckUserTermination(EnvironmentPtr envPtr, std::string taskIDTrue);
-    virtual ~TaskCheckUserTermination();
+    ~TaskCheckUserTermination() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
     std::string taskIDIfTrue;

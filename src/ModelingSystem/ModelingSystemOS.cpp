@@ -21,7 +21,6 @@
 #include "OSResult.h"
 
 #include "OSiLReader.h"
-#include "OSiLWriter.h"
 #include "OSInstance.h"
 #include "OSnl2OS.h"
 #include "OSoLReader.h"
@@ -37,10 +36,7 @@
 namespace SHOT
 {
 
-ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envPtr)
-{
-    std::shared_ptr<OSiLWriter> osilWriter();
-}
+ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envPtr) {}
 
 ModelingSystemOS::~ModelingSystemOS() = default;
 

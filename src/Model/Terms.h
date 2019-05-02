@@ -60,13 +60,13 @@ public:
         variable = var;
     }
 
-    inline double calculate(const VectorDouble& point) const
+    inline double calculate(const VectorDouble& point) const override
     {
         double value = coefficient * variable->calculate(point);
         return value;
     }
 
-    inline Interval calculate(const IntervalVector& intervalVector) const
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         Interval value = coefficient * variable->calculate(intervalVector);
         return value;
@@ -316,13 +316,13 @@ public:
         }
     };
 
-    inline double calculate(const VectorDouble& point) const
+    inline double calculate(const VectorDouble& point) const override
     {
         double value = coefficient * firstVariable->calculate(point) * secondVariable->calculate(point);
         return value;
     };
 
-    inline Interval calculate(const IntervalVector& intervalVector) const
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         Interval value
             = coefficient * firstVariable->calculate(intervalVector) * secondVariable->calculate(intervalVector);
@@ -401,7 +401,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
 class QuadraticTerms : public Terms<QuadraticTermPtr>
 {
 private:
-    void updateConvexity();
+    void updateConvexity() override;
 
 public:
     using std::vector<QuadraticTermPtr>::operator[];
@@ -525,7 +525,7 @@ public:
     // Creates a copy of the term, with variables from destinationProblem
     MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem);
 
-    inline double calculate(const VectorDouble& point) const
+    inline double calculate(const VectorDouble& point) const override
     {
         double value = coefficient;
 
@@ -537,7 +537,7 @@ public:
         return value;
     };
 
-    inline Interval calculate(const IntervalVector& intervalVector) const
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         Interval value(coefficient);
 
@@ -755,7 +755,7 @@ public:
     // Creates a copy of the term, with variables from destinationProblem
     SignomialTerm(const SignomialTerm* term, ProblemPtr destinationProblem);
 
-    inline double calculate(const VectorDouble& point) const
+    inline double calculate(const VectorDouble& point) const override
     {
         double value = coefficient;
 
@@ -767,7 +767,7 @@ public:
         return value;
     };
 
-    inline Interval calculate(const IntervalVector& intervalVector) const
+    inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         Interval value(coefficient);
 

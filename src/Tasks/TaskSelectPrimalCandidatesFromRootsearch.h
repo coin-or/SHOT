@@ -19,11 +19,11 @@ class TaskSelectPrimalCandidatesFromRootsearch : public TaskBase
 {
 public:
     TaskSelectPrimalCandidatesFromRootsearch(EnvironmentPtr envPtr);
-    virtual ~TaskSelectPrimalCandidatesFromRootsearch();
-    virtual void run();
+    ~TaskSelectPrimalCandidatesFromRootsearch() override;
+    void run() override;
     virtual void run(std::vector<SolutionPoint> solPoints);
 
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
 };

@@ -17,11 +17,11 @@ class TaskAddHyperplanes : public TaskBase
 {
 public:
     TaskAddHyperplanes(EnvironmentPtr envPtr);
-    virtual ~TaskAddHyperplanes();
+    ~TaskAddHyperplanes() override;
 
-    virtual void run();
+    void run() override;
 
-    virtual std::string getType();
+    std::string getType() override;
 
 private:
     int itersWithoutAddedHPs;

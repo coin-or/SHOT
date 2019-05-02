@@ -59,7 +59,8 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     auto dualBound = env->results->getCurrentDualBound();
 
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
-        && abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound()) / ((1e-10) + abs(dualBound))
+        && std::abs(allSolutions.at(0).objectiveValue - env->results->getCurrentDualBound())
+                / ((1e-10) + std::abs(dualBound))
             < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;

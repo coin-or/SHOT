@@ -35,13 +35,13 @@ class ModelingSystemGAMS : public IModelingSystem
 {
 public:
     ModelingSystemGAMS(EnvironmentPtr envPtr);
-    virtual ~ModelingSystemGAMS();
+    ~ModelingSystemGAMS() override;
 
     // Adds modeling system specific settings
-    virtual void augmentSettings(SettingsPtr settings);
+    void augmentSettings(SettingsPtr settings) override;
 
     // Get specific settings from modeling system
-    virtual void updateSettings(SettingsPtr settings);
+    void updateSettings(SettingsPtr settings) override;
 
     // Create the optimization problem by filename either directly from a gms-file or from a compiled GAMS model
     E_ProblemCreationStatus createProblem(
@@ -51,7 +51,7 @@ public:
     E_ProblemCreationStatus createProblem(ProblemPtr& problem, gmoHandle_t gmo);
 
     // Move the solution and statistics from SHOT to the modeling system
-    virtual void finalizeSolution();
+    void finalizeSolution() override;
 
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;

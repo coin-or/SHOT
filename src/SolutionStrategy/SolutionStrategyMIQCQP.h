@@ -21,8 +21,8 @@ public:
     SolutionStrategyMIQCQP(EnvironmentPtr envPtr);
     virtual ~SolutionStrategyMIQCQP();
 
-    virtual bool solveProblem();
-    virtual void initializeStrategy();
+    bool solveProblem() override;
+    void initializeStrategy() override;
 
 protected:
 };

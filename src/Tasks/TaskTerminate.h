@@ -17,10 +17,10 @@ class TaskTerminate : public TaskBase
 {
 public:
     TaskTerminate(EnvironmentPtr envPtr);
-    virtual ~TaskTerminate();
+    ~TaskTerminate() override;
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
 private:
 };
