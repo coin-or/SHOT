@@ -154,7 +154,7 @@ typedef std::shared_ptr<NonlinearExpression> NonlinearExpressionPtr;
 
 inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr expr)
 {
-    if(expr != NULL)
+    if(expr != nullptr)
     {
         stream << *expr;
     }

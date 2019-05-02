@@ -210,7 +210,7 @@ bool IpoptProblem::eval_jac_g(
     Index n, const Number* x, bool new_x, Index m, Index nele_jac, Index* iRow, Index* jCol, Number* values)
 {
     // The structure
-    if(values == NULL)
+    if(values == nullptr)
     {
         int counter = 0;
 
@@ -263,7 +263,7 @@ bool IpoptProblem::eval_h(Index n, const Number* x, bool new_x, Number obj_facto
     bool new_lambda, Index nele_hess, Index* iRow, Index* jCol, Number* values)
 {
     // The structure
-    if(values == NULL)
+    if(values == nullptr)
     {
         int counter = 0;
         lagrangianHessianCounterPlacement.clear();
@@ -366,7 +366,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::IterationLimit;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -384,7 +384,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::IterationLimit;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -403,7 +403,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Feasible;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -428,7 +428,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Error;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -446,7 +446,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Unbounded;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -464,7 +464,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Error;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -482,7 +482,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Error;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -500,7 +500,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Error;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);
@@ -518,7 +518,7 @@ void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number*
 
         solutionStatus = E_NLPSolutionStatus::Error;
 
-        if(x != NULL)
+        if(x != nullptr)
         {
             hasSolution = true;
             variableSolution = VectorDouble(numberOfVariables);

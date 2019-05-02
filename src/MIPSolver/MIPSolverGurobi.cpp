@@ -671,7 +671,7 @@ bool MIPSolverGurobi::repairInfeasibility()
         // Gurobi modifies the value when running feasModel.optimize()
         int numConstraintsToRepairOrig = numConstraintsToRepair;
 
-        if(feasModel.feasRelax(GRB_FEASRELAX_LINEAR, false, 0, NULL, NULL, NULL, numConstraintsToRepair,
+        if(feasModel.feasRelax(GRB_FEASRELAX_LINEAR, false, 0, nullptr, nullptr, nullptr, numConstraintsToRepair,
                &repairConstraints[0], &relaxParameters[0])
             < 0)
         {

@@ -27,7 +27,7 @@ namespace SHOT
 {
 
 ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
-    : IModelingSystem(envPtr), modelingObject(NULL), modelingEnvironment(NULL), createdtmpdir(false), createdgmo(false)
+    : IModelingSystem(envPtr), modelingObject(nullptr), modelingEnvironment(nullptr), createdtmpdir(false), createdgmo(false)
 {
 }
 
@@ -146,7 +146,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, gmoHandle_t gmo)
 {
-    assert(gmo != NULL);
+    assert(gmo != nullptr);
 
     modelingObject = gmo;
     modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
@@ -204,8 +204,8 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     int rc;
     FILE* convertdopt;
 
-    assert(modelingObject == NULL);
-    assert(modelingEnvironment == NULL);
+    assert(modelingObject == nullptr);
+    assert(modelingEnvironment == nullptr);
 
     /* create temporary directory */
     mkdir("loadgms.tmp", S_IRWXU);
@@ -213,7 +213,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
     /* create empty convertd options file */
     convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
-    if(convertdopt == NULL)
+    if(convertdopt == nullptr)
     {
         throw std::logic_error("Could not create convertd options file.");
     }
@@ -286,7 +286,7 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
 void ModelingSystemGAMS::finalizeSolution()
 {
     ResultsPtr r = env->results;
-    assert(r != NULL);
+    assert(r != nullptr);
 
     // set primal solution and model status
     if(r->primalSolutions.size() > 0)
@@ -360,14 +360,14 @@ void ModelingSystemGAMS::finalizeSolution()
 
 void ModelingSystemGAMS::clearGAMSObjects()
 {
-    if(createdgmo && modelingObject != NULL)
+    if(createdgmo && modelingObject != nullptr)
     {
         gmoFree(&modelingObject);
-        modelingObject = NULL;
+        modelingObject = nullptr;
 
-        assert(modelingEnvironment != NULL);
+        assert(modelingEnvironment != nullptr);
         gevFree(&modelingEnvironment);
-        modelingEnvironment = NULL;
+        modelingEnvironment = nullptr;
     }
 
     /* remove temporary directory content (should have only files) and directory itself) */

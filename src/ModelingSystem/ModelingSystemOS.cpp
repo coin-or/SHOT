@@ -172,7 +172,7 @@ bool ModelingSystemOS::copyVariables(OSInstance* source, ProblemPtr destination)
 {
     env->output->outputDebug("Starting to copy variables between OSInstance and SHOT problem objects.");
 
-    if(source->instanceData->variables != NULL && source->instanceData->variables->numberOfVariables > 0)
+    if(source->instanceData->variables != nullptr && source->instanceData->variables->numberOfVariables > 0)
     {
         double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
         double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
@@ -293,7 +293,7 @@ bool ModelingSystemOS::copyObjectiveFunction(OSInstance* source, ProblemPtr dest
 
     ObjectiveFunctionPtr objectiveFunction;
 
-    if(source->instanceData->objectives != NULL)
+    if(source->instanceData->objectives != nullptr)
     {
         std::string objectiveDirection = source->getObjectiveMaxOrMins()[0];
 
@@ -359,7 +359,7 @@ bool ModelingSystemOS::copyConstraints(OSInstance* source, ProblemPtr destinatio
 {
     env->output->outputDebug("Starting to copy constraints between OSInstance and SHOT problem objects.");
 
-    if(source->instanceData->constraints != NULL)
+    if(source->instanceData->constraints != nullptr)
     {
         int numberOfConstraints = source->getConstraintNumber();
         auto classification = getConstraintClassifications(source);
@@ -415,7 +415,7 @@ bool ModelingSystemOS::copyLinearTerms(OSInstance* source, ProblemPtr destinatio
 {
     env->output->outputDebug("Starting to copy linear terms between OSInstance and SHOT problem objects.");
 
-    if(source->instanceData->linearConstraintCoefficients != NULL
+    if(source->instanceData->linearConstraintCoefficients != nullptr
         && source->instanceData->linearConstraintCoefficients->numberOfValues > 0)
     {
         int variableIndex = 0;
@@ -470,7 +470,7 @@ bool ModelingSystemOS::copyQuadraticTerms(OSInstance* source, ProblemPtr destina
 {
     env->output->outputDebug("Starting to copy quadratic terms between OSInstance and SHOT problem objects.");
 
-    if(source->instanceData->quadraticCoefficients != NULL)
+    if(source->instanceData->quadraticCoefficients != nullptr)
     {
         int numQuadraticTerms = source->getNumberOfQuadraticTerms();
 
@@ -519,7 +519,7 @@ bool ModelingSystemOS::copyNonlinearExpressions(OSInstance* source, ProblemPtr d
 {
     env->output->outputDebug("Starting to copy nonlinear expressions between OSInstance and SHOT problem objects.");
 
-    if(source->instanceData->nonlinearExpressions != NULL)
+    if(source->instanceData->nonlinearExpressions != nullptr)
     {
         int numNonlinearExpressions = source->getNumberOfNonlinearExpressions();
 

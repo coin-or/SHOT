@@ -517,7 +517,7 @@ bool Settings::readSettingsFromOSoL(std::string osol)
         return (false);
     }
 
-    for(auto N = osolNode->FirstChildElement("solverOption"); N != NULL; N = N->NextSiblingElement("solverOption"))
+    for(auto N = osolNode->FirstChildElement("solverOption"); N != nullptr; N = N->NextSiblingElement("solverOption"))
     {
         try
         {

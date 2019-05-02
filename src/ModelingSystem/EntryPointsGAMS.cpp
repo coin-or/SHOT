@@ -53,16 +53,16 @@ extern "C"
 
     DllExport void STDCALL shtXCreate(void** Cptr)
     {
-        assert(Cptr != NULL);
+        assert(Cptr != nullptr);
 
         *Cptr = calloc(1, sizeof(gamsshot));
     }
 
     DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen)
     {
-        assert(Cptr != NULL);
+        assert(Cptr != nullptr);
         assert(msgBufLen > 0);
-        assert(msgBuf != NULL);
+        assert(msgBuf != nullptr);
 
         *Cptr = calloc(1, sizeof(gamsshot));
 
@@ -73,11 +73,11 @@ extern "C"
 
     DllExport void STDCALL shtXFree(void** Cptr)
     {
-        assert(Cptr != NULL);
-        assert(*Cptr != NULL);
+        assert(Cptr != nullptr);
+        assert(*Cptr != nullptr);
 
         free(*Cptr);
-        *Cptr = NULL;
+        *Cptr = nullptr;
 
         gmoLibraryUnload();
         gevLibraryUnload();
@@ -117,8 +117,8 @@ extern "C"
     {
         gamsshot* gs;
 
-        assert(Cptr != NULL);
-        assert(Gptr != NULL);
+        assert(Cptr != nullptr);
+        assert(Gptr != nullptr);
 
         char msg[256];
         if(!gmoGetReady(msg, sizeof(msg)))
@@ -137,10 +137,10 @@ extern "C"
     {
         gamsshot* gs;
 
-        assert(Cptr != NULL);
+        assert(Cptr != nullptr);
         gs = (gamsshot*)Cptr;
-        assert(gs->gmo != NULL);
-        assert(gs->opt == NULL); /* we don't process GAMS options objects so far */
+        assert(gs->gmo != nullptr);
+        assert(gs->opt == nullptr); /* we don't process GAMS options objects so far */
 
         // create solver, direct SHOT console output to GAMS log and status file
         Solver solver(std::make_shared<GamsOutputSink>((gevHandle_t)gmoEnvironment(gs->gmo)));
@@ -211,7 +211,7 @@ extern "C"
 
     DllExport int STDCALL C__shtModifyProblem(void* Cptr)
     {
-        assert(Cptr != NULL);
+        assert(Cptr != nullptr);
         return 1;
     }
 }

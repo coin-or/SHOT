@@ -22,7 +22,7 @@ namespace SHOT
 NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject)
     : INLPSolver(envPtr)
     , modelingObject(modelingObject)
-    , modelingEnvironment(NULL)
+    , modelingEnvironment(nullptr)
     , timelimit(10.0)
     , iterlimit(ITERLIM_INFINITY)
     , showlog(false)
@@ -110,7 +110,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     gmoForceContSet(modelingObject, 1);
 
     if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver, gevSolveLinkLoadLibrary,
-           showlog ? gevSolverSameStreams : gevSolverQuiet, NULL, NULL, timelimit, iterlimit, 0, 0.0, 0.0, NULL, msg)
+           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0, nullptr, msg)
         != 0)
     {
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
@@ -171,7 +171,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 
 VectorDouble NLPSolverGAMS::getVariableLowerBounds()
 {
-    assert(modelingObject != NULL);
+    assert(modelingObject != nullptr);
 
     VectorDouble lb(gmoN(modelingObject));
 
@@ -182,7 +182,7 @@ VectorDouble NLPSolverGAMS::getVariableLowerBounds()
 
 VectorDouble NLPSolverGAMS::getVariableUpperBounds()
 {
-    assert(modelingObject != NULL);
+    assert(modelingObject != nullptr);
 
     VectorDouble ub(gmoN(modelingObject));
 

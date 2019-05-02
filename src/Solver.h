@@ -47,7 +47,7 @@ private:
     EnvironmentPtr env;
 
 public:
-    Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink = NULL);
+    Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink = nullptr);
     Solver(EnvironmentPtr environment);
     ~Solver();
 
