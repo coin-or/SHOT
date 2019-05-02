@@ -25,23 +25,23 @@ class TaskHandler
 {
 public:
     TaskHandler(EnvironmentPtr envPtr);
-    ~TaskHandler();
+    ~TaskHandler() = default;
 
-    void addTask(TaskBase* task, std::string taskID);
-    bool getNextTask(TaskBase*& task);
+    void addTask(TaskPtr task, std::string taskID);
+    bool getNextTask(TaskPtr& task);
     void setNextTask(std::string taskID);
     void clearTasks();
 
-    TaskBase* getTask(std::string taskID);
+    TaskPtr getTask(std::string taskID);
 
     void terminate() { terminated = true; }
     inline bool isTerminated() { return terminated; }
 
 private:
-    std::list<std::pair<std::string, TaskBase*>>::iterator nextTask;
+    std::list<std::pair<std::string, TaskPtr>>::iterator nextTask;
     std::string nextTaskID;
-    std::list<std::pair<std::string, TaskBase*>> taskIDMap;
-    std::list<TaskBase*> allTasks;
+    std::list<std::pair<std::string, TaskPtr>> taskIDMap;
+    std::list<TaskPtr> allTasks;
 
     EnvironmentPtr env;
 

@@ -22,15 +22,7 @@ TaskHandler::TaskHandler(EnvironmentPtr envPtr)
     nextTask = taskIDMap.begin();
 }
 
-TaskHandler::~TaskHandler()
-{
-    for(auto& task : allTasks)
-    {
-        delete task;
-    }
-}
-
-void TaskHandler::addTask(TaskBase* task, std::string taskID)
+void TaskHandler::addTask(TaskPtr task, std::string taskID)
 {
     taskIDMap.push_back(std::make_pair(taskID, task));
 
@@ -46,7 +38,7 @@ void TaskHandler::addTask(TaskBase* task, std::string taskID)
         allTasks.push_back(task);
 }
 
-bool TaskHandler::getNextTask(TaskBase*& task)
+bool TaskHandler::getNextTask(TaskPtr& task)
 {
     if(nextTask == taskIDMap.end())
         return (false);
@@ -61,7 +53,7 @@ void TaskHandler::setNextTask(std::string taskID)
 {
     bool isFound = false;
 
-    for(std::list<std::pair<std::string, TaskBase*>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(std::list<std::pair<std::string, TaskPtr>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
     {
         if(it->first == taskID)
         {
@@ -85,9 +77,9 @@ void TaskHandler::clearTasks()
     nextTask = taskIDMap.end();
 }
 
-TaskBase* TaskHandler::getTask(std::string taskID)
+TaskPtr TaskHandler::getTask(std::string taskID)
 {
-    for(std::list<std::pair<std::string, TaskBase*>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(std::list<std::pair<std::string, TaskPtr>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
     {
         if(it->first == taskID)
         {

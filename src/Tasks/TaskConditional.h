@@ -19,12 +19,12 @@ class TaskConditional : public TaskBase
 {
 public:
     TaskConditional(
-        EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskBase* taskIfTrue, TaskBase* taskIfFalse);
+        EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskPtr taskIfTrue, TaskPtr taskIfFalse);
     TaskConditional(EnvironmentPtr envPtr);
     virtual ~TaskConditional();
 
-    void setTaskIfTrue(TaskBase* task);
-    void setTaskIfFalse(TaskBase* task);
+    void setTaskIfTrue(TaskPtr task);
+    void setTaskIfFalse(TaskPtr task);
     void setCondition(std::function<bool()> conditionFunct);
 
     virtual void run();
@@ -33,8 +33,8 @@ public:
 private:
     std::function<bool()> condition;
 
-    TaskBase* taskIfTrue;
-    TaskBase* taskIfFalse;
+    TaskPtr taskIfTrue;
+    TaskPtr taskIfFalse;
     bool taskFalseIsSet;
 
 protected:

@@ -16,7 +16,7 @@ namespace SHOT
 TaskConditional::TaskConditional(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
 TaskConditional::TaskConditional(
-    EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskBase* taskTrue, TaskBase* taskFalse)
+    EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskPtr taskTrue, TaskPtr taskFalse)
     : TaskBase(envPtr)
 {
     condition = conditionFunct;
@@ -29,9 +29,9 @@ TaskConditional::~TaskConditional() = default;
 
 void TaskConditional::setCondition(std::function<bool()> conditionFunct) { condition = conditionFunct; }
 
-void TaskConditional::setTaskIfTrue(TaskBase* task) { taskIfTrue = task; }
+void TaskConditional::setTaskIfTrue(TaskPtr task) { taskIfTrue = task; }
 
-void TaskConditional::setTaskIfFalse(TaskBase* task)
+void TaskConditional::setTaskIfFalse(TaskPtr task)
 {
     taskIfFalse = task;
     taskFalseIsSet = true;

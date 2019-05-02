@@ -1,4 +1,6 @@
-/**
+/** std::dynamic_pointer_cast<TaskSequential>
+    std::dynamic_pointer_cast<TaskSequential> std::dynamic_pointer_cast<TaskSequential>
+        std::dynamic_pointer_cast<TaskSequential>
    The Supporting Hyperplane Optimization Toolkit (SHOT).
 
    @author Andreas Lundell, Åbo Akademi University
@@ -89,117 +91,118 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
     env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
     env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
 
-    TaskBase* tFinalizeSolution = new TaskSequential(env);
+    auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
-    TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, true);
+    auto tInitMIPSolver = std::make_shared<TaskInitializeDualSolver>(env, true);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
     if(env->settings->getSetting<int>("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase* tFindIntPoint = new TaskFindInteriorPoint(env);
+        auto tFindIntPoint = std::make_shared<TaskFindInteriorPoint>(env);
         env->tasks->addTask(tFindIntPoint, "FindIntPoint");
     }
 
-    TaskBase* tCreateDualProblem = new TaskCreateDualProblem(env);
+    auto tCreateDualProblem = std::make_shared<TaskCreateDualProblem>(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase* tInitializeRootsearch = new TaskInitializeRootsearch(env);
+    auto tInitializeRootsearch = std::make_shared<TaskInitializeRootsearch>(env);
     env->tasks->addTask(tInitializeRootsearch, "InitializeRootsearch");
 
-    TaskBase* tInitializeIteration = new TaskInitializeIteration(env);
+    auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase* tAddHPs = new TaskAddHyperplanes(env);
+    auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
     env->tasks->addTask(tAddHPs, "AddHPs");
 
     if(env->settings->getSetting<bool>("Relaxation.Use", "Dual"))
     {
-        TaskBase* tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+        auto tExecuteRelaxStrategy = std::make_shared<TaskExecuteRelaxationStrategy>(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategyInitial");
     }
 
     if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
         != ES_MIPPresolveStrategy::Never)
     {
-        TaskBase* tPresolve = new TaskPresolve(env);
+        auto tPresolve = std::make_shared<TaskPresolve>(env);
         env->tasks->addTask(tPresolve, "Presolve");
     }
 
-    TaskBase* tSolveIteration = new TaskSolveIteration(env);
+    auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
-    TaskBase* tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
+    auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
     if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase* tSelectPrimRootsearch = new TaskSelectPrimalCandidatesFromRootsearch(env);
+        auto tSelectPrimRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
         env->tasks->addTask(tSelectPrimRootsearch, "SelectPrimRootsearch");
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimRootsearch);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimRootsearch);
     }
 
-    TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
+    auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
     if((env->settings->getSetting<int>("Convexity", "Strategy")
            != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
         && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
-        TaskBase* tRepairInfeasibility = new TaskRepairInfeasibleDualProblem(env, "SolveIter", "CheckAbsGap");
+        auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
     }
 
-    TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
+    auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase* tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
+    auto tCheckRelGap = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase* tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
+    auto tCheckIterLim = std::make_shared<TaskCheckIterationLimit>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
+    auto tCheckTimeLim = std::make_shared<TaskCheckTimeLimit>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase* tCheckUserTerm = new TaskCheckUserTermination(env, "FinalizeSolution");
+    auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
 
     // Remove?
-    TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
+    auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
     if((env->settings->getSetting<int>("Convexity", "Strategy")
            != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
         && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
-        TaskBase* tCheckMaxNumberOfObjectiveCuts = new TaskCheckMaxNumberOfPrimalReductionCuts(env, "FinalizeSolution");
+        auto tCheckMaxNumberOfObjectiveCuts
+            = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
         env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-        TaskBase* tCheckPrimalStag = new TaskCheckPrimalStagnation(env, "AddObjectiveCut", "CheckDualStag");
+        auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
         env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
-        TaskBase* tAddObjectiveCut = new TaskAddPrimalReductionCut(env, "CheckDualStag", "CheckDualStag");
+        auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
         env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
     }
 
-    TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
+    auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");
 
     if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
     {
-        TaskBase* tSelectPrimFixedNLPSolPool = new TaskSelectPrimalFixedNLPPointsFromSolutionPool(env);
+        auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
-        TaskBase* tSelectPrimNLPCheck = new TaskSelectPrimalCandidatesFromNLP(env);
+        auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
         env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
 
         env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
         env->tasks->addTask(tCheckRelGap, "CheckRelGap");
@@ -209,40 +212,40 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
 
     if(env->settings->getSetting<bool>("Relaxation.Use", "Dual"))
     {
-        TaskBase* tExecuteRelaxStrategy = new TaskExecuteRelaxationStrategy(env);
+        auto tExecuteRelaxStrategy = std::make_shared<TaskExecuteRelaxationStrategy>(env);
         env->tasks->addTask(tExecuteRelaxStrategy, "ExecRelaxStrategy");
     }
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
-        TaskBase* tUpdateInteriorPoint = new TaskUpdateInteriorPoint(env);
+        auto tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
         env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
-        TaskBase* tSelectHPPts = new TaskSelectHyperplanePointsESH(env);
+        auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
     else
     {
-        TaskBase* tSelectHPPts = new TaskSelectHyperplanePointsECP(env);
+        auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
         env->tasks->addTask(tSelectHPPts, "SelectHPPts");
     }
 
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
-        TaskBase* tSelectObjectiveHPPts = new TaskSelectHyperplanePointsByObjectiveRootsearch(env);
+        auto tSelectObjectiveHPPts = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
         env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
     if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
-        TaskBase* tAddICs = new TaskAddIntegerCuts(env);
+        auto tAddICs = std::make_shared<TaskAddIntegerCuts>(env);
         env->tasks->addTask(tAddICs, "AddICs");
     }
 
     env->tasks->addTask(tAddHPs, "AddHPs");
 
-    TaskBase* tGoto = new TaskGoto(env, "SolveIter");
+    auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
     env->tasks->addTask(tGoto, "Goto");
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
@@ -251,11 +254,11 @@ SolutionStrategySingleTree::SolutionStrategySingleTree(EnvironmentPtr envPtr)
            != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
         && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
-        TaskBase* tAddObjectiveCutFinal = new TaskAddPrimalReductionCut(env, "InitIter2", "Terminate");
-        dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
+        auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
     }
 
-    TaskBase* tTerminate = new TaskTerminate(env);
+    auto tTerminate = std::make_shared<TaskTerminate>(env);
     env->tasks->addTask(tTerminate, "Terminate");
 }
 
@@ -263,7 +266,7 @@ SolutionStrategySingleTree::~SolutionStrategySingleTree() = default;
 
 bool SolutionStrategySingleTree::solveProblem()
 {
-    TaskBase* nextTask;
+    TaskPtr nextTask;
 
     while(env->tasks->getNextTask(nextTask))
     {

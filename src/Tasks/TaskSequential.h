@@ -21,13 +21,13 @@ public:
 
     virtual ~TaskSequential();
 
-    void addTasks(std::vector<TaskBase*> tasks);
-    void addTask(TaskBase* task);
+    void addTasks(std::vector<TaskPtr> tasks);
+    void addTask(TaskPtr task);
 
     virtual void run();
     virtual std::string getType();
 
 private:
-    std::vector<TaskBase*> m_tasks;
+    std::vector<TaskPtr> m_tasks;
 };
 } // namespace SHOT

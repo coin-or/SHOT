@@ -16,6 +16,7 @@
 
 namespace SHOT
 {
+
 class TaskBase
 {
 public:
@@ -38,4 +39,7 @@ protected:
 private:
     bool m_isActive;
 };
+
+typedef std::shared_ptr<TaskBase> TaskPtr;
+
 } // namespace SHOT

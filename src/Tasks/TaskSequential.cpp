@@ -36,13 +36,13 @@ void TaskSequential::run()
     }
 }
 
-void TaskSequential::addTasks(std::vector<TaskBase*> tasks)
+void TaskSequential::addTasks(std::vector<TaskPtr> tasks)
 {
     for(auto& T : tasks)
         addTask(T);
 }
 
-void TaskSequential::addTask(TaskBase* task) { m_tasks.emplace_back(task); }
+void TaskSequential::addTask(TaskPtr task) { m_tasks.emplace_back(task); }
 
 std::string TaskSequential::getType()
 {

@@ -81,49 +81,49 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     env->timing->createTimer("PrimalStrategy", " - primal strategy");
 
-    TaskBase* tFinalizeSolution = new TaskSequential(env);
+    auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
-    TaskBase* tInitMIPSolver = new TaskInitializeDualSolver(env, false);
+    auto tInitMIPSolver = std::make_shared<TaskInitializeDualSolver>(env, false);
     env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    TaskBase* tCreateDualProblem = new TaskCreateDualProblem(env);
+    auto tCreateDualProblem = std::make_shared<TaskCreateDualProblem>(env);
     env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase* tInitializeIteration = new TaskInitializeIteration(env);
+    auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
     env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase* tSolveIteration = new TaskSolveIteration(env);
+    auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
     env->tasks->addTask(tSolveIteration, "SolveIter");
 
-    TaskBase* tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool(env);
+    auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
     env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential*>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    TaskBase* tPrintIterReport = new TaskPrintIterationReport(env);
+    auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase* tCheckAbsGap = new TaskCheckAbsoluteGap(env, "FinalizeSolution");
+    auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase* tCheckRelGap = new TaskCheckRelativeGap(env, "FinalizeSolution");
+    auto tCheckRelGap = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase* tCheckTimeLim = new TaskCheckTimeLimit(env, "FinalizeSolution");
+    auto tCheckTimeLim = std::make_shared<TaskCheckTimeLimit>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase* tCheckUserTerm = new TaskCheckUserTermination(env, "FinalizeSolution");
+    auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
 
-    TaskBase* tCheckIterLim = new TaskCheckIterationLimit(env, "FinalizeSolution");
+    auto tCheckIterLim = std::make_shared<TaskCheckIterationLimit>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase* tCheckIterError = new TaskCheckIterationError(env, "FinalizeSolution");
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase* tCheckDualStag = new TaskCheckDualStagnation(env, "FinalizeSolution");
+    auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");
 
-    TaskBase* tCheckConstrTol = new TaskCheckConstraintTolerance(env, "FinalizeSolution");
+    auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
@@ -133,7 +133,7 @@ SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP() = default;
 
 bool SolutionStrategyMIQCQP::solveProblem()
 {
-    TaskBase* nextTask;
+    TaskPtr nextTask;
 
     while(env->tasks->getNextTask(nextTask))
     {
