@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -35,6 +36,7 @@ public:
 
     VectorDouble primalSolution;
     std::vector<PrimalSolution> primalSolutions;
+    std::map<E_PrimalSolutionSource, int> primalSolutionSourceStatistics;
 
     void addPrimalSolution(PrimalSolution solution);
     double getPrimalBound();

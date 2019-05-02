@@ -62,6 +62,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 
     env->results->primalSolution = solution.point;
     env->results->setPrimalBound(solution.objValue);
+    env->solutionStatistics.numberOfFoundPrimalSolutions++;
 
     // Write the new primal point to a file
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -261,6 +262,65 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("value", env->solutionStatistics.getNumberOfTotalNLPProblems());
     otherNode->SetAttribute("description", "The number of NLP problems solved in the primal strategy");
     otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFound");
+    otherNode->SetAttribute("value", env->solutionStatistics.numberOfFoundPrimalSolutions);
+    otherNode->SetAttribute("description", "The number of primal solutions found");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    for(auto& S : env->results->primalSolutionSourceStatistics)
+    {
+        otherNode = osrlDocument.NewElement("other");
+
+        switch(S.first)
+        {
+        case E_PrimalSolutionSource::Rootsearch:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundRootSearch");
+            otherNode->SetAttribute("description", "The number of primal solutions found with root search");
+            break;
+        case E_PrimalSolutionSource::RootsearchFixedIntegers:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundRootSearchFixedIntegers");
+            otherNode->SetAttribute(
+                "description", "The number of primal solutions found with root search and fixed integers");
+            break;
+        case E_PrimalSolutionSource::NLPFixedIntegers:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundNLPFixedIntegers");
+            otherNode->SetAttribute(
+                "description", "The number of primal solutions found by solving integer-fixed NLP problems");
+            break;
+        case E_PrimalSolutionSource::MIPSolutionPool:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundMIPSolutionPool");
+            otherNode->SetAttribute("description", "The number of primal solutions found from the MIP solution pool");
+            break;
+        case E_PrimalSolutionSource::LPFixedIntegers:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundLPFixedIntegers");
+            otherNode->SetAttribute(
+                "description", "The number of primal solutions found by solving integer-fixed LP problems");
+            break;
+        case E_PrimalSolutionSource::LazyConstraintCallback:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundLazyCallback");
+            otherNode->SetAttribute("description", "The number of primal solutions found in lazy constraint callback");
+            break;
+        case E_PrimalSolutionSource::HeuristicCallback:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundHeuristicCallback");
+            otherNode->SetAttribute(
+                "description", "The number of primal solutions found in heuristic constraint callback");
+            break;
+        case E_PrimalSolutionSource::IncumbentCallback:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundIncumbentCallback");
+            otherNode->SetAttribute(
+                "description", "The number of primal solutions found in incumbent constraint callback");
+            break;
+        default:
+            otherNode->SetAttribute("name", "NumberOfPrimalSolutionsFoundOther");
+            otherNode->SetAttribute("description", "The number of primal solutions found with unknown method");
+            break;
+        }
+
+        otherNode->SetAttribute("value", S.second);
+        otherResultsNode->InsertEndChild(otherNode);
+    }
 
     generalNode->InsertFirstChild(otherResultsNode);
 

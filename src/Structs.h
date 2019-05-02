@@ -56,31 +56,31 @@ class Constraint;
 class NumericConstraint;
 
 using ResultsPtr = std::shared_ptr<Results>;
-using SettingsPtr = std::shared_ptr<Settings> ;
+using SettingsPtr = std::shared_ptr<Settings>;
 using ModelPtr = std::shared_ptr<Model>;
-using ProblemPtr = std::shared_ptr<Problem> ;
+using ProblemPtr = std::shared_ptr<Problem>;
 using ReformulatedProblemPtr = std::shared_ptr<ReformulatedProblem>;
-using ModelingSystemPtr = std::shared_ptr<IModelingSystem> ;
-using MIPSolverPtr = std::shared_ptr<IMIPSolver> ;
-using OutputPtr = std::shared_ptr<Output> ;
+using ModelingSystemPtr = std::shared_ptr<IModelingSystem>;
+using MIPSolverPtr = std::shared_ptr<IMIPSolver>;
+using OutputPtr = std::shared_ptr<Output>;
 using EventHandlerPtr = std::shared_ptr<EventHandler>;
-using ReportPtr = std::shared_ptr<Report> ;
-using  TaskHandlerPtr= std::shared_ptr<TaskHandler> ;
-using TimingPtr = std::shared_ptr<Timing> ;
-using DualSolverPtr = std::shared_ptr<DualSolver> ;
-using PrimalSolverPtr  = std::shared_ptr<PrimalSolver> ;
-using IterationPtr = std::shared_ptr<Iteration> ;
+using ReportPtr = std::shared_ptr<Report>;
+using TaskHandlerPtr = std::shared_ptr<TaskHandler>;
+using TimingPtr = std::shared_ptr<Timing>;
+using DualSolverPtr = std::shared_ptr<DualSolver>;
+using PrimalSolverPtr = std::shared_ptr<PrimalSolver>;
+using IterationPtr = std::shared_ptr<Iteration>;
 
-using ConstraintPtr = std::shared_ptr<Constraint> ;
+using ConstraintPtr = std::shared_ptr<Constraint>;
 using NumericConstraintPtr = std::shared_ptr<NumericConstraint>;
 
-using PairInteger = std::pair<int, int> ;
+using PairInteger = std::pair<int, int>;
 using PairDouble = std::pair<double, double>;
-using  PairString= std::pair<std::string, std::string> ;
+using PairString = std::pair<std::string, std::string>;
 
-using VectorDouble = std::vector<double> ;
+using VectorDouble = std::vector<double>;
 using VectorInteger = std::vector<int>;
-using VectorString = std::vector<std::string> ;
+using VectorString = std::vector<std::string>;
 
 struct PairIndexValue
 {
@@ -209,6 +209,8 @@ struct SolutionStatistics
     double timeLastFixedNLPCall = 0;
 
     int numberOfOriginalInteriorPoints = 0;
+
+    int numberOfFoundPrimalSolutions = 0;
 
     int numberOfExploredNodes = 0;
     int numberOfOpenNodes = 0;

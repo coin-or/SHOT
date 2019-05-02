@@ -115,14 +115,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     case E_PrimalSolutionSource::NLPFixedIntegers:
         sourceDesc = "NLP fixed";
         break;
-    case E_PrimalSolutionSource::NLPRelaxed:
-        sourceDesc = "NLP relaxed";
-        break;
     case E_PrimalSolutionSource::MIPSolutionPool:
         sourceDesc = "MILP sol. pool";
-        break;
-    case E_PrimalSolutionSource::ObjectiveConstraint:
-        sourceDesc = "obj. constr.";
         break;
     case E_PrimalSolutionSource::LPFixedIntegers:
         sourceDesc = "LP fixed";
@@ -299,7 +293,6 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // For example rootsearches may violate linear constraints
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::NLPRelaxed
         || primalSol.sourceType == E_PrimalSolutionSource::IncumbentCallback
         || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
         || primalSol.sourceType == E_PrimalSolutionSource::LazyConstraintCallback);
@@ -410,6 +403,15 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
     auto tmpLine = fmt::format("        New primal bound {} from {} accepted.", tmpObjVal, sourceDesc);
+
+    auto element = env->results->primalSolutionSourceStatistics.emplace(primalSol.sourceType, 1);
+
+    if(!element.second)
+    {
+        // Element already exists
+        element.first->second += 1;
+    }
+
     env->output->outputCritical(tmpLine);
 
     env->results->addPrimalSolution(primalSol);

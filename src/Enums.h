@@ -130,7 +130,6 @@ enum class E_PrimalSolutionSource
     NLPFixedIntegers,
     NLPRelaxed,
     MIPSolutionPool,
-    ObjectiveConstraint,
     LPFixedIntegers,
     LazyConstraintCallback,
     HeuristicCallback,

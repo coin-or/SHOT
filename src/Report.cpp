@@ -1007,17 +1007,63 @@ void Report::outputSolutionReport()
             report << " - LP problems:                                  ";
             report << env->solutionStatistics.numberOfProblemsMinimaxLP << "\r\n";
         }
-    }
 
-    report << "\r\n";
+        report << "\r\n";
+    }
 
     if(env->solutionStatistics.numberOfProblemsFixedNLP > 0)
     {
         report << " Fixed primal NLP problems solved:               ";
         report << env->solutionStatistics.numberOfProblemsFixedNLP << "\r\n";
+        report << "\r\n";
     }
 
-    report << "\r\n";
+    if(env->results->primalSolutions.size() > 0)
+    {
+        report << fmt::format(" {:<48}{:d}",
+                      "Number of primal solutions found:", env->solutionStatistics.numberOfFoundPrimalSolutions)
+               << "\r\n";
+
+        for(auto& S : env->results->primalSolutionSourceStatistics)
+        {
+            std::string sourceDesc;
+
+            switch(S.first)
+            {
+            case E_PrimalSolutionSource::Rootsearch:
+                sourceDesc = "root search";
+                break;
+            case E_PrimalSolutionSource::RootsearchFixedIntegers:
+                sourceDesc = "root search with fixed integers";
+                break;
+            case E_PrimalSolutionSource::NLPFixedIntegers:
+                sourceDesc = "NLP problem with fixed integers";
+                break;
+            case E_PrimalSolutionSource::MIPSolutionPool:
+                sourceDesc = "MILP solution pool";
+                break;
+            case E_PrimalSolutionSource::LPFixedIntegers:
+                sourceDesc = "LP problem with fixed integers";
+                break;
+            case E_PrimalSolutionSource::LazyConstraintCallback:
+                sourceDesc = "lazy constraint callback";
+                break;
+            case E_PrimalSolutionSource::HeuristicCallback:
+                sourceDesc = "heuristic constraint callback";
+                break;
+            case E_PrimalSolutionSource::IncumbentCallback:
+                sourceDesc = "incumbent constraint callback";
+                break;
+            default:
+                sourceDesc = "other";
+                break;
+            }
+
+            report << fmt::format(" - {:<46}{:d}", sourceDesc + ':', S.second) << "\r\n";
+        }
+
+        report << "\r\n";
+    }
 
     for(auto& T : env->timing->timers)
     {
