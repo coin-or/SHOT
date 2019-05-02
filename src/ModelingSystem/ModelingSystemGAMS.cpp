@@ -942,7 +942,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
 
     for(int i = 0; i < codelen; ++i)
     {
-        GamsOpCode opcode = (GamsOpCode)opcodes[i];
+        auto opcode = (GamsOpCode)opcodes[i];
         int address = fields[i] - 1;
 
         debugout << '\t' << GamsOpCodeName[opcode] << ": ";

@@ -286,7 +286,7 @@ void Report::outputOptionsReport()
               "────╴\r\n";
     report << "\r\n";
 
-    std::string optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input");
+    auto optionsFile = env->settings->getSetting<std::string>("OptionsFile", "Input");
 
     if(optionsFile == "")
     {
@@ -488,7 +488,7 @@ void Report::outputProblemInstanceReport()
               "\r\n";
     report << "\r\n";
 
-    std::string problemFile = env->settings->getSetting<std::string>("ProblemFile", "Input");
+    auto problemFile = env->settings->getSetting<std::string>("ProblemFile", "Input");
 
     report << " Problem read from file:     " << problemFile;
     report << "\r\n\r\n";

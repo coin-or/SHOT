@@ -670,7 +670,7 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
 
     case OS_VARIABLE:
     {
-        OSnLNodeVariable* varnode = (OSnLNodeVariable*)node;
+        auto* varnode = (OSnLNodeVariable*)node;
         if(varnode->coef == 0.)
             return std::make_shared<ExpressionConstant>(0.);
         if(varnode->coef == 1.)

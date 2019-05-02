@@ -53,7 +53,7 @@ void TaskHandler::setNextTask(std::string taskID)
 {
     bool isFound = false;
 
-    for(std::list<std::pair<std::string, TaskPtr>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(auto it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
     {
         if(it->first == taskID)
         {
@@ -79,7 +79,7 @@ void TaskHandler::clearTasks()
 
 TaskPtr TaskHandler::getTask(std::string taskID)
 {
-    for(std::list<std::pair<std::string, TaskPtr>>::iterator it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(auto it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
     {
         if(it->first == taskID)
         {
