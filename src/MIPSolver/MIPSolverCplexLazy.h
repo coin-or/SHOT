@@ -50,10 +50,10 @@ class CplexCallback : public IloCplex::Callback::Function, public MIPSolverCallb
 private:
     std::mutex callbackMutex;
     /* Empty constructor is forbidden. */
-    CplexCallback();
+    CplexCallback() = delete;
 
     /* Copy constructor is forbidden. */
-    CplexCallback(const CplexCallback& tocopy);
+    CplexCallback(const CplexCallback& tocopy) = delete;
 
     IloNumVarArray cplexVars;
     IloCplex cplexInst;
