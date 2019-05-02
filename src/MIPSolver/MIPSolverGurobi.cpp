@@ -397,10 +397,10 @@ int MIPSolverGurobi::addLinearConstraint(
     {
         auto expr = std::make_unique<GRBLinExpr>(0.0);
 
-        for(int i = 0; i < elements.size(); i++)
+        for(auto E : elements)
         {
-            auto variable = gurobiModel->getVar(elements.at(i).index);
-            *expr.get() = *expr.get() + elements.at(i).value * variable;
+            auto variable = gurobiModel->getVar(E.index);
+            *expr.get() = *expr.get() + E.value * variable;
         }
 
         if(isGreaterThan)
@@ -430,15 +430,15 @@ void MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
     {
         GRBLinExpr expr = 0;
 
-        for(int i = 0; i < binaryIndexesOnes.size(); i++)
+        for(int I : binaryIndexesOnes)
         {
-            auto variable = gurobiModel->getVar(binaryIndexesOnes.at(i));
+            auto variable = gurobiModel->getVar(I);
             expr += 1.0 * variable;
         }
 
-        for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+        for(int I : binaryIndexesZeroes)
         {
-            auto variable = gurobiModel->getVar(binaryIndexesZeroes.at(i));
+            auto variable = gurobiModel->getVar(I);
             expr += (1.0 - 1.0 * variable);
         }
 

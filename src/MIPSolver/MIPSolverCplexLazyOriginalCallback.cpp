@@ -81,9 +81,9 @@ void HCallbackI::main() // Called at each node...
 
         IloNumArray tmpVals(this->getEnv());
 
-        for(int i = 0; i < primalSol.size(); i++)
+        for(double S : primalSol)
         {
-            tmpVals.add(primalSol.at(i));
+            tmpVals.add(S);
         }
 
         for(auto& V : env->reformulatedProblem->auxiliaryVariables)
@@ -524,9 +524,9 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
     {
         IloExpr expr(this->getEnv());
 
-        for(int i = 0; i < tmpPair.first.size(); i++)
+        for(auto& P : tmpPair.first)
         {
-            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).index];
+            expr += P.value * cplexVars[P.index];
         }
 
         IloRange tmpRange(this->getEnv(), -IloInfinity, expr, -tmpPair.second);
@@ -562,14 +562,14 @@ void CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteg
 {
     IloExpr expr(this->getEnv());
 
-    for(int i = 0; i < binaryIndexesOnes.size(); i++)
+    for(int I : binaryIndexesOnes)
     {
-        expr += 1.0 * cplexVars[binaryIndexesOnes.at(i)];
+        expr += 1.0 * cplexVars[I];
     }
 
-    for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+    for(int I : binaryIndexesZeroes)
     {
-        expr += (1 - 1.0 * cplexVars[binaryIndexesZeroes.at(i)]);
+        expr += (1 - 1.0 * cplexVars[I]);
     }
 
     IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);

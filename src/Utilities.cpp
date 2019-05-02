@@ -187,10 +187,10 @@ void displayVector(const std::vector<VectorDouble>& points)
     {
         str << i;
 
-        for(int j = 0; j < points.size(); j++)
+        for(const auto& P : points)
         {
             str << "\t";
-            str << points.at(j).at(i);
+            str << P.at(i);
         }
 
         str << '\n';
@@ -207,10 +207,10 @@ void displayVector(const std::vector<VectorInteger>& points)
     {
         str << i;
 
-        for(int j = 0; j < points.size(); j++)
+        for(const auto& P : points)
         {
             str << "\t";
-            str << points.at(j).at(i);
+            str << P.at(i);
         }
 
         str << '\n';
@@ -227,10 +227,10 @@ void displayVector(const std::vector<VectorString>& points)
     {
         str << i;
 
-        for(int j = 0; j < points.size(); j++)
+        for(const auto& P : points)
         {
             str << "\t";
-            str << points.at(j).at(i);
+            str << P.at(i);
         }
 
         str << '\n';
@@ -296,9 +296,9 @@ int numDifferentRoundedSelectedElements(
 {
     int numDiff = 0;
 
-    for(int i = 0; i < indexes.size(); i++)
+    for(int I : indexes)
     {
-        if(round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
+        if(round(firstPt.at(I)) != round(secondPt.at(I)))
         {
             numDiff++;
         }
@@ -309,9 +309,9 @@ int numDifferentRoundedSelectedElements(
 bool isDifferentRoundedSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
 {
-    for(int i = 0; i < indexes.size(); i++)
+    for(int I : indexes)
     {
-        if(round(firstPt.at(indexes.at(i))) != round(secondPt.at(indexes.at(i))))
+        if(round(firstPt.at(I)) != round(secondPt.at(I)))
             return (true);
     }
 
@@ -321,9 +321,9 @@ bool isDifferentRoundedSelectedElements(
 bool isDifferentSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
 {
-    for(int i = 0; i < indexes.size(); i++)
+    for(int I : indexes)
     {
-        if(firstPt.at(indexes.at(i)) != secondPt.at(indexes.at(i)))
+        if(firstPt.at(I) != secondPt.at(I))
             return (true);
     }
 

@@ -50,27 +50,26 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
         env->timing->startTimer("PrimalStrategy");
         env->timing->startTimer("PrimalBoundStrategyRootSearch");
 
-        for(int i = 0; i < solPoints.size(); i++)
+        for(auto& P : solPoints)
         {
-            for(int j = 0; j < env->dualSolver->MIPSolver->interiorPts.size(); j++)
+            for(auto& IP : env->dualSolver->MIPSolver->interiorPts)
             {
-                auto xNLP = env->dualSolver->MIPSolver->interiorPts.at(j)->point;
+                auto xNLP = IP->point;
 
-                auto solPoint = solPoints.at(i).point;
+                auto solPoint = P.point;
 
                 for(auto& V : env->problem->binaryVariables)
                 {
-                    xNLP.at(V->index) = solPoints.at(i).point.at(V->index);
+                    xNLP.at(V->index) = P.point.at(V->index);
                 }
 
                 for(auto& V : env->problem->integerVariables)
                 {
-                    xNLP.at(V->index) = solPoints.at(i).point.at(V->index);
+                    xNLP.at(V->index) = P.point.at(V->index);
                 }
 
                 auto maxDevNLP2 = env->problem->getMaxNumericConstraintValue(xNLP, env->problem->numericConstraints);
-                auto maxDevMIP = env->problem->getMaxNumericConstraintValue(
-                    solPoints.at(i).point, env->problem->numericConstraints);
+                auto maxDevMIP = env->problem->getMaxNumericConstraintValue(P.point, env->problem->numericConstraints);
 
                 if(maxDevNLP2.normalizedValue <= 0 && maxDevMIP.normalizedValue > 0)
                 {
@@ -79,7 +78,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                     try
                     {
                         env->timing->startTimer("PrimalBoundStrategyRootSearch");
-                        xNewc = env->rootsearchMethod->findZero(xNLP, solPoints.at(i).point,
+                        xNewc = env->rootsearchMethod->findZero(xNLP, P.point,
                             env->settings->getSetting<int>("Rootsearch.MaxIterations", "Subsolver"),
                             env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"), 0,
                             env->reformulatedProblem->nonlinearConstraints, false);

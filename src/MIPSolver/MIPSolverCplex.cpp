@@ -414,9 +414,9 @@ int MIPSolverCplex::addLinearConstraint(
     {
         IloExpr expr(cplexEnv);
 
-        for(int i = 0; i < elements.size(); i++)
+        for(auto E : elements)
         {
-            expr += elements.at(i).value * cplexVars[elements.at(i).index];
+            expr += E.value * cplexVars[E.index];
         }
 
         if(isGreaterThan)
@@ -453,9 +453,9 @@ void MIPSolverCplex::activateDiscreteVariables(bool activate)
     try
     {
 
-        for(int i = 0; i < cplexVarConvers.size(); i++)
+        for(auto& C : cplexVarConvers)
         {
-            cplexVarConvers.at(i).end();
+            C.end();
         }
 
         cplexVarConvers.clear();
@@ -958,9 +958,9 @@ void MIPSolverCplex::addMIPStart(VectorDouble point)
 {
     IloNumArray startVal(cplexEnv);
 
-    for(int i = 0; i < point.size(); i++)
+    for(double P : point)
     {
-        startVal.add(point.at(i));
+        startVal.add(P);
     }
 
     for(auto& V : env->reformulatedProblem->auxiliaryVariables)
@@ -1249,9 +1249,9 @@ void MIPSolverCplex::createHyperplane(
     {
         IloExpr expr(cplexEnv);
 
-        for(int i = 0; i < tmpPair.first.size(); i++)
+        for(auto& P : tmpPair.first)
         {
-            expr += tmpPair.first.at(i).value * cplexVars[tmpPair.first.at(i).index];
+            expr += P.value * cplexVars[P.index];
         }
 
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
@@ -1268,14 +1268,14 @@ void MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
 {
     IloExpr expr(cplexEnv);
 
-    for(int i = 0; i < binaryIndexesOnes.size(); i++)
+    for(int I : binaryIndexesOnes)
     {
-        expr += 1.0 * cplexVars[binaryIndexesOnes.at(i)];
+        expr += 1.0 * cplexVars[I];
     }
 
-    for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+    for(int I : binaryIndexesZeroes)
     {
-        expr += (1 - 1.0 * cplexVars[binaryIndexesZeroes.at(i)]);
+        expr += (1 - 1.0 * cplexVars[I]);
     }
 
     IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);

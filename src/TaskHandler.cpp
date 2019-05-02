@@ -79,11 +79,11 @@ void TaskHandler::clearTasks()
 
 TaskPtr TaskHandler::getTask(std::string taskID)
 {
-    for(auto it = taskIDMap.begin(); it != taskIDMap.end(); ++it)
+    for(auto & it : taskIDMap)
     {
-        if(it->first == taskID)
+        if(it.first == taskID)
         {
-            return (it->second);
+            return (it.second);
         }
     }
 

@@ -259,9 +259,9 @@ int MIPSolverOsiCbc::addLinearConstraint(
 {
     CoinPackedVector cut;
 
-    for(int i = 0; i < elements.size(); i++)
+    for(auto E : elements)
     {
-        cut.insert(elements.at(i).index, elements.at(i).value);
+        cut.insert(E.index, E.value);
     }
 
     // Adds the cutting plane
@@ -354,9 +354,9 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
         // Adding the MIP starts provided
         try
         {
-            for(auto it = MIPStarts.begin(); it != MIPStarts.end(); ++it)
+            for(auto& P : MIPStarts)
             {
-                cbcModel->setMIPStart(*it);
+                cbcModel->setMIPStart(P);
             }
 
             MIPStarts.clear();

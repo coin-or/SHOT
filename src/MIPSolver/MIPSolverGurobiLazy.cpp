@@ -438,9 +438,9 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
         {
             GRBLinExpr expr = 0;
 
-            for(int i = 0; i < tmpPair.first.size(); i++)
+            for(auto& P : tmpPair.first)
             {
-                expr += +(tmpPair.first.at(i).value) * (vars[tmpPair.first.at(i).index]);
+                expr += +(P.value) * (vars[P.index]);
             }
 
             addLazy(expr <= -tmpPair.second);
@@ -513,14 +513,14 @@ void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
     {
         GRBLinExpr expr = 0;
 
-        for(int i = 0; i < binaryIndexesOnes.size(); i++)
+        for(int I : binaryIndexesOnes)
         {
-            expr += 1.0 * vars[binaryIndexesOnes.at(i)];
+            expr += 1.0 * vars[I];
         }
 
-        for(int i = 0; i < binaryIndexesZeroes.size(); i++)
+        for(int I : binaryIndexesZeroes)
         {
-            expr += (1 - 1.0 * vars[binaryIndexesZeroes.at(i)]);
+            expr += (1 - 1.0 * vars[I]);
         }
 
         addLazy(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);

@@ -156,16 +156,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
     // Check if integer value combination has been tested before
     if(testedPoints.size() > 0)
     {
-        for(int j = 0; j < env->primalSolver->fixedPrimalNLPCandidates.size(); j++)
+        for(auto& C : env->primalSolver->fixedPrimalNLPCandidates)
         {
-            for(int i = 0; i < testedPoints.size(); i++)
+            for(auto& P : testedPoints)
             {
-                if(Utilities::isDifferentRoundedSelectedElements(
-                       env->primalSolver->fixedPrimalNLPCandidates.at(j).point, testedPoints.at(i),
-                       discreteVariableIndexes))
+                if(Utilities::isDifferentRoundedSelectedElements(C.point, P, discreteVariableIndexes))
                 {
-                    testPts.push_back(env->primalSolver->fixedPrimalNLPCandidates.at(j));
-                    testedPoints.push_back(env->primalSolver->fixedPrimalNLPCandidates.at(j).point);
+                    testPts.push_back(C);
+                    testedPoints.push_back(C.point);
                     break;
                 }
             }
