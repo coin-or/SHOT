@@ -44,8 +44,9 @@ void TaskAddIntegerCuts::run()
             env->solutionStatistics.numberOfIntegerCuts++;
         }
 
-        env->output->outputCritical("        Added "
-            + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size()) + " integer cut(s).");
+        env->output->outputDebug("        Added "
+            + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
+            + " integer cut(s) to waiting list.");
 
         env->dualSolver->MIPSolver->integerCutWaitingList.clear();
     }

@@ -128,11 +128,11 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    /*if(allBilinear)
+    if(allBilinear)
     {
         convexity = E_Convexity::Nonconvex;
         return;
-    }*/
+    }
 
     int numberOfVariables = variableMap.size();
 
@@ -162,8 +162,6 @@ void QuadraticTerms::updateConvexity()
     for(int i = 0; i < numberOfVariables; i++)
     {
         double eigenvalue = eigenSolver.eigenvalues().col(0)[i];
-
-        std::cout << "eigenvalue " << eigenvalue << std::endl;
 
         areAllNegativeOrZero = areAllNegativeOrZero && eigenvalue <= eigenvalueTolerance;
         areAllPositiveOrZero = areAllPositiveOrZero && eigenvalue >= -eigenvalueTolerance;

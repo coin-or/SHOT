@@ -89,7 +89,6 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(numericConstraintValues.size() == 0)
         {
-            env->output->outputInfo("        All nonlinear constraints fulfilled, so no constraint cuts added.");
             continue;
         }
 
@@ -301,7 +300,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
     if(addedHyperplanes == 0)
     {
-        env->output->outputInfo("        All nonlinear constraints fulfilled, so no constraint cuts added.");
+        env->output->outputDebug("        All nonlinear constraints fulfilled, so no constraint cuts added.");
     }
 
     env->timing->stopTimer("DualCutGenerationRootSearch");

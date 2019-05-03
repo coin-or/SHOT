@@ -421,8 +421,6 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     primalSol.point = tmpPoint;
     primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
-    auto tmpLine = fmt::format("        New primal bound {} from {} accepted.", tmpObjVal, sourceDesc);
-
     auto element = env->results->primalSolutionSourceStatistics.emplace(primalSol.sourceType, 1);
 
     if(!element.second)
@@ -431,7 +429,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         element.first->second += 1;
     }
 
-    env->output->outputCritical(tmpLine);
+    auto tmpLine = fmt::format("        New primal bound {} from {} accepted.", tmpObjVal, sourceDesc);
+    env->output->outputDebug(tmpLine);
 
     env->results->addPrimalSolution(primalSol);
 
