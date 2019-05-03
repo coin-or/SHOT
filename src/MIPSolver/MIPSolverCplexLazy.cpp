@@ -37,15 +37,18 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-        == ES_HyperplaneCutStrategy::ESH)
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
-        taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
-    }
-    else
-    {
-        taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ESH)
+        {
+            tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+        }
+        else
+        {
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+        }
     }
 
     tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
@@ -435,18 +438,19 @@ void CplexCallback::addLazyConstraint(
 {
     try
     {
-        env->results->getCurrentIteration()->numHyperplanesAdded++;
-
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-            == ES_HyperplaneCutStrategy::ESH)
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
-            tUpdateInteriorPoint->run();
+            if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                == ES_HyperplaneCutStrategy::ESH)
+            {
+                tUpdateInteriorPoint->run();
 
-            static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
-        }
-        else
-        {
-            static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(candidatePoints);
+                static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
+            }
+            else
+            {
+                static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(candidatePoints);
+            }
         }
 
         if(env->reformulatedProblem->objectiveFunction->properties.classification

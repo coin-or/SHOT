@@ -473,18 +473,21 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 
     cbCalls = 0;
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-        == ES_HyperplaneCutStrategy::ESH)
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        tUpdateInteriorPoint = std::shared_ptr<TaskUpdateInteriorPoint>(std::make_shared<TaskUpdateInteriorPoint>(env));
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ESH)
+        {
+            tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
 
-        taskSelectHPPts
-            = std::shared_ptr<TaskSelectHyperplanePointsESH>(std::make_shared<TaskSelectHyperplanePointsESH>(env));
-    }
-    else
-    {
-        taskSelectHPPts
-            = std::shared_ptr<TaskSelectHyperplanePointsECP>(std::make_shared<TaskSelectHyperplanePointsECP>(env));
+            taskSelectHPPts
+                = std::shared_ptr<TaskSelectHyperplanePointsESH>(std::make_shared<TaskSelectHyperplanePointsESH>(env));
+        }
+        else
+        {
+            taskSelectHPPts
+                = std::shared_ptr<TaskSelectHyperplanePointsECP>(std::make_shared<TaskSelectHyperplanePointsECP>(env));
+        }
     }
 
     tSelectPrimNLP
@@ -539,28 +542,31 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
     {
         this->cbCalls++;
 
-        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-            == ES_HyperplaneCutStrategy::ESH)
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
-            tUpdateInteriorPoint->run();
-
-            static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
-
-            if(env->reformulatedProblem->objectiveFunction->properties.classification
-                > E_ObjectiveFunctionClassification::Quadratic)
+            if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                == ES_HyperplaneCutStrategy::ESH)
             {
-                taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
+                tUpdateInteriorPoint->run();
+
+                static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
+
+                if(env->reformulatedProblem->objectiveFunction->properties.classification
+                    > E_ObjectiveFunctionClassification::Quadratic)
+                {
+                    taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
+                }
+            }
+            else
+            {
+                static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(candidatePoints);
             }
         }
-        else
-        {
-            static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(candidatePoints);
 
-            if(env->reformulatedProblem->objectiveFunction->properties.classification
-                > E_ObjectiveFunctionClassification::Quadratic)
-            {
-                taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
-            }
+        if(env->reformulatedProblem->objectiveFunction->properties.classification
+            > E_ObjectiveFunctionClassification::Quadratic)
+        {
+            taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
         }
 
         for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)

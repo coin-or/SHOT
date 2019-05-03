@@ -177,19 +177,22 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tInitializeIteration, "InitIter2");
 
-    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-        == ES_HyperplaneCutStrategy::ESH)
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        auto tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
-        env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ESH)
+        {
+            auto tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
+            env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
 
-        auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
-        env->tasks->addTask(tSelectHPPts, "SelectHPPts");
-    }
-    else
-    {
-        auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
-        env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
+        else
+        {
+            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
+        }
     }
 
     if(env->reformulatedProblem->objectiveFunction->properties.classification

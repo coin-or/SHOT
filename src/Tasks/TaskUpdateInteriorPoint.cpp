@@ -33,6 +33,9 @@ void TaskUpdateInteriorPoint::run()
     if(env->results->primalSolutions.size() == 0)
         return;
 
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        return;
+
     env->timing->startTimer("InteriorPointSearch");
 
     auto maxDevPrimal = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
