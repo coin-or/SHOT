@@ -225,7 +225,7 @@ bool IpoptProblem::eval_jac_g(
                 iRow[counter] = C->index;
                 jCol[counter] = G->index;
 
-                jacobianCounterPlacement.insert(std::make_pair(std::make_pair(C->index, G->index), counter));
+                jacobianCounterPlacement.emplace(std::make_pair(C->index, G->index), counter);
                 counter++;
             }
         }
@@ -275,8 +275,7 @@ bool IpoptProblem::eval_h(Index n, const Number* x, bool new_x, Number obj_facto
             iRow[counter] = E.first->index;
             jCol[counter] = E.second->index;
 
-            lagrangianHessianCounterPlacement.insert(
-                std::make_pair(std::make_pair(E.first->index, E.second->index), counter));
+            lagrangianHessianCounterPlacement.emplace(std::make_pair(E.first->index, E.second->index), counter);
 
             counter++;
         }

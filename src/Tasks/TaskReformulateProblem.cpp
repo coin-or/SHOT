@@ -1300,8 +1300,7 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                     reformulatedProblem->add(std::move(auxFirstSum));
                     reformulatedProblem->add(std::move(auxFirstSumVarDef));
 
-                    integerAuxiliaryBinaryVariables.insert(
-                        std::make_pair(discretizationVariable, discretizationBinaries));
+                    integerAuxiliaryBinaryVariables.emplace(discretizationVariable, discretizationBinaries);
                 }
 
                 auto auxVariable = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);

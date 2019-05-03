@@ -492,7 +492,7 @@ SparseVariableVector combineSparseVariableVectors(const SparseVariableVector& fi
 
     for(auto& G : first)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -503,7 +503,7 @@ SparseVariableVector combineSparseVariableVectors(const SparseVariableVector& fi
 
     for(auto& G : second)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -522,7 +522,7 @@ SparseVariableVector combineSparseVariableVectors(
 
     for(auto& G : first)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -533,7 +533,7 @@ SparseVariableVector combineSparseVariableVectors(
 
     for(auto& G : second)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -544,7 +544,7 @@ SparseVariableVector combineSparseVariableVectors(
 
     for(auto& G : third)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -563,7 +563,7 @@ SparseVariableMatrix combineSparseVariableMatrices(
 
     for(auto& G : first)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -574,7 +574,7 @@ SparseVariableMatrix combineSparseVariableMatrices(
 
     for(auto& G : second)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -593,7 +593,7 @@ SparseVariableMatrix combineSparseVariableMatrices(
 
     for(auto& G : first)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -604,7 +604,7 @@ SparseVariableMatrix combineSparseVariableMatrices(
 
     for(auto& G : second)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {
@@ -615,7 +615,7 @@ SparseVariableMatrix combineSparseVariableMatrices(
 
     for(auto& G : third)
     {
-        auto element = result.insert(std::make_pair(G.first, G.second));
+        auto element = result.emplace(G.first, G.second);
 
         if(!element.second)
         {

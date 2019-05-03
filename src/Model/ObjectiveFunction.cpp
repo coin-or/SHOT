@@ -160,7 +160,7 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
 
     for(auto& T : linearTerms)
     {
-        auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
+        auto element = gradient.emplace(T->variable, T->coefficient);
         if(!element.second)
         {
             // Element already exists for the variable
@@ -333,7 +333,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
         if(T->firstVariable == T->secondVariable) // variable squared
         {
             auto value = 2 * T->coefficient * point[T->firstVariable->index];
-            auto element = gradient.insert(std::make_pair(T->firstVariable, value));
+            auto element = gradient.emplace(T->firstVariable, value);
 
             if(!element.second)
             {
@@ -344,7 +344,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
         else
         {
             auto value = T->coefficient * point[T->secondVariable->index];
-            auto element = gradient.insert(std::make_pair(T->firstVariable, value));
+            auto element = gradient.emplace(T->firstVariable, value);
 
             if(!element.second)
             {
@@ -353,7 +353,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
             }
 
             value = T->coefficient * point[T->firstVariable->index];
-            element = gradient.insert(std::make_pair(T->secondVariable, value));
+            element = gradient.emplace(T->secondVariable, value);
 
             if(!element.second)
             {
@@ -400,7 +400,7 @@ SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDo
         if(T->firstVariable == T->secondVariable) // variable squared
         {
             auto value = 2 * T->coefficient;
-            auto element = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+            auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
 
             if(!element.second)
             {
@@ -414,8 +414,7 @@ SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDo
             if(T->firstVariable->index < T->secondVariable->index)
             {
                 auto value = T->coefficient;
-                auto element
-                    = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+                auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
 
                 if(!element.second)
                 {
@@ -426,8 +425,7 @@ SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDo
             else
             {
                 auto value = T->coefficient;
-                auto element
-                    = hessian.insert(std::make_pair(std::make_pair(T->secondVariable, T->firstVariable), value));
+                auto element = hessian.emplace(std::make_pair(T->secondVariable, T->firstVariable), value);
 
                 if(!element.second)
                 {
@@ -672,7 +670,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
                 &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
         }
 
-        auto element = gradient.insert(std::make_pair(E.first, value[0]));
+        auto element = gradient.emplace(E.first, value[0]);
 
         if(!element.second)
         {
@@ -788,7 +786,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             if(E.first.first->index > E.first.second->index)
                 continue;
 
-            auto element = hessian.insert(std::make_pair(std::get<0>(E), value[0]));
+            auto element = hessian.emplace(std::get<0>(E), value[0]);
 
             if(!element.second)
             {

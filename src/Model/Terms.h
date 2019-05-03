@@ -270,7 +270,7 @@ public:
             if(T->coefficient == 0.0)
                 continue;
 
-            auto element = gradient.insert(std::make_pair(T->variable, T->coefficient));
+            auto element = gradient.emplace(T->variable, T->coefficient);
             if(!element.second)
             {
                 // Element already exists for the variable
@@ -452,7 +452,7 @@ public:
             if(T->firstVariable == T->secondVariable) // variable squared
             {
                 auto value = 2 * T->coefficient * point[T->firstVariable->index];
-                auto element = gradient.insert(std::make_pair(T->firstVariable, value));
+                auto element = gradient.emplace(T->firstVariable, value);
 
                 if(!element.second)
                 {
@@ -463,7 +463,7 @@ public:
             else
             {
                 auto value = T->coefficient * point[T->secondVariable->index];
-                auto element = gradient.insert(std::make_pair(T->firstVariable, value));
+                auto element = gradient.emplace(T->firstVariable, value);
 
                 if(!element.second)
                 {
@@ -473,7 +473,7 @@ public:
 
                 value = T->coefficient * point[T->firstVariable->index];
 
-                element = gradient.insert(std::make_pair(T->secondVariable, value));
+                element = gradient.emplace(T->secondVariable, value);
 
                 if(!element.second)
                 {
@@ -657,7 +657,7 @@ public:
                     value *= V2->calculate(point);
                 }
 
-                gradient.insert(std::make_pair(V1, value));
+                gradient.emplace(V1, value);
             }
         };
 
@@ -692,7 +692,7 @@ public:
 
                     std::pair<VariablePtr, VariablePtr> variablePair = std::make_pair(V1, V2);
 
-                    auto element = hessian.insert(std::make_pair(variablePair, value));
+                    auto element = hessian.emplace(variablePair, value);
 
                     if(!element.second)
                     {
@@ -999,7 +999,7 @@ public:
                     }
                 }
 
-                auto element = gradient.insert(std::make_pair(E1->variable, T->coefficient * value));
+                auto element = gradient.emplace(E1->variable, T->coefficient * value);
 
                 if(!element.second)
                 {
@@ -1043,9 +1043,9 @@ public:
                             = E1->power * E2->power / (E1->variable->calculate(point) * E2->variable->calculate(point));
                     }
 
-                    std::pair<VariablePtr, VariablePtr> variablePair = std::make_pair(E1->variable, E2->variable);
+                    auto variablePair = std::make_pair(E1->variable, E2->variable);
 
-                    auto element = hessian.insert(std::make_pair(variablePair, corrFactor * value));
+                    auto element = hessian.emplace(variablePair, corrFactor * value);
 
                     if(!element.second)
                     {

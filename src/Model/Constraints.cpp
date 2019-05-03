@@ -334,7 +334,7 @@ SparseVariableMatrix QuadraticConstraint::calculateHessian(const VectorDouble& p
         if(T->firstVariable == T->secondVariable) // variable squared
         {
             auto value = 2 * T->coefficient;
-            auto element = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+            auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
 
             if(!element.second)
             {
@@ -348,8 +348,7 @@ SparseVariableMatrix QuadraticConstraint::calculateHessian(const VectorDouble& p
             if(T->firstVariable->index < T->secondVariable->index)
             {
                 auto value = T->coefficient;
-                auto element
-                    = hessian.insert(std::make_pair(std::make_pair(T->firstVariable, T->secondVariable), value));
+                auto element = hessian.emplace(std::make_pair(T->firstVariable, T->secondVariable), value);
 
                 if(!element.second)
                 {
@@ -360,8 +359,7 @@ SparseVariableMatrix QuadraticConstraint::calculateHessian(const VectorDouble& p
             else
             {
                 auto value = T->coefficient;
-                auto element
-                    = hessian.insert(std::make_pair(std::make_pair(T->secondVariable, T->firstVariable), value));
+                auto element = hessian.emplace(std::make_pair(T->secondVariable, T->firstVariable), value);
 
                 if(!element.second)
                 {
@@ -566,7 +564,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
             if(eraseZeroes && value[0] == 0.0)
                 continue;
 
-            auto element = gradient.insert(std::make_pair(E.first, value[0]));
+            auto element = gradient.emplace(E.first, value[0]);
 
             if(!element.second)
             {
@@ -687,7 +685,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                 // Hessian is symmetric, so discard elements below the diagonal
                 continue;
 
-            auto element = hessian.insert(std::make_pair(std::get<0>(E), value[0]));
+            auto element = hessian.emplace(std::get<0>(E), value[0]);
 
             if(!element.second)
             {
