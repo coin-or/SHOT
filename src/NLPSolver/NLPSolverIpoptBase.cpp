@@ -135,7 +135,6 @@ bool IpoptProblem::get_starting_point(
         if(variableUB == SHOT_DBL_MAX)
         {
             if(defaultInitValue > variableLB)
-
                 x[k] = variableLB;
             else
                 x[k] = defaultInitValue;
@@ -724,7 +723,7 @@ void NLPSolverIpoptBase::setInitialSettings()
         subsolver = "mumps";
     }
 
-    ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
+    // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
     ipoptApplication->Options()->SetStringValue("linear_solver", subsolver);
 
     switch(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")))
@@ -801,14 +800,11 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         {
             env->output->outputWarning("  Fixed value for variable " + std::to_string(currVarIndex)
                 + " is larger than ub: " + Utilities::toString(currPt) + " > " + std::to_string(currUB));
+
             if(currUB == 1 && currPt > 1 && currPt < 1.00001)
-            {
                 currPt = 1;
-            }
             else
-            {
                 continue;
-            }
         }
         else if(currPt < currLB)
         {
@@ -816,13 +812,9 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
                 + " is smaller than lb: " + Utilities::toString(currPt) + " < " + std::to_string(currLB));
 
             if(currLB == 0 && currPt < 0 && currPt > -0.00001)
-            {
                 currPt = 0;
-            }
             else
-            {
                 continue;
-            }
         }
 
         env->output->outputTrace("  Setting fixed value for variable " + std::to_string(currVarIndex) + ": "
