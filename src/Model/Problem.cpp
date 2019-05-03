@@ -298,7 +298,8 @@ void Problem::updateProperties()
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
 
-    properties.isDiscrete = (properties.numberOfDiscreteVariables > 0);
+    properties.isDiscrete
+        = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0);
 
     if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
@@ -529,7 +530,8 @@ void Problem::updateFactorableFunctions()
 
             if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
             {
-                nonlinearObjective->symbolicSparseHessian.emplace_back(std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement);
+                nonlinearObjective->symbolicSparseHessian.emplace_back(
+                    std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement);
             }
         }
 

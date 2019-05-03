@@ -160,6 +160,25 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
     }
 
+    for(auto& V : env->problem->semicontinuousVariables)
+    {
+        auto value = V->calculate(tmpPoint);
+
+        if(value == 0.0)
+        {
+        }
+        else if(value > V->upperBound)
+        {
+            isVariableBoundsFulfilled = false;
+            tmpPoint.at(V->index) = V->upperBound;
+        }
+        else if(value < V->lowerBound)
+        {
+            isVariableBoundsFulfilled = false;
+            tmpPoint.at(V->index) = V->lowerBound;
+        }
+    }
+
     for(auto& V : env->problem->integerVariables)
     {
         auto value = V->calculate(tmpPoint);
