@@ -63,7 +63,7 @@ void Problem::updateConstraints()
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
 
-            NonlinearConstraintPtr auxConstraint;
+            auto auxConstraint = std::make_shared<NonlinearConstraint>();
 
             auxConstraint->constant = -C->constant;
             auxConstraint->valueRHS = -C->valueLHS;
@@ -110,7 +110,7 @@ void Problem::updateConstraints()
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
 
-            NonlinearConstraintPtr auxConstraint;
+            auto auxConstraint = std::make_shared<NonlinearConstraint>();
 
             auxConstraint->constant = -C->constant;
             auxConstraint->valueRHS = -C->valueLHS;
