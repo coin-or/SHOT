@@ -59,13 +59,6 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    /*
-        if(currIter->solutionStatus != E_ProblemSolutionStatus::Optimal)
-        {
-            env->tasks->setNextTask(taskIDIfFalse);
-            return;
-        }*/
-
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
         >= env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
     {
@@ -82,16 +75,18 @@ void TaskAddPrimalReductionCut::run()
         env->output->outputCritical("********Final update since number of nonconvex objective cutoffs tried: "
             + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));
 
+        double reductionFactor = 0.01;
+
         if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
         {
-            env->dualSolver->cutOffToUse = env->results->getPrimalBound();
-            // env->dualSolver->cutOffToUse = 0.99 * env->dualSolver->cutOffToUse;
+            env->dualSolver->cutOffToUse
+                = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
             env->results->currentDualBound = SHOT_DBL_MIN;
         }
         else
         {
-            env->dualSolver->cutOffToUse = env->results->getPrimalBound();
-            // env->dualSolver->cutOffToUse = 1.01 * env->dualSolver->cutOffToUse;
+            env->dualSolver->cutOffToUse
+                = env->dualSolver->cutOffToUse + reductionFactor * std::abs(env->dualSolver->cutOffToUse);
             env->results->currentDualBound = SHOT_DBL_MAX;
         }
 
