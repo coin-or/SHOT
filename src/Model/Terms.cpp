@@ -43,36 +43,75 @@ void QuadraticTerms::updateConvexity()
     std::vector<Eigen::Triplet<double>> elements;
     elements.reserve(2 * size());
 
-    std::map<VariablePtr, bool> variableMap;
+    std::map<VariablePtr, int> variableMap;
 
     bool allSquares = true;
     bool allPositive = true;
     bool allNegative = true;
+    bool allBilinear = true;
+
+    int variableCounter = 0;
 
     for(auto& T : (*this))
     {
         if(T->firstVariable == T->secondVariable)
         {
-            variableMap.insert(std::make_pair(T->firstVariable, true));
+            int currentVariableIndex;
+            auto element = variableMap.emplace(T->firstVariable, variableCounter);
+
+            if(element.second)
+            {
+                // Variable not already indexed found
+                currentVariableIndex = variableCounter;
+                variableCounter++;
+            }
+
             allPositive = allPositive && T->coefficient >= 0;
             allNegative = allNegative && T->coefficient <= 0;
+            allBilinear = false;
 
-            elements.emplace_back(T->firstVariable->index, T->firstVariable->index, T->coefficient);
+            elements.emplace_back(currentVariableIndex, currentVariableIndex, T->coefficient);
         }
         else
         {
-            variableMap.insert(std::make_pair(T->firstVariable, true));
-            variableMap.insert(std::make_pair(T->secondVariable, true));
+            int currentFirstVariableIndex;
+            auto element = variableMap.emplace(T->firstVariable, variableCounter);
+
+            if(element.second)
+            {
+                // Variable not already indexed found, but inserted into map
+                currentFirstVariableIndex = variableCounter;
+                variableCounter++;
+            }
+            else
+            {
+                currentFirstVariableIndex = element.first->second;
+            }
+
+            int currentSecondVariableIndex;
+            element = variableMap.emplace(T->secondVariable, variableCounter);
+
+            if(element.second)
+            {
+                // Variable not already indexed found, but inserted into map
+                currentSecondVariableIndex = variableCounter;
+                variableCounter++;
+            }
+            else
+            {
+                currentSecondVariableIndex = element.first->second;
+            }
+
             allSquares = false;
 
             // Matrix is self adjoint, so only need lower triangular elements
             if(T->firstVariable->index > T->secondVariable->index)
             {
-                elements.emplace_back(T->firstVariable->index, T->secondVariable->index, 0.5 * T->coefficient);
+                elements.emplace_back(currentFirstVariableIndex, currentSecondVariableIndex, 0.5 * T->coefficient);
             }
             else
             {
-                elements.emplace_back(T->secondVariable->index, T->firstVariable->index, 0.5 * T->coefficient);
+                elements.emplace_back(currentSecondVariableIndex, currentFirstVariableIndex, 0.5 * T->coefficient);
             }
         }
     }
@@ -88,6 +127,12 @@ void QuadraticTerms::updateConvexity()
         convexity = E_Convexity::Concave;
         return;
     }
+
+    /*if(allBilinear)
+    {
+        convexity = E_Convexity::Nonconvex;
+        return;
+    }*/
 
     int numberOfVariables = variableMap.size();
 
