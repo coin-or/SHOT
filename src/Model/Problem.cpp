@@ -182,19 +182,9 @@ void Problem::updateVariables()
         variableUpperBounds[i] = allVariables[i]->upperBound;
         variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
 
-        // allVariables[i]->index = i;
-
         if(allVariables[i]->isNonlinear)
             nonlinearVariables.push_back(allVariables[i]);
     }
-    /*
-        for(int i = 0; i < numAuxiliaryVariables; i++)
-        {
-            auxiliaryVariables[i]->index = numVariables + i;
-        }
-
-        if(auxiliaryObjectiveVariable)
-            auxiliaryObjectiveVariable->index = numVariables + numAuxiliaryVariables;*/
 
     allVariables.takeOwnership(shared_from_this());
     auxiliaryVariables.takeOwnership(shared_from_this());
