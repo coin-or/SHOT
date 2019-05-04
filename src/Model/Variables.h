@@ -86,9 +86,9 @@ public:
     void takeOwnership(ProblemPtr owner);
 };
 
-using VariablePtr= std::shared_ptr<Variable> ;
+using VariablePtr = std::shared_ptr<Variable>;
 using SparseVariableVector = std::map<VariablePtr, double>;
-using SparseVariableMatrix= std::map<std::pair<VariablePtr, VariablePtr>, double> ;
+using SparseVariableMatrix = std::map<std::pair<VariablePtr, VariablePtr>, double>;
 
 class Variables : private std::vector<VariablePtr>
 {
@@ -109,6 +109,11 @@ public:
     using std::vector<VariablePtr>::size;
 
     Variables() = default;
+    Variables(std::initializer_list<VariablePtr> variables)
+    {
+        for(auto& V : variables)
+            (*this).push_back(V);
+    };
 
     inline void takeOwnership(ProblemPtr owner)
     {

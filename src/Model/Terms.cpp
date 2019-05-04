@@ -155,8 +155,15 @@ void QuadraticTerms::updateConvexity()
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
-        eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>(
-            "Convexity.Quadratics.EigenValueTolerance", "Model");
+        if(sharedOwnerProblem->env->settings)
+        {
+            eigenvalueTolerance = sharedOwnerProblem->env->settings->getSetting<double>(
+                "Convexity.Quadratics.EigenValueTolerance", "Model");
+        }
+        else
+        {
+            eigenvalueTolerance = 1e-5;
+        }
     }
 
     for(int i = 0; i < numberOfVariables; i++)

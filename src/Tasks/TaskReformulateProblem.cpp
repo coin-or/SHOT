@@ -786,6 +786,11 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Nonlinear;
     }
+    else if(destinationQuadraticTerms.size() > 0 && useQuadraticConstraints)
+    {
+        constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
+    }
     else if(destinationQuadraticTerms.size() > 0)
     {
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);

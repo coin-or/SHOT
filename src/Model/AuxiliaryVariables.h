@@ -80,6 +80,11 @@ public:
     using std::vector<AuxiliaryVariablePtr>::size;
 
     AuxiliaryVariables() = default;
+    AuxiliaryVariables(std::initializer_list<AuxiliaryVariablePtr> variables)
+    {
+        for(auto& V : variables)
+            (*this).push_back(V);
+    };
 
     inline void takeOwnership(ProblemPtr owner)
     {

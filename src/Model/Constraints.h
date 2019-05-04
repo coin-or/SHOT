@@ -402,8 +402,8 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-using NonlinearConstraintPtr= std::shared_ptr<NonlinearConstraint> ;
-using NonlinearConstraints = std::vector<NonlinearConstraintPtr> ;
+using NonlinearConstraintPtr = std::shared_ptr<NonlinearConstraint>;
+using NonlinearConstraints = std::vector<NonlinearConstraintPtr>;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint);
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint);

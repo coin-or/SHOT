@@ -160,6 +160,11 @@ public:
     using std::vector<T>::size;
 
     Terms() = default;
+    Terms(std::initializer_list<T> terms)
+    {
+        for(auto& TE : terms)
+            (*this).push_back(TE);
+    };
 
     double calculate(const VectorDouble& point) const
     {

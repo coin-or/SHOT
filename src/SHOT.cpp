@@ -76,7 +76,6 @@ int main(int argc, char* argv[])
 
     if(cmdl("--opt") >> filename) // Have specified a opt-file
     {
-
         auto filepath = std::filesystem::current_path() / std::filesystem::path(filename);
 
         if(std::filesystem::exists(filepath))

@@ -61,14 +61,8 @@ bool GurobiTest1(std::string filename)
 {
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
-
-    env->output = std::make_shared<SHOT::Output>();
-    SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-    env->settings = std::make_shared<Settings>(env->output);
-
-    std::unique_ptr<Solver> solver = std::make_unique<Solver>(env);
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
 
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 

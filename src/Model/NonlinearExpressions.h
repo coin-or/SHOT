@@ -177,11 +177,14 @@ public:
     using std::vector<NonlinearExpressionPtr>::resize;
     using std::vector<NonlinearExpressionPtr>::size;
 
+    NonlinearExpressions() = default;
+    NonlinearExpressions(std::initializer_list<NonlinearExpressionPtr> expressions)
+    {
+        for(auto& E : expressions)
+            (*this).push_back(E);
+    };
+
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
-
-    // NonlinearExpressionPtr get(int i) { return expressions.at(i); };
-
-    // inline size_t size() const { return expressions.size(); };
 };
 
 class ExpressionConstant : public NonlinearExpression
@@ -265,7 +268,7 @@ public:
     };
 };
 
-using ExpressionVariablePtr = std::shared_ptr<ExpressionVariable> ;
+using ExpressionVariablePtr = std::shared_ptr<ExpressionVariable>;
 
 class ExpressionUnary : public NonlinearExpression
 {
