@@ -777,7 +777,6 @@ inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::sha
 
     if(!childSignomial)
         return resultingSignomialTerm;
-    ;
 
     childSignomial->get()->coefficient *= -1.0;
 
@@ -940,6 +939,8 @@ inline std::optional<SignomialTermPtr> convertExpressionToSignomialTerm(std::sha
 
         if(!childSignomial) // Not a signomial term
             return resultingSignomialTerm;
+
+        signomialTerm->coefficient *= childSignomial->get()->coefficient;
 
         for(auto& E2 : childSignomial->get()->elements)
         {
