@@ -520,21 +520,17 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             cplexInstance.extract(cplexModel);
         }
 
-        // activateDiscreteVariables(true); // Otherwise we will get an error from CPLEX
-
-        CplexCallback cCallback(env, cplexVars, cplexInstance);
         CPXLONG contextMask = 0;
 
-        if(discreteVariablesActivated)
+        if(getDiscreteVariableStatus())
         {
+            CplexCallback cCallback(env, cplexVars, cplexInstance);
             contextMask |= IloCplex::Callback::Context::Id::Candidate;
             contextMask |= IloCplex::Callback::Context::Id::Relaxation;
 
-            // If contextMask is not zero we add the callback.
+            if(contextMask != 0)
+                cplexInstance.use(&cCallback, contextMask);
         }
-
-        if(contextMask != 0)
-            cplexInstance.use(&cCallback, contextMask);
 
         // This fixes a bug in CPLEX
         cplexEnv.setNormalizer(false);

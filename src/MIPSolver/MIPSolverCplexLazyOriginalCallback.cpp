@@ -613,10 +613,6 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     try
     {
         MIPSolverCplex::initializeSolverSettings();
-
-        cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
-        cplexInstance.use(HCallback(env, cplexEnv, cplexVars));
-        cplexInstance.use(InfoCallback(env, cplexEnv, cplexVars));
     }
     catch(IloException& e)
     {
@@ -635,6 +631,13 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
         {
             // Extract the model if we have updated the constraints
             cplexInstance.extract(cplexModel);
+        }
+
+        if(getDiscreteVariableStatus())
+        {
+            cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
+            cplexInstance.use(HCallback(env, cplexEnv, cplexVars));
+            cplexInstance.use(InfoCallback(env, cplexEnv, cplexVars));
         }
 
         // Fixes a deadlock bug in Cplex 12.7 and 12.8
