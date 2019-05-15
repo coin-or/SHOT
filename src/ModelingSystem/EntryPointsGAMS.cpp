@@ -210,6 +210,15 @@ extern "C"
 
             return (0);
         }
+        catch(const std::exception& e)
+        {
+            env->output->outputError(std::string("Error: ") + e.what());
+
+            gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
+            gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+
+            return (0);
+        }
 
         return 0;
     }
