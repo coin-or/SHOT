@@ -295,10 +295,11 @@ void ModelingSystemGAMS::finalizeSolution()
     assert(r != nullptr);
 
     // set primal solution and model status
-    if(r->primalSolutions.size() > 0)
+    if(r->primalSolution.size() > 0)
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
         // TODO might we claim global optimal in some cases? we should not do this for nonconvex problems
+        // TODO there is r.modelReturnStatus
         gmoModelStatSet(
             modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
     }
