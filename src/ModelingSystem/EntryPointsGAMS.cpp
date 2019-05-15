@@ -23,6 +23,7 @@
 #include "gmomcc.h"
 #include "gevmcc.h"
 #include "optcc.h"
+#include "palmcc.h"
 
 #if defined(_WIN32)
 #if !defined(STDCALL)
@@ -133,6 +134,47 @@ extern "C"
         return 0;
     }
 
+    static
+    bool doLicenseChecks(
+        void*            Cptr,
+        Solver&          solver
+        )
+    {
+#ifdef GAMS_BUILD
+        gamsshot* gs;
+
+        assert(Cptr != nullptr);
+        gs = (gamsshot*)Cptr;
+        assert(gs->gmo != nullptr);
+        gevHandle_t gev = (gevHandle_t)gmoEnvironment(gs->gmo);
+
+        if( solver.getEnvironment()->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex )
+        {
+            char buffer[GMS_SSSIZE];
+
+            palHandle_t pal;
+            if( !palCreate(&pal, buffer, sizeof(buffer)) )
+            {
+                gevLogStat(gev, buffer);
+                gmoSolveStatSet(gs->gmo, gmoSolveStat_SystemErr);
+                gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+                return false;
+            }
+
+            if( !palLicenseIsDemoCheckout(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) )
+            {
+                // TODO if user set CPLEX explicitly, then we should stop
+                gevLogStat(gev, " CPLEX chosen as MIP solver, but no CPLEX license available. Changing to CBC.\n");
+                //gmoSolveStatSet(gs->gmo, gmoSolveStat_License);
+                //gmoModelStatSet(gs->gmo, gmoModelStat_LicenseError);
+                //return false;
+                solver.getEnvironment()->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+            }
+        }
+#endif
+        return true;
+    }
+
     DllExport int STDCALL C__shtCallSolver(void* Cptr)
     {
         gamsshot* gs;
@@ -155,11 +197,18 @@ extern "C"
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
 
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-            if(modelingSystem->createProblem(problem, gs->gmo) != E_ProblemCreationStatus::NormalCompletion)
+            switch(modelingSystem->createProblem(problem, gs->gmo))
             {
-                gmoSolveStatSet(gs->gmo, gmoSolveStat_Capability);
-                gmoModelStatSet(gs->gmo, gmoModelStat_NoSolutionReturned);
-                return 0;
+                case E_ProblemCreationStatus::NormalCompletion :
+                    break;
+                case E_ProblemCreationStatus::CapabilityProblem :
+                    gmoSolveStatSet(gs->gmo, gmoSolveStat_Capability);
+                    gmoModelStatSet(gs->gmo, gmoModelStat_NoSolutionReturned);
+                    return 0;
+                default:
+                    gmoSolveStatSet(gs->gmo, gmoSolveStat_SetupErr);
+                    gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+                    return 0;
             }
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
@@ -167,6 +216,10 @@ extern "C"
 
             /* correct to call this here? */
             modelingSystem->updateSettings(env->settings);
+
+            // check for licenses on commercial solvers, if used
+            if( !doLicenseChecks(Cptr, solver) )
+                return 0;
 
             solver.registerCallback(
                 E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)] {
@@ -197,6 +250,15 @@ extern "C"
         catch(const Error& eclass)
         {
             env->output->outputError(eclass.message);
+
+            gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
+            gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+
+            return (0);
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputError(std::string("Error: ") + e.what());
 
             gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
             gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);

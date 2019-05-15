@@ -28,8 +28,6 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject)
     , showlog(false)
 {
     modelingEnvironment = (gevHandle_t)gmoEnvironment(modelingObject);
-    strcpy(nlpsolver, "conopt");
-    *nlpsolveropt = '\0';
 
     strcpy(nlpsolver, env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver").c_str());
     strcpy(nlpsolveropt, env->settings->getSetting<std::string>("GAMS.NLP.OptionsFilename", "Subsolver").c_str());

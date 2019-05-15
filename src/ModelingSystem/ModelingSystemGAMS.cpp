@@ -164,14 +164,18 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
         gmoNameInput(modelingObject, buffer);
         problem->name = buffer;
 
+        /* copyVariables and copyConstraints only return false if there was an unsupported variable or equation type or there were no variables or no equations
+         * all cases are SHOT capability problems
+         */
+
         if(!copyVariables(problem))
-            return (E_ProblemCreationStatus::ErrorInVariables);
+            return (E_ProblemCreationStatus::CapabilityProblem);
 
         if(!copyObjectiveFunction(problem))
             return (E_ProblemCreationStatus::ErrorInObjective);
 
         if(!copyConstraints(problem))
-            return (E_ProblemCreationStatus::ErrorInConstraints);
+            return (E_ProblemCreationStatus::CapabilityProblem);
 
         if(!copyLinearTerms(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
@@ -187,7 +191,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
 
         problem->finalize();
     }
-    catch(std::exception& e)
+    catch(const OperationNotImplementedException& e)
+    {
+        env->output->outputError("Capability problem when creating problem from GAMS object: ");
+        env->output->outputError(e.what());
+        return (E_ProblemCreationStatus::CapabilityProblem);
+    }
+    catch(const std::exception& e)
     {
         env->output->outputError("Error when creating problem from GAMS object.");
 
@@ -289,10 +299,11 @@ void ModelingSystemGAMS::finalizeSolution()
     assert(r != nullptr);
 
     // set primal solution and model status
-    if(r->primalSolutions.size() > 0)
+    if(r->primalSolution.size() > 0)
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
         // TODO might we claim global optimal in some cases? we should not do this for nonconvex problems
+        // TODO there is r.modelReturnStatus
         gmoModelStatSet(
             modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
     }
@@ -887,10 +898,6 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
         {
             return (false);
         }
-        catch(const OperationNotImplementedException& e)
-        {
-            return (false);
-        }
     }
 
     for(int i = 0; i < gmoM(modelingObject); ++i)
@@ -910,10 +917,6 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
                 constraint->add(std::move(destinationExpression));
             }
             catch(const ConstraintNotFoundException& e)
-            {
-                return (false);
-            }
-            catch(const OperationNotImplementedException& e)
             {
                 return (false);
             }
@@ -1315,7 +1318,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 char buffer[256];
                 sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw new OperationNotImplementedException("Error: Unsupported GAMS function " + std::string(buffer));
+                throw OperationNotImplementedException("Error: Unsupported GAMS function " + std::string(buffer));
             }
             }
             break;
@@ -1327,7 +1330,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             char buffer[256];
             sprintf(buffer, "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
             gevLogStatPChar(modelingEnvironment, buffer);
-            throw new OperationNotImplementedException("Error: Unsupported GAMS opcode " + std::string(buffer));
+            throw OperationNotImplementedException("Error: Unsupported GAMS opcode " + std::string(buffer));
         }
         }
     }
