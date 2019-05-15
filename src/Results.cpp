@@ -76,8 +76,8 @@ void Results::addPrimalSolution(PrimalSolution solution)
         savePrimalSolutionToFile(solution, env->problem->allVariables, fileName.str());
     }
 
-    // Add primal objective cut
-    if(env->settings->getSetting<bool>("HyperplaneCuts.UsePrimalObjectiveCut", "Dual")
+    // TODO: Add primal objective cut
+    /*if(env->settings->getSetting<bool>("HyperplaneCuts.UsePrimalObjectiveCut", "Dual")
         && env->reformulatedProblem->objectiveFunction->properties.classification
             > E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -103,7 +103,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
 
         env->output->outputCritical("        Primal objective cut added.");
-    }
+    }*/
 }
 
 bool Results::isRelativeObjectiveGapToleranceMet()

@@ -590,8 +590,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
-    env->settings->createSetting(
-        "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
+    // TODO: activate
+    // env->settings->createSetting(
+    //    "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
 
     // Dual strategy settings: MIP solver
 
