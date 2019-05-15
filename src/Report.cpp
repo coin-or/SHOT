@@ -845,9 +845,19 @@ void Report::outputSolutionReport()
 
     report << "\r\n";
 
-    report << " Objective bound [dual, primal]:                 ";
-    report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << ", ";
-    report << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << "]\r\n";
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        report << " Objective bound (minimization) [dual, primal]:  ";
+        report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << ", ";
+        report << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << "]\r\n";
+    }
+    else
+    {
+        report << " Objective bound (maximization) [primal, dual]:  ";
+        report << "[" << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << ", ";
+        report << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << "]\r\n";
+    }
+
     report << " Objective gap absolute / relative:              ";
     report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "{:g}") << " / ";
     report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "{:g}") << "\r\n";
