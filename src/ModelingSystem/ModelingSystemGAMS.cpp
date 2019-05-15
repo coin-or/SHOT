@@ -187,7 +187,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
 
         problem->finalize();
     }
-    catch(std::exception& e)
+    catch(const OperationNotImplementedException& e)
+    {
+        env->output->outputError("Capability problem when creating problem from GAMS object: ");
+        env->output->outputError(e.what());
+        return (E_ProblemCreationStatus::CapabilityProblem);
+    }
+    catch(const std::exception& e)
     {
         env->output->outputError("Error when creating problem from GAMS object.");
 
@@ -887,10 +893,6 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
         {
             return (false);
         }
-        catch(const OperationNotImplementedException& e)
-        {
-            return (false);
-        }
     }
 
     for(int i = 0; i < gmoM(modelingObject); ++i)
@@ -910,10 +912,6 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
                 constraint->add(std::move(destinationExpression));
             }
             catch(const ConstraintNotFoundException& e)
-            {
-                return (false);
-            }
-            catch(const OperationNotImplementedException& e)
             {
                 return (false);
             }
@@ -1315,7 +1313,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 char buffer[256];
                 sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw new OperationNotImplementedException("Error: Unsupported GAMS function " + std::string(buffer));
+                throw OperationNotImplementedException("Error: Unsupported GAMS function " + std::string(buffer));
             }
             }
             break;
@@ -1327,7 +1325,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             char buffer[256];
             sprintf(buffer, "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
             gevLogStatPChar(modelingEnvironment, buffer);
-            throw new OperationNotImplementedException("Error: Unsupported GAMS opcode " + std::string(buffer));
+            throw OperationNotImplementedException("Error: Unsupported GAMS opcode " + std::string(buffer));
         }
         }
     }

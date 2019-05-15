@@ -155,11 +155,18 @@ extern "C"
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
 
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-            if(modelingSystem->createProblem(problem, gs->gmo) != E_ProblemCreationStatus::NormalCompletion)
+            switch(modelingSystem->createProblem(problem, gs->gmo))
             {
-                gmoSolveStatSet(gs->gmo, gmoSolveStat_Capability);
-                gmoModelStatSet(gs->gmo, gmoModelStat_NoSolutionReturned);
-                return 0;
+                case E_ProblemCreationStatus::NormalCompletion :
+                    break;
+                case E_ProblemCreationStatus::CapabilityProblem :
+                    gmoSolveStatSet(gs->gmo, gmoSolveStat_Capability);
+                    gmoModelStatSet(gs->gmo, gmoModelStat_NoSolutionReturned);
+                    return 0;
+                default:
+                    gmoSolveStatSet(gs->gmo, gmoSolveStat_SetupErr);
+                    gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
+                    return 0;
             }
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
