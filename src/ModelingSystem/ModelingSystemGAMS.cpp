@@ -164,14 +164,18 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
         gmoNameInput(modelingObject, buffer);
         problem->name = buffer;
 
+        /* copyVariables and copyConstraints only return false if there was an unsupported variable or equation type or there were no variables or no equations
+         * all cases are SHOT capability problems
+         */
+
         if(!copyVariables(problem))
-            return (E_ProblemCreationStatus::ErrorInVariables);
+            return (E_ProblemCreationStatus::CapabilityProblem);
 
         if(!copyObjectiveFunction(problem))
             return (E_ProblemCreationStatus::ErrorInObjective);
 
         if(!copyConstraints(problem))
-            return (E_ProblemCreationStatus::ErrorInConstraints);
+            return (E_ProblemCreationStatus::CapabilityProblem);
 
         if(!copyLinearTerms(problem))
             return (E_ProblemCreationStatus::ErrorInConstraints);
