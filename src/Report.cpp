@@ -97,9 +97,19 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             combDualCuts = fmt::format("{:>4d} | {:<6d}", dualCutsAdded, dualCutsTotal);
         }
 
-        std::string combObjectiveValue
-            = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(dualObjectiveValue, "{:g}"),
+        std::string combObjectiveValue;
+
+        if(env->problem->objectiveFunction->properties.isMinimize)
+        {
+            combObjectiveValue = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(dualObjectiveValue, "{:g}"),
                 Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+        }
+        else
+        {
+            combObjectiveValue
+                = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
+                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"));
+        }
 
         std::string combObjectiveGap
             = fmt::format("{:>8s} | {:<8s}", Utilities::toStringFormat(absoluteObjectiveGap, "{:.1e}"),
@@ -213,9 +223,21 @@ void Report::outputIterationDetailHeader()
 
     header << "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current "
               "solution\r\n";
-    header << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | "
-              "max.err.\r\n";
-    header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────────"
+
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        header
+            << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | "
+               "max.err.\r\n";
+    }
+    else
+    {
+        header
+            << "     #: type      │  tot.  │   + | tot.  │     primal | dual       │    abs. | rel.    │    obj.fn. | "
+               "max.err.\r\n";
+    }
+    header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
+              "────"
               "───────────╴\r\n";
     header << "\r\n";
 
