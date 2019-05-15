@@ -142,6 +142,9 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         int j = std::get<1>(values);
         auto NCV = std::get<2>(values);
 
+        if(NCV.error <= 0.0)
+            continue;
+
         VectorDouble externalPoint;
         VectorDouble internalPoint;
 
@@ -164,7 +167,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             env->timing->stopTimer("DualCutGenerationRootSearch");
             externalPoint = solPoints.at(i).point;
 
-            env->output->outputInfo("     Cannot find solution with rootsearch, using solution point instead.");
+            env->output->outputDebug("     Cannot find solution with rootsearch, using solution point instead.");
         }
 
         auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
@@ -213,7 +216,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         }
         else
         {
-            env->output->outputCritical("     Could not add hyperplane to waiting list since constraint value is "
+            env->output->outputDebug("     Could not add hyperplane to waiting list since constraint value is "
                 + std::to_string(externalConstraintValue.normalizedValue));
         }
     }
@@ -228,6 +231,9 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             int i = std::get<0>(values);
             int j = std::get<1>(values);
             auto NCV = std::get<2>(values);
+
+            if(NCV.error <= 0.0)
+                continue;
 
             VectorDouble externalPoint;
             VectorDouble internalPoint;
@@ -251,7 +257,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 externalPoint = solPoints.at(i).point;
 
-                env->output->outputInfo("     Cannot find solution with rootsearch, using solution point instead.");
+                env->output->outputDebug("     Cannot find solution with rootsearch, using solution point instead.");
             }
 
             auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
@@ -292,7 +298,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             }
             else
             {
-                env->output->outputCritical("     Could not add hyperplane to waiting list since constraint value is "
+                env->output->outputDebug("     Could not add hyperplane to waiting list since constraint value is "
                     + std::to_string(externalConstraintValue.normalizedValue));
             }
         }
