@@ -868,28 +868,20 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 
 void MIPSolverCplex::setCutOff(double cutOff)
 {
-    // double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
-
     try
     {
-        cplexInstance.setParam(IloCplex::CutUp, cutOff);
-
-        env->output->outputDebug(
-            "        Setting cutoff value to " + Utilities::toString(cutOff) + " for minimization.");
-        /*
-    if(isMinimizationProblem)
-    {
-        cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
-
-        env->output->outputCritical("        Setting cutoff value to "
-            + Utilities::toStringFormat(cutOff, true) + " for minimization.");
-    }
-    else
-    {
-        cplexInstance.setParam(IloCplex::CutLo, cutOff);
-        env->output->outputCritical("        Setting cutoff value to "
-            + Utilities::toStringFormat(cutOff, true) + " for maximization.");
-    }*/
+        if(isMinimizationProblem)
+        {
+            cplexInstance.setParam(IloCplex::CutUp, cutOff);
+            env->output->outputDebug(
+                "        Setting cutoff value to " + Utilities::toString(cutOff) + " for minimization.");
+        }
+        else
+        {
+            cplexInstance.setParam(IloCplex::CutLo, cutOff);
+            env->output->outputDebug(
+                "        Setting cutoff value to " + Utilities::toString(cutOff) + " for maximization.");
+        }
     }
     catch(IloException& e)
     {

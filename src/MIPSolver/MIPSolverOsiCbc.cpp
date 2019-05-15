@@ -420,7 +420,6 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
 
     try
     {
-
         if(isMinimizationProblem)
         {
             this->cutOff = cutOff + cutOffTol;
