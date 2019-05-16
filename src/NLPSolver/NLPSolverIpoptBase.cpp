@@ -701,18 +701,22 @@ void NLPSolverIpoptBase::setInitialSettings()
     {
     case(ES_IpoptSolver::ma27):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma27");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::ma57):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma57");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::ma86):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma86");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::ma97):
         ipoptApplication->Options()->SetStringValue("linear_solver", "ma97");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::mumps):
@@ -753,6 +757,15 @@ void NLPSolverIpoptBase::setInitialSettings()
 
     // ipoptApplication->Options()->SetStringValue("derivative_test", "second-order");
     // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "yes");
+
+    ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
+    ipoptApplication->Options()->SetStringValue("mu_strategy", "adaptive", true, true);
+    ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
+
+    // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and Ipopt
+    // can make use of this
+    if(sourceProblem->properties.isMIQPProblem)
+        ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
 
     setSolverSpecificInitialSettings();
 }
