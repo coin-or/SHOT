@@ -452,34 +452,34 @@ void Report::outputOptionsReport()
         report << ")\r\n";
         break;
     case(ES_PrimalNLPSolver::Ipopt):
-        report << "Ipopt (";
+        report << "Ipopt ";
 
         switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
         {
         case(ES_IpoptSolver::ma27):
-            report << "ma27";
+            report << "with HSL MA27 linear solver";
             break;
 
         case(ES_IpoptSolver::ma57):
-            report << "ma57";
+            report << "with HSL MA57 linear solver";
             break;
 
         case(ES_IpoptSolver::ma86):
-            report << "ma86";
+            report << "with HSL MA86 linear solver";
             break;
 
         case(ES_IpoptSolver::ma97):
-            report << "ma97";
+            report << "with HSL MA97 linear solver";
             break;
 
         case(ES_IpoptSolver::mumps):
-            report << "mumps";
+            report << "with MUMPS linear solver";
             break;
         default:
-            report << "mumps";
+            report << "with Ipopt default linear solver";
         }
 
-        report << ")\r\n";
+        report << "\r\n";
         break;
     default:
         report << "none";
