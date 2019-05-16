@@ -655,6 +655,10 @@ bool MIPSolverGurobi::repairInfeasibility()
             {
                 continue;
             }
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints).isSourceConvex)
+            {
+                continue;
+            }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
                 continue;

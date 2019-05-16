@@ -627,7 +627,13 @@ bool MIPSolverCplex::repairInfeasibility()
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
+            {
                 relax.add(0.0);
+            }
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints).isSourceConvex)
+            {
+                relax.add(0);
+            }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
                 relax.add(0);
