@@ -441,7 +441,10 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverOsiCbc::setCutOffAsConstraint(double cutOff) {}
+void MIPSolverOsiCbc::setCutOffAsConstraint(double cutOff)
+{
+    // TODO
+}
 
 void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
 {

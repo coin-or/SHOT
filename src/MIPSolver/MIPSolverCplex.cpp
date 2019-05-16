@@ -891,6 +891,9 @@ void MIPSolverCplex::setCutOff(double cutOff)
 
 void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 {
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
     try
     {
         if(!cutOffConstraintDefined)

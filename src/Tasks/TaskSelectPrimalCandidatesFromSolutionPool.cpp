@@ -30,14 +30,11 @@ void TaskSelectPrimalCandidatesFromSolutionPool::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if(currIter->isMIP() || env->results->usedSolutionStrategy == E_SolutionStrategy::NLP)
-    {
-        env->timing->startTimer("PrimalStrategy");
-        auto allSolutions = env->results->getCurrentIteration()->solutionPoints;
-        env->primalSolver->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
+    env->timing->startTimer("PrimalStrategy");
+    auto allSolutions = env->results->getCurrentIteration()->solutionPoints;
+    env->primalSolver->addPrimalSolutionCandidates(allSolutions, E_PrimalSolutionSource::MIPSolutionPool);
 
-        env->timing->stopTimer("PrimalStrategy");
-    }
+    env->timing->stopTimer("PrimalStrategy");
 }
 
 std::string TaskSelectPrimalCandidatesFromSolutionPool::getType()
