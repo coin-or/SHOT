@@ -95,12 +95,15 @@ enum class E_LogLevel
 enum class E_ModelReturnStatus
 {
     None,
-    LocallyOptimal,
-    GloballyOptimal,
-    IntegerSolution,
-    Infeasible,
+    OptimalGlobal,
+    OptimalLocal,
     Unbounded,
-    NoSolution,
+    UnboundedNoSolution,
+    InfeasibleGlobal,
+    InfeasibleLocal,
+    NonoptimalFeasibleSolution,
+    NonoptimalIntegerSolution,
+    NoSolutionReturned,
     ErrorUnknown,
     ErrorNoSolution
 };
@@ -223,7 +226,6 @@ enum class E_TerminationReason
     Error,
     AbsoluteGap,
     RelativeGap,
-    InteriorPointError,
     NumericIssues,
     UserAbort,
     ObjectiveGapNotReached,

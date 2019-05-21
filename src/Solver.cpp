@@ -1244,5 +1244,5 @@ std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results-
 
 E_TerminationReason Solver::getTerminationReason() { return (env->results->terminationReason); }
 
-E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->modelReturnStatus); }
+E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 } // namespace SHOT

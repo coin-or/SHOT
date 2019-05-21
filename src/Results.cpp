@@ -871,6 +871,35 @@ double Results::getRelativeCurrentObjectiveGap()
     return (gap);
 }
 
+E_ModelReturnStatus Results::getModelReturnStatus()
+{
+    if(isRelativeObjectiveGapToleranceMet() || isAbsoluteObjectiveGapToleranceMet())
+    {
+        return (solutionIsGlobal ? E_ModelReturnStatus::OptimalGlobal : E_ModelReturnStatus::OptimalLocal);
+    }
+
+    if(terminationReason == E_TerminationReason::UnboundedProblem)
+        return (hasPrimalSolution() ? E_ModelReturnStatus::Unbounded : E_ModelReturnStatus::UnboundedNoSolution);
+
+    if(terminationReason == E_TerminationReason::InfeasibleProblem)
+        return (solutionIsGlobal ? E_ModelReturnStatus::InfeasibleGlobal : E_ModelReturnStatus::InfeasibleLocal);
+
+    if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
+        return (hasPrimalSolution() ? E_ModelReturnStatus::ErrorUnknown : E_ModelReturnStatus::ErrorNoSolution);
+
+    if(hasPrimalSolution())
+    {
+        if(env->problem->properties.isDiscrete)
+            return (E_ModelReturnStatus::NonoptimalIntegerSolution);
+        else
+            return (E_ModelReturnStatus::NonoptimalFeasibleSolution);
+    }
+
+    return (E_ModelReturnStatus::NoSolutionReturned);
+}
+
+bool Results::hasPrimalSolution() { return primalSolutions.size() > 0; }
+
 void Results::savePrimalSolutionToFile(
     const PrimalSolution& solution, const VectorString& variables, const std::string& fileName)
 {

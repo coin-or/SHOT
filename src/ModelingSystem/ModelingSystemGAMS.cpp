@@ -27,7 +27,11 @@ namespace SHOT
 {
 
 ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
-    : IModelingSystem(envPtr), modelingObject(nullptr), modelingEnvironment(nullptr), createdtmpdir(false), createdgmo(false)
+    : IModelingSystem(envPtr)
+    , modelingObject(nullptr)
+    , modelingEnvironment(nullptr)
+    , createdtmpdir(false)
+    , createdgmo(false)
 {
 }
 
@@ -164,8 +168,8 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
         gmoNameInput(modelingObject, buffer);
         problem->name = buffer;
 
-        /* copyVariables and copyConstraints only return false if there was an unsupported variable or equation type or there were no variables or no equations
-         * all cases are SHOT capability problems
+        /* copyVariables and copyConstraints only return false if there was an unsupported variable or equation type or
+         * there were no variables or no equations all cases are SHOT capability problems
          */
 
         if(!copyVariables(problem))
@@ -297,13 +301,13 @@ void ModelingSystemGAMS::finalizeSolution()
 {
     ResultsPtr r = env->results;
     assert(r != nullptr);
-    bool havesol = false;
+    bool haveSolution = false;
 
     // set primal solution and model status
     if(r->primalSolution.size() > 0)
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
-        havesol = true;
+        haveSolution = true;
     }
     else
     {
@@ -311,35 +315,44 @@ void ModelingSystemGAMS::finalizeSolution()
     }
 
     // set model status
-    switch(r->modelReturnStatus)
+    switch(r->getModelReturnStatus())
     {
-        case E_ModelReturnStatus::LocallyOptimal :
-            gmoModelStatSet(modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
-            break;
-        case E_ModelReturnStatus::GloballyOptimal :
-            // TODO check gap
-            gmoModelStatSet(modelingObject, gmoModelStat_OptimalGlobal);
-            break;
-        case E_ModelReturnStatus::IntegerSolution :
-            gmoModelStatSet(modelingObject, gmoModelStat_Integer);
-            break;
-        case E_ModelReturnStatus::Infeasible :
-            assert(!havesol);
-            gmoModelStatSet(modelingObject,  gmoModelStat_InfeasibleNoSolution);
-            break;
-        case E_ModelReturnStatus::Unbounded :
-            if( havesol )
-                gmoModelStatSet(modelingObject, gmoModelStat_Unbounded);
-            else
-                gmoModelStatSet(modelingObject, gmoModelStat_UnboundedNoSolution);
-        case E_ModelReturnStatus::NoSolution :
-            gmoModelStatSet(modelingObject, gmoModelStat_NoSolutionReturned);
-            break;
-        case E_ModelReturnStatus::ErrorUnknown :
-            gmoModelStatSet(modelingObject, gmoModelStat_ErrorUnknown);
-        case E_ModelReturnStatus::None :
-        case E_ModelReturnStatus::ErrorNoSolution :
-            gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
+    case E_ModelReturnStatus::OptimalLocal:
+        gmoModelStatSet(
+            modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
+        break;
+    case E_ModelReturnStatus::OptimalGlobal:
+        gmoModelStatSet(modelingObject, gmoModelStat_OptimalGlobal);
+        break;
+    case E_ModelReturnStatus::NonoptimalIntegerSolution:
+        gmoModelStatSet(modelingObject, gmoModelStat_Integer);
+        break;
+    case E_ModelReturnStatus::NonoptimalFeasibleSolution:
+        gmoModelStatSet(modelingObject, gmoModelStat_Feasible);
+        break;
+    case E_ModelReturnStatus::InfeasibleLocal:
+        assert(!haveSolution);
+        gmoModelStatSet(modelingObject, gmoModelStat_InfeasibleLocal);
+        break;
+    case E_ModelReturnStatus::InfeasibleGlobal:
+        assert(!haveSolution);
+        gmoModelStatSet(modelingObject, gmoModelStat_InfeasibleGlobal);
+        break;
+    case E_ModelReturnStatus::Unbounded:
+        gmoModelStatSet(modelingObject, gmoModelStat_Unbounded);
+        break;
+    case E_ModelReturnStatus::UnboundedNoSolution:
+        gmoModelStatSet(modelingObject, gmoModelStat_UnboundedNoSolution);
+        break;
+    case E_ModelReturnStatus::NoSolutionReturned:
+        gmoModelStatSet(modelingObject, gmoModelStat_NoSolutionReturned);
+        break;
+    case E_ModelReturnStatus::ErrorUnknown:
+        gmoModelStatSet(modelingObject, gmoModelStat_ErrorUnknown);
+        break;
+    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::ErrorNoSolution:
+        gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
     };
 
     // set solve status and possibly change model status
@@ -361,14 +374,13 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
         break;
     case E_TerminationReason::ConstraintTolerance:
-    case E_TerminationReason::ObjectiveStagnation:  // terminated by solver?
+    case E_TerminationReason::ObjectiveStagnation: // terminated by solver?
     case E_TerminationReason::AbsoluteGap:
     case E_TerminationReason::RelativeGap:
     case E_TerminationReason::ObjectiveGapNotReached:
         gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
         break;
     case E_TerminationReason::Error:
-    case E_TerminationReason::InteriorPointError:
     case E_TerminationReason::NumericIssues:
         gmoSolveStatSet(modelingObject, gmoSolveStat_SolverErr);
         break;
