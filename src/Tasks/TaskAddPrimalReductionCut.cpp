@@ -59,6 +59,13 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
+    if(env->results->solutionIsGlobal
+        && (env->results->isRelativeObjectiveGapToleranceMet() || env->results->isAbsoluteObjectiveGapToleranceMet()))
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
+    }
+
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
         >= env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
     {

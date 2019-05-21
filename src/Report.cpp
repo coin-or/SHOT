@@ -101,14 +101,15 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(env->problem->objectiveFunction->properties.isMinimize)
         {
-            combObjectiveValue = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(dualObjectiveValue, "{:g}"),
+            combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
+                Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
                 Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
         }
         else
         {
             combObjectiveValue
-                = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
-                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"));
+                = fmt::format("{:>12s} | {:<12s}{}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
+                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*");
         }
 
         std::string combObjectiveGap
