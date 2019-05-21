@@ -635,21 +635,24 @@ std::string Results::getResultsTrace()
     std::stringstream ss;
     ss << env->problem->name << ",";
 
-    switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
-    {
-    case(E_SolutionStrategy::MIQP):
-        ss << "MINLP";
-        break;
-    case(E_SolutionStrategy::MIQCQP):
-        ss << "MINLP";
-        break;
-    case(E_SolutionStrategy::NLP):
+    if(env->problem->properties.isLPProblem)
+        ss << "LP";
+    else if(env->problem->properties.isMILPProblem)
+        ss << "MIP";
+    else if(env->problem->properties.isQPProblem)
+        ss << "QCP";
+    else if(env->problem->properties.isQCQPProblem)
+        ss << "QCP";
+    else if(env->problem->properties.isMIQPProblem)
+        ss << "MIQCP";
+    else if(env->problem->properties.isMIQCQPProblem)
+        ss << "MIQCP";
+    else if(env->problem->properties.isNLPProblem)
         ss << "NLP";
-        break;
-    default:
+    else if(env->problem->properties.isMINLPProblem)
         ss << "MINLP";
-        break;
-    }
+    else
+        ss << "UNKNOWN";
 
     ss << ",";
     ss << "SHOT"
