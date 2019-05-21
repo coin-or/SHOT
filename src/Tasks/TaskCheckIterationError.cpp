@@ -36,7 +36,7 @@ void TaskCheckIterationError::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since an error occured.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && env->results->primalSolutions.size() > 0)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && env->results->hasPrimalSolution())
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);
@@ -67,7 +67,7 @@ void TaskCheckIterationError::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated due to numerical issues.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::None && env->results->primalSolutions.size() > 0)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::None && env->results->hasPrimalSolution())
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
         env->tasks->setNextTask(taskIDIfTrue);

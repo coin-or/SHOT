@@ -50,7 +50,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
     else
     {
-        if(env->results->primalSolutions.size() == 0)
+        if(!env->results->hasPrimalSolution())
         {
             env->results->primalSolutions.push_back(solution);
         }
@@ -388,7 +388,7 @@ std::string Results::getResultsOSrL()
         substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
         statusNode->InsertFirstChild(substatusNode);
     }
-    else if(this->primalSolutions.size() > 0)
+    else if(hasPrimalSolution())
     {
         statusNode->SetAttribute("type", "feasible");
         statusNode->SetAttribute("description", "Feasible solution found");
@@ -891,7 +891,7 @@ E_ModelReturnStatus Results::getModelReturnStatus()
     return (E_ModelReturnStatus::NoSolutionReturned);
 }
 
-bool Results::hasPrimalSolution() { return primalSolutions.size() > 0; }
+bool Results::hasPrimalSolution() { return (primalSolutions.size() > 0); }
 
 void Results::savePrimalSolutionToFile(
     const PrimalSolution& solution, const VectorString& variables, const std::string& fileName)

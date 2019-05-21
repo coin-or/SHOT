@@ -93,11 +93,9 @@ void TaskSolveIteration::run()
         }
     }
 
-    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->primalSolutions.size() > 0)
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
-        auto tmpPrimal = env->results->primalSolution;
-
-        env->dualSolver->MIPSolver->addMIPStart(tmpPrimal);
+        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))

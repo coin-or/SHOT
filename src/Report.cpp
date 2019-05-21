@@ -774,7 +774,7 @@ void Report::outputSolutionReport()
 
     auto terminationReason = env->results->terminationReason;
 
-    bool primalSolutionFound = (env->results->primalSolutions.size() > 0);
+    bool primalSolutionFound = env->results->hasPrimalSolution();
 
     if(env->results->terminationReasonDescription != "")
         report << " " << env->results->terminationReasonDescription << "\r\n\r\n";
@@ -1018,7 +1018,7 @@ void Report::outputSolutionReport()
         report << "\r\n";
     }
 
-    if(env->results->primalSolutions.size() > 0)
+    if(env->results->hasPrimalSolution())
     {
         report << fmt::format(" {:<48}{:d}",
                       "Number of primal solutions found:", env->solutionStatistics.numberOfFoundPrimalSolutions)

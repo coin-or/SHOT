@@ -62,12 +62,12 @@ void TaskPresolve::run()
     auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if(env->results->primalSolutions.size() > 0)
+    if(env->results->hasPrimalSolution())
     {
         // env->dualSolver->MIPSolver->setCutOff(env->results->getPrimalBound());
     }
 
-    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->primalSolutions.size() > 0)
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
         env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
     }

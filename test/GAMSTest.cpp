@@ -269,7 +269,7 @@ bool TestCallbackGAMS(std::string filename)
     solver->registerCallback(E_EventType::UserTerminationCheck, [&env] {
         std::cout << "Checking whether to terminate SHOT... ";
 
-        if(env->results->primalSolutions.size() > 0)
+        if(env->results->hasPrimalSolution())
         {
             env->tasks->terminate();
             std::cout << "Sure, do it.\n";

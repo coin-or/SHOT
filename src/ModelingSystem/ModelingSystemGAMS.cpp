@@ -304,7 +304,7 @@ void ModelingSystemGAMS::finalizeSolution()
     bool haveSolution = false;
 
     // set primal solution and model status
-    if(r->primalSolution.size() > 0)
+    if(r->hasPrimalSolution())
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
         haveSolution = true;
