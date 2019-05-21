@@ -709,7 +709,7 @@ std::string Results::getResultsTrace()
     std::string solverStatus = "";
     std::string modelStatus = "";
 
-    // set solve status and possibly change model status
+    // set solve status
     switch(this->terminationReason)
     {
     case E_TerminationReason::IterationLimit:
