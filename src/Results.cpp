@@ -142,8 +142,6 @@ Results::~Results()
     dualSolutions.clear();
 }
 
-void Results::initializeResults(int numObj, int numVar, int numConstr) {}
-
 std::string Results::getResultsOSrL()
 {
     using namespace tinyxml2;
