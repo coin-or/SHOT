@@ -101,8 +101,7 @@ enum class E_ModelReturnStatus
     UnboundedNoSolution,
     InfeasibleGlobal,
     InfeasibleLocal,
-    NonoptimalFeasibleSolution,
-    NonoptimalIntegerSolution,
+    FeasibleSolution,
     NoSolutionReturned,
     ErrorUnknown,
     ErrorNoSolution

@@ -324,11 +324,11 @@ void ModelingSystemGAMS::finalizeSolution()
     case E_ModelReturnStatus::OptimalGlobal:
         gmoModelStatSet(modelingObject, gmoModelStat_OptimalGlobal);
         break;
-    case E_ModelReturnStatus::NonoptimalIntegerSolution:
-        gmoModelStatSet(modelingObject, gmoModelStat_Integer);
-        break;
-    case E_ModelReturnStatus::NonoptimalFeasibleSolution:
-        gmoModelStatSet(modelingObject, gmoModelStat_Feasible);
+    case E_ModelReturnStatus::FeasibleSolution:
+        if(env->problem->properties.isDiscrete)
+            gmoModelStatSet(modelingObject, gmoModelStat_Integer);
+        else
+            gmoModelStatSet(modelingObject, gmoModelStat_Feasible);
         break;
     case E_ModelReturnStatus::InfeasibleLocal:
         assert(!haveSolution);

@@ -748,11 +748,8 @@ std::string Results::getResultsTrace()
     case E_ModelReturnStatus::OptimalGlobal:
         modelStatus = "1";
         break;
-    case E_ModelReturnStatus::NonoptimalIntegerSolution:
-        modelStatus = "8";
-        break;
-    case E_ModelReturnStatus::NonoptimalFeasibleSolution:
-        modelStatus = "7";
+    case E_ModelReturnStatus::FeasibleSolution:
+        modelStatus = (env->problem->properties.isDiscrete) ? "8" : "7";
         break;
     case E_ModelReturnStatus::InfeasibleLocal:
         modelStatus = "5";
@@ -881,12 +878,7 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (hasPrimalSolution() ? E_ModelReturnStatus::ErrorUnknown : E_ModelReturnStatus::ErrorNoSolution);
 
     if(hasPrimalSolution())
-    {
-        if(env->problem->properties.isDiscrete)
-            return (E_ModelReturnStatus::NonoptimalIntegerSolution);
-        else
-            return (E_ModelReturnStatus::NonoptimalFeasibleSolution);
-    }
+        return (E_ModelReturnStatus::FeasibleSolution);
 
     return (E_ModelReturnStatus::NoSolutionReturned);
 }
