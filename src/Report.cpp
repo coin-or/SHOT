@@ -837,7 +837,48 @@ void Report::outputSolutionReport()
     case E_ModelReturnStatus::ErrorNoSolution:
         report << " An error occurred, and no primal solution was found.\r\n";
     };
-  
+
+    // Warn the user if variables are at maximum bound limits
+
+    if(primalSolutionFound)
+    {
+        bool variablesAreBounded = true;
+        double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+        double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+        double minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
+        double maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
+
+        if(minLBInt == 0)
+            minLBInt = -maxUBInt; // In case a min lower bound of zero is used, we do not want to give false warnings
+
+        for(auto& V : env->problem->realVariables)
+        {
+            if(env->results->primalSolution.at(V->index) == minLBCont
+                || env->results->primalSolution.at(V->index) == maxUBCont)
+            {
+                variablesAreBounded = false;
+                break;
+            }
+        }
+
+        if(variablesAreBounded)
+        {
+            for(auto& V : env->problem->integerVariables)
+            {
+                if(env->results->primalSolution.at(V->index) == minLBInt
+                    || env->results->primalSolution.at(V->index) == maxUBInt)
+                {
+                    variablesAreBounded = false;
+                    break;
+                }
+            }
+        }
+
+        if(!variablesAreBounded)
+            report
+                << " Warning! Solution point is at maximum variable bounds. Problem might be artificially bounded.\r\n";
+    }
+
     report << "\r\n";
 
     if(env->problem->objectiveFunction->properties.isMinimize)
