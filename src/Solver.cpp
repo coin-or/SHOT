@@ -1232,7 +1232,7 @@ double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeGlob
 
 PrimalSolution Solver::getPrimalSolution()
 {
-    if(isProblemSolved && env->results->primalSolutions.size() > 0)
+    if(isProblemSolved && env->results->hasPrimalSolution())
     {
         PrimalSolution primalSol = env->results->primalSolutions.at(0);
         return (primalSol);
@@ -1246,5 +1246,5 @@ std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results-
 
 E_TerminationReason Solver::getTerminationReason() { return (env->results->terminationReason); }
 
-E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->modelReturnStatus); }
+E_ModelReturnStatus Solver::getModelReturnStatus() { return (env->results->getModelReturnStatus()); }
 } // namespace SHOT

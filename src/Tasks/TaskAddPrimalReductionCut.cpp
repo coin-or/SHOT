@@ -39,7 +39,7 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    if(env->results->primalSolutions.size() == 0)
+    if(!env->results->hasPrimalSolution())
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;

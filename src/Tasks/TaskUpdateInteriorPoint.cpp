@@ -30,7 +30,7 @@ TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() = default;
 void TaskUpdateInteriorPoint::run()
 {
     // If we do not yet have a valid primal solution we can't do anything
-    if(env->results->primalSolutions.size() == 0)
+    if(!env->results->hasPrimalSolution())
         return;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)

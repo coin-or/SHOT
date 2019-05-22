@@ -298,7 +298,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         // Add current primal solution as new incumbent candidate
         auto primalBound = env->results->getPrimalBound();
 
-        if(env->results->primalSolutions.size() > 0
+        if(env->results->hasPrimalSolution()
             && ((isMinimization && lastUpdatedPrimal < primalBound) || (!isMinimization && primalBound > primalBound)))
         {
             auto primalSol = env->results->primalSolution;

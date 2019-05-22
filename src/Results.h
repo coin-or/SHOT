@@ -70,7 +70,8 @@ public:
     E_TerminationReason terminationReason = E_TerminationReason::None;
     std::string terminationReasonDescription;
 
-    E_ModelReturnStatus modelReturnStatus = E_ModelReturnStatus::None;
+    E_ModelReturnStatus getModelReturnStatus();
+    bool hasPrimalSolution();
 
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 

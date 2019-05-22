@@ -797,116 +797,47 @@ void Report::outputSolutionReport()
 
     auto terminationReason = env->results->terminationReason;
 
-    bool primalSolutionFound = (env->results->primalSolutions.size() > 0);
+    bool primalSolutionFound = env->results->hasPrimalSolution();
 
     if(env->results->terminationReasonDescription != "")
         report << " " << env->results->terminationReasonDescription << "\r\n\r\n";
 
-    if(env->results->solutionIsGlobal)
+    switch(env->results->getModelReturnStatus())
     {
-        report << " Solution is global.\r\n";
-    }
-    else
-    {
-
-        report << " Solution is local.\r\n";
-    }
-
-    // Warn the user if variables are at maximum bound limits
-    if(primalSolutionFound)
-    {
-        bool variablesAreBounded = true;
-
-        double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
-
-        if(minLBInt == 0)
-            minLBInt = -maxUBInt; // In case a min lower bound of zero is used, we do not want to give false warnings
-
-        for(auto& V : env->problem->realVariables)
-        {
-            if(env->results->primalSolution.at(V->index) == minLBCont
-                || env->results->primalSolution.at(V->index) == maxUBCont)
-            {
-                variablesAreBounded = false;
-                break;
-            }
-        }
-
-        if(variablesAreBounded)
-        {
-            for(auto& V : env->problem->integerVariables)
-            {
-                if(env->results->primalSolution.at(V->index) == minLBInt
-                    || env->results->primalSolution.at(V->index) == maxUBInt)
-                {
-                    variablesAreBounded = false;
-                    break;
-                }
-            }
-        }
-
-        if(!variablesAreBounded)
-            report
-                << " Warning! Solution point is at maximum variable bounds. Problem might be artificially bounded.\r\n";
-    }
-
-    if(terminationReason == E_TerminationReason::AbsoluteGap || terminationReason == E_TerminationReason::RelativeGap)
-    {
-        report << " Optimal primal solution found to given tolerances.\r\n";
-    }
-    else if(terminationReason == E_TerminationReason::InfeasibleProblem)
-    {
-        report << " No solution found since problem is infeasible.\r\n";
-    }
-    else if(terminationReason == E_TerminationReason::ConstraintTolerance
-        || terminationReason == E_TerminationReason::ObjectiveGapNotReached
-        || terminationReason == E_TerminationReason::ObjectiveStagnation
-        || terminationReason == E_TerminationReason::IterationLimit
-        || terminationReason == E_TerminationReason::TimeLimit)
-    {
-        if(primalSolutionFound)
-            report << " Feasible primal solution found. Can not guarantee optimality to the given termination "
-                      "criteria.\r\n";
-        else
-            report << " No feasible primal solution found. Try modifying the termination criteria.\r\n";
-    }
-    else if(terminationReason == E_TerminationReason::UnboundedProblem)
-    {
-        report << " No solution found since problem is unbounded.\r\n";
-    }
-    else if(terminationReason == E_TerminationReason::NumericIssues)
-    {
-        if(primalSolutionFound)
-            report << " Feasible primal solution found. Can not guarantee optimality due to numeric issues.\r\n";
-        else
-            report << " No feasible primal solution found due to numeric issues.\r\n";
-    }
-    else if(terminationReason == E_TerminationReason::UserAbort)
-    {
-        if(primalSolutionFound)
-            report << " Feasible primal solution found. Can not guarantee optimality since solution process was "
-                      "aborted.\r\n";
-        else
-            report << " No feasible primal solution found since solution process was aborted.\r\n";
-    }
-    else if(terminationReason == E_TerminationReason::Error)
-    {
-        if(primalSolutionFound)
-            report << " Feasible primal solution found. Can not guarantee optimality since an error occured.\r\n";
-        else
-            report << " No feasible primal solution found since an error occured.\r\n";
-    }
-    else
-    {
-        if(primalSolutionFound)
-            report << " Feasible primal solution found. Can not guarantee optimality since an error occured.\r\n";
-        else
-            report << " No feasible primal solution found since an error occured.\r\n";
-    }
-
+    case E_ModelReturnStatus::OptimalLocal:
+        report << " Optimal primal solution found, but it might be local since the model seems to be nonconvex.\r\n";
+        break;
+    case E_ModelReturnStatus::OptimalGlobal:
+        report << " Globally optimal primal solution found.\r\n";
+        break;
+    case E_ModelReturnStatus::FeasibleSolution:
+        report << " Feasible primal solution found. Can not guarantee optimality to the given termination "
+                  "criteria.\r\n";
+        break;
+    case E_ModelReturnStatus::InfeasibleLocal:
+        report << " Problem found to be infeasible, but globality could not be verified since the problem seems to be "
+                  "nonconvex.\r\n";
+        break;
+    case E_ModelReturnStatus::InfeasibleGlobal:
+        report << " Problem is infeasible.\r\n";
+        break;
+    case E_ModelReturnStatus::Unbounded:
+        report << " Problem is unbounded, but a primal solution was found.\r\n";
+        break;
+    case E_ModelReturnStatus::UnboundedNoSolution:
+        report << " Problem is unbounded, and no primal solution was found.\r\n";
+        break;
+    case E_ModelReturnStatus::NoSolutionReturned:
+        report << " No solution found. Try modifying the termination criteria.\r\n";
+        break;
+    case E_ModelReturnStatus::ErrorUnknown:
+        report << " An error occurred, but a primal solution was found.\r\n";
+        break;
+    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::ErrorNoSolution:
+        report << " An error occurred, and no primal solution was found.\r\n";
+    };
+  
     report << "\r\n";
 
     if(env->problem->objectiveFunction->properties.isMinimize)
@@ -1092,7 +1023,7 @@ void Report::outputSolutionReport()
         report << "\r\n";
     }
 
-    if(env->results->primalSolutions.size() > 0)
+    if(env->results->hasPrimalSolution())
     {
         report << fmt::format(" {:<48}{:d}",
                       "Number of primal solutions found:", env->solutionStatistics.numberOfFoundPrimalSolutions)

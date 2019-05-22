@@ -33,7 +33,7 @@ void TaskCheckObjectiveGapNotMet::run()
     if(currIter->type != E_IterationProblemType::MIP)
         return;
 
-    if(env->results->primalSolutions.size() > 0 && !env->results->isRelativeObjectiveGapToleranceMet()
+    if(env->results->hasPrimalSolution() && !env->results->isRelativeObjectiveGapToleranceMet()
         && !env->results->isAbsoluteObjectiveGapToleranceMet())
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;

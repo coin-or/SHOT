@@ -50,7 +50,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
     }
     else
     {
-        if(env->results->primalSolutions.size() == 0)
+        if(!env->results->hasPrimalSolution())
         {
             env->results->primalSolutions.push_back(solution);
         }
@@ -386,7 +386,7 @@ std::string Results::getResultsOSrL()
         substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
         statusNode->InsertFirstChild(substatusNode);
     }
-    else if(this->primalSolutions.size() > 0)
+    else if(hasPrimalSolution())
     {
         statusNode->SetAttribute("type", "feasible");
         statusNode->SetAttribute("description", "Feasible solution found");
@@ -633,21 +633,24 @@ std::string Results::getResultsTrace()
     std::stringstream ss;
     ss << env->problem->name << ",";
 
-    switch(static_cast<E_SolutionStrategy>(env->results->usedSolutionStrategy))
-    {
-    case(E_SolutionStrategy::MIQP):
-        ss << "MINLP";
-        break;
-    case(E_SolutionStrategy::MIQCQP):
-        ss << "MINLP";
-        break;
-    case(E_SolutionStrategy::NLP):
+    if(env->problem->properties.isLPProblem)
+        ss << "LP";
+    else if(env->problem->properties.isMILPProblem)
+        ss << "MIP";
+    else if(env->problem->properties.isQPProblem)
+        ss << "QCP";
+    else if(env->problem->properties.isQCQPProblem)
+        ss << "QCP";
+    else if(env->problem->properties.isMIQPProblem)
+        ss << "MIQCP";
+    else if(env->problem->properties.isMIQCQPProblem)
+        ss << "MIQCP";
+    else if(env->problem->properties.isNLPProblem)
         ss << "NLP";
-        break;
-    default:
+    else if(env->problem->properties.isMINLPProblem)
         ss << "MINLP";
-        break;
-    }
+    else
+        ss << "UNKNOWN";
 
     ss << ",";
     ss << "SHOT"
@@ -704,83 +707,70 @@ std::string Results::getResultsTrace()
     std::string solverStatus = "";
     std::string modelStatus = "";
 
-    bool isOptimal = false;
-
-    if(this->terminationReason == E_TerminationReason::AbsoluteGap
-        || this->terminationReason == E_TerminationReason::RelativeGap)
+    // set solve status
+    switch(this->terminationReason)
     {
-        solverStatus = "1";
-        isOptimal = true;
-    }
-    else if(this->terminationReason == E_TerminationReason::ObjectiveStagnation
-        || this->terminationReason == E_TerminationReason::IterationLimit)
-    {
+    case E_TerminationReason::IterationLimit:
         solverStatus = "2";
-    }
-    else if(this->terminationReason == E_TerminationReason::TimeLimit)
-    {
+        break;
+    case E_TerminationReason::TimeLimit:
         solverStatus = "3";
-    }
-    else if(this->terminationReason == E_TerminationReason::NumericIssues)
-    {
-        solverStatus = "5";
-    }
-    else if(this->terminationReason == E_TerminationReason::UserAbort)
-    {
+        break;
+    case E_TerminationReason::UserAbort:
         solverStatus = "8";
-    }
-    else if(this->terminationReason == E_TerminationReason::Error)
-    {
-        solverStatus = "10";
-    }
-    else if(this->terminationReason == E_TerminationReason::InfeasibleProblem
-        || this->terminationReason == E_TerminationReason::ConstraintTolerance
-        || this->terminationReason == E_TerminationReason::ObjectiveGapNotReached
-        || this->terminationReason == E_TerminationReason::UnboundedProblem)
-    {
+        break;
+    case E_TerminationReason::InfeasibleProblem:
+    case E_TerminationReason::UnboundedProblem:
+    case E_TerminationReason::ConstraintTolerance:
+    case E_TerminationReason::AbsoluteGap:
+    case E_TerminationReason::RelativeGap:
+    case E_TerminationReason::ObjectiveGapNotReached:
         solverStatus = "1";
-    }
-    else
-    {
+        break;
+    case E_TerminationReason::ObjectiveStagnation:
+    case E_TerminationReason::Error:
+    case E_TerminationReason::NumericIssues:
         solverStatus = "10";
-        env->output->outputError(
-            "Unknown return code " + std::to_string((int)this->terminationReason) + " obtained from solver.");
+        break;
+    case E_TerminationReason::None:
+        solverStatus = "13";
+        break;
     }
 
-    auto solStatus = this->getCurrentIteration()->solutionStatus;
-
-    if(isOptimal)
+    // set model status
+    switch(this->getModelReturnStatus())
     {
+    case E_ModelReturnStatus::OptimalLocal:
+        modelStatus = "2";
+        break;
+    case E_ModelReturnStatus::OptimalGlobal:
         modelStatus = "1";
-    }
-    else if(this->primalSolutions.size() > 0)
-    {
-        modelStatus = "8";
-    }
-    else if(solStatus == E_ProblemSolutionStatus::Unbounded)
-    {
-        modelStatus = "3";
-    }
-    else if(solStatus == E_ProblemSolutionStatus::Infeasible)
-    {
+        break;
+    case E_ModelReturnStatus::FeasibleSolution:
+        modelStatus = (env->problem->properties.isDiscrete) ? "8" : "7";
+        break;
+    case E_ModelReturnStatus::InfeasibleLocal:
+        modelStatus = "5";
+        break;
+    case E_ModelReturnStatus::InfeasibleGlobal:
         modelStatus = "4";
-    }
-    else if(solStatus == E_ProblemSolutionStatus::Feasible || solStatus == E_ProblemSolutionStatus::IterationLimit
-        || solStatus == E_ProblemSolutionStatus::TimeLimit || solStatus == E_ProblemSolutionStatus::NodeLimit
-        || solStatus == E_ProblemSolutionStatus::SolutionLimit)
-    {
-        modelStatus = "7";
-    }
-    else if(solStatus == E_ProblemSolutionStatus::Error || solStatus == E_ProblemSolutionStatus::Numeric
-        || solStatus == E_ProblemSolutionStatus::CutOff || solStatus == E_ProblemSolutionStatus::Abort)
-    {
+        break;
+    case E_ModelReturnStatus::Unbounded:
+        modelStatus = "3";
+        break;
+    case E_ModelReturnStatus::UnboundedNoSolution:
+        modelStatus = "18";
+        break;
+    case E_ModelReturnStatus::NoSolutionReturned:
+        modelStatus = "14";
+        break;
+    case E_ModelReturnStatus::ErrorUnknown:
         modelStatus = "12";
-    }
-    else
-    {
-        modelStatus = "NA";
-        env->output->outputError("Unknown return code " + std::to_string((int)solStatus) + " from model solution.");
-    }
+        break;
+    case E_ModelReturnStatus::None:
+    case E_ModelReturnStatus::ErrorNoSolution:
+        modelStatus = "13";
+    };
 
     ss << modelStatus << ",";
     ss << solverStatus << ",";
@@ -868,6 +858,30 @@ double Results::getRelativeCurrentObjectiveGap()
 
     return (gap);
 }
+
+E_ModelReturnStatus Results::getModelReturnStatus()
+{
+    if(isRelativeObjectiveGapToleranceMet() || isAbsoluteObjectiveGapToleranceMet())
+    {
+        return (solutionIsGlobal ? E_ModelReturnStatus::OptimalGlobal : E_ModelReturnStatus::OptimalLocal);
+    }
+
+    if(terminationReason == E_TerminationReason::UnboundedProblem)
+        return (hasPrimalSolution() ? E_ModelReturnStatus::Unbounded : E_ModelReturnStatus::UnboundedNoSolution);
+
+    if(terminationReason == E_TerminationReason::InfeasibleProblem)
+        return (solutionIsGlobal ? E_ModelReturnStatus::InfeasibleGlobal : E_ModelReturnStatus::InfeasibleLocal);
+
+    if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
+        return (hasPrimalSolution() ? E_ModelReturnStatus::ErrorUnknown : E_ModelReturnStatus::ErrorNoSolution);
+
+    if(hasPrimalSolution())
+        return (E_ModelReturnStatus::FeasibleSolution);
+
+    return (E_ModelReturnStatus::NoSolutionReturned);
+}
+
+bool Results::hasPrimalSolution() { return (primalSolutions.size() > 0); }
 
 void Results::savePrimalSolutionToFile(
     const PrimalSolution& solution, const VectorString& variables, const std::string& fileName)
