@@ -96,7 +96,12 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         auto objectiveBound = sourceProblem->objectiveFunction->getBounds();
 
         destination->setAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
-        destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
+
+        if(sourceProblem->objectiveFunction->properties.isMinimize)
+            destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
+        else
+            destination->addVariable(
+                "shot_dual_objvar", E_VariableType::Real, -objectiveBound.u(), -objectiveBound.l());
     }
 
     // Now creating the objective function

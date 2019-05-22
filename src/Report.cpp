@@ -97,9 +97,20 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             combDualCuts = fmt::format("{:>4d} | {:<6d}", dualCutsAdded, dualCutsTotal);
         }
 
-        std::string combObjectiveValue
-            = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(dualObjectiveValue, "{:g}"),
+        std::string combObjectiveValue;
+
+        if(env->problem->objectiveFunction->properties.isMinimize)
+        {
+            combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
+                Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
                 Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+        }
+        else
+        {
+            combObjectiveValue
+                = fmt::format("{:>12s} | {:<12s}{}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
+                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*");
+        }
 
         std::string combObjectiveGap
             = fmt::format("{:>8s} | {:<8s}", Utilities::toStringFormat(absoluteObjectiveGap, "{:.1e}"),
@@ -213,9 +224,21 @@ void Report::outputIterationDetailHeader()
 
     header << "    Iteration     │  Time  │  Dual cuts  │     Objective value     │   Objective gap   │     Current "
               "solution\r\n";
-    header << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | "
-              "max.err.\r\n";
-    header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────────"
+
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        header
+            << "     #: type      │  tot.  │   + | tot.  │       dual | primal     │    abs. | rel.    │    obj.fn. | "
+               "max.err.\r\n";
+    }
+    else
+    {
+        header
+            << "     #: type      │  tot.  │   + | tot.  │     primal | dual       │    abs. | rel.    │    obj.fn. | "
+               "max.err.\r\n";
+    }
+    header << "╶─────────────────┴────────┴─────────────┴─────────────────────────┴───────────────────┴────────────"
+              "────"
               "───────────╴\r\n";
     header << "\r\n";
 
@@ -430,34 +453,34 @@ void Report::outputOptionsReport()
         report << ")\r\n";
         break;
     case(ES_PrimalNLPSolver::Ipopt):
-        report << "Ipopt (";
+        report << "Ipopt ";
 
         switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
         {
         case(ES_IpoptSolver::ma27):
-            report << "ma27";
+            report << "with HSL MA27 linear solver";
             break;
 
         case(ES_IpoptSolver::ma57):
-            report << "ma57";
+            report << "with HSL MA57 linear solver";
             break;
 
         case(ES_IpoptSolver::ma86):
-            report << "ma86";
+            report << "with HSL MA86 linear solver";
             break;
 
         case(ES_IpoptSolver::ma97):
-            report << "ma97";
+            report << "with HSL MA97 linear solver";
             break;
 
         case(ES_IpoptSolver::mumps):
-            report << "mumps";
+            report << "with MUMPS linear solver";
             break;
         default:
-            report << "mumps";
+            report << "with Ipopt default linear solver";
         }
 
-        report << ")\r\n";
+        report << "\r\n";
         break;
     default:
         report << "none";
@@ -814,12 +837,22 @@ void Report::outputSolutionReport()
     case E_ModelReturnStatus::ErrorNoSolution:
         report << " An error occurred, and no primal solution was found.\r\n";
     };
-
+  
     report << "\r\n";
 
-    report << " Objective bound [dual, primal]:                 ";
-    report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << ", ";
-    report << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << "]\r\n";
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        report << " Objective bound (minimization) [dual, primal]:  ";
+        report << "[" << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << ", ";
+        report << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << "]\r\n";
+    }
+    else
+    {
+        report << " Objective bound (maximization) [primal, dual]:  ";
+        report << "[" << Utilities::toStringFormat(env->results->getPrimalBound(), "{:g}") << ", ";
+        report << Utilities::toStringFormat(env->results->getGlobalDualBound(), "{:g}") << "]\r\n";
+    }
+
     report << " Objective gap absolute / relative:              ";
     report << "" << Utilities::toStringFormat(env->results->getAbsoluteGlobalObjectiveGap(), "{:g}") << " / ";
     report << Utilities::toStringFormat(env->results->getRelativeGlobalObjectiveGap(), "{:g}") << "\r\n";

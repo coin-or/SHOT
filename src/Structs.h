@@ -164,6 +164,7 @@ struct GeneratedHyperplane
     E_HyperplaneSource source;
     bool isLazy;
     bool isRemoved;
+    bool isSourceConvex;
     int iterationGenerated;
 
     std::size_t pointHash;

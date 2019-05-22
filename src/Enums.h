@@ -270,6 +270,7 @@ enum class ES_InteriorPointStrategy
 
 enum class ES_IpoptSolver
 {
+    IpoptDefault,
     ma27,
     ma57,
     ma86,

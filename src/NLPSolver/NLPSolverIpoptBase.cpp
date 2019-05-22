@@ -700,31 +700,35 @@ void NLPSolverIpoptBase::setInitialSettings()
     switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
     {
     case(ES_IpoptSolver::ma27):
-        subsolver = "ma27";
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma27");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::ma57):
-        subsolver = "ma57";
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma57");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::ma86):
-        subsolver = "ma86";
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma86");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::ma97):
-        subsolver = "ma97";
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma97");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
     case(ES_IpoptSolver::mumps):
-        subsolver = "mumps";
+        ipoptApplication->Options()->SetStringValue("linear_solver", "mumps");
         break;
 
+    case(ES_IpoptSolver::IpoptDefault):
     default:
-        subsolver = "mumps";
+        break;
     }
 
     // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
-    ipoptApplication->Options()->SetStringValue("linear_solver", subsolver);
 
     switch(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")))
     {
@@ -753,6 +757,15 @@ void NLPSolverIpoptBase::setInitialSettings()
 
     // ipoptApplication->Options()->SetStringValue("derivative_test", "second-order");
     // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "yes");
+
+    ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
+    ipoptApplication->Options()->SetStringValue("mu_strategy", "adaptive", true, true);
+    ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
+
+    // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and Ipopt
+    // can make use of this
+    if(sourceProblem->properties.isMIQPProblem)
+        ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
 
     setSolverSpecificInitialSettings();
 }

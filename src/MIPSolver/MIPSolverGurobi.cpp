@@ -655,6 +655,10 @@ bool MIPSolverGurobi::repairInfeasibility()
             {
                 continue;
             }
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints).isSourceConvex)
+            {
+                continue;
+            }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
                 continue;
@@ -797,6 +801,9 @@ void MIPSolverGurobi::setCutOff(double cutOff)
 
 void MIPSolverGurobi::setCutOffAsConstraint(double cutOff)
 {
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
     try
     {
         if(!cutOffConstraintDefined)

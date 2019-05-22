@@ -535,9 +535,9 @@ void Solver::initializeSettings()
 
     VectorString enumNLPSolver;
     enumNLPSolver.push_back("Cutting plane minimax");
-    enumNLPSolver.push_back("Ipopt minimax");
+    /*enumNLPSolver.push_back("Ipopt minimax");
     enumNLPSolver.push_back("Ipopt relaxed");
-    enumNLPSolver.push_back("Ipopt minimax and relaxed");
+    enumNLPSolver.push_back("Ipopt minimax and relaxed");*/
 
     env->settings->createSetting("ESH.InteriorPoint.Solver", "Dual",
         static_cast<int>(ES_InteriorPointStrategy::CuttingPlaneMiniMax), "NLP solver", enumNLPSolver, true);
@@ -590,8 +590,9 @@ void Solver::initializeSettings()
     env->settings->createSetting("HyperplaneCuts.UseIntegerCuts", "Dual", false,
         "Add integer cuts for infeasible integer-combinations for binary problems");
 
-    env->settings->createSetting(
-        "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
+    // TODO: activate
+    // env->settings->createSetting(
+    //    "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
 
     // Dual strategy settings: MIP solver
 
@@ -954,12 +955,13 @@ void Solver::initializeSettings()
         "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     VectorString enumIPOptSolver;
-    enumIPOptSolver.push_back("ma27");
-    enumIPOptSolver.push_back("ma57");
-    enumIPOptSolver.push_back("ma86");
-    enumIPOptSolver.push_back("ma97");
-    enumIPOptSolver.push_back("mumps");
-    env->settings->createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma57),
+    enumIPOptSolver.push_back("Default");
+    enumIPOptSolver.push_back("MA27");
+    enumIPOptSolver.push_back("MA57");
+    enumIPOptSolver.push_back("MA86");
+    enumIPOptSolver.push_back("MA97");
+    enumIPOptSolver.push_back("MUMPS");
+    env->settings->createSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::IpoptDefault),
         "Ipopt linear subsolver", enumIPOptSolver);
     enumIPOptSolver.clear();
 

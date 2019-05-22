@@ -31,7 +31,7 @@ double MIPSolverBase::getObjectiveValue()
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
     if(env->reformulatedProblem->properties.numberOfDiscreteVariables == 0
-        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables)
+        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0)
     {
         return (false);
     }

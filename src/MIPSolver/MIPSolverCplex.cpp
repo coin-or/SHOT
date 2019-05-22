@@ -627,7 +627,13 @@ bool MIPSolverCplex::repairInfeasibility()
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
+            {
                 relax.add(0.0);
+            }
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints).isSourceConvex)
+            {
+                relax.add(0);
+            }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
                 relax.add(0);
@@ -868,28 +874,20 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 
 void MIPSolverCplex::setCutOff(double cutOff)
 {
-    // double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
-
     try
     {
-        cplexInstance.setParam(IloCplex::CutUp, cutOff);
-
-        env->output->outputDebug(
-            "        Setting cutoff value to " + Utilities::toString(cutOff) + " for minimization.");
-        /*
-    if(isMinimizationProblem)
-    {
-        cplexInstance.setParam(IloCplex::CutUp, cutOff + cutOffTol);
-
-        env->output->outputCritical("        Setting cutoff value to "
-            + Utilities::toStringFormat(cutOff, true) + " for minimization.");
-    }
-    else
-    {
-        cplexInstance.setParam(IloCplex::CutLo, cutOff);
-        env->output->outputCritical("        Setting cutoff value to "
-            + Utilities::toStringFormat(cutOff, true) + " for maximization.");
-    }*/
+        if(isMinimizationProblem)
+        {
+            cplexInstance.setParam(IloCplex::CutUp, cutOff);
+            env->output->outputDebug(
+                "        Setting cutoff value to " + Utilities::toString(cutOff) + " for minimization.");
+        }
+        else
+        {
+            cplexInstance.setParam(IloCplex::CutLo, cutOff);
+            env->output->outputDebug(
+                "        Setting cutoff value to " + Utilities::toString(cutOff) + " for maximization.");
+        }
     }
     catch(IloException& e)
     {
@@ -899,6 +897,9 @@ void MIPSolverCplex::setCutOff(double cutOff)
 
 void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
 {
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
     try
     {
         if(!cutOffConstraintDefined)

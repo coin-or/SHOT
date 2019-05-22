@@ -160,6 +160,21 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     genHyperplane.iterationGenerated = env->results->getCurrentIteration()->iterationNumber;
     genHyperplane.isLazy = false;
 
+    if(hyperplane.sourceConstraint)
+    {
+        if(hyperplane.sourceConstraint->properties.convexity == E_Convexity::Convex)
+            genHyperplane.isSourceConvex = true;
+        else
+            genHyperplane.isSourceConvex = false;
+    }
+    else
+    {
+        if(env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex)
+            genHyperplane.isSourceConvex = true;
+        else
+            genHyperplane.isSourceConvex = false;
+    }
+
     genHyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
 
     generatedHyperplanes.push_back(genHyperplane);

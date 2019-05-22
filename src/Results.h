@@ -32,8 +32,6 @@ public:
     Results(EnvironmentPtr envPtr);
     ~Results();
 
-    void initializeResults(int numObj, int numVar, int numConstr);
-
     VectorDouble primalSolution;
     std::vector<PrimalSolution> primalSolutions;
     std::map<E_PrimalSolutionSource, int> primalSolutionSourceStatistics;

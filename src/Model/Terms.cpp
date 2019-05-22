@@ -65,6 +65,10 @@ void QuadraticTerms::updateConvexity()
                 currentVariableIndex = variableCounter;
                 variableCounter++;
             }
+            else
+            {
+                currentVariableIndex = element.first->second;
+            }
 
             allPositive = allPositive && T->coefficient >= 0;
             allNegative = allNegative && T->coefficient <= 0;
