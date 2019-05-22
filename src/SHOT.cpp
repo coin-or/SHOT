@@ -95,7 +95,6 @@ int main(int argc, char* argv[])
         if(std::filesystem::exists(filepath))
         {
             optionsFile = filepath;
-            env->output->outputInfo("  Default options file written to: " + filepath.string());
         }
         else
         {
@@ -107,6 +106,7 @@ int main(int argc, char* argv[])
             }
 
             defaultOptionsGenerated = true;
+            env->output->outputInfo("  Default options file written to: " + filepath.string());
         }
     }
     else if(cmdl("--osol") >> filename) // Have specified a OSoL-file
