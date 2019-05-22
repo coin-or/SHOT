@@ -65,9 +65,10 @@ void Problem::updateConstraints()
             auto auxConstraint = std::make_shared<NonlinearConstraint>();
 
             auxConstraint->constant = -C->constant;
-            auxConstraint->valueRHS = -C->valueLHS;
+            auxConstraint->valueRHS = -valueLHS;
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
+            auxConstraint->index = this->numericConstraints.size() - 1;
 
             for(auto& T : C->linearTerms)
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
@@ -112,9 +113,10 @@ void Problem::updateConstraints()
             auto auxConstraint = std::make_shared<NonlinearConstraint>();
 
             auxConstraint->constant = -C->constant;
-            auxConstraint->valueRHS = -C->valueLHS;
+            auxConstraint->valueRHS = -valueLHS;
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
+            auxConstraint->index = this->numericConstraints.size() - 1;
 
             for(auto& T : C->linearTerms)
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * T->coefficient, T->variable));
