@@ -49,12 +49,6 @@ void TaskCheckIterationError::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since the problem is infeasible.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
-    {
-        env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
-        env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription = "Terminated since the problem is infeasible due to dual cutoff.";
-    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;

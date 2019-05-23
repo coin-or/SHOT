@@ -30,13 +30,9 @@ TaskCheckDualStagnation::~TaskCheckDualStagnation() = default;
 
 void TaskCheckDualStagnation::run()
 {
-    if(env->solutionStatistics.numberOfIterationsWithDualStagnation == 0) // First MIP solution
-    {
-        return;
-    }
-
-    if(env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
-        <= env->settings->getSetting<int>("DualObjectiveStagnation.IterationLimit", "Termination"))
+    if(env->reformulatedProblem->properties.isDiscrete
+        && env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
+            <= env->settings->getSetting<int>("DualStagnation.IterationLimit", "Termination"))
     {
         return;
     }
@@ -48,8 +44,16 @@ void TaskCheckDualStagnation::run()
         return;
     }
 
+    if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+        && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 1)
+    {
+        env->results->terminationReason = E_TerminationReason::NoDualCutsAdded;
+        env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since no additional dual cuts can be added.";
+    }
+
     if(env->solutionStatistics.numberOfIterationsWithDualStagnation
-        >= env->settings->getSetting<int>("DualObjectiveStagnation.IterationLimit", "Termination"))
+        >= env->settings->getSetting<int>("DualStagnation.IterationLimit", "Termination"))
     {
         env->results->terminationReason = E_TerminationReason::ObjectiveStagnation;
         env->tasks->setNextTask(taskIDIfTrue);

@@ -590,7 +590,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if(status == GRB_CUTOFF)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::CutOff;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
     }
     else if(status == GRB_SUBOPTIMAL)
     {

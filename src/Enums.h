@@ -228,6 +228,7 @@ enum class E_TerminationReason
     NumericIssues,
     UserAbort,
     ObjectiveGapNotReached,
+    NoDualCutsAdded,
     None
 };
 

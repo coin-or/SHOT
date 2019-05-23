@@ -461,6 +461,21 @@ std::string Results::getResultsOSrL()
             statusNode->InsertFirstChild(substatusNode);
         }
     }
+    else if(this->terminationReason == E_TerminationReason::NoDualCutsAdded)
+    {
+        statusNode->SetAttribute("type", "other");
+        statusNode->SetAttribute("description", "No solution found");
+
+        if(terminationReasonDescription != "")
+        {
+            statusNode->SetAttribute("numberOfSubstatuses", 1);
+
+            auto substatusNode = osrlDocument.NewElement("substatus");
+            substatusNode->SetAttribute("type", "stoppedByLimit");
+            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
+            statusNode->InsertFirstChild(substatusNode);
+        }
+    }
     else if(this->terminationReason == E_TerminationReason::IterationLimit)
     {
         statusNode->SetAttribute("type", "other");
@@ -728,6 +743,7 @@ std::string Results::getResultsTrace()
         solverStatus = "1";
         break;
     case E_TerminationReason::ObjectiveStagnation:
+    case E_TerminationReason::NoDualCutsAdded:
     case E_TerminationReason::Error:
     case E_TerminationReason::NumericIssues:
         solverStatus = "10";

@@ -195,24 +195,24 @@ int main(int argc, char* argv[])
     env->report->outputOptionsReport();
     env->report->outputProblemInstanceReport();
 
-    try
+    // try
+    //{
+    if(!solver->solveProblem()) // Solve the problem
     {
-        if(!solver->solveProblem()) // Solve the problem
-        {
-            env->output->outputCritical(" Error when solving problem.");
-            return (0);
-        }
-
-        env->report->outputSolutionReport();
-
-        env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
-                                "───────────────────────────────────╴\r\n");
+        env->output->outputCritical(" Error when solving problem.");
+        return (0);
     }
-    catch(const std::exception& error)
+
+    env->report->outputSolutionReport();
+
+    env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
+                            "───────────────────────────────────╴\r\n");
+    //}
+    /*catch(const std::exception& error)
     {
         env->output->outputError(" Error when solving problem", error.what());
         return (0);
-    }
+    }*/
 
     std::string osrl = solver->getResultsOSrL();
 

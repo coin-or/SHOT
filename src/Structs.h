@@ -205,6 +205,7 @@ struct SolutionStatistics
     int iterationLastPrimalBoundUpdate = 0;
     int iterationLastDualBoundUpdate = 0;
     int iterationLastLazyAdded = 0;
+    int iterationLastDualCutAdded = 0;
 
     double timeLastDualBoundUpdate = 0;
     double timeLastFixedNLPCall = 0;

@@ -99,6 +99,11 @@ void TaskPrintIterationReport::run()
         tmpType << "-U";
         hasSolution = false;
     }
+    else
+    {
+        tmpType << "";
+        hasSolution = false;
+    }
 
     env->report->outputIterationDetail(currIter->iterationNumber, tmpType.str(), env->timing->getElapsedTime("Total"),
         currIter->numHyperplanesAdded, currIter->totNumHyperplanes, env->results->getCurrentDualBound(),
