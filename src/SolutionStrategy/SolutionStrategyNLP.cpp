@@ -137,9 +137,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
     auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
     env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if((env->settings->getSetting<int>("Convexity", "Strategy")
-           != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex))
-        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
         auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
         env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
@@ -209,9 +207,7 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 
-    if(env->settings->getSetting<int>("Convexity", "Strategy")
-            != static_cast<int>(ES_ConvexityIdentificationStrategy::AssumeConvex)
-        && env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
         auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);

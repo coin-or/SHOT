@@ -227,7 +227,7 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-using QuadraticObjectiveFunctionPtr =std::shared_ptr<QuadraticObjectiveFunction>;
+using QuadraticObjectiveFunctionPtr = std::shared_ptr<QuadraticObjectiveFunction>;
 
 class NonlinearObjectiveFunction : public QuadraticObjectiveFunction
 {
@@ -344,7 +344,7 @@ protected:
     void initializeHessianSparsityPattern() override;
 };
 
-using NonlinearObjectiveFunctionPtr =std::shared_ptr<NonlinearObjectiveFunction> ;
+using NonlinearObjectiveFunctionPtr = std::shared_ptr<NonlinearObjectiveFunction>;
 
 std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective);
 

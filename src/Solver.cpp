@@ -486,14 +486,7 @@ void Solver::initializeSettings()
     env->settings->createSetting("UseRecommendedSettings", "Strategy", true,
         "Modifies some settings to their recommended values based on the strategy");
 
-    VectorString enumConvexityIdentificationStrategy;
-    enumConvexityIdentificationStrategy.push_back("Automatically");
-    enumConvexityIdentificationStrategy.push_back("AssumeConvex");
-    enumConvexityIdentificationStrategy.push_back("AssumeNonconvex");
-    env->settings->createSetting("Convexity", "Strategy",
-        static_cast<int>(ES_ConvexityIdentificationStrategy::Automatically),
-        "How to determine convexity of the problem", enumConvexityIdentificationStrategy);
-    enumConvexityIdentificationStrategy.clear();
+    env->settings->createSetting("AssumeConvex", "Convexity", false, "Assume that the problem is convex.");
 
     // Dual strategy settings: ECP and ESH
 
@@ -1170,15 +1163,7 @@ void Solver::setConvexityBasedSettings()
 {
     if(env->settings->getSetting<bool>("UseRecommendedSettings", "Strategy"))
     {
-        auto convexityStrategy
-            = static_cast<ES_ConvexityIdentificationStrategy>(env->settings->getSetting<int>("Convexity", "Strategy"));
-
-        if((convexityStrategy == ES_ConvexityIdentificationStrategy::Automatically
-               && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
-            || convexityStrategy == ES_ConvexityIdentificationStrategy::AssumeConvex)
-        {
-        }
-        else
+        if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);

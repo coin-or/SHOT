@@ -247,13 +247,6 @@ enum class ES_AddPrimalPointAsInteriorPoint
     OnlyAverage
 };
 
-enum class ES_ConvexityIdentificationStrategy
-{
-    Automatically,
-    AssumeConvex,
-    AssumeNonconvex
-};
-
 enum class ES_HyperplaneCutStrategy
 {
     ESH,

@@ -11,6 +11,7 @@
 #include "Problem.h"
 #include "../Enums.h"
 #include "../Output.h"
+#include "../Settings.h"
 #include "../Utilities.h"
 #include "../Model/Simplifications.h"
 #include "../Tasks/TaskReformulateProblem.h"
@@ -195,56 +196,74 @@ void Problem::updateVariables()
 
 void Problem::updateProperties()
 {
+    bool assumeConvex = env->settings->getSetting<bool>("AssumeConvex", "Convexity");
+
     objectiveFunction->updateProperties();
+
+    if(assumeConvex && objectiveFunction->properties.convexity != E_Convexity::Linear)
+    {
+        objectiveFunction->properties.convexity
+            = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
+    }
 
     for(auto& C : numericConstraints)
     {
         C->updateProperties();
+
+        if(assumeConvex && C->properties.convexity != E_Convexity::Linear)
+            C->properties.convexity = E_Convexity::Convex;
     }
 
     if(!variablesUpdated)
         updateVariables();
 
-    if(objectiveFunction->properties.isMinimize
-        && (objectiveFunction->properties.convexity == E_Convexity::Linear
-               || objectiveFunction->properties.convexity == E_Convexity::Convex))
+    if(assumeConvex)
     {
         properties.convexity = E_ProblemConvexity::Convex;
     }
-    else if(objectiveFunction->properties.isMaximize
-        && (objectiveFunction->properties.convexity == E_Convexity::Linear
-               || objectiveFunction->properties.convexity == E_Convexity::Concave))
+    else
     {
-        properties.convexity = E_ProblemConvexity::Convex;
-    }
-    else if(objectiveFunction->properties.convexity == E_Convexity::Nonconvex)
-    {
-        properties.convexity = E_ProblemConvexity::Nonconvex;
-    }
-    else if(objectiveFunction->properties.convexity == E_Convexity::Unknown)
-    {
-        properties.convexity = E_ProblemConvexity::Nonconvex;
-    }
-
-    if(properties.convexity == E_ProblemConvexity::Convex)
-    {
-        for(auto& C : quadraticConstraints)
+        if(objectiveFunction->properties.isMinimize
+            && (objectiveFunction->properties.convexity == E_Convexity::Linear
+                   || objectiveFunction->properties.convexity == E_Convexity::Convex))
         {
-            if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
-            {
-                properties.convexity = E_ProblemConvexity::Nonconvex;
-                break;
-            }
+            properties.convexity = E_ProblemConvexity::Convex;
+        }
+        else if(objectiveFunction->properties.isMaximize
+            && (objectiveFunction->properties.convexity == E_Convexity::Linear
+                   || objectiveFunction->properties.convexity == E_Convexity::Concave))
+        {
+            properties.convexity = E_ProblemConvexity::Convex;
+        }
+        else if(objectiveFunction->properties.convexity == E_Convexity::Nonconvex)
+        {
+            properties.convexity = E_ProblemConvexity::Nonconvex;
+        }
+        else if(objectiveFunction->properties.convexity == E_Convexity::Unknown)
+        {
+            properties.convexity = E_ProblemConvexity::Nonconvex;
         }
 
-        if(properties.convexity != E_ProblemConvexity::Nonconvex)
+        if(properties.convexity == E_ProblemConvexity::Convex)
         {
-            for(auto& C : nonlinearConstraints)
+            for(auto& C : quadraticConstraints)
             {
                 if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
                 {
                     properties.convexity = E_ProblemConvexity::Nonconvex;
                     break;
+                }
+            }
+
+            if(properties.convexity != E_ProblemConvexity::Nonconvex)
+            {
+                for(auto& C : nonlinearConstraints)
+                {
+                    if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
+                    {
+                        properties.convexity = E_ProblemConvexity::Nonconvex;
+                        break;
+                    }
                 }
             }
         }
