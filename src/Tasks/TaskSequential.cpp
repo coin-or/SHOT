@@ -30,9 +30,9 @@ void TaskSequential::run()
 {
     for(auto& T : m_tasks)
     {
-        env->output->outputDebug("┌─── Started task:  " + T->getType());
+        env->output->outputTrace("┌─── Started task:  " + T->getType());
         T->run();
-        env->output->outputDebug("└─── Finished task: " + T->getType());
+        env->output->outputTrace("└─── Finished task: " + T->getType());
     }
 }
 

@@ -225,9 +225,9 @@ bool SolutionStrategyNLP::solveProblem()
 
     while(env->tasks->getNextTask(nextTask))
     {
-        env->output->outputDebug("┌─── Started task:  " + nextTask->getType());
+        env->output->outputTrace("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
-        env->output->outputDebug("└─── Finished task: " + nextTask->getType());
+        env->output->outputTrace("└─── Finished task: " + nextTask->getType());
     }
 
     return (true);
