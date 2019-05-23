@@ -39,7 +39,7 @@ void TaskCheckConstraintTolerance::run()
     if(env->reformulatedProblem->properties.isMIQPProblem || env->reformulatedProblem->properties.isQPProblem)
         return;
 
-    auto constraintTolerance = env->settings->getSetting<double>("ConstraintTolerance", "Termination");
+    auto constraintTolerance = env->settings->getSetting<double>("ConstraintTolerance", "Termination") + 1e-10;
 
     // Checks it the nonlinear objective is fulfilled
     if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
@@ -51,15 +51,13 @@ void TaskCheckConstraintTolerance::run()
     }
 
     // Checks if the quadratic constraints are fulfilled to tolerance
-    if(!env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point,
-           env->settings->getSetting<double>("ConstraintTolerance", "Termination")))
+    if(!env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
     {
         return;
     }
 
     // Checks if the nonlinear constraints are fulfilled to tolerance
-    if(!env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point,
-           env->settings->getSetting<double>("ConstraintTolerance", "Termination")))
+    if(!env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
     {
         return;
     }

@@ -109,7 +109,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 bool Results::isRelativeObjectiveGapToleranceMet()
 {
     if(this->getRelativeGlobalObjectiveGap()
-        <= env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination"))
+        <= env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") + 1e-10)
     {
         return (true);
     }
@@ -122,7 +122,7 @@ bool Results::isRelativeObjectiveGapToleranceMet()
 bool Results::isAbsoluteObjectiveGapToleranceMet()
 {
     if(this->getAbsoluteGlobalObjectiveGap()
-        <= env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination"))
+        <= env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") + 1e-10)
     {
         return (true);
     }
