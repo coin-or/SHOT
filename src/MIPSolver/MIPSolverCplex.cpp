@@ -624,13 +624,16 @@ bool MIPSolverCplex::repairInfeasibility()
 
         relax.add(numOrigConstraints, 0.0);
 
+        int cutoffOffset = 0;
+
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
             {
                 relax.add(0.0);
+                cutoffOffset = 1;
             }
-            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints).isSourceConvex)
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - cutoffOffset).isSourceConvex)
             {
                 relax.add(0);
             }

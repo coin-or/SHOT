@@ -649,13 +649,16 @@ bool MIPSolverGurobi::repairInfeasibility()
         VectorDouble relaxParameters;
         int numConstraintsToRepair = 0;
 
+        int cutoffOffset = 0;
+
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
             {
+                cutoffOffset = 1;
                 continue;
             }
-            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints).isSourceConvex)
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - cutoffOffset).isSourceConvex)
             {
                 continue;
             }
