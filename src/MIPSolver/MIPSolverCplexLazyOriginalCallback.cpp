@@ -282,6 +282,7 @@ void CtCallbackI::main()
     {
         env->results->createIteration();
         currIter = env->results->getCurrentIteration();
+        currIter->type = E_IterationProblemType::MIP;
     }
 
     currIter->isSolved = true;

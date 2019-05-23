@@ -247,6 +247,7 @@ void GurobiCallback::callback()
             {
                 env->results->createIteration();
                 currIter = env->results->getCurrentIteration();
+                currIter->type = E_IterationProblemType::MIP;
             }
 
             int numModelVars = static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
