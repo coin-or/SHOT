@@ -86,18 +86,18 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            if(NCV.constraint->properties.convexity == E_Convexity::Nonconvex)
-            {
-                nonconvexSelectedNumericValues.emplace_back(i, NCV);
-                continue;
-            }
-
             size_t hash = Utilities::calculateHash(solPoints.at(i).point);
 
             if(env->dualSolver->hasHyperplaneBeenAdded(hash, NCV.constraint->index))
             {
                 env->output->outputDebug("    Hyperplane already added for constraint "
                     + std::to_string(NCV.constraint->index) + " and hash " + std::to_string(hash));
+                continue;
+            }
+
+            if(NCV.constraint->properties.convexity == E_Convexity::Nonconvex)
+            {
+                nonconvexSelectedNumericValues.emplace_back(i, NCV);
                 continue;
             }
 
