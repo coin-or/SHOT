@@ -36,13 +36,6 @@ void TaskCheckIterationError::run()
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since an error occured.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && env->results->hasPrimalSolution())
-    {
-        env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
-        env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription
-            = "Terminated since the specified objective gap tolerance could not be met.";
-    }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
@@ -60,13 +53,6 @@ void TaskCheckIterationError::run()
         env->results->terminationReason = E_TerminationReason::NumericIssues;
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated due to numerical issues.";
-    }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::None && env->results->hasPrimalSolution())
-    {
-        env->results->terminationReason = E_TerminationReason::ObjectiveGapNotReached;
-        env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription
-            = "Terminated since the specified objective gap tolerance could not be met.";
     }
 }
 

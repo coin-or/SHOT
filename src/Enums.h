@@ -227,7 +227,6 @@ enum class E_TerminationReason
     RelativeGap,
     NumericIssues,
     UserAbort,
-    ObjectiveGapNotReached,
     NoDualCutsAdded,
     None
 };

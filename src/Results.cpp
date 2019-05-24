@@ -431,21 +431,6 @@ std::string Results::getResultsOSrL()
             statusNode->InsertFirstChild(substatusNode);
         }
     }
-    else if(this->terminationReason == E_TerminationReason::ObjectiveGapNotReached)
-    {
-        statusNode->SetAttribute("type", "other");
-        statusNode->SetAttribute("description", "No solution found");
-
-        if(terminationReasonDescription != "")
-        {
-            statusNode->SetAttribute("numberOfSubstatuses", 1);
-
-            auto substatusNode = osrlDocument.NewElement("substatus");
-            substatusNode->SetAttribute("type", "stoppedByLimit");
-            substatusNode->SetAttribute("description", terminationReasonDescription.c_str());
-            statusNode->InsertFirstChild(substatusNode);
-        }
-    }
     else if(this->terminationReason == E_TerminationReason::ObjectiveStagnation)
     {
         statusNode->SetAttribute("type", "other");
@@ -739,7 +724,6 @@ std::string Results::getResultsTrace()
     case E_TerminationReason::ConstraintTolerance:
     case E_TerminationReason::AbsoluteGap:
     case E_TerminationReason::RelativeGap:
-    case E_TerminationReason::ObjectiveGapNotReached:
         solverStatus = "1";
         break;
     case E_TerminationReason::ObjectiveStagnation:

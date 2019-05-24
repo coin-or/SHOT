@@ -376,7 +376,6 @@ void ModelingSystemGAMS::finalizeSolution()
     case E_TerminationReason::ConstraintTolerance:
     case E_TerminationReason::AbsoluteGap:
     case E_TerminationReason::RelativeGap:
-    case E_TerminationReason::ObjectiveGapNotReached:
         gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
         break;
     case E_TerminationReason::ObjectiveStagnation:
