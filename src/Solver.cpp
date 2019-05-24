@@ -377,6 +377,21 @@ bool Solver::selectStrategy()
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
+    else if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
+    // QP problem
+    {
+        env->output->outputDebug(" Using QP solution strategy.");
+        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+    }
+    // QCQP problem
+    else if(useQuadraticConstraints && env->problem->properties.isQCQPProblem)
+    {
+        env->output->outputDebug(" Using QCQP solution strategy.");
+
+        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+    }
     // MIQCQP problem
     else if(useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
     {
@@ -385,10 +400,17 @@ bool Solver::selectStrategy()
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
-    // NLP problem
-    else if(env->problem->properties.isNLPProblem)
+    else if(env->problem->properties.isMILPProblem)
+    // MIQP problem
     {
-        env->output->outputDebug(" Using NLP solution strategy.");
+        env->output->outputDebug(" Using MILP solution strategy.");
+        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
+    }
+    // NLP problem
+    else if(env->problem->properties.isNLPProblem || env->problem->properties.isLPProblem)
+    {
+        env->output->outputDebug(" Using continous solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
     }
