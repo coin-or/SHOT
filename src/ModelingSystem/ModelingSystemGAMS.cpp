@@ -381,6 +381,8 @@ void ModelingSystemGAMS::finalizeSolution()
         break;
     case E_TerminationReason::ObjectiveStagnation:
     case E_TerminationReason::NoDualCutsAdded:
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Solver);
+        break;
     case E_TerminationReason::Error:
     case E_TerminationReason::NumericIssues:
         gmoSolveStatSet(modelingObject, gmoSolveStat_SolverErr);
