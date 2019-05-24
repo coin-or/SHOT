@@ -368,11 +368,7 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoSolveStatSet(modelingObject, gmoSolveStat_User);
         break;
     case E_TerminationReason::InfeasibleProblem:
-        gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
-        break;
     case E_TerminationReason::UnboundedProblem:
-        gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
-        break;
     case E_TerminationReason::ConstraintTolerance:
     case E_TerminationReason::AbsoluteGap:
     case E_TerminationReason::RelativeGap:

@@ -728,6 +728,8 @@ std::string Results::getResultsTrace()
         break;
     case E_TerminationReason::ObjectiveStagnation:
     case E_TerminationReason::NoDualCutsAdded:
+        solverStatus = "4";
+        break;
     case E_TerminationReason::Error:
     case E_TerminationReason::NumericIssues:
         solverStatus = "10";
