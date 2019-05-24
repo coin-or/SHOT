@@ -348,9 +348,9 @@ bool Solver::selectStrategy()
 {
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
     {
-        if(env->problem->properties.isNLPProblem)
+        if(env->problem->properties.numberOfDiscreteVariables == 0)
         {
-            env->output->outputDebug(" Using NLP solution strategy.");
+            env->output->outputDebug(" Using continuous problem solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
 
             env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
