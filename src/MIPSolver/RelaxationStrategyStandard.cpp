@@ -92,6 +92,7 @@ void RelaxationStrategyStandard::setActive()
         env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = false;
+        env->results->getCurrentIteration()->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
     }
 }
 
@@ -104,6 +105,7 @@ void RelaxationStrategyStandard::setInactive()
         env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = true;
+        env->results->getCurrentIteration()->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
 
         LPFinished = true;
     }

@@ -10,7 +10,9 @@
 
 #include "TaskPrintIterationReport.h"
 
+#include "../DualSolver.h"
 #include "../Iteration.h"
+#include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
 #include "../Report.h"
 #include "../Results.h"
@@ -34,22 +36,31 @@ void TaskPrintIterationReport::run()
 
     bool hasSolution = true;
 
-    bool isMIQP = env->reformulatedProblem->properties.isMIQPProblem;
-    bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
-    bool isDiscrete = (currIter->isDualProblemDiscrete) && env->reformulatedProblem->properties.isDiscrete;
+    auto dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
 
-    if(isMIQCP && isDiscrete)
-        tmpType << "MIQCQP";
-    else if(isMIQCP)
-        tmpType << "QCQP";
-    else if(isMIQP && isDiscrete)
-        tmpType << "MIQP";
-    else if(isMIQP)
-        tmpType << "QP";
-    else if(isDiscrete)
-        tmpType << "MIP";
-    else
+    switch(dualProblemClass)
+    {
+    case E_DualProblemClass::LP:
         tmpType << "LP";
+        break;
+    case E_DualProblemClass::QP:
+        tmpType << "QP";
+        break;
+    case E_DualProblemClass::QCQP:
+        tmpType << "QCQP";
+        break;
+    case E_DualProblemClass::MIP:
+        tmpType << "MIP";
+        break;
+    case E_DualProblemClass::MIQP:
+        tmpType << "MIQP";
+        break;
+    case E_DualProblemClass::MIQCQP:
+        tmpType << "MIQPCP";
+        break;
+    default:
+        break;
+    }
 
     if(currIter->solutionPoints.size() == 0)
         hasSolution = false;

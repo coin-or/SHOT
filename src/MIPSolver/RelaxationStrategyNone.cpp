@@ -31,7 +31,11 @@ RelaxationStrategyNone::~RelaxationStrategyNone() = default;
 
 void RelaxationStrategyNone::setInitial() { setInactive(); }
 
-void RelaxationStrategyNone::executeStrategy() { env->results->getCurrentIteration()->isDualProblemDiscrete = true; }
+void RelaxationStrategyNone::executeStrategy()
+{
+    env->results->getCurrentIteration()->isDualProblemDiscrete = true;
+    env->results->getCurrentIteration()->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
+}
 
 void RelaxationStrategyNone::setActive() {}
 

@@ -21,6 +21,7 @@ public:
     Iteration(EnvironmentPtr envPtr);
     ~Iteration();
 
+    E_DualProblemClass dualProblemClass;
     bool isDualProblemDiscrete = false;
 
     E_ProblemSolutionStatus solutionStatus;

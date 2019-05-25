@@ -74,6 +74,16 @@ enum class E_IterationLineType
     PrimalNLP
 };
 
+enum class E_DualProblemClass
+{
+    LP,
+    QP,
+    QCQP,
+    MIP,
+    MIQP,
+    MIQCQP
+};
+
 enum class E_LogLevel
 {
     Off = 6,

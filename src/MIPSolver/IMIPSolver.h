@@ -48,6 +48,8 @@ public:
     virtual VectorDouble getVariableSolution(int solIdx) = 0;
     virtual int getNumberOfSolutions() = 0;
 
+    virtual E_DualProblemClass getProblemClass() = 0;
+
     virtual void activateDiscreteVariables(bool activate) = 0;
     virtual bool getDiscreteVariableStatus() = 0;
 

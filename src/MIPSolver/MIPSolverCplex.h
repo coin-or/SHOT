@@ -98,6 +98,8 @@ public:
     void activateDiscreteVariables(bool activate) override;
     bool getDiscreteVariableStatus() override { return (MIPSolverBase::getDiscreteVariableStatus()); }
 
+    E_DualProblemClass getProblemClass() override { return (MIPSolverBase::getProblemClass()); }
+
     void executeRelaxationStrategy() override { MIPSolverBase::executeRelaxationStrategy(); }
 
     E_ProblemSolutionStatus solveProblem() override;

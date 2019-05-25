@@ -45,6 +45,9 @@ protected:
     bool cutOffConstraintDefined = false;
     int cutOffConstraintIndex;
 
+    bool hasQuadraticObjective = false;
+    bool hasQudraticConstraint = false;
+
 public:
     ~MIPSolverBase();
 
@@ -57,6 +60,7 @@ public:
 
     virtual void setCutOffAsConstraint(double cutOff) = 0;
 
+    virtual E_DualProblemClass getProblemClass();
     virtual bool getDiscreteVariableStatus();
 
     virtual void executeRelaxationStrategy();

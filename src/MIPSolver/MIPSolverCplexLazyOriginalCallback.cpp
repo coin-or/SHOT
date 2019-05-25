@@ -283,6 +283,7 @@ void CtCallbackI::main()
         env->results->createIteration();
         currIter = env->results->getCurrentIteration();
         currIter->isDualProblemDiscrete = true;
+        currIter->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
     }
 
     currIter->isSolved = true;

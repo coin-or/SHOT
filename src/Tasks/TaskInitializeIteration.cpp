@@ -27,6 +27,7 @@ void TaskInitializeIteration::run()
     env->results->createIteration();
     env->results->getCurrentIteration()->isDualProblemDiscrete
         = env->dualSolver->MIPSolver->getDiscreteVariableStatus();
+    env->results->getCurrentIteration()->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
 }
 
 std::string TaskInitializeIteration::getType()

@@ -180,6 +180,8 @@ bool MIPSolverCplex::addQuadraticTermToObjective(double coefficient, int firstVa
         return (false);
     }
 
+    hasQuadraticObjective = true;
+
     return (true);
 }
 
@@ -259,6 +261,8 @@ bool MIPSolverCplex::addQuadraticTermToConstraint(double coefficient, int firstV
             "        Cplex exception caught when adding quadratic term to constraint: ", e.getMessage());
         return (false);
     }
+
+    hasQudraticConstraint = true;
 
     return (true);
 }

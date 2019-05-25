@@ -28,6 +28,18 @@ double MIPSolverBase::getObjectiveValue()
     return (objval);
 }
 
+E_DualProblemClass MIPSolverBase::getProblemClass()
+{
+    bool isMIP = getDiscreteVariableStatus();
+
+    if(hasQuadraticObjective && hasQudraticConstraint || hasQudraticConstraint)
+        return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
+    else if(hasQuadraticObjective)
+        return (isMIP ? E_DualProblemClass::MIQP : E_DualProblemClass::QP);
+    else
+        return (isMIP ? E_DualProblemClass::MIP : E_DualProblemClass::LP);
+}
+
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
     if(env->reformulatedProblem->properties.numberOfDiscreteVariables == 0

@@ -164,6 +164,8 @@ bool MIPSolverGurobi::addQuadraticTermToObjective(double coefficient, int firstV
         return (false);
     }
 
+    hasQuadraticObjective = true;
+
     return (true);
 }
 
@@ -240,6 +242,8 @@ bool MIPSolverGurobi::addQuadraticTermToConstraint(double coefficient, int first
             "        Gurobi exception caught when adding quadratic term to constraint: ", e.getMessage());
         return (false);
     }
+
+    hasQudraticConstraint = true;
 
     return (true);
 }

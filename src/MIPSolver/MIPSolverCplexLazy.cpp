@@ -202,6 +202,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 env->results->createIteration();
                 currIter = env->results->getCurrentIteration();
                 currIter->isDualProblemDiscrete = true;
+                currIter->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
             }
 
             IloNumArray tmpVals(context.getEnv());
