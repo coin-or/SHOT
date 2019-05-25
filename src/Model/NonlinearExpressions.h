@@ -569,6 +569,8 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
+        auto childValue = log(child->calculate(intervalVector));
+
         return (log(child->calculate(intervalVector)));
     }
 

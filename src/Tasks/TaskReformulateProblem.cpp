@@ -179,7 +179,16 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         {
             double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
 
-            auto objectiveBound = env->problem->objectiveFunction->getBounds();
+            Interval objectiveBound;
+
+            try
+            {
+                objectiveBound = env->problem->objectiveFunction->getBounds();
+            }
+            catch(mc::Interval::Exceptions& e)
+            {
+                objectiveBound = Interval(-objVarBound, objVarBound);
+            }
 
             auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
                 "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
@@ -894,13 +903,15 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
         if(!allNonlinearExpressionsReformulated)
         {
+            double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+
             auto bounds = T->getBounds();
 
             if(bounds.l() == bounds.u())
             {
                 // TODO
-                bounds.l(-9999999999.0);
-                bounds.u(9999999999.0);
+                bounds.l(-objVarBound);
+                bounds.u(objVarBound);
             }
 
             auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pnl_" + std::to_string(auxVariableCounter + 1),
@@ -946,13 +957,15 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
 
     for(auto& T : sourceTerms)
     {
+        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+
         auto bounds = T->getBounds();
 
         if(bounds.l() == bounds.u())
         {
             // TODO
-            bounds.l(-9999999999.0);
-            bounds.u(9999999999.0);
+            bounds.l(-objVarBound);
+            bounds.u(objVarBound);
         }
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pmon_" + std::to_string(auxVariableCounter + 1),
@@ -994,13 +1007,15 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
     for(auto& T : sourceTerms)
     {
+        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+
         auto bounds = T->getBounds();
 
         if(bounds.l() == bounds.u())
         {
             // TODO
-            bounds.l(-9999999999.0);
-            bounds.u(9999999999.0);
+            bounds.l(-objVarBound);
+            bounds.u(objVarBound);
         }
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_psig_" + std::to_string(auxVariableCounter + 1),

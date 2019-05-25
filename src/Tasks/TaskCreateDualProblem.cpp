@@ -93,7 +93,16 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     {
         double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
 
-        auto objectiveBound = sourceProblem->objectiveFunction->getBounds();
+        Interval objectiveBound;
+
+        try
+        {
+            objectiveBound = sourceProblem->objectiveFunction->getBounds();
+        }
+        catch(mc::Interval::Exceptions& e)
+        {
+            objectiveBound = Interval(-objVarBound, objVarBound);
+        }
 
         destination->setAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
