@@ -30,13 +30,6 @@ TaskCheckDualStagnation::~TaskCheckDualStagnation() = default;
 
 void TaskCheckDualStagnation::run()
 {
-    if(env->reformulatedProblem->properties.isDiscrete
-        && env->solutionStatistics.numberOfProblemsFeasibleMILP + env->solutionStatistics.numberOfProblemsOptimalMILP
-            <= env->settings->getSetting<int>("DualStagnation.IterationLimit", "Termination"))
-    {
-        return;
-    }
-
     auto currIter = env->results->getCurrentIteration();
 
     if(env->problem->properties.isDiscrete && !currIter->isMIP())
@@ -44,7 +37,7 @@ void TaskCheckDualStagnation::run()
         return;
     }
 
-    if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
+    if(currIter->solutionStatus != E_ProblemSolutionStatus::SolutionLimit
         && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 1)
     {
         env->results->terminationReason = E_TerminationReason::NoDualCutsAdded;

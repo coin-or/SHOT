@@ -30,25 +30,26 @@ void TaskCheckIterationError::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    if(currIter->solutionStatus == E_ProblemSolutionStatus::Error)
+    // Always also check whether we actually got a solution in the current interation
+    if(currIter->solutionStatus == E_ProblemSolutionStatus::Error && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::Error;
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since an error occured.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since the problem is infeasible.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);
         env->results->terminationReasonDescription = "Terminated since the problem is unbounded.";
     }
-    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::NumericIssues;
         env->tasks->setNextTask(taskIDIfTrue);

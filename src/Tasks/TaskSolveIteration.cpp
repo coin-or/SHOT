@@ -108,7 +108,8 @@ void TaskSolveIteration::run()
         env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
     }
 
-    if(env->reformulatedProblem->properties.isLPProblem || env->reformulatedProblem->properties.isMILPProblem)
+    if(env->reformulatedProblem->properties.isLPProblem || env->reformulatedProblem->properties.isMILPProblem
+        || env->reformulatedProblem->properties.isMIQPProblem)
     {
         env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
     }

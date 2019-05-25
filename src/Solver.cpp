@@ -377,7 +377,6 @@ bool Solver::selectStrategy()
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
-
     else if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
     // QP problem
     {
