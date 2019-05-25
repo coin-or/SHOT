@@ -705,10 +705,10 @@ void Solver::initializeSettings()
     env->settings->createSetting("Convexity.Quadratics.EigenValueTolerance", "Model", 1e-5,
         "Convexity tolerance for the eigenvalues of the Hessian matrix for quadratic terms", 0.0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -1e10,
+    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -1e50,
         "Minimum lower bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 1e10,
+    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 1e50,
         "Maximum upper bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
     env->settings->createSetting("IntegerVariable.MinimumLowerBound", "Model", -2.0e9,
