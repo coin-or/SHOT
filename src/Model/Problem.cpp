@@ -281,7 +281,9 @@ void Problem::updateProperties()
     properties.numberOfLinearConstraints = linearConstraints.size();
 
     bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
-        && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasNonlinearExpression));
+        && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasMonomialTerms
+               || objectiveFunction->properties.hasSignomialTerms
+               || objectiveFunction->properties.hasNonlinearExpression));
     bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
         && objectiveFunction->properties.hasQuadraticTerms);
 
