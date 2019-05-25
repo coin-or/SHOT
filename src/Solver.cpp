@@ -1188,6 +1188,13 @@ void Solver::verifySettings()
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
     }
+
+    // Checking for too tight termination criteria
+    if(env->settings->getSetting<double>("ObjectiveGap.Relative", "Termination") < 1e-8)
+        (env->settings->updateSetting("ObjectiveGap.Relative", "Termination", 1e-10));
+
+    if(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") < 1e-8)
+        (env->settings->updateSetting("ObjectiveGap.Absolute", "Termination", 1e-10));
 }
 
 void Solver::setConvexityBasedSettings()
