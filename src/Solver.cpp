@@ -377,6 +377,7 @@ bool Solver::selectStrategy()
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
+
     else if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
     // QP problem
     {
@@ -384,24 +385,24 @@ bool Solver::selectStrategy()
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
-    // QCQP problem
-    else if(useQuadraticConstraints && env->problem->properties.isQCQPProblem)
-    {
-        env->output->outputDebug(" Using QCQP solution strategy.");
-
-        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
-        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
-    }
     // MIQCQP problem
-    else if(useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
+    else if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQCQPProblem)
     {
         env->output->outputDebug(" Using MIQCQP solution strategy.");
 
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
+    // QCQP problem
+    else if((useQuadraticConstraints || useQuadraticConstraints) && env->problem->properties.isQCQPProblem)
+    {
+        env->output->outputDebug(" Using QCQP solution strategy.");
+
+        solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+        env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
+    }
+    // MILP problem
     else if(env->problem->properties.isMILPProblem)
-    // MIQP problem
     {
         env->output->outputDebug(" Using MILP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
@@ -416,20 +417,29 @@ bool Solver::selectStrategy()
     }
     else
     {
-        switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual")))
+        if(!env->problem->properties.isDiscrete)
         {
-        case(ES_TreeStrategy::SingleTree):
-            env->output->outputDebug(" Using single-tree solution strategy.");
-            solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
-            env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
-            break;
-        case(ES_TreeStrategy::MultiTree):
             env->output->outputDebug(" Using multi-tree solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
-            break;
-        default:
-            break;
+        }
+        else
+        {
+            switch(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual")))
+            {
+            case(ES_TreeStrategy::SingleTree):
+                env->output->outputDebug(" Using single-tree solution strategy.");
+                solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
+                env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
+                break;
+            case(ES_TreeStrategy::MultiTree):
+                env->output->outputDebug(" Using multi-tree solution strategy.");
+                solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
+                env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
+                break;
+            default:
+                break;
+            }
         }
     }
 
