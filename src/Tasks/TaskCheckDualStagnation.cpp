@@ -37,7 +37,7 @@ void TaskCheckDualStagnation::run()
         return;
     }
 
-    if(currIter->solutionStatus != E_ProblemSolutionStatus::SolutionLimit
+    if(!currIter->MIPSolutionLimitUpdated
         && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 1)
     {
         env->results->terminationReason = E_TerminationReason::NoDualCutsAdded;
