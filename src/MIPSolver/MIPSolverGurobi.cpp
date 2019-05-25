@@ -866,24 +866,25 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
 {
     try
     {
-        for(int i = 0; i < point.size(); i++)
+        VectorDouble startVal;
+
+        for(double P : point)
         {
-            GRBVar tmpVar = gurobiModel->getVar(i);
-            tmpVar.set(GRB_DoubleAttr_Start, point.at(i));
+            startVal.push_back(P);
         }
 
-        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+        for(auto& V : env->reformulatedProblem->auxiliaryVariables)
         {
-            GRBVar tmpVar = gurobiModel->getVar(i + point.size());
-            tmpVar.set(GRB_DoubleAttr_Start,
-                env->reformulatedProblem->auxiliaryVariables.at(i)->calculateAuxiliaryValue(point));
+            startVal.push_back(V->calculateAuxiliaryValue(point));
         }
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            startVal.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point));
+
+        for(int i = 0; i < startVal.size(); i++)
         {
-            GRBVar tmpVar = gurobiModel->getVar(env->reformulatedProblem->auxiliaryObjectiveVariable->index);
-            tmpVar.set(GRB_DoubleAttr_Start,
-                env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point));
+            GRBVar tmpVar = gurobiModel->getVar(i);
+            tmpVar.set(GRB_DoubleAttr_Start, startVal.at(i));
         }
     }
     catch(GRBException& e)

@@ -25,7 +25,7 @@ public:
     bool isAuxiliary = true;
 
     // These are used to calculate the value of the variable
-    double constant;
+    double constant = 0.0;
     LinearTerms linearTerms;
     QuadraticTerms quadraticTerms;
     MonomialTerms monomialTerms;
