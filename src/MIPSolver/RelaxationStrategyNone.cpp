@@ -31,20 +31,9 @@ RelaxationStrategyNone::~RelaxationStrategyNone() = default;
 
 void RelaxationStrategyNone::setInitial() { setInactive(); }
 
-void RelaxationStrategyNone::executeStrategy()
-{
-    env->results->getCurrentIteration()->type = E_IterationProblemType::MIP;
-}
+void RelaxationStrategyNone::executeStrategy() { env->results->getCurrentIteration()->isDualProblemDiscrete = true; }
 
 void RelaxationStrategyNone::setActive() {}
 
 void RelaxationStrategyNone::setInactive() {}
-
-E_IterationProblemType RelaxationStrategyNone::getProblemType()
-{
-    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus())
-        return E_IterationProblemType::MIP;
-    else
-        return E_IterationProblemType::Relaxed;
-}
 } // namespace SHOT

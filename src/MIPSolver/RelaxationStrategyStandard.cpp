@@ -91,7 +91,7 @@ void RelaxationStrategyStandard::setActive()
         env->timing->startTimer("DualProblemsRelaxed");
         env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
-        env->results->getCurrentIteration()->type = E_IterationProblemType::Relaxed;
+        env->results->getCurrentIteration()->isDualProblemDiscrete = false;
     }
 }
 
@@ -103,19 +103,10 @@ void RelaxationStrategyStandard::setInactive()
         env->timing->startTimer("DualProblemsDiscrete");
         env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
-        env->results->getCurrentIteration()->type = E_IterationProblemType::MIP;
+        env->results->getCurrentIteration()->isDualProblemDiscrete = true;
 
         LPFinished = true;
     }
-}
-
-E_IterationProblemType RelaxationStrategyStandard::getProblemType()
-{
-    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus())
-
-        return (E_IterationProblemType::MIP);
-    else
-        return (E_IterationProblemType::Relaxed);
 }
 
 bool RelaxationStrategyStandard::isIterationLimitReached()

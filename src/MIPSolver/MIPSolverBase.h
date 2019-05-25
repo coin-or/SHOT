@@ -59,7 +59,6 @@ public:
 
     virtual bool getDiscreteVariableStatus();
 
-    virtual E_IterationProblemType getCurrentProblemType();
     virtual void executeRelaxationStrategy();
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions();

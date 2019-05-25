@@ -21,7 +21,8 @@ public:
     Iteration(EnvironmentPtr envPtr);
     ~Iteration();
 
-    E_IterationProblemType type;
+    bool isDualProblemDiscrete = false;
+
     E_ProblemSolutionStatus solutionStatus;
 
     std::vector<SolutionPoint> solutionPoints;

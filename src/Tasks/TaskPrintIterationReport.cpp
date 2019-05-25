@@ -36,8 +36,7 @@ void TaskPrintIterationReport::run()
 
     bool isMIQP = env->reformulatedProblem->properties.isMIQPProblem;
     bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
-    bool isDiscrete
-        = (currIter->type == E_IterationProblemType::MIP) && env->reformulatedProblem->properties.isDiscrete;
+    bool isDiscrete = (currIter->isDualProblemDiscrete) && env->reformulatedProblem->properties.isDiscrete;
 
     if(isMIQCP && isDiscrete)
         tmpType << "MIQCQP";

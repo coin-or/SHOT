@@ -29,8 +29,6 @@ public:
 
     void setInitial() override;
 
-    E_IterationProblemType getProblemType() override;
-
 private:
     bool isIterationLimitReached();
     bool isTimeLimitReached();

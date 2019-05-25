@@ -41,14 +41,6 @@ bool MIPSolverBase::getDiscreteVariableStatus()
     }
 }
 
-E_IterationProblemType MIPSolverBase::getCurrentProblemType()
-{
-    if(getDiscreteVariableStatus())
-        return (E_IterationProblemType::MIP);
-    else
-        return (E_IterationProblemType::Relaxed);
-}
-
 void MIPSolverBase::executeRelaxationStrategy()
 {
     if(this->relaxationStrategy == nullptr || this->relaxationStrategy.get() == nullptr)

@@ -51,8 +51,6 @@ public:
     virtual void activateDiscreteVariables(bool activate) = 0;
     virtual bool getDiscreteVariableStatus() = 0;
 
-    virtual E_IterationProblemType getCurrentProblemType() = 0;
-
     virtual void executeRelaxationStrategy() = 0;
 
     virtual E_ProblemSolutionStatus solveProblem() = 0;

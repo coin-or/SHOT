@@ -74,13 +74,6 @@ enum class E_IterationLineType
     PrimalNLP
 };
 
-enum class E_IterationProblemType
-{
-    MIP,
-    Relaxed,
-    None
-};
-
 enum class E_LogLevel
 {
     Off = 6,

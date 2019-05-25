@@ -25,7 +25,5 @@ public:
     virtual void setInactive() = 0;
 
     virtual void setInitial() = 0;
-
-    virtual E_IterationProblemType getProblemType() = 0;
 };
 } // namespace SHOT

@@ -230,7 +230,7 @@ void TaskSolveIteration::run()
     currIter->usedMIPSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
 
     // Update solution stats
-    if(currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+    if(currIter->isDualProblemDiscrete && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
         if(env->reformulatedProblem->properties.isMIQPProblem)
         {
@@ -245,7 +245,7 @@ void TaskSolveIteration::run()
             env->solutionStatistics.numberOfProblemsOptimalMILP++;
         }
     }
-    else if(currIter->type == E_IterationProblemType::Relaxed)
+    else if(!currIter->isDualProblemDiscrete)
     {
         if(env->reformulatedProblem->properties.isMIQPProblem)
         {
@@ -260,7 +260,7 @@ void TaskSolveIteration::run()
             env->solutionStatistics.numberOfProblemsLP++;
         }
     }
-    else if(currIter->type == E_IterationProblemType::MIP
+    else if(currIter->isDualProblemDiscrete
         && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
                || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
                || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))

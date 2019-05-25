@@ -64,8 +64,7 @@ void TaskCheckConstraintTolerance::run()
 
     if(env->problem->properties.isDiscrete)
     {
-        if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal
-            && currIter->type == E_IterationProblemType::MIP)
+        if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal && currIter->isDualProblemDiscrete)
         {
             env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
             env->tasks->setNextTask(taskIDIfTrue);

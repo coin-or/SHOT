@@ -47,7 +47,7 @@ Iteration::~Iteration()
     hyperplanePoints.clear();
 }
 
-bool Iteration::isMIP() { return (this->type == E_IterationProblemType::MIP); }
+bool Iteration::isMIP() { return (this->isDualProblemDiscrete); }
 
 SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 {
