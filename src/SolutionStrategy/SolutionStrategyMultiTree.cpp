@@ -179,11 +179,18 @@ SolutionStrategyMultiTree::SolutionStrategyMultiTree(EnvironmentPtr envPtr)
     auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
-    env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        auto tCheckMaxNumberOfObjectiveCuts
+            = std::make_shared<TaskCheckMaxNumberOfPrimalReductionCuts>(env, "FinalizeSolution");
+        env->tasks->addTask(tCheckMaxNumberOfObjectiveCuts, "CheckMaxObjectiveCuts");
 
-    auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
-    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+        auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
+        env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
+
+        auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
+        env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
+    }
 
     auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckDualStag, "CheckDualStag");
