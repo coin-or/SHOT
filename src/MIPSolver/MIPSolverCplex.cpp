@@ -806,9 +806,9 @@ int MIPSolverCplex::getNumberOfSolutions()
         else
         {
             // LP problem
-            auto cplexStatus = cplexInstance.getCplexStatus();
+            auto cplexStatus = cplexInstance.getStatus();
 
-            if(cplexStatus == IloCplex::CplexStatus::Optimal || cplexStatus == IloCplex::CplexStatus::OptimalTol)
+            if(cplexStatus == IloAlgorithm::Status::Optimal || IloAlgorithm::Status::Feasible)
                 numSols = 1;
             else
                 numSols = 0;
