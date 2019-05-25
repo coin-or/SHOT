@@ -562,7 +562,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     }
     else if(status == GRB_INF_OR_UNBD)
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
     else if(status == GRB_UNBOUNDED)
     {

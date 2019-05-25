@@ -541,7 +541,7 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
         }
         else if(status == IloCplex::CplexStatus::InfOrUnbd)
         {
-            MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+            MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
         }
         else if(status == IloCplex::CplexStatus::Unbounded)
         {
@@ -812,7 +812,7 @@ int MIPSolverCplex::getNumberOfSolutions()
             // LP problem
             auto cplexStatus = cplexInstance.getStatus();
 
-            if(cplexStatus == IloAlgorithm::Status::Optimal || IloAlgorithm::Status::Feasible)
+            if(cplexStatus == IloAlgorithm::Status::Optimal || cplexStatus == IloAlgorithm::Status::Feasible)
                 numSols = 1;
             else
                 numSols = 0;
