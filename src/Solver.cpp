@@ -385,7 +385,7 @@ bool Solver::selectStrategy()
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     // MIQCQP problem
-    else if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQCQPProblem)
+    else if(useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
     {
         env->output->outputDebug(" Using MIQCQP solution strategy.");
 
