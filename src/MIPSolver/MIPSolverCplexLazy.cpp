@@ -51,13 +51,13 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
         }
     }
 
-    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
-
     if(env->reformulatedProblem->objectiveFunction->properties.classification
         > E_ObjectiveFunctionClassification::Quadratic)
     {
         taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
     }
+
+    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
 
     if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -175,6 +175,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
                     == ES_HyperplaneCutStrategy::ESH)
                 {
+                    tUpdateInteriorPoint->run();
                     static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(solutionPoints);
                 }
                 else
@@ -446,7 +447,6 @@ void CplexCallback::addLazyConstraint(
                 == ES_HyperplaneCutStrategy::ESH)
             {
                 tUpdateInteriorPoint->run();
-
                 static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
             }
             else

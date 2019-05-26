@@ -485,7 +485,6 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
             == ES_HyperplaneCutStrategy::ESH)
         {
             tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
-
             taskSelectHPPts
                 = std::shared_ptr<TaskSelectHyperplanePointsESH>(std::make_shared<TaskSelectHyperplanePointsESH>(env));
         }
@@ -554,14 +553,7 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
                 == ES_HyperplaneCutStrategy::ESH)
             {
                 tUpdateInteriorPoint->run();
-
                 static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
-
-                if(env->reformulatedProblem->objectiveFunction->properties.classification
-                    > E_ObjectiveFunctionClassification::Quadratic)
-                {
-                    taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
-                }
             }
             else
             {

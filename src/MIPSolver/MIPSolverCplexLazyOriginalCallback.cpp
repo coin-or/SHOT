@@ -35,23 +35,18 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
     {
+        tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
         taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
-
-        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
-        {
-            taskSelectHPPtsByObjectiveRootsearch
-                = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
-        }
     }
     else
     {
         taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+    }
 
-        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
-        {
-            taskSelectHPPtsByObjectiveRootsearch
-                = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
-        }
+    if(env->reformulatedProblem->objectiveFunction->properties.classification
+        > E_ObjectiveFunctionClassification::Quadratic)
+    {
+        taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
     }
 }
 
@@ -241,7 +236,6 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
             == ES_HyperplaneCutStrategy::ESH)
         {
             tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
-
             taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
         }
         else
@@ -350,6 +344,7 @@ void CtCallbackI::main()
             {
                 primalSolution.at(i) = tmpPrimalVals[i];
             }
+
             SolutionPoint tmpPt;
 
             if(env->problem->properties.numberOfNonlinearConstraints > 0)
@@ -456,7 +451,6 @@ void CtCallbackI::main()
             == ES_HyperplaneCutStrategy::ESH)
         {
             tUpdateInteriorPoint->run();
-
             static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(candidatePoints);
         }
         else
@@ -465,7 +459,8 @@ void CtCallbackI::main()
         }
     }
 
-    if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+    if(env->reformulatedProblem->objectiveFunction->properties.classification
+        > E_ObjectiveFunctionClassification::Quadratic)
     {
         taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
     }
@@ -473,7 +468,6 @@ void CtCallbackI::main()
     for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
     {
         this->createHyperplane(hp);
-
         this->lastNumAddedHyperplanes++;
     }
 
