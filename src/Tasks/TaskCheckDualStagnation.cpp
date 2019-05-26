@@ -10,6 +10,7 @@
 
 #include "TaskCheckDualStagnation.h"
 
+#include "../DualSolver.h"
 #include "../Iteration.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -37,8 +38,8 @@ void TaskCheckDualStagnation::run()
         return;
     }
 
-    if(!currIter->MIPSolutionLimitUpdated
-        && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 1)
+    if(!env->dualSolver->isSingleTree && !currIter->MIPSolutionLimitUpdated
+        && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 2)
     {
         env->results->terminationReason = E_TerminationReason::NoDualCutsAdded;
         env->tasks->setNextTask(taskIDIfTrue);

@@ -430,6 +430,7 @@ bool Solver::selectStrategy()
                 env->output->outputDebug(" Using single-tree solution strategy.");
                 solutionStrategy = std::make_unique<SolutionStrategySingleTree>(env);
                 env->results->usedSolutionStrategy = E_SolutionStrategy::SingleTree;
+                env->dualSolver->isSingleTree = true;
                 break;
             case(ES_TreeStrategy::MultiTree):
                 env->output->outputDebug(" Using multi-tree solution strategy.");

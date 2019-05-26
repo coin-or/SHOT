@@ -34,6 +34,7 @@ public:
 
     double cutOffToUse;
     bool useCutOff = false;
+    bool isSingleTree = false;
 
 private:
     EnvironmentPtr env;
