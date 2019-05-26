@@ -184,6 +184,7 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
 
 bool DualSolver::hasHyperplaneBeenAdded(size_t hash, int constraintIndex)
 {
+    return (false);
     for(auto& H : generatedHyperplanes)
     {
         if(H.sourceConstraintIndex == constraintIndex && H.pointHash == hash)
