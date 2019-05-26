@@ -537,6 +537,35 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
+        // The square root of sums of nonnegative convex quadratic functions is convex
+        if(child->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            auto sumExpr = std::dynamic_pointer_cast<ExpressionGeneral>(child);
+
+            auto isValid = true;
+
+            for(auto& C : sumExpr->children)
+            {
+                if(C->getType() == E_NonlinearExpressionTypes::Square)
+                {
+                    if(!(C->getBounds().l() >= 0
+                           && (C->getConvexity() == E_Convexity::Linear || C->getConvexity() == E_Convexity::Convex)))
+                    {
+                        isValid = false;
+                        break;
+                    }
+                }
+                else
+                {
+                    isValid = false;
+                    break;
+                }
+            }
+
+            if(isValid)
+                return E_Convexity::Convex;
+        }
+
         if(childBounds.l() >= 0 && childConvexity == E_Convexity::Concave)
             return E_Convexity::Concave;
 
