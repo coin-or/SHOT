@@ -685,7 +685,13 @@ public:
     inline Interval getBounds() const override
     {
         auto value = child->getBounds();
-        return (value * value);
+
+        auto interval = value * value;
+
+        if(interval.l() <= 0)
+            interval.l(0.0);
+
+        return (interval);
     }
 
     inline FactorableFunction getFactorableFunction() override
@@ -1469,7 +1475,25 @@ public:
         return (pow(firstChild->calculate(intervalVector), secondChild->calculate(intervalVector)));
     }
 
-    inline Interval getBounds() const override { return (pow(firstChild->getBounds(), secondChild->getBounds())); }
+    inline Interval getBounds() const override
+    {
+        auto bounds = pow(firstChild->getBounds(), secondChild->getBounds());
+
+        if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double constant = std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
+
+            double intpart;
+            bool isInteger = (std::modf(constant, &intpart) == 0.0);
+            int integerValue = (int)round(intpart);
+            bool isEven = (integerValue % 2 == 0);
+
+            if(isInteger && isEven && bounds.l() <= 0.0)
+                bounds.l(0.0);
+        }
+
+        return (bounds);
+    }
 
     inline FactorableFunction getFactorableFunction() override
     {
@@ -1593,7 +1617,7 @@ private:
 
         double intpart;
         bool isInteger = (std::modf(exponentValue, &intpart) == 0.0);
-        bool integerValue = round(intpart);
+        int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
         if(isInteger && isEven)
@@ -1675,7 +1699,7 @@ private:
 
         double intpart;
         bool isInteger = (std::modf(exponentValue, &intpart) == 0.0);
-        bool integerValue = round(intpart);
+        int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
         if(isInteger && isEven)
