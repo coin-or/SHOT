@@ -903,15 +903,19 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
         if(!allNonlinearExpressionsReformulated)
         {
-            double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+            Interval bounds;
 
-            auto bounds = T->getBounds();
-
-            if(bounds.l() == bounds.u())
+            try
             {
-                // TODO
-                bounds.l(-objVarBound);
-                bounds.u(objVarBound);
+                bounds = T->getBounds();
+            }
+            catch(mc::Interval::Exceptions& e)
+            {
+                double varLowerBound
+                    = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+                double varUpperBound
+                    = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+                bounds = Interval(varLowerBound, varUpperBound);
             }
 
             auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pnl_" + std::to_string(auxVariableCounter + 1),
@@ -957,15 +961,17 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
 
     for(auto& T : sourceTerms)
     {
-        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+        Interval bounds;
 
-        auto bounds = T->getBounds();
-
-        if(bounds.l() == bounds.u())
+        try
         {
-            // TODO
-            bounds.l(-objVarBound);
-            bounds.u(objVarBound);
+            bounds = T->getBounds();
+        }
+        catch(mc::Interval::Exceptions& e)
+        {
+            double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+            double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+            bounds = Interval(varLowerBound, varUpperBound);
         }
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pmon_" + std::to_string(auxVariableCounter + 1),
@@ -1007,15 +1013,17 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
     for(auto& T : sourceTerms)
     {
-        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+        Interval bounds;
 
-        auto bounds = T->getBounds();
-
-        if(bounds.l() == bounds.u())
+        try
         {
-            // TODO
-            bounds.l(-objVarBound);
-            bounds.u(objVarBound);
+            bounds = T->getBounds();
+        }
+        catch(mc::Interval::Exceptions& e)
+        {
+            double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+            double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+            bounds = Interval(varLowerBound, varUpperBound);
         }
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_psig_" + std::to_string(auxVariableCounter + 1),
@@ -1033,7 +1041,18 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         auto signomialTerm = std::make_shared<SignomialTerm>(T.get(), reformulatedProblem);
 
         if(reversedSigns)
+        {
             signomialTerm->coefficient *= -1.0;
+        }
+        /*
+                if(signomialTerm->coefficient < 0)
+                {
+                    auxVariable->upperBound = 0.0;
+                }
+                else
+                {
+                    auxVariable->lowerBound = 0.0;
+                }*/
 
         auxConstraint->add(signomialTerm);
 
