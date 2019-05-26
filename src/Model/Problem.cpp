@@ -437,6 +437,7 @@ void Problem::updateFactorableFunctions()
         {
             C->updateFactorableFunction();
             factorableFunctions.push_back(*C->factorableFunction.get());
+            constraintsWithNonlinearExpressions.push_back(C);
         }
     }
 
@@ -468,7 +469,7 @@ void Problem::updateFactorableFunctions()
         }
         else
         {
-            auto nonlinearConstraint = nonlinearConstraints[std::get<1>(jacobian)[i]];
+            auto nonlinearConstraint = constraintsWithNonlinearExpressions[std::get<1>(jacobian)[i]];
             nonlinearConstraint->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
         }
     }

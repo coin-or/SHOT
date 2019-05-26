@@ -79,6 +79,8 @@ private:
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> constraintsHessianSparsityPattern;
     std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> lagrangianHessianSparsityPattern;
 
+    NonlinearConstraints constraintsWithNonlinearExpressions;
+
     void updateVariables();
     void updateConstraints();
     void updateFactorableFunctions();
