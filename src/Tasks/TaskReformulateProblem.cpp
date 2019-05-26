@@ -905,16 +905,18 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
         {
             Interval bounds;
 
+            double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+            double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+
             try
             {
                 bounds = T->getBounds();
+
+                if(bounds.l() == bounds.u())
+                    bounds = Interval(varLowerBound, varUpperBound);
             }
             catch(mc::Interval::Exceptions& e)
             {
-                double varLowerBound
-                    = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-                double varUpperBound
-                    = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
                 bounds = Interval(varLowerBound, varUpperBound);
             }
 
@@ -963,14 +965,18 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     {
         Interval bounds;
 
+        double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+        double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+
         try
         {
             bounds = T->getBounds();
+
+            if(bounds.l() == bounds.u())
+                bounds = Interval(varLowerBound, varUpperBound);
         }
         catch(mc::Interval::Exceptions& e)
         {
-            double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-            double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
             bounds = Interval(varLowerBound, varUpperBound);
         }
 
@@ -1015,14 +1021,18 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     {
         Interval bounds;
 
+        double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+        double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+
         try
         {
             bounds = T->getBounds();
+
+            if(bounds.l() == bounds.u())
+                bounds = Interval(varLowerBound, varUpperBound);
         }
         catch(mc::Interval::Exceptions& e)
         {
-            double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-            double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
             bounds = Interval(varLowerBound, varUpperBound);
         }
 
