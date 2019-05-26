@@ -1393,6 +1393,120 @@ public:
             }
         }
 
+        // Identify x/(1+x)
+        if(firstChild->getType() == E_NonlinearExpressionTypes::Variable
+            && secondChild->getType() == E_NonlinearExpressionTypes::Sum && secondChild->getNumberOfChildren() == 2)
+        {
+            auto sum = std::dynamic_pointer_cast<ExpressionGeneral>(secondChild);
+            auto variable = std::dynamic_pointer_cast<ExpressionVariable>(firstChild)->variable;
+            double constant;
+            double coefficient;
+            bool isValid = false;
+
+            if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Variable
+                && sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                if(std::dynamic_pointer_cast<ExpressionVariable>(sum->children[0])->variable != variable)
+                    return E_Convexity::Unknown;
+
+                constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
+                coefficient = 1.0;
+                isValid = true;
+            }
+            else if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Variable
+                && sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                if(std::dynamic_pointer_cast<ExpressionVariable>(sum->children[1])->variable != variable)
+                    return E_Convexity::Unknown;
+
+                constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
+                coefficient = 1.0;
+                isValid = true;
+            }
+            else if(sum->children[0]->getType() == E_NonlinearExpressionTypes::Product
+                && sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant
+                && sum->children[0]->getNumberOfChildren() == 2)
+            {
+                ExpressionVariable newVariable;
+                auto prod = std::dynamic_pointer_cast<ExpressionGeneral>(sum->children[0]);
+
+                if(prod->children[0]->getType() == E_NonlinearExpressionTypes::Variable
+                    && prod->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[0])->variable == variable)
+                    {
+                        coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[1])->constant;
+                        constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
+                        isValid = true;
+                    }
+                }
+                else if(prod->children[1]->getType() == E_NonlinearExpressionTypes::Variable
+                    && prod->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[1])->variable == variable)
+                    {
+                        coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[0])->constant;
+                        constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[1])->constant;
+                        isValid = true;
+                    }
+                }
+            }
+            else if(sum->children[1]->getType() == E_NonlinearExpressionTypes::Product
+                && sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant
+                && sum->children[1]->getNumberOfChildren() == 2)
+            {
+                ExpressionVariable newVariable;
+                auto prod = std::dynamic_pointer_cast<ExpressionGeneral>(sum->children[1]);
+
+                if(prod->children[0]->getType() == E_NonlinearExpressionTypes::Variable
+                    && prod->children[1]->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[0])->variable == variable)
+                    {
+                        coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[1])->constant;
+                        constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
+                        isValid = true;
+                    }
+                }
+                else if(prod->children[1]->getType() == E_NonlinearExpressionTypes::Variable
+                    && prod->children[0]->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    if(std::dynamic_pointer_cast<ExpressionVariable>(prod->children[1])->variable == variable)
+                    {
+                        coefficient = std::dynamic_pointer_cast<ExpressionConstant>(prod->children[0])->constant;
+                        constant = std::dynamic_pointer_cast<ExpressionConstant>(sum->children[0])->constant;
+                        isValid = true;
+                    }
+                }
+            }
+
+            if(isValid)
+            {
+                if(variable->lowerBound >= 0)
+                {
+                    if(constant > 0.0 && coefficient > 0.0)
+                        return E_Convexity::Concave;
+                    else if(constant > 0.0 && coefficient < 0.0)
+                        return E_Convexity::Concave;
+                    else if(constant < 0.0 && coefficient > 0.0)
+                        return E_Convexity::Convex;
+                    else if(constant < 0.0 && coefficient < 0.0)
+                        return E_Convexity::Convex;
+                }
+                else
+                {
+                    if(constant > 0.0 && coefficient > 0.0)
+                        return E_Convexity::Convex;
+                    else if(constant > 0.0 && coefficient < 0.0)
+                        return E_Convexity::Convex;
+                    else if(constant < 0.0 && coefficient > 0.0)
+                        return E_Convexity::Concave;
+                    else if(constant < 0.0 && coefficient < 0.0)
+                        return E_Convexity::Concave;
+                }
+            }
+        }
+
         return E_Convexity::Unknown;
     };
 
