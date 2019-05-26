@@ -1635,35 +1635,35 @@ private:
             }
             else
             {
-                if(baseConvexity == E_Convexity::Convex && baseBounds.u() <= 0)
+                if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex
+                       || baseConvexity == E_Convexity::Concave)
+                    && baseBounds.l() > 0)
                     return E_Convexity::Convex;
 
-                if(baseConvexity == E_Convexity::Concave && baseBounds.l() >= 0)
+                if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex
+                       || baseConvexity == E_Convexity::Concave)
+                    && baseBounds.u() < 0)
                     return E_Convexity::Convex;
-
-                if(baseConvexity == E_Convexity::Convex && baseBounds.l() >= 0)
-                    return E_Convexity::Concave;
-
-                if(baseConvexity == E_Convexity::Concave && baseBounds.u() <= 0)
-                    return E_Convexity::Concave;
             }
         }
-        else if(isInteger)
+        else if(isInteger) // Odd exponent
         {
             if(exponentValue > 0)
             {
-                if(baseConvexity == E_Convexity::Convex && baseBounds.l() >= 0)
+                if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex)
+                    && baseBounds.l() >= 0)
                     return E_Convexity::Convex;
 
-                if(baseConvexity == E_Convexity::Concave && baseBounds.u() <= 0)
+                if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Concave)
+                    && baseBounds.u() <= 0)
                     return E_Convexity::Concave;
             }
             else
             {
-                if(baseConvexity == E_Convexity::Concave && baseBounds.l() >= 0)
+                if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex) && baseBounds.l() > 0)
                     return E_Convexity::Convex;
 
-                if(baseConvexity == E_Convexity::Convex && baseBounds.u() <= 0)
+                if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex) && baseBounds.u() < 0)
                     return E_Convexity::Concave;
             }
         }
@@ -1672,16 +1672,17 @@ private:
             if(!(baseBounds.l() >= 0))
                 return E_Convexity::Unknown;
 
-            if(baseConvexity == E_Convexity::Convex && exponentValue > 1.0)
+            if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex) && exponentValue > 1.0)
                 return E_Convexity::Convex;
 
-            if(baseConvexity == E_Convexity::Concave && exponentValue < 0.0)
+            if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Concave) && exponentValue < 0.0)
                 return E_Convexity::Convex;
 
-            if(baseConvexity == E_Convexity::Concave && exponentValue > 0.0 && exponentValue < 1.0)
+            if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Concave) && exponentValue > 0.0
+                && exponentValue < 1.0)
                 return E_Convexity::Concave;
 
-            if(baseConvexity == E_Convexity::Convex && exponentValue < 0.0)
+            if((baseConvexity == E_Convexity::Linear || baseConvexity == E_Convexity::Convex) && exponentValue < 0.0)
                 return E_Convexity::Concave;
         }
 
