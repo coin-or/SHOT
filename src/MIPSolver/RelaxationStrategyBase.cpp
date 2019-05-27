@@ -22,7 +22,7 @@ namespace SHOT
 
 bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 {
-    if(env->results->iterations.size() < 2)
+    if(env->results->getNumberOfIterations() < 2)
     {
         return false;
     }
@@ -39,7 +39,7 @@ bool RelaxationStrategyBase::isRelaxedSolutionInterior()
 
 bool RelaxationStrategyBase::isConstraintToleranceReached()
 {
-    if(env->results->iterations.size() < 2)
+    if(env->results->getNumberOfIterations() < 2)
     {
         return false;
     }
@@ -68,7 +68,7 @@ bool RelaxationStrategyBase::isConstraintToleranceReached()
 
 bool RelaxationStrategyBase::isGapReached()
 {
-    if(env->results->iterations.size() < 2)
+    if(env->results->getNumberOfIterations() < 2)
     {
         return false;
     }

@@ -798,11 +798,13 @@ IterationPtr Results::getCurrentIteration() { return (iterations.back()); }
 
 IterationPtr Results::getPreviousIteration()
 {
-    if(iterations.size() > 1)
-        return (iterations[iterations.size() - 2]);
+    if(getNumberOfIterations() > 1)
+        return (iterations[getNumberOfIterations() - 2]);
     else
         throw Error("Only one iteration!");
 }
+
+int Results::getNumberOfIterations() { return (iterations.size()); }
 
 double Results::getPrimalBound() { return (this->currentPrimalBound); }
 
@@ -812,7 +814,7 @@ void Results::setPrimalBound(double value)
     env->dualSolver->cutOffToUse = value;
     env->dualSolver->useCutOff = true;
     env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
-    env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = iterations.size() - 1;
+    env->solutionStatistics.lastIterationWithSignificantPrimalUpdate = getNumberOfIterations() - 1;
     env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
     env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
 }
@@ -830,7 +832,7 @@ void Results::setDualBound(double value)
 
     env->solutionStatistics.numberOfIterationsWithDualStagnation = 0;
 
-    env->solutionStatistics.lastIterationWithSignificantDualUpdate = iterations.size() - 1;
+    env->solutionStatistics.lastIterationWithSignificantDualUpdate = getNumberOfIterations() - 1;
 }
 
 double Results::getAbsoluteGlobalObjectiveGap()

@@ -18,16 +18,17 @@ namespace SHOT
 Iteration::Iteration(EnvironmentPtr envPtr)
 {
     env = envPtr;
-    this->iterationNumber = env->results->iterations.size() + 1;
+    this->iterationNumber = env->results->getNumberOfIterations() + 1;
 
     this->numHyperplanesAdded = 0;
 
-    if(env->results->iterations.size() == 0)
+    if(env->results->getNumberOfIterations() == 0)
         this->totNumHyperplanes = 0;
     else if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         this->totNumHyperplanes = 0;
     else
-        this->totNumHyperplanes = env->results->iterations.at(env->results->iterations.size() - 1)->totNumHyperplanes;
+        this->totNumHyperplanes
+            = env->results->iterations.at(env->results->getNumberOfIterations() - 1)->totNumHyperplanes;
 
     this->maxDeviation = SHOT_DBL_MAX;
     this->boundaryDistance = SHOT_DBL_MAX;

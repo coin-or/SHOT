@@ -326,7 +326,7 @@ bool MIPSolverGurobi::finalizeProblem()
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
 
-            if(env->results->iterations.size() > 0)
+            if(env->results->getNumberOfIterations() > 0)
             {
                 setSolLimit = env->results->getCurrentIteration()->usedMIPSolutionLimit;
                 discreteVariablesActivated = env->results->getCurrentIteration()->isMIP();

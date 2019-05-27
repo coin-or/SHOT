@@ -85,7 +85,7 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->iterations.size() > 0)
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->getNumberOfIterations() > 0)
     {
         env->timing->stopTimer("DualProblemsDiscrete");
         env->timing->startTimer("DualProblemsRelaxed");
@@ -113,7 +113,7 @@ void RelaxationStrategyStandard::setInactive()
 
 bool RelaxationStrategyStandard::isIterationLimitReached()
 {
-    if(env->results->iterations.size() < 2)
+    if(env->results->getNumberOfIterations() < 2)
     {
         return false;
     }
@@ -145,7 +145,7 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
     int numSteps = 10;
 
-    if(env->results->iterations.size() < 2)
+    if(env->results->getNumberOfIterations() < 2)
     {
         return false;
     }

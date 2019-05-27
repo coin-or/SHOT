@@ -309,7 +309,7 @@ bool MIPSolverCplex::finalizeProblem()
             int setSolLimit;
             bool discreteVariablesActivated = getDiscreteVariableStatus();
 
-            if(env->results->iterations.size() > 0)
+            if(env->results->getNumberOfIterations() > 0)
             {
                 setSolLimit = env->results->getCurrentIteration()->usedMIPSolutionLimit;
                 discreteVariablesActivated = env->results->getCurrentIteration()->isMIP();
@@ -363,7 +363,7 @@ void MIPSolverCplex::initializeSolverSettings()
 
         if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
-            if(env->results->iterations.size() == 0)
+            if(env->results->getNumberOfIterations() == 0)
                 cplexInstance.setParam(
                     IloCplex::IntSolLim, env->settings->getSetting<int>("MIP.SolutionLimit.Initial", "Dual"));
         }

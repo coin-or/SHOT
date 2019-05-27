@@ -66,6 +66,7 @@ public:
     IterationPtr getCurrentIteration();
     IterationPtr getPreviousIteration();
     std::vector<IterationPtr> iterations;
+    int getNumberOfIterations();
 
     E_TerminationReason terminationReason = E_TerminationReason::None;
     std::string terminationReasonDescription;
