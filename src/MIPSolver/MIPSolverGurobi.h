@@ -119,6 +119,8 @@ public:
     bool supportsQuadraticObjective() override;
     bool supportsQuadraticConstraints() override;
 
+    double getUnboundedVariableBoundValue() override;
+
     int getNumberOfExploredNodes() override;
 
     int getNumberOfOpenNodes() override { return (MIPSolverBase::getNumberOfOpenNodes()); }

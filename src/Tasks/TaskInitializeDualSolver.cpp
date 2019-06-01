@@ -152,6 +152,21 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
     }
 
+    double minLB = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+    double maxUB = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+
+    if(minLB < -env->dualSolver->MIPSolver->getUnboundedVariableBoundValue())
+    {
+        env->settings->updateSetting("ContinuousVariable.MinimumLowerBound", "Model",
+            -env->dualSolver->MIPSolver->getUnboundedVariableBoundValue());
+    }
+
+    if(maxUB > env->dualSolver->MIPSolver->getUnboundedVariableBoundValue())
+    {
+        env->settings->updateSetting("ContinuousVariable.MaximumUpperBound", "Model",
+            env->dualSolver->MIPSolver->getUnboundedVariableBoundValue());
+    }
+
     env->timing->stopTimer("DualStrategy");
 }
 

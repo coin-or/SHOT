@@ -1114,6 +1114,8 @@ PairDouble MIPSolverCplex::getCurrentVariableBounds(int varIndex)
 bool MIPSolverCplex::supportsQuadraticObjective() { return (true); }
 bool MIPSolverCplex::supportsQuadraticConstraints() { return (true); }
 
+double MIPSolverCplex::getUnboundedVariableBoundValue() { return (1e+20); }
+
 double MIPSolverCplex::getDualObjectiveValue()
 {
     double objVal = NAN;

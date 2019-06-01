@@ -679,6 +679,8 @@ bool MIPSolverOsiCbc::supportsQuadraticObjective() { return (false); }
 
 bool MIPSolverOsiCbc::supportsQuadraticConstraints() { return (false); }
 
+double MIPSolverOsiCbc::getUnboundedVariableBoundValue() { return (1e+50); }
+
 double MIPSolverOsiCbc::getDualObjectiveValue()
 {
     double objVal = NAN;

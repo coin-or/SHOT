@@ -1071,6 +1071,8 @@ PairDouble MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
 bool MIPSolverGurobi::supportsQuadraticObjective() { return (true); }
 bool MIPSolverGurobi::supportsQuadraticConstraints() { return (true); }
 
+double MIPSolverGurobi::getUnboundedVariableBoundValue() { return (1e+20); }
+
 double MIPSolverGurobi::getDualObjectiveValue()
 {
 
