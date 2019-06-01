@@ -14,6 +14,7 @@
 #include "Output.h"
 #include "Results.h"
 #include "Settings.h"
+#include "TaskHandler.h"
 #include "Timing.h"
 #include "Utilities.h"
 
@@ -34,6 +35,11 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
     try
     {
         bool printLine = false;
+
+        if(env->results->getNumberOfIterations() == 1)
+        {
+            printLine = true;
+        }
 
         if(dualObjectiveValue != lastDualObjectiveValue)
         {
