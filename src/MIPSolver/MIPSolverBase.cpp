@@ -227,7 +227,7 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
                     G.second = eps;
             }
 
-            std::cout << "gradient recalculated \n";
+            env->output->outputDebug("        All gradients nonzero, adding tolerance.");
         }
 
         env->output->outputTrace("     HP point generated for constraint index "

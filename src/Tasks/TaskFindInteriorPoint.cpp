@@ -92,7 +92,7 @@ void TaskFindInteriorPoint::run()
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
         tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        if(maxDev.normalizedValue > 0)
+        if(maxDev.normalizedValue >= 0)
         {
             env->output->outputWarning("\n        Maximum deviation in interior point is too large: "
                 + Utilities::toString(maxDev.normalizedValue));
