@@ -187,6 +187,88 @@ void Problem::updateVariables()
             nonlinearVariables.push_back(allVariables[i]);
     }
 
+    if(objectiveFunction->properties.hasLinearTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction)->linearTerms)
+            T->variable->properties.inObjectiveFunction = true;
+    }
+
+    if(objectiveFunction->properties.hasQuadraticTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction)->quadraticTerms)
+        {
+            T->firstVariable->properties.inObjectiveFunction = true;
+            T->secondVariable->properties.inObjectiveFunction = true;
+        }
+    }
+
+    if(objectiveFunction->properties.hasMonomialTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->monomialTerms)
+        {
+            for(auto& V : T->variables)
+            {
+                V->properties.inObjectiveFunction = true;
+                V->properties.inMonomialTerms = true;
+            }
+        }
+    }
+
+    if(objectiveFunction->properties.hasSignomialTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->signomialTerms)
+        {
+            for(auto& E : T->elements)
+            {
+                E->variable->properties.inObjectiveFunction = true;
+                E->variable->properties.inSignomialTerms = true;
+            }
+        }
+    }
+
+    if(objectiveFunction->properties.hasNonlinearExpression)
+    {
+        for(auto& V :
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->variablesInNonlinearExpression)
+        {
+            V->properties.inObjectiveFunction = true;
+            V->properties.inNonlinearExpression = true;
+        }
+    }
+
+    for(auto& C : linearConstraints)
+    {
+        for(auto& T : C->linearTerms)
+            T->variable->properties.inLinearConstraints = true;
+    }
+
+    for(auto& C : quadraticConstraints)
+    {
+        for(auto& T : C->quadraticTerms)
+        {
+            T->firstVariable->properties.inQuadraticConstraints = true;
+            T->secondVariable->properties.inQuadraticConstraints = true;
+        }
+    }
+
+    for(auto& C : nonlinearConstraints)
+    {
+        for(auto& V : C->variablesInMonomialTerms)
+        {
+            V->properties.inMonomialTerms = true;
+            V->properties.inNonlinearConstraints = true;
+        }
+
+        for(auto& V : C->variablesInSignomialTerms)
+        {
+            V->properties.inSignomialTerms = true;
+            V->properties.inNonlinearConstraints = true;
+        }
+
+        for(auto& V : C->variablesInNonlinearExpression)
+            V->properties.inNonlinearConstraints = true;
+    }
+
     allVariables.takeOwnership(shared_from_this());
     auxiliaryVariables.takeOwnership(shared_from_this());
 
