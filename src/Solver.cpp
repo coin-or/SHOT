@@ -1154,10 +1154,13 @@ void Solver::verifySettings()
 
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
     bool MIPSolverDefined = false;
+    double unboundedVariableBound = 1e50;
+
 #ifdef HAS_CPLEX
     if(solver == ES_MIPSolver::Cplex)
     {
         MIPSolverDefined = true;
+        unboundedVariableBound = 1e20;
     }
 #endif
 
@@ -1165,6 +1168,7 @@ void Solver::verifySettings()
     if(solver == ES_MIPSolver::Gurobi)
     {
         MIPSolverDefined = true;
+        unboundedVariableBound = 1e20;
     }
 #endif
 
@@ -1172,6 +1176,7 @@ void Solver::verifySettings()
     if(solver == ES_MIPSolver::Cbc)
     {
         MIPSolverDefined = true;
+        unboundedVariableBound = 1e50;
     }
 #endif
 
@@ -1181,13 +1186,30 @@ void Solver::verifySettings()
 
 #ifdef HAS_CBC
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+        unboundedVariableBound = 1e50;
 #elif HAS_GUROBI
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Gurobi);
+        unboundedVariableBound = 1e20;
 #elif HAS_CPLEX
         env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cplex);
+        unboundedVariableBound = 1e20;
 #else
         env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
 #endif
+    }
+
+    // Updating max bound setting for unbounded variables
+    double minLB = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
+    double maxUB = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+
+    if(minLB < -unboundedVariableBound)
+    {
+        env->settings->updateSetting("ContinuousVariable.MinimumLowerBound", "Model", -unboundedVariableBound);
+    }
+
+    if(maxUB > unboundedVariableBound)
+    {
+        env->settings->updateSetting("ContinuousVariable.MaximumUpperBound", "Model", unboundedVariableBound);
     }
 
     // Checking for too tight termination criteria
