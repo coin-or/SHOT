@@ -61,6 +61,12 @@ bool MIPSolverOsiCbc::addVariable(std::string name, E_VariableType type, double 
 {
     int index = numberOfVariables;
 
+    if(lowerBound < -getUnboundedVariableBoundValue())
+        lowerBound = -getUnboundedVariableBoundValue();
+
+    if(upperBound > getUnboundedVariableBoundValue())
+        upperBound = getUnboundedVariableBoundValue();
+
     try
     {
         coinModel->setColumnBounds(index, lowerBound, upperBound);
@@ -332,8 +338,13 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
+    else if(cbcModel->isContinuousUnbounded())
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+    }
     else
     {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
         env->output->outputError("MIP solver return status unknown.");
     }
 
@@ -382,6 +393,57 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
     {
         env->output->outputError("Error when solving subproblem with Cbc", e.what());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+    }
+
+    // To find a feasible point for an unbounded dual problem
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+    {
+        bool variableBoundsUpdated = false;
+
+        if((env->reformulatedProblem->objectiveFunction->properties.classification
+                   == E_ObjectiveFunctionClassification::Linear
+               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->isDualUnbounded())
+            || (env->reformulatedProblem->objectiveFunction->properties.classification
+                       == E_ObjectiveFunctionClassification::Quadratic
+                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                          ->isDualUnbounded()))
+        {
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(V->isDualUnbounded())
+                {
+                    updateVariableBound(
+                        V->index, -getUnboundedVariableBoundValue() / 10e30, getUnboundedVariableBoundValue() / 10e30);
+                    variableBoundsUpdated = true;
+                }
+            }
+        }
+
+        if(variableBoundsUpdated)
+        {
+            cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+            initializeSolverSettings();
+
+            CbcMain0(*cbcModel);
+
+            if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+            {
+                cbcModel->setLogLevel(0);
+                osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            }
+
+            cbcModel->branchAndBound();
+
+            MIPSolutionStatus = getSolutionStatus();
+
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(V->isDualUnbounded())
+                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
+            }
+        }
     }
 
     return (MIPSolutionStatus);
