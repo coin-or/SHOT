@@ -2150,7 +2150,7 @@ public:
 
     inline Interval getBounds() const override
     {
-        Interval tmpInterval(0.);
+        Interval tmpInterval(1.);
 
         for(auto& C : children)
         {

@@ -911,9 +911,6 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
             try
             {
                 bounds = T->getBounds();
-
-                if(bounds.l() == bounds.u())
-                    bounds = Interval(varLowerBound, varUpperBound);
             }
             catch(mc::Interval::Exceptions& e)
             {
@@ -971,9 +968,6 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
         try
         {
             bounds = T->getBounds();
-
-            if(bounds.l() == bounds.u())
-                bounds = Interval(varLowerBound, varUpperBound);
         }
         catch(mc::Interval::Exceptions& e)
         {
@@ -1027,9 +1021,6 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         try
         {
             bounds = T->getBounds();
-
-            if(bounds.l() == bounds.u())
-                bounds = Interval(varLowerBound, varUpperBound);
         }
         catch(mc::Interval::Exceptions& e)
         {
