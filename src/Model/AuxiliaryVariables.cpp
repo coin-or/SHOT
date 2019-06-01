@@ -9,8 +9,6 @@
 */
 
 #include "AuxiliaryVariables.h"
-#include "Variables.h"
-#include "Terms.h"
 
 namespace SHOT
 {
@@ -34,7 +32,7 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 {
     stream << "[" << var->index << "]:\t";
 
-    switch(var->type)
+    switch(var->properties.type)
     {
     case E_VariableType::Real:
         stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
@@ -60,7 +58,7 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
         break;
     }
 
-    switch(var->auxiliaryType)
+    switch(var->properties.auxiliaryType)
     {
     case E_AuxiliaryVariableType::NonlinearObjectiveFunction:
         stream << " (objective auxiliary variable)";

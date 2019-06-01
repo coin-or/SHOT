@@ -55,7 +55,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Copying variables
     for(auto& V : env->problem->allVariables)
     {
-        auto variable = std::make_shared<Variable>(V->name, V->index, V->type, V->lowerBound, V->upperBound);
+        auto variable = std::make_shared<Variable>(V->name, V->index, V->properties.type, V->lowerBound, V->upperBound);
         reformulatedProblem->add(std::move(variable));
     }
 
@@ -192,7 +192,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
             auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
                 "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
-            objectiveVariable->auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
+            objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
 
             if(env->problem->objectiveFunction->properties.hasLinearTerms)
             {
@@ -922,7 +922,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
             auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pnl_" + std::to_string(auxVariableCounter + 1),
                 auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
-            auxVariable->auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
+            auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
             auxVariableCounter++;
 
             resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
@@ -982,7 +982,7 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_pmon_" + std::to_string(auxVariableCounter + 1),
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
-        auxVariable->auxiliaryType = E_AuxiliaryVariableType::MonomialTermsPartitioning;
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::MonomialTermsPartitioning;
         auxVariableCounter++;
 
         resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
@@ -1038,7 +1038,7 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
         auto auxVariable = std::make_shared<AuxiliaryVariable>("s_psig_" + std::to_string(auxVariableCounter + 1),
             auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
-        auxVariable->auxiliaryType = E_AuxiliaryVariableType::SignomialTermsPartitioning;
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::SignomialTermsPartitioning;
         auxVariableCounter++;
 
         resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
@@ -1139,7 +1139,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             reformulatedProblem->add(std::move(auxConstraintBound2));
         }
         else if(T->isBilinear
-            && (T->firstVariable->type == E_VariableType::Binary || T->secondVariable->type == E_VariableType::Binary))
+            && (T->firstVariable->properties.type == E_VariableType::Binary
+                   || T->secondVariable->properties.type == E_VariableType::Binary))
         // Bilinear term b1*x2 or x1*b2
         {
             auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
@@ -1147,9 +1148,9 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
 
             auto binaryVariable
-                = (T->firstVariable->type == E_VariableType::Binary) ? T->firstVariable : T->secondVariable;
+                = (T->firstVariable->properties.type == E_VariableType::Binary) ? T->firstVariable : T->secondVariable;
             auto otherVariable
-                = (T->firstVariable->type == E_VariableType::Binary) ? T->secondVariable : T->firstVariable;
+                = (T->firstVariable->properties.type == E_VariableType::Binary) ? T->secondVariable : T->firstVariable;
 
             auto auxConstraint1 = std::make_shared<LinearConstraint>(auxConstraintCounter,
                 "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
@@ -1168,8 +1169,8 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             reformulatedProblem->add(std::move(auxConstraint1));
             reformulatedProblem->add(std::move(auxConstraint2));
         }
-        else if(T->isBilinear && T->firstVariable->type == E_VariableType::Integer
-            && T->secondVariable->type == E_VariableType::Integer && T->firstVariable->lowerBound >= 0
+        else if(T->isBilinear && T->firstVariable->properties.type == E_VariableType::Integer
+            && T->secondVariable->properties.type == E_VariableType::Integer && T->firstVariable->lowerBound >= 0
             && T->secondVariable->lowerBound >= 0 && T->firstVariable->upperBound <= 100
             && T->secondVariable->upperBound <= 100)
         // bilinear term i1*i2
@@ -1758,21 +1759,24 @@ AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
         auxVariableCounter, E_VariableType::Real, lowerBound, upperBound);
     auxVariableCounter++;
 
-    if(firstVariable->type == E_VariableType::Binary && secondVariable->type == E_VariableType::Binary)
+    if(firstVariable->properties.type == E_VariableType::Binary
+        && secondVariable->properties.type == E_VariableType::Binary)
     {
-        auxVariable->auxiliaryType = E_AuxiliaryVariableType::BinaryBilinear;
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryBilinear;
     }
-    else if(firstVariable->type == E_VariableType::Integer && secondVariable->type == E_VariableType::Integer)
+    else if(firstVariable->properties.type == E_VariableType::Integer
+        && secondVariable->properties.type == E_VariableType::Integer)
     {
-        auxVariable->auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
     }
-    else if(firstVariable->type == E_VariableType::Real && secondVariable->type == E_VariableType::Real)
+    else if(firstVariable->properties.type == E_VariableType::Real
+        && secondVariable->properties.type == E_VariableType::Real)
     {
-        auxVariable->auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
     }
     else
     {
-        auxVariable->auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousOrIntegerBilinear;
+        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousOrIntegerBilinear;
     }
 
     reformulatedProblem->add((auxVariable));

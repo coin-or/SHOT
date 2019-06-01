@@ -22,7 +22,7 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     sourceProblem = source;
 
     for(auto& V : sourceProblem->allVariables)
-        originalVariableType.push_back(V->type);
+        originalVariableType.push_back(V->properties.type);
 
     lowerBounds = sourceProblem->getVariableLowerBounds();
     upperBounds = sourceProblem->getVariableUpperBounds();

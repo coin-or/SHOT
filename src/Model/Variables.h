@@ -30,53 +30,61 @@ using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
 using Interval = mc::Interval;
 using IntervalVector = std::vector<Interval>;
 
+struct VariableProperties
+{
+    E_VariableType type = E_VariableType::None;
+    E_AuxiliaryVariableType auxiliaryType = E_AuxiliaryVariableType::None;
+
+    bool isAuxiliary = false;
+
+    bool inObjectiveFunction = false;
+    bool inLinearConstraints = false;
+    bool inQuadraticConstraints = false;
+    bool inNonlinearConstraints = false;
+
+    bool isUnboundedInDualProblem = false;
+    bool hasUpperBoundBeenTightened = false;
+    bool hasLowerBoundBeenTightened = false;
+};
+
 class Variable
 {
 public:
     std::string name = "";
     int index;
 
-    E_VariableType type;
+    VariableProperties properties;
+
     std::weak_ptr<Problem> ownerProblem;
 
     double upperBound;
     double lowerBound;
-    bool hasUpperBoundBeenTightened;
-    bool hasLowerBoundBeenTightened;
 
-    bool isNonlinear;
-    bool isAuxiliary;
     FactorableFunctionPtr factorableFunctionVariable;
 
     Variable()
-        : lowerBound(SHOT_DBL_MIN)
-        , upperBound(SHOT_DBL_MAX)
-        , hasUpperBoundBeenTightened(false)
-        , hasLowerBoundBeenTightened(false)
-        , isNonlinear(false)
-        , isAuxiliary(false){};
+    {
+        lowerBound = SHOT_DBL_MIN;
+        upperBound = SHOT_DBL_MAX;
+    }
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
-        : name(variableName)
-        , index(variableIndex)
-        , type(variableType)
-        , lowerBound(LB)
-        , upperBound(UB)
-        , hasUpperBoundBeenTightened(false)
-        , hasLowerBoundBeenTightened(false)
-        , isNonlinear(false)
-        , isAuxiliary(false){};
+    {
+        index = variableIndex;
+        name = variableName;
+        lowerBound = LB;
+        upperBound = UB;
+        properties.type = variableType;
+    };
 
     Variable(std::string variableName, int variableIndex, E_VariableType variableType)
-        : name(variableName)
-        , index(variableIndex)
-        , type(variableType)
-        , lowerBound(SHOT_DBL_MIN)
-        , upperBound(SHOT_DBL_MAX)
-        , hasUpperBoundBeenTightened(false)
-        , hasLowerBoundBeenTightened(false)
-        , isNonlinear(false)
-        , isAuxiliary(false){};
+    {
+        index = variableIndex;
+        name = variableName;
+        lowerBound = SHOT_DBL_MIN;
+        upperBound = SHOT_DBL_MAX;
+        properties.type = variableType;
+    };
 
     double calculate(const VectorDouble& point) const;
 

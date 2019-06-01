@@ -196,13 +196,13 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 if(V->index > sizeOfVariableVector)
                     continue;
 
-                if(V->hasUpperBoundBeenTightened)
+                if(V->properties.hasUpperBoundBeenTightened)
                 {
                     std::cout << "updated UB in NLP\n";
                     NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
                 }
 
-                if(V->hasLowerBoundBeenTightened)
+                if(V->properties.hasLowerBoundBeenTightened)
                 {
                     std::cout << "updated LB in NLP\n";
                     NLPSolver->updateVariableLowerBound(V->index, V->upperBound);

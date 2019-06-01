@@ -315,7 +315,8 @@ public:
             isSquare = true;
         }
 
-        if(firstVariable->type == E_VariableType::Binary && secondVariable->type == E_VariableType::Binary)
+        if(firstVariable->properties.type == E_VariableType::Binary
+            && secondVariable->properties.type == E_VariableType::Binary)
         {
             isBinary = true;
         }
@@ -519,7 +520,7 @@ public:
 
         for(auto& V : variables)
         {
-            if(V->type != E_VariableType::Binary)
+            if(V->properties.type != E_VariableType::Binary)
             {
                 isBinary = false;
                 break;

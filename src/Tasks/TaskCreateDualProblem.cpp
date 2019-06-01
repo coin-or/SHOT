@@ -78,8 +78,8 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     for(auto& V : sourceProblem->allVariables)
     {
-        variablesInitialized
-            = variablesInitialized && destination->addVariable(V->name.c_str(), V->type, V->lowerBound, V->upperBound);
+        variablesInitialized = variablesInitialized
+            && destination->addVariable(V->name.c_str(), V->properties.type, V->lowerBound, V->upperBound);
     }
 
     if(!variablesInitialized)

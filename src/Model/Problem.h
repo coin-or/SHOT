@@ -54,6 +54,7 @@ struct ProblemProperties
     int numberOfIntegerVariables = 0; // Not including binary variables
     int numberOfSemicontinuousVariables = 0;
     int numberOfNonlinearVariables = 0;
+    int numberOfAuxiliaryVariables = 0;
 
     int numberOfNumericConstraints = 0;
     int numberOfLinearConstraints = 0;

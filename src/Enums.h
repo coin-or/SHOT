@@ -236,6 +236,7 @@ enum class E_TerminationReason
 
 enum class E_VariableType
 {
+    None,
     Real,
     Binary,
     Integer,

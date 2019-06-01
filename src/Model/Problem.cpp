@@ -152,7 +152,6 @@ void Problem::updateConstraints()
 void Problem::updateVariables()
 {
     int numVariables = allVariables.size();
-    int numAuxiliaryVariables = auxiliaryVariables.size();
 
     allVariables.sortByIndex();
     allVariables.sortByIndex();
@@ -184,7 +183,7 @@ void Problem::updateVariables()
         variableUpperBounds[i] = allVariables[i]->upperBound;
         variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
 
-        if(allVariables[i]->isNonlinear)
+        if(allVariables[i]->properties.inNonlinearConstraints)
             nonlinearVariables.push_back(allVariables[i]);
     }
 
@@ -276,6 +275,10 @@ void Problem::updateProperties()
     properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
+    properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
+
+    if(auxiliaryObjectiveVariable)
+        properties.numberOfAuxiliaryVariables++;
 
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
@@ -599,7 +602,7 @@ void Problem::add(VariablePtr variable)
 {
     allVariables.push_back(variable);
 
-    switch(variable->type)
+    switch(variable->properties.type)
     {
     case(E_VariableType::Real):
         realVariables.push_back(variable);
@@ -633,12 +636,12 @@ void Problem::add(AuxiliaryVariablePtr variable)
 {
     allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
 
-    if(variable->auxiliaryType == E_AuxiliaryVariableType::NonlinearObjectiveFunction)
+    if(variable->properties.auxiliaryType == E_AuxiliaryVariableType::NonlinearObjectiveFunction)
         auxiliaryObjectiveVariable = variable;
     else
         auxiliaryVariables.push_back(variable);
 
-    switch(variable->type)
+    switch(variable->properties.type)
     {
     case(E_VariableType::Real):
         realVariables.push_back(variable);
@@ -830,7 +833,7 @@ AuxiliaryVariables Problem::getAuxiliaryVariablesOfType(E_AuxiliaryVariableType 
 
     for(auto& V : auxiliaryVariables)
     {
-        if(V->auxiliaryType == type)
+        if(V->properties.auxiliaryType == type)
             variables.push_back(V);
     }
 

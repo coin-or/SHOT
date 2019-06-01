@@ -12,8 +12,9 @@
 
 #include "../Structs.h"
 #include "../Enums.h"
-#include "Terms.h"
 #include "NonlinearExpressions.h"
+#include "Terms.h"
+#include "Variables.h"
 
 namespace SHOT
 {
@@ -21,9 +22,6 @@ namespace SHOT
 class AuxiliaryVariable : public Variable
 {
 public:
-    E_AuxiliaryVariableType auxiliaryType = E_AuxiliaryVariableType::None;
-    bool isAuxiliary = true;
-
     // These are used to calculate the value of the variable
     double constant = 0.0;
     LinearTerms linearTerms;
@@ -36,24 +34,27 @@ public:
     {
         Variable::lowerBound = SHOT_DBL_MIN;
         Variable::upperBound = SHOT_DBL_MAX;
+        properties.isAuxiliary = true;
     }
 
     AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType, double LB, double UB)
     {
         Variable::name = variableName;
         Variable::index = variableIndex;
-        Variable::type = variableType;
+        properties.type = variableType;
         Variable::lowerBound = LB;
         Variable::upperBound = UB;
+        properties.isAuxiliary = true;
     }
 
     AuxiliaryVariable(std::string variableName, int variableIndex, E_VariableType variableType)
     {
         Variable::name = variableName;
         Variable::index = variableIndex;
-        Variable::type = variableType;
+        properties.type = variableType;
         Variable::lowerBound = SHOT_DBL_MIN;
         Variable::upperBound = SHOT_DBL_MAX;
+        properties.isAuxiliary = true;
     }
 
     double calculateAuxiliaryValue(VectorDouble point);

@@ -24,7 +24,7 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
 {
     stream << "[" << var->index << "]:\t";
 
-    switch(var->type)
+    switch(var->properties.type)
     {
     case E_VariableType::Real:
         stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;

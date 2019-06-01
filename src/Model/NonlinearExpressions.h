@@ -226,9 +226,11 @@ class ExpressionVariable : public NonlinearExpression
 public:
     VariablePtr variable;
 
-    ExpressionVariable() { variable->isNonlinear = true; };
+    ExpressionVariable() { variable->properties.inNonlinearConstraints = true; };
 
-    ExpressionVariable(VariablePtr variable) : variable(variable) { variable->isNonlinear = true; };
+    ExpressionVariable(VariablePtr variable) : variable(variable) {
+        variable->properties.inNonlinearConstraints = true;
+    };
 
     inline double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
 

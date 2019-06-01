@@ -338,8 +338,8 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     for(auto& V : sourceProblem->allVariables)
     {
-        variablesInitialized
-            = variablesInitialized && destination->addVariable(V->name, V->type, V->lowerBound, V->upperBound);
+        variablesInitialized = variablesInitialized
+            && destination->addVariable(V->name, V->properties.type, V->lowerBound, V->upperBound);
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {

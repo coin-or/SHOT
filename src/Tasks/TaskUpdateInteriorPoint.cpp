@@ -46,10 +46,8 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
-        {
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
-        }
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
 
@@ -76,10 +74,8 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
-        {
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
-        }
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
@@ -101,10 +97,8 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
-        {
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
-        }
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
@@ -132,10 +126,8 @@ void TaskUpdateInteriorPoint::run()
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
-        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
-        {
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
-        }
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
@@ -164,10 +156,8 @@ void TaskUpdateInteriorPoint::run()
                 = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->MIPSolver->interiorPts.at(0)->point.at(i));
         }
 
-        for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
-        {
-            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(tmpPrimalPoint));
-        }
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
 

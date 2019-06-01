@@ -352,9 +352,9 @@ void MIPSolverBase::presolveAndUpdateBounds()
             env->output->outputDebug("     Lower bound for variable (" + std::to_string(i) + ") updated from "
                 + Utilities::toString(currBounds.first) + " to " + Utilities::toString(newBounds.first.at(i)));
 
-            if(!env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened)
+            if(!env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened)
             {
-                env->reformulatedProblem->allVariables[i]->hasLowerBoundBeenTightened = true;
+                env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened = true;
                 env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
@@ -365,9 +365,9 @@ void MIPSolverBase::presolveAndUpdateBounds()
             env->output->outputDebug("     Upper bound for variable (" + std::to_string(i) + ") updated from "
                 + Utilities::toString(currBounds.second) + " to " + Utilities::toString(newBounds.second.at(i)));
 
-            if(!env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened)
+            if(!env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened)
             {
-                env->reformulatedProblem->allVariables[i]->hasUpperBoundBeenTightened = true;
+                env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened = true;
                 env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
