@@ -680,6 +680,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
                 if(V->isDualUnbounded())
                     updateVariableBound(V->index, V->lowerBound, V->upperBound);
             }
+
+            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
     }
 
