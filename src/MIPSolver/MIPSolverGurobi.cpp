@@ -653,7 +653,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
                 if(V->isDualUnbounded())
                 {
                     updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 0.9);
+                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
                     variableBoundsUpdated = true;
                 }
             }
