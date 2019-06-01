@@ -612,7 +612,8 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
-            MIPSolutionStatus = getSolutionStatus();
+            MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
     }
     catch(IloException& e)
@@ -696,11 +697,11 @@ bool MIPSolverCplex::repairInfeasibility()
 
             if(numRepairs == 0)
             {
-                env->output->outputCritical("        Could not repair the infeasible dual problem.");
+                env->output->outputDebug("        Could not repair the infeasible dual problem.");
                 return (false);
             }
 
-            env->output->outputCritical("        Number of constraints modified: " + std::to_string(numRepairs));
+            env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
             cplexInstance.extract(cplexModel);
 
@@ -717,7 +718,7 @@ bool MIPSolverCplex::repairInfeasibility()
             return (true);
         }
 
-        env->output->outputCritical("        Could not repair the infeasible dual problem.");
+        env->output->outputDebug("        Could not repair the infeasible dual problem.");
     }
     catch(IloException& e)
     {

@@ -735,7 +735,7 @@ bool MIPSolverGurobi::repairInfeasibility()
                &repairConstraints[0], &relaxParameters[0])
             < 0)
         {
-            env->output->outputCritical("        Could not repair the infeasible dual problem.");
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
             return (false);
         }
 
@@ -745,7 +745,7 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         if(status != GRB_OPTIMAL)
         {
-            env->output->outputCritical("        Could not repair the infeasible dual problem.");
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
             return (false);
         }
 
