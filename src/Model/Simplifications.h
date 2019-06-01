@@ -338,6 +338,30 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionDivid
     if(secondChildIsConstant && secondChildConstant == 1.0)
         return (firstChild);
 
+    if(secondChild->getType() == E_NonlinearExpressionTypes::Power)
+    {
+        auto child = std::dynamic_pointer_cast<ExpressionPower>(secondChild);
+
+        if(child->firstChild->getType() == E_NonlinearExpressionTypes::Variable
+            && child->secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            auto power = std::dynamic_pointer_cast<ExpressionConstant>(child->secondChild);
+            power->constant *= -1.0;
+
+            std::make_shared<ExpressionProduct>(firstChild, secondChild);
+        }
+    }
+    else if(secondChild->getType() == E_NonlinearExpressionTypes::Square)
+    {
+        auto square = std::dynamic_pointer_cast<ExpressionSquare>(secondChild);
+
+        if(square->child->getType() == E_NonlinearExpressionTypes::Variable)
+        {
+            return (std::make_shared<ExpressionProduct>(firstChild,
+                std::make_shared<ExpressionPower>(square->child, std::make_shared<ExpressionConstant>(-2.0))));
+        }
+    }
+
     return (std::make_shared<ExpressionDivide>(firstChild, secondChild));
 }
 

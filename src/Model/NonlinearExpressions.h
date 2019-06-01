@@ -2253,6 +2253,69 @@ public:
             }
         }
 
+        // Identify convexity for exp(q*y)/x^p for q real, p>0
+
+        bool isValid = true;
+        double constant = 1.0;
+
+        for(auto& C : children)
+        {
+            if(C->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+            }
+            else if(C->getType() == E_NonlinearExpressionTypes::Exp)
+            {
+                auto exponential = std::dynamic_pointer_cast<ExpressionExp>(C);
+
+                if(exponential->child->getConvexity() != E_Convexity::Linear)
+                {
+                    isValid = false;
+                    break;
+                }
+            }
+            else if(C->getType() == E_NonlinearExpressionTypes::Power)
+            {
+                auto power = std::dynamic_pointer_cast<ExpressionPower>(C);
+
+                if(power->secondChild->getType() != E_NonlinearExpressionTypes::Constant
+                    && std::dynamic_pointer_cast<ExpressionConstant>(power->secondChild)->constant > 0)
+                {
+                    isValid = false;
+                    break;
+                }
+
+                if(power->firstChild->getBounds().l() <= 0)
+                {
+                    isValid = false;
+                    break;
+                }
+
+                if(power->firstChild->getConvexity() != E_Convexity::Linear)
+                {
+                    isValid = false;
+                    break;
+                }
+            }
+            else
+            {
+                isValid = false;
+                break;
+            }
+        }
+
+        if(isValid)
+        {
+            if(constant >= 0)
+            {
+                return E_Convexity::Convex;
+            }
+            else
+            {
+                return E_Convexity::Concave;
+            }
+        }
+
         return E_Convexity::Unknown;
     };
 
