@@ -87,6 +87,12 @@ bool MIPSolverCplex::initializeProblem()
 
 bool MIPSolverCplex::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
+    if(lowerBound < -getUnboundedVariableBoundValue())
+        lowerBound = -getUnboundedVariableBoundValue();
+
+    if(upperBound > getUnboundedVariableBoundValue())
+        upperBound = getUnboundedVariableBoundValue();
+
     try
     {
         switch(type)
@@ -535,6 +541,10 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
                 MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
             }
         }
+        else if(status == IloCplex::CplexStatus::Feasible)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+        }
         else if(status == IloCplex::CplexStatus::Infeasible)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
@@ -598,6 +608,12 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         cplexInstance.solve();
 
         MIPSolutionStatus = getSolutionStatus();
+
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        {
+            repairInfeasibility();
+            MIPSolutionStatus = getSolutionStatus();
+        }
     }
     catch(IloException& e)
     {
