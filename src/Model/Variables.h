@@ -96,6 +96,8 @@ public:
     Interval calculate(const IntervalVector& intervalVector) const;
     Interval getBound();
 
+    bool isDualUnbounded();
+
     void takeOwnership(ProblemPtr owner);
 };
 

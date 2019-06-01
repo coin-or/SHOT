@@ -9,7 +9,12 @@
 */
 
 #include "Variables.h"
+#include "Problem.h"
+
 #include "ffunc.hpp"
+
+#include "../Environment.h"
+#include "../Settings.h"
 
 namespace SHOT
 {
@@ -17,6 +22,32 @@ namespace SHOT
 double Variable::calculate(const VectorDouble& point) const { return point[index]; };
 Interval Variable::calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; };
 Interval Variable::getBound() { return Interval(lowerBound, upperBound); };
+
+bool Variable::isDualUnbounded()
+{
+    if(properties.inLinearConstraints || properties.inQuadraticConstraints)
+        return false;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        double maxBound;
+
+        if(sharedOwnerProblem->env->settings)
+        {
+            maxBound = sharedOwnerProblem->env->settings->getSetting<double>(
+                "ContinuousVariable.MinimumLowerBound", "Model");
+        }
+        else
+        {
+            maxBound = 1e50;
+        }
+
+        if(lowerBound >= -maxBound && upperBound <= maxBound)
+            return false;
+    }
+
+    return true;
+}
 
 void Variable::takeOwnership(ProblemPtr owner) { ownerProblem = owner; };
 

@@ -136,6 +136,20 @@ void LinearObjectiveFunction::updateProperties()
     ObjectiveFunction::updateProperties();
 };
 
+bool LinearObjectiveFunction::isDualUnbounded()
+{
+    for(auto& T : linearTerms)
+    {
+        if(T->coefficient == 0)
+            continue;
+
+        if(T->variable->isDualUnbounded())
+            return true;
+    }
+
+    return false;
+};
+
 void LinearObjectiveFunction::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
@@ -302,6 +316,26 @@ void QuadraticObjectiveFunction::updateProperties()
     {
         properties.hasQuadraticTerms = false;
     }
+};
+
+bool QuadraticObjectiveFunction::isDualUnbounded()
+{
+    if(LinearObjectiveFunction::isDualUnbounded())
+        return true;
+
+    for(auto& T : quadraticTerms)
+    {
+        if(T->coefficient == 0)
+            continue;
+
+        if(T->firstVariable->isDualUnbounded())
+            return true;
+
+        if(T->secondVariable->isDualUnbounded())
+            return true;
+    }
+
+    return false;
 };
 
 void QuadraticObjectiveFunction::takeOwnership(ProblemPtr owner)

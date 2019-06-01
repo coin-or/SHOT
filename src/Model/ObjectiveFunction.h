@@ -142,6 +142,8 @@ public:
     void add(LinearTermPtr term);
     void updateProperties() override;
 
+    virtual bool isDualUnbounded();
+
     void takeOwnership(ProblemPtr owner) override;
 
     double calculateValue(const VectorDouble& point) override;
@@ -211,6 +213,8 @@ public:
     void add(QuadraticTermPtr term);
 
     void updateProperties() override;
+
+    bool isDualUnbounded() override;
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;
