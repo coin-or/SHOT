@@ -183,7 +183,7 @@ void Problem::updateVariables()
         variableUpperBounds[i] = allVariables[i]->upperBound;
         variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
 
-        if(allVariables[i]->properties.inNonlinearConstraints)
+        if(allVariables[i]->properties.isNonlinear)
             nonlinearVariables.push_back(allVariables[i]);
     }
 

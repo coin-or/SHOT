@@ -36,11 +36,15 @@ struct VariableProperties
     E_AuxiliaryVariableType auxiliaryType = E_AuxiliaryVariableType::None;
 
     bool isAuxiliary = false;
+    bool isNonlinear = false;
 
     bool inObjectiveFunction = false;
     bool inLinearConstraints = false;
     bool inQuadraticConstraints = false;
     bool inNonlinearConstraints = false;
+
+    bool inMonomialTerms = false;
+    bool inSignomialTerms = false;
 
     bool isUnboundedInDualProblem = false;
     bool hasUpperBoundBeenTightened = false;
