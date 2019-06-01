@@ -135,7 +135,19 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionInver
     else // One invertion remains
     {
         expression->child = simplify(child);
-        return expression;
+
+        if(expression->child->getType() == E_NonlinearExpressionTypes::Power)
+        {
+            auto child = std::dynamic_pointer_cast<ExpressionPower>(expression->child);
+
+            if(child->secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+            {
+                auto power = std::dynamic_pointer_cast<ExpressionConstant>(child->secondChild);
+                power->constant *= -1.0;
+
+                return child;
+            }
+        }
     }
 
     return (expression);
