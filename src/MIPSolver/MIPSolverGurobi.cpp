@@ -75,6 +75,12 @@ bool MIPSolverGurobi::initializeProblem()
 
 bool MIPSolverGurobi::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
+    if(lowerBound < -getUnboundedVariableBoundValue())
+        lowerBound = -getUnboundedVariableBoundValue();
+
+    if(upperBound > getUnboundedVariableBoundValue())
+        upperBound = getUnboundedVariableBoundValue();
+
     try
     {
         switch(type)
@@ -635,7 +641,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     }
 
     // To find a feasible point for an unbounded dual problem
-    if(env->results->getNumberOfIterations() == 1 && (MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded))
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         bool variableBoundsUpdated = false;
 
