@@ -47,7 +47,6 @@ struct VariableProperties
     bool inSignomialTerms = false;
     bool inNonlinearExpression = false;
 
-    bool isUnboundedInDualProblem = false;
     bool hasUpperBoundBeenTightened = false;
     bool hasLowerBoundBeenTightened = false;
 };

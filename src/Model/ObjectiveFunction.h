@@ -214,7 +214,7 @@ public:
 
     void updateProperties() override;
 
-    bool isDualUnbounded() override;
+    virtual bool isDualUnbounded() override;
 
     double calculateValue(const VectorDouble& point) override;
     Interval calculateValue(const IntervalVector& intervalVector) override;

@@ -634,6 +634,49 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // To find a feasible point for an unbounded dual problem
+    if(env->results->getNumberOfIterations() == 1 && (MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded))
+    {
+        bool variableBoundsUpdated = false;
+
+        if((env->reformulatedProblem->objectiveFunction->properties.classification
+                   == E_ObjectiveFunctionClassification::Linear
+               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->isDualUnbounded())
+            || (env->reformulatedProblem->objectiveFunction->properties.classification
+                       == E_ObjectiveFunctionClassification::Quadratic
+                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                          ->isDualUnbounded()))
+        {
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(V->isDualUnbounded())
+                {
+                    updateVariableBound(
+                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 0.9);
+                    variableBoundsUpdated = true;
+                }
+            }
+        }
+
+        if(variableBoundsUpdated)
+        {
+            gurobiModel->update();
+
+            GurobiInfoCallback gurobiCallback = GurobiInfoCallback(env);
+            gurobiModel->setCallback(&gurobiCallback);
+            gurobiModel->optimize();
+
+            MIPSolutionStatus = getSolutionStatus();
+
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(V->isDualUnbounded())
+                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
+            }
+        }
+    }
+
     return (MIPSolutionStatus);
 }
 
