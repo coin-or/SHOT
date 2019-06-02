@@ -188,6 +188,18 @@ public:
         return value;
     }
 
+    Interval getBounds() const
+    {
+        Interval bounds(0.0, 0.0);
+
+        for(auto const& TERM : *this)
+        {
+            bounds += TERM->getBounds();
+        }
+
+        return bounds;
+    }
+
     inline void takeOwnership(ProblemPtr owner)
     {
         ownerProblem = owner;

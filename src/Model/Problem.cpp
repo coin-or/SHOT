@@ -272,6 +272,8 @@ void Problem::updateVariables()
     allVariables.takeOwnership(shared_from_this());
     auxiliaryVariables.takeOwnership(shared_from_this());
 
+    tightenBounds();
+
     variablesUpdated = true;
 };
 
@@ -1395,6 +1397,99 @@ void Problem::saveProblemToFile(std::string filename)
     if(!Utilities::writeStringToFile(filename, stream.str()))
     {
         env->output->outputError("Error when writing to file " + filename);
+    }
+}
+
+void Problem::doFBBT()
+{
+    int numberOfPasses = 5;
+
+    for(int i = 0; i < numberOfPasses; i++)
+    {
+        bool boundsUpdated = false;
+        env->output->outputInfo(fmt::format("Bound tightening pass {} of {}.", i + 1, numberOfPasses));
+
+        for(auto& C : linearConstraints)
+        {
+            if(C->valueRHS < SHOT_DBL_MAX)
+            {
+                for(auto& T : C->linearTerms)
+                {
+                    double sum = 0.0;
+
+                    for(auto& T2 : C->linearTerms)
+                    {
+                        if(T2 == T)
+                            continue;
+
+                        sum += T2->coefficient
+                            * (T2->coefficient > 0 ? T2->variable->lowerBound : T2->variable->upperBound);
+                    }
+
+                    double candidate = (1 / T->coefficient) * (C->valueRHS - C->constant - sum);
+
+                    if(T->coefficient > 0 && candidate < T->variable->upperBound)
+                    {
+                        env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
+                                                            "New bounds [{},{}]. Constraint: {}.",
+                            T->variable->name, T->variable->upperBound, candidate, T->variable->lowerBound, candidate,
+                            C->name));
+                        T->variable->upperBound = candidate;
+                        boundsUpdated = true;
+                    }
+                    else if(T->coefficient < 0 && candidate > T->variable->lowerBound)
+                    {
+                        env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}. "
+                                                            "New bounds [{},{}]. Constraint: {}.",
+                            T->variable->name, T->variable->lowerBound, candidate, candidate, T->variable->upperBound,
+                            C->name));
+                        T->variable->lowerBound = candidate;
+                        boundsUpdated = true;
+                    }
+                }
+            }
+
+            if(C->valueLHS > SHOT_DBL_MIN)
+            {
+                for(auto& T : C->linearTerms)
+                {
+                    double sum = 0.0;
+
+                    for(auto& T2 : C->linearTerms)
+                    {
+                        if(T2 == T)
+                            continue;
+
+                        sum += T2->coefficient
+                            * (T2->coefficient > 0 ? T2->variable->upperBound : T2->variable->lowerBound);
+                    }
+
+                    double candidate = (1 / T->coefficient) * (C->valueLHS - C->constant - sum);
+
+                    if(T->coefficient > 0 && candidate > T->variable->lowerBound)
+                    {
+                        env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}. "
+                                                            "New bounds [{},{}]. Constraint: {}.",
+                            T->variable->name, T->variable->lowerBound, candidate, candidate, T->variable->upperBound,
+                            C->name));
+                        T->variable->lowerBound = candidate;
+                        boundsUpdated = true;
+                    }
+                    else if(T->coefficient < 0 && candidate < T->variable->upperBound)
+                    {
+                        env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
+                                                            "New bounds [{},{}]. Constraint: {}.",
+                            T->variable->name, T->variable->upperBound, candidate, T->variable->lowerBound, candidate,
+                            C->name));
+                        T->variable->upperBound = candidate;
+                        boundsUpdated = true;
+                    }
+                }
+            }
+        }
+
+        if(!boundsUpdated)
+            break;
     }
 }
 
