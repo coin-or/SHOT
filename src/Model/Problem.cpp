@@ -1496,6 +1496,49 @@ void Problem::doFBBT()
             }
         }
 
+        for(auto& C : nonlinearConstraints)
+        {
+            auto bound = C->getConstraintFunctionBounds();
+
+            bound.l(std::max(C->valueLHS, bound.l()));
+            bound.u(std::min(C->valueRHS, bound.u()));
+
+            for(auto& T1 : C->linearTerms)
+            {
+                auto newBound = bound;
+
+                for(auto& T2 : C->linearTerms)
+                {
+                    if(T2 == T1)
+                        continue;
+
+                    newBound -= T2->getBounds();
+                }
+
+                newBound.l(std::max(newBound.l(), bound.l()));
+                newBound.u(std::min(newBound.u(), bound.u()));
+
+                auto candidate = (1.0 / T1->coefficient) * newBound;
+                bool tmpUpdated = false;
+
+                if(T1->variable->tightenBounds(candidate))
+                {
+                    bound = C->getConstraintFunctionBounds();
+                    boundsUpdated = true;
+                }
+            }
+
+            if(C->nonlinearExpression)
+            {
+                auto newBound = bound - C->linearTerms.getBounds() - C->quadraticTerms.getBounds();
+
+                newBound.l(std::max(newBound.l(), bound.l()));
+                newBound.u(std::min(newBound.u(), bound.u()));
+
+                boundsUpdated = C->nonlinearExpression->tightenBounds(newBound) || boundsUpdated;
+            }
+        }
+
         if(!boundsUpdated)
             break;
     }

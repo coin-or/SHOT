@@ -14,6 +14,7 @@
 #include "ffunc.hpp"
 
 #include "../Environment.h"
+#include "../Output.h"
 #include "../Settings.h"
 
 namespace SHOT
@@ -22,6 +23,41 @@ namespace SHOT
 double Variable::calculate(const VectorDouble& point) const { return point[index]; };
 Interval Variable::calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; };
 Interval Variable::getBound() { return Interval(lowerBound, upperBound); };
+
+bool Variable::tightenBounds(const Interval bound)
+{
+    bool tightened = false;
+    double originalLowerBound = this->lowerBound;
+    double originalUpperBound = this->upperBound;
+
+    if(bound.l() > this->lowerBound && bound.l() <= this->upperBound)
+    {
+        tightened = true;
+        this->lowerBound = bound.l();
+    }
+
+    if(bound.u() < this->upperBound && bound.u() >= this->lowerBound)
+    {
+        tightened = true;
+        this->upperBound = bound.u();
+    }
+
+    if(tightened)
+    {
+        if(auto sharedOwnerProblem = ownerProblem.lock())
+        {
+            if(sharedOwnerProblem->env->output)
+            {
+                sharedOwnerProblem->env->output->outputInfo(
+                    fmt::format("Bounds tightened for variable {}. Old bounds [{},{}] "
+                                "New bounds [{},{}].",
+                        this->name, originalLowerBound, originalUpperBound, this->lowerBound, this->upperBound));
+            }
+        }
+    }
+
+    return tightened;
+};
 
 bool Variable::isDualUnbounded()
 {
