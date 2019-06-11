@@ -273,8 +273,6 @@ void Problem::updateVariables()
     allVariables.takeOwnership(shared_from_this());
     auxiliaryVariables.takeOwnership(shared_from_this());
 
-    doFBBT();
-
     variablesUpdated = true;
 };
 
@@ -675,6 +673,8 @@ void Problem::finalize()
     updateConstraints();
     updateProperties();
     updateFactorableFunctions();
+
+    doFBBT();
 }
 
 void Problem::add(Variables variables)
@@ -1432,7 +1432,7 @@ void Problem::doFBBT()
 
                     double candidate = (1 / T->coefficient) * (C->valueRHS - C->constant - sum);
 
-                    if(T->coefficient > 0 && candidate < T->variable->upperBound && candidate < T->variable->upperBound
+                    if(T->coefficient > 0 && candidate < T->variable->upperBound
                         && candidate >= T->variable->lowerBound)
                     {
                         env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
