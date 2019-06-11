@@ -12,6 +12,7 @@
 #include "../Enums.h"
 #include "../Output.h"
 #include "../Settings.h"
+#include "../Timing.h"
 #include "../Utilities.h"
 #include "../Model/Simplifications.h"
 #include "../Tasks/TaskReformulateProblem.h"
@@ -272,7 +273,7 @@ void Problem::updateVariables()
     allVariables.takeOwnership(shared_from_this());
     auxiliaryVariables.takeOwnership(shared_from_this());
 
-    tightenBounds();
+    doFBBT();
 
     variablesUpdated = true;
 };
@@ -1402,6 +1403,9 @@ void Problem::saveProblemToFile(std::string filename)
 
 void Problem::doFBBT()
 {
+    env->timing->startTimer("BoundTightening");
+    env->timing->startTimer("BoundTighteningFBBT");
+
     int numberOfPasses = 5;
 
     for(int i = 0; i < numberOfPasses; i++)
@@ -1428,7 +1432,8 @@ void Problem::doFBBT()
 
                     double candidate = (1 / T->coefficient) * (C->valueRHS - C->constant - sum);
 
-                    if(T->coefficient > 0 && candidate < T->variable->upperBound)
+                    if(T->coefficient > 0 && candidate < T->variable->upperBound && candidate < T->variable->upperBound
+                        && candidate >= T->variable->lowerBound)
                     {
                         env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
                                                             "New bounds [{},{}]. Constraint: {}.",
@@ -1437,7 +1442,8 @@ void Problem::doFBBT()
                         T->variable->upperBound = candidate;
                         boundsUpdated = true;
                     }
-                    else if(T->coefficient < 0 && candidate > T->variable->lowerBound)
+                    else if(T->coefficient < 0 && candidate > T->variable->lowerBound
+                        && candidate <= T->variable->upperBound)
                     {
                         env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}. "
                                                             "New bounds [{},{}]. Constraint: {}.",
@@ -1466,7 +1472,8 @@ void Problem::doFBBT()
 
                     double candidate = (1 / T->coefficient) * (C->valueLHS - C->constant - sum);
 
-                    if(T->coefficient > 0 && candidate > T->variable->lowerBound)
+                    if(T->coefficient > 0 && candidate > T->variable->lowerBound
+                        && candidate <= T->variable->upperBound)
                     {
                         env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}. "
                                                             "New bounds [{},{}]. Constraint: {}.",
@@ -1475,7 +1482,8 @@ void Problem::doFBBT()
                         T->variable->lowerBound = candidate;
                         boundsUpdated = true;
                     }
-                    else if(T->coefficient < 0 && candidate < T->variable->upperBound)
+                    else if(T->coefficient < 0 && candidate < T->variable->upperBound
+                        && candidate >= T->variable->lowerBound)
                     {
                         env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
                                                             "New bounds [{},{}]. Constraint: {}.",
@@ -1491,6 +1499,9 @@ void Problem::doFBBT()
         if(!boundsUpdated)
             break;
     }
+
+    env->timing->stopTimer("BoundTighteningFBBT");
+    env->timing->stopTimer("BoundTightening");
 }
 
 std::ostream& operator<<(std::ostream& stream, const Problem& problem)
