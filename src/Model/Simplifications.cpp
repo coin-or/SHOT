@@ -14,7 +14,8 @@
 namespace SHOT
 {
 
-void simplifyNonlinearExpressions(ProblemPtr problem)
+void simplifyNonlinearExpressions(
+    ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics)
 {
     if(problem->objectiveFunction->properties.hasNonlinearExpression)
     {
@@ -24,7 +25,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
-            = extractTermsAndConstant(nonlinearExpression);
+            = extractTermsAndConstant(nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics);
 
         if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
             && nonlinearObjective->monomialTerms.size() == 0 && nonlinearObjective->signomialTerms.size() == 0)
@@ -99,7 +100,7 @@ void simplifyNonlinearExpressions(ProblemPtr problem)
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
-            = extractTermsAndConstant(nonlinearExpression);
+            = extractTermsAndConstant(nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics);
 
         if(tmpMonomialTerms.size() == 0 && tmpSignomialTerms.size() == 0 && !tmpNonlinearExpression
             && nonlinearConstraint->monomialTerms.size() == 0 && nonlinearConstraint->signomialTerms.size() == 0)

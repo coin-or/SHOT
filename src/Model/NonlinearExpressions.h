@@ -679,7 +679,13 @@ public:
 
     inline Interval getBounds() const override { return (exp(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (child->tightenBounds(log(bound))); };
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() <= 0)
+            return false;
+
+        return (child->tightenBounds(log(bound)));
+    };
 
     inline FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }
 
@@ -747,7 +753,13 @@ public:
         return (interval);
     }
 
-    inline bool tightenBounds(Interval bound) override { return (child->tightenBounds(sqrt(bound))); };
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() < 0)
+            return false;
+
+        return (child->tightenBounds(sqrt(bound)));
+    };
 
     inline FactorableFunction getFactorableFunction() override
     {
@@ -2071,8 +2083,10 @@ public:
                 newBound -= T2->getBounds();
             }
 
-            newBound.l(std::max(bound.l(), newBound.l()));
-            newBound.u(std::min(bound.u(), newBound.u()));
+            auto childBound = T1->getBounds();
+
+            newBound.l(std::max(childBound.l(), newBound.l()));
+            newBound.u(std::min(childBound.u(), newBound.u()));
 
             tightened = T1->tightenBounds(newBound) || tightened;
         }
@@ -2248,7 +2262,7 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        /* int numberOfChildren = getNumberOfChildren();
+        int numberOfChildren = getNumberOfChildren();
 
         if(numberOfChildren == 0)
             return (false);
@@ -2256,56 +2270,30 @@ public:
         if(numberOfChildren == 1)
             return (children.at(0)->tightenBounds(bound));
 
-        if(auto optional = convertProductToLinearTerm(shared_from_this()); optional)
+        bool tightened = false;
+
+        for(auto& C1 : children)
         {
-            auto term = optional.value();
-        }
-        else if(auto optional = convertProductToQuadraticTerm(product); optional)
-        {
-            quadraticTerms.add(optional.value());
-        }
+            Interval othersBound(1.0);
 
-        double constant = 1.0;
+            for(auto& C2 : children)
+            {
+                if(C1 == C2)
+                    continue;
 
-        if(isLinearTerm)
-        {
-        }
+                othersBound *= C2->getBounds();
+            }
 
-        if(!isQuadraticTerm())
-            return (false);
+            // To avoid division by zero
+            if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                continue;
 
-        double constant = 1.0;
-        ExpressionVariablePtr firstVariable;
-        ExpressionVariablePtr secondVariable;
+            auto childBound = bound / othersBound;
 
-        if(numberOfChildren == 3 && children.at(0)->getType() == E_NonlinearExpressionTypes::Constant)
-        {
-            constant = std::dynamic_pointer_cast<ExpressionConstant>(children.at(0));
-
-            firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(children.at(1));
-            secondVariable = std::dynamic_pointer_cast<ExpressionVariable>(children.at(1));
-        }
-        else
-        {
+            tightened = C1->tightenBounds(childBound);
         }
 
-        if(children.at(0).get() == children.at(1).get())
-        {
-            auto firstConvexity = children.at(0)->getConvexity();
-            auto firstBounds = children.at(0)->getBounds();
-
-            if(firstConvexity == E_Convexity::Linear)
-                return E_Convexity::Convex;
-
-            if(firstConvexity == E_Convexity::Convex && firstBounds.l() >= 0.0)
-                return E_Convexity::Convex;
-
-            if(firstConvexity == E_Convexity::Concave && firstBounds.u() <= 0.0)
-                return E_Convexity::Convex;
-        }
-        */
-
-        return (false);
+        return (tightened);
     };
 
     inline FactorableFunction getFactorableFunction() override

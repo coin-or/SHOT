@@ -191,7 +191,12 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
             return (E_ProblemCreationStatus::ErrorInConstraints);
 
         problem->updateProperties();
-        simplifyNonlinearExpressions(problem);
+
+        bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
+        bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
+        bool extractQuadraticTerms = env->settings->getSetting<bool>("Reformulation.Quadratics.Extract", "Model");
+
+        simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 
         problem->finalize();
     }

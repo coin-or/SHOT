@@ -706,6 +706,16 @@ void Solver::initializeSettings()
 
     // Optimization model settings
 
+    // Bound tightening
+    env->settings->createSetting(
+        "BoundTightening.FeasibilityBased.MaxIterations", "Model", 5, "Maximal number of bound tightening iterations");
+
+    env->settings->createSetting(
+        "BoundTightening.FeasibilityBased.Use", "Model", true, "Peform feasibility-based bound tightening");
+
+    env->settings->createSetting("BoundTightening.FeasibilityBased.UseNonlinear", "Model", true,
+        "Peform feasibility-based bound tightening on nonlinear expressions");
+
     env->settings->createSetting("Convexity.Quadratics.EigenValueTolerance", "Model", 1e-5,
         "Convexity tolerance for the eigenvalues of the Hessian matrix for quadratic terms", 0.0, SHOT_DBL_MAX);
 
@@ -753,7 +763,11 @@ void Solver::initializeSettings()
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false,
         "Partition quadratic terms as auxiliary constraints");
 
-    // Reformulations for binary monomials
+    // Reformulations for monomials
+
+    env->settings->createSetting(
+        "Reformulation.Monomials.Extract", "Model", true, "Extract monomial terms from nonlinear expressions");
+
     VectorString enumBinaryMonomialReformulation;
     enumBinaryMonomialReformulation.push_back("None");
     enumBinaryMonomialReformulation.push_back("Simple");
@@ -775,7 +789,16 @@ void Solver::initializeSettings()
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false,
         "Partition quadratic terms as auxiliary constraints");
 
+    // Reformulations for signomials
+
+    env->settings->createSetting(
+        "Reformulation.Signomials.Extract", "Model", true, "Extract signomial terms from nonlinear expressions");
+
     // Reformulations for quadratic objective and constraints
+
+    env->settings->createSetting(
+        "Reformulation.Quadratics.Extract", "Model", true, "Extract quadratic terms from nonlinear expressions");
+
     VectorString enumQPStrategy;
     enumQPStrategy.push_back("All nonlinear");
     enumQPStrategy.push_back("Use quadratic objective");

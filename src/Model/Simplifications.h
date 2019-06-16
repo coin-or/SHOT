@@ -1033,7 +1033,8 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
 }
 
 inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, NonlinearExpressionPtr, double>
-    extractTermsAndConstant(NonlinearExpressionPtr expression)
+    extractTermsAndConstant(
+        NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials, bool extractQuadratics)
 {
     double constant = 0.0;
     LinearTerms linearTerms;
@@ -1059,11 +1060,11 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto square = std::dynamic_pointer_cast<ExpressionSquare>(expression);
 
-        if(auto optional = convertSquareToQuadraticTerm(square); optional)
+        if(auto optional = convertSquareToQuadraticTerm(square); optional && extractQuadratics)
         {
             quadraticTerms.add(optional.value());
         }
-        else if(auto optional = convertExpressionToSignomialTerm(square); optional)
+        else if(auto optional = convertExpressionToSignomialTerm(square); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1076,7 +1077,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto squareRoot = std::dynamic_pointer_cast<ExpressionSquareRoot>(expression);
 
-        if(auto optional = convertExpressionToSignomialTerm(squareRoot); optional)
+        if(auto optional = convertExpressionToSignomialTerm(squareRoot); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1089,7 +1090,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto inversion = std::dynamic_pointer_cast<ExpressionInvert>(expression);
 
-        if(auto optional = convertExpressionToSignomialTerm(inversion); optional)
+        if(auto optional = convertExpressionToSignomialTerm(inversion); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1102,7 +1103,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto negation = std::dynamic_pointer_cast<ExpressionNegate>(expression);
 
-        if(auto optional = convertExpressionToSignomialTerm(negation); optional)
+        if(auto optional = convertExpressionToSignomialTerm(negation); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1115,7 +1116,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto division = std::dynamic_pointer_cast<ExpressionDivide>(expression);
 
-        if(auto optional = convertExpressionToSignomialTerm(division); optional)
+        if(auto optional = convertExpressionToSignomialTerm(division); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1132,11 +1133,11 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             linearTerms.add(optional.value());
         }
-        else if(auto optional = convertPowerToQuadraticTerm(power); optional)
+        else if(auto optional = convertPowerToQuadraticTerm(power); optional && extractQuadratics)
         {
             quadraticTerms.add(optional.value());
         }
-        else if(auto optional = convertExpressionToSignomialTerm(power); optional)
+        else if(auto optional = convertExpressionToSignomialTerm(power); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1153,15 +1154,15 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             linearTerms.add(optional.value());
         }
-        else if(auto optional = convertProductToQuadraticTerm(product); optional)
+        else if(auto optional = convertProductToQuadraticTerm(product); optional && extractQuadratics)
         {
             quadraticTerms.add(optional.value());
         }
-        else if(auto optional = convertProductToMonomialTerm(product); optional)
+        else if(auto optional = convertProductToMonomialTerm(product); optional && extractMonomials)
         {
             monomialTerms.add(optional.value());
         }
-        else if(auto optional = convertExpressionToSignomialTerm(product); optional)
+        else if(auto optional = convertExpressionToSignomialTerm(product); optional && extractSignomials)
         {
             signomialTerms.add(optional.value());
         }
@@ -1176,7 +1177,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
-                = extractTermsAndConstant(C);
+                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics);
 
             linearTerms.add(tmpLinearTerms);
             quadraticTerms.add(tmpQuadraticTerms);
@@ -1225,7 +1226,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     return std::make_tuple(linearTerms, quadraticTerms, monomialTerms, signomialTerms, nonlinearExpression, constant);
 }
 
-void simplifyNonlinearExpressions(ProblemPtr problem);
+void simplifyNonlinearExpressions(
+    ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics);
 
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination);

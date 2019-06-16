@@ -674,7 +674,8 @@ void Problem::finalize()
     updateProperties();
     updateFactorableFunctions();
 
-    doFBBT();
+    if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
+        doFBBT();
 }
 
 void Problem::add(Variables variables)
@@ -1406,13 +1407,87 @@ void Problem::doFBBT()
     env->timing->startTimer("BoundTightening");
     env->timing->startTimer("BoundTighteningFBBT");
 
-    int numberOfPasses = 5;
+    int numberOfIterations = env->settings->getSetting<int>("BoundTightening.FeasibilityBased.MaxIterations", "Model");
 
-    for(int i = 0; i < numberOfPasses; i++)
+    for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
-        env->output->outputInfo(fmt::format("Bound tightening pass {} of {}.", i + 1, numberOfPasses));
+        env->output->outputInfo(fmt::format("Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
+        for(auto& C : numericConstraints)
+        {
+            if(C->properties.hasLinearTerms)
+            {
+                Interval otherTermsBound(C->constant);
+
+                if(C->properties.hasQuadraticTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.getBounds();
+
+                if(C->properties.hasMonomialTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms.getBounds();
+
+                if(C->properties.hasSignomialTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms.getBounds();
+
+                if(C->properties.hasNonlinearExpression)
+                    otherTermsBound
+                        += std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression->getBounds();
+
+                auto terms = std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms;
+
+                for(auto& T : terms)
+                {
+                    Interval newBound = otherTermsBound;
+
+                    for(auto& T2 : terms)
+                    {
+                        if(T2 == T)
+                            continue;
+
+                        newBound += T2->getBounds();
+                    }
+
+                    Interval candidate = Interval(C->valueLHS, C->valueRHS) - newBound;
+                    candidate = candidate / T->coefficient;
+
+                    if(T->variable->tightenBounds(candidate))
+                    {
+                        boundsUpdated = true;
+                        env->output->outputInfo(fmt::format("Tightened bound in linear constraint {}:", C->name));
+                    }
+                }
+            }
+
+            if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.UseNonlinear", "Model")
+                && C->properties.hasNonlinearExpression)
+            {
+                Interval otherTermsBound(C->constant);
+
+                if(C->properties.hasLinearTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms.getBounds();
+
+                if(C->properties.hasQuadraticTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.getBounds();
+
+                if(C->properties.hasMonomialTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms.getBounds();
+
+                if(C->properties.hasSignomialTerms)
+                    otherTermsBound += std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms.getBounds();
+
+                Interval candidate = Interval(C->valueLHS, C->valueRHS) - otherTermsBound;
+
+                if(std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression->tightenBounds(candidate))
+                {
+                    env->output->outputInfo(fmt::format("Tightened bound in nonlinear constraint {}:", C->name));
+                    boundsUpdated = true;
+                }
+            }
+        }
+
+        if(!boundsUpdated)
+            break;
+        /*
         for(auto& C : linearConstraints)
         {
             if(C->valueRHS < SHOT_DBL_MAX)
@@ -1435,8 +1510,8 @@ void Problem::doFBBT()
                     if(T->coefficient > 0 && candidate < T->variable->upperBound
                         && candidate >= T->variable->lowerBound)
                     {
-                        env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
-                                                            "New bounds [{},{}]. Constraint: {}.",
+                        env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}."
+                                                            " New bounds[{}, {}]. Constraint: {}.",
                             T->variable->name, T->variable->upperBound, candidate, T->variable->lowerBound, candidate,
                             C->name));
                         T->variable->upperBound = candidate;
@@ -1445,8 +1520,8 @@ void Problem::doFBBT()
                     else if(T->coefficient < 0 && candidate > T->variable->lowerBound
                         && candidate <= T->variable->upperBound)
                     {
-                        env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}. "
-                                                            "New bounds [{},{}]. Constraint: {}.",
+                        env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}."
+                                                            " New bounds[{}, {}]. Constraint: {}.",
                             T->variable->name, T->variable->lowerBound, candidate, candidate, T->variable->upperBound,
                             C->name));
                         T->variable->lowerBound = candidate;
@@ -1475,8 +1550,8 @@ void Problem::doFBBT()
                     if(T->coefficient > 0 && candidate > T->variable->lowerBound
                         && candidate <= T->variable->upperBound)
                     {
-                        env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}. "
-                                                            "New bounds [{},{}]. Constraint: {}.",
+                        env->output->outputInfo(fmt::format("Lower bound tightened for variable {} from {} to {}."
+                                                            " New bounds[{}, {}]. Constraint: {}.",
                             T->variable->name, T->variable->lowerBound, candidate, candidate, T->variable->upperBound,
                             C->name));
                         T->variable->lowerBound = candidate;
@@ -1485,8 +1560,8 @@ void Problem::doFBBT()
                     else if(T->coefficient < 0 && candidate < T->variable->upperBound
                         && candidate >= T->variable->lowerBound)
                     {
-                        env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}. "
-                                                            "New bounds [{},{}]. Constraint: {}.",
+                        env->output->outputInfo(fmt::format("Upper bound tightened for variable {} from {} to {}."
+                                                            " New bounds[{}, {}]. Constraint: {}.",
                             T->variable->name, T->variable->upperBound, candidate, T->variable->lowerBound, candidate,
                             C->name));
                         T->variable->upperBound = candidate;
@@ -1494,53 +1569,7 @@ void Problem::doFBBT()
                     }
                 }
             }
-        }
-
-        for(auto& C : nonlinearConstraints)
-        {
-            auto bound = C->getConstraintFunctionBounds();
-
-            bound.l(std::max(C->valueLHS, bound.l()));
-            bound.u(std::min(C->valueRHS, bound.u()));
-
-            for(auto& T1 : C->linearTerms)
-            {
-                auto newBound = bound;
-
-                for(auto& T2 : C->linearTerms)
-                {
-                    if(T2 == T1)
-                        continue;
-
-                    newBound -= T2->getBounds();
-                }
-
-                newBound.l(std::max(newBound.l(), bound.l()));
-                newBound.u(std::min(newBound.u(), bound.u()));
-
-                auto candidate = (1.0 / T1->coefficient) * newBound;
-                bool tmpUpdated = false;
-
-                if(T1->variable->tightenBounds(candidate))
-                {
-                    bound = C->getConstraintFunctionBounds();
-                    boundsUpdated = true;
-                }
-            }
-
-            if(C->nonlinearExpression)
-            {
-                auto newBound = bound - C->linearTerms.getBounds() - C->quadraticTerms.getBounds();
-
-                newBound.l(std::max(newBound.l(), bound.l()));
-                newBound.u(std::min(newBound.u(), bound.u()));
-
-                boundsUpdated = C->nonlinearExpression->tightenBounds(newBound) || boundsUpdated;
-            }
-        }
-
-        if(!boundsUpdated)
-            break;
+        } */
     }
 
     env->timing->stopTimer("BoundTighteningFBBT");
