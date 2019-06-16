@@ -81,6 +81,9 @@ void TaskFindInteriorPoint::run()
     {
         auto solutionStatus = NLPSolvers.at(i)->solveProblem();
 
+        if(NLPSolvers.at(i)->getSolution().size() == 0)
+            continue;
+
         auto tmpIP = std::make_shared<InteriorPoint>();
 
         tmpIP->NLPSolver
