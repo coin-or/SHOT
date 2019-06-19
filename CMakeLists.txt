@@ -56,7 +56,7 @@ set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
 
 # May be needed to specify the path to where Boost is installed, if not automatically detected
-#set(Boost_INCLUDE_DIR /usr/include)
+set(Boost_INCLUDE_DIR /home/andreas/Research/boostselected)
 #set(Boost_LIBRARY_DIR /usr/lib)
 
 # Some checks on the provided parameters
@@ -300,9 +300,9 @@ list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
 include_directories(${INCLUDE_DIRS})
 
-find_package(Boost 1.63.0 COMPONENTS system REQUIRED)
+#find_package(Boost 1.63.0 COMPONENTS system REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIR})
+#link_directories(${Boost_LIBRARY_DIR})
 
 include_directories("${ARGH_DIR}")
 include_directories("${EIGEN_DIR}")
