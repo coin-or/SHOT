@@ -231,8 +231,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             }
 
             // The difference between linesearch and LP objective values
-            maxObjDiffAbs = abs(mu - LPObjVar);
-            maxObjDiffRel = maxObjDiffAbs / ((1e-10) + abs(LPObjVar));
+            maxObjDiffAbs = std::abs(mu - LPObjVar);
+            maxObjDiffRel = maxObjDiffAbs / ((1e-10) + std::abs(LPObjVar));
 
             // Saves the LP solution to file if in debug mode
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))

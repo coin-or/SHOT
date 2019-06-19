@@ -837,28 +837,28 @@ void Results::setDualBound(double value)
 
 double Results::getAbsoluteGlobalObjectiveGap()
 {
-    double gap = abs(getGlobalDualBound() - getPrimalBound());
+    double gap = std::abs(getGlobalDualBound() - getPrimalBound());
 
     return (gap);
 }
 
 double Results::getRelativeGlobalObjectiveGap()
 {
-    double gap = abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+    double gap = std::abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 
     return (gap);
 }
 
 double Results::getAbsoluteCurrentObjectiveGap()
 {
-    double gap = abs(getCurrentDualBound() - getPrimalBound());
+    double gap = std::abs(getCurrentDualBound() - getPrimalBound());
 
     return (gap);
 }
 
 double Results::getRelativeCurrentObjectiveGap()
 {
-    double gap = abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+    double gap = std::abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 
     return (gap);
 }

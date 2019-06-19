@@ -604,7 +604,7 @@ bool ModelTestCreateProblem()
     std::cout << "\nValue for linear constraint is: ";
     std::cout << linearIntervalValue << '\n';
 
-    if(abs(linearIntervalValue.l() - 0.4) > (1.0e-12) || abs(linearIntervalValue.u() - 2.6) > (1.0e-12))
+    if(std::abs(linearIntervalValue.l() - 0.4) > (1.0e-12) || std::abs(linearIntervalValue.u() - 2.6) > (1.0e-12))
     {
         std::cout << "Interval is not correct.\n";
         passed = false;
@@ -614,7 +614,7 @@ bool ModelTestCreateProblem()
     std::cout << "\nValue for quadratic constraint is: ";
     std::cout << quadraticIntervalValue << '\n';
 
-    if(abs(quadraticIntervalValue.l() - 4) > (1.0e-12) || abs(quadraticIntervalValue.u() - 14) > (1.0e-12))
+    if(std::abs(quadraticIntervalValue.l() - 4) > (1.0e-12) || std::abs(quadraticIntervalValue.u() - 14) > (1.0e-12))
     {
         std::cout << "Interval is not correct.\n";
         passed = false;
@@ -624,7 +624,8 @@ bool ModelTestCreateProblem()
     std::cout << "\nValue for nonlinear constraint is: ";
     std::cout << nonlinearIntervalValue << '\n';
 
-    if(abs(nonlinearIntervalValue.l() - 31.4) > (1.0e-12) || abs(nonlinearIntervalValue.u() - 72.6) > (1.0e-12))
+    if(std::abs(nonlinearIntervalValue.l() - 31.4) > (1.0e-12)
+        || std::abs(nonlinearIntervalValue.u() - 72.6) > (1.0e-12))
     {
         std::cout << "Interval is not correct.\n";
         passed = false;

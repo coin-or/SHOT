@@ -121,7 +121,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     for(auto& E : tmpPair.first)
     {
-        if(E.value != E.value || isinf(E.value)) // Check for NaN or inf
+        if(E.value != E.value || std::isinf(E.value)) // Check for NaN or inf
         {
             if(hyperplane.isObjectiveHyperplane)
                 env->output->outputError("        Warning: hyperplane for objective function not generated, NaN or inf "
