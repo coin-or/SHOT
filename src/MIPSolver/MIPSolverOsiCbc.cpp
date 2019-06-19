@@ -247,13 +247,13 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
 
     // Cbc has problems with too large cutoff values
-    if(isMinimizationProblem && abs(this->cutOff) < 10e20)
+    if(isMinimizationProblem && std::abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
 
         env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
     }
-    else if(!isMinimizationProblem && abs(this->cutOff) < 10e20)
+    else if(!isMinimizationProblem && std::abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
         env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");

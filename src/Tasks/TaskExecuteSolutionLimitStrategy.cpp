@@ -96,7 +96,7 @@ void TaskExecuteSolutionLimitStrategy::run()
         }
 
         if(env->results->getPrimalBound() < SHOT_DBL_MAX
-            && abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
+            && std::abs(prevIter->objectiveValue - env->results->getPrimalBound()) < 0.001)
         {
             previousSolLimit = prevIter->usedMIPSolutionLimit + 1;
             env->dualSolver->MIPSolver->setSolutionLimit(2100000000);

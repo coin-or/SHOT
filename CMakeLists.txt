@@ -45,19 +45,20 @@ set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if
 option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
+# Boost
+option(USE_EXTERNAL_BOOST "Use an external Boost distribution" ON)
+#set(Boost_INCLUDE_DIR "/path/to/boost") # May be needed to specify where Boost is installed, if not automatically detected
+
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(ARGH_DIR "ThirdParty/argh")
+set(BOOST_DIR "ThirdParty/boost")
 set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
 set(TINYXML2_DIR "ThirdParty/tinyxml2")
-
-# May be needed to specify the path to where Boost is installed, if not automatically detected
-#set(Boost_INCLUDE_DIR /usr/include)
-#set(Boost_LIBRARY_DIR /usr/lib)
 
 # Some checks on the provided parameters
 
@@ -149,7 +150,7 @@ endif(HAS_IPOPT)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
-set(Boost_USE_STATIC_LIBS OFF)
+#set(Boost_USE_STATIC_LIBS OFF)
 
 include(FindPkgConfig)
 
@@ -293,18 +294,20 @@ endif(HAS_OS)
 # Finding out link directories
 set(INCLUDE_DIRS "")
 foreach(_headerFile ${HEADERS})
-    get_filename_component(_dir ${_headerFile} PATH)
-    list(APPEND INCLUDE_DIRS ${_dir})
+  get_filename_component(_dir ${_headerFile} PATH)
+  list(APPEND INCLUDE_DIRS ${_dir})
 endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
 include_directories(${INCLUDE_DIRS})
 
-find_package(Boost 1.63.0 COMPONENTS system REQUIRED)
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIR})
+if(USE_EXTERNAL_BOOST)
+  find_package(Boost 1.63.0 REQUIRED)
+  set(BOOST_DIR ${Boost_INCLUDE_DIR})
+endif(USE_EXTERNAL_BOOST)
 
 include_directories("${ARGH_DIR}")
+include_directories("${BOOST_DIR}")
 include_directories("${EIGEN_DIR}")
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
