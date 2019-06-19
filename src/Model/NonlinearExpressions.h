@@ -537,7 +537,7 @@ public:
         auto interval = bound * bound;
 
         if(interval.l() <= 0)
-            interval.l(0.0);
+            return (false);
 
         return (child->tightenBounds(interval));
     };
@@ -748,7 +748,7 @@ public:
         auto interval = value * value;
 
         if(interval.l() <= 0)
-            interval.l(0.0);
+            return (false);
 
         return (interval);
     }
@@ -2085,8 +2085,13 @@ public:
 
             auto childBound = T1->getBounds();
 
+            Interval newBound2 = newBound;
+
             newBound.l(std::max(childBound.l(), newBound.l()));
             newBound.u(std::min(childBound.u(), newBound.u()));
+
+            if(newBound.l() > newBound.u())
+                continue;
 
             tightened = T1->tightenBounds(newBound) || tightened;
         }
