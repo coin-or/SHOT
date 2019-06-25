@@ -27,7 +27,7 @@
 
 namespace SHOT
 {
-class __declspec(dllexport) Solver
+class DllExport Solver
 {
 private:
     std::unique_ptr<ISolutionStrategy> solutionStrategy;

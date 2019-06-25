@@ -25,22 +25,6 @@
 #include "optcc.h"
 #include "palmcc.h"
 
-#if defined(_WIN32)
-#if !defined(STDCALL)
-#define STDCALL __stdcall
-#endif
-#if !defined(DllExport)
-#define DllExport __declspec(dllexport)
-#endif
-#else
-#if !defined(STDCALL)
-#define STDCALL
-#endif
-#if !defined(DllExport)
-#define DllExport
-#endif
-#endif
-
 using namespace SHOT;
 
 extern "C"

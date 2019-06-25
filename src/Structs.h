@@ -18,6 +18,23 @@
 #include <string>
 #include <vector>
 
+// For DLL support in Windows
+#if defined(_WIN32)
+#if !defined(STDCALL)
+#define STDCALL __stdcall
+#endif
+#if !defined(DllExport)
+#define DllExport __declspec(dllexport)
+#endif
+#else
+#if !defined(STDCALL)
+#define STDCALL
+#endif
+#if !defined(DllExport)
+#define DllExport
+#endif
+#endif
+
 // Fix for missing NAN i Visual Studio
 #ifdef WIN32
 #ifndef NAN

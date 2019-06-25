@@ -25,7 +25,7 @@
 
 namespace SHOT
 {
-class __declspec(dllexport) Settings
+class DllExport Settings
 {
 private:
     template <typename T>
