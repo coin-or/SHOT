@@ -518,7 +518,7 @@ void Problem::updateFactorableFunctions()
 
     for(auto& C : nonlinearConstraints)
     {
-        if(C->properties.hasNonlinearExpression)
+        if(C->properties.hasNonlinearExpression && C->variablesInNonlinearExpression.size() > 0)
         {
             C->updateFactorableFunction();
             factorableFunctions.push_back(*C->factorableFunction.get());
@@ -527,7 +527,8 @@ void Problem::updateFactorableFunctions()
     }
 
     int objectiveFactorableFunctionIndex = -1;
-    if(objectiveFunction->properties.hasNonlinearExpression)
+    if(objectiveFunction->properties.hasNonlinearExpression && 
+		std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->variablesInNonlinearExpression.size() > 0)
     {
         auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
 
@@ -568,7 +569,7 @@ void Problem::updateFactorableFunctions()
 
     for(auto& C : nonlinearConstraints)
     {
-        if(C->properties.hasNonlinearExpression)
+        if(C->properties.hasNonlinearExpression && C->symbolicSparseJacobian.size() > 0)
         {
             std::vector<FactorableFunction> jacobianElements;
 
