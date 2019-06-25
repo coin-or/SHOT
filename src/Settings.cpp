@@ -566,8 +566,11 @@ bool Settings::readSettingsFromString(std::string options)
     while(std::getline(f, line))
     {
         // Ignore empty lines and comments (starting with an asterisk)
-        if(line == "" || line.at(0) == '*')
+        if(line == "" || line.at(0) == '*' || line.at(0) == '\r' || line.at(0) == '\n')
             continue;
+
+		line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
         int equalitySignIndex = line.find('=');
 
