@@ -27,27 +27,27 @@ option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "C:/GAMS/win64/26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
 set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
 cmake_dependent_option(HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON "HAS_CPLEX" OFF)
-set(CPLEX_DIR "C:/Program Files/IBM/ILOG/CPLEX_Studio129/" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
-option(HAS_GUROBI "Is Gurobi available" OFF)
-set(GUROBI_DIR "C:/gurobi811/win64" CACHE STRING "The base directory where Gurobi is located (if available)")
+option(HAS_GUROBI "Is Gurobi available" ON)
+set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" OFF)
+option(HAS_CBC "Is Cbc available" ON)
 set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" OFF)
+option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
 # Boost
@@ -325,31 +325,30 @@ include_directories("${MCPP_DIR}/3rdparty/fadbad++")
 include_directories("${SPDLOG_DIR}")
 include_directories("${TINYXML2_DIR}/")
 
-# Creates the SHOT library that is linked to the executable
-
-
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
+
+# Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # For gcc and C++ filesystem support; TODO, verify if needed for other compilers
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-target_link_libraries(SHOTSolver stdc++fs)
+  target_link_libraries(SHOTSolver stdc++fs)
 endif()
 
 if(HAS_CPLEX)
   include_directories("${CPLEX_DIR}/cplex/include")
   include_directories("${CPLEX_DIR}/concert/include")
   #target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x64_windows_vs2017/stat_mdd/ilocplex.lib)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x64_windows_vs2017/stat_mdd/cplex1290.lib)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/concert/lib/x64_windows_vs2017/stat_mdd/concert.lib)
+  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
+  target_link_libraries(SHOTSolver ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
+  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
   include_directories("${GUROBI_DIR}/linux64/include")
   # Change the Gurobi library below to match the version on the system
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/gurobi81.lib)
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/gurobi_c++mdd2017.lib)
+  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
+  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
 endif(HAS_GUROBI)
 
 if(HAS_CBC)
@@ -379,7 +378,7 @@ endif(HAS_OS)
 # Generates the SHOT executable
 if(GENERATE_EXE)
   add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
-  target_link_libraries(${PROJECT_NAME} SHOTSolver "-static")
+  target_link_libraries(${PROJECT_NAME} SHOTSolver)
 endif(GENERATE_EXE)
 
 if(HAS_GAMS)
@@ -392,6 +391,11 @@ if(HAS_GAMS)
   endif(UNIX)
 endif(HAS_GAMS)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(SHOTSolver Threads::Threads)
+
+target_link_libraries(SHOTSolver ${CMAKE_DL_LIBS})
 target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)

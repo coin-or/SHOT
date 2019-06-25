@@ -22,9 +22,49 @@
 
 #include "Enums.h"
 #include "Output.h"
+#include "Structs.h"
 
 namespace SHOT
 {
+
+class SettingKeyNotFoundException : public std::runtime_error
+{
+public:
+    SettingKeyNotFoundException(const std::string& key, const std::string& category)
+        : std::runtime_error(fmt::format("Setting {}.{} not found!", category, key))
+    {
+    }
+};
+
+class SettingSetWrongTypeException : public std::runtime_error
+{
+public:
+    SettingSetWrongTypeException(const std::string& key, const std::string& category)
+        : std::runtime_error(fmt::format("Cannot set setting {}.{} since value is of the wrong type!", category, key))
+    {
+    }
+};
+
+class SettingGetWrongTypeException : public std::runtime_error
+{
+public:
+    SettingGetWrongTypeException(const std::string& key, const std::string& category)
+        : std::runtime_error(fmt::format("Cannot get setting {}.{} since value is of the wrong type!", category, key))
+    {
+    }
+};
+
+class SettingOutsideBoundsException : public std::runtime_error
+{
+public:
+    SettingOutsideBoundsException(const std::string& key, const std::string& category, const double& value,
+        const double& minVal, const double& maxVal)
+        : std::runtime_error(fmt::format(
+              "The value {} of setting {}.{} is not in interval [{},{}]!", value, category, key, minVal, maxVal))
+    {
+    }
+};
+
 class DllExport Settings
 {
 private:
@@ -63,7 +103,7 @@ public:
 
     template <typename T> void updateSetting(std::string name, std::string category, T value);
 
-   // template <typename T> T getSetting(std::string name, std::string category);
+    // template <typename T> T getSetting(std::string name, std::string category);
 
     template <typename T> T getSetting(std::string name, std::string category)
     {
@@ -107,7 +147,7 @@ public:
 
         return (value->second);
     }
-	
+
     void createSetting(
         std::string name, std::string category, std::string value, std::string description, bool isPrivate = false);
 
@@ -134,43 +174,5 @@ public:
 
     bool readSettingsFromOSoL(std::string osol);
     bool readSettingsFromString(std::string options);
-};
-
-class SettingKeyNotFoundException : public std::runtime_error
-{
-public:
-    SettingKeyNotFoundException(const std::string& key, const std::string& category)
-        : std::runtime_error(fmt::format("Setting {}.{} not found!", category, key))
-    {
-    }
-};
-
-class SettingSetWrongTypeException : public std::runtime_error
-{
-public:
-    SettingSetWrongTypeException(const std::string& key, const std::string& category)
-        : std::runtime_error(fmt::format("Cannot set setting {}.{} since value is of the wrong type!", category, key))
-    {
-    }
-};
-
-class SettingGetWrongTypeException : public std::runtime_error
-{
-public:
-    SettingGetWrongTypeException(const std::string& key, const std::string& category)
-        : std::runtime_error(fmt::format("Cannot get setting {}.{} since value is of the wrong type!", category, key))
-    {
-    }
-};
-
-class SettingOutsideBoundsException : public std::runtime_error
-{
-public:
-    SettingOutsideBoundsException(const std::string& key, const std::string& category, const double& value,
-        const double& minVal, const double& maxVal)
-        : std::runtime_error(fmt::format(
-              "The value {} of setting {}.{} is not in interval [{},{}]!", value, category, key, minVal, maxVal))
-    {
-    }
 };
 }; // namespace SHOT
