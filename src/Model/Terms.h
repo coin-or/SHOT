@@ -114,7 +114,7 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTermPtr term)
     return stream;
 }
 
-template <class T> class Terms : private std::vector<T>
+template <class T> class Terms : public std::vector<T>
 {
 protected:
     E_Convexity convexity = E_Convexity::NotSet;
@@ -245,7 +245,6 @@ public:
     using std::vector<LinearTermPtr>::size;
 
     LinearTerms() = default;
-    ;
 
     void add(LinearTermPtr term)
     {
