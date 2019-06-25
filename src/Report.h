@@ -15,7 +15,7 @@
 
 namespace SHOT
 {
-class Report
+class __declspec(dllexport) Report
 {
 public:
     Report(EnvironmentPtr envPtr);

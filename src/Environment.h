@@ -19,7 +19,7 @@ namespace SHOT
 
 class IRootsearchMethod;
 
-class Environment
+class __declspec(dllexport) Environment
 {
 public:
     inline Environment() = default;

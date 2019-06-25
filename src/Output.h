@@ -18,7 +18,7 @@
 
 namespace SHOT
 {
-class Output
+class __declspec(dllexport) Output
 {
 public:
     Output();

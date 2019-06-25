@@ -11,7 +11,12 @@ if(CCACHE_PROGRAM)
 endif()
 
 project(SHOT)
-set(CMAKE_CXX_STANDARD 17 )
+set(CMAKE_CXX_STANDARD 17)
+
+if(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
+  add_definitions(-D_USE_MATH_DEFINES)
+endif(MSVC)
 
 # Sets the release types, e.g. Release, Debug
 # set(CMAKE_BUILD_TYPE Debug)
@@ -22,39 +27,37 @@ option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR "C:/GAMS/win64/26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
 set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
 cmake_dependent_option(HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON "HAS_CPLEX" OFF)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(CPLEX_DIR "C:/Program Files/IBM/ILOG/CPLEX_Studio129/" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
-option(HAS_GUROBI "Is Gurobi available" ON)
-set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
+option(HAS_GUROBI "Is Gurobi available" OFF)
+set(GUROBI_DIR "C:/gurobi811/win64" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" ON)
+option(HAS_CBC "Is Cbc available" OFF)
 set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" ON)
+option(HAS_IPOPT "Is Ipopt available" OFF)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
 # Boost
-option(USE_EXTERNAL_BOOST "Use an external Boost distribution" ON)
-#set(Boost_INCLUDE_DIR "/path/to/boost") # May be needed to specify where Boost is installed, if not automatically detected
+set(Boost_INCLUDE_DIR "ThirdParty/boost") # May be needed to specify where Boost is installed, if not automatically detected
 
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(ARGH_DIR "ThirdParty/argh")
-set(BOOST_DIR "ThirdParty/boost")
 set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
@@ -77,7 +80,7 @@ set(SHOT_VERSION_MAJOR 0)
 set(SHOT_VERSION_MINOR 9)
 set(SHOT_VERSION_PATCH 2)
 
-# Try to find the Git
+# Try to find Git
 find_program(GIT git)
 
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
@@ -95,8 +98,20 @@ mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH GITHAS
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
-# Searches for PkgConfig
-find_package(PkgConfig REQUIRED)
+# Makes sure the provided directories are in CMake format
+file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
+file(TO_CMAKE_PATH "${OS_DIR}" ${OS_DIR})
+file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
+file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
+file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
+file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
+file(TO_CMAKE_PATH "${Boost_INCLUDE_DIR}" ${Boost_INCLUDE_DIR})
+
+if(HAS_CBC OR HAS_IPOPT OR HAS_OS)
+	# Searches for PkgConfig
+	find_package(PkgConfig REQUIRED)
+	include(FindPkgConfig)
+endif()
 
 # Passes the parameters to the compiler
 
@@ -148,11 +163,8 @@ if(HAS_IPOPT)
   add_definitions(-DHAS_IPOPT)
 endif(HAS_IPOPT)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
 #set(Boost_USE_STATIC_LIBS OFF)
-
-include(FindPkgConfig)
 
 # Adding source files
 file(GLOB_RECURSE SOURCES
@@ -234,7 +246,7 @@ file(GLOB_RECURSE HEADERS
   "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
   "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
   "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
-  "${PROJECT_SOURCE_DIR}/src/Settings.h"
+  "${PROJECT_SOURCE_DIR}/src/Settings.h" 
   "${TINYXML2_DIR}/tinyxml2.h"
   )
 
@@ -295,19 +307,17 @@ endif(HAS_OS)
 set(INCLUDE_DIRS "")
 foreach(_headerFile ${HEADERS})
   get_filename_component(_dir ${_headerFile} PATH)
+    file(TO_CMAKE_PATH "${_dir}" _dir)
   list(APPEND INCLUDE_DIRS ${_dir})
 endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
 include_directories(${INCLUDE_DIRS})
 
-if(USE_EXTERNAL_BOOST)
-  find_package(Boost 1.63.0 REQUIRED)
-  set(BOOST_DIR ${Boost_INCLUDE_DIR})
-endif(USE_EXTERNAL_BOOST)
+find_package(Boost 1.63.0 REQUIRED)
 
 include_directories("${ARGH_DIR}")
-include_directories("${BOOST_DIR}")
+include_directories("${Boost_INCLUDE_DIR}")
 include_directories("${EIGEN_DIR}")
 include_directories("${MCPP_DIR}/include")
 include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
@@ -316,24 +326,30 @@ include_directories("${SPDLOG_DIR}")
 include_directories("${TINYXML2_DIR}/")
 
 # Creates the SHOT library that is linked to the executable
+
+
+file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # For gcc and C++ filesystem support; TODO, verify if needed for other compilers
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 target_link_libraries(SHOTSolver stdc++fs)
+endif()
 
 if(HAS_CPLEX)
   include_directories("${CPLEX_DIR}/cplex/include")
   include_directories("${CPLEX_DIR}/concert/include")
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
+  #target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
+  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x64_windows_vs2017/stat_mdd/ilocplex.lib)
+  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x64_windows_vs2017/stat_mdd/cplex1290.lib)
+  target_link_libraries(SHOTSolver ${CPLEX_DIR}/concert/lib/x64_windows_vs2017/stat_mdd/concert.lib)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
   include_directories("${GUROBI_DIR}/linux64/include")
   # Change the Gurobi library below to match the version on the system
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
+  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/gurobi81.lib)
+  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/gurobi_c++mdd2017.lib)
 endif(HAS_GUROBI)
 
 if(HAS_CBC)
@@ -363,7 +379,7 @@ endif(HAS_OS)
 # Generates the SHOT executable
 if(GENERATE_EXE)
   add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
-  target_link_libraries(${PROJECT_NAME} SHOTSolver)
+  target_link_libraries(${PROJECT_NAME} SHOTSolver "-static")
 endif(GENERATE_EXE)
 
 if(HAS_GAMS)

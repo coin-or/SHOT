@@ -19,8 +19,6 @@
 
 #include "../Model/Simplifications.h"
 
-#include <sys/stat.h> // for mkdir
-
 #include <filesystem>
 
 namespace SHOT
@@ -222,7 +220,9 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     assert(modelingEnvironment == nullptr);
 
     /* create temporary directory */
-    mkdir("loadgms.tmp", S_IRWXU);
+    std::filesystem::create_directory("loadgms.tmp");
+    std::filesystem::permissions("loadgms.tmp", std::filesystem::perms::all);
+
     createdtmpdir = true;
 
     /* create empty convertd options file */
@@ -241,7 +241,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
      */
     snprintf(gamscall, sizeof(gamscall),
         GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > /dev/null",
+                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > test.log",
         filename.c_str());
 
     /* printf(gamscall); fflush(stdout); */

@@ -538,25 +538,32 @@ void Problem::updateFactorableFunctions()
         objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
     }
 
-    auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0],
-        factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
-
-    for(int i = 0; i < std::get<0>(jacobian); i++)
+    if(factorableFunctions.size() > 0)
     {
-        auto nonlinearVariable = nonlinearVariables[std::get<2>(jacobian)[i]];
-        auto jacobianElement = std::get<3>(jacobian)[i];
+        auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0],
+            factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
 
-        if(objectiveFunction->properties.hasNonlinearExpression
-            && std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
+        for(int i = 0; i < std::get<0>(jacobian); i++)
         {
-            auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
-            objective->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
+            auto nonlinearVariable = nonlinearVariables[std::get<2>(jacobian)[i]];
+            auto jacobianElement = std::get<3>(jacobian)[i];
+
+            if(objectiveFunction->properties.hasNonlinearExpression
+                && std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
+            {
+                auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
+                objective->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
+            }
+            else
+            {
+                auto nonlinearConstraint = constraintsWithNonlinearExpressions[std::get<1>(jacobian)[i]];
+                nonlinearConstraint->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
+            }
         }
-        else
-        {
-            auto nonlinearConstraint = constraintsWithNonlinearExpressions[std::get<1>(jacobian)[i]];
-            nonlinearConstraint->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
-        }
+
+		delete[] std::get<1>(jacobian);
+        delete[] std::get<2>(jacobian);
+        delete[] std::get<3>(jacobian);
     }
 
     for(auto& C : nonlinearConstraints)
@@ -637,13 +644,9 @@ void Problem::updateFactorableFunctions()
         delete[] std::get<2>(hessian);
         delete[] std::get<3>(hessian);
     }
-
-    delete[] std::get<1>(jacobian);
-    delete[] std::get<2>(jacobian);
-    delete[] std::get<3>(jacobian);
 };
 
-Problem::Problem(EnvironmentPtr env) : env(env){};
+Problem::Problem(EnvironmentPtr env) : env(env) {};
 
 Problem::~Problem()
 {
