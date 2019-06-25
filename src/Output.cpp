@@ -14,6 +14,8 @@ namespace SHOT
 {
 Output::Output()
 {
+    SetConsoleOutputCP(CP_UTF8); // For correct output of special characters on Windows
+
     consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("multisink.txt", true);
     std::vector<spdlog::sink_ptr> sinks{ consoleSink, fileSink };
