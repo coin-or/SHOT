@@ -30,7 +30,7 @@ option(HAS_GAMS "Is GAMS available" ON)
 set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
 set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
 
 # CPLEX
@@ -43,11 +43,11 @@ option(HAS_GUROBI "Is Gurobi available" ON)
 set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" ON)
+option(HAS_CBC "Is Cbc available" OFF)
 set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" ON)
+option(HAS_IPOPT "Is Ipopt available" OFF)
 set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
 # Boost
@@ -83,6 +83,9 @@ set(SHOT_VERSION_PATCH 2)
 # Try to find Git
 find_program(GIT git)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
     execute_process(
         COMMAND ${GIT} describe --always --dirty
@@ -109,9 +112,11 @@ file(TO_CMAKE_PATH "${Boost_INCLUDE_DIR}" ${Boost_INCLUDE_DIR})
 
 if(HAS_CBC OR HAS_IPOPT OR HAS_OS)
 	# Searches for PkgConfig
-	find_package(PkgConfig REQUIRED)
+	find_package(PkgConfig)
 	include(FindPkgConfig)
 endif()
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 
 # Passes the parameters to the compiler
 
@@ -139,8 +144,11 @@ if(HAS_CBC)
 endif(HAS_CBC)
 
 if(HAS_CPLEX)
+  find_package(CPLEX)
   add_definitions(-DIL_STD)
   add_definitions(-LDFLAGS="-Wl,--no-as-needed")
+  
+  find_package(CPLEX)
 
   add_definitions(-DHAS_CPLEX)
   if(HAS_CPLEX_NEW_CALLBACK)
@@ -336,19 +344,39 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 endif()
 
 if(HAS_CPLEX)
-  include_directories("${CPLEX_DIR}/cplex/include")
-  include_directories("${CPLEX_DIR}/concert/include")
-  #target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libilocplex.a)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/concert/lib/x86-64_linux/static_pic/libconcert.a)
-  target_link_libraries(SHOTSolver ${CPLEX_DIR}/cplex/lib/x86-64_linux/static_pic/libcplex.a)
+  if (NOT(CPLEX_FOUND) OR NOT(CPLEX_CONCERT_FOUND) OR NOT(CPLEX_ILOCPLEX_FOUND))
+    message("-- CPLEX libraries could not be found!")
+  else()
+	include_directories("${CPLEX_INCLUDE_DIR}")
+	include_directories("${CPLEX_CONCERT_INCLUDE_DIR}")
+	include_directories("${CPLEX_ILOCPLEX_INCLUDE_DIR}")
+  
+	message("-- The following CPLEX libraries will be used:")
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	  message("   ${CPLEX_LIBRARY_DEBUG}")
+	  message("   ${CPLEX_CONCERT_LIBRARY_DEBUG}")
+	  message("   ${CPLEX_ILOCPLEX_LIBRARY_DEBUG}")
+	  
+	  target_link_libraries(SHOTSolver ${CPLEX_LIBRARY_DEBUG})
+	  target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY_DEBUG})
+	  target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY_DEBUG})
+	else()
+	  message("   ${CPLEX_LIBRARY}")
+	  message("   ${CPLEX_CONCERT_LIBRARY}")
+	  message("   ${CPLEX_ILOCPLEX_LIBRARY}")
+	  
+	  target_link_libraries(SHOTSolver ${CPLEX_LIBRARY})
+	  target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY})
+	  target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY})
+	endif()
+  endif()
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
-  include_directories("${GUROBI_DIR}/linux64/include")
+  include_directories("${GUROBI_DIR}/win64/include")
   # Change the Gurobi library below to match the version on the system
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi81.so)
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/linux64/lib/libgurobi_g++5.2.a)
+  target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi81.lib)
+  target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi_c++mdd2017.lib)
 endif(HAS_GUROBI)
 
 if(HAS_CBC)
@@ -391,8 +419,6 @@ if(HAS_GAMS)
   endif(UNIX)
 endif(HAS_GAMS)
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 target_link_libraries(SHOTSolver Threads::Threads)
 
 target_link_libraries(SHOTSolver ${CMAKE_DL_LIBS})
