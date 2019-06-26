@@ -13,13 +13,7 @@ endif()
 project(SHOT)
 set(CMAKE_CXX_STANDARD 17)
 
-if(MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
-  add_definitions(-D_USE_MATH_DEFINES)
-endif(MSVC)
-
-# Sets the release types, e.g. Release, Debug
-# set(CMAKE_BUILD_TYPE Debug)
+# Sets the release types, e.g. Release, Debug: set(CMAKE_BUILD_TYPE Debug)
 
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
@@ -27,15 +21,21 @@ option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams26.1"  CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR "/opt/gams/gams26.1" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
 option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
-set(OS_DIR "/opt/OS-2.10" CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
+set(OS_DIR
+    "/opt/OS-2.10"
+    CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
-cmake_dependent_option(HAS_CPLEX_NEW_CALLBACK "Is Cplex version >12.8 so the new callbacks are available?" ON "HAS_CPLEX" OFF)
+cmake_dependent_option(HAS_CPLEX_NEW_CALLBACK
+                       "Is Cplex version >12.8 so the new callbacks are available?"
+                       ON
+                       "HAS_CPLEX"
+                       OFF)
 set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
@@ -44,17 +44,25 @@ set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gu
 
 # Cbc
 option(HAS_CBC "Is Cbc available" OFF)
-set(CBC_DIR "/opt/Cbc" CACHE STRING "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
+set(CBC_DIR
+    "/opt/Cbc"
+    CACHE STRING
+          "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" OFF)
-set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
+set(IPOPT_DIR
+    "/opt/ipopt"
+    CACHE STRING
+          "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
 # Boost
-set(Boost_INCLUDE_DIR "ThirdParty/boost") # May be needed to specify where Boost is installed, if not automatically detected
+set(Boost_INCLUDE_DIR "ThirdParty/boost") # May be needed to specify where Boost is installed, if not automatically
+                                          # detected
 
 # Create also the executable
-option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)" ON)
+option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
+       ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(ARGH_DIR "ThirdParty/argh")
@@ -66,13 +74,13 @@ set(TINYXML2_DIR "ThirdParty/tinyxml2")
 # Some checks on the provided parameters
 
 # Check if a MIP solver is defined
-if(NOT(HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
-  message( FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
+if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
+  message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
 # Check if a modeling system is defined if we want to build the executable
-if(GENERATE_EXE AND NOT(HAS_GAMS OR HAS_OS))
-  message( FATAL_ERROR "No modeling system defined which is required if  you want to build an executable!")
+if(GENERATE_EXE AND NOT (HAS_GAMS OR HAS_OS))
+  message(FATAL_ERROR "No modeling system defined which is required if  you want to build an executable!")
 endif()
 
 # Sets version number
@@ -87,17 +95,27 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
-    execute_process(
-        COMMAND ${GIT} describe --always --dirty
-        WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-        OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX REPLACE "^.*-g" "" GITHASH ${GITHASH})
+  execute_process(COMMAND ${GIT}
+                          describe
+                          --always
+                          --dirty
+                  WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+                  OUTPUT_VARIABLE GITHASH
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX
+         REPLACE "^.*-g"
+                 ""
+                 GITHASH
+                 ${GITHASH})
 else()
-    set(GITHASH "n/a")
+  set(GITHASH "n/a")
 endif()
 message(STATUS "Git hash: " ${GITHASH})
 
-mark_as_advanced(SHOT_VERSION_MAJOR SHOT_VERSION_MINOR SHOT_VERSION_PATCH GITHASH)
+mark_as_advanced(SHOT_VERSION_MAJOR
+                 SHOT_VERSION_MINOR
+                 SHOT_VERSION_PATCH
+                 GITHASH)
 configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
@@ -111,9 +129,9 @@ file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 file(TO_CMAKE_PATH "${Boost_INCLUDE_DIR}" ${Boost_INCLUDE_DIR})
 
 if(HAS_CBC OR HAS_IPOPT OR HAS_OS)
-	# Searches for PkgConfig
-	find_package(PkgConfig)
-	include(FindPkgConfig)
+  # Searches for PkgConfig
+  find_package(PkgConfig)
+  include(FindPkgConfig)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
@@ -150,7 +168,7 @@ if(HAS_CPLEX)
 
   add_definitions(-DHAS_CPLEX)
   if(HAS_CPLEX_NEW_CALLBACK)
-      add_definitions(-DHAS_CPLEX_NEW_CALLBACK)
+    add_definitions(-DHAS_CPLEX_NEW_CALLBACK)
   endif(HAS_CPLEX_NEW_CALLBACK)
 endif(HAS_CPLEX)
 
@@ -162,7 +180,7 @@ endif(HAS_GUROBI)
 # NLP solvers
 
 if(HAS_IPOPT)
-  set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig") 
+  set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig")
   pkg_search_module(IPOPT REQUIRED ipopt)
   link_directories(${IPOPT_LIBRARY_DIRS})
   include_directories(${IPOPT_INCLUDE_DIRS})
@@ -170,91 +188,91 @@ if(HAS_IPOPT)
 endif(HAS_IPOPT)
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
-#set(Boost_USE_STATIC_LIBS OFF)
+# set(Boost_USE_STATIC_LIBS OFF)
 
 # Adding source files
-file(GLOB_RECURSE SOURCES
-  "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model/Constraints.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model/Problem.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Report.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Output.cpp"
-  "${PROJECT_SOURCE_DIR}/src/DualSolver.cpp"
-  "${PROJECT_SOURCE_DIR}/src/PrimalSolver.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Results.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
-  "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Utilities.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
-  "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.cpp"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.cpp"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp"
-  "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
-  "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
-  "${TINYXML2_DIR}/tinyxml2.cpp"
-  )
+file(GLOB_RECURSE
+     SOURCES
+     "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Model/Constraints.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Model/Problem.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Model/Variables.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Report.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Iteration.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Output.cpp"
+     "${PROJECT_SOURCE_DIR}/src/DualSolver.cpp"
+     "${PROJECT_SOURCE_DIR}/src/PrimalSolver.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Results.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
+     "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Utilities.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
+     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.cpp"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.cpp"
+     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.cpp"
+     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.cpp"
+     "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
+     "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
+     "${TINYXML2_DIR}/tinyxml2.cpp")
 
 # Adding header files
-file(GLOB_RECURSE HEADERS
-  "${PROJECT_SOURCE_DIR}/src/Enums.h"
-  "${PROJECT_SOURCE_DIR}/src/Structs.h"
-  "${PROJECT_SOURCE_DIR}/src/Environment.h"
-  "${PROJECT_SOURCE_DIR}/src/EventHandler.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/Constraints.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/Problem.h"
-  "${PROJECT_SOURCE_DIR}/src/Model/ModelHelperFunctions.h"
-  "${PROJECT_SOURCE_DIR}/src/Report.h"
-  "${PROJECT_SOURCE_DIR}/src/Iteration.h"
-  "${PROJECT_SOURCE_DIR}/src/Timing.h"
-  "${PROJECT_SOURCE_DIR}/src/Timer.h"
-  "${PROJECT_SOURCE_DIR}/src/Output.h"
-  "${PROJECT_SOURCE_DIR}/src/DualSolver.h"
-  "${PROJECT_SOURCE_DIR}/src/PrimalSolver.h"
-  "${PROJECT_SOURCE_DIR}/src/Results.h"
-  "${PROJECT_SOURCE_DIR}/src/Solver.h"
-  "${PROJECT_SOURCE_DIR}/src/TaskHandler.h"
-  "${PROJECT_SOURCE_DIR}/src/Utilities.h"
-  "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
-  "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
-  "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
-  "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
-  "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolver.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h"
-  "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
-  "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
-  "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
-  "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
-  "${PROJECT_SOURCE_DIR}/src/Settings.h" 
-  "${TINYXML2_DIR}/tinyxml2.h"
-  )
+file(GLOB_RECURSE
+     HEADERS
+     "${PROJECT_SOURCE_DIR}/src/Enums.h"
+     "${PROJECT_SOURCE_DIR}/src/Structs.h"
+     "${PROJECT_SOURCE_DIR}/src/Environment.h"
+     "${PROJECT_SOURCE_DIR}/src/EventHandler.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/Variables.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/Terms.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/AuxiliaryVariables.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/Constraints.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/Problem.h"
+     "${PROJECT_SOURCE_DIR}/src/Model/ModelHelperFunctions.h"
+     "${PROJECT_SOURCE_DIR}/src/Report.h"
+     "${PROJECT_SOURCE_DIR}/src/Iteration.h"
+     "${PROJECT_SOURCE_DIR}/src/Timing.h"
+     "${PROJECT_SOURCE_DIR}/src/Timer.h"
+     "${PROJECT_SOURCE_DIR}/src/Output.h"
+     "${PROJECT_SOURCE_DIR}/src/DualSolver.h"
+     "${PROJECT_SOURCE_DIR}/src/PrimalSolver.h"
+     "${PROJECT_SOURCE_DIR}/src/Results.h"
+     "${PROJECT_SOURCE_DIR}/src/Solver.h"
+     "${PROJECT_SOURCE_DIR}/src/TaskHandler.h"
+     "${PROJECT_SOURCE_DIR}/src/Utilities.h"
+     "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
+     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
+     "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
+     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
+     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolver.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyNone.h"
+     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
+     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
+     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverBase.h"
+     "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverCuttingPlaneMinimax.h"
+     "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
+     "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
+     "${PROJECT_SOURCE_DIR}/src/Settings.h"
+     "${TINYXML2_DIR}/tinyxml2.h")
 
 if(HAS_CBC)
   set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp")
@@ -313,7 +331,7 @@ endif(HAS_OS)
 set(INCLUDE_DIRS "")
 foreach(_headerFile ${HEADERS})
   get_filename_component(_dir ${_headerFile} PATH)
-    file(TO_CMAKE_PATH "${_dir}" _dir)
+  file(TO_CMAKE_PATH "${_dir}" _dir)
   list(APPEND INCLUDE_DIRS ${_dir})
 endforeach()
 list(REMOVE_DUPLICATES INCLUDE_DIRS)
@@ -337,69 +355,67 @@ file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 add_library(SHOTSolver SHARED ${SOURCES})
 
 # For gcc and C++ filesystem support; TODO, verify if needed for other compilers
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   target_link_libraries(SHOTSolver stdc++fs)
 endif()
 
+# Extra flags for Visual Studio compilers
+if(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
+  add_definitions(-D_USE_MATH_DEFINES)
+endif(MSVC)
+
 if(HAS_CPLEX)
-  if (NOT(CPLEX_FOUND) OR NOT(CPLEX_CONCERT_FOUND) OR NOT(CPLEX_ILOCPLEX_FOUND))
+  if(NOT (CPLEX_FOUND) OR NOT (CPLEX_CONCERT_FOUND) OR NOT (CPLEX_ILOCPLEX_FOUND))
     message("-- CPLEX libraries could not be found!")
   else()
-	include_directories("${CPLEX_INCLUDE_DIR}")
-	include_directories("${CPLEX_CONCERT_INCLUDE_DIR}")
-	include_directories("${CPLEX_ILOCPLEX_INCLUDE_DIR}")
-  
-	message("-- The following CPLEX libraries will be used:")
-	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	  message("   ${CPLEX_LIBRARY_DEBUG}")
-	  message("   ${CPLEX_CONCERT_LIBRARY_DEBUG}")
-	  message("   ${CPLEX_ILOCPLEX_LIBRARY_DEBUG}")
-	  
-	  target_link_libraries(SHOTSolver ${CPLEX_LIBRARY_DEBUG})
-	  target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY_DEBUG})
-	  target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY_DEBUG})
-	else()
-	  message("   ${CPLEX_LIBRARY}")
-	  message("   ${CPLEX_CONCERT_LIBRARY}")
-	  message("   ${CPLEX_ILOCPLEX_LIBRARY}")
-	  
-	  target_link_libraries(SHOTSolver ${CPLEX_LIBRARY})
-	  target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY})
-	  target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY})
-	endif()
+    include_directories("${CPLEX_INCLUDE_DIR}")
+    include_directories("${CPLEX_CONCERT_INCLUDE_DIR}")
+    include_directories("${CPLEX_ILOCPLEX_INCLUDE_DIR}")
+
+    message("-- The following CPLEX libraries will be used:")
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      message("   ${CPLEX_LIBRARY_DEBUG}")
+      message("   ${CPLEX_CONCERT_LIBRARY_DEBUG}")
+      message("   ${CPLEX_ILOCPLEX_LIBRARY_DEBUG}")
+
+      target_link_libraries(SHOTSolver ${CPLEX_LIBRARY_DEBUG})
+      target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY_DEBUG})
+      target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY_DEBUG})
+    else()
+      message("   ${CPLEX_LIBRARY}")
+      message("   ${CPLEX_CONCERT_LIBRARY}")
+      message("   ${CPLEX_ILOCPLEX_LIBRARY}")
+
+      target_link_libraries(SHOTSolver ${CPLEX_LIBRARY})
+      target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY})
+      target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY})
+    endif()
   endif()
 endif(HAS_CPLEX)
 
-
 if(HAS_GUROBI)
-  if (NOT(GUROBI_FOUND))
+  if(NOT (GUROBI_FOUND))
     message("-- Gurobi libraries could not be found!")
   else()
-	include_directories("${GUROBI_INCLUDE_DIR}")
-  
-	message("-- The following Gurobi libraries will be used:")
-	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	  message("   ${GUROBI_LIBRARY_DEBUG}")
-	  message("   ${GUROBI_CPP_LIBRARY}")
-	  
-	  target_link_libraries(SHOTSolver ${GUROBI_LIBRARY_DEBUG})
-	  target_link_libraries(SHOTSolver ${GUROBI_CPP_LIBRARY})
-	else()
-	  message("   ${GUROBI_LIBRARY}")
-	  message("   ${GUROBI_CPP_LIBRARY}")
-	  
-	  target_link_libraries(SHOTSolver ${GUROBI_LIBRARY})
-	  target_link_libraries(SHOTSolver ${GUROBI_CPP_LIBRARY})
-	endif()
+    include_directories("${GUROBI_INCLUDE_DIR}")
+
+    message("-- The following Gurobi libraries will be used:")
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+      message("   ${GUROBI_LIBRARY_DEBUG}")
+      message("   ${GUROBI_CPP_LIBRARY}")
+
+      target_link_libraries(SHOTSolver ${GUROBI_LIBRARY_DEBUG})
+      target_link_libraries(SHOTSolver ${GUROBI_CPP_LIBRARY})
+    else()
+      message("   ${GUROBI_LIBRARY}")
+      message("   ${GUROBI_CPP_LIBRARY}")
+
+      target_link_libraries(SHOTSolver ${GUROBI_LIBRARY})
+      target_link_libraries(SHOTSolver ${GUROBI_CPP_LIBRARY})
+    endif()
   endif()
 endif(HAS_GUROBI)
-
-#if(HAS_GUROBI)
-#  include_directories("${GUROBI_DIR}/win64/include")
-  # Change the Gurobi library below to match the version on the system
- # target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi81.lib)
-  #target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi_c++mdd2017.lib)
-#endif(HAS_GUROBI)
 
 if(HAS_CBC)
   target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
@@ -452,27 +468,27 @@ install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
 
 if(BUILD_DOCUMENTATION)
-	find_package(Doxygen)
-    if(NOT DOXYGEN_FOUND)
-        message(FATAL_ERROR "Doxygen is needed to build the documentation.")
-    endif()
+  find_package(Doxygen)
+  if(NOT DOXYGEN_FOUND)
+    message(FATAL_ERROR "Doxygen is needed to build the documentation.")
+  endif()
 
-    set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doxydoc/doxygen.conf.in)
-    set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
+  set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/doxydoc/doxygen.conf.in)
+  set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
 
-    configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+  configure_file(${doxyfile_in} ${doxyfile} @ONLY)
 
-    add_custom_target(doc
-        COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM)
+  add_custom_target(doc
+                    COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+                    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                    COMMENT "Generating API documentation with Doxygen"
+                    VERBATIM)
 
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+  install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
 endif()
 
 if(COMPILE_TESTS)
-    # For performing automated tests
-    enable_testing()
-    add_subdirectory("${PROJECT_SOURCE_DIR}/test")
+  # For performing automated tests
+  enable_testing()
+  add_subdirectory("${PROJECT_SOURCE_DIR}/test")
 endif()
