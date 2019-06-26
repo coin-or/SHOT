@@ -147,8 +147,6 @@ if(HAS_CPLEX)
   find_package(CPLEX)
   add_definitions(-DIL_STD)
   add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-  
-  find_package(CPLEX)
 
   add_definitions(-DHAS_CPLEX)
   if(HAS_CPLEX_NEW_CALLBACK)
@@ -157,7 +155,7 @@ if(HAS_CPLEX)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
-  # Note that you also may have to set the correct names of the Gurobi libraries below
+  find_package(Gurobi)
   add_definitions(-DHAS_GUROBI)
 endif(HAS_GUROBI)
 
@@ -372,12 +370,36 @@ if(HAS_CPLEX)
   endif()
 endif(HAS_CPLEX)
 
+
 if(HAS_GUROBI)
-  include_directories("${GUROBI_DIR}/win64/include")
-  # Change the Gurobi library below to match the version on the system
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi81.lib)
-  target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi_c++mdd2017.lib)
+  if (NOT(GUROBI_FOUND))
+    message("-- Gurobi libraries could not be found!")
+  else()
+	include_directories("${GUROBI_INCLUDE_DIR}")
+  
+	message("-- The following Gurobi libraries will be used:")
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	  message("   ${GUROBI_LIBRARY_DEBUG}")
+	  message("   ${GUROBI_CPP_LIBRARY}")
+	  
+	  target_link_libraries(SHOTSolver ${GUROBI_LIBRARY_DEBUG})
+	  target_link_libraries(SHOTSolver ${GUROBI_CPP_LIBRARY})
+	else()
+	  message("   ${GUROBI_LIBRARY}")
+	  message("   ${GUROBI_CPP_LIBRARY}")
+	  
+	  target_link_libraries(SHOTSolver ${GUROBI_LIBRARY})
+	  target_link_libraries(SHOTSolver ${GUROBI_CPP_LIBRARY})
+	endif()
+  endif()
 endif(HAS_GUROBI)
+
+#if(HAS_GUROBI)
+#  include_directories("${GUROBI_DIR}/win64/include")
+  # Change the Gurobi library below to match the version on the system
+ # target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi81.lib)
+  #target_link_libraries(SHOTSolver ${GUROBI_DIR}/win64/lib/gurobi_c++mdd2017.lib)
+#endif(HAS_GUROBI)
 
 if(HAS_CBC)
   target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
@@ -427,10 +449,10 @@ target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 # Add a target to generate API documentation with Doxygen
-find_package(Doxygen)
 option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
 
 if(BUILD_DOCUMENTATION)
+	find_package(Doxygen)
     if(NOT DOXYGEN_FOUND)
         message(FATAL_ERROR "Doxygen is needed to build the documentation.")
     endif()

@@ -106,22 +106,22 @@ if (UNIX)
     PATHS ${CPLEX_DIR} PATH_SUFFIXES ${CPLEX_LIB_PATH_SUFFIXES})
   set(CPLEX_LIBRARY_DEBUG ${CPLEX_LIBRARY})
 elseif (NOT CPLEX_LIBRARY)
-message("In windows trying " ${${CPLEX_LIB_PATH_SUFFIXES}})
+#message("In windows trying " ${${CPLEX_LIB_PATH_SUFFIXES}})
   # On Windows the version is appended to the library name which cannot be
   # handled by find_library, so search manually.
   find_win_cplex_library(CPLEX_LIB "${CPLEX_LIB_PATH_SUFFIXES}")
-  message(" CPLEX_LIB " ${CPLEX_LIB})
-  message(" CPLEX_LIBRARY " ${CPLEX_LIBRARY})
+  #message(" CPLEX_LIB " ${CPLEX_LIB})
+  #message(" CPLEX_LIBRARY " ${CPLEX_LIBRARY})
   set(CPLEX_LIBRARY ${CPLEX_LIB} CACHE FILEPATH "Path to the CPLEX library")
   find_win_cplex_library(CPLEX_LIB "${CPLEX_LIB_PATH_SUFFIXES_DEBUG}")
     
   set(CPLEX_LIBRARY_DEBUG ${CPLEX_LIB} CACHE
     FILEPATH "Path to the debug CPLEX library")
-	message(" CPLEX_LIBRARY " ${CPLEX_LIBRARY})
+	#message(" CPLEX_LIBRARY " ${CPLEX_LIBRARY})
   if (CPLEX_LIBRARY MATCHES ".*/(cplex.*)\\.lib")
     file(GLOB CPLEX_DLL_ "${CPLEX_DIR}/bin/*/${CMAKE_MATCH_1}.dll")
     set(CPLEX_DLL ${CPLEX_DLL_} CACHE PATH "Path to the CPLEX DLL.")
-	message(" CPLEX_DLL " ${CPLEX_DLL})
+	#message(" CPLEX_DLL " ${CPLEX_DLL})
   endif ()
 endif ()
 
