@@ -43,7 +43,7 @@ option(HAS_GUROBI "Is Gurobi available" ON)
 set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" OFF)
+option(HAS_CBC "Is Cbc available" ON)
 set(CBC_DIR
     "/opt/Cbc"
     CACHE STRING
@@ -128,12 +128,6 @@ file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 file(TO_CMAKE_PATH "${Boost_INCLUDE_DIR}" ${Boost_INCLUDE_DIR})
 
-if(HAS_CBC OR HAS_IPOPT OR HAS_OS)
-  # Searches for PkgConfig
-  find_package(PkgConfig)
-  include(FindPkgConfig)
-endif()
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 
 # Passes the parameters to the compiler
@@ -154,11 +148,15 @@ endif(HAS_OS)
 # MIP solvers
 
 if(HAS_CBC)
-  set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig")
-  pkg_search_module(CBC REQUIRED cbc)
-  link_directories(${CBC_LIBRARY_DIRS})
-  include_directories(${CBC_INCLUDE_DIRS})
-  add_definitions(-DHAS_CBC)
+
+  find_package(CBC)
+  # set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig") pkg_search_module(CBC REQUIRED cbc)
+
+  if(CBC_FOUND)
+    link_directories(${CBC_LIBRARY_DIRS})
+    include_directories(${CBC_INCLUDE_DIRS})
+    add_definitions(-DHAS_CBC)
+  endif(CBC_FOUND)
 endif(HAS_CBC)
 
 if(HAS_CPLEX)
@@ -369,6 +367,11 @@ if(HAS_CPLEX)
   if(NOT (CPLEX_FOUND) OR NOT (CPLEX_CONCERT_FOUND) OR NOT (CPLEX_ILOCPLEX_FOUND))
     message("-- CPLEX libraries could not be found!")
   else()
+
+    message("-- CPLEX include files will be used from:")
+    message("   ${CPLEX_INCLUDE_DIR}")
+    message("   ${CPLEX_CONCERT_INCLUDE_DIR}")
+    message("   ${CPLEX_ILOCPLEX_INCLUDE_DIR}")
     include_directories("${CPLEX_INCLUDE_DIR}")
     include_directories("${CPLEX_CONCERT_INCLUDE_DIR}")
     include_directories("${CPLEX_ILOCPLEX_INCLUDE_DIR}")
@@ -398,6 +401,7 @@ if(HAS_GUROBI)
   if(NOT (GUROBI_FOUND))
     message("-- Gurobi libraries could not be found!")
   else()
+    message("-- Gurobi include files will be used from: ${GUROBI_INCLUDE_DIR}")
     include_directories("${GUROBI_INCLUDE_DIR}")
 
     message("-- The following Gurobi libraries will be used:")
@@ -418,10 +422,17 @@ if(HAS_GUROBI)
 endif(HAS_GUROBI)
 
 if(HAS_CBC)
-  target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
-  target_include_directories(SHOTSolver PUBLIC "${CBC_DIR}/include/coin")
-  target_compile_options(SHOTSolver PUBLIC ${CBC_CFLAGS_OTHER})
-  include_directories(${CBC_INCLUDE_DIRS})
+  if(NOT (CBC_FOUND))
+    message("-- Cbc libraries could not be found!")
+  else()
+    message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
+
+    target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
+    target_compile_options(SHOTSolver PUBLIC ${CBC_CFLAGS_OTHER})
+
+    message("-- The following Cbc libraries will be used from: ${CBC_LIBRARY_DIRS}")
+    message("   ${CBC_STATIC_LIBRARIES}")
+  endif()
 endif(HAS_CBC)
 
 if(HAS_IPOPT)
