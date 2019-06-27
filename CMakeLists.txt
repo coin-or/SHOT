@@ -342,14 +342,14 @@ include_directories(${INCLUDE_DIRS})
 
 find_package(Boost 1.63.0 REQUIRED)
 
-include_directories("${ARGH_DIR}")
-include_directories("${Boost_INCLUDE_DIR}")
-include_directories("${EIGEN_DIR}")
-include_directories("${MCPP_DIR}/include")
-include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
-include_directories("${MCPP_DIR}/3rdparty/fadbad++")
-include_directories("${SPDLOG_DIR}")
-include_directories("${TINYXML2_DIR}/")
+include_directories(SYSTEM "${ARGH_DIR}")
+include_directories(SYSTEM "${Boost_INCLUDE_DIR}")
+include_directories(SYSTEM "${EIGEN_DIR}")
+include_directories(SYSTEM "${MCPP_DIR}/include")
+include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
+include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
+include_directories(SYSTEM "${SPDLOG_DIR}")
+include_directories(SYSTEM "${TINYXML2_DIR}/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
