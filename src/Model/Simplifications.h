@@ -348,7 +348,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionDivid
             auto power = std::dynamic_pointer_cast<ExpressionConstant>(child->secondChild);
             power->constant *= -1.0;
 
-            std::make_shared<ExpressionProduct>(firstChild, secondChild);
+            return (std::make_shared<ExpressionProduct>(firstChild, secondChild));
         }
     }
     else if(secondChild->getType() == E_NonlinearExpressionTypes::Square)

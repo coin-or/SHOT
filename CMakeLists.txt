@@ -162,8 +162,6 @@ endif(HAS_CBC)
 if(HAS_CPLEX)
   find_package(CPLEX)
   add_definitions(-DIL_STD)
-  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-
   add_definitions(-DHAS_CPLEX)
   if(HAS_CPLEX_NEW_CALLBACK)
     add_definitions(-DHAS_CPLEX_NEW_CALLBACK)

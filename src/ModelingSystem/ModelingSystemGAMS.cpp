@@ -102,7 +102,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
         catch(std::exception& e)
         {
-            env->output->outputError("Error when reading GAMS options file " + std::string(buffer));
+            env->output->outputError("Error when reading GAMS options file " + std::string(buffer),e.what());
             throw std::logic_error("Cannot read GAMS options file.");
         }
     }
@@ -201,7 +201,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, g
     }
     catch(const std::exception& e)
     {
-        env->output->outputError("Error when creating problem from GAMS object.");
+        env->output->outputError("Error when creating problem from GAMS object.", e.what());
 
         return (E_ProblemCreationStatus::Error);
     }

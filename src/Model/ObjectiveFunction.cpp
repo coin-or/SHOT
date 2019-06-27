@@ -179,7 +179,7 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
         {
             // Element already exists for the variable
 
-            element.second += T->coefficient;
+            element.first->second += T->coefficient;
         }
     }
 

@@ -149,8 +149,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    bool isSolved;
-
     std::vector<PrimalFixedNLPCandidate> testPts;
 
     // Check if integer value combination has been tested before
@@ -297,7 +295,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
             {
                 int iters = std::max(
-                    ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
+                    std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
                     originalNLPIter);
 
                 if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
@@ -454,7 +452,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
             {
-                int iters = ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
+                int iters = std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
 
                 if(iters < 10 * this->originalIterFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);

@@ -2056,8 +2056,6 @@ public:
 
     inline E_Monotonicity getMonotonicity() const override
     {
-        E_Monotonicity resultMonotonicity;
-
         bool areAllConstant = true;
         bool areAllZeroOrNondecreasing = true;
         bool areAllZeroOrNonincreasing = true;

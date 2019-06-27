@@ -1193,7 +1193,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
 
             for(int j = 0; j < cplexConstrs.getSize(); j++)
             {
-                if(redund[j] == true)
+                if(redund[j] == 0)
                 {
                     cplexModel.remove(cplexConstrs[j]);
                     cplexConstrs[j].asConstraint().removeFromAll();

@@ -47,7 +47,7 @@ std::vector<NumericConstraint*> Test::getActiveConstraints() { return (activeCon
 
 double Test::operator()(const double x)
 {
-    int length = firstPt.size();
+    auto length = firstPt.size();
     VectorDouble ptNew(length);
 
     for(int i = 0; i < length; i++)
@@ -129,7 +129,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
         test->problem = sharedProblem.get();
     }
 
-    int length = ptA.size();
+    auto length = ptA.size();
     VectorDouble ptNew(length);
     VectorDouble ptNew2(length);
 

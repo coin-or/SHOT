@@ -278,8 +278,7 @@ public:
             if(!element.second)
             {
                 // Element already exists for the variable
-
-                element.second += T->coefficient;
+                element.first->second += T->coefficient;
             }
         }
 

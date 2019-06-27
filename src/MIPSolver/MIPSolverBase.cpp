@@ -211,7 +211,7 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
         gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
                        ->calculateGradient(hyperplane.generatedPoint, true);
 
-        int nonzeroes
+        auto nonzeroes
             = std::count_if(gradient.begin(), gradient.end(), [](auto element) { return (element.second != 0.0); });
 
         if(nonzeroes == 0)
@@ -387,7 +387,7 @@ void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble var
         unfixVariables();
     }
 
-    int size = variableIndexes.size();
+    auto size = variableIndexes.size();
 
     if(size == 0)
         return;

@@ -305,7 +305,6 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
 
 NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination)
 {
-    unsigned int i;
     std::ostringstream outStr;
     int numChildren;
 
@@ -323,7 +322,7 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
             return copyNonlinearExpression(((ExpressionSum*)expression)->children[0].get(), destination);
         default:
             NonlinearExpressions terms;
-            for(i = 0; i < numChildren; i++)
+            for(int i = 0; i < numChildren; i++)
                 terms.push_back(copyNonlinearExpression(((ExpressionSum*)expression)->children[i].get(), destination));
             return std::make_shared<ExpressionSum>(terms);
         }
@@ -352,7 +351,7 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
             return copyNonlinearExpression(((ExpressionProduct*)expression)->children[0].get(), destination);
         default:
             NonlinearExpressions factors;
-            for(i = 0; i < numChildren; i++)
+            for(int i = 0; i < numChildren; i++)
                 factors.push_back(
                     copyNonlinearExpression(((ExpressionProduct*)expression)->children[i].get(), destination));
             return std::make_shared<ExpressionProduct>(factors);

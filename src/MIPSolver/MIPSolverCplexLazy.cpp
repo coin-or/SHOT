@@ -246,7 +246,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             currIter->maxDeviationConstraint = solutionCandidate.maxDeviation.index;
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
             currIter->objectiveValue = context.getCandidateObjective();
-
+			
             env->results->getCurrentIteration()->numberOfOpenNodes = cplexInst.getNnodesLeft();
             env->solutionStatistics.numberOfExploredNodes
                 = std::max(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount),

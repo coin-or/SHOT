@@ -70,7 +70,7 @@ struct ProblemProperties
 using FactorableFunctionGraph = mc::FFGraph;
 using FactorableFunctionGraphPtr = std::shared_ptr<FactorableFunctionGraph>;
 
-class Problem : public std::enable_shared_from_this<Problem>
+class DllExport Problem : public std::enable_shared_from_this<Problem>
 {
 private:
     bool variablesUpdated = false;
