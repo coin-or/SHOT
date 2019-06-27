@@ -426,12 +426,13 @@ if(HAS_CBC)
     message("-- Cbc libraries could not be found!")
   else()
     message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
-
+	
+	#file(TO_CMAKE_PATH "${CBC_LIBRARIES}" ${CBC_LIBRARIES})
     target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
     target_compile_options(SHOTSolver PUBLIC ${CBC_CFLAGS_OTHER})
 
     message("-- The following Cbc libraries will be used from: ${CBC_LIBRARY_DIRS}")
-    message("   ${CBC_STATIC_LIBRARIES}")
+    message("   ${CBC_LIBRARIES}")
   endif()
 endif(HAS_CBC)
 
