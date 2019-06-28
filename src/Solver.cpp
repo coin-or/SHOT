@@ -83,6 +83,9 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
 
+    env->timing->createTimer("BoundTightening", " - bound tightening");
+    env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
+
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
     env->events = std::make_shared<EventHandler>(env);
