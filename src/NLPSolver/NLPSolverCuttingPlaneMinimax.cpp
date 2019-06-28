@@ -286,7 +286,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             elements.push_back(pair);
 
             // Adds the linear constraint
-            LPSolver->addLinearConstraint(elements, constant, "minimax");
+            LPSolver->addLinearConstraint(elements, constant,
+                "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot));
 
             numHyperTot++;
             numHyperAdded++;

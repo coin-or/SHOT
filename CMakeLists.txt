@@ -45,7 +45,7 @@ set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gu
 # Cbc
 option(HAS_CBC "Is Cbc available" ON)
 set(CBC_DIR
-    "/opt/Cbc"
+    "/opt/Cbc-2.10"
     CACHE STRING
           "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 

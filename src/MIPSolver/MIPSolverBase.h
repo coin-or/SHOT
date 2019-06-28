@@ -31,6 +31,7 @@ private:
 
     bool auxiliaryObjectiveVariableDefined = false;
     int auxiliaryObjectiveVariableIndex;
+    int constraintCounter = 0;
 
 protected:
     int numberOfVariables = 0;
