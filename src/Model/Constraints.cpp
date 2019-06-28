@@ -140,7 +140,7 @@ bool NumericConstraint::isFulfilled(const VectorDouble& point)
     auto constraintValue = calculateNumericValue(point);
 
     return (constraintValue.isFulfilledLHS && constraintValue.isFulfilledRHS);
-};
+}
 
 void LinearConstraint::add(LinearTerms terms)
 {
@@ -156,35 +156,35 @@ void LinearConstraint::add(LinearTerms terms)
             add(T);
         }
     }
-};
+}
 
 void LinearConstraint::add(LinearTermPtr term)
 {
     linearTerms.add(term);
     properties.hasLinearTerms = true;
-};
+}
 
 double LinearConstraint::calculateFunctionValue(const VectorDouble& point)
 {
     double value = linearTerms.calculate(point);
     value += constant;
     return value;
-};
+}
 
 Interval LinearConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = linearTerms.calculate(intervalVector);
     value += Interval(constant);
     return value;
-};
+}
 
-bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
+bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
 
 void LinearConstraint::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
     linearTerms.takeOwnership(owner);
-};
+}
 
 SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -194,7 +194,7 @@ SparseVariableVector LinearConstraint::calculateGradient(const VectorDouble& poi
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
-};
+}
 
 void LinearConstraint::initializeGradientSparsityPattern()
 {
@@ -207,26 +207,26 @@ void LinearConstraint::initializeGradientSparsityPattern()
             == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->variable);
     }
-};
+}
 
-void LinearConstraint::initializeHessianSparsityPattern(){};
+void LinearConstraint::initializeHessianSparsityPattern() {}
 
-SparseVariableMatrix LinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+SparseVariableMatrix LinearConstraint::calculateHessian(
+    [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
-
     return hessian;
-};
+}
 
 NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
-    return NumericConstraint::calculateNumericValue(point);
-};
+    return NumericConstraint::calculateNumericValue(point, correction);
+}
 
 std::shared_ptr<NumericConstraint> LinearConstraint::getPointer()
 {
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
-};
+}
 
 void LinearConstraint::updateProperties()
 {
@@ -241,11 +241,11 @@ void LinearConstraint::updateProperties()
 
     properties.convexity = E_Convexity::Linear;
     properties.classification = E_ConstraintClassification::Linear;
-};
+}
 
-void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
+void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
 
-void QuadraticConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); };
+void QuadraticConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); }
 
 void QuadraticConstraint::add(QuadraticTerms terms)
 {
@@ -261,13 +261,13 @@ void QuadraticConstraint::add(QuadraticTerms terms)
             add(T);
         }
     }
-};
+}
 
 void QuadraticConstraint::add(QuadraticTermPtr term)
 {
     quadraticTerms.push_back(term);
     properties.hasQuadraticTerms = true;
-};
+}
 
 double QuadraticConstraint::calculateFunctionValue(const VectorDouble& point)
 {
@@ -275,22 +275,22 @@ double QuadraticConstraint::calculateFunctionValue(const VectorDouble& point)
     value += quadraticTerms.calculate(point);
 
     return value;
-};
+}
 
 Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
     Interval value = LinearConstraint::calculateFunctionValue(intervalVector);
     value += quadraticTerms.calculate(intervalVector);
     return value;
-};
+}
 
-bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
+bool QuadraticConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
 
 void QuadraticConstraint::takeOwnership(ProblemPtr owner)
 {
     LinearConstraint::takeOwnership(owner);
     quadraticTerms.takeOwnership(owner);
-};
+}
 
 SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -298,7 +298,7 @@ SparseVariableVector QuadraticConstraint::calculateGradient(const VectorDouble& 
     SparseVariableVector quadraticGradient = quadraticTerms.calculateGradient(point);
 
     return (Utilities::combineSparseVariableVectors(linearGradient, quadraticGradient));
-};
+}
 
 void QuadraticConstraint::initializeGradientSparsityPattern()
 {
@@ -320,9 +320,10 @@ void QuadraticConstraint::initializeGradientSparsityPattern()
             == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->secondVariable);
     }
-};
+}
 
-SparseVariableMatrix QuadraticConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+SparseVariableMatrix QuadraticConstraint::calculateHessian(
+    [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
 
@@ -371,7 +372,7 @@ SparseVariableMatrix QuadraticConstraint::calculateHessian(const VectorDouble& p
     }
 
     return hessian;
-};
+}
 
 void QuadraticConstraint::initializeHessianSparsityPattern()
 {
@@ -393,17 +394,17 @@ void QuadraticConstraint::initializeHessianSparsityPattern()
             == hessianSparsityPattern->end())
             hessianSparsityPattern->push_back(key);
     }
-};
+}
 
 NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
-    return NumericConstraint::calculateNumericValue(point);
-};
+    return NumericConstraint::calculateNumericValue(point, correction);
+}
 
 std::shared_ptr<NumericConstraint> QuadraticConstraint::getPointer()
 {
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
-};
+}
 
 void QuadraticConstraint::updateProperties()
 {
@@ -421,15 +422,15 @@ void QuadraticConstraint::updateProperties()
 
     auto convexity = quadraticTerms.getConvexity();
     properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
-};
+}
 
-void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); };
+void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
 
-void NonlinearConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); };
+void NonlinearConstraint::add(LinearTermPtr term) { LinearConstraint::add(term); }
 
-void NonlinearConstraint::add(QuadraticTerms terms) { QuadraticConstraint::add(terms); };
+void NonlinearConstraint::add(QuadraticTerms terms) { QuadraticConstraint::add(terms); }
 
-void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(term); };
+void NonlinearConstraint::add(QuadraticTermPtr term) { QuadraticConstraint::add(term); }
 
 void NonlinearConstraint::add(MonomialTerms terms)
 {
@@ -445,13 +446,13 @@ void NonlinearConstraint::add(MonomialTerms terms)
             add(T);
         }
     }
-};
+}
 
 void NonlinearConstraint::add(MonomialTermPtr term)
 {
     monomialTerms.push_back(term);
     properties.hasMonomialTerms = true;
-};
+}
 
 void NonlinearConstraint::add(SignomialTerms terms)
 {
@@ -467,13 +468,13 @@ void NonlinearConstraint::add(SignomialTerms terms)
             add(T);
         }
     }
-};
+}
 
 void NonlinearConstraint::add(SignomialTermPtr term)
 {
     signomialTerms.push_back(term);
     properties.hasSignomialTerms = true;
-};
+}
 
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
 {
@@ -490,12 +491,12 @@ void NonlinearConstraint::add(NonlinearExpressionPtr expression)
     }
 
     properties.hasNonlinearExpression = true;
-};
+}
 
 void NonlinearConstraint::updateFactorableFunction()
 {
     factorableFunction = std::make_shared<FactorableFunction>(nonlinearExpression->getFactorableFunction());
-};
+}
 
 double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
 {
@@ -511,7 +512,7 @@ double NonlinearConstraint::calculateFunctionValue(const VectorDouble& point)
         value += nonlinearExpression->calculate(point);
 
     return value;
-};
+}
 
 Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& intervalVector)
 {
@@ -527,7 +528,7 @@ Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& inter
         value += nonlinearExpression->calculate(intervalVector);
 
     return value;
-};
+}
 
 SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -598,7 +599,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
         Utilities::erase_if<VariablePtr, double>(result, 0.0);
 
     return result;
-};
+}
 
 void NonlinearConstraint::initializeGradientSparsityPattern()
 {
@@ -642,7 +643,7 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
             == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(E.first);
     }
-};
+}
 
 SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -713,7 +714,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
         Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
 
     return (hessian);
-};
+}
 
 void NonlinearConstraint::initializeHessianSparsityPattern()
 {
@@ -781,9 +782,9 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
             == hessianSparsityPattern->end())
             hessianSparsityPattern->push_back(E.first);
     }
-};
+}
 
-bool NonlinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); };
+bool NonlinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
 
 void NonlinearConstraint::takeOwnership(ProblemPtr owner)
 {
@@ -792,17 +793,17 @@ void NonlinearConstraint::takeOwnership(ProblemPtr owner)
     signomialTerms.takeOwnership(owner);
     if(nonlinearExpression != nullptr)
         nonlinearExpression->takeOwnership(owner);
-};
+}
 
 NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
-    return NumericConstraint::calculateNumericValue(point);
-};
+    return NumericConstraint::calculateNumericValue(point, correction);
+}
 
 std::shared_ptr<NumericConstraint> NonlinearConstraint::getPointer()
 {
     return std::dynamic_pointer_cast<NumericConstraint>(shared_from_this());
-};
+}
 
 void NonlinearConstraint::updateProperties()
 {
@@ -875,19 +876,19 @@ void NonlinearConstraint::updateProperties()
         [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
             return (variableOne->index < variableTwo->index);
         });
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, LinearConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
-};
+}
 
 std::ostream& LinearConstraint::print(std::ostream& stream) const
 {
@@ -909,13 +910,13 @@ std::ostream& LinearConstraint::print(std::ostream& stream) const
         stream << " <= " << valueRHS;
 
     return stream;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
-};
+}
 
 std::ostream& QuadraticConstraint::print(std::ostream& stream) const
 {
@@ -938,13 +939,13 @@ std::ostream& QuadraticConstraint::print(std::ostream& stream) const
         stream << " <= " << valueRHS;
 
     return stream;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint)
 {
     stream << *constraint;
     return stream;
-};
+}
 
 std::ostream& NonlinearConstraint::print(std::ostream& stream) const
 {
@@ -975,5 +976,5 @@ std::ostream& NonlinearConstraint::print(std::ostream& stream) const
         stream << " <= " << valueRHS;
 
     return stream;
-};
+}
 } // namespace SHOT

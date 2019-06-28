@@ -29,7 +29,6 @@ private:
     std::vector<VectorDouble> testedPoints;
 
     VectorDouble lastSolution;
-    double lastPrimalBound = NAN;
 
     int totalIters = 0;
 };

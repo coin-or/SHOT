@@ -109,14 +109,12 @@ void TaskSolveFixedDualProblem::run()
 
     VectorDouble fixValues(discreteVariableIndexes.size());
 
-    for(int i = 0; i < discreteVariableIndexes.size(); i++)
+    for(size_t i = 0; i < discreteVariableIndexes.size(); i++)
     {
         fixValues.at(i) = currSolPt.at(discreteVariableIndexes.at(i));
     }
 
     env->dualSolver->MIPSolver->fixVariables(discreteVariableIndexes, fixValues);
-
-    bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
     double prevObjVal = SHOT_DBL_MAX;
 
@@ -127,7 +125,6 @@ void TaskSolveFixedDualProblem::run()
 
     bool isMIQP = env->reformulatedProblem->properties.isMIQPProblem;
     bool isMIQCP = env->reformulatedProblem->properties.isMIQCQPProblem;
-    bool isDiscrete = false;
 
     for(int k = 0; k < maxIter; k++)
     {
@@ -210,15 +207,9 @@ void TaskSolveFixedDualProblem::run()
 
             env->dualSolver->MIPSolver->createHyperplane(hyperplane);
 
-            bool hasSolution = true;
-
-            if(varSol.size() == 0)
-                hasSolution = false;
-
             if(solStatus == E_ProblemSolutionStatus::Error)
             {
                 tmpType << "-E";
-                hasSolution = false;
             }
             else if(solStatus == E_ProblemSolutionStatus::Feasible)
             {
@@ -227,7 +218,6 @@ void TaskSolveFixedDualProblem::run()
             else if(solStatus == E_ProblemSolutionStatus::Infeasible)
             {
                 tmpType << "-I";
-                hasSolution = false;
             }
             else if(solStatus == E_ProblemSolutionStatus::IterationLimit)
             {
@@ -240,12 +230,10 @@ void TaskSolveFixedDualProblem::run()
             else if(solStatus == E_ProblemSolutionStatus::TimeLimit)
             {
                 tmpType << "-TL";
-                hasSolution = false;
             }
             else if(solStatus == E_ProblemSolutionStatus::Unbounded)
             {
                 tmpType << "-U";
-                hasSolution = false;
             }
 
             env->report->outputIterationDetail(totalIters, tmpType.str(), env->timing->getElapsedTime("Total"), 1,

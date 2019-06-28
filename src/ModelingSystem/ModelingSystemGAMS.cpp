@@ -44,7 +44,7 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
     }
 }
 
-void ModelingSystemGAMS::augmentSettings(SettingsPtr settings) {}
+void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
@@ -102,7 +102,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
         catch(std::exception& e)
         {
-            env->output->outputError("Error when reading GAMS options file " + std::string(buffer),e.what());
+            env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
             throw std::logic_error("Cannot read GAMS options file.");
         }
     }
@@ -626,13 +626,13 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 
         int numberLinearTerms = numberOfNonzeros - numberOfNonlinearNonzeros;
 
-        for(int i = 0, j = 0; i < numberLinearTerms; ++i)
+        for(int i = 0; i < numberLinearTerms; ++i)
         {
             try
             {
                 VariablePtr variable = destination->getVariable(variableIndexes[i]);
                 (std::static_pointer_cast<LinearObjectiveFunction>(objectiveFunction))
-                    ->add(std::move(std::make_shared<LinearTerm>(coefficients[i], variable)));
+                    ->add(std::make_shared<LinearTerm>(coefficients[i], variable));
             }
             catch(const VariableNotFoundException& e)
             {
@@ -966,7 +966,7 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /**< length of GAMS instructions */
     int* opcodes, /**< opcodes of GAMS instructions */
     int* fields, /**< fields of GAMS instructions */
-    int constantlen, /**< length of GAMS constants pool */
+    [[maybe_unused]] int constantlen, /**< length of GAMS constants pool */
     double* constants, /**< GAMS constants pool */
     const ProblemPtr& destination)
 {

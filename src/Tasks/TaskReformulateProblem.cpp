@@ -503,15 +503,15 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     if(copyOriginalNonlinearExpression)
     {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)));
+        reformulatedProblem->add(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective));
     }
     else if(destinationQuadraticTerms.size() > 0)
     {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective)));
+        reformulatedProblem->add(std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective));
     }
     else
     {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)));
+        reformulatedProblem->add(std::dynamic_pointer_cast<LinearObjectiveFunction>(objective));
     }
 }
 
@@ -956,8 +956,6 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
 
-    bool allNonlinearExpressionsReformulated = false;
-
     for(auto& T : sourceTerms)
     {
         Interval bounds;
@@ -1008,8 +1006,6 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
-
-    bool allNonlinearExpressionsReformulated = false;
 
     for(auto& T : sourceTerms)
     {
@@ -1438,7 +1434,6 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
     double signfactor = reversedSigns ? -1.0 : 1.0;
 
     bool allTermsAreBinary = true;
-
     for(auto& T : monomialTerms)
     {
         if(!T->isBinary)
@@ -1500,7 +1495,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
             auto numLambdas = std::pow(2, k);
 
-            for(auto i = 1; numLambdas; i++)
+            for(auto i = 1; i < numLambdas; i++)
             {
                 auto auxLambda
                     = std::make_shared<AuxiliaryVariable>("s_monlam" + std::to_string(auxVariableCounter + 1),

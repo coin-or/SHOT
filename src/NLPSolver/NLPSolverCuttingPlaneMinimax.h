@@ -66,8 +66,6 @@ private:
 
     void saveOptionsToFile(std::string fileName) override;
 
-    bool isProblemCreated;
-
     VectorDouble solution;
     double objectiveValue = NAN;
 

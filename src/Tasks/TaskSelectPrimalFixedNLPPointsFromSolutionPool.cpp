@@ -130,7 +130,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
             tmpSol.iterFound, tmpSol.maxDeviation);
 
-        for(int i = 1; i < allSolutions.size(); i++)
+        for(size_t i = 1; i < allSolutions.size(); i++)
         {
             auto tmpSol = allSolutions.at(i);
 
@@ -149,7 +149,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         env->primalSolver->addFixedNLPCandidate(tmpSol.point, E_PrimalNLPSource::FirstSolution, tmpSol.objectiveValue,
             tmpSol.iterFound, tmpSol.maxDeviation);
 
-        for(int i = 1; i < allSolutions.size(); i++)
+        for(size_t i = 1; i < allSolutions.size(); i++)
         {
             tmpSol = allSolutions.at(i);
 

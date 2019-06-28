@@ -19,9 +19,9 @@
 namespace SHOT
 {
 
-double Variable::calculate(const VectorDouble& point) const { return point[index]; };
-Interval Variable::calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; };
-Interval Variable::getBound() { return Interval(lowerBound, upperBound); };
+double Variable::calculate(const VectorDouble& point) const { return point[index]; }
+Interval Variable::calculate(const IntervalVector& intervalVector) const { return intervalVector[index]; }
+Interval Variable::getBound() { return Interval(lowerBound, upperBound); }
 
 bool Variable::isDualUnbounded()
 {
@@ -49,7 +49,7 @@ bool Variable::isDualUnbounded()
     return true;
 }
 
-void Variable::takeOwnership(ProblemPtr owner) { ownerProblem = owner; };
+void Variable::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
 std::ostream& operator<<(std::ostream& stream, VariablePtr var)
 {
@@ -82,6 +82,6 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
     }
 
     return stream;
-};
+}
 
 } // namespace SHOT

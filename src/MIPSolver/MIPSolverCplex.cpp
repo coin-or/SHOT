@@ -1230,7 +1230,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverCplex::presolveAndGetNewBounds()
     }
 }
 
-void MIPSolverCplex::writePresolvedToFile(std::string filename)
+void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
 {
     try
     {
@@ -1283,7 +1283,7 @@ void MIPSolverCplex::createHyperplane(
 
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
 
-        auto addedConstr = addConstraintFunction(tmpRange);
+        addConstraintFunction(tmpRange);
 
         currIter->numHyperplanesAdded++;
         currIter->totNumHyperplanes++;

@@ -415,11 +415,11 @@ int MIPSolverGurobi::addLinearConstraint(
 
         if(isGreaterThan)
         {
-            gurobiModel->addConstr(-constant >= *expr);
+            gurobiModel->addConstr(-constant >= *expr, name);
         }
         else
         {
-            gurobiModel->addConstr(*expr <= -constant);
+            gurobiModel->addConstr(*expr <= -constant, name);
         }
 
         modelUpdated = true;
@@ -753,8 +753,6 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         int numRepairs = 0;
 
-        auto vars = feasModel.getVars();
-
         for(int i = 0; i < numConstraintsToRepairOrig; i++)
         {
             auto variable = feasModel.getVar(numOrigVariables + i);
@@ -932,7 +930,7 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             startVal.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point));
 
-        for(int i = 0; i < startVal.size(); i++)
+        for(size_t i = 0; i < startVal.size(); i++)
         {
             GRBVar tmpVar = gurobiModel->getVar(i);
             tmpVar.set(GRB_DoubleAttr_Start, startVal.at(i));
@@ -982,12 +980,10 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
         {
             gurobiModel->getEnv().set(GRB_IntParam_SolutionNumber, solIdx);
 
-            int numvars = gurobiModel->get(GRB_IntAttr_NumVars);
-
             auto objective = gurobiModel->getObjective();
             objVal = objective.getLinExpr().getConstant();
 
-            for(int i = 0; i < objective.size(); i++)
+            for(size_t i = 0; i < objective.size(); i++)
             {
                 objVal += objective.getCoeff(i) * objective.getVar1(i).get(GRB_DoubleAttr_Xn)
                     * objective.getVar2(i).get(GRB_DoubleAttr_Xn);
@@ -995,7 +991,7 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 
             auto linexpr = objective.getLinExpr();
 
-            for(int i = 0; i < linexpr.size(); i++)
+            for(size_t i = 0; i < linexpr.size(); i++)
             {
                 objVal += linexpr.getCoeff(i) * linexpr.getVar(i).get(GRB_DoubleAttr_Xn);
             }
@@ -1150,7 +1146,7 @@ double MIPSolverGurobi::getDualObjectiveValue()
     return (objVal);
 }
 
-void MIPSolverGurobi::writePresolvedToFile(std::string filename) {}
+void MIPSolverGurobi::writePresolvedToFile([[maybe_unused]] std::string filename) {}
 
 void MIPSolverGurobi::checkParameters() {}
 

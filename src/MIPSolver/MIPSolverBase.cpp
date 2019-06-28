@@ -32,7 +32,7 @@ E_DualProblemClass MIPSolverBase::getProblemClass()
 {
     bool isMIP = getDiscreteVariableStatus();
 
-    if(hasQuadraticObjective && hasQudraticConstraint || hasQudraticConstraint)
+    if(hasQuadraticObjective && hasQudraticConstraint)
         return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else if(hasQuadraticObjective)
         return (isMIP ? E_DualProblemClass::MIQP : E_DualProblemClass::QP);
@@ -70,7 +70,6 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
     int numSol = getNumberOfSolutions();
 
-    int numVar = env->reformulatedProblem->properties.numberOfVariables;
     std::vector<SolutionPoint> lastSolutions(numSol);
 
     for(int i = 0; i < numSol; i++)
@@ -79,7 +78,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
         auto tmpPt = getVariableSolution(i);
 
-        while(tmpPt.size() > env->reformulatedProblem->properties.numberOfVariables)
+        while((int)tmpPt.size() > env->reformulatedProblem->properties.numberOfVariables)
         {
             tmpPt.pop_back();
         }
@@ -148,7 +147,7 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         if(hyperplane.sourceConstraint != nullptr)
             identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
-        int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
+        addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
         env->dualSolver->addGeneratedHyperplane(hyperplane);
         env->solutionStatistics.iterationLastDualCutAdded = currIter->iterationNumber;
 
@@ -258,9 +257,9 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
     elements.clear();
 
     return (optional);
-};
+}
 
-void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
+void MIPSolverBase::createInteriorHyperplane([[maybe_unused]] Hyperplane hyperplane)
 {
     /*
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
@@ -396,7 +395,7 @@ void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
     activateDiscreteVariables(false);
 
-    for(int i = 0; i < size; i++)
+    for(size_t i = 0; i < size; i++)
     {
         originalBounds.at(i) = this->getCurrentVariableBounds(variableIndexes.at(i));
         this->fixVariable(variableIndexes.at(i), variableValues.at(i));
@@ -410,7 +409,7 @@ void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void MIPSolverBase::unfixVariables()
 {
-    for(int i = 0; i < fixedVariableIndexes.size(); i++)
+    for(size_t i = 0; i < fixedVariableIndexes.size(); i++)
     {
         updateVariableBound(fixedVariableIndexes.at(i), fixedVariableOriginalBounds.at(i).first,
             fixedVariableOriginalBounds.at(i).second);

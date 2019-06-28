@@ -97,7 +97,7 @@ Solver::Solver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
 
 Solver::~Solver() = default;
 
-EnvironmentPtr Solver::getEnvironment() { return env; };
+EnvironmentPtr Solver::getEnvironment() { return env; }
 
 bool Solver::setOptionsFromFile(std::string fileName)
 {

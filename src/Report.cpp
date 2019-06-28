@@ -801,8 +801,6 @@ void Report::outputSolutionReport()
               "╴\r\n";
     report << "\r\n";
 
-    auto terminationReason = env->results->terminationReason;
-
     bool primalSolutionFound = env->results->hasPrimalSolution();
 
     if(env->results->terminationReasonDescription != "")

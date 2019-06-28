@@ -61,7 +61,6 @@ bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
     bool callNLPSolver = false;
 
     auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
-    auto userSetting = env->settings->getSetting<int>("FixedInteger.Source", "Primal");
 
     auto dualBound = env->results->getCurrentDualBound();
 

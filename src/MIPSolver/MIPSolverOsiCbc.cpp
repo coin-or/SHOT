@@ -272,9 +272,9 @@ int MIPSolverOsiCbc::addLinearConstraint(
 
     // Adds the cutting plane
     if(isGreaterThan)
-        osiInterface->addRow(cut, -constant, osiInterface->getInfinity());
+        osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
     else
-        osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant);
+        osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
 
     return (osiInterface->getNumRows() - 1);
 }

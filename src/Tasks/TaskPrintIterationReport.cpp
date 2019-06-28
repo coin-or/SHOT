@@ -35,7 +35,6 @@ void TaskPrintIterationReport::run()
     std::stringstream tmpType;
 
     bool hasSolution = true;
-
     auto dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
 
     switch(dualProblemClass)

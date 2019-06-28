@@ -26,7 +26,7 @@ double AuxiliaryVariable::calculateAuxiliaryValue(VectorDouble point)
         value += nonlinearExpression->calculate(point);
 
     return value;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 {
@@ -86,6 +86,6 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
     }
 
     return stream;
-};
+}
 
 } // namespace SHOT

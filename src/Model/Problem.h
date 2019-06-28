@@ -234,18 +234,18 @@ inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)
 {
     stream << *problem;
     return stream;
-};
+}
 
 inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionGraphPtr graph)
 {
     stream << *graph;
     return stream;
-};
+}
 
 inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionPtr function)
 {
     stream << *function;
     return stream;
-};
+}
 
 } // namespace SHOT

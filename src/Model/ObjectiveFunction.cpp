@@ -27,7 +27,7 @@ void ObjectiveFunction::updateProperties()
         properties.isMinimize = false;
         properties.isMaximize = true;
     }
-};
+}
 
 Interval ObjectiveFunction::getBounds()
 {
@@ -62,7 +62,7 @@ std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
     gradientSparsityPattern->erase(last, gradientSparsityPattern->end());
 
     return (gradientSparsityPattern);
-};
+}
 
 std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunction::getHessianSparsityPattern()
 {
@@ -84,18 +84,18 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
         });
 
     return (hessianSparsityPattern);
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
 {
     return objective.print(stream); // polymorphic print via reference
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective)
 {
     stream << *objective;
     return stream;
-};
+}
 
 void LinearObjectiveFunction::add(LinearTerms terms)
 {
@@ -111,13 +111,13 @@ void LinearObjectiveFunction::add(LinearTerms terms)
             add(T);
         }
     }
-};
+}
 
 void LinearObjectiveFunction::add(LinearTermPtr term)
 {
     linearTerms.push_back(term);
     properties.isValid = false;
-};
+}
 
 void LinearObjectiveFunction::updateProperties()
 {
@@ -134,7 +134,7 @@ void LinearObjectiveFunction::updateProperties()
     properties.convexity = E_Convexity::Linear;
 
     ObjectiveFunction::updateProperties();
-};
+}
 
 bool LinearObjectiveFunction::isDualUnbounded()
 {
@@ -148,27 +148,28 @@ bool LinearObjectiveFunction::isDualUnbounded()
     }
 
     return false;
-};
+}
 
 void LinearObjectiveFunction::takeOwnership(ProblemPtr owner)
 {
     ownerProblem = owner;
     linearTerms.takeOwnership(owner);
-};
+}
 
 double LinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
     double value = constant + linearTerms.calculate(point);
     return value;
-};
+}
 
 Interval LinearObjectiveFunction::calculateValue(const IntervalVector& intervalVector)
 {
     Interval value = linearTerms.calculate(intervalVector);
     return value;
-};
+}
 
-SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
+SparseVariableVector LinearObjectiveFunction::calculateGradient(
+    [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
     SparseVariableVector gradient;
 
@@ -187,7 +188,7 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(const VectorDoub
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
-};
+}
 
 void LinearObjectiveFunction::initializeGradientSparsityPattern()
 {
@@ -200,16 +201,17 @@ void LinearObjectiveFunction::initializeGradientSparsityPattern()
             != gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->variable);
     }
-};
+}
 
-SparseVariableMatrix LinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+SparseVariableMatrix LinearObjectiveFunction::calculateHessian(
+    [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
 
     return hessian;
-};
+}
 
-void LinearObjectiveFunction::initializeHessianSparsityPattern(){};
+void LinearObjectiveFunction::initializeHessianSparsityPattern() {}
 
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
@@ -244,13 +246,13 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
         stream << linearTerms;
 
     return stream;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, LinearObjectiveFunctionPtr objective)
 {
     stream << *objective;
     return stream;
-};
+}
 
 void QuadraticObjectiveFunction::add(QuadraticTerms terms)
 {
@@ -266,13 +268,13 @@ void QuadraticObjectiveFunction::add(QuadraticTerms terms)
             add(T);
         }
     }
-};
+}
 
 void QuadraticObjectiveFunction::add(QuadraticTermPtr term)
 {
     quadraticTerms.push_back(term);
     properties.isValid = false;
-};
+}
 
 void QuadraticObjectiveFunction::updateProperties()
 {
@@ -316,7 +318,7 @@ void QuadraticObjectiveFunction::updateProperties()
     {
         properties.hasQuadraticTerms = false;
     }
-};
+}
 
 bool QuadraticObjectiveFunction::isDualUnbounded()
 {
@@ -336,27 +338,27 @@ bool QuadraticObjectiveFunction::isDualUnbounded()
     }
 
     return false;
-};
+}
 
 void QuadraticObjectiveFunction::takeOwnership(ProblemPtr owner)
 {
     LinearObjectiveFunction::takeOwnership(owner);
     quadraticTerms.takeOwnership(owner);
-};
+}
 
 double QuadraticObjectiveFunction::calculateValue(const VectorDouble& point)
 {
     double value = LinearObjectiveFunction::calculateValue(point);
     value += quadraticTerms.calculate(point);
     return value;
-};
+}
 
 Interval QuadraticObjectiveFunction::calculateValue(const IntervalVector& intervalVector)
 {
     Interval value = LinearObjectiveFunction::calculateValue(intervalVector);
     value += quadraticTerms.calculate(intervalVector);
     return value;
-};
+}
 
 SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -401,7 +403,7 @@ SparseVariableVector QuadraticObjectiveFunction::calculateGradient(const VectorD
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return gradient;
-};
+}
 
 void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
 {
@@ -420,9 +422,10 @@ void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
             != gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->secondVariable);
     }
-};
+}
 
-SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
+SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(
+    [[maybe_unused]] const VectorDouble& point, [[maybe_unused]] bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian;
 
@@ -471,7 +474,7 @@ SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(const VectorDo
     }
 
     return hessian;
-};
+}
 
 void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
 {
@@ -493,7 +496,7 @@ void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
             == hessianSparsityPattern->end())
             hessianSparsityPattern->push_back(key);
     }
-};
+}
 
 std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
 {
@@ -503,13 +506,13 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
         stream << quadraticTerms;
 
     return stream;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, QuadraticObjectiveFunctionPtr objective)
 {
     stream << *objective;
     return stream;
-};
+}
 
 void NonlinearObjectiveFunction::add(MonomialTerms terms)
 {
@@ -654,7 +657,7 @@ void NonlinearObjectiveFunction::takeOwnership(ProblemPtr owner)
     signomialTerms.takeOwnership(owner);
     if(nonlinearExpression != nullptr)
         nonlinearExpression->takeOwnership(owner);
-};
+}
 
 double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
 {
@@ -666,7 +669,7 @@ double NonlinearObjectiveFunction::calculateValue(const VectorDouble& point)
         value += nonlinearExpression->calculate(point);
 
     return value;
-};
+}
 
 Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& intervalVector)
 {
@@ -678,7 +681,7 @@ Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& interv
         value += nonlinearExpression->calculate(intervalVector);
 
     return value;
-};
+}
 
 SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -733,7 +736,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
         Utilities::erase_if<VariablePtr, double>(gradient, 0.0);
 
     return result;
-};
+}
 
 void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 {
@@ -777,7 +780,7 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(E.first);
     }
-};
+}
 
 SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -848,7 +851,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
     }
 
     return hessian;
-};
+}
 
 void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
 {
@@ -916,7 +919,7 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
             == hessianSparsityPattern->end())
             hessianSparsityPattern->push_back(E.first);
     }
-};
+}
 
 std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
 {
@@ -937,12 +940,12 @@ std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
         stream << constant;
 
     return stream;
-};
+}
 
 std::ostream& operator<<(std::ostream& stream, NonlinearObjectiveFunctionPtr objective)
 {
     stream << *objective;
     return stream;
-};
+}
 
 } // namespace SHOT

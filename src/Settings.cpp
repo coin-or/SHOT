@@ -13,9 +13,9 @@
 
 namespace SHOT
 {
-Settings::Settings(OutputPtr outputPtr) : output(outputPtr) {};
+Settings::Settings(OutputPtr outputPtr) : output(outputPtr) {}
 
-Settings::~Settings() {};
+Settings::~Settings() {}
 
 template <typename T>
 void Settings::createBaseSetting(
@@ -220,7 +220,7 @@ void Settings::createSetting(
     settingBounds[make_pair(category, name)]
         = std::make_pair(std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max());
 
-    for(int i = 0; i < enumDesc.size(); i++)
+    for(size_t i = 0; i < enumDesc.size(); i++)
     {
         enumDescriptions[make_tuple(category, name, i)] = enumDesc.at(i);
 
@@ -569,7 +569,7 @@ bool Settings::readSettingsFromString(std::string options)
         if(line == "" || line.at(0) == '*' || line.at(0) == '\r' || line.at(0) == '\n')
             continue;
 
-		line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+        line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
         int equalitySignIndex = line.find('=');

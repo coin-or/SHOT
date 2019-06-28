@@ -308,4 +308,4 @@ public:
         return (message.str().c_str());
     }
 };
-}; // namespace SHOT
+} // namespace SHOT

@@ -24,7 +24,7 @@ option(HAS_GAMS "Is GAMS available" ON)
 set(GAMS_DIR "/opt/gams/gams26.1" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
 set(OS_DIR
     "/opt/OS-2.10"
     CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
@@ -50,7 +50,7 @@ set(CBC_DIR
           "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" OFF)
+option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR
     "/opt/ipopt"
     CACHE STRING
@@ -137,12 +137,17 @@ if(HAS_GAMS)
 endif(HAS_GAMS)
 
 if(HAS_OS)
-  set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
-  pkg_search_module(OS REQUIRED os)
-  link_directories(${OS_LIBRARY_DIRS})
-  include_directories(${OS_INCLUDE_DIRS})
-  add_definitions(-DHAS_OS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+  find_package(PkgConfig)
+
+  if(PkgConfig_FOUND)
+    include(FindPkgConfig)
+    set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
+    pkg_search_module(OS REQUIRED os)
+    link_directories(${OS_LIBRARY_DIRS})
+    include_directories(${OS_INCLUDE_DIRS})
+    add_definitions(-DHAS_OS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+  endif()
 endif(HAS_OS)
 
 # MIP solvers
@@ -464,6 +469,13 @@ if(GENERATE_EXE)
   add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
   target_link_libraries(${PROJECT_NAME} SHOTSolver)
 endif(GENERATE_EXE)
+
+# Set compiler warnings levels
+if(MSVC)
+  target_compile_options(SHOTSolver PRIVATE /W4 /WX)
+else()
+  target_compile_options(SHOTSolver PRIVATE -Wall -Wextra -pedantic)
+endif()
 
 if(HAS_GAMS)
   if(UNIX)

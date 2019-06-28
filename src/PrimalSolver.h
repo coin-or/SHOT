@@ -40,7 +40,7 @@ public:
     inline void addFixedNLPCandidate(
         VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
     {
-        PrimalFixedNLPCandidate cand = { pt, source, objVal, iter };
+        PrimalFixedNLPCandidate cand = { pt, source, objVal, iter, maxConstrDev };
         fixedPrimalNLPCandidates.push_back(cand);
     }
 
