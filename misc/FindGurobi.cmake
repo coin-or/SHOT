@@ -36,6 +36,10 @@ if(GUROBI_INSTALL_DIR)
          REGEX
          ".*_light.so$")
 
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+      file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++5.2.a)
+    endif()
+
     if(CMAKE_COMPILER_IS_GNUCXX)
       execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
       if(GCC_VERSION VERSION_GREATER 5.2 OR GCC_VERSION VERSION_EQUAL 5.2)
@@ -43,10 +47,10 @@ if(GUROBI_INSTALL_DIR)
       else()
         file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++4.2.a)
       endif()
+    endif()
 
-      if(NOT (GUROBI_CPP_LIBRARY))
-        file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_c++.a)
-      endif()
+    if(NOT (GUROBI_CPP_LIBRARY))
+      file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_c++.a)
     endif()
 
     list(FILTER

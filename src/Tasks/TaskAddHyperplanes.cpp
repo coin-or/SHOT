@@ -44,7 +44,7 @@ void TaskAddHyperplanes::run()
     {
         int addedHyperplanes = 0;
 
-        for(int k = env->dualSolver->MIPSolver->hyperplaneWaitingList.size(); k > 0; k--)
+        for(auto k = env->dualSolver->MIPSolver->hyperplaneWaitingList.size(); k > 0; k--)
         {
             if(addedHyperplanes >= env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual"))
                 break;

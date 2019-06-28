@@ -82,7 +82,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
     std::vector<std::tuple<int, int, NumericConstraintValue>> selectedNumericValues;
     std::vector<std::tuple<int, int, NumericConstraintValue>> nonconvexSelectedNumericValues;
 
-    for(int i = 0; i < solPoints.size(); i++)
+    for(size_t i = 0; i < solPoints.size(); i++)
     {
         auto numericConstraintValues = env->reformulatedProblem->getFractionOfDeviatingNonlinearConstraints(
             solPoints.at(i).point, 0.0, constraintSelectionFactor);
@@ -94,7 +94,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& NCV : numericConstraintValues)
         {
-            for(int j = 0; j < env->dualSolver->MIPSolver->interiorPts.size(); j++)
+            for(size_t j = 0; j < env->dualSolver->MIPSolver->interiorPts.size(); j++)
             {
                 if(addedHyperplanes >= maxHyperplanesPerIter)
                 {

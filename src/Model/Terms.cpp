@@ -184,7 +184,7 @@ void QuadraticTerms::updateConvexity()
         convexity = E_Convexity::Concave;
     else
         convexity = E_Convexity::Nonconvex;
-};
+}
 
 MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProblem)
 {
@@ -197,7 +197,7 @@ MonomialTerm::MonomialTerm(const MonomialTerm* term, ProblemPtr destinationProbl
     {
         this->variables.push_back(destinationProblem->getVariable(V->index));
     }
-};
+}
 
 SignomialTerm::SignomialTerm(const SignomialTerm* term, ProblemPtr destinationProblem)
 {
@@ -208,5 +208,5 @@ SignomialTerm::SignomialTerm(const SignomialTerm* term, ProblemPtr destinationPr
         this->elements.push_back(
             std::make_shared<SignomialElement>(destinationProblem->getVariable(E->variable->index), E->power));
     }
-};
+}
 } // namespace SHOT

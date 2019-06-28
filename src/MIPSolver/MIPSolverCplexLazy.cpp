@@ -84,7 +84,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             VectorDouble doubleSolution; // Empty since we have no point
 
             DualSolution sol = { doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
-                env->results->getCurrentIteration()->iterationNumber };
+                env->results->getCurrentIteration()->iterationNumber, false };
             env->dualSolver->addDualSolutionCandidate(sol);
         }
 

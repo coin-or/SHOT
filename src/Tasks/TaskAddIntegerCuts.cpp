@@ -36,7 +36,7 @@ void TaskAddIntegerCuts::run()
         || !currIter->MIPSolutionLimitUpdated)
     {
 
-        for(int j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
+        for(size_t j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
         {
             auto [ones, zeroes] = env->dualSolver->MIPSolver->integerCutWaitingList.at(j);
 

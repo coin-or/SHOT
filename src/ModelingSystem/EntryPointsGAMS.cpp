@@ -83,21 +83,29 @@ extern "C"
            3: client is newer than DLL, forward compatibility
            FIXME: for now, we just claim full compatibility
      */
-    DllExport int STDCALL C__shtXAPIVersion(int api, char* Msg, int* comp)
+    DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
     {
         *comp = 1;
         return 1;
     }
 
-    DllExport int STDCALL D__shtXAPIVersion(int api, char* Msg, int* comp)
+    DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
     {
         *comp = 1;
         return 1;
     }
 
-    DllExport int STDCALL C__shtXCheck(const char* funcn, int ClNrArg, int Clsign[], char* Msg) { return 1; }
+    DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
+        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
+    {
+        return 1;
+    }
 
-    DllExport int STDCALL D__shtXCheck(const char* funcn, int ClNrArg, int Clsign[], char* Msg) { return 1; }
+    DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
+        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
+    {
+        return 1;
+    }
 
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
@@ -119,7 +127,7 @@ extern "C"
         return 0;
     }
 
-    static bool doLicenseChecks(void* Cptr, Solver& solver)
+    static bool doLicenseChecks([[maybe_unused]] void* Cptr, [[maybe_unused]] Solver& solver)
     {
 #ifdef GAMS_BUILD
         gamsshot* gs;
@@ -250,7 +258,7 @@ extern "C"
         return 0;
     }
 
-    DllExport int STDCALL C__shtHaveModifyProblem(void* Cptr) { return 0; }
+    DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr) { return 0; }
 
     DllExport int STDCALL C__shtModifyProblem(void* Cptr)
     {

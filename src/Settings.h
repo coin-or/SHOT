@@ -175,4 +175,4 @@ public:
     bool readSettingsFromOSoL(std::string osol);
     bool readSettingsFromString(std::string options);
 };
-}; // namespace SHOT
+} // namespace SHOT

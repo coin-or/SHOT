@@ -46,7 +46,7 @@ void saveVariablePointVectorToFile(
     }
 
     writeStringToFile(fileName, str.str());
-};
+}
 
 void displayVector(const VectorDouble& point)
 {
@@ -57,7 +57,7 @@ void displayVector(const VectorDouble& point)
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for(int i = 0; i < point.size(); i++)
+    for(size_t i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
@@ -78,7 +78,7 @@ void displayVector(const VectorDouble& point1, const VectorDouble& point2)
     if(point1.size() != point2.size())
         return;
 
-    for(int i = 0; i < point1.size(); i++)
+    for(size_t i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -90,7 +90,7 @@ void displayVector(const VectorDouble& point1, const VectorDouble& point2)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const VectorDouble& point1, const VectorDouble& point2, const VectorDouble& point3)
 {
@@ -100,7 +100,7 @@ void displayVector(const VectorDouble& point1, const VectorDouble& point2, const
     if(point1.size() != point2.size())
         return;
 
-    for(int i = 0; i < point1.size(); i++)
+    for(size_t i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -115,7 +115,7 @@ void displayVector(const VectorDouble& point1, const VectorDouble& point2, const
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayDifferencesInVector(const VectorDouble& point1, const VectorDouble& point2, double tol)
 {
@@ -125,7 +125,7 @@ void displayDifferencesInVector(const VectorDouble& point1, const VectorDouble& 
     if(point1.size() != point2.size())
         return;
 
-    for(int i = 0; i < point1.size(); i++)
+    for(size_t i = 0; i < point1.size(); i++)
     {
         if(std::abs(point1.at(i) - point2.at(i)) > tol)
         {
@@ -149,7 +149,7 @@ void displayVector(const VectorInteger& point)
     if(point.size() == 0)
         str << "vector is empty";
 
-    for(int i = 0; i < point.size(); i++)
+    for(size_t i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
@@ -167,7 +167,7 @@ void displayVector(const VectorString& point)
     if(point.size() == 0)
         str << "vector is empty";
 
-    for(int i = 0; i < point.size(); i++)
+    for(size_t i = 0; i < point.size(); i++)
     {
         str << i;
         str << "\t";
@@ -183,7 +183,7 @@ void displayVector(const std::vector<VectorDouble>& points)
     std::stringstream str;
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for(int i = 0; i < points.at(0).size(); i++)
+    for(size_t i = 0; i < points.at(0).size(); i++)
     {
         str << i;
 
@@ -203,7 +203,7 @@ void displayVector(const std::vector<VectorInteger>& points)
 {
     std::stringstream str;
 
-    for(int i = 0; i < points.at(0).size(); i++)
+    for(size_t i = 0; i < points.at(0).size(); i++)
     {
         str << i;
 
@@ -223,7 +223,7 @@ void displayVector(const std::vector<VectorString>& points)
 {
     std::stringstream str;
 
-    for(int i = 0; i < points.at(0).size(); i++)
+    for(size_t i = 0; i < points.at(0).size(); i++)
     {
         str << i;
 
@@ -248,7 +248,7 @@ double L2Norm(const VectorDouble& ptA, const VectorDouble& ptB)
         return (-1.0);
     }
 
-    for(int i = 0; i < ptA.size(); i++)
+    for(size_t i = 0; i < ptA.size(); i++)
     {
         norm = norm + pow(ptA.at(i) - ptB.at(i), 2.0);
     }
@@ -262,13 +262,13 @@ VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& 
 {
     VectorDouble norms(ptsA.size());
 
-    for(int i = 0; i < ptsA.size(); i++)
+    for(size_t i = 0; i < ptsA.size(); i++)
     {
         norms.at(i) = L2Norm(ptsA.at(i), ptB);
     }
 
     return (norms);
-};
+}
 
 VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts)
 {
@@ -364,7 +364,7 @@ void displayVector(const VectorInteger& point1, const VectorInteger& point2)
     if(point1.size() != point2.size())
         return;
 
-    for(int i = 0; i < point1.size(); i++)
+    for(size_t i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -385,7 +385,7 @@ void displayVector(const VectorInteger& point1, const VectorDouble& point2)
     if(point1.size() != point2.size())
         return;
 
-    for(int i = 0; i < point1.size(); i++)
+    for(size_t i = 0; i < point1.size(); i++)
     {
         str << i;
         str << "\t";
@@ -650,4 +650,4 @@ E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
     return E_Convexity::Linear;
 }
 
-}; // namespace SHOT::Utilities
+} // namespace SHOT::Utilities

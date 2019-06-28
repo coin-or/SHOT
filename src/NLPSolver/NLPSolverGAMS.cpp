@@ -64,16 +64,16 @@ void NLPSolverGAMS::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void NLPSolverGAMS::unfixVariables()
 {
-    for(size_t i = 0; i < gmoN(modelingObject); ++i)
+    for(int i = 0; i < gmoN(modelingObject); ++i)
     {
         gmoSetAltVarLowerOne(modelingObject, i, gmoGetVarLowerOne(modelingObject, i));
         gmoSetAltVarUpperOne(modelingObject, i, gmoGetVarUpperOne(modelingObject, i));
     }
 }
 
-void NLPSolverGAMS::saveOptionsToFile(std::string fileName) {}
+void NLPSolverGAMS::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
 
-void NLPSolverGAMS::saveProblemToFile(std::string fileName) {}
+void NLPSolverGAMS::saveProblemToFile([[maybe_unused]] std::string fileName) {}
 
 VectorDouble NLPSolverGAMS::getSolution()
 {
@@ -84,7 +84,10 @@ VectorDouble NLPSolverGAMS::getSolution()
     return sol;
 }
 
-double NLPSolverGAMS::getSolution(int i) { throw std::logic_error("getSolution(int) not implemented"); }
+double NLPSolverGAMS::getSolution([[maybe_unused]] int i)
+{
+    throw std::logic_error("getSolution(int) not implemented");
+}
 
 double NLPSolverGAMS::getObjectiveValue() { return gmoGetHeadnTail(modelingObject, gmoHobjval); }
 
@@ -108,7 +111,8 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     gmoForceContSet(modelingObject, 1);
 
     if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver, gevSolveLinkLoadLibrary,
-           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0, nullptr, msg)
+           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0,
+           nullptr, msg)
         != 0)
     {
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);

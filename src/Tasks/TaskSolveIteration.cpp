@@ -212,20 +212,20 @@ void TaskSolveIteration::run()
             if(currIter->isMIP())
             {
                 DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
-                    currIter->iterationNumber };
+                    currIter->iterationNumber, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
 
                 if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
                     DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
-                        currIter->objectiveValue, currIter->iterationNumber };
+                        currIter->objectiveValue, currIter->iterationNumber, false };
                     env->dualSolver->addDualSolutionCandidate(sol);
                 }
             }
             else
             {
                 DualSolution sol = { sols.at(0).point, E_DualSolutionSource::LPSolution, currentDualBound,
-                    currIter->iterationNumber };
+                    currIter->iterationNumber, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
             }
         }

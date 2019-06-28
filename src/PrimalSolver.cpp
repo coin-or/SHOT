@@ -354,7 +354,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
     }
-	
+
     if(env->problem->properties.numberOfQuadraticConstraints > 0)
     {
         PairIndexValue mostDevQuadraticConstraints;
@@ -384,10 +384,10 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
         primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
     }
-	
-	if(env->problem->properties.numberOfNonlinearConstraints > 0)
+
+    if(env->problem->properties.numberOfNonlinearConstraints > 0)
     {
-		PairIndexValue mostDevNonlinearConstraints;
+        PairIndexValue mostDevNonlinearConstraints;
 
         auto maxNonlinearConstraintValue
             = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->nonlinearConstraints);
@@ -412,12 +412,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
             env->output->outputDebug(tmpLine);
         }
 
-		primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
+        primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
     }
 
     primalSol.objValue = tmpObjVal;
 
-    if(tmpPoint.size() > env->problem->properties.numberOfVariables)
+    if((int)tmpPoint.size() > env->problem->properties.numberOfVariables)
         tmpPoint = std::vector(tmpPoint.begin(), tmpPoint.begin() + env->problem->properties.numberOfVariables);
 
     primalSol.point = tmpPoint;

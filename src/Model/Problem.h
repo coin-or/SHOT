@@ -70,7 +70,7 @@ struct ProblemProperties
 using FactorableFunctionGraph = mc::FFGraph;
 using FactorableFunctionGraphPtr = std::shared_ptr<FactorableFunctionGraph>;
 
-class Problem : public std::enable_shared_from_this<Problem>
+class DllExport Problem : public std::enable_shared_from_this<Problem>
 {
 private:
     bool variablesUpdated = false;
@@ -234,18 +234,18 @@ inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)
 {
     stream << *problem;
     return stream;
-};
+}
 
 inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionGraphPtr graph)
 {
     stream << *graph;
     return stream;
-};
+}
 
 inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionPtr function)
 {
     stream << *function;
     return stream;
-};
+}
 
 } // namespace SHOT

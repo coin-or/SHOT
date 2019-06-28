@@ -102,7 +102,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 
 NLPSolverCuttingPlaneMinimax::~NLPSolverCuttingPlaneMinimax() = default;
 
-void NLPSolverCuttingPlaneMinimax::saveProblemToFile(std::string fileName) {}
+void NLPSolverCuttingPlaneMinimax::saveProblemToFile([[maybe_unused]] std::string fileName) {}
 
 E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 {
@@ -412,7 +412,10 @@ void NLPSolverCuttingPlaneMinimax::fixVariables(VectorInteger variableIndexes, V
 
 void NLPSolverCuttingPlaneMinimax::unfixVariables() { LPSolver->unfixVariables(); }
 
-void NLPSolverCuttingPlaneMinimax::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) {}
+void NLPSolverCuttingPlaneMinimax::setStartingPoint(
+    [[maybe_unused]] VectorInteger variableIndexes, [[maybe_unused]] VectorDouble variableValues)
+{
+}
 
 bool NLPSolverCuttingPlaneMinimax::isObjectiveFunctionNonlinear() { return (false); }
 
@@ -440,5 +443,5 @@ void NLPSolverCuttingPlaneMinimax::updateVariableUpperBound(int variableIndex, d
 
 void NLPSolverCuttingPlaneMinimax::clearStartingPoint() {}
 
-void NLPSolverCuttingPlaneMinimax::saveOptionsToFile(std::string fileName) {}
+void NLPSolverCuttingPlaneMinimax::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
 } // namespace SHOT

@@ -149,8 +149,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 {
     auto currIter = env->results->getCurrentIteration();
 
-    bool isSolved;
-
     std::vector<PrimalFixedNLPCandidate> testPts;
 
     // Check if integer value combination has been tested before
@@ -181,9 +179,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         return (false);
     }
 
-    for(int j = 0; j < testPts.size(); j++)
+    for(size_t j = 0; j < testPts.size(); j++)
     {
-        auto oldPrimalBound = env->results->getPrimalBound();
         double timeStart = env->timing->getElapsedTime("Total");
         VectorDouble fixedVariableValues(discreteVariableIndexes.size());
 
@@ -214,7 +211,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
         VectorDouble startingPointValues(sizeOfVariableVector);
 
         // Sets the fixed values for discrete variables
-        for(int k = 0; k < discreteVariableIndexes.size(); k++)
+        for(size_t k = 0; k < discreteVariableIndexes.size(); k++)
         {
             int currVarIndex = discreteVariableIndexes.at(k);
 
@@ -297,7 +294,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
             if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
             {
                 int iters = std::max(
-                    ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
+                    std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 0.98),
                     originalNLPIter);
 
                 if(iters > std::max(0.1 * this->originalIterFrequency, 1.0))
@@ -454,7 +451,8 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
             if(env->settings->getSetting<bool>("FixedInteger.Frequency.Dynamic", "Primal"))
             {
-                int iters = ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
+                int iters
+                    = std::ceil(env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal") * 1.02);
 
                 if(iters < 10 * this->originalIterFrequency)
                     env->settings->updateSetting("FixedInteger.Frequency.Iteration", "Primal", iters);

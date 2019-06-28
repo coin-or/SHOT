@@ -177,8 +177,6 @@ void InfoCallbackI::main() // Called at each node...
     std::lock_guard<std::mutex> lock(
         (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
-    bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
-
     auto absObjGap = env->results->getAbsoluteGlobalObjectiveGap();
     auto relObjGap = env->results->getRelativeGlobalObjectiveGap();
 
@@ -323,7 +321,7 @@ void CtCallbackI::main()
         || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
     {
         DualSolution sol = { solution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
-            env->results->getCurrentIteration()->iterationNumber };
+            env->results->getCurrentIteration()->iterationNumber, false };
         env->dualSolver->addDualSolutionCandidate(sol);
     }
 

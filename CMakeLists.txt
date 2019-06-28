@@ -24,7 +24,7 @@ option(HAS_GAMS "Is GAMS available" ON)
 set(GAMS_DIR "/opt/gams/gams26.1" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
 set(OS_DIR
     "/opt/OS-2.10"
     CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
@@ -50,7 +50,7 @@ set(CBC_DIR
           "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
 
 # Ipopt
-option(HAS_IPOPT "Is Ipopt available" OFF)
+option(HAS_IPOPT "Is Ipopt available" ON)
 set(IPOPT_DIR
     "/opt/ipopt"
     CACHE STRING
@@ -137,12 +137,17 @@ if(HAS_GAMS)
 endif(HAS_GAMS)
 
 if(HAS_OS)
-  set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
-  pkg_search_module(OS REQUIRED os)
-  link_directories(${OS_LIBRARY_DIRS})
-  include_directories(${OS_INCLUDE_DIRS})
-  add_definitions(-DHAS_OS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+  find_package(PkgConfig)
+
+  if(PkgConfig_FOUND)
+    include(FindPkgConfig)
+    set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
+    pkg_search_module(OS REQUIRED os)
+    link_directories(${OS_LIBRARY_DIRS})
+    include_directories(${OS_INCLUDE_DIRS})
+    add_definitions(-DHAS_OS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
+  endif()
 endif(HAS_OS)
 
 # MIP solvers
@@ -162,8 +167,6 @@ endif(HAS_CBC)
 if(HAS_CPLEX)
   find_package(CPLEX)
   add_definitions(-DIL_STD)
-  add_definitions(-LDFLAGS="-Wl,--no-as-needed")
-
   add_definitions(-DHAS_CPLEX)
   if(HAS_CPLEX_NEW_CALLBACK)
     add_definitions(-DHAS_CPLEX_NEW_CALLBACK)
@@ -273,32 +276,38 @@ file(GLOB_RECURSE
      "${TINYXML2_DIR}/tinyxml2.h")
 
 if(HAS_CBC)
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.h")
+  if(CBC_FOUND)
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.cpp")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverOsiCbc.h")
+  endif(CBC_FOUND)
 endif(HAS_CBC)
 
 if(HAS_CPLEX)
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
+  if(CPLEX_FOUND)
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
-  if(HAS_CPLEX_NEW_CALLBACK)
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.cpp")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
-  endif(HAS_CPLEX_NEW_CALLBACK)
+    if(HAS_CPLEX_NEW_CALLBACK)
+      set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.cpp")
+      set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
+    endif(HAS_CPLEX_NEW_CALLBACK)
 
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.cpp")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.h")
+  endif(CPLEX_FOUND)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.h")
+  if(GUROBI_FOUND)
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.cpp")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiLazy.h")
+  endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
 
 if(HAS_IPOPT)
@@ -338,14 +347,14 @@ include_directories(${INCLUDE_DIRS})
 
 find_package(Boost 1.63.0 REQUIRED)
 
-include_directories("${ARGH_DIR}")
-include_directories("${Boost_INCLUDE_DIR}")
-include_directories("${EIGEN_DIR}")
-include_directories("${MCPP_DIR}/include")
-include_directories("${MCPP_DIR}/3rdparty/cpplapack/include")
-include_directories("${MCPP_DIR}/3rdparty/fadbad++")
-include_directories("${SPDLOG_DIR}")
-include_directories("${TINYXML2_DIR}/")
+include_directories(SYSTEM "${ARGH_DIR}")
+include_directories(SYSTEM "${Boost_INCLUDE_DIR}")
+include_directories(SYSTEM "${EIGEN_DIR}")
+include_directories(SYSTEM "${MCPP_DIR}/include")
+include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
+include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
+include_directories(SYSTEM "${SPDLOG_DIR}")
+include_directories(SYSTEM "${TINYXML2_DIR}/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
@@ -354,6 +363,8 @@ add_library(SHOTSolver SHARED ${SOURCES})
 
 # For gcc and C++ filesystem support; TODO, verify if needed for other compilers
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  target_link_libraries(SHOTSolver stdc++fs)
+elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   target_link_libraries(SHOTSolver stdc++fs)
 endif()
 
@@ -426,8 +437,8 @@ if(HAS_CBC)
     message("-- Cbc libraries could not be found!")
   else()
     message("-- Cbc include files will be used from: ${CBC_INCLUDE_DIRS}")
-	
-	#file(TO_CMAKE_PATH "${CBC_LIBRARIES}" ${CBC_LIBRARIES})
+
+    # file(TO_CMAKE_PATH "${CBC_LIBRARIES}" ${CBC_LIBRARIES})
     target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
     target_compile_options(SHOTSolver PUBLIC ${CBC_CFLAGS_OTHER})
 
@@ -458,6 +469,13 @@ if(GENERATE_EXE)
   add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
   target_link_libraries(${PROJECT_NAME} SHOTSolver)
 endif(GENERATE_EXE)
+
+# Set compiler warnings levels
+if(MSVC)
+  target_compile_options(SHOTSolver PRIVATE /W4 /WX)
+else()
+  target_compile_options(SHOTSolver PRIVATE -Wall -Wextra -pedantic)
+endif()
 
 if(HAS_GAMS)
   if(UNIX)
