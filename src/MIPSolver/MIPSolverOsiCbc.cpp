@@ -773,8 +773,6 @@ void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)
 
 void MIPSolverOsiCbc::checkParameters()
 {
-    env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
-
     // Some features are not available in Cbc
     env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
     env->settings->updateSetting(
