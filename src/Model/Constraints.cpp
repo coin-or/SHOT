@@ -220,7 +220,7 @@ SparseVariableMatrix LinearConstraint::calculateHessian(
 
 NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
-    return NumericConstraint::calculateNumericValue(point, correction);
+    return NumericConstraint::calculateNumericValue(point);
 }
 
 std::shared_ptr<NumericConstraint> LinearConstraint::getPointer()
@@ -398,7 +398,7 @@ void QuadraticConstraint::initializeHessianSparsityPattern()
 
 NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
-    return NumericConstraint::calculateNumericValue(point, correction);
+    return NumericConstraint::calculateNumericValue(point);
 }
 
 std::shared_ptr<NumericConstraint> QuadraticConstraint::getPointer()
@@ -797,7 +797,7 @@ void NonlinearConstraint::takeOwnership(ProblemPtr owner)
 
 NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
 {
-    return NumericConstraint::calculateNumericValue(point, correction);
+    return NumericConstraint::calculateNumericValue(point);
 }
 
 std::shared_ptr<NumericConstraint> NonlinearConstraint::getPointer()
