@@ -50,6 +50,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
+        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -81,6 +82,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
+        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -104,6 +106,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
+        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -134,6 +137,7 @@ void TaskUpdateInteriorPoint::run()
 
         // Add the new point only
         tmpIP->point = tmpPrimalPoint;
+        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -159,7 +163,11 @@ void TaskUpdateInteriorPoint::run()
         for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
             tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
         tmpIP->point = tmpPrimalPoint;
+        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
