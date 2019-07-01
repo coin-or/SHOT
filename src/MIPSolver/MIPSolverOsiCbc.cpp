@@ -237,9 +237,7 @@ bool MIPSolverOsiCbc::finalizeProblem()
 void MIPSolverOsiCbc::initializeSolverSettings()
 {
     if(cbcModel->haveMultiThreadSupport())
-    {
         cbcModel->setNumberThreads(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-    }
 
     cbcModel->setAllowableGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
@@ -250,7 +248,6 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     if(isMinimizationProblem && std::abs(this->cutOff) < 10e20)
     {
         cbcModel->setCutoff(this->cutOff);
-
         env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
     }
     else if(!isMinimizationProblem && std::abs(this->cutOff) < 10e20)
@@ -773,6 +770,10 @@ void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)
 
 void MIPSolverOsiCbc::checkParameters()
 {
+    // Check if Cbc has been compiled with support for multiple threads
+    if(!cbcModel->haveMultiThreadSupport())
+        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
+
     // Some features are not available in Cbc
     env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
     env->settings->updateSetting(
