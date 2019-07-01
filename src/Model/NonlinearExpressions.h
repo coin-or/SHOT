@@ -455,7 +455,13 @@ public:
 
     inline Interval getBounds() const override { return (1.0 / child->getBounds()); }
 
-    inline bool tightenBounds(Interval bound) override { return (child->tightenBounds(1.0 / bound)); };
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() <= 0.0 && bound.u() >= 0.0)
+            return (false);
+
+        return (child->tightenBounds(1.0 / bound));
+    };
 
     inline FactorableFunction getFactorableFunction() override { return (1 / child->getFactorableFunction()); }
 
@@ -534,10 +540,10 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
-        auto interval = bound * bound;
-
-        if(interval.l() <= 0)
+        if(bound.l() < 0.0 && bound.u() < 0.0)
             return (false);
+
+        auto interval = pow(bound, 2);
 
         return (child->tightenBounds(interval));
     };
@@ -625,7 +631,16 @@ public:
 
     inline Interval getBounds() const override { return (log(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (child->tightenBounds(exp(bound))); };
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() < 0.0 && bound.u() < 0.0)
+            return (false);
+
+        if(bound.l() < 0.0)
+            bound.l(SHOT_DBL_EPS);
+
+        return (child->tightenBounds(exp(bound)));
+    };
 
     inline FactorableFunction getFactorableFunction() override { return (log(child->getFactorableFunction())); }
 
@@ -738,17 +753,17 @@ public:
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         auto value = child->calculate(intervalVector);
-        return (value * value);
+
+        auto interval = pow(value, 2);
+
+        return (interval);
     }
 
     inline Interval getBounds() const override
     {
         auto value = child->getBounds();
 
-        auto interval = value * value;
-
-        if(interval.l() <= 0)
-            return (false);
+        auto interval = pow(value, 2);
 
         return (interval);
     }
@@ -1371,7 +1386,11 @@ public:
 
     inline Interval getBounds() const override { return (firstChild->getBounds() / secondChild->getBounds()); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds(Interval bound) override
+    {
+        // TODO
+        return (false);
+    }
 
     inline FactorableFunction getFactorableFunction() override
     {
@@ -2071,29 +2090,21 @@ public:
     {
         bool tightened = false;
 
-        for(auto& T1 : children)
+        for(auto& T : children)
         {
-            auto newBound = bound;
+            Interval newBound = Interval(0.0);
 
             for(auto& T2 : children)
             {
-                if(T2 == T1)
+                if(T2 == T)
                     continue;
 
-                newBound -= T2->getBounds();
+                newBound += T2->getBounds();
             }
 
-            auto childBound = T1->getBounds();
+            Interval candidate = bound - newBound;
 
-            Interval newBound2 = newBound;
-
-            newBound.l(std::max(childBound.l(), newBound.l()));
-            newBound.u(std::min(childBound.u(), newBound.u()));
-
-            if(newBound.l() > newBound.u())
-                continue;
-
-            tightened = T1->tightenBounds(newBound) || tightened;
+            tightened = T->tightenBounds(candidate) || tightened;
         }
 
         return (tightened);

@@ -30,13 +30,15 @@ bool Variable::tightenBounds(const Interval bound)
     double originalLowerBound = this->lowerBound;
     double originalUpperBound = this->upperBound;
 
-    if(bound.l() > this->lowerBound && bound.l() <= this->upperBound)
+    double epsTolerance = 1e-10;
+
+    if(bound.l() > this->lowerBound + epsTolerance && bound.l() <= this->upperBound)
     {
         tightened = true;
         this->lowerBound = bound.l();
     }
 
-    if(bound.u() < this->upperBound && bound.u() >= this->lowerBound)
+    if(bound.u() < this->upperBound - epsTolerance && bound.u() >= this->lowerBound)
     {
         tightened = true;
         this->upperBound = bound.u();
@@ -49,9 +51,8 @@ bool Variable::tightenBounds(const Interval bound)
             if(sharedOwnerProblem->env->output)
             {
                 sharedOwnerProblem->env->output->outputInfo(
-                    fmt::format("Bounds tightened for variable {}. Old bounds [{},{}] "
-                                "New bounds [{},{}].",
-                        this->name, originalLowerBound, originalUpperBound, this->lowerBound, this->upperBound));
+                    fmt::format(" Bounds tightened for variable {}:\t[{},{}] -> [{},{}].", this->name,
+                        originalLowerBound, originalUpperBound, this->lowerBound, this->upperBound));
             }
         }
     }
