@@ -71,7 +71,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                 auto maxDevNLP2 = env->problem->getMaxNumericConstraintValue(xNLP, env->problem->numericConstraints);
                 auto maxDevMIP = env->problem->getMaxNumericConstraintValue(P.point, env->problem->numericConstraints);
 
-                if(maxDevNLP2.normalizedValue <= 0 && maxDevMIP.normalizedValue > 0)
+                if(maxDevNLP2.normalizedValue < 0 && maxDevMIP.normalizedValue > 0)
                 {
                     std::pair<VectorDouble, VectorDouble> xNewc;
 
@@ -90,7 +90,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                     }
                     catch(std::exception& e)
                     {
-                        env->output->outputWarning("Cannot find solution with primal bound rootsearch.");
+                        env->output->outputWarning("Cannot find solution with primal rootsearch.");
                     }
                 }
             }
