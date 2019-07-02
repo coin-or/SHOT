@@ -3,72 +3,83 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskPresolve.h"
 
-TaskPresolve::TaskPresolve(IMIPSolver *MIPSolver)
+#include "../DualSolver.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
+namespace SHOT
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+
+TaskPresolve::TaskPresolve(EnvironmentPtr envPtr) : TaskBase(envPtr)
+{
+    env->timing->startTimer("DualStrategy");
 
     isPresolved = false;
-    this->MIPSolver = MIPSolver;
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
-TaskPresolve::~TaskPresolve()
-{
-}
+TaskPresolve::~TaskPresolve() = default;
 
 void TaskPresolve::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    env->timing->startTimer("DualStrategy");
+    auto currIter = env->results->getCurrentIteration();
 
-    auto strategy = static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual"));
+    auto strategy
+        = static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"));
 
-    if (!currIter->isMIP())
+    if(!currIter->isMIP())
     {
-        ProcessInfo::getInstance().stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
         return;
     }
 
-    if (strategy == ES_MIPPresolveStrategy::Never)
+    if(strategy == ES_MIPPresolveStrategy::Never)
     {
-        ProcessInfo::getInstance().stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
         return;
     }
-    else if (strategy == ES_MIPPresolveStrategy::Once && isPresolved == true)
+    else if(strategy == ES_MIPPresolveStrategy::Once && isPresolved == true)
     {
-        ProcessInfo::getInstance().stopTimer("DualStrategy");
+        env->timing->stopTimer("DualStrategy");
         return;
     }
 
     // Sets the iteration time limit
-    auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
-    MIPSolver->setTimeLimit(timeLim);
+    auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if(env->results->hasPrimalSolution())
     {
-        MIPSolver->setCutOff(ProcessInfo::getInstance().getPrimalBound());
+        // env->dualSolver->MIPSolver->setCutOff(env->results->getPrimalBound());
     }
 
-    if (MIPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
-        MIPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
+        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
     }
 
-    if (Settings::getInstance().getBoolSetting("FixedInteger.UsePresolveBounds", "Primal") || Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual"))
+    if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal")
+        || env->settings->getSetting<bool>("MIP.Presolve.UpdateObtainedBounds", "Dual"))
     {
-        MIPSolver->presolveAndUpdateBounds();
+        env->dualSolver->MIPSolver->presolveAndUpdateBounds();
         isPresolved = true;
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskPresolve::getType()
@@ -76,3 +87,4 @@ std::string TaskPresolve::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

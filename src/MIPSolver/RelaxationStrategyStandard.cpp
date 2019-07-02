@@ -3,27 +3,39 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "RelaxationStrategyStandard.h"
 
-RelaxationStrategyStandard::RelaxationStrategyStandard(IMIPSolver *MIPSolver)
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
+namespace SHOT
 {
-    this->MIPSolver = MIPSolver;
+
+RelaxationStrategyStandard::RelaxationStrategyStandard(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+    setInitial();
 }
 
-RelaxationStrategyStandard::~RelaxationStrategyStandard()
-{
-}
+RelaxationStrategyStandard::~RelaxationStrategyStandard() = default;
 
 void RelaxationStrategyStandard::setInitial()
 {
     LPFinished = false;
 
-    if (Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") > 0 && Settings::getInstance().getDoubleSetting("Relaxation.TimeLimit", "Dual") > 0)
+    if(env->settings->getSetting<bool>("Relaxation.Use", "Dual")
+        && env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual") > 0
+        && env->settings->getSetting<double>("Relaxation.TimeLimit", "Dual") > 0)
     {
         this->setActive();
     }
@@ -35,13 +47,33 @@ void RelaxationStrategyStandard::setInitial()
 
 void RelaxationStrategyStandard::executeStrategy()
 {
-    int iterInterval = Settings::getInstance().getIntSetting("Relaxation.Frequency", "Dual");
-    if (iterInterval != 0 && ProcessInfo::getInstance().getCurrentIteration()->iterationNumber % iterInterval == 0)
+    int iterInterval = env->settings->getSetting<int>("Relaxation.Frequency", "Dual");
+    if(iterInterval != 0 && env->results->getCurrentIteration()->iterationNumber % iterInterval == 0)
     {
         return (this->setActive());
     }
 
-    if (isLPStepFinished() || isCurrentToleranceReached() || isGapReached() || isIterationLimitReached() || isTimeLimitReached() || isRelaxedSolutionEpsilonValid() || isObjectiveStagnant())
+    if(isLPStepFinished())
+    {
+        this->setInactive();
+    }
+    else if(isConstraintToleranceReached())
+    {
+        this->setInactive();
+    }
+    else if(isGapReached())
+    {
+        this->setInactive();
+    }
+    else if(isIterationLimitReached())
+    {
+        this->setInactive();
+    }
+    else if(isTimeLimitReached())
+    {
+        this->setInactive();
+    }
+    else if(isObjectiveStagnant())
     {
         this->setInactive();
     }
@@ -53,44 +85,42 @@ void RelaxationStrategyStandard::executeStrategy()
 
 void RelaxationStrategyStandard::setActive()
 {
-    if (MIPSolver->getDiscreteVariableStatus())
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->getNumberOfIterations() > 0)
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsDiscrete");
-        ProcessInfo::getInstance().startTimer("DualProblemsRelaxed");
-        MIPSolver->activateDiscreteVariables(false);
+        env->timing->stopTimer("DualProblemsDiscrete");
+        env->timing->startTimer("DualProblemsRelaxed");
+        env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
-        ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::Relaxed;
+        env->results->getCurrentIteration()->isDualProblemDiscrete = false;
+        env->results->getCurrentIteration()->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
     }
 }
 
 void RelaxationStrategyStandard::setInactive()
 {
-    if (!MIPSolver->getDiscreteVariableStatus())
+    if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
     {
-        ProcessInfo::getInstance().stopTimer("DualProblemsRelaxed");
-        ProcessInfo::getInstance().startTimer("DualProblemsDiscrete");
-        MIPSolver->activateDiscreteVariables(true);
+        env->timing->stopTimer("DualProblemsRelaxed");
+        env->timing->startTimer("DualProblemsDiscrete");
+        env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
-        ProcessInfo::getInstance().getCurrentIteration()->type = E_IterationProblemType::MIP;
+        env->results->getCurrentIteration()->isDualProblemDiscrete = true;
+        env->results->getCurrentIteration()->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
 
         LPFinished = true;
     }
 }
 
-E_IterationProblemType RelaxationStrategyStandard::getProblemType()
-{
-    if (MIPSolver->getDiscreteVariableStatus())
-
-        return (E_IterationProblemType::MIP);
-    else
-        return (E_IterationProblemType::Relaxed);
-}
-
 bool RelaxationStrategyStandard::isIterationLimitReached()
 {
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    if(env->results->getNumberOfIterations() < 2)
+    {
+        return false;
+    }
 
-    if (prevIter->iterationNumber < Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual"))
+    auto prevIter = env->results->getPreviousIteration();
+
+    if(prevIter->iterationNumber < env->settings->getSetting<int>("Relaxation.IterationLimit", "Dual"))
     {
         return (false);
     }
@@ -100,7 +130,8 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-    if (ProcessInfo::getInstance().getElapsedTime("DualProblemsRelaxed") < Settings::getInstance().getDoubleSetting("Relaxation.TimeLimit", "Dual"))
+    if(env->timing->getElapsedTime("DualProblemsRelaxed")
+        < env->settings->getSetting<double>("Relaxation.TimeLimit", "Dual"))
     {
         return (false);
     }
@@ -108,25 +139,28 @@ bool RelaxationStrategyStandard::isTimeLimitReached()
     return (true);
 }
 
-bool RelaxationStrategyStandard::isLPStepFinished()
-{
-    return (LPFinished);
-}
+bool RelaxationStrategyStandard::isLPStepFinished() { return (LPFinished); }
 
 bool RelaxationStrategyStandard::isObjectiveStagnant()
 {
     int numSteps = 10;
 
-    auto prevIter = ProcessInfo::getInstance().getPreviousIteration();
+    if(env->results->getNumberOfIterations() < 2)
+    {
+        return false;
+    }
 
-    if (prevIter->iterationNumber < numSteps)
+    auto prevIter = env->results->getPreviousIteration();
+
+    if(prevIter->iterationNumber < numSteps)
         return (false);
 
-    auto prevIter2 = &ProcessInfo::getInstance().iterations[prevIter->iterationNumber - numSteps];
+    auto prevIter2 = env->results->iterations[prevIter->iterationNumber - numSteps];
 
-    //TODO: should be substituted with parameter
-    if (std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001)
+    // TODO: should be substituted with parameter
+    if(std::abs((prevIter->objectiveValue - prevIter2->objectiveValue) / prevIter->objectiveValue) < 0.000001)
         return (true);
 
     return (false);
 }
+} // namespace SHOT

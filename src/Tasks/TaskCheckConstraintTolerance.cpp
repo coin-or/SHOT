@@ -3,79 +3,81 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskCheckConstraintTolerance.h"
 
-TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(
-    std::string taskIDTrue)
+#include "../Enums.h"
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+#include "../Model/Problem.h"
+
+namespace SHOT
 {
-    taskIDIfTrue = taskIDTrue;
+
+TaskCheckConstraintTolerance::TaskCheckConstraintTolerance(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+{
 }
 
-TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() {}
+TaskCheckConstraintTolerance::~TaskCheckConstraintTolerance() = default;
 
 void TaskCheckConstraintTolerance::run()
 {
-    if (!isInitialized)
+    auto currIter = env->results->getCurrentIteration();
+
+    if(currIter->solutionPoints.size() == 0)
+        return;
+
+    if(env->reformulatedProblem->properties.isMIQPProblem || env->reformulatedProblem->properties.isQPProblem)
+        return;
+
+    auto constraintTolerance = env->settings->getSetting<double>("ConstraintTolerance", "Termination") + 1e-10;
+
+    // Checks it the nonlinear objective is fulfilled
+    if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
+        && env->problem->objectiveFunction->calculateValue(currIter->solutionPoints.at(0).point)
+                - currIter->objectiveValue
+            > constraintTolerance)
     {
-        this->isObjectiveNonlinear = ProcessInfo::getInstance().problemStats.isObjectiveNonlinear();
-        this->nonlinearConstraintIndexes = ProcessInfo::getInstance().originalProblem->getNonlinearConstraintIndexes();
-
-        if (this->isObjectiveNonlinear)
-        {
-            this->nonlinearObjectiveConstraintIndex = ProcessInfo::getInstance().originalProblem->getNonlinearObjectiveConstraintIdx();
-
-            // Removes the nonlinear constraint index from the list
-            std::vector<int>::iterator position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), -1);
-            if (position != this->nonlinearConstraintIndexes.end()) // means the element was not found
-                this->nonlinearConstraintIndexes.erase(position);
-
-            position = std::find(this->nonlinearConstraintIndexes.begin(), this->nonlinearConstraintIndexes.end(), this->nonlinearObjectiveConstraintIndex);
-            if (position != this->nonlinearConstraintIndexes.end()) // means the element was not found
-                this->nonlinearConstraintIndexes.erase(position);
-        }
+        return;
     }
 
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-    auto solutionPoint = currIter->solutionPoints.at(0).point;
+    // Checks if the quadratic constraints are fulfilled to tolerance
+    if(!env->problem->areQuadraticConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
+    {
+        return;
+    }
 
     // Checks if the nonlinear constraints are fulfilled to tolerance
-    if (this->nonlinearConstraintIndexes.size() > 0)
+    if(!env->problem->areNonlinearConstraintsFulfilled(currIter->solutionPoints.at(0).point, constraintTolerance))
     {
-        auto maxDev = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(solutionPoint, this->nonlinearConstraintIndexes).first;
-
-        if (maxDev.value >= Settings::getInstance().getDoubleSetting("ConstraintTolerance", "Termination"))
-            return;
+        return;
     }
 
-    // Checks if objective constraint is fulfilled to tolerance
-    if (this->isObjectiveNonlinear)
+    if(env->problem->properties.isDiscrete)
     {
-        double objDev = ProcessInfo::getInstance().originalProblem->calculateConstraintFunctionValue(this->nonlinearObjectiveConstraintIndex, solutionPoint);
-
-        if (objDev >= Settings::getInstance().getDoubleSetting("ObjectiveConstraintTolerance", "Termination"))
-            return;
-    }
-
-    if (ProcessInfo::getInstance().problemStats.isDiscreteProblem)
-    {
-        if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal &&
-            currIter->type == E_IterationProblemType::MIP)
+        if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal && currIter->isDualProblemDiscrete)
         {
-            ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
-            ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+            env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
+            env->tasks->setNextTask(taskIDIfTrue);
+            env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
         }
     }
     else
     {
-        if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+        if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
         {
-            ProcessInfo::getInstance().terminationReason = E_TerminationReason::ConstraintTolerance;
-            ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+            env->results->terminationReason = E_TerminationReason::ConstraintTolerance;
+            env->tasks->setNextTask(taskIDIfTrue);
+            env->results->terminationReasonDescription = "Terminated since nonlinear constraint tolerance met.";
         }
     }
 
@@ -87,3 +89,4 @@ std::string TaskCheckConstraintTolerance::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

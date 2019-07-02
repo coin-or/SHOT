@@ -3,126 +3,131 @@
 
    @author Stefan Vigerske, GAMS Development Corp.
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "NLPSolverGAMS.h"
-#include "../GAMS/GAMS2OS.h"
-#include "../OptProblems/OptProblemNLPRelaxed.h"
 
-NLPSolverGAMS::NLPSolverGAMS() : gmo(NULL), gev(NULL), timelimit(10.0), iterlimit(ITERLIM_INFINITY), showlog(false)
+#include "../Output.h"
+#include "../Settings.h"
+
+#include <cstdio>
+#include <cstring>
+
+namespace SHOT
 {
-    NLPProblem = new OptProblemNLPRelaxed();
 
-    strcpy(nlpsolver, "conopt");
-    *nlpsolveropt = '\0';
+NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject)
+    : INLPSolver(envPtr)
+    , modelingObject(modelingObject)
+    , modelingEnvironment(nullptr)
+    , timelimit(10.0)
+    , iterlimit(ITERLIM_INFINITY)
+    , showlog(false)
+{
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(modelingObject);
 
-    strcpy(nlpsolver, Settings::getInstance().getStringSetting("GAMS.NLP.Solver", "Subsolver").c_str());
-    strcpy(nlpsolveropt, Settings::getInstance().getStringSetting("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
+    strcpy(nlpsolver, env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver").c_str());
+    strcpy(nlpsolveropt, env->settings->getSetting<std::string>("GAMS.NLP.OptionsFilename", "Subsolver").c_str());
 
-    timelimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
-    iterlimit = Settings::getInstance().getIntSetting("FixedInteger.IterationLimit", "Primal");
+    timelimit = env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal");
+    iterlimit = env->settings->getSetting<int>("FixedInteger.IterationLimit", "Primal");
 
     // TODO: showlog seems to have no effect...
-    showlog = Settings::getInstance().getBoolSetting("Console.GAMS.Show", "Output");
+    showlog = env->settings->getSetting<bool>("Console.GAMS.Show", "Output");
 }
 
-NLPSolverGAMS::~NLPSolverGAMS()
-{
-    delete NLPProblem;
-}
+NLPSolverGAMS::~NLPSolverGAMS() = default;
 
-void NLPSolverGAMS::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverGAMS::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-    for (size_t i = 0; i < variableIndexes.size(); ++i)
+    for(size_t i = 0; i < variableIndexes.size(); ++i)
     {
-        assert(variableIndexes[i] < gmoN(gmo));
-        gmoSetVarLOne(gmo, variableIndexes[i], variableValues[i]);
+        assert(variableIndexes[i] < gmoN(modelingObject));
+        gmoSetVarLOne(modelingObject, variableIndexes[i], variableValues[i]);
     }
 }
 
-void NLPSolverGAMS::clearStartingPoint()
-{
-}
+void NLPSolverGAMS::clearStartingPoint() {}
 
-void NLPSolverGAMS::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverGAMS::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-    for (size_t i = 0; i < variableIndexes.size(); ++i)
+    for(size_t i = 0; i < variableIndexes.size(); ++i)
     {
-        assert(variableIndexes[i] < gmoN(gmo));
-        gmoSetAltVarLowerOne(gmo, variableIndexes[i], variableValues[i]);
-        gmoSetAltVarUpperOne(gmo, variableIndexes[i], variableValues[i]);
+        assert(variableIndexes[i] < gmoN(modelingObject));
+        gmoSetAltVarLowerOne(modelingObject, variableIndexes[i], variableValues[i]);
+        gmoSetAltVarUpperOne(modelingObject, variableIndexes[i], variableValues[i]);
     }
 }
 
 void NLPSolverGAMS::unfixVariables()
 {
-    for (size_t i = 0; i < gmoN(gmo); ++i)
+    for(int i = 0; i < gmoN(modelingObject); ++i)
     {
-        gmoSetAltVarLowerOne(gmo, i, gmoGetVarLowerOne(gmo, i));
-        gmoSetAltVarUpperOne(gmo, i, gmoGetVarUpperOne(gmo, i));
+        gmoSetAltVarLowerOne(modelingObject, i, gmoGetVarLowerOne(modelingObject, i));
+        gmoSetAltVarUpperOne(modelingObject, i, gmoGetVarUpperOne(modelingObject, i));
     }
 }
 
-void NLPSolverGAMS::saveOptionsToFile(std::string fileName)
-{
-    //throw std::logic_error("saveOptionsToFile() not implemented");
-}
+void NLPSolverGAMS::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
 
-std::vector<double> NLPSolverGAMS::getSolution()
-{
-    std::vector<double> sol(gmoN(gmo));
+void NLPSolverGAMS::saveProblemToFile([[maybe_unused]] std::string fileName) {}
 
-    gmoGetVarL(gmo, &sol[0]);
+VectorDouble NLPSolverGAMS::getSolution()
+{
+    VectorDouble sol(gmoN(modelingObject));
+
+    gmoGetVarL(modelingObject, &sol[0]);
 
     return sol;
 }
 
-double NLPSolverGAMS::getSolution(int i)
+double NLPSolverGAMS::getSolution([[maybe_unused]] int i)
 {
     throw std::logic_error("getSolution(int) not implemented");
 }
 
-double NLPSolverGAMS::getObjectiveValue()
-{
-    return gmoGetHeadnTail(gmo, gmoHobjval);
-}
+double NLPSolverGAMS::getObjectiveValue() { return gmoGetHeadnTail(modelingObject, gmoHobjval); }
 
 E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 {
     char msg[GMS_SSSIZE];
 
     /* set which options file to use */
-    if (*nlpsolveropt)
+    if(*nlpsolveropt)
     {
-        gmoOptFileSet(gmo, 1);
-        gmoNameOptFileSet(gmo, nlpsolveropt);
+        gmoOptFileSet(modelingObject, 1);
+        gmoNameOptFileSet(modelingObject, nlpsolveropt);
     }
     else
     {
         /* don't read SHOT options file */
-        gmoOptFileSet(gmo, 0);
+        gmoOptFileSet(modelingObject, 0);
     }
 
-    gmoAltBoundsSet(gmo, 1); /* use alternative bounds */
-    gmoForceContSet(gmo, 1);
+    gmoAltBoundsSet(modelingObject, 1); /* use alternative bounds */
+    gmoForceContSet(modelingObject, 1);
 
-    if (gevCallSolver(gev, gmo, "", nlpsolver, gevSolveLinkLoadLibrary, showlog ? gevSolverSameStreams : gevSolverQuiet,
-                      NULL, NULL, timelimit, iterlimit, 0, 0.0, 0.0, NULL, msg) != 0)
+    if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver, gevSolveLinkLoadLibrary,
+           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, timelimit, iterlimit, 0, 0.0, 0.0,
+           nullptr, msg)
+        != 0)
     {
-        gmoModelStatSet(gmo, gmoModelStat_ErrorNoSolution);
-        //throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
+        gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
+        throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
     }
 
-    gmoAltBoundsSet(gmo, 0);
-    gmoForceContSet(gmo, 0);
+    /* if not run via GAMS, then uninstall GAMS SIGINT handler, as gevTerminateGet() is not checked (is only checked if
+     * called from GAMS) */
+    if(env->settings->getSetting<std::string>("ProblemFile", "Input") != "")
+        gevTerminateUninstall(modelingEnvironment);
 
-    /* the callSolver calls installs a SIGINT handler again, which prevents stopping on Ctrl+C */
-    gevTerminateUninstall(gev);
+    gmoAltBoundsSet(modelingObject, 0);
+    gmoForceContSet(modelingObject, 0);
 
-    switch (gmoModelStat(gmo))
+    switch(gmoModelStat(modelingObject))
     {
     case gmoModelStat_OptimalGlobal:
     case gmoModelStat_OptimalLocal:
@@ -145,7 +150,7 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     case gmoModelStat_InfeasibleIntermed:
     case gmoModelStat_NonIntegerIntermed:
     case gmoModelStat_NoSolutionReturned:
-        switch (gmoSolveStat(gmo))
+        switch(gmoSolveStat(modelingObject))
         {
         case gmoSolveStat_Iteration:
             return E_NLPSolutionStatus::IterationLimit;
@@ -161,65 +166,42 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     case gmoModelStat_LicenseError:
     case gmoModelStat_ErrorUnknown:
     case gmoModelStat_ErrorNoSolution:
+    default:
         return E_NLPSolutionStatus::Error;
     }
 }
 
-bool NLPSolverGAMS::createProblemInstance(OSInstance *origInstance)
+VectorDouble NLPSolverGAMS::getVariableLowerBounds()
 {
-    dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
+    assert(modelingObject != nullptr);
 
-    //GAMSOSInstance *gamsosinstance = static_cast<GAMSOSInstance *>(origInstance);
-    // TODO cannot do dynamic_cast to check type
-    //	if( gamsosinstance == NULL )
-    //		return false;
+    VectorDouble lb(gmoN(modelingObject));
 
-    gmo = ProcessInfo::getInstance().GAMSModelingObject;
-    gev = (gevHandle_t)gmoEnvironment(gmo);
-
-    return true;
-}
-
-bool NLPSolverGAMS::isObjectiveFunctionNonlinear()
-{
-    return (NLPProblem->isObjectiveFunctionNonlinear());
-}
-
-int NLPSolverGAMS::getObjectiveFunctionVariableIndex()
-{
-    return (NLPProblem->getNonlinearObjectiveVariableIdx());
-}
-
-#if 0
-std::vector<double> NLPSolverGAMS::getCurrentVariableLowerBounds()
-{
-	return (NLPProblem->getVariableLowerBounds());
-}
-
-std::vector<double> NLPSolverGAMS::getCurrentVariableUpperBounds()
-{
-	return (NLPProblem->getVariableUpperBounds());
-}
-#endif
-
-std::vector<double> NLPSolverGAMS::getCurrentVariableLowerBounds()
-{
-    assert(gmo != NULL);
-
-    std::vector<double> lb(gmoN(gmo));
-
-    gmoGetVarLower(gmo, &lb[0]);
+    gmoGetVarLower(modelingObject, &lb[0]);
 
     return lb;
 }
 
-std::vector<double> NLPSolverGAMS::getCurrentVariableUpperBounds()
+VectorDouble NLPSolverGAMS::getVariableUpperBounds()
 {
-    assert(gmo != NULL);
+    assert(modelingObject != nullptr);
 
-    std::vector<double> ub(gmoN(gmo));
+    VectorDouble ub(gmoN(modelingObject));
 
-    gmoGetVarUpper(gmo, &ub[0]);
+    gmoGetVarUpper(modelingObject, &ub[0]);
 
     return ub;
 }
+
+void NLPSolverGAMS::updateVariableLowerBound(int variableIndex, double bound)
+{
+    gmoSetAltVarLowerOne(modelingObject, variableIndex, bound);
+}
+
+void NLPSolverGAMS::updateVariableUpperBound(int variableIndex, double bound)
+{
+    gmoSetAltVarUpperOne(modelingObject, variableIndex, bound);
+}
+
+void updateVariableUpperBound(double bound);
+} // namespace SHOT

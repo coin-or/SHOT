@@ -3,36 +3,61 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "vector"
+#include "../Environment.h"
 #include "../Enums.h"
-#include "OSInstance.h"
-#include "../ProcessInfo.h"
-#include "../OptProblems/OptProblemOriginal.h"
-#include "../OptProblems/OptProblemOriginalLinearObjective.h"
-#include "../OptProblems/OptProblemOriginalQuadraticObjective.h"
-#include "../OptProblems/OptProblemOriginalNonlinearObjective.h"
 #include "../Structs.h"
+
+#include <optional>
+#include <string>
+#include <vector>
+#include <utility>
+
+namespace SHOT
+{
 
 class IMIPSolver
 {
-  public:
+public:
+    virtual ~IMIPSolver() = default;
+
+    virtual bool initializeProblem() = 0;
     virtual void checkParameters() = 0;
 
-    virtual bool createLinearProblem(OptProblem *origProblem) = 0;
+    virtual bool addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound) = 0;
+
+    virtual bool initializeObjective() = 0;
+    virtual bool addLinearTermToObjective(double coefficient, int variableIndex) = 0;
+    virtual bool addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
+    virtual bool finalizeObjective(bool isMinimize, double constant = 0.0) = 0;
+
+    virtual bool initializeConstraint() = 0;
+    virtual bool addLinearTermToConstraint(double coefficient, int variableIndex) = 0;
+    virtual bool addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex) = 0;
+    virtual bool finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant = 0.0) = 0;
+
+    virtual bool finalizeProblem() = 0;
+
     virtual void initializeSolverSettings() = 0;
 
-    virtual std::vector<double> getVariableSolution(int solIdx) = 0;
+    virtual VectorDouble getVariableSolution(int solIdx) = 0;
     virtual int getNumberOfSolutions() = 0;
+
+    virtual E_DualProblemClass getProblemClass() = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;
     virtual bool getDiscreteVariableStatus() = 0;
+
+    virtual void executeRelaxationStrategy() = 0;
+
     virtual E_ProblemSolutionStatus solveProblem() = 0;
+    virtual bool repairInfeasibility() = 0;
+
     virtual E_ProblemSolutionStatus getSolutionStatus() = 0;
     virtual double getObjectiveValue() = 0;
 
@@ -48,44 +73,53 @@ class IMIPSolver
     virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant) = 0;
-    virtual int addLinearConstraint(std::vector<IndexValuePair> elements, double constant, bool isGreaterThan) = 0;
+    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) = 0;
+    virtual int addLinearConstraint(
+        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+        = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
 
     virtual void setCutOff(double cutOff) = 0;
+    virtual void setCutOffAsConstraint(double cutOff) = 0;
 
-    virtual void addMIPStart(std::vector<double> point) = 0;
+    virtual void addMIPStart(VectorDouble point) = 0;
     virtual void deleteMIPStarts() = 0;
 
     virtual void fixVariable(int varIndex, double value) = 0;
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues) = 0;
+    virtual void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) = 0;
     virtual void unfixVariables() = 0;
 
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
+    virtual void updateVariableLowerBound(int varIndex, double lowerBound) = 0;
+    virtual void updateVariableUpperBound(int varIndex, double upperBound) = 0;
 
-    virtual pair<double, double> getCurrentVariableBounds(int varIndex) = 0;
+    virtual PairDouble getCurrentVariableBounds(int varIndex) = 0;
 
     virtual void presolveAndUpdateBounds() = 0;
-    virtual std::pair<std::vector<double>, std::vector<double>> presolveAndGetNewBounds() = 0;
+    virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
     virtual void createHyperplane(Hyperplane hyperplane) = 0;
-    virtual void createIntegerCut(std::vector<int> binaryIndexes) = 0;
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
-    virtual boost::optional<std::pair<std::vector<IndexValuePair>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
+    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane)
+        = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;
 
-    virtual std::vector<GeneratedHyperplane> *getGeneratedHyperplanes() = 0;
-
-    virtual void updateNonlinearObjectiveFromPrimalDualBounds() = 0;
+    virtual double getUnboundedVariableBoundValue() = 0;
 
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;
 
-    virtual ~IMIPSolver(){};
+    virtual bool hasAuxiliaryObjectiveVariable() = 0;
+    virtual int getAuxiliaryObjectiveVariableIndex() = 0;
+    virtual void setAuxiliaryObjectiveVariableIndex(int index) = 0;
 
-  protected:
+    virtual std::string getConstraintIdentifier(E_HyperplaneSource source) = 0;
+
+protected:
 };
+} // namespace SHOT

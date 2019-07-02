@@ -3,54 +3,54 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "../Enums.h"
-#include "IMIPSolver.h"
 #include "MIPSolverBase.h"
 #include "MIPSolverGurobi.h"
 #include "MIPSolverCallbackBase.h"
-#include "gurobi_c++.h"
 
+namespace SHOT
+{
 class MIPSolverGurobiLazy : public MIPSolverGurobi
 {
-  public:
-    MIPSolverGurobiLazy();
-    virtual ~MIPSolverGurobiLazy();
+public:
+    MIPSolverGurobiLazy(EnvironmentPtr envPtr);
+    ~MIPSolverGurobiLazy() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
-    E_ProblemSolutionStatus solveProblem();
+    E_ProblemSolutionStatus solveProblem() override;
 
-  private:
+private:
 };
 
 class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
 {
-  public:
-    GRBVar *vars;
-    GurobiCallback(GRBVar *xvars);
+public:
+    GRBVar* vars;
+    GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr);
 
-  protected:
-    void callback();
+protected:
+    void callback() override;
 
-  private:
-    int numVar = 0;
+private:
     int lastExploredNodes = 0;
     int lastOpenNodes = 0;
 
     void createHyperplane(Hyperplane hyperplane);
-    void createIntegerCut(std::vector<int> binaryIndexes);
+
+    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 };
+} // namespace SHOT

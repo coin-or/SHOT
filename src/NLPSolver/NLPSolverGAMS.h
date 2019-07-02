@@ -3,8 +3,8 @@
 
    @author Stefan Vigerske, GAMS Development Corp.
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
@@ -14,11 +14,13 @@
 #include "gmomcc.h"
 #include "gevmcc.h"
 
+namespace SHOT
+{
 class NLPSolverGAMS : public NLPSolverBase
 {
-  private:
-    gmoHandle_t gmo;
-    gevHandle_t gev;
+private:
+    gmoHandle_t modelingObject;
+    gevHandle_t modelingEnvironment;
 
     char nlpsolver[GMS_SSSIZE];
     char nlpsolveropt[GMS_SSSIZE];
@@ -26,33 +28,36 @@ class NLPSolverGAMS : public NLPSolverBase
     int iterlimit;
     bool showlog;
 
-  public:
-    NLPSolverGAMS();
+public:
+    NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject);
 
-    virtual ~NLPSolverGAMS();
+    ~NLPSolverGAMS() override;
 
-    void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
-    void clearStartingPoint();
+    void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
+    void clearStartingPoint() override;
 
-    void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) override;
 
-    void unfixVariables();
+    void unfixVariables() override;
 
-    void saveOptionsToFile(std::string fileName);
+    void saveOptionsToFile(std::string fileName) override;
 
-    std::vector<double> getSolution();
-    double getSolution(int i);
-    double getObjectiveValue();
+    void saveProblemToFile(std::string fileName) override;
 
-    bool isObjectiveFunctionNonlinear();
-    int getObjectiveFunctionVariableIndex();
+    VectorDouble getSolution() override;
+    double getSolution(int i) override;
 
-  protected:
-    E_NLPSolutionStatus solveProblemInstance();
-    bool createProblemInstance(OSInstance *origInstance);
+    double getObjectiveValue() override;
 
-    std::vector<double> getCurrentVariableLowerBounds();
-    std::vector<double> getCurrentVariableUpperBounds();
+    void updateVariableLowerBound(int variableIndex, double bound) override;
+    void updateVariableUpperBound(int variableIndex, double bound) override;
 
-  private:
+protected:
+    E_NLPSolutionStatus solveProblemInstance() override;
+
+    VectorDouble getVariableLowerBounds() override;
+    VectorDouble getVariableUpperBounds() override;
+
+private:
 };
+} // namespace SHOT

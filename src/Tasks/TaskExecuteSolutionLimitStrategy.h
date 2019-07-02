@@ -3,34 +3,32 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../MIPSolver/IMIPSolutionLimitStrategy.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyUnlimited.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyIncrease.h"
-#include "../MIPSolver/MIPSolutionLimitStrategyAdaptive.h"
+
+namespace SHOT
+{
+class IMIPSolutionLimitStrategy;
 
 class TaskExecuteSolutionLimitStrategy : public TaskBase
 {
-  public:
-    TaskExecuteSolutionLimitStrategy(IMIPSolver *MIPSolver);
-    virtual ~TaskExecuteSolutionLimitStrategy();
+public:
+    TaskExecuteSolutionLimitStrategy(EnvironmentPtr envPtr);
+    ~TaskExecuteSolutionLimitStrategy() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
-  private:
-    IMIPSolutionLimitStrategy *solutionLimitStrategy;
-
-    IMIPSolver *MIPSolver;
+private:
+    std::unique_ptr<IMIPSolutionLimitStrategy> solutionLimitStrategy;
 
     bool isInitialized;
     bool temporaryOptLimitUsed;
     int previousSolLimit;
 };
+} // namespace SHOT

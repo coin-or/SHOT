@@ -78,3 +78,16 @@ If you want to change some options, you can edit either 'options.opt' and 'optio
     ./SHOT problem_file.osil options.opt
 
 For more information about how to call SHOT, run SHOT without arguments or see the documentation.
+
+
+Use within GAMS:
+
+Build the SHOT library as in discussed in main installation, but make sure to
+pass the GAMS system directory to the cmake call via -DGAMS_DIR=<PATH>.
+
+Add the following entry to gmscpmun.txt (gmscmpnx.txt on Windows) in the GAMS system directory:
+
+    SHOT 1101 5 0001020304 1 0 2 MINLP MIQCP
+    gmsgenus.run
+    gmsgenux.out
+    /path/to/libSHOTSolver.so sht 1 1

@@ -3,58 +3,162 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include <vector>
+
 #include "Enums.h"
-#include "OSGeneral.h"
+
+#include <limits>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
+// For DLL support in Windows
+#if defined(_WIN32)
+#if !defined(STDCALL)
+#define STDCALL __stdcall
+#endif
+#if !defined(DllExport)
+#define DllExport __declspec(dllexport)
+#endif
+#else
+#if !defined(STDCALL)
+#define STDCALL
+#endif
+#if !defined(DllExport)
+#define DllExport
+#endif
+#endif
+
+// Fix for missing NAN i Visual Studio
+#ifdef WIN32
+#ifndef NAN
+static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
+#define NAN (*(const float*)__nan)
+#endif
+#else
+#include <cmath> // For NAN
+#endif
+
+namespace SHOT
+{
+const double SHOT_DBL_MIN = std::numeric_limits<double>::lowest();
+const double SHOT_DBL_MAX = std::numeric_limits<double>::max();
+const double SHOT_DBL_INF = std::numeric_limits<double>::infinity();
+const double SHOT_DBL_EPS = std::numeric_limits<double>::epsilon();
+const int SHOT_INT_MAX = std::numeric_limits<int>::max();
+
+class Results;
+class Settings;
+class Model;
+class Problem;
+class ReformulatedProblem;
+class IModelingSystem;
+class IMIPSolver;
+class Output;
+class Report;
+class TaskHandler;
+class EventHandler;
+class Timing;
+class Iteration;
+class DualSolver;
+class PrimalSolver;
+
+class Constraint;
+class NumericConstraint;
+
+using ResultsPtr = std::shared_ptr<Results>;
+using SettingsPtr = std::shared_ptr<Settings>;
+using ModelPtr = std::shared_ptr<Model>;
+using ProblemPtr = std::shared_ptr<Problem>;
+using ReformulatedProblemPtr = std::shared_ptr<ReformulatedProblem>;
+using ModelingSystemPtr = std::shared_ptr<IModelingSystem>;
+using MIPSolverPtr = std::shared_ptr<IMIPSolver>;
+using OutputPtr = std::shared_ptr<Output>;
+using EventHandlerPtr = std::shared_ptr<EventHandler>;
+using ReportPtr = std::shared_ptr<Report>;
+using TaskHandlerPtr = std::shared_ptr<TaskHandler>;
+using TimingPtr = std::shared_ptr<Timing>;
+using DualSolverPtr = std::shared_ptr<DualSolver>;
+using PrimalSolverPtr = std::shared_ptr<PrimalSolver>;
+using IterationPtr = std::shared_ptr<Iteration>;
+
+using ConstraintPtr = std::shared_ptr<Constraint>;
+using NumericConstraintPtr = std::shared_ptr<NumericConstraint>;
+
+using PairInteger = std::pair<int, int>;
+using PairDouble = std::pair<double, double>;
+using PairString = std::pair<std::string, std::string>;
+
+using VectorDouble = std::vector<double>;
+using VectorInteger = std::vector<int>;
+using VectorString = std::vector<std::string>;
+
+struct PairIndexValue
+{
+    int index;
+    double value;
+
+public:
+    PairIndexValue() = default;
+    PairIndexValue(int index, double value) : index(index), value(value){};
+};
+
+struct PairCoordinateValue
+{
+    PairInteger indexes;
+    double value;
+};
 
 struct SolutionPoint
 {
-    std::vector<double> point;
+    VectorDouble point;
     double objectiveValue;
     int iterFound;
-    IndexValuePair maxDeviation;
+    PairIndexValue maxDeviation;
+    bool isRelaxedPoint = false;
 };
 
 struct InteriorPoint
 {
-    std::vector<double> point;
+    VectorDouble point;
     ES_InteriorPointStrategy NLPSolver;
-    IndexValuePair maxDevatingConstraint;
+    PairIndexValue maxDevatingConstraint;
 };
 
 struct PrimalSolution
 {
-    std::vector<double> point;
+    VectorDouble point;
     E_PrimalSolutionSource sourceType;
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    IndexValuePair maxDevatingConstraintNonlinear;
-    IndexValuePair maxDevatingConstraintLinear;
-    double maxIntegerToleranceError;       // The maximum integer error before rounding
+    PairIndexValue maxDevatingConstraintLinear;
+    PairIndexValue maxDevatingConstraintQuadratic;
+    PairIndexValue maxDevatingConstraintNonlinear;
+    double maxIntegerToleranceError; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?
-    bool displayed = false;                // Has the primal solution been displayed on console?
+    bool displayed = false; // Has the primal solution been displayed on console?
 };
 
 struct PrimalFixedNLPCandidate
 {
-    std::vector<double> point;
+    VectorDouble point;
     E_PrimalNLPSource sourceType;
     double objValue;
     int iterFound;
-    IndexValuePair maxDevatingConstraint;
+    PairIndexValue maxDevatingConstraint;
 };
 
 struct DualSolution
 {
-    std::vector<double> point;
+    VectorDouble point;
     E_DualSolutionSource sourceType;
     double objValue;
     int iterFound;
@@ -63,49 +167,24 @@ struct DualSolution
 
 struct Hyperplane
 {
-    int sourceConstraintIndex;
-    std::vector<double> generatedPoint;
+    NumericConstraintPtr sourceConstraint;
+    int sourceConstraintIndex; // TODO remove
+    VectorDouble generatedPoint;
+    double objectiveFunctionValue; // Used for the objective cuts only
     E_HyperplaneSource source;
+    bool isObjectiveHyperplane = false;
 };
 
 struct GeneratedHyperplane
 {
-    int generatedConstraintIndex;
     int sourceConstraintIndex;
-    std::vector<double> generatedPoint;
     E_HyperplaneSource source;
     bool isLazy;
     bool isRemoved;
-    int generatedIter;
-    int removedIter;
-};
+    bool isSourceConvex;
+    int iterationGenerated;
 
-struct OptimizationProblemStatistics
-{
-    E_ProblemType problemType = E_ProblemType::None;
-    E_ObjectiveFunctionType objectiveFunctionType = E_ObjectiveFunctionType::None;
-
-    bool isMinimizationProblem = false;
-    bool isDiscreteProblem = false;
-
-    int numberOfConstraints = 0;
-    int numberOfLinearConstraints = 0;
-    int numberOfNonlinearConstraints = 0;
-    int numberOfQuadraticConstraints = 0;
-
-    bool quadraticTermsReformulatedAsNonlinear = false;
-    int numberOfQuadraticTerms = 0;
-
-    int numberOfVariables = 0;
-    int numberOfContinousVariables = 0;
-    int numberOfIntegerVariables = 0;
-    int numberOfBinaryVariables = 0;
-    int numberOfSemicontinuousVariables = 0;
-
-    bool isObjectiveNonlinear()
-    {
-        return (objectiveFunctionType == E_ObjectiveFunctionType::Nonlinear || objectiveFunctionType == E_ObjectiveFunctionType::QuadraticConsideredAsNonlinear);
-    };
+    std::size_t pointHash;
 };
 
 struct SolutionStatistics
@@ -134,37 +213,99 @@ struct SolutionStatistics
 
     int numberOfIntegerCuts = 0;
 
-    int numberOfIterationsWithStagnationMIP = 0;
-    int numberOfIterationsWithSignificantObjectiveUpdate = 0;
+    int numberOfIterationsWithDualStagnation = 0;
+    int lastIterationWithSignificantDualUpdate = 0;
+    int numberOfIterationsWithPrimalStagnation = 0;
+    int lastIterationWithSignificantPrimalUpdate = 0;
     int numberOfIterationsWithoutNLPCallMIP = 0;
 
     int iterationLastPrimalBoundUpdate = 0;
     int iterationLastDualBoundUpdate = 0;
     int iterationLastLazyAdded = 0;
+    int iterationLastDualCutAdded = 0;
 
     double timeLastDualBoundUpdate = 0;
     double timeLastFixedNLPCall = 0;
 
     int numberOfOriginalInteriorPoints = 0;
 
+    int numberOfFoundPrimalSolutions = 0;
+
     int numberOfExploredNodes = 0;
     int numberOfOpenNodes = 0;
 
+    int numberOfPrimalReductionCutsUpdatesWithoutEffect = 0;
+    int numberOfDualRepairsSinceLastPrimalUpdate = 0;
+
     int getNumberOfTotalDualProblems()
     {
-        return (numberOfProblemsLP +
-                numberOfProblemsQP +
-                numberOfProblemsFeasibleMILP +
-                numberOfProblemsOptimalMILP +
-                numberOfProblemsFeasibleMIQP +
-                numberOfProblemsOptimalMIQP +
-                numberOfProblemsOptimalMIQCQP +
-                numberOfProblemsFeasibleMIQCQP);
+        return (numberOfProblemsLP + numberOfProblemsQP + numberOfProblemsFeasibleMILP + numberOfProblemsOptimalMILP
+            + numberOfProblemsFeasibleMIQP + numberOfProblemsOptimalMIQP + numberOfProblemsOptimalMIQCQP
+            + numberOfProblemsFeasibleMIQCQP);
     };
 
-    int getNumberOfTotalNLPProblems()
-    {
-        return (numberOfProblemsNLPInteriorPointSearch +
-                numberOfProblemsFixedNLP);
-    };
+    int getNumberOfTotalNLPProblems() { return (numberOfProblemsNLPInteriorPointSearch + numberOfProblemsFixedNLP); };
 };
+
+class Error
+{
+public:
+    Error(std::string message) : message(message){};
+
+    std::string message;
+};
+
+class VariableNotFoundException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    VariableNotFoundException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw() override
+    {
+        std::stringstream message;
+        message << "Could not find variable ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+
+class ConstraintNotFoundException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    ConstraintNotFoundException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw() override
+    {
+        std::stringstream message;
+        message << "Could not find constraint ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+
+class OperationNotImplementedException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    OperationNotImplementedException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw() override
+    {
+        std::stringstream message;
+        message << "The following operation is not implemented: ";
+        message << errorMessage;
+
+        return (message.str().c_str());
+    }
+};
+} // namespace SHOT

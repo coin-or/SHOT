@@ -1,0 +1,4 @@
+#!/bin/sh
+rm -f std err doxygen.log
+rm -rf html
+doxygen > std 2> err

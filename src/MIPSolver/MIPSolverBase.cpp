@@ -3,21 +3,24 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "MIPSolverBase.h"
+#include "../Model/Problem.h"
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Utilities.h"
 
-MIPSolverBase::MIPSolverBase()
+namespace SHOT
 {
-}
 
-MIPSolverBase::~MIPSolverBase()
-{
-    lastSolutions.clear();
-}
+MIPSolverBase::~MIPSolverBase() { lastSolutions.clear(); }
 
 double MIPSolverBase::getObjectiveValue()
 {
@@ -25,9 +28,22 @@ double MIPSolverBase::getObjectiveValue()
     return (objval);
 }
 
+E_DualProblemClass MIPSolverBase::getProblemClass()
+{
+    bool isMIP = getDiscreteVariableStatus();
+
+    if(hasQuadraticObjective && hasQudraticConstraint)
+        return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
+    else if(hasQuadraticObjective)
+        return (isMIP ? E_DualProblemClass::MIQP : E_DualProblemClass::QP);
+    else
+        return (isMIP ? E_DualProblemClass::MIP : E_DualProblemClass::LP);
+}
+
 bool MIPSolverBase::getDiscreteVariableStatus()
 {
-    if (ProcessInfo::getInstance().originalProblem->getNumberOfDiscreteVariables() == 0)
+    if(env->reformulatedProblem->properties.numberOfDiscreteVariables == 0
+        && env->reformulatedProblem->properties.numberOfSemicontinuousVariables == 0)
     {
         return (false);
     }
@@ -37,28 +53,47 @@ bool MIPSolverBase::getDiscreteVariableStatus()
     }
 }
 
+void MIPSolverBase::executeRelaxationStrategy()
+{
+    if(this->relaxationStrategy == nullptr || this->relaxationStrategy.get() == nullptr)
+    {
+        relaxationStrategy = std::make_unique<RelaxationStrategyStandard>(env);
+    }
+
+    MIPSolverBase::relaxationStrategy->executeStrategy();
+}
+
 std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 {
-    if (cachedSolutionHasChanged == false)
+    if(cachedSolutionHasChanged == false)
         return (lastSolutions);
 
     int numSol = getNumberOfSolutions();
 
-    int numVar = originalProblem->getNumberOfVariables();
     std::vector<SolutionPoint> lastSolutions(numSol);
 
-    for (int i = 0; i < numSol; i++)
+    for(int i = 0; i < numSol; i++)
     {
         SolutionPoint tmpSolPt;
 
         auto tmpPt = getVariableSolution(i);
 
-        auto maxDev = originalProblem->getMostDeviatingConstraint(tmpPt);
+        while((int)tmpPt.size() > env->reformulatedProblem->properties.numberOfVariables)
+        {
+            tmpPt.pop_back();
+        }
 
         tmpSolPt.point = tmpPt;
+
         tmpSolPt.objectiveValue = getObjectiveValue(i);
-        tmpSolPt.iterFound = ProcessInfo::getInstance().getCurrentIteration()->iterationNumber;
-        tmpSolPt.maxDeviation = maxDev;
+        tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
+
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        {
+            auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+                tmpPt, env->reformulatedProblem->nonlinearConstraints);
+            tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+        }
 
         lastSolutions.at(i) = tmpSolPt;
     }
@@ -70,116 +105,179 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
 
 void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
     auto optional = createHyperplaneTerms(hyperplane);
 
-    if (!optional)
+    if(!optional)
     {
         return;
     }
 
-    auto tmpPair = optional.get();
+    auto tmpPair = optional.value();
 
     bool hyperplaneIsOk = true;
 
-    for (auto E : tmpPair.first)
+    for(auto& E : tmpPair.first)
     {
-        if (E.value != E.value) //Check for NaN
+        if(E.value != E.value || std::isinf(E.value)) // Check for NaN or inf
         {
-            Output::getInstance().Output::getInstance().outputError(
-                "     Warning: hyperplane not generated, NaN found in linear terms!");
-            hyperplaneIsOk = false;
-            break;
-        }
+            if(hyperplane.isObjectiveHyperplane)
+                env->output->outputError("        Warning: hyperplane for objective function not generated, NaN or inf "
+                                         "found in linear terms for "
+                    + env->problem->getVariable(E.index)->name + " = "
+                    + std::to_string(hyperplane.generatedPoint.at(E.index)));
+            else
+                env->output->outputError("        Warning: hyperplane for constraint "
+                    + hyperplane.sourceConstraint->name + " not generated,  NaN or inf found in linear terms for "
+                    + env->problem->getVariable(E.index)->name + " = "
+                    + std::to_string(hyperplane.generatedPoint.at(E.index)));
 
-        if (isinf(E.value))
-        {
-            Output::getInstance().Output::getInstance().outputError(
-                "     Warning: hyperplane not generated, inf found in linear terms!");
             hyperplaneIsOk = false;
             break;
         }
     }
 
-    if (hyperplaneIsOk)
+    std::string constraintName;
+
+    if(hyperplaneIsOk)
     {
-        GeneratedHyperplane genHyperplane;
+        std::string identifier = getConstraintIdentifier(hyperplane.source);
 
-        int constrIndex = addLinearConstraint(tmpPair.first, tmpPair.second);
+        if(hyperplane.sourceConstraint != nullptr)
+            identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
-        /*genHyperplane.generatedConstraintIndex = constrIndex;
-        genHyperplane.sourceConstraintIndex = hyperplane.sourceConstraintIndex;
-        genHyperplane.generatedPoint = hyperplane.generatedPoint;
-        genHyperplane.source = hyperplane.source;
-        genHyperplane.generatedIter = currIter->iterationNumber;
-        genHyperplane.isLazy = false;
-        genHyperplane.isRemoved = false;
+        identifier += "_" + std::to_string(constraintCounter);
+        constraintCounter++;
 
-        generatedHyperplanes.push_back(genHyperplane);*/
-
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
+        addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
     }
 }
 
-boost::optional<std::pair<std::vector<IndexValuePair>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
+std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(
+    Hyperplane hyperplane)
 {
-    auto varNames = originalProblem->getVariableNames();
+    std::vector<PairIndexValue> elements;
+    double constant = 0.0;
+    SparseVariableVector gradient;
+    double signFactor = 1.0; // Will be -1.0 for greater than constraints
 
-    std::vector<IndexValuePair> elements;
-
-    double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
-    auto nablag = originalProblem->calculateConstraintFunctionGradient(hyperplane.sourceConstraintIndex, hyperplane.generatedPoint);
-
-    Output::getInstance().outputInfo("     HP point generated for constraint index " + to_string(hyperplane.sourceConstraintIndex) + " with " + to_string(nablag->number) + " elements.");
-
-    for (int i = 0; i < nablag->number; i++)
+    if(hyperplane.isObjectiveHyperplane)
     {
-        IndexValuePair pair;
-        pair.idx = nablag->indexes[i];
-        pair.value = nablag->values[i];
+        // constant =
+        // std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
+        constant = hyperplane.objectiveFunctionValue;
+
+        if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
+        {
+            gradient
+                = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->calculateGradient(hyperplane.generatedPoint, true);
+        }
+        else
+        {
+            gradient
+                = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->calculateGradient(hyperplane.generatedPoint, true);
+        }
+
+        PairIndexValue pair;
+        pair.index = auxiliaryObjectiveVariableIndex;
+        pair.value = -1.0;
 
         elements.push_back(pair);
 
-        constant += -nablag->values[i] * hyperplane.generatedPoint.at(nablag->indexes[i]);
+        env->output->outputTrace("     HP point generated for objective function with "
+            + std::to_string(gradient.size()) + " elements and constant " + std::to_string(constant));
+    }
+    else
+    {
+        assert(hyperplane.sourceConstraint);
+        auto maxDev = hyperplane.sourceConstraint->calculateNumericValue(hyperplane.generatedPoint);
 
-        Output::getInstance().outputInfo("     Gradient for variable " + varNames.at(nablag->indexes[i]) + " in point " + to_string(hyperplane.generatedPoint.at(nablag->indexes[i])) + ": " + to_string(nablag->values[i]));
+        if(maxDev.isFulfilledRHS && !maxDev.isFulfilledLHS)
+        {
+            signFactor = -1.0;
+            constant = maxDev.normalizedLHSValue;
+        }
+        else
+        {
+            constant = maxDev.normalizedRHSValue;
+        }
+
+        gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                       ->calculateGradient(hyperplane.generatedPoint, true);
+
+        auto nonzeroes
+            = std::count_if(gradient.begin(), gradient.end(), [](auto element) { return (element.second != 0.0); });
+
+        if(nonzeroes == 0)
+        {
+            gradient = std::dynamic_pointer_cast<NonlinearConstraint>(hyperplane.sourceConstraint)
+                           ->calculateGradient(hyperplane.generatedPoint, false);
+
+            double eps = 0.000001;
+
+            for(auto& G : gradient)
+            {
+                if(G.second == 0.0)
+                    G.second = eps;
+            }
+
+            env->output->outputDebug("        All gradients nonzero, adding tolerance.");
+        }
+
+        env->output->outputTrace("     HP point generated for constraint index "
+            + std::to_string(hyperplane.sourceConstraintIndex) + " with " + std::to_string(gradient.size())
+            + " elements.");
     }
 
-    boost::optional<std::pair<std::vector<IndexValuePair>, double>> optional;
-    if (elements.size() > 0)
+    for(auto const& G : gradient)
+    {
+        PairIndexValue pair;
+        pair.index = G.first->index;
+        pair.value = signFactor * G.second;
+
+        elements.push_back(pair);
+
+        constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(G.first->index);
+
+        env->output->outputTrace("     Gradient for variable " + G.first->name + " in point "
+            + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": "
+            + std::to_string(signFactor * G.second));
+    }
+
+    std::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
+
+    if(elements.size() > 0)
         optional = std::make_pair(elements, constant);
 
-    delete nablag;
-
     elements.clear();
-    varNames.clear();
 
     return (optional);
 }
 
-void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
+void MIPSolverBase::createInteriorHyperplane([[maybe_unused]] Hyperplane hyperplane)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
-    std::vector<IndexValuePair> elements;
+    /*
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
+    std::vector<PairIndexValue> elements;
 
-    auto varNames = originalProblem->getVariableNames();
+    double constant =
+    env->model->originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
+                                                                                    hyperplane.generatedPoint);
 
-    double constant = originalProblem->calculateConstraintFunctionValue(hyperplane.sourceConstraintIndex,
-                                                                        hyperplane.generatedPoint);
-
-    auto tmpArray = originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
+    auto tmpArray = env->model->originalProblem->getProblemInstance()->calculateObjectiveFunctionGradient(
         &hyperplane.generatedPoint.at(0), -1, true);
-    int number = originalProblem->getNumberOfVariables();
-    ProcessInfo::getInstance().solutionStatistics.numberOfGradientEvaluations++;
+    int number = env->model->originalProblem->getNumberOfVariables();
+    env->solutionStatistics.numberOfGradientEvaluations++;
 
     for (int i = 0; i < number - 1; i++)
     {
         if (tmpArray[i] != 0)
         {
-            IndexValuePair pair;
-            pair.idx = i;
+            PairIndexValue pair;
+            pair.index = i;
             pair.value = tmpArray[i];
 
             elements.push_back(pair);
@@ -187,12 +285,12 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
         }
     }
 
-    IndexValuePair pair;
-    pair.idx = originalProblem->getNonlinearObjectiveVariableIdx();
+    PairIndexValue pair;
+    pair.index = env->model->originalProblem->getNonlinearObjectiveVariableIdx();
     pair.value = -1.0;
 
     elements.push_back(pair);
-    constant += hyperplane.generatedPoint.at(pair.idx);
+    constant += hyperplane.generatedPoint.at(pair.index);
 
     bool hyperplaneIsOk = true;
 
@@ -200,7 +298,7 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
     {
         if (E.value != E.value) //Check for NaN
         {
-            Output::getInstance().outputWarning(
+            env->output->outputWarning(
                 "     Warning: hyperplane not generated, NaN found in linear terms!");
 
             hyperplaneIsOk = false;
@@ -225,83 +323,79 @@ void MIPSolverBase::createInteriorHyperplane(Hyperplane hyperplane)
         currIter->totNumHyperplanes++;
     }
 
-    currIter->totNumHyperplanes = ProcessInfo::getInstance().getPreviousIteration()->totNumHyperplanes + currIter->numHyperplanesAdded;
-}
-
-std::vector<GeneratedHyperplane> *MIPSolverBase::getGeneratedHyperplanes()
-{
-    return (&generatedHyperplanes);
+    currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes +
+    currIter->numHyperplanesAdded;*/
 }
 
 void MIPSolverBase::presolveAndUpdateBounds()
 {
     auto newBounds = this->presolveAndGetNewBounds();
 
-    auto numVar = originalProblem->getNumberOfVariables();
-
-    for (int i = 0; i < numVar; i++)
+    for(int i = 0; i < env->reformulatedProblem->properties.numberOfVariables; i++)
     {
         auto currBounds = this->getCurrentVariableBounds(i);
 
         bool newLB = false;
         bool newUB = false;
 
-        if (newBounds.first.at(i) > currBounds.first)
+        if(newBounds.first.at(i) > currBounds.first)
             newLB = true;
-        if (newBounds.second.at(i) > currBounds.second)
+        if(newBounds.second.at(i) > currBounds.second)
             newUB = true;
 
-        if (newLB)
+        if(newLB)
         {
-            originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-            Output::getInstance().outputInfo(
-                "     Lower bound for variable (" + to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.first) + " to " + UtilityFunctions::toString(newBounds.first.at(i)));
+            env->reformulatedProblem->getVariable(i)->lowerBound = newBounds.first.at(i);
+            env->output->outputDebug("     Lower bound for variable (" + std::to_string(i) + ") updated from "
+                + Utilities::toString(currBounds.first) + " to " + Utilities::toString(newBounds.first.at(i)));
 
-            if (!originalProblem->hasVariableBoundsBeenTightened(i))
+            if(!env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened)
             {
-                originalProblem->setVariableBoundsAsTightened(i);
-                ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
+                env->reformulatedProblem->allVariables[i]->properties.hasLowerBoundBeenTightened = true;
+                env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
-        if (newUB)
+        if(newUB)
         {
-            originalProblem->setVariableUpperBound(i, newBounds.second.at(i));
-            Output::getInstance().outputInfo(
-                "     Upper bound for variable (" + to_string(i) + ") updated from " + UtilityFunctions::toString(currBounds.second) + " to " + UtilityFunctions::toString(newBounds.second.at(i)));
+            env->reformulatedProblem->getVariable(i)->upperBound = newBounds.second.at(i);
+            env->output->outputDebug("     Upper bound for variable (" + std::to_string(i) + ") updated from "
+                + Utilities::toString(currBounds.second) + " to " + Utilities::toString(newBounds.second.at(i)));
 
-            if (!originalProblem->hasVariableBoundsBeenTightened(i))
+            if(!env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened)
             {
-                originalProblem->setVariableBoundsAsTightened(i);
-                ProcessInfo::getInstance().solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
+                env->reformulatedProblem->allVariables[i]->properties.hasUpperBoundBeenTightened = true;
+                env->solutionStatistics.numberOfVariableBoundsTightenedInPresolve++;
             }
         }
 
-        if (Settings::getInstance().getBoolSetting("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
+        if(env->settings->getSetting<bool>("MIP.Presolve.UpdateObtainedBounds", "Dual") && (newLB || newUB))
         {
             updateVariableBound(i, newBounds.first.at(i), newBounds.second.at(i));
-            Output::getInstance().outputInfo("     Bounds updated also in MIP problem");
+            env->output->outputDebug("     Bounds updated also in MIP problem");
         }
     }
+
+    env->reformulatedProblem->doFBBT();
 }
 
-void MIPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-    if (isVariablesFixed)
+    if(isVariablesFixed)
     {
         unfixVariables();
     }
 
-    int size = variableIndexes.size();
+    auto size = variableIndexes.size();
 
-    if (size == 0)
+    if(size == 0)
         return;
 
-    vector<pair<double, double>> originalBounds(size);
+    std::vector<PairDouble> originalBounds(size);
 
     activateDiscreteVariables(false);
 
-    for (int i = 0; i < size; i++)
+    for(size_t i = 0; i < size; i++)
     {
         originalBounds.at(i) = this->getCurrentVariableBounds(variableIndexes.at(i));
         this->fixVariable(variableIndexes.at(i), variableValues.at(i));
@@ -315,55 +409,14 @@ void MIPSolverBase::fixVariables(std::vector<int> variableIndexes, std::vector<d
 
 void MIPSolverBase::unfixVariables()
 {
-    for (int i = 0; i < fixedVariableIndexes.size(); i++)
+    for(size_t i = 0; i < fixedVariableIndexes.size(); i++)
     {
         updateVariableBound(fixedVariableIndexes.at(i), fixedVariableOriginalBounds.at(i).first,
-                            fixedVariableOriginalBounds.at(i).second);
+            fixedVariableOriginalBounds.at(i).second);
     }
 
     isVariablesFixed = false;
 }
 
-void MIPSolverBase::updateNonlinearObjectiveFromPrimalDualBounds()
-{
-    if (!originalProblem->isObjectiveFunctionNonlinear())
-    {
-        return;
-    }
-
-    auto varIdx = originalProblem->getNonlinearObjectiveVariableIdx();
-
-    auto newLB = ProcessInfo::getInstance().getDualBound();
-    auto newUB = ProcessInfo::getInstance().getPrimalBound();
-
-    auto currBounds = this->getCurrentVariableBounds(varIdx);
-
-    if (newLB > currBounds.first || newUB < currBounds.second)
-    {
-        this->updateVariableBound(varIdx, newLB, newUB);
-        Output::getInstance().outputInfo(
-            "     Bounds for nonlinear objective function updated to " + UtilityFunctions::toString(newLB) + " and " + UtilityFunctions::toString(newUB));
-    }
-}
-
-void MIPSolverBase::createIntegerCut(std::vector<int> binaryIndexes)
-{
-    std::vector<IndexValuePair> elements;
-
-    for (int i = 0; i < binaryIndexes.size(); i++)
-    {
-        IndexValuePair pair;
-        pair.idx = binaryIndexes.at(i);
-        pair.value = 1.0;
-
-        elements.push_back(pair);
-    }
-
-    this->addLinearConstraint(elements, -(binaryIndexes.size() - 1.0));
-    ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
-}
-
-int MIPSolverBase::getNumberOfOpenNodes()
-{
-    return (ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes);
-}
+int MIPSolverBase::getNumberOfOpenNodes() { return (env->solutionStatistics.numberOfOpenNodes); }
+} // namespace SHOT

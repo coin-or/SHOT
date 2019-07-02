@@ -3,175 +3,649 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "NLPSolverIpoptBase.h"
 
+#include "../Output.h"
+#include "../Settings.h"
+#include "../Utilities.h"
+
+namespace SHOT
+{
+
+using namespace Ipopt;
+
+IpoptProblem::IpoptProblem(EnvironmentPtr envPtr, NLPSolverIpoptBase* solver, ProblemPtr problem)
+    : env(envPtr), ipoptSolver(solver), sourceProblem(problem)
+{
+}
+
+bool IpoptProblem::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style)
+{
+    n = sourceProblem->properties.numberOfVariables;
+    m = sourceProblem->properties.numberOfNumericConstraints;
+
+    nnz_jac_g = 0;
+
+    for(auto& E : *sourceProblem->getConstraintsJacobianSparsityPattern())
+    {
+        nnz_jac_g += E.second.size();
+    }
+
+    nnz_h_lag = sourceProblem->getLagrangianHessianSparsityPattern()->size();
+
+    // use the C style indexing (0-based)
+    index_style = TNLP::C_STYLE;
+
+    return (true);
+}
+
+bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, Number* g_l, Number* g_u)
+{
+    for(int i = 0; i < n; i++)
+    {
+        x_l[i] = ipoptSolver->lowerBounds[i];
+        x_u[i] = ipoptSolver->upperBounds[i];
+    }
+
+    // Ipopt interprets any number greater than nlp_upper_bound_inf as
+    // infinity. The default value of nlp_upper_bound_inf and nlp_lower_bound_inf
+    // is 1e19 and can be changed through ipopt options.
+    // e.g. g_u[0] = 2e19;
+
+    for(int i = 0; i < m; i++)
+    {
+        auto constraint = std::dynamic_pointer_cast<NumericConstraint>(sourceProblem->getConstraint(i));
+
+        g_l[i] = constraint->valueLHS;
+        g_u[i] = constraint->valueRHS;
+    }
+
+    return (true);
+}
+
+// returns the initial point for the problem
+bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init_z, [[maybe_unused]] Number* z_L,
+    [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m, [[maybe_unused]] bool init_lambda,
+    [[maybe_unused]] Number* lambda)
+{
+    assert(init_x == true);
+    assert(init_z == false);
+    assert(init_lambda == false);
+
+    std::vector<bool> isInitialized(n, false);
+
+    for(size_t k = 0; k < ipoptSolver->startingPointVariableIndexes.size(); k++)
+    {
+        int variableIndex = ipoptSolver->startingPointVariableIndexes[k];
+
+        double variableValue = ipoptSolver->startingPointVariableValues[k];
+
+        double variableLB = sourceProblem->getVariableLowerBound(variableIndex);
+        double variableUB = sourceProblem->getVariableUpperBound(variableIndex);
+
+        if(variableUB == SHOT_DBL_MAX)
+        {
+            if(variableValue < variableLB)
+            {
+                env->output->outputCritical("Initial value " + std::to_string(variableValue)
+                    + " for variable with index " + std::to_string(variableIndex) + " is less than the lower bound "
+                    + std::to_string(variableLB));
+                continue;
+            }
+        }
+        else if(variableLB == SHOT_DBL_MIN)
+        {
+            if(variableValue > variableUB)
+            {
+                env->output->outputCritical("Initial value " + std::to_string(variableValue)
+                    + " for variable with index " + std::to_string(variableIndex) + " is larger than the upper bound "
+                    + std::to_string(variableUB));
+                continue;
+            }
+        }
+        else
+        {
+            if(variableValue < variableLB || variableValue > variableUB)
+            {
+                env->output->outputCritical("Initial value " + std::to_string(variableValue)
+                    + " for variable with index " + std::to_string(variableIndex) + " is not within variable bounds ["
+                    + std::to_string(variableLB) + "," + std::to_string(variableUB));
+                continue;
+            }
+        }
+
+        x[variableIndex] = variableValue;
+        isInitialized[variableIndex] = true;
+    }
+
+    double defaultInitValue = 1.7171; // TODO: why?
+
+    for(int k = 0; k < n; k++)
+    {
+        if(isInitialized[k])
+            continue;
+
+        double variableLB = sourceProblem->getVariableLowerBound(k);
+        double variableUB = sourceProblem->getVariableUpperBound(k);
+
+        if(variableUB == SHOT_DBL_MAX)
+        {
+            if(defaultInitValue > variableLB)
+                x[k] = variableLB;
+            else
+                x[k] = defaultInitValue;
+        }
+        else if(variableLB == SHOT_DBL_MIN)
+        {
+            if(defaultInitValue > variableUB)
+                x[k] = variableUB;
+            else
+                x[k] = defaultInitValue;
+        }
+        else if(variableLB <= defaultInitValue && defaultInitValue <= variableUB)
+            x[k] = variableUB;
+        else if(variableLB > defaultInitValue)
+            x[k] = variableLB;
+        else
+            x[k] = variableUB;
+    }
+
+    return (true);
+}
+
+// Returns the value of the objective function
+bool IpoptProblem::eval_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number& obj_value)
+{
+    VectorDouble vectorPoint(n);
+
+    for(int i = 0; i < n; i++)
+        vectorPoint[i] = x[i];
+
+    obj_value = sourceProblem->objectiveFunction->calculateValue(vectorPoint);
+
+    return (true);
+}
+
+// Returns the gradient of the objective function
+bool IpoptProblem::eval_grad_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number* grad_f)
+{
+    VectorDouble vectorPoint(n);
+
+    for(int i = 0; i < n; i++)
+        vectorPoint[i] = x[i];
+
+    for(int i = 0; i < n; i++)
+        grad_f[i] = 0.0;
+
+    for(auto& G : sourceProblem->objectiveFunction->calculateGradient(vectorPoint, false))
+        grad_f[G.first->index] = G.second;
+
+    return (true);
+}
+
+// Return the value of the constraints
+bool IpoptProblem::eval_g(Index n, const Number* x, [[maybe_unused]] bool new_x, Index m, Number* g)
+{
+    VectorDouble vectorPoint(n);
+
+    for(int i = 0; i < n; i++)
+        vectorPoint[i] = x[i];
+
+    for(int i = 0; i < m; i++)
+        g[i] = 0.0;
+
+    for(int i = 0; i < m; i++)
+        g[i] = sourceProblem->numericConstraints[i]->calculateFunctionValue(vectorPoint);
+
+    return (true);
+}
+
+// Return the structure or values of the jacobian
+bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool new_x, [[maybe_unused]] Index m,
+    Index nele_jac, Index* iRow, Index* jCol, Number* values)
+{
+    // The structure
+    if(values == nullptr)
+    {
+        int counter = 0;
+
+        jacobianCounterPlacement.clear();
+
+        for(auto& C : sourceProblem->numericConstraints)
+        {
+            auto jacobian = C->getGradientSparsityPattern();
+
+            for(auto& G : *jacobian)
+            {
+                iRow[counter] = C->index;
+                jCol[counter] = G->index;
+
+                jacobianCounterPlacement.emplace(std::make_pair(C->index, G->index), counter);
+                counter++;
+            }
+        }
+
+        return (true);
+    }
+
+    // The values
+
+    VectorDouble vectorPoint(n);
+
+    for(int i = 0; i < n; i++)
+        vectorPoint[i] = x[i];
+
+    for(int i = 0; i < nele_jac; i++)
+        values[i] = 0.0;
+
+    for(auto& C : sourceProblem->numericConstraints)
+    {
+        auto jacobian = C->calculateGradient(vectorPoint, false);
+
+        for(auto& G : jacobian)
+        {
+            int location = jacobianCounterPlacement[std::make_pair(C->index, G.first->index)];
+
+            values[location] += G.second;
+        }
+    }
+
+    return (true);
+}
+
+// Return the structure or values of the Hessian of the Langragian
+bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x, Number obj_factor,
+    [[maybe_unused]] Index m, const Number* lambda, [[maybe_unused]] bool new_lambda, Index nele_hess, Index* iRow,
+    Index* jCol, Number* values)
+{
+    // The structure
+    if(values == nullptr)
+    {
+        int counter = 0;
+        lagrangianHessianCounterPlacement.clear();
+
+        for(auto& E : *sourceProblem->getLagrangianHessianSparsityPattern())
+        {
+            assert(E.first->index <= E.second->index);
+
+            iRow[counter] = E.first->index;
+            jCol[counter] = E.second->index;
+
+            lagrangianHessianCounterPlacement.emplace(std::make_pair(E.first->index, E.second->index), counter);
+
+            counter++;
+        }
+
+        return (true);
+    }
+
+    // The values
+
+    VectorDouble vectorPoint(n);
+
+    for(int i = 0; i < n; i++)
+        vectorPoint[i] = x[i];
+
+    for(int i = 0; i < nele_hess; i++)
+        values[i] = 0.0;
+
+    if(obj_factor != 0.0)
+    {
+        for(auto& E : sourceProblem->objectiveFunction->calculateHessian(vectorPoint, false))
+        {
+            int location
+                = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+
+            values[location] = obj_factor * E.second;
+        }
+    }
+
+    for(auto& C : sourceProblem->numericConstraints)
+    {
+        if(C->properties.classification == E_ConstraintClassification::Linear)
+            continue;
+
+        if(lambda[C->index] == 0.0)
+            continue;
+
+        for(auto& E : C->calculateHessian(vectorPoint, false))
+        {
+            int location
+                = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+
+            values[location] += lambda[C->index] * E.second;
+        }
+    }
+
+    return (true);
+}
+
+bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, [[maybe_unused]] bool& use_x_scaling,
+    [[maybe_unused]] Index n, [[maybe_unused]] Number* x_scaling, [[maybe_unused]] bool& use_g_scaling,
+    [[maybe_unused]] Index m, [[maybe_unused]] Number* g_scaling)
+{
+    obj_scaling = sourceProblem->objectiveFunction->properties.isMinimize ? 1.0 : -1.0;
+
+    use_x_scaling = false;
+    use_g_scaling = false;
+
+    return (true);
+}
+
+void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index n, const Number* x,
+    [[maybe_unused]] const Number* z_L, [[maybe_unused]] const Number* z_U, [[maybe_unused]] Index m,
+    [[maybe_unused]] const Number* g, [[maybe_unused]] const Number* lambda, Number obj_value,
+    [[maybe_unused]] const IpoptData* ip_data, [[maybe_unused]] IpoptCalculatedQuantities* ip_cq)
+{
+    int numberOfVariables = sourceProblem->properties.numberOfVariables;
+
+    switch(status)
+    {
+    case SUCCESS:
+        solutionDescription
+            = "Algorithm terminated normally at a locally optimal point satisfying the convergence tolerances.";
+
+        solutionStatus = E_NLPSolutionStatus::Optimal;
+        variableSolution = VectorDouble(numberOfVariables);
+
+        for(int i = 0; i < numberOfVariables; i++)
+            variableSolution[i] = x[i];
+
+        objectiveValue = obj_value;
+        hasSolution = true;
+
+        break;
+
+    case MAXITER_EXCEEDED:
+        solutionDescription = "Maximum number of iterations exceeded.";
+
+        solutionStatus = E_NLPSolutionStatus::IterationLimit;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case STOP_AT_TINY_STEP:
+        solutionDescription = "Algorithm proceeds with very little progress.";
+
+        solutionStatus = E_NLPSolutionStatus::IterationLimit;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case STOP_AT_ACCEPTABLE_POINT:
+        solutionDescription = "Algorithm stopped at a point that was converged, not to desired tolerances, but to "
+                              "acceptable tolerances.";
+
+        solutionStatus = E_NLPSolutionStatus::Feasible;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case LOCAL_INFEASIBILITY:
+        solutionDescription = "Algorithm converged to a point of local infeasibility. Problem may be infeasible.";
+
+        solutionStatus = E_NLPSolutionStatus::Infeasible;
+
+        break;
+
+    case USER_REQUESTED_STOP:
+        solutionDescription = "The user requested a premature termination of the optimization.";
+
+        solutionStatus = E_NLPSolutionStatus::Error;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case DIVERGING_ITERATES:
+        solutionDescription = "It seems that the iterates diverge.";
+
+        solutionStatus = E_NLPSolutionStatus::Unbounded;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case RESTORATION_FAILURE:
+        solutionDescription = "Restoration phase failed, algorithm doesn't know how to proceed.";
+
+        solutionStatus = E_NLPSolutionStatus::Error;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case ERROR_IN_STEP_COMPUTATION:
+        solutionDescription = "An unrecoverable error occurred while Ipopt tried to compute the search direction.";
+
+        solutionStatus = E_NLPSolutionStatus::Error;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case INVALID_NUMBER_DETECTED:
+        solutionDescription = "Algorithm received an invalid number (such as NaN or Inf) from the NLP.";
+
+        solutionStatus = E_NLPSolutionStatus::Error;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    case INTERNAL_ERROR:
+        solutionDescription = "An unknown internal error occurred.";
+
+        solutionStatus = E_NLPSolutionStatus::Error;
+
+        if(x != nullptr)
+        {
+            hasSolution = true;
+            variableSolution = VectorDouble(numberOfVariables);
+
+            for(int i = 0; i < numberOfVariables; i++)
+                variableSolution[i] = x[i];
+
+            objectiveValue = obj_value;
+        }
+
+        break;
+
+    default:
+        solutionDescription = "Unknown solution status.";
+
+        solutionStatus = E_NLPSolutionStatus::Error;
+    }
+
+    env->output->outputDebug("Ipopt terminated with status: " + solutionDescription);
+}
+
 E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 {
-    Output::getInstance().outputInfo("     Starting solution of Ipopt problem.");
-
-    auto timeLimit = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
+    env->output->outputDebug(" Starting solution of Ipopt problem.");
 
     E_NLPSolutionStatus status;
 
-    if (IpoptNLPSolver != NULL)
-    {
-        delete IpoptNLPSolver;
-        IpoptNLPSolver = NULL;
-    }
-
-    IpoptNLPSolver = new IpoptSolver();
-
     try
     {
-        IpoptNLPSolver->osinstance = NLPProblem->getProblemInstance();
         updateSettings();
 
-        std::string solStatus;
+        ipoptProblem = std::make_shared<IpoptProblem>(env, this, sourceProblem);
 
-        try
+        ipoptApplication = std::make_unique<Ipopt::IpoptApplication>();
+
+        setInitialSettings();
+
+        Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize();
+
+        if(ipoptStatus != Ipopt::Solve_Succeeded)
         {
-            IpoptNLPSolver->solve();
-            std::cout << "\e[A"; // Fix for removing unwanted output
-            std::cout << "\e[A";
-            solStatus = IpoptNLPSolver->osresult->getSolutionStatusType(0);
-        }
-        catch (ErrorClass e)
-        {
-            Output::getInstance().Output::getInstance().outputError("     Error when solving NLP problem with Ipopt", e.errormsg);
-            solStatus == "other";
+            env->output->outputError(" Error when initializing Ipopt.");
+            return (E_NLPSolutionStatus::Error);
         }
 
-        if (solStatus == "globallyOptimal")
+        ipoptStatus = ipoptApplication->OptimizeTNLP(ipoptProblem.get());
+
+        switch(ipoptStatus)
         {
-            Output::getInstance().outputWarning("     Global solution found to relaxed problem with Ipopt.");
+        case Ipopt::ApplicationReturnStatus::Solve_Succeeded:
             status = E_NLPSolutionStatus::Optimal;
-        }
+            env->output->outputDebug(" Global solution found with Ipopt.");
+            break;
 
-        if (solStatus == "locallyOptimal")
-        {
-            Output::getInstance().outputWarning("     Local solution found to relaxed problem with Ipopt.");
-            status = E_NLPSolutionStatus::Optimal;
-        }
-
-        if (solStatus == "optimal")
-        {
-            Output::getInstance().outputWarning("     Optimal solution found to relaxed problem with Ipopt.");
-            status = E_NLPSolutionStatus::Optimal;
-        }
-
-        if (solStatus == "bestSoFar")
-        {
-            Output::getInstance().outputWarning("     Feasible solution found to relaxed problem with Ipopt.");
+        case Ipopt::ApplicationReturnStatus::Feasible_Point_Found:
+        case Ipopt::ApplicationReturnStatus::Solved_To_Acceptable_Level:
             status = E_NLPSolutionStatus::Feasible;
-        }
+            env->output->outputDebug(" Feasible solution found with Ipopt.");
+            break;
 
-        if (solStatus == "stoppedByLimit")
-        {
-            Output::getInstance().outputWarning(
-                "     No solution found to problem with Ipopt: Time or iteration limit exceeded.");
+        case Ipopt::ApplicationReturnStatus::Infeasible_Problem_Detected:
+            status = E_NLPSolutionStatus::Infeasible;
+            env->output->outputDebug(" No solution found to problem with Ipopt: Infeasible problem detected.");
+            break;
+
+        case Ipopt::ApplicationReturnStatus::Maximum_Iterations_Exceeded:
             status = E_NLPSolutionStatus::IterationLimit;
-        }
+            env->output->outputDebug(" No solution found to problem with Ipopt: Iteration limit exceeded.");
+            break;
 
-        if (solStatus == "infeasible")
-        {
-            Output::getInstance().outputWarning(
-                "     No solution found to problem with Ipopt: Infeasible problem detected.");
-            status = E_NLPSolutionStatus::Infeasible;
-        }
+        case Ipopt::ApplicationReturnStatus::Maximum_CpuTime_Exceeded:
+            status = E_NLPSolutionStatus::TimeLimit;
+            env->output->outputDebug(" No solution found to problem with Ipopt: Time limit exceeded.");
+            break;
 
-        if (solStatus == "unsure")
-        {
-            Output::getInstance().Output::getInstance().outputError(
-                "     No solution found to problem with Ipopt, solution code: unsure.");
-            status = E_NLPSolutionStatus::Infeasible;
-        }
-
-        if (solStatus == "other")
-        {
-            Output::getInstance().outputWarning(
-                "     No solution found to problem with Ipopt, solution code: other.");
-            status = E_NLPSolutionStatus::Infeasible;
+        default:
+            status = E_NLPSolutionStatus::Error;
+            env->output->outputError(" Error when solving NLP problem with Ipopt.");
+            break;
         }
     }
-    catch (std::exception &e)
+    catch(std::exception& e)
     {
-        if (IpoptNLPSolver != NULL)
-        {
-            delete IpoptNLPSolver;
-            IpoptNLPSolver = NULL;
-        }
-
-        Output::getInstance().Output::getInstance().outputError("     Error when solving relaxed problem with Ipopt!", e.what());
+        env->output->outputError(" Error when solving relaxed problem with Ipopt!", e.what());
         status = E_NLPSolutionStatus::Error;
     }
-    catch (...)
+    catch(...)
     {
-        if (IpoptNLPSolver != NULL)
-        {
-            delete IpoptNLPSolver;
-            IpoptNLPSolver = NULL;
-        }
-
-        Output::getInstance().Output::getInstance().outputError("     Unspecified error when solving relaxed problem with Ipopt!");
+        env->output->outputError(" Unspecified error when solving relaxed problem with Ipopt!");
         status = E_NLPSolutionStatus::Error;
     }
 
-    Output::getInstance().outputInfo("     Finished solution of Ipopt problem.");
+    env->output->outputDebug(" Finished solution of Ipopt problem.");
 
     return (status);
 }
 
-double NLPSolverIpoptBase::getSolution(int i)
-{
-    double value = IpoptNLPSolver->osresult->getVarValue(0, i);
-    return (value);
-}
+double NLPSolverIpoptBase::getSolution(int i) { return (ipoptProblem->variableSolution[i]); }
 
-double NLPSolverIpoptBase::getObjectiveValue()
-{
-    double value = IpoptNLPSolver->osresult->getObjValue(0, 0);
-    return (value);
-}
+double NLPSolverIpoptBase::getObjectiveValue() { return (ipoptProblem->objectiveValue); }
 
-void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
 {
     startingPointVariableIndexes = variableIndexes;
     startingPointVariableValues = variableValues;
 
     int startingPointSize = startingPointVariableIndexes.size();
 
-    if (startingPointSize == 0)
+    if(startingPointSize == 0)
         return;
 
-    auto lbs = NLPProblem->getVariableLowerBounds();
-    auto ubs = NLPProblem->getVariableUpperBounds();
+    env->output->outputDebug(" Adding starting points to Ipopt.");
 
-    Output::getInstance().outputInfo("     Adding starting points to Ipopt.");
-
-    for (int k = 0; k < startingPointSize; k++)
+    for(int k = 0; k < startingPointSize; k++)
     {
         int currVarIndex = startingPointVariableIndexes.at(k);
         auto currPt = startingPointVariableValues.at(k);
 
-        auto currLB = lbs.at(currVarIndex);
-        auto currUB = ubs.at(currVarIndex);
+        auto currLB = sourceProblem->getVariableLowerBound(currVarIndex);
+        auto currUB = sourceProblem->getVariableUpperBound(currVarIndex);
 
-        // Nonlinear objective function variable are not used in the NLP problem for Ipopt
-        if (NLPProblem->isObjectiveFunctionNonlinear() && currVarIndex == NLPProblem->getNonlinearObjectiveVariableIdx())
+        if(currPt > currUB)
         {
-            continue;
-        }
-
-        if (currPt > currUB)
-        {
-            Output::getInstance().outputWarning(
-                "       Starting point value for variable " + to_string(currVarIndex) + " is larger than ub: " + UtilityFunctions::toString(currPt) + " > " + UtilityFunctions::toString(currUB) + "; resetting to ub.");
-            if (currUB == 1 && currPt > 1 && currPt < 1.00001)
+            env->output->outputDebug("  Starting point value for variable " + std::to_string(currVarIndex)
+                + " is larger than ub: " + Utilities::toString(currPt) + " > " + Utilities::toString(currUB)
+                + "; resetting to ub.");
+            if(currUB == 1 && currPt > 1 && currPt < 1.00001)
             {
                 currPt = 1;
             }
@@ -181,12 +655,13 @@ void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std:
             }
         }
 
-        if (currPt < currLB)
+        if(currPt < currLB)
         {
-            Output::getInstance().outputWarning(
-                "       Starting point value for variable " + to_string(currVarIndex) + " is smaller than lb: " + UtilityFunctions::toString(currPt) + " < " + UtilityFunctions::toString(currLB) + "; resetting to lb.");
+            env->output->outputDebug("  Starting point value for variable " + std::to_string(currVarIndex)
+                + " is smaller than lb: " + Utilities::toString(currPt) + " < " + Utilities::toString(currLB)
+                + "; resetting to lb.");
 
-            if (currLB == 0 && currPt < 0 && currPt > -0.00001)
+            if(currLB == 0 && currPt < 0 && currPt > -0.00001)
             {
                 currPt = 0;
             }
@@ -196,15 +671,13 @@ void NLPSolverIpoptBase::setStartingPoint(std::vector<int> variableIndexes, std:
             }
         }
 
-        osOption->setAnotherInitVarValue(currVarIndex, currPt);
+        startingPointVariableValues.at(k) = currPt;
 
-        Output::getInstance().outputInfo(
-            "       Starting point value for " + to_string(currVarIndex) + " set: " + UtilityFunctions::toString(currLB) + " < " + UtilityFunctions::toString(currPt) + " < " + UtilityFunctions::toString(currUB));
+        env->output->outputTrace("  Starting point value for " + std::to_string(currVarIndex) + " set: "
+            + Utilities::toString(currLB) + " < " + Utilities::toString(currPt) + " < " + Utilities::toString(currUB));
     }
 
-    osOption->setAnotherSolverOption("warm_start_init_point", "yes", "ipopt", "", "string", "");
-
-    Output::getInstance().outputInfo("     All starting points set.");
+    env->output->outputDebug(" All starting points set.");
 }
 
 void NLPSolverIpoptBase::clearStartingPoint()
@@ -215,246 +688,188 @@ void NLPSolverIpoptBase::clearStartingPoint()
     setSolverSpecificInitialSettings();
 }
 
-bool NLPSolverIpoptBase::isObjectiveFunctionNonlinear()
-{
-    return (NLPProblem->isObjectiveFunctionNonlinear());
-}
+VectorDouble NLPSolverIpoptBase::getVariableLowerBounds() { return (lowerBounds); }
 
-int NLPSolverIpoptBase::getObjectiveFunctionVariableIndex()
-{
-    return (NLPProblem->getNonlinearObjectiveVariableIdx());
-}
+VectorDouble NLPSolverIpoptBase::getVariableUpperBounds() { return (upperBounds); }
 
-std::vector<double> NLPSolverIpoptBase::getCurrentVariableLowerBounds()
-{
-    return (NLPProblem->getVariableLowerBounds());
-}
-
-std::vector<double> NLPSolverIpoptBase::getCurrentVariableUpperBounds()
-{
-    return (NLPProblem->getVariableUpperBounds());
-}
-
-NLPSolverIpoptBase::NLPSolverIpoptBase()
-{
-    IpoptNLPSolver = NULL;
-}
-
-NLPSolverIpoptBase::~NLPSolverIpoptBase()
-{
-    if (IpoptNLPSolver != NULL)
-    {
-        delete IpoptNLPSolver;
-        IpoptNLPSolver = NULL;
-    }
-
-    delete osOption;
-}
-
-std::vector<double> NLPSolverIpoptBase::getSolution()
-{
-    int numVar = NLPProblem->getNumberOfVariables();
-    std::vector<double> tmpPoint(numVar);
-
-    for (int i = 0; i < numVar; i++)
-    {
-        tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
-    }
-
-    return (tmpPoint);
-}
+VectorDouble NLPSolverIpoptBase::getSolution() { return (ipoptProblem->variableSolution); }
 
 void NLPSolverIpoptBase::setInitialSettings()
 {
-    osOption = new OSOption();
-
-    std::string IpoptSolver = "";
+    std::string subsolver = "";
 
     // Sets the linear solver used
-    switch (static_cast<ES_IpoptSolver>(Settings::getInstance().getIntSetting("Ipopt.LinearSolver", "Subsolver")))
+    switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
     {
-    case (ES_IpoptSolver::ma27):
-        IpoptSolver = "ma27";
+    case(ES_IpoptSolver::ma27):
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma27");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
-    case (ES_IpoptSolver::ma57):
-        IpoptSolver = "ma57";
+    case(ES_IpoptSolver::ma57):
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma57");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
-    case (ES_IpoptSolver::ma86):
-        IpoptSolver = "ma86";
+    case(ES_IpoptSolver::ma86):
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma86");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
-    case (ES_IpoptSolver::ma97):
-        IpoptSolver = "ma97";
+    case(ES_IpoptSolver::ma97):
+        ipoptApplication->Options()->SetStringValue("linear_solver", "ma97");
+        ipoptApplication->Options()->SetStringValue("linear_system_scaling", "mc19", true, true);
         break;
 
-    case (ES_IpoptSolver::mumps):
-        IpoptSolver = "mumps";
+    case(ES_IpoptSolver::mumps):
+        ipoptApplication->Options()->SetStringValue("linear_solver", "mumps");
         break;
+
+    case(ES_IpoptSolver::IpoptDefault):
     default:
-        IpoptSolver = "mumps";
+        break;
     }
 
-    osOption->setAnotherSolverOption("linear_solver", IpoptSolver, "ipopt", "", "string", "");
+    // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
 
-    switch (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") + 1)
+    switch(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")))
     {
-    case ENUM_OUTPUT_LEVEL_error:
-        osOption->setAnotherSolverOption("print_level", "0", "ipopt", "", "integer", "");
+    case E_LogLevel::Off:
+    case E_LogLevel::Critical:
+    case E_LogLevel::Error:
+    case E_LogLevel::Warning:
+    case E_LogLevel::Info:
+        ipoptApplication->Options()->SetIntegerValue("print_level", 0);
         break;
-    case ENUM_OUTPUT_LEVEL_summary:
-        osOption->setAnotherSolverOption("print_level", "2", "ipopt", "", "integer", "");
+    case E_LogLevel::Debug:
+        ipoptApplication->Options()->SetIntegerValue("print_level", 8);
         break;
-    case ENUM_OUTPUT_LEVEL_warning:
-        osOption->setAnotherSolverOption("print_level", "2", "ipopt", "", "integer", "");
-        break;
-    case ENUM_OUTPUT_LEVEL_info:
-        osOption->setAnotherSolverOption("print_level", "5", "ipopt", "", "integer", "");
-        break;
-    case ENUM_OUTPUT_LEVEL_debug:
-        osOption->setAnotherSolverOption("print_level", "8", "ipopt", "", "integer", "");
-        break;
-    case ENUM_OUTPUT_LEVEL_trace:
-        osOption->setAnotherSolverOption("print_level", "10", "ipopt", "", "integer", "");
-        break;
-    case ENUM_OUTPUT_LEVEL_detailed_trace:
-        osOption->setAnotherSolverOption("print_level", "12", "ipopt", "", "integer", "");
+    case E_LogLevel::Trace:
+        ipoptApplication->Options()->SetIntegerValue("print_level", 10);
         break;
     default:
         break;
     }
 
     // Suppress copyright message
-    if (Settings::getInstance().getIntSetting("Console.LogLevel", "Output") < 3)
+    if(env->settings->getSetting<int>("Console.LogLevel", "Output") > (int)E_LogLevel::Debug)
     {
-        osOption->setAnotherSolverOption("sb", "yes", "ipopt", "", "string", "");
+        ipoptApplication->Options()->SetStringValue("sb", "yes");
     }
 
-    //osOption->setAnotherSolverOption("fixed_variable_treatment", "make_constraint", "ipopt", "", "string", "");
+    // ipoptApplication->Options()->SetStringValue("derivative_test", "second-order");
+    // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "yes");
 
-    /*
-	 // Misc options
-	 osOption->setAnotherSolverOption("acceptable_iter", "15", "ipopt", "", "integer", "");
-	 osOption->setAnotherSolverOption("acceptable_obj_change_tol", "1E20", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("acceptable_compl_inf_tol", "0.01", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("acceptable_compl_viol_tol", "0.01", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("acceptable_dual_inf_tol", "100000000000000", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("barrier_tol_factor", "10", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("expect_infeasible_problem", "no", "ipopt", "", "string", "");
-	 osOption->setAnotherSolverOption("mu_init", "0.1", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("mu_max", "100000", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("mu_min", "1E-11", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("resto_failure_feasibility_threshold", "0", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("resto_penalty_parameter", "1000", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("resto_proximity_weight", "1", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("gamma_theta", "1E-5", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("required_infeasibility_reduction", "0.5", "ipopt", "", "double", "");
+    ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
+    ipoptApplication->Options()->SetStringValue("mu_strategy", "adaptive", true, true);
+    ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
 
-	 osOption->setAnotherSolverOption("constr_viol_tol", "0.01", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("dual_inf_tol", "1", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("compl_inf_tol", "0.0001", "ipopt", "", "double", "");
-	 osOption->setAnotherSolverOption("mu_strategy", "adaptive", "ipopt", "", "string", "");
-	 osOption->setAnotherSolverOption("mu_oracle", "quality-function", "ipopt", "", "string", "");
-	 osOption->setAnotherSolverOption("check_derivatives_for_naninf", "yes", "ipopt", "", "string", "");
-
-	 */
+    // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and Ipopt
+    // can make use of this
+    if(sourceProblem->properties.isMIQPProblem)
+        ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
 
     setSolverSpecificInitialSettings();
 }
 
-void NLPSolverIpoptBase::fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues)
+void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-
     fixedVariableIndexes = variableIndexes;
     fixedVariableValues = variableValues;
 
     int size = fixedVariableIndexes.size();
 
-    if (size == 0)
+    if(size == 0)
         return;
 
-    auto lbs = NLPProblem->getVariableLowerBounds();
-    auto ubs = NLPProblem->getVariableUpperBounds();
-
-    if (lowerBoundsBeforeFix.size() > 0 || upperBoundsBeforeFix.size() > 0)
+    if(lowerBoundsBeforeFix.size() > 0 || upperBoundsBeforeFix.size() > 0)
     {
-        Output::getInstance().outputWarning("     Old variable fixes remain for Ipopt solver, resetting!");
+        env->output->outputDebug(" Old variable fixes remain for Ipopt solver, resetting!");
         lowerBoundsBeforeFix.clear();
         upperBoundsBeforeFix.clear();
     }
 
-    Output::getInstance().outputInfo("     Defining fixed variables in Ipopt.");
+    env->output->outputDebug(" Defining fixed variables in Ipopt.");
 
-    for (int k = 0; k < size; k++)
+    for(int k = 0; k < size; k++)
     {
         int currVarIndex = fixedVariableIndexes.at(k);
-        auto currPt = fixedVariableValues.at(k);
+        double currPt = fixedVariableValues.at(k);
 
-        auto currLB = lbs.at(currVarIndex);
-        auto currUB = ubs.at(currVarIndex);
+        double currLB = sourceProblem->getVariableLowerBound(currVarIndex);
+        double currUB = sourceProblem->getVariableUpperBound(currVarIndex);
 
         lowerBoundsBeforeFix.push_back(currLB);
         upperBoundsBeforeFix.push_back(currUB);
 
-        currPt = UtilityFunctions::round(currPt);
+        currPt = std::round(currPt);
 
         // Fix for negative zero
-        if (currPt >= (0.0 - std::numeric_limits<double>::epsilon()) && currPt <= 0.0 + std::numeric_limits<double>::epsilon())
+        if(currPt >= (0.0 - std::numeric_limits<double>::epsilon())
+            && currPt <= 0.0 + std::numeric_limits<double>::epsilon())
         {
             currPt = 0.0;
         }
 
-        if (currPt > currUB)
+        if(currPt > currUB)
         {
-            Output::getInstance().outputWarning(
-                "       Fixed value for variable " + to_string(currVarIndex) + " is larger than ub: " + UtilityFunctions::toString(currPt) + " > " + to_string(currUB));
-            if (currUB == 1 && currPt > 1 && currPt < 1.00001)
-            {
+            env->output->outputWarning("  Fixed value for variable " + std::to_string(currVarIndex)
+                + " is larger than ub: " + Utilities::toString(currPt) + " > " + std::to_string(currUB));
+
+            if(currUB == 1 && currPt > 1 && currPt < 1.00001)
                 currPt = 1;
-            }
             else
-            {
                 continue;
-            }
         }
-        else if (currPt < currLB)
+        else if(currPt < currLB)
         {
-            Output::getInstance().outputWarning(
-                "       Fixed value for variable " + to_string(currVarIndex) + " is smaller than lb: " + UtilityFunctions::toString(currPt) + " < " + to_string(currLB));
+            env->output->outputWarning("  Fixed value for variable " + std::to_string(currVarIndex)
+                + " is smaller than lb: " + Utilities::toString(currPt) + " < " + std::to_string(currLB));
 
-            if (currLB == 0 && currPt < 0 && currPt > -0.00001)
-            {
+            if(currLB == 0 && currPt < 0 && currPt > -0.00001)
                 currPt = 0;
-            }
             else
-            {
                 continue;
-            }
         }
 
-        Output::getInstance().outputInfo(
-            "       Setting fixed value for variable " + to_string(currVarIndex) + ": " + UtilityFunctions::toString(currLB) + " <= " + UtilityFunctions::toString(currPt) + " <= " + UtilityFunctions::toString(currUB));
+        env->output->outputTrace("  Setting fixed value for variable " + std::to_string(currVarIndex) + ": "
+            + Utilities::toString(currLB) + " <= " + Utilities::toString(currPt)
+            + " <= " + Utilities::toString(currUB));
 
-        NLPProblem->fixVariable(currVarIndex, currPt);
+        if(currPt >= sourceProblem->getVariableLowerBound(currVarIndex)
+            && currPt <= sourceProblem->getVariableUpperBound(currVarIndex))
+        {
+            lowerBounds.at(currVarIndex) = currPt;
+            upperBounds.at(currVarIndex) = currPt;
+        }
+        else
+        {
+            env->output->outputWarning("     Cannot fix variable value for variable with index "
+                + std::to_string(currVarIndex) + ": not within bounds ("
+                + Utilities::toString(sourceProblem->getVariableLowerBound(currVarIndex)) + " < "
+                + Utilities::toString(currPt) + " < "
+                + Utilities::toString(sourceProblem->getVariableUpperBound(currVarIndex)));
+        }
     }
-    Output::getInstance().outputInfo("     All fixed variables defined.");
+
+    env->output->outputDebug(" All fixed variables defined.");
 }
 
 void NLPSolverIpoptBase::unfixVariables()
 {
-    Output::getInstance().outputInfo("     Starting reset of fixed variables in Ipopt.");
+    env->output->outputDebug(" Starting reset of fixed variables in Ipopt.");
 
-    for (int k = 0; k < fixedVariableIndexes.size(); k++)
+    for(size_t k = 0; k < fixedVariableIndexes.size(); k++)
     {
         int currVarIndex = fixedVariableIndexes.at(k);
         double newLB = lowerBoundsBeforeFix.at(k);
         double newUB = upperBoundsBeforeFix.at(k);
 
-        NLPProblem->setVariableLowerBound(currVarIndex, newLB);
-        NLPProblem->setVariableUpperBound(currVarIndex, newUB);
-        Output::getInstance().outputInfo(
-            "       Resetting initial bounds for variable " + to_string(currVarIndex) + " lb = " + UtilityFunctions::toString(newLB) + " ub = " + UtilityFunctions::toString(newUB));
+        lowerBounds[currVarIndex] = newLB;
+        upperBounds[currVarIndex] = newUB;
+
+        env->output->outputDebug("  Resetting initial bounds for variable " + std::to_string(currVarIndex)
+            + " lb = " + Utilities::toString(newLB) + " ub = " + Utilities::toString(newUB));
     }
 
     fixedVariableIndexes.clear();
@@ -462,23 +877,25 @@ void NLPSolverIpoptBase::unfixVariables()
     lowerBoundsBeforeFix.clear();
     upperBoundsBeforeFix.clear();
 
-    setInitialSettings(); // Must initialize it again since the class contains fixed variable bounds and starting points
+    setInitialSettings(); // Must initialize it again since the class contains fixed variable bounds and starting
+                          // points
 
-    Output::getInstance().outputInfo("     Reset of fixed variables in Ipopt completed.");
+    env->output->outputDebug(" Reset of fixed variables in Ipopt completed.");
 }
 
-void NLPSolverIpoptBase::updateSettings()
+void NLPSolverIpoptBase::updateVariableLowerBound(int variableIndex, double bound)
 {
-    IpoptNLPSolver->osoption = osOption;
-    IpoptNLPSolver->osol = osolwriter->writeOSoL(osOption);
+    lowerBounds[variableIndex] = bound;
 }
 
-void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName)
+void NLPSolverIpoptBase::updateVariableUpperBound(int variableIndex, double bound)
 {
-    osolwriter->m_bWhiteSpace = false;
-
-    stringstream ss;
-    ss << osolwriter->writeOSoL(osOption);
-
-    UtilityFunctions::writeStringToFile(fileName, ss.str());
+    upperBounds[variableIndex] = bound;
 }
+
+void NLPSolverIpoptBase::updateSettings() {}
+
+void NLPSolverIpoptBase::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
+
+void NLPSolverIpoptBase::saveProblemToFile([[maybe_unused]] std::string fileName) {}
+} // namespace SHOT

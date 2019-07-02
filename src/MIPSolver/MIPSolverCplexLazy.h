@@ -3,18 +3,16 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "IMIPSolver.h"
-#include "MIPSolverBase.h"
+#include "MIPSolverCplex.h"
 #include "MIPSolverCallbackBase.h"
 
-#include <functional>
-#include <thread>
+#include <mutex>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
@@ -24,55 +22,57 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
+namespace SHOT
+{
 class MIPSolverCplexLazy : public MIPSolverCplex
 {
-  public:
-    MIPSolverCplexLazy();
-    virtual ~MIPSolverCplexLazy();
+public:
+    MIPSolverCplexLazy(EnvironmentPtr envPtr);
+    ~MIPSolverCplexLazy() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual E_ProblemSolutionStatus solveProblem();
+    E_ProblemSolutionStatus solveProblem() override;
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
-  private:
-  protected:
+private:
+protected:
 };
 
 class CplexCallback : public IloCplex::Callback::Function, public MIPSolverCallbackBase
 {
 
-  private:
+private:
     std::mutex callbackMutex;
     /* Empty constructor is forbidden. */
-    CplexCallback();
+    CplexCallback() = delete;
 
     /* Copy constructor is forbidden. */
-    CplexCallback(const CplexCallback &tocopy);
+    CplexCallback(const CplexCallback& tocopy) = delete;
 
     IloNumVarArray cplexVars;
-    IloEnv cplexEnv;
     IloCplex cplexInst;
 
-    void
-    createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context &context);
-    void createIntegerCut(std::vector<int> binaryIndexes, const IloCplex::Callback::Context &context);
+    void createHyperplane(Hyperplane hyperplane, const IloCplex::Callback::Context& context);
+    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes,
+        const IloCplex::Callback::Context& context);
 
-  public:
+public:
     /* Constructor with data */
-    CplexCallback(const IloNumVarArray &vars, const IloEnv &env, const IloCplex &inst);
+    CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, const IloCplex& inst);
 
-    void addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context &context);
+    void addLazyConstraint(std::vector<SolutionPoint> candidatePoints, const IloCplex::Callback::Context& context);
 
     // This is the function that we have to implement and that Cplex will call
     // during the solution process at the places that we asked for.
-    virtual void invoke(const IloCplex::Callback::Context &context);
+    void invoke(const IloCplex::Callback::Context& context) override;
 
     /// Destructor
-    virtual ~CplexCallback();
+    ~CplexCallback() override;
 };
+} // namespace SHOT

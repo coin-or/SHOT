@@ -3,61 +3,72 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 
 #include "NLPSolverBase.h"
-#include "../OptProblems/OptProblemNLPMinimax.h"
+#include "../Tasks/TaskAddHyperplanes.h"
 
 #ifdef HAS_CPLEX
-#include "../MIPSolver/MIPSolverCplex.h"
+#include "MIPSolver/MIPSolverCplex.h"
 #endif
+
 #ifdef HAS_GUROBI
-#include "../MIPSolver/MIPSolverGurobi.h"
+#include "MIPSolver/MIPSolverGurobi.h"
 #endif
 
-#include "../MIPSolver/MIPSolverOsiCbc.h"
+#ifdef HAS_CBC
+#include "MIPSolver/MIPSolverOsiCbc.h"
+#endif
 
-#include "boost/math/tools/minima.hpp"
+#include "../Model/Problem.h"
 
+namespace SHOT
+{
 class NLPSolverCuttingPlaneMinimax : public NLPSolverBase
 {
-  public:
-    NLPSolverCuttingPlaneMinimax();
-    virtual ~NLPSolverCuttingPlaneMinimax();
+public:
+    NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr, ProblemPtr problem);
+    ~NLPSolverCuttingPlaneMinimax() override;
 
-    virtual void setStartingPoint(std::vector<int> variableIndexes, std::vector<double> variableValues);
-    virtual void clearStartingPoint();
+    void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
+    void clearStartingPoint() override;
 
     virtual bool isObjectiveFunctionNonlinear();
     virtual int getObjectiveFunctionVariableIndex();
 
-    virtual std::vector<double> getCurrentVariableLowerBounds();
-    virtual std::vector<double> getCurrentVariableUpperBounds();
+    VectorDouble getVariableLowerBounds() override;
+    VectorDouble getVariableUpperBounds() override;
 
-  private:
-    IMIPSolver *LPSolver;
+    void updateVariableLowerBound(int variableIndex, double bound) override;
+    void updateVariableUpperBound(int variableIndex, double bound) override;
 
-    virtual double getSolution(int i);
-    virtual std::vector<double> getSolution();
-    virtual double getObjectiveValue();
+    void saveProblemToFile(std::string fileName) override;
 
-    virtual bool createProblemInstance(OSInstance *origInstance);
+private:
+    std::unique_ptr<IMIPSolver> LPSolver;
+    ProblemPtr sourceProblem;
+    VectorString variableNames;
 
-    virtual void fixVariables(std::vector<int> variableIndexes, std::vector<double> variableValues);
+    double getSolution(int i) override;
+    VectorDouble getSolution() override;
+    double getObjectiveValue() override;
 
-    virtual void unfixVariables();
+    void fixVariables(VectorInteger variableIndexes, VectorDouble variableValues) override;
 
-    virtual E_NLPSolutionStatus solveProblemInstance();
+    void unfixVariables() override;
 
-    virtual void saveOptionsToFile(std::string fileName);
+    E_NLPSolutionStatus solveProblemInstance() override;
 
-    bool isProblemCreated;
+    void saveOptionsToFile(std::string fileName) override;
 
-    std::vector<double> solution;
+    VectorDouble solution;
     double objectiveValue = NAN;
+
+    bool createProblem(IMIPSolver* destinationProblem, ProblemPtr sourceProblem);
 };
+} // namespace SHOT

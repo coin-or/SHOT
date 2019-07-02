@@ -3,207 +3,257 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
-#include "SHOTSolver.h"
+#include "Environment.h"
+#include "Solver.h"
+#include "Report.h"
+#include "Utilities.h"
+#include "Output.h"
+#include "Settings.h"
+#include "Problem.h"
 
-int main(int argc, char *argv[])
+#include "argh.h"
+
+#include <filesystem>
+#include <iostream>
+#include <memory>
+#include <string>
+
+using namespace SHOT;
+
+int main(int argc, char* argv[])
 {
-    if (argc == 1)
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    argh::parser cmdl;
+    cmdl.add_params({ "--opt", "--osol" });
+    cmdl.add_params({ "--osrl", "--trc" });
+
+    cmdl.parse(argc, argv);
+
+    env->report->outputSolverHeader();
+
+    if(cmdl["--help"])
     {
-        Output::getInstance().outputSolverHeader();
-        std::cout << " Usage: filename.[osil|xml|gms] options.[opt|xml|osol] results.osrl results.trc" << std::endl;
+
+        env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
+                                "───────────────────────────────────╴\r\n");
+
+        env->output->outputCritical("  Usage: SHOT PROBLEMFILE [OPTIONS]");
+        env->output->outputCritical("");
+        env->output->outputCritical("  SHOT has been compiled with support for the following problem formats ");
+#ifdef HAS_OS
+        env->output->outputCritical("   OSiL (.osil or .xml) ");
+        env->output->outputCritical("   AMPL (.nl) ");
+#endif
+#ifdef HAS_GAMS
+        env->output->outputCritical("   GAMS (.gms) ");
+#endif
+        env->output->outputCritical("");
+        env->output->outputCritical("  The following command line options can also be used:");
+        env->output->outputCritical("");
+        env->output->outputCritical("   --opt [FILE]           Reads in options from FILE in GAMS format");
+        env->output->outputCritical("                          If FILE is empty, a new options file will be created");
+        env->output->outputCritical("   --osol [FILE]          Reads in options from FILE in OSoL format");
+        env->output->outputCritical("                          If FILE is empty, a new options file will be created");
+        env->output->outputCritical("   --osrl FILE            Sets the filename for the OSrL result file");
+        env->output->outputCritical("   --trc FILE             Sets the filename for the GAMS trace file");
 
         return (0);
     }
 
-    unique_ptr<SHOTSolver> solver(new SHOTSolver());
+    std::string filename;
+    std::filesystem::path resultFile, optionsFile, traceFile;
+
+    // Read or create options file
+
     bool defaultOptionsGenerated = false;
 
-    ProcessInfo::getInstance().startTimer("Total");
-
-    boost::filesystem::path resultFile, optionsFile, traceFile;
-
-    if (strlen(argv[1]) > 4 && strcmp(argv[1] + (strlen(argv[1]) - 4), ".dat") == 0)
+    if(cmdl("--opt") >> filename) // Have specified a opt-file
     {
-        // special handling when run on gams control file (.dat): don't read options file, don't write results or trace file
-        // TODO it would probably be better to have a specialized SHOT executable for running under GAMS than hijacking this main()
-    }
-    else if (argc == 2) // No options file specified, use or create defaults
-    {
-        bool GAMSOptFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.opt");
-        bool OSoLFileExists = boost::filesystem::exists(boost::filesystem::current_path() / "options.xml");
+        auto filepath = std::filesystem::current_path() / std::filesystem::path(filename);
 
-        if (GAMSOptFileExists)
+        if(std::filesystem::exists(filepath))
         {
-            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
+            optionsFile = filepath;
         }
-        else if (OSoLFileExists)
+        else
         {
-            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
+            env->output->outputCritical("  Options file not found: " + filepath.string());
+            return 0;
+        }
+    }
+    else if(cmdl["--opt"]) // Create a new opt-file
+    {
+        auto filepath = std::filesystem::current_path() / std::filesystem::path("options.opt");
+
+        if(std::filesystem::exists(filepath))
+        {
+            optionsFile = filepath;
+        }
+        else
+        {
+            // Create option file
+            if(!Utilities::writeStringToFile(filepath.string(), solver->getOptions()))
+            {
+                env->output->outputCritical("  Error when writing options file: " + filepath.string());
+                return 0;
+            }
+
+            defaultOptionsGenerated = true;
+            env->output->outputInfo("  Default options file written to: " + filepath.string());
+        }
+    }
+    else if(cmdl("--osol") >> filename) // Have specified a OSoL-file
+    {
+        auto filepath = std::filesystem::current_path() / std::filesystem::path(filename);
+
+        if(std::filesystem::exists(filepath))
+        {
+            optionsFile = filepath;
+            env->output->outputInfo("  Default options file written to: " + filepath.string());
+        }
+        else
+        {
+            env->output->outputCritical(" Options file not found: " + filepath.string());
+            return 0;
+        }
+    }
+    else if(cmdl["--osol"]) // Create a new OSoL-file
+    {
+        auto filepath = std::filesystem::current_path() / std::filesystem::path("options.xml");
+
+        if(std::filesystem::exists(filepath))
+        {
+            optionsFile = filepath;
         }
         else
         {
             // Create OSoL-file
-            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.xml");
-
-            if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getOSoL()))
+            if(!Utilities::writeStringToFile(filepath.string(), solver->getOptionsOSoL()))
             {
-                Output::getInstance().outputError(" Error when writing OSoL file: " + optionsFile.string());
-            }
-
-            // Create GAMS option file
-            optionsFile = boost::filesystem::path(boost::filesystem::current_path() / "options.opt");
-
-            if (!UtilityFunctions::writeStringToFile(optionsFile.string(), solver->getGAMSOptFile()))
-            {
-                Output::getInstance().outputError(" Error when writing options file: " + optionsFile.string());
-            }
-
-            defaultOptionsGenerated = true;
-        }
-    }
-    else if (argc == 3)
-    {
-        if (!boost::filesystem::exists(argv[2]))
-        {
-            Output::getInstance().outputSolverHeader();
-
-            return (0);
-        }
-
-        optionsFile = boost::filesystem::path(argv[2]);
-    }
-    else if (argc == 4)
-    {
-        if (!boost::filesystem::exists(argv[2]))
-        {
-            Output::getInstance().outputSolverHeader();
-            std::cout << " Options file " << argv[2] << " not found!" << std::endl;
-
-            return (0);
-        }
-
-        optionsFile = boost::filesystem::path(argv[2]);
-        resultFile = boost::filesystem::path(argv[3]);
-    }
-    else
-    {
-        if (!boost::filesystem::exists(argv[2]))
-        {
-            Output::getInstance().outputSolverHeader();
-            std::cout << " Options file " << argv[2] << " not found!" << std::endl;
-
-            return (0);
-        }
-
-        optionsFile = boost::filesystem::path(argv[2]);
-        resultFile = boost::filesystem::path(argv[3]);
-        traceFile = boost::filesystem::path(argv[4]);
-    }
-
-    try
-    {
-        if (!boost::filesystem::exists(argv[1]))
-        {
-            Output::getInstance().outputSolverHeader();
-            std::cout << " Problem file " << argv[1] << " not found!" << std::endl;
-
-            return (0);
-        }
-
-        std::string fileName = argv[1];
-
-        if (!defaultOptionsGenerated)
-        {
-            if (!optionsFile.empty() && !solver->setOptions(optionsFile.string()))
-            {
-                Output::getInstance().outputSolverHeader();
-                std::cout << " Cannot set options!" << std::endl;
-                return (0);
+                env->output->outputCritical("  Error when writing OSoL file: " + filepath.string());
+                return 0;
             }
         }
 
-        Output::getInstance().setLogLevels();
-
-        // Prints out the welcome message to the logging facility
-
-        if (!solver->setProblem(fileName))
-        {
-            Output::getInstance().outputError(" Error when reading problem file.");
-
-            return (0);
-        }
-
-        Output::getInstance().outputSolverHeader();
-        Output::getInstance().outputOptionsReport();
-        Output::getInstance().outputProblemInstanceReport();
-
-        if (!solver->solveProblem()) // solve problem
-        {
-            Output::getInstance().outputError(" Error when solving problem.");
-
-            return (0);
-        }
-
-        Output::getInstance().outputSolutionReport();
-
-        Output::getInstance().outputSummary("╶─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╴\r\n");
+        defaultOptionsGenerated = true;
     }
-    catch (const ErrorClass &eclass)
-    {
-        Output::getInstance().outputError(eclass.errormsg);
 
+    if(!defaultOptionsGenerated)
+    {
+        if(!optionsFile.empty() && !solver->setOptionsFromFile(optionsFile.string()))
+        {
+            env->output->outputCritical("  Cannot set options from file: " + optionsFile.string());
+            return (0);
+        }
+
+        env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
+            static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+    }
+
+    // Define result file locations
+
+    if(cmdl("--osrl") >> filename) // Have specified a OSrL-file
+    {
+        resultFile = std::filesystem::current_path() / std::filesystem::path(filename);
+    }
+
+    if(cmdl("--trc") >> filename) // Have specified a trace-file
+    {
+        traceFile = std::filesystem::current_path() / std::filesystem::path(filename);
+        std::cout << traceFile << std::endl;
+    }
+
+    // Read problem file
+
+    if(!cmdl(1) || !(cmdl(1) >> filename))
+    {
+        env->output->outputCritical("  No problem file specified.");
+        env->output->outputCritical("  Try 'SHOT --help' for more information.");
         return (0);
     }
 
-    std::string osrl = solver->getOSrL();
-
-    if (resultFile.empty())
+    if(!std::filesystem::exists(filename))
     {
-        boost::filesystem::path resultPath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
-        resultPath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
+
+        env->output->outputCritical("   Problem file " + filename + " not found!");
+        return (0);
+    }
+
+    if(!solver->setProblem(filename))
+    {
+        env->output->outputCritical("   Error when reading problem file.");
+        return (0);
+    }
+
+    env->report->outputOptionsReport();
+    env->report->outputProblemInstanceReport();
+
+    // try
+    //{
+    if(!solver->solveProblem()) // Solve the problem
+    {
+        env->output->outputCritical(" Error when solving problem.");
+        return (0);
+    }
+
+    env->report->outputSolutionReport();
+
+    env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
+                            "───────────────────────────────────╴\r\n");
+    //}
+    /*catch(const std::exception& error)
+    {
+        env->output->outputError(" Error when solving problem", error.what());
+        return (0);
+    }*/
+
+    std::string osrl = solver->getResultsOSrL();
+
+    if(resultFile.empty())
+    {
+        std::filesystem::path resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+        resultPath /= env->problem->name;
         resultPath = resultPath.replace_extension(".osrl");
-        Output::getInstance().outputSummary(" Results written to: " + resultPath.string());
 
-        if (!UtilityFunctions::writeStringToFile(resultPath.string(), osrl))
-        {
-            Output::getInstance().outputError(" Error when writing OSrL file: " + resultPath.string());
-        }
+        if(!Utilities::writeStringToFile(resultPath.string(), osrl))
+            env->output->outputCritical(" Error when writing OSrL file to: " + resultPath.string());
+        else
+            env->output->outputInfo(" Results written to: " + resultPath.string());
     }
     else
     {
-        Output::getInstance().outputSummary(" Results written to: " + resultFile.string());
-
-        if (!UtilityFunctions::writeStringToFile(resultFile.string(), osrl))
-        {
-            Output::getInstance().outputError(" Error when writing OSrL file: " + resultFile.string());
-        }
+        if(!Utilities::writeStringToFile(resultFile.string(), osrl))
+            env->output->outputCritical(" Error when writing OSrL file to: " + resultFile.string());
+        else
+            env->output->outputInfo(" Results written to: " + resultFile.string());
     }
 
-    std::string trace = solver->getTraceResult();
+    std::string trace = solver->getResultsTrace();
 
-    if (traceFile.empty())
+    if(traceFile.empty())
     {
-        boost::filesystem::path tracePath(Settings::getInstance().getStringSetting("ResultPath", "Output"));
-        tracePath /= ProcessInfo::getInstance().originalProblem->getProblemInstance()->getInstanceName();
+        std::filesystem::path tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+        tracePath /= env->problem->name;
         tracePath = tracePath.replace_extension(".trc");
-        Output::getInstance().outputSummary("                     " + tracePath.string());
 
-        if (!UtilityFunctions::writeStringToFile(tracePath.string(), trace))
-        {
-            Output::getInstance().outputError(" Error when writing trace file: " + tracePath.string());
-        }
+        if(!Utilities::writeStringToFile(tracePath.string(), trace))
+            env->output->outputCritical(" Error when writing trace file: " + tracePath.string());
+        else
+            env->output->outputInfo("                     " + tracePath.string());
     }
     else
     {
-        if (!UtilityFunctions::writeStringToFile(traceFile.string(), trace))
-        {
-            Output::getInstance().outputError(" Error when writing trace file: " + traceFile.string());
-        }
+        if(!Utilities::writeStringToFile(traceFile.string(), trace))
+            env->output->outputCritical(" Error when writing trace file: " + traceFile.string());
+        else
+            env->output->outputInfo("                     " + traceFile.string());
     }
 
     return (0);

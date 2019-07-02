@@ -3,68 +3,47 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "NLPSolverIpoptRelaxed.h"
 
-NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed()
+#include "../Settings.h"
+
+#include "../Model/Problem.h"
+
+namespace SHOT
 {
-    osolwriter = new OSoLWriter();
 
-    NLPProblem = new OptProblemNLPRelaxed();
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr)
+{
+    sourceProblem = source;
 
-    setInitialSettings();
+    for(auto& V : sourceProblem->allVariables)
+        originalVariableType.push_back(V->properties.type);
+
+    lowerBounds = sourceProblem->getVariableLowerBounds();
+    upperBounds = sourceProblem->getVariableUpperBounds();
 }
 
-NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
-{
-    delete osolwriter;
-    delete NLPProblem;
-}
-
-bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
-{
-    Output::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
-
-    dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
-
-    Output::getInstance().outputInfo("     Ipopt relaxed NLP problem created.");
-
-    return (true);
-}
+NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() = default;
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
-    auto constrTol = Settings::getInstance().getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
-    osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
-                                     "", "double", "");
+    ipoptApplication->Options()->SetNumericValue("constr_viol_tol",
+        env->settings->getSetting<double>("Ipopt.ConstraintViolationTolerance", "Subsolver") + 1e-12);
 
-    osOption->setAnotherSolverOption("tol",
-                                     UtilityFunctions::toStringFormat(
-                                         Settings::getInstance().getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
-                                     "ipopt", "", "double", "");
+    ipoptApplication->Options()->SetNumericValue(
+        "tol", env->settings->getSetting<double>("Ipopt.RelativeConvergenceTolerance", "Subsolver") + 1e-12);
 
-    osOption->setAnotherSolverOption("max_iter",
-                                     to_string(Settings::getInstance().getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "",
-                                     "integer", "");
+    ipoptApplication->Options()->SetIntegerValue(
+        "max_iter", env->settings->getSetting<int>("Ipopt.MaxIterations", "Subsolver"));
 
-    auto timeLimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
-    osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
-                                     "number", "");
+    ipoptApplication->Options()->SetNumericValue(
+        "max_cpu_time", env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal"));
 }
 
-std::vector<double> NLPSolverIpoptRelaxed::getSolution()
-{
-    int numVar = NLPProblem->getNumberOfVariables();
-    std::vector<double> tmpPoint(numVar);
-
-    for (int i = 0; i < numVar; i++)
-    {
-        tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
-    }
-
-    return (tmpPoint);
-}
+VectorDouble NLPSolverIpoptRelaxed::getSolution() { return (NLPSolverIpoptBase::getSolution()); }
+} // namespace SHOT

@@ -3,58 +3,72 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskAddHyperplanes.h"
 
-TaskAddHyperplanes::TaskAddHyperplanes(IMIPSolver *MIPSolver)
+#include "../Model/Constraints.h"
+#include "../Model/Problem.h"
+
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+namespace SHOT
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+
+TaskAddHyperplanes::TaskAddHyperplanes(EnvironmentPtr envPtr) : TaskBase(envPtr)
+{
+    env->timing->startTimer("DualStrategy");
     itersWithoutAddedHPs = 0;
 
-    this->MIPSolver = MIPSolver;
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
-TaskAddHyperplanes::~TaskAddHyperplanes()
-{
-}
+TaskAddHyperplanes::~TaskAddHyperplanes() = default;
 
 void TaskAddHyperplanes::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    this->MIPSolver = MIPSolver;
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    env->timing->startTimer("DualStrategy");
 
-    if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
+
+    if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
+        || !currIter->MIPSolutionLimitUpdated || itersWithoutAddedHPs > 5)
     {
         int addedHyperplanes = 0;
 
-        for (int k = ProcessInfo::getInstance().hyperplaneWaitingList.size(); k > 0; k--)
+        for(auto k = env->dualSolver->hyperplaneWaitingList.size(); k > 0; k--)
         {
-            if (addedHyperplanes >= Settings::getInstance().getIntSetting("HyperplaneCuts.MaxPerIteration", "Dual"))
+            if(addedHyperplanes >= env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual"))
                 break;
 
-            auto tmpItem = ProcessInfo::getInstance().hyperplaneWaitingList.at(k - 1);
+            auto tmpItem = env->dualSolver->hyperplaneWaitingList.at(k - 1);
 
-            if (tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
+            if(tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
             {
-                MIPSolver->createInteriorHyperplane(tmpItem);
+                env->dualSolver->MIPSolver->createInteriorHyperplane(tmpItem);
             }
             else
             {
-                MIPSolver->createHyperplane(tmpItem);
-
-                ProcessInfo::getInstance().addedHyperplanes.push_back(tmpItem);
-
-                addedHyperplanes++;
+                env->dualSolver->MIPSolver->createHyperplane(tmpItem);
             }
+
+            env->dualSolver->addGeneratedHyperplane(tmpItem);
+            addedHyperplanes++;
         }
 
-        ProcessInfo::getInstance().hyperplaneWaitingList.clear();
+        if(!env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
+        {
+            env->dualSolver->hyperplaneWaitingList.clear();
+        }
+
         itersWithoutAddedHPs = 0;
     }
     else
@@ -62,7 +76,7 @@ void TaskAddHyperplanes::run()
         itersWithoutAddedHPs++;
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskAddHyperplanes::getType()
@@ -70,3 +84,4 @@ std::string TaskAddHyperplanes::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

@@ -1,0 +1,10 @@
+CONTENTS
+
+   inlude/: CPPLapack header files
+      doc/: CPPLapack documentation files (see doc/html/index.html)
+     test/: CPPLapack test programs
+benchmark/: CPPLapack benchmark programs
+makefiles/: CPPLapack Makefile samples
+  contrib/: CPPLapack contribution programs
+packaging/: files for rpm and deb packaging
+    README: This file

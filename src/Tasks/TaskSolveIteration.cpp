@@ -3,216 +3,288 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskSolveIteration.h"
 
-TaskSolveIteration::TaskSolveIteration(IMIPSolver *MIPSolver)
+#include "../DualSolver.h"
+#include "../Iteration.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
+#include "../Utilities.h"
+
+#include "../MIPSolver/IMIPSolver.h"
+
+#include "../Model/Problem.h"
+
+namespace SHOT
 {
-    this->MIPSolver = MIPSolver;
+
+TaskSolveIteration::TaskSolveIteration(EnvironmentPtr envPtr) : TaskBase(envPtr)
+{
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        for(auto& V : env->reformulatedProblem->allVariables)
+        {
+            variableNames.push_back(V->name);
+        }
+    }
 }
 
-TaskSolveIteration::~TaskSolveIteration()
-{
-}
+TaskSolveIteration::~TaskSolveIteration() = default;
 
 void TaskSolveIteration::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    env->timing->startTimer("DualStrategy");
+    auto currIter = env->results->getCurrentIteration();
 
-    bool isMinimization = ProcessInfo::getInstance().originalProblem->isTypeOfObjectiveMinimize();
+    bool isMinimization
+        = env->reformulatedProblem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize;
 
     // Sets the iteration time limit
-    auto timeLim = Settings::getInstance().getDoubleSetting("TimeLimit", "Termination") - ProcessInfo::getInstance().getElapsedTime("Total");
-    MIPSolver->setTimeLimit(timeLim);
+    auto timeLim = env->settings->getSetting<double>("TimeLimit", "Termination") - env->timing->getElapsedTime("Total");
+    env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    if (ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if(env->dualSolver->useCutOff)
     {
-        if (isMinimization)
+        double cutOffValue;
+        double cutOffValueConstraint;
+
+        if(isMinimization)
         {
-            MIPSolver->setCutOff(
-                ProcessInfo::getInstance().getPrimalBound() + Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual"));
+            cutOffValue
+                = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+            cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
         else
         {
-            MIPSolver->setCutOff(
-                ProcessInfo::getInstance().getPrimalBound() - Settings::getInstance().getDoubleSetting("MIP.CutOffTolerance", "Dual"));
+            cutOffValue
+                = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+            cutOffValueConstraint = env->dualSolver->cutOffToUse;
+        }
+
+        env->dualSolver->MIPSolver->setCutOff(cutOffValue);
+
+        if(env->reformulatedProblem->objectiveFunction->properties.classification
+            != E_ObjectiveFunctionClassification::Quadratic)
+            env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
+    }
+
+    if(env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()
+        && env->settings->getSetting<bool>("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
+    {
+        auto newLB = env->results->getCurrentDualBound();
+        auto newUB = env->results->getPrimalBound();
+
+        auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(
+            env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex());
+
+        if(newLB > currBounds.first || newUB < currBounds.second)
+        {
+            env->dualSolver->MIPSolver->updateVariableBound(
+                env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex(), newLB, newUB);
+            env->output->outputDebug("     Bounds for nonlinear objective function updated to "
+                + Utilities::toString(newLB) + " and " + Utilities::toString(newUB));
         }
     }
 
-    if (Settings::getInstance().getBoolSetting("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
+    if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->hasPrimalSolution())
     {
-        MIPSolver->updateNonlinearObjectiveFromPrimalDualBounds();
+        env->dualSolver->MIPSolver->addMIPStart(env->results->primalSolution);
     }
 
-    if (MIPSolver->getDiscreteVariableStatus() && ProcessInfo::getInstance().primalSolutions.size() > 0)
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        MIPSolver->addMIPStart(ProcessInfo::getInstance().primalSolution);
-    }
-
-    if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
-    {
-        stringstream ss;
-        ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
+        std::stringstream ss;
+        ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
         ss << "/lp";
         ss << currIter->iterationNumber - 1;
         ss << ".lp";
-        MIPSolver->writeProblemToFile(ss.str());
+        env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
     }
 
-    Output::getInstance().outputInfo("     Solving dual problem.");
-    auto solStatus = MIPSolver->solveProblem();
-    Output::getInstance().outputInfo("     Dual problem solved.");
-
-    // Must update the pointer to the current iteration if we use the lazy strategy since new iterations have been created when solving
-    if (static_cast<ES_TreeStrategy>(Settings::getInstance().getIntSetting("TreeStrategy", "Dual")) == ES_TreeStrategy::SingleTree)
+    if(env->reformulatedProblem->properties.isLPProblem || env->reformulatedProblem->properties.isMILPProblem
+        || env->reformulatedProblem->properties.isMIQPProblem)
     {
-        currIter = ProcessInfo::getInstance().getCurrentIteration();
+        env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
     }
-    else // Must update the node stats if multi-tree strategy (otherwise it is done in the callbacks)
+
+    env->output->outputDebug("     Solving dual problem.");
+    auto solStatus = env->dualSolver->MIPSolver->solveProblem();
+    env->output->outputDebug("     Dual problem solved.");
+
+    // Must update the pointer to the current iteration if we use the lazy
+    // strategy since new iterations have been created when solving
+    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("TreeStrategy", "Dual"))
+        == ES_TreeStrategy::SingleTree)
     {
-        currIter->numberOfExploredNodes = MIPSolver->getNumberOfExploredNodes();
-        ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
-        ProcessInfo::getInstance().solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
-        //std::cout << "Nodes: " << ProcessInfo::getInstance().solutionStatistics.numberOfExploredNodes << std::endl;
+        currIter = env->results->getCurrentIteration();
+    }
+    else // Must update the node stats if multi-tree strategy (otherwise it is
+         // done in the callbacks)
+    {
+        currIter->numberOfExploredNodes = env->dualSolver->MIPSolver->getNumberOfExploredNodes();
+        env->solutionStatistics.numberOfExploredNodes += currIter->numberOfExploredNodes;
+        env->solutionStatistics.numberOfOpenNodes = currIter->numberOfOpenNodes;
     }
 
     currIter->solutionStatus = solStatus;
-    Output::getInstance().outputInfo("     Dual problem return code: " + to_string((int)solStatus));
+    env->output->outputDebug("     Dual problem return code: " + std::to_string((int)solStatus));
 
-    if (solStatus == E_ProblemSolutionStatus::Infeasible ||
-        solStatus == E_ProblemSolutionStatus::Error ||
-        solStatus == E_ProblemSolutionStatus::Abort ||
-        solStatus == E_ProblemSolutionStatus::CutOff ||
-        solStatus == E_ProblemSolutionStatus::Numeric ||
-        solStatus == E_ProblemSolutionStatus::Unbounded)
+    auto sols = env->dualSolver->MIPSolver->getAllVariableSolutions();
+
+    if(sols.size() > 0)
     {
-    }
-    else
-    {
-        auto sols = MIPSolver->getAllVariableSolutions();
+        env->output->outputDebug("        Number of solutions in solution pool: " + std::to_string(sols.size()));
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lpsolpt";
+            ss << currIter->iterationNumber - 1;
+            ss << ".txt";
+            Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
+        }
+
+        /*if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+        {
+            for(auto& S : sols)
+            {
+                S.point.pop_back();
+            }
+        }*/
+
         currIter->solutionPoints = sols;
 
-        if (sols.size() > 0)
+        currIter->objectiveValue = env->dualSolver->MIPSolver->getObjectiveValue();
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
-            if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
+            VectorDouble tmpObjValue;
+            VectorString tmpObjName;
+
+            tmpObjValue.push_back(env->dualSolver->MIPSolver->getObjectiveValue());
+            tmpObjName.push_back("objective");
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lpobjsol";
+            ss << currIter->iterationNumber - 1;
+            ss << ".txt";
+            Utilities::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
+        }
+
+        if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+        {
+            auto mostDevConstr = env->reformulatedProblem->getMaxNumericConstraintValue(
+                sols.at(0).point, env->reformulatedProblem->nonlinearConstraints);
+
+            currIter->maxDeviationConstraint = mostDevConstr.constraint->index;
+            currIter->maxDeviation = mostDevConstr.normalizedValue;
+
+            if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
-                stringstream ss;
-                ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
-                ss << "/lpsolpt";
-                ss << currIter->iterationNumber - 1;
-                ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(sols.at(0).point,
-                                                                ProcessInfo::getInstance().originalProblem->getVariableNames(), ss.str());
-            }
+                VectorDouble tmpMostDevValue;
+                VectorString tmpConstrIndex;
 
-            currIter->objectiveValue = MIPSolver->getObjectiveValue();
+                tmpMostDevValue.push_back(currIter->maxDeviation);
+                tmpConstrIndex.push_back(std::to_string(currIter->maxDeviationConstraint));
 
-            if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
-            {
-                std::vector<double> tmpObjValue;
-                std::vector<std::string> tmpObjName;
-
-                tmpObjValue.push_back(MIPSolver->getObjectiveValue());
-                tmpObjName.push_back("objective");
-
-                stringstream ss;
-                ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
-                ss << "/lpobjsol";
-                ss << currIter->iterationNumber - 1;
-                ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpObjValue, tmpObjName, ss.str());
-            }
-
-            auto mostDevConstr = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(sols.at(0).point);
-
-            currIter->maxDeviationConstraint = mostDevConstr.idx;
-            currIter->maxDeviation = mostDevConstr.value;
-
-            if (Settings::getInstance().getBoolSetting("Debug.Enable", "Output"))
-            {
-                std::vector<double> tmpMostDevValue;
-                std::vector<std::string> tmpConstrIndex;
-
-                tmpMostDevValue.push_back(mostDevConstr.value);
-                tmpConstrIndex.push_back(std::to_string(mostDevConstr.idx));
-
-                stringstream ss;
-                ss << Settings::getInstance().getStringSetting("Debug.Path", "Output");
+                std::stringstream ss;
+                ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
                 ss << "/lpmostdevm";
                 ss << currIter->iterationNumber - 1;
                 ss << ".txt";
-                UtilityFunctions::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
+                Utilities::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
             }
+        }
 
-            double tmpDualObjBound = MIPSolver->getDualObjectiveValue();
-            if (currIter->isMIP())
+        if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
+        {
+
+            double currentDualBound = env->dualSolver->MIPSolver->getDualObjectiveValue();
+            if(currIter->isMIP())
             {
-                DualSolution sol =
-                    {sols.at(0).point, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
-                     currIter->iterationNumber};
-                ProcessInfo::getInstance().addDualSolutionCandidate(sol);
+                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolverBound, currentDualBound,
+                    currIter->iterationNumber, false };
+                env->dualSolver->addDualSolutionCandidate(sol);
 
-                if (currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+                if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
                 {
-                    DualSolution sol =
-                        {sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal, currIter->objectiveValue,
-                         currIter->iterationNumber};
-                    ProcessInfo::getInstance().addDualSolutionCandidate(sol);
+                    DualSolution sol = { sols.at(0).point, E_DualSolutionSource::MIPSolutionOptimal,
+                        currIter->objectiveValue, currIter->iterationNumber, false };
+                    env->dualSolver->addDualSolutionCandidate(sol);
                 }
             }
             else
             {
-                DualSolution sol =
-                    {sols.at(0).point, E_DualSolutionSource::LPSolution, tmpDualObjBound,
-                     currIter->iterationNumber};
-                ProcessInfo::getInstance().addDualSolutionCandidate(sol);
+                DualSolution sol = { sols.at(0).point, E_DualSolutionSource::LPSolution, currentDualBound,
+                    currIter->iterationNumber, false };
+                env->dualSolver->addDualSolutionCandidate(sol);
             }
         }
     }
 
-    currIter->usedMIPSolutionLimit = MIPSolver->getSolutionLimit();
+    currIter->usedMIPSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
 
     // Update solution stats
-    if (currIter->type == E_IterationProblemType::MIP && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
+    if(currIter->isDualProblemDiscrete && currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
-        if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
+        if(env->reformulatedProblem->properties.isMIQPProblem)
         {
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMIQP++;
+            env->solutionStatistics.numberOfProblemsOptimalMIQP++;
+        }
+        else if(env->reformulatedProblem->properties.isMIQCQPProblem)
+        {
+            env->solutionStatistics.numberOfProblemsOptimalMIQCQP++;
         }
         else
         {
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsOptimalMILP++;
+            env->solutionStatistics.numberOfProblemsOptimalMILP++;
         }
     }
-    else if (currIter->type == E_IterationProblemType::Relaxed)
+    else if(!currIter->isDualProblemDiscrete)
     {
-        if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
+        if(env->reformulatedProblem->properties.isMIQPProblem)
         {
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsQP++;
+            env->solutionStatistics.numberOfProblemsQP++;
+        }
+        else if(env->reformulatedProblem->properties.isMIQCQPProblem)
+        {
+            env->solutionStatistics.numberOfProblemsQCQP++;
         }
         else
         {
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsLP++;
+            env->solutionStatistics.numberOfProblemsLP++;
         }
     }
-    else if (currIter->type == E_IterationProblemType::MIP && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
+    else if(currIter->isDualProblemDiscrete
+        && (currIter->solutionStatus == E_ProblemSolutionStatus::SolutionLimit
+               || currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit
+               || currIter->solutionStatus == E_ProblemSolutionStatus::NodeLimit))
     {
-        if (ProcessInfo::getInstance().originalProblem->isConstraintQuadratic(-1))
+
+        if(env->reformulatedProblem->properties.isMIQPProblem)
         {
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMIQP++;
+            env->solutionStatistics.numberOfProblemsFeasibleMIQP++;
+        }
+        else if(env->reformulatedProblem->properties.isMIQCQPProblem)
+        {
+            env->solutionStatistics.numberOfProblemsFeasibleMIQCQP++;
         }
         else
         {
-            ProcessInfo::getInstance().solutionStatistics.numberOfProblemsFeasibleMILP++;
+            env->solutionStatistics.numberOfProblemsFeasibleMILP++;
         }
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskSolveIteration::getType()
@@ -220,3 +292,4 @@ std::string TaskSolveIteration::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

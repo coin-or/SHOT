@@ -3,33 +3,41 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskCheckRelativeGap.h"
 
-TaskCheckRelativeGap::TaskCheckRelativeGap(std::string taskIDTrue)
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+namespace SHOT
 {
-	taskIDIfTrue = taskIDTrue;
+
+TaskCheckRelativeGap::TaskCheckRelativeGap(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+{
 }
 
-TaskCheckRelativeGap::~TaskCheckRelativeGap()
-{
-}
+TaskCheckRelativeGap::~TaskCheckRelativeGap() = default;
 
 void TaskCheckRelativeGap::run()
 {
-	if (ProcessInfo::getInstance().isRelativeObjectiveGapToleranceMet())
-	{
-		ProcessInfo::getInstance().terminationReason = E_TerminationReason::RelativeGap;
-		ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-	}
+    if(env->results->isRelativeObjectiveGapToleranceMet())
+    {
+        env->results->terminationReason = E_TerminationReason::RelativeGap;
+        env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since relative gap met requirements.";
+    }
 }
 
 std::string TaskCheckRelativeGap::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }
+} // namespace SHOT

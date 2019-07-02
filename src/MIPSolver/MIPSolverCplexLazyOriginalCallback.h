@@ -3,18 +3,15 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "IMIPSolver.h"
-#include "MIPSolverBase.h"
+#include "MIPSolverCplex.h"
 #include "MIPSolverCallbackBase.h"
 
-#include <functional>
-#include <thread>
 #include <mutex>
 
 #ifdef __GNUC__
@@ -25,71 +22,70 @@
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
 
+namespace SHOT
+{
 class MIPSolverCplexLazyOriginalCallback : public MIPSolverCplex
 {
-  public:
-    MIPSolverCplexLazyOriginalCallback();
-    virtual ~MIPSolverCplexLazyOriginalCallback();
+public:
+    MIPSolverCplexLazyOriginalCallback(EnvironmentPtr envPtr);
+    ~MIPSolverCplexLazyOriginalCallback() override;
 
-    virtual void checkParameters();
+    void checkParameters() override;
 
-    virtual void initializeSolverSettings();
+    void initializeSolverSettings() override;
 
-    virtual E_ProblemSolutionStatus solveProblem();
+    E_ProblemSolutionStatus solveProblem() override;
 
-    virtual int increaseSolutionLimit(int increment);
-    virtual void setSolutionLimit(long limit);
-    virtual int getSolutionLimit();
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
 
     std::mutex callbackMutex2;
 
-  private:
-    IloRangeArray cplexLazyConstrs;
-
-  protected:
+private:
+protected:
 };
 
 class HCallbackI : public IloCplex::HeuristicCallbackI, public MIPSolverCallbackBase
 {
     IloNumVarArray cplexVars;
 
-  private:
-  public:
-    IloCplex::CallbackI *duplicateCallback() const;
-    HCallbackI(IloEnv env, IloNumVarArray xx2);
-    void main();
+private:
+public:
+    IloCplex::CallbackI* duplicateCallback() const override;
+    HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
+    void main() override;
 
-    virtual ~HCallbackI();
+    ~HCallbackI() override;
 };
 
 class InfoCallbackI : public IloCplex::MIPInfoCallbackI, public MIPSolverCallbackBase
 {
     IloNumVarArray cplexVars;
 
-  private:
-  public:
-    IloCplex::CallbackI *duplicateCallback() const;
-    InfoCallbackI(IloEnv env, IloNumVarArray xx2);
-    void main();
+private:
+public:
+    IloCplex::CallbackI* duplicateCallback() const override;
+    InfoCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
+    void main() override;
 
-    virtual ~InfoCallbackI();
+    ~InfoCallbackI() override;
 };
 
 class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCallbackBase
 {
     IloNumVarArray cplexVars;
 
-    MIPSolverCplexLazyOriginalCallback *cplexSolver;
-
     void createHyperplane(Hyperplane hyperplane);
 
-    void createIntegerCut(std::vector<int> binaryIndexes);
+    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
-  public:
-    IloCplex::CallbackI *duplicateCallback() const;
+public:
+    IloCplex::CallbackI* duplicateCallback() const override;
 
-    CtCallbackI(IloEnv env, IloNumVarArray xx2, MIPSolverCplexLazyOriginalCallback *solver);
-    void main();
+    CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2);
+    void main() override;
 
-    virtual ~CtCallbackI();
+    ~CtCallbackI() override;
 };
+} // namespace SHOT

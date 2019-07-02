@@ -3,32 +3,35 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "Enums.h"
 #include "Structs.h"
-#include "SHOTSettings.h"
-#include "ProcessInfo.h"
+#include "Enums.h"
+#include "Environment.h"
 
+namespace SHOT
+{
 class Iteration
 {
-  public:
-    Iteration();
+public:
+    Iteration(EnvironmentPtr envPtr);
     ~Iteration();
 
-    E_IterationProblemType type;
+    E_DualProblemClass dualProblemClass;
+    bool isDualProblemDiscrete = false;
+
     E_ProblemSolutionStatus solutionStatus;
 
     std::vector<SolutionPoint> solutionPoints;
 
     double objectiveValue;
-    std::pair<double, double> currentObjectiveBounds;
+    PairDouble currentObjectiveBounds;
 
-    std::vector<double> constraintDeviations;
+    VectorDouble constraintDeviations;
     double maxDeviation;
     int maxDeviationConstraint;
 
@@ -52,9 +55,15 @@ class Iteration
     bool isSolved = false;
 
     double solutionTime;
+    bool hasInfeasibilityRepairBeenPerformed = false;
+    bool wasInfeasibilityRepairSuccessful = false;
 
-    std::vector<std::vector<double>> hyperplanePoints;
+    std::vector<VectorDouble> hyperplanePoints;
 
     SolutionPoint getSolutionPointWithSmallestDeviation();
     int getSolutionPointWithSmallestDeviationIndex();
+
+private:
+    EnvironmentPtr env;
 };
+} // namespace SHOT

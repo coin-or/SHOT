@@ -3,27 +3,25 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskTerminate.h"
 
-TaskTerminate::TaskTerminate()
+namespace SHOT
 {
-}
 
-TaskTerminate::~TaskTerminate()
-{
-}
+TaskTerminate::TaskTerminate(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
 
-void TaskTerminate::run()
-{
-}
+TaskTerminate::~TaskTerminate() = default;
+
+void TaskTerminate::run() {}
 
 std::string TaskTerminate::getType()
 {
-	std::string type = typeid(this).name();
-	return (type);
+    std::string type = typeid(this).name();
+    return (type);
 }
+} // namespace SHOT

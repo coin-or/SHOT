@@ -3,24 +3,26 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCalculateSolutionChangeNorm : public TaskBase
 {
-  public:
-	TaskCalculateSolutionChangeNorm();
-	virtual ~TaskCalculateSolutionChangeNorm();
+public:
+    TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr);
+    ~TaskCalculateSolutionChangeNorm() override;
 
-	virtual void run();
+    void run() override;
 
-	virtual std::string getType();
+    std::string getType() override;
 
-  private:
+private:
 };
+} // namespace SHOT
