@@ -35,13 +35,39 @@ bool Variable::tightenBounds(const Interval bound)
     if(bound.l() > this->lowerBound + epsTolerance && bound.l() <= this->upperBound)
     {
         tightened = true;
-        this->lowerBound = bound.l();
+
+        if(bound.l() == 0.0 && std::signbit(bound.l()))
+        {
+            // Special logic for negative zero
+            this->lowerBound = -bound.l();
+        }
+        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer)
+        {
+            this->lowerBound = std::ceil(bound.l());
+        }
+        else
+        {
+            this->lowerBound = bound.l();
+        }
     }
 
     if(bound.u() < this->upperBound - epsTolerance && bound.u() >= this->lowerBound)
     {
         tightened = true;
-        this->upperBound = bound.u();
+
+        if(bound.u() == 0.0 && std::signbit(bound.u()))
+        {
+            // Special logic for negative zero
+            this->upperBound = -bound.u();
+        }
+        else if(this->properties.type == E_VariableType::Binary || this->properties.type == E_VariableType::Integer)
+        {
+            this->upperBound = std::floor(bound.u());
+        }
+        else
+        {
+            this->upperBound = bound.u();
+        }
     }
 
     if(tightened)
