@@ -1301,7 +1301,7 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
 
-            env->settings->updateSetting("Rootsearch.Use", "Primal", false);
+            env->settings->updateSetting("Rootsearch.Use", "Primal", true);
 
             env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
             env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
