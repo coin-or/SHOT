@@ -47,12 +47,6 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
-    {
-        env->tasks->setNextTask(taskIDIfFalse);
-        return;
-    }
-
     if(env->results->solutionIsGlobal
         && (env->results->isRelativeObjectiveGapToleranceMet() || env->results->isAbsoluteObjectiveGapToleranceMet()))
     {
@@ -91,7 +85,7 @@ void TaskAddPrimalReductionCut::run()
     }
 
     std::stringstream tmpType;
-    tmpType << "REDCUT-" << env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect;
+    tmpType << "REDCUT-" << env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect + 1;
 
     env->report->outputIterationDetail(totalReductionCutUpdates + 1, tmpType.str(),
         env->timing->getElapsedTime("Total"), 0, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0, currIter->maxDeviation,
