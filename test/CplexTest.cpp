@@ -17,6 +17,7 @@ bool CplexTest1(std::string filename);
 
 int CplexTest(int argc, char* argv[])
 {
+
     int defaultchoice = 1;
 
     int choice = defaultchoice;
