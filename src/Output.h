@@ -10,6 +10,7 @@
 
 #pragma once
 #include "Enums.h"
+#include "Structs.h"
 #include <memory>
 
 #include "spdlog/spdlog.h"
@@ -18,7 +19,7 @@
 
 namespace SHOT
 {
-class Output
+class DllExport Output
 {
 public:
     Output();

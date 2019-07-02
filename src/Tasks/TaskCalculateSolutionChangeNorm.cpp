@@ -49,7 +49,7 @@ void TaskCalculateSolutionChangeNorm::run()
 
             double distance = 0;
 
-            for(int j = 0; j < currIterSol.size(); j++)
+            for(size_t j = 0; j < currIterSol.size(); j++)
             {
                 distance = distance + (currIterSol.at(j) - prevIterSol.at(j)) * (currIterSol.at(j) - prevIterSol.at(j));
             }

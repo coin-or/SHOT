@@ -61,7 +61,7 @@ void TaskFindInteriorPoint::run()
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
-        for(int i = 0; i < NLPSolvers.size(); i++)
+        for(size_t i = 0; i < NLPSolvers.size(); i++)
         {
             std::stringstream ss;
             ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
@@ -77,9 +77,9 @@ void TaskFindInteriorPoint::run()
 
     bool foundNLPPoint = false;
 
-    for(int i = 0; i < NLPSolvers.size(); i++)
+    for(size_t i = 0; i < NLPSolvers.size(); i++)
     {
-        auto solutionStatus = NLPSolvers.at(i)->solveProblem();
+        NLPSolvers.at(i)->solveProblem();
 
         if(NLPSolvers.at(i)->getSolution().size() == 0)
             continue;

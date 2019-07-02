@@ -13,6 +13,10 @@
 
 namespace SHOT
 {
+Settings::Settings(OutputPtr outputPtr) : output(outputPtr) {}
+
+Settings::~Settings() {}
+
 template <typename T>
 void Settings::createBaseSetting(
     std::string name, std::string category, T value, std::string description, bool isPrivate)
@@ -173,54 +177,6 @@ template <typename T> void Settings::updateSetting(std::string name, std::string
     settingIsDefaultValue[key] = false;
 }
 
-template std::string Settings::getSetting(std::string name, std::string category);
-template int Settings::getSetting(std::string name, std::string category);
-template double Settings::getSetting(std::string name, std::string category);
-template bool Settings::getSetting(std::string name, std::string category);
-
-template <typename T> T Settings::getSetting(std::string name, std::string category)
-{
-    // Check that setting is of the correct type
-    using value_type = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
-            || std::is_same<int, T>::value || std::is_same<bool, T>::value,
-        T>::type;
-
-    PairString key = make_pair(category, name);
-
-    typename std::map<PairString, T>::iterator value;
-    typename std::map<PairString, T>::iterator end;
-
-    if constexpr(std::is_same_v<T, std::string>)
-    {
-        value = stringSettings.find(key);
-        end = stringSettings.end();
-    }
-    else if constexpr(std::is_same_v<T, int>)
-    {
-        value = integerSettings.find(key);
-        end = integerSettings.end();
-    }
-    else if constexpr(std::is_same_v<T, double>)
-    {
-        value = doubleSettings.find(key);
-        end = doubleSettings.end();
-    }
-    else if constexpr(std::is_same_v<T, bool>)
-    {
-        value = booleanSettings.find(key);
-        end = booleanSettings.end();
-    }
-
-    if(value == end)
-    {
-        output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
-
-        throw SettingKeyNotFoundException(name, category);
-    }
-
-    return (value->second);
-}
-
 // String settings ===============================================================
 
 void Settings::createSetting(
@@ -264,7 +220,7 @@ void Settings::createSetting(
     settingBounds[make_pair(category, name)]
         = std::make_pair(std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max());
 
-    for(int i = 0; i < enumDesc.size(); i++)
+    for(size_t i = 0; i < enumDesc.size(); i++)
     {
         enumDescriptions[make_tuple(category, name, i)] = enumDesc.at(i);
 
@@ -610,8 +566,11 @@ bool Settings::readSettingsFromString(std::string options)
     while(std::getline(f, line))
     {
         // Ignore empty lines and comments (starting with an asterisk)
-        if(line == "" || line.at(0) == '*')
+        if(line == "" || line.at(0) == '*' || line.at(0) == '\r' || line.at(0) == '\n')
             continue;
+
+        line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
         int equalitySignIndex = line.find('=');
 

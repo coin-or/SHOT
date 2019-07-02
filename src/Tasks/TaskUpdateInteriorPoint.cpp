@@ -114,7 +114,8 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputDebug("     Primal solution point used as additional interior point.");
 
-        if(env->dualSolver->MIPSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
+        if((int)env->dualSolver->MIPSolver->interiorPts.size()
+            == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
             env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
         }
@@ -154,7 +155,7 @@ void TaskUpdateInteriorPoint::run()
         auto tmpIP = std::make_shared<InteriorPoint>();
 
         // Find a new point in the midpoint between the original and new
-        for(int i = 0; i < tmpPrimalPoint.size(); i++)
+        for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
         {
             tmpPrimalPoint.at(i)
                 = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->MIPSolver->interiorPts.at(0)->point.at(i));

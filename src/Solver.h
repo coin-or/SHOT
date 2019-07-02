@@ -27,7 +27,7 @@
 
 namespace SHOT
 {
-class Solver
+class DllExport Solver
 {
 private:
     std::unique_ptr<ISolutionStrategy> solutionStrategy;
@@ -47,11 +47,12 @@ private:
     EnvironmentPtr env;
 
 public:
-    Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink = nullptr);
+    Solver();
+    Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink);
     Solver(EnvironmentPtr environment);
     ~Solver();
 
-    inline EnvironmentPtr getEnvironment() { return env; };
+    EnvironmentPtr getEnvironment();
 
     bool setOptionsFromFile(std::string fileName);
     bool setOptionsFromString(std::string options);

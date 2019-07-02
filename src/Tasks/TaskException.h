@@ -19,7 +19,7 @@ namespace SHOT
 class TaskException : public std::exception
 {
 public:
-    TaskException(EnvironmentPtr envPtr, std::string msg) : message(msg) {}
+    TaskException(EnvironmentPtr envPtr[[maybe_unused]], std::string msg) : message(msg) {}
     TaskException() = default;
 
     const char* what() const throw() override
@@ -43,7 +43,7 @@ private:
 class TaskExceptionFunctionNotDefined : public std::exception
 {
 public:
-    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr, std::string task) : taskName(task) {}
+    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr[[maybe_unused]], std::string task) : taskName(task) {}
 
     const char* what() const throw() override
     {
@@ -62,7 +62,7 @@ private:
 class TaskExceptionNotFound : public std::exception
 {
 public:
-    TaskExceptionNotFound(EnvironmentPtr envPtr, std::string task) : taskID(task) {}
+    TaskExceptionNotFound(EnvironmentPtr envPtr[[maybe_unused]], std::string task) : taskID(task) {}
 
     const char* what() const throw() override
     {

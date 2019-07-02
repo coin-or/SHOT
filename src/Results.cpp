@@ -353,8 +353,6 @@ std::string Results::getResultsOSrL()
 
     auto solutionNode = osrlDocument.NewElement("solution");
 
-    auto otherSolutionResultsNode = osrlDocument.NewElement("otherSolutionResults");
-
     int numPrimalSols = primalSolutions.size();
 
     int numSaveSolutions = std::min(env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"), numPrimalSols);
@@ -585,10 +583,10 @@ std::string Results::getResultsOSrL()
         auto variableValueNode = osrlDocument.NewElement("values");
         variableValueNode->SetAttribute("numberOfVar", (int)primalSolutions.at(i).point.size());
 
-        for(int j = 0; j < primalSolutions.at(i).point.size(); j++)
+        for(size_t j = 0; j < primalSolutions.at(i).point.size(); j++)
         {
             auto variableSolutionNode = osrlDocument.NewElement("var");
-            variableSolutionNode->SetAttribute("idx", j);
+            variableSolutionNode->SetAttribute("idx", (int)j);
             variableSolutionNode->SetAttribute("name", env->problem->allVariables.at(j)->name.c_str());
             variableSolutionNode->SetText(std::to_string(primalSolutions.at(i).point.at(j)).c_str());
             variableValueNode->InsertEndChild(variableSolutionNode);
@@ -602,10 +600,10 @@ std::string Results::getResultsOSrL()
         auto dualValuesNode = osrlDocument.NewElement("dualValues");
         dualValuesNode->SetAttribute("numberOfCon", (int)env->problem->properties.numberOfNumericConstraints);
 
-        for(int j = 0; j < env->problem->numericConstraints.size(); j++)
+        for(size_t j = 0; j < env->problem->numericConstraints.size(); j++)
         {
             auto dualValueNode = osrlDocument.NewElement("con");
-            dualValueNode->SetAttribute("idx", j);
+            dualValueNode->SetAttribute("idx", (int)j);
             dualValueNode->SetAttribute("name", env->problem->numericConstraints.at(j)->name.c_str());
             dualValueNode->SetText(std::to_string(env->problem->numericConstraints.at(j)
                                                       ->calculateNumericValue(primalSolutions.at(i).point)
@@ -837,28 +835,28 @@ void Results::setDualBound(double value)
 
 double Results::getAbsoluteGlobalObjectiveGap()
 {
-    double gap = abs(getGlobalDualBound() - getPrimalBound());
+    double gap = std::abs(getGlobalDualBound() - getPrimalBound());
 
     return (gap);
 }
 
 double Results::getRelativeGlobalObjectiveGap()
 {
-    double gap = abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+    double gap = std::abs(getGlobalDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 
     return (gap);
 }
 
 double Results::getAbsoluteCurrentObjectiveGap()
 {
-    double gap = abs(getCurrentDualBound() - getPrimalBound());
+    double gap = std::abs(getCurrentDualBound() - getPrimalBound());
 
     return (gap);
 }
 
 double Results::getRelativeCurrentObjectiveGap()
 {
-    double gap = abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + abs(getPrimalBound()));
+    double gap = std::abs(getCurrentDualBound() - getPrimalBound()) / ((1e-10) + std::abs(getPrimalBound()));
 
     return (gap);
 }
@@ -926,7 +924,7 @@ void Results::savePrimalSolutionToFile(
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for(int i = 0; i < solution.point.size(); i++)
+    for(size_t i = 0; i < solution.point.size(); i++)
     {
         str << variables.at(i);
         str << "\t";
@@ -935,7 +933,7 @@ void Results::savePrimalSolutionToFile(
     }
 
     Utilities::writeStringToFile(fileName, str.str());
-};
+}
 
 void Results::savePrimalSolutionToFile(
     const PrimalSolution& solution, const Variables& variables, const std::string& fileName)
@@ -976,7 +974,7 @@ void Results::savePrimalSolutionToFile(
 
     str << std::setprecision(std::numeric_limits<double>::digits10);
 
-    for(int i = 0; i < solution.point.size(); i++)
+    for(size_t i = 0; i < solution.point.size(); i++)
     {
         if(i < variables.size())
             str << variables.at(i)->name;
@@ -988,6 +986,6 @@ void Results::savePrimalSolutionToFile(
     }
 
     Utilities::writeStringToFile(fileName, str.str());
-};
+}
 
 } // namespace SHOT

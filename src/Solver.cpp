@@ -39,6 +39,32 @@
 namespace SHOT
 {
 
+Solver::Solver()
+{
+    env = std::make_shared<Environment>();
+
+    env->output = std::make_shared<Output>();
+
+    env->results = std::make_shared<Results>(env);
+    env->timing = std::make_shared<Timing>(env);
+
+    env->timing->createTimer("Total", "Total solution time");
+    env->timing->startTimer("Total");
+
+    env->timing->createTimer("ProblemInitialization", " - problem initialization");
+
+    env->timing->createTimer("ProblemReformulation", " - problem reformulation");
+
+    env->settings = std::make_shared<Settings>(env->output);
+    env->tasks = std::make_shared<TaskHandler>(env);
+    env->events = std::make_shared<EventHandler>(env);
+    env->report = std::make_shared<Report>(env);
+
+    env->dualSolver = std::make_shared<DualSolver>(env);
+    env->primalSolver = std::make_shared<PrimalSolver>(env);
+    initializeSettings();
+}
+
 Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
 {
     env = std::make_shared<Environment>();
@@ -74,13 +100,15 @@ Solver::Solver(EnvironmentPtr envPtr) : env(envPtr) { initializeSettings(); }
 
 Solver::~Solver() = default;
 
+EnvironmentPtr Solver::getEnvironment() { return env; }
+
 bool Solver::setOptionsFromFile(std::string fileName)
 {
     bool result = true;
     try
     {
         std::string fileContents;
-        std::string fileExtension = std::filesystem::path(fileName).extension();
+        std::string fileExtension = std::filesystem::path(fileName).extension().string();
 
         if(fileExtension == ".xml" || fileExtension == ".osol")
         {

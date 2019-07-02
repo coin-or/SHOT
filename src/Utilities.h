@@ -70,7 +70,7 @@ std::string toString(const double value);
 
 double getJulianFractionalDate();
 
-bool writeStringToFile(const std::string& fileName, const std::string& str);
+bool DllExport writeStringToFile(const std::string& fileName, const std::string& str);
 
 std::string getFileAsString(const std::string& fileName);
 

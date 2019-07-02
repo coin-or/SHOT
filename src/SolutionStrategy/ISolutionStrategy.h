@@ -17,7 +17,7 @@ namespace SHOT
 class ISolutionStrategy
 {
 public:
-    ~ISolutionStrategy() = default;
+    virtual ~ISolutionStrategy() = default;
 
     virtual void initializeStrategy() = 0;
     virtual bool solveProblem() = 0;

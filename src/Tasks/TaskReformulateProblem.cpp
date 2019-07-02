@@ -503,15 +503,15 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     if(copyOriginalNonlinearExpression)
     {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)));
+        reformulatedProblem->add(std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective));
     }
     else if(destinationQuadraticTerms.size() > 0)
     {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective)));
+        reformulatedProblem->add(std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objective));
     }
     else
     {
-        reformulatedProblem->add(std::move(std::dynamic_pointer_cast<LinearObjectiveFunction>(objective)));
+        reformulatedProblem->add(std::dynamic_pointer_cast<LinearObjectiveFunction>(objective));
     }
 }
 
@@ -956,8 +956,6 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
 
-    bool allNonlinearExpressionsReformulated = false;
-
     for(auto& T : sourceTerms)
     {
         Interval bounds;
@@ -1008,8 +1006,6 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 
     if(sourceTerms.size() == 0)
         return (resultLinearTerms);
-
-    bool allNonlinearExpressionsReformulated = false;
 
     for(auto& T : sourceTerms)
     {
@@ -1438,7 +1434,6 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
     double signfactor = reversedSigns ? -1.0 : 1.0;
 
     bool allTermsAreBinary = true;
-
     for(auto& T : monomialTerms)
     {
         if(!T->isBinary)
@@ -1454,7 +1449,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
             && env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
                 == static_cast<int>(ES_ReformulationBinaryMonomials::Simple))
         {
-            double N = T->variables.size();
+            auto N = T->variables.size();
 
             auto auxConstraint1 = std::make_shared<LinearConstraint>(
                 auxConstraintCounter, "s_mon1" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
@@ -1498,14 +1493,14 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
                 auxConstraintCounter, "s_monlam" + std::to_string(auxConstraintCounter), 1.0, 1.0);
             auxConstraintCounter++;
 
-            int numLambdas = std::pow(2, k);
+            auto numLambdas = std::pow(2, k);
 
-            for(auto i = 1; numLambdas; i++)
+            for(auto i = 1; i < numLambdas; i++)
             {
                 auto auxLambda
                     = std::make_shared<AuxiliaryVariable>("s_monlam" + std::to_string(auxVariableCounter + 1),
                         auxVariableCounter + variableOffset, E_VariableType::Real, 0.0, 1.0);
-                auxLambda->constant = 1.0 / ((double)numLambdas);
+                auxLambda->constant = 1.0 / numLambdas;
 
                 auxLambdaSum->add(std::make_shared<LinearTerm>(1.0, auxLambda));
                 lambdas.push_back(auxLambda);

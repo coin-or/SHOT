@@ -20,78 +20,12 @@
 
 #include "tinyxml2.h"
 
-#include "../Enums.h"
-#include "../Output.h"
+#include "Enums.h"
+#include "Output.h"
+#include "Structs.h"
 
 namespace SHOT
 {
-class Settings
-{
-private:
-    template <typename T>
-    void createBaseSetting(
-        std::string name, std::string category, T value, std::string description, bool isPrivate = false);
-
-    using OutputPtr = std::shared_ptr<Output>;
-    OutputPtr output;
-
-    using PairString = std::pair<std::string, std::string>;
-    using PairDouble = std::pair<double, double>;
-    using VectorString = std::vector<std::string>;
-
-    std::map<PairString, std::string> stringSettings;
-    std::map<PairString, double> doubleSettings;
-    std::map<PairString, int> integerSettings;
-    std::map<PairString, bool> booleanSettings;
-
-    std::map<PairString, std::string> settingDescriptions;
-    std::map<PairString, E_SettingType> settingTypes;
-    std::map<PairString, bool> settingIsPrivate;
-    std::map<PairString, bool> settingIsDefaultValue;
-    std::map<PairString, PairDouble> settingBounds;
-    std::map<PairString, bool> settingEnums;
-
-    using TupleStringPairInt = std::tuple<std::string, std::string, int>;
-    std::map<TupleStringPairInt, std::string> enumDescriptions;
-
-public:
-    bool settingsInitialized = false;
-
-    Settings(OutputPtr outputPtr) : output(outputPtr) {}
-
-    ~Settings() = default;
-
-    template <typename T> void updateSetting(std::string name, std::string category, T value);
-
-    template <typename T> T getSetting(std::string name, std::string category);
-
-    void createSetting(
-        std::string name, std::string category, std::string value, std::string description, bool isPrivate = false);
-
-    void createSetting(std::string name, std::string category, int value, std::string description,
-        double minVal = std::numeric_limits<double>::lowest(), double maxVal = std::numeric_limits<double>::max(),
-        bool isPrivate = false);
-
-    void createSetting(std::string name, std::string category, double value, std::string description,
-        double minVal = std::numeric_limits<double>::lowest(), double maxVal = std::numeric_limits<double>::max(),
-        bool isPrivate = false);
-
-    void createSetting(std::string name, std::string category, int value, std::string description,
-        VectorString enumDesc, bool isPrivate = false);
-
-    void createSetting(
-        std::string name, std::string category, bool value, std::string description, bool isPrivate = false);
-
-    std::string getEnumDescriptionList(std::string name, std::string category);
-    std::string getEnumDescription(std::string name, std::string category);
-
-    std::string getSettingsAsOSoL();
-    std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);
-    VectorString getChangedSettings();
-
-    bool readSettingsFromOSoL(std::string osol);
-    bool readSettingsFromString(std::string options);
-};
 
 class SettingKeyNotFoundException : public std::runtime_error
 {
@@ -130,4 +64,115 @@ public:
     {
     }
 };
-}; // namespace SHOT
+
+class DllExport Settings
+{
+private:
+    template <typename T>
+    void createBaseSetting(
+        std::string name, std::string category, T value, std::string description, bool isPrivate = false);
+
+    using OutputPtr = std::shared_ptr<Output>;
+    OutputPtr output;
+
+    using PairString = std::pair<std::string, std::string>;
+    using PairDouble = std::pair<double, double>;
+    using VectorString = std::vector<std::string>;
+
+    std::map<PairString, std::string> stringSettings;
+    std::map<PairString, double> doubleSettings;
+    std::map<PairString, int> integerSettings;
+    std::map<PairString, bool> booleanSettings;
+
+    std::map<PairString, std::string> settingDescriptions;
+    std::map<PairString, E_SettingType> settingTypes;
+    std::map<PairString, bool> settingIsPrivate;
+    std::map<PairString, bool> settingIsDefaultValue;
+    std::map<PairString, PairDouble> settingBounds;
+    std::map<PairString, bool> settingEnums;
+
+    using TupleStringPairInt = std::tuple<std::string, std::string, int>;
+    std::map<TupleStringPairInt, std::string> enumDescriptions;
+
+public:
+    bool settingsInitialized = false;
+
+    Settings(OutputPtr outputPtr);
+
+    ~Settings();
+
+    template <typename T> void updateSetting(std::string name, std::string category, T value);
+
+    // template <typename T> T getSetting(std::string name, std::string category);
+
+    template <typename T> T getSetting(std::string name, std::string category)
+    {
+        // Check that setting is of the correct type
+        using value_type = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
+                || std::is_same<int, T>::value || std::is_same<bool, T>::value,
+            T>::type;
+
+        PairString key = make_pair(category, name);
+
+        typename std::map<PairString, T>::iterator value;
+        typename std::map<PairString, T>::iterator end;
+
+        if constexpr(std::is_same_v<T, std::string>)
+        {
+            value = stringSettings.find(key);
+            end = stringSettings.end();
+        }
+        else if constexpr(std::is_same_v<T, int>)
+        {
+            value = integerSettings.find(key);
+            end = integerSettings.end();
+        }
+        else if constexpr(std::is_same_v<T, double>)
+        {
+            value = doubleSettings.find(key);
+            end = doubleSettings.end();
+        }
+        else if constexpr(std::is_same_v<T, bool>)
+        {
+            value = booleanSettings.find(key);
+            end = booleanSettings.end();
+        }
+
+        if(value == end)
+        {
+            output->outputError("Cannot get setting " + category + "." + name + " since it has not been defined.");
+
+            throw SettingKeyNotFoundException(name, category);
+        }
+
+        return (value->second);
+    }
+
+    void createSetting(
+        std::string name, std::string category, std::string value, std::string description, bool isPrivate = false);
+
+    void createSetting(std::string name, std::string category, int value, std::string description,
+        double minVal = std::numeric_limits<double>::lowest(), double maxVal = std::numeric_limits<double>::max(),
+        bool isPrivate = false);
+
+    void createSetting(std::string name, std::string category, double value, std::string description,
+        double minVal = std::numeric_limits<double>::lowest(), double maxVal = std::numeric_limits<double>::max(),
+        bool isPrivate = false);
+
+    void createSetting(std::string name, std::string category, int value, std::string description,
+        VectorString enumDesc, bool isPrivate = false);
+
+    void createSetting(
+        std::string name, std::string category, bool value, std::string description, bool isPrivate = false);
+
+    std::string getEnumDescriptionList(std::string name, std::string category);
+    std::string getEnumDescription(std::string name, std::string category);
+
+    std::string getSettingsAsOSoL();
+    std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);
+    VectorString getChangedSettings();
+
+    bool readSettingsFromOSoL(std::string osol);
+    bool readSettingsFromString(std::string options);
+};
+} // namespace SHOT

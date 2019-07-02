@@ -29,3 +29,5 @@
 
 .vscode/*
 build/*
+/.vs
+/out/build

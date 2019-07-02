@@ -55,7 +55,7 @@ SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
     double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
-    for(int i = 0; i < solutionPoints.size(); i++)
+    for(size_t i = 0; i < solutionPoints.size(); i++)
     {
         if(solutionPoints.at(i).maxDeviation.value > tmpVal)
         {
@@ -72,7 +72,7 @@ int Iteration::getSolutionPointWithSmallestDeviationIndex()
     double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
-    for(int i = 0; i < solutionPoints.size(); i++)
+    for(size_t i = 0; i < solutionPoints.size(); i++)
     {
         if(solutionPoints.at(i).maxDeviation.value > tmpVal)
         {

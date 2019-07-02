@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
         else
         {
             // Create option file
-            if(!Utilities::writeStringToFile(filepath, solver->getOptions()))
+            if(!Utilities::writeStringToFile(filepath.string(), solver->getOptions()))
             {
                 env->output->outputCritical("  Error when writing options file: " + filepath.string());
                 return 0;
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
         else
         {
             // Create OSoL-file
-            if(!Utilities::writeStringToFile(filepath, solver->getOptionsOSoL()))
+            if(!Utilities::writeStringToFile(filepath.string(), solver->getOptionsOSoL()))
             {
                 env->output->outputCritical("  Error when writing OSoL file: " + filepath.string());
                 return 0;

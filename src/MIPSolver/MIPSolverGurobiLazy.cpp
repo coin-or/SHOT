@@ -142,7 +142,7 @@ void GurobiCallback::callback()
                 VectorDouble doubleSolution; // Empty since we have no point
 
                 DualSolution sol = { doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
-                    env->results->getCurrentIteration()->iterationNumber };
+                    env->results->getCurrentIteration()->iterationNumber, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
             }
         }
@@ -365,12 +365,12 @@ void GurobiCallback::callback()
             {
                 auto primalSol = env->results->primalSolution;
 
-                for(int i = 0; i < primalSol.size(); i++)
+                for(size_t i = 0; i < primalSol.size(); i++)
                 {
                     setSolution(vars[i], primalSol.at(i));
                 }
 
-                for(int i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
+                for(size_t i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
                 {
                     setSolution(vars[i + primalSol.size()],
                         env->reformulatedProblem->auxiliaryVariables.at(i)->calculateAuxiliaryValue(primalSol));

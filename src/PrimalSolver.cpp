@@ -355,10 +355,10 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
     }
 
-    PairIndexValue mostDevQuadraticConstraints;
-
     if(env->problem->properties.numberOfQuadraticConstraints > 0)
     {
+        PairIndexValue mostDevQuadraticConstraints;
+
         auto maxQuadraticConstraintValue
             = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->quadraticConstraints);
 
@@ -381,14 +381,14 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 maxQuadraticConstraintValue.constraint->name, maxQuadraticConstraintValue.error, nonlinTol);
             env->output->outputDebug(tmpLine);
         }
+
+        primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
     }
-
-    primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
-
-    PairIndexValue mostDevNonlinearConstraints;
 
     if(env->problem->properties.numberOfNonlinearConstraints > 0)
     {
+        PairIndexValue mostDevNonlinearConstraints;
+
         auto maxNonlinearConstraintValue
             = env->problem->getMaxNumericConstraintValue(tmpPoint, env->problem->nonlinearConstraints);
 
@@ -411,15 +411,16 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 maxNonlinearConstraintValue.constraint->name, mostDevNonlinearConstraints.value, nonlinTol);
             env->output->outputDebug(tmpLine);
         }
+
+        primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
     }
 
     primalSol.objValue = tmpObjVal;
 
-    if(tmpPoint.size() > env->problem->properties.numberOfVariables)
+    if((int)tmpPoint.size() > env->problem->properties.numberOfVariables)
         tmpPoint = std::vector(tmpPoint.begin(), tmpPoint.begin() + env->problem->properties.numberOfVariables);
 
     primalSol.point = tmpPoint;
-    primalSol.maxDevatingConstraintNonlinear = mostDevNonlinearConstraints;
 
     auto element = env->results->primalSolutionSourceStatistics.emplace(primalSol.sourceType, 1);
 

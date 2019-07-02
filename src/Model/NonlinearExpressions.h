@@ -78,7 +78,7 @@ inline E_Monotonicity negateMonotonicity(E_Monotonicity monotonicity)
     }
 
     return resultMonotonicity;
-};
+}
 
 inline E_Convexity getConvexityTimesWithConstantFunction(E_Convexity nonconstantConvexity, Interval constantBound)
 {
@@ -101,7 +101,7 @@ inline E_Convexity getConvexityTimesWithConstantFunction(E_Convexity nonconstant
 }
 
 inline E_Monotonicity getMonotonicityTimesWithConstantFunction(
-    E_Monotonicity nonconstantMonotonicity, Interval nonconstantBound, Interval constantBound)
+    E_Monotonicity nonconstantMonotonicity, Interval constantBound)
 {
     if(nonconstantMonotonicity == E_Monotonicity::Nondecreasing && constantBound.l() >= 0.0)
         return E_Monotonicity::Nondecreasing;
@@ -116,7 +116,7 @@ inline E_Monotonicity getMonotonicityTimesWithConstantFunction(
         return E_Monotonicity::Nonincreasing;
 
     return E_Monotonicity::Unknown;
-};
+}
 
 class NonlinearExpression
 {
@@ -125,8 +125,8 @@ public:
 
     virtual inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
-    virtual double calculate(const VectorDouble& point) const = 0;
-    virtual Interval calculate(const IntervalVector& intervalVector) const = 0;
+    virtual double calculate([[maybe_unused]] const VectorDouble& point) const = 0;
+    virtual Interval calculate([[maybe_unused]] const IntervalVector& intervalVector) const = 0;
     virtual Interval getBounds() const = 0;
 
     virtual bool tightenBounds(Interval bound) = 0;
@@ -142,7 +142,7 @@ public:
 
     virtual int getNumberOfChildren() const = 0;
 
-    virtual void appendNonlinearVariables(Variables& nonlinearVariables) = 0;
+    virtual void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) = 0;
 
     inline friend std::ostream& operator<<(std::ostream& stream, const NonlinearExpression& expr)
     {
@@ -162,7 +162,7 @@ inline std::ostream& operator<<(std::ostream& stream, NonlinearExpressionPtr exp
     }
 
     return stream;
-};
+}
 
 class NonlinearExpressions : private std::vector<NonlinearExpressionPtr>
 {
@@ -195,9 +195,12 @@ public:
     double constant = 0;
     ExpressionConstant(double constant) : constant(constant){};
 
-    inline double calculate(const VectorDouble& point) const override { return constant; };
+    inline double calculate([[maybe_unused]] const VectorDouble& point) const override { return constant; };
 
-    inline Interval calculate(const IntervalVector& intervalVector) const override { return (Interval(constant)); };
+    inline Interval calculate([[maybe_unused]] const IntervalVector& intervalVector) const override
+    {
+        return (Interval(constant));
+    };
 
     inline Interval getBounds() const override { return Interval(constant); };
 
@@ -214,7 +217,7 @@ public:
 
     inline int getNumberOfChildren() const override { return 0; }
 
-    inline void appendNonlinearVariables(Variables& nonlinearVariables) override{};
+    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override{};
 
     inline bool operator==(const NonlinearExpression& rhs) const override
     {
@@ -303,8 +306,6 @@ public:
 class ExpressionBinary : public NonlinearExpression
 {
 private:
-    bool isAssociative = false;
-
 public:
     NonlinearExpressionPtr firstChild;
     NonlinearExpressionPtr secondChild;
@@ -1363,8 +1364,6 @@ public:
 class ExpressionDivide : public ExpressionBinary
 {
 private:
-    bool isAssociative = false;
-
 public:
     ExpressionDivide() = default;
 
@@ -1407,8 +1406,6 @@ public:
 
     inline E_Convexity getConvexity() const override
     {
-        auto child2Convexity = secondChild->getConvexity();
-
         auto child1Monotonicity = firstChild->getMonotonicity();
         auto child2Monotonicity = secondChild->getMonotonicity();
 
@@ -1647,8 +1644,6 @@ public:
 class ExpressionPower : public ExpressionBinary
 {
 private:
-    bool isAssociative = false;
-
 public:
     ExpressionPower() = default;
 
@@ -2132,7 +2127,7 @@ public:
 
         stream << '(' << children.at(0);
 
-        for(int i = 1; i < children.size(); i++)
+        for(size_t i = 1; i < children.size(); i++)
         {
             stream << '+' << children.at(i);
         }
@@ -2171,8 +2166,6 @@ public:
 
     inline E_Monotonicity getMonotonicity() const override
     {
-        E_Monotonicity resultMonotonicity;
-
         bool areAllConstant = true;
         bool areAllZeroOrNondecreasing = true;
         bool areAllZeroOrNonincreasing = true;
@@ -2180,11 +2173,11 @@ public:
         for(auto& C : children)
         {
             auto childMonotonicity = C->getMonotonicity();
-            areAllConstant = areAllConstant && (C->getMonotonicity() == E_Monotonicity::Constant);
+            areAllConstant = areAllConstant && (childMonotonicity == E_Monotonicity::Constant);
             areAllZeroOrNondecreasing
-                = areAllZeroOrNondecreasing && (C->getMonotonicity() == E_Monotonicity::Nondecreasing);
+                = areAllZeroOrNondecreasing && (childMonotonicity == E_Monotonicity::Nondecreasing);
             areAllZeroOrNonincreasing
-                = areAllZeroOrNonincreasing && (C->getMonotonicity() == E_Monotonicity::Nonincreasing);
+                = areAllZeroOrNonincreasing && (childMonotonicity == E_Monotonicity::Nonincreasing);
         }
 
         if(areAllConstant)
@@ -2318,14 +2311,14 @@ public:
 
         std::vector<FactorableFunction> factors(children.size());
 
-        for(int i = 0; i < children.size(); i++)
+        for(size_t i = 0; i < children.size(); i++)
         {
             factors[i] = children[i]->getFactorableFunction();
         }
 
         funct = factors[0];
 
-        for(int i = 1; i < children.size(); i++)
+        for(size_t i = 1; i < children.size(); i++)
         {
             funct = funct * factors[i];
         }
@@ -2343,7 +2336,7 @@ public:
 
         stream << '(' << children.at(0);
 
-        for(int i = 1; i < children.size(); i++)
+        for(size_t i = 1; i < children.size(); i++)
         {
             stream << '*' << children.at(i);
         }
@@ -2493,10 +2486,10 @@ public:
                 return E_Monotonicity::Constant;
 
             if(nextMonotonicity == E_Monotonicity::Constant)
-                return getMonotonicityTimesWithConstantFunction(joinedMonotonicity, joinedBounds, nextBounds);
+                return getMonotonicityTimesWithConstantFunction(joinedMonotonicity, nextBounds);
 
             if(joinedMonotonicity == E_Monotonicity::Constant)
-                return getMonotonicityTimesWithConstantFunction(nextMonotonicity, nextBounds, joinedBounds);
+                return getMonotonicityTimesWithConstantFunction(nextMonotonicity, joinedBounds);
 
             bool nondecreasingCondition1
                 = (joinedMonotonicity == E_Monotonicity::Nondecreasing && nextBounds.l() >= 0.0)

@@ -39,7 +39,7 @@ void TaskConditional::setTaskIfFalse(TaskPtr task)
 
 void TaskConditional::run()
 {
-    bool tmpCondition;
+    bool tmpCondition = false;
 
     if(condition != nullptr)
     {

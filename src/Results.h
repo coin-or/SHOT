@@ -26,7 +26,7 @@ namespace SHOT
 
 class Variables;
 
-class Results
+class DllExport Results
 {
 public:
     Results(EnvironmentPtr envPtr);

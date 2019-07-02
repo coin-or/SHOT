@@ -158,8 +158,6 @@ protected:
     void callback() override;
 
 private:
-    int lastExploredNodes = 0;
-    int lastOpenNodes = 0;
     EnvironmentPtr env;
 };
 } // namespace SHOT

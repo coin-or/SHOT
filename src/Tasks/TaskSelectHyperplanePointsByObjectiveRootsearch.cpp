@@ -47,12 +47,11 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
     {
         for(auto& SOLPT : sourcePoints)
         {
-            double oldObjVal = SOLPT.objectiveValue;
             double objectiveLinearizationError = std::abs(
                 env->reformulatedProblem->objectiveFunction->calculateValue(SOLPT.point) - SOLPT.objectiveValue);
 
             double objectiveLB = SOLPT.objectiveValue;
-            double objectiveUB = (1 + std::min(0.01, 1 / abs(SOLPT.objectiveValue))) * objectiveLinearizationError;
+            double objectiveUB = (1 + std::min(0.01, 1 / std::abs(SOLPT.objectiveValue))) * objectiveLinearizationError;
 
             if(objectiveLinearizationError == 0)
                 continue;
@@ -64,8 +63,6 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
                     env->settings->getSetting<double>("Rootsearch.TerminationTolerance", "Subsolver"), 0,
                     std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                         .get());
-
-                double diffobj = abs(oldObjVal - rootBound.second);
 
                 Hyperplane hyperplane;
                 hyperplane.isObjectiveHyperplane = true;

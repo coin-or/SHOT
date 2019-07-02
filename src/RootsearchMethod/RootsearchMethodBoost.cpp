@@ -47,10 +47,10 @@ std::vector<NumericConstraint*> Test::getActiveConstraints() { return (activeCon
 
 double Test::operator()(const double x)
 {
-    int length = firstPt.size();
+    auto length = firstPt.size();
     VectorDouble ptNew(length);
 
-    for(int i = 0; i < length; i++)
+    for(size_t i = 0; i < length; i++)
     {
         ptNew.at(i) = x * firstPt.at(i) + (1 - x) * secondPt.at(i);
     }
@@ -129,7 +129,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
         test->problem = sharedProblem.get();
     }
 
-    int length = ptA.size();
+    auto length = ptA.size();
     VectorDouble ptNew(length);
     VectorDouble ptNew2(length);
 
@@ -180,7 +180,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
     }
 
     int resFVals = env->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
-    if(max_iter == Nmax)
+    if((int)max_iter == Nmax)
     {
         env->output->outputDebug(
             "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");
@@ -191,14 +191,13 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
             + ". Function evaluations: " + std::to_string(resFVals));
     }
 
-    for(int i = 0; i < length; i++)
+    for(size_t i = 0; i < length; i++)
     {
         ptNew.at(i) = r1.first * ptA.at(i) + (1 - r1.first) * ptB.at(i);
         ptNew2.at(i) = r1.second * ptA.at(i) + (1 - r1.second) * ptB.at(i);
     }
 
     auto validNewPt = test->problem->areNonlinearConstraintsFulfilled(ptNew, 0);
-    auto validNewPt2 = test->problem->areNonlinearConstraintsFulfilled(ptNew2, 0);
 
     if(!validNewPt) // ptNew Outside feasible region
     {
@@ -254,7 +253,7 @@ std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt
     }
 
     int resFVals = env->solutionStatistics.numberOfFunctionEvalutions - tempFEvals;
-    if(max_iter == Nmax)
+    if((int)max_iter == Nmax)
     {
         env->output->outputDebug(
             "     Warning, number of line search iterations " + std::to_string(max_iter) + " reached!");

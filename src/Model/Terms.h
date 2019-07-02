@@ -53,7 +53,7 @@ public:
     VariablePtr variable;
 
     LinearTerm() = default;
-    ;
+
     LinearTerm(double coeff, VariablePtr var)
     {
         coefficient = coeff;
@@ -114,7 +114,7 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTermPtr term)
     return stream;
 }
 
-template <class T> class Terms : private std::vector<T>
+template <class T> class Terms : public std::vector<T>
 {
 protected:
     E_Convexity convexity = E_Convexity::NotSet;
@@ -257,7 +257,6 @@ public:
     using std::vector<LinearTermPtr>::size;
 
     LinearTerms() = default;
-    ;
 
     void add(LinearTermPtr term)
     {
@@ -278,7 +277,7 @@ public:
         }
     }
 
-    SparseVariableVector calculateGradient(const VectorDouble& point) const
+    SparseVariableVector calculateGradient([[maybe_unused]] const VectorDouble& point) const
     {
         SparseVariableVector gradient;
 
@@ -291,8 +290,7 @@ public:
             if(!element.second)
             {
                 // Element already exists for the variable
-
-                element.second += T->coefficient;
+                element.first->second += T->coefficient;
             }
         }
 
@@ -311,7 +309,7 @@ public:
     bool isBinary = false;
 
     QuadraticTerm() = default;
-    ;
+
     QuadraticTerm(double coeff, VariablePtr variable1, VariablePtr variable2)
     {
         coefficient = coeff;
@@ -414,7 +412,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
         stream << term->firstVariable->name << '*' << term->secondVariable->name;
 
     return stream;
-};
+}
 
 class QuadraticTerms : public Terms<QuadraticTermPtr>
 {
@@ -435,7 +433,6 @@ public:
     using std::vector<QuadraticTermPtr>::size;
 
     QuadraticTerms() = default;
-    ;
 
     void add(QuadraticTermPtr term)
     {
@@ -603,7 +600,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
     }
 
     return stream;
-};
+}
 
 class MonomialTerms : public Terms<MonomialTermPtr>
 {
@@ -755,7 +752,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialElementPtr elemen
         stream << element->variable->name << "^(" << element->power << ')';
 
     return stream;
-};
+}
 
 class SignomialTerm : public Term
 {
@@ -799,7 +796,7 @@ public:
 
     inline E_Convexity getConvexity() const override
     {
-        int numberPositivePowers = 0;
+        size_t numberPositivePowers = 0;
         double sumPowers = 0.0;
 
         for(auto& E : elements)
@@ -845,7 +842,7 @@ public:
 
     inline E_Monotonicity getMonotonicity() const override
     {
-        int numberPositivePowers = 0;
+        size_t numberPositivePowers = 0;
         double sumPowers = 0.0;
 
         if(coefficient == 0.0)
@@ -939,7 +936,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
     }
 
     return stream;
-};
+}
 
 class SignomialTerms : public Terms<SignomialTermPtr>
 {
@@ -968,7 +965,6 @@ public:
     using std::vector<SignomialTermPtr>::size;
 
     SignomialTerms() = default;
-    ;
 
     void add(SignomialTermPtr term)
     {
@@ -1085,7 +1081,7 @@ inline std::ostream& operator<<(std::ostream& stream, LinearTerms terms)
 
     stream << ' ' << terms.at(0);
 
-    for(int i = 1; i < terms.size(); i++)
+    for(size_t i = 1; i < terms.size(); i++)
     {
         stream << terms.at(i);
     }
@@ -1100,7 +1096,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
 
     stream << ' ' << terms.at(0);
 
-    for(int i = 1; i < terms.size(); i++)
+    for(size_t i = 1; i < terms.size(); i++)
     {
         stream << terms.at(i);
     }
@@ -1115,7 +1111,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
 
     stream << ' ' << terms.at(0);
 
-    for(int i = 1; i < terms.size(); i++)
+    for(size_t i = 1; i < terms.size(); i++)
     {
         stream << terms.at(i);
     }
@@ -1130,7 +1126,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
 
     stream << ' ' << terms.at(0);
 
-    for(int i = 1; i < terms.size(); i++)
+    for(size_t i = 1; i < terms.size(); i++)
     {
         stream << terms.at(i);
     }

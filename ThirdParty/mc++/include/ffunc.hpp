@@ -1530,7 +1530,7 @@ operator <<
 inline FFVar::FFVar
 ( FFGraph*dag )
 : _dag( dag? dag: throw typename FFGraph::Exceptions( FFGraph::Exceptions::INIT )),
-  _id( VAR, _dag->_nvar++ ), _num( 0./0. ), _dep(), _val( 0 ), _cst( false )
+  _id( VAR, _dag->_nvar++ ), _num( 0 ), _dep(), _val( 0 ), _cst( false )
 { 
   // Initialize dependence
   _dep.indep(_id.second);
@@ -1577,7 +1577,7 @@ inline FFVar::FFVar
 
 inline FFVar::FFVar
 ( FFGraph*dag, const FFDep&dep, FFOp*op )
-: _dag( dag ), _id( AUX, dag->_naux++ ), _num( 0./0. ), _dep(dep),
+: _dag( dag ), _id( AUX, dag->_naux++ ), _num(0 ), _dep(dep),
   _val ( 0 ), _cst( false )
 { _ops.first = op; }
 
