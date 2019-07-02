@@ -13,6 +13,7 @@
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
+#include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../TaskHandler.h"
@@ -60,6 +61,9 @@ void TaskRepairInfeasibleDualProblem::run()
     // Otherwise repair problem might not be solved to optimality
     env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
 
+    std::stringstream tmpType;
+    tmpType << "REP";
+
     if(env->dualSolver->MIPSolver->repairInfeasibility())
     {
         env->tasks->setNextTask(taskIDIfTrue);
@@ -69,6 +73,7 @@ void TaskRepairInfeasibleDualProblem::run()
         // env->results->setDualBound(env->dualSolver->MIPSolver->getDualObjectiveValue());
 
         currIter->wasInfeasibilityRepairSuccessful = true;
+        tmpType << "-SUCC";
     }
     else if(mainRepairTries < 2)
     {
@@ -77,18 +82,26 @@ void TaskRepairInfeasibleDualProblem::run()
         env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate = 0;
         env->tasks->setNextTask(taskIDIfTrue);
         mainRepairTries++;
+        tmpType << "-FAIL-" << mainRepairTries;
     }
     else
     {
         currIter->wasInfeasibilityRepairSuccessful = false;
         env->tasks->setNextTask(taskIDIfFalse);
         mainRepairTries++;
+        tmpType << "-FAIL-" << mainRepairTries;
     }
+
+    totRepairTries++;
 
     env->dualSolver->MIPSolver->setSolutionLimit(currentSolutionLimit);
 
     env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate++;
     env->results->solutionIsGlobal = false;
+
+    env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"), 0, 0, 0,
+        env->dualSolver->cutOffToUse, 0, 0, 0, 0, currIter->maxDeviation, E_IterationLineType::DualRepair, true);
+
     env->timing->stopTimer("DualStrategy");
 }
 

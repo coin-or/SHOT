@@ -138,10 +138,18 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
                 = fmt::format("{:>12g} | {}: {:.2e}", currentObjectiveValue, maxConstraintIndex, maxConstraintError);
         }
 
-        auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-            iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
-
-        env->output->outputInfo(tmpLine);
+        if(lineType == E_IterationLineType::DualRepair)
+        {
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, "", "", "");
+            env->output->outputInfo(tmpLine);
+        }
+        else
+        {
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
+            env->output->outputInfo(tmpLine);
+        }
 
         std::stringstream nodes;
 

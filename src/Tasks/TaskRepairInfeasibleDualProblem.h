@@ -27,5 +27,6 @@ private:
     std::string taskIDIfFalse;
     int iterLastRepair = 0;
     int mainRepairTries = 0;
+    int totRepairTries = 0;
 };
 } // namespace SHOT
