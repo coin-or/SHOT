@@ -940,6 +940,14 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
+    // Primal settings: reduction cuts for nonconvex problems
+
+    env->settings->createSetting("ReductionCut.MaxIterations", "Primal", 5,
+        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting(
+        "ReductionCut.ReductionFactor", "Primal", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
+
     // Primal settings: rootsearch
 
     env->settings->createSetting("Rootsearch.Use", "Primal", true, "Use a rootsearch to find primal solutions");
@@ -1096,9 +1104,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("InfeasibilityRepair.TimeLimit", "Termination", 10.0,
         "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
-
-    env->settings->createSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination", 5,
-        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 

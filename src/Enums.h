@@ -72,6 +72,7 @@ enum class E_IterationLineType
     DualCallback,
     DualIntegerFixed,
     DualRepair,
+    DualReductionCut,
     PrimalNLP
 };
 

@@ -105,17 +105,25 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         std::string combObjectiveValue;
 
-        if(env->problem->objectiveFunction->properties.isMinimize)
+        if(lineType == E_IterationLineType::DualReductionCut)
         {
-            combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
-                Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
-                Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+            combObjectiveValue
+                = fmt::format("Cutoff: {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
         }
         else
         {
-            combObjectiveValue
-                = fmt::format("{:>12s} | {:<12s}{}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
+            if(env->problem->objectiveFunction->properties.isMinimize)
+            {
+                combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
+                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
+                    Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+            }
+            else
+            {
+                combObjectiveValue = fmt::format("{:>12s} | {:<12s}{}",
+                    Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
                     Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*");
+            }
         }
 
         std::string combObjectiveGap
@@ -144,6 +152,12 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
                 iterationDesc, totalTime, combDualCuts, "", "", "");
             env->output->outputInfo(tmpLine);
         }
+        else if(lineType == E_IterationLineType::DualReductionCut)
+        {
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, combObjectiveValue, "", "");
+            env->output->outputInfo(tmpLine);
+        }
         else
         {
             auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
@@ -152,7 +166,6 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         }
 
         std::stringstream nodes;
-
         nodes << "        Explored nodes: ";
 
         if(env->results->getCurrentIteration()->numberOfExploredNodes > 0)
