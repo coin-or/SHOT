@@ -269,5 +269,7 @@ int main(int argc, char* argv[])
             env->output->outputInfo("                     " + traceFile.string());
     }
 
+    env->output->outputInfo("\r\n Log written to:     " + logFile.string());
+
     return (0);
 }
