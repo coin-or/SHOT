@@ -17,8 +17,6 @@
 #include "../Timing.h"
 #include "../Utilities.h"
 
-#include "../MIPSolver/IMIPSolver.h"
-
 #include "../NLPSolver/NLPSolverCuttingPlaneMinimax.h"
 
 namespace SHOT
@@ -113,7 +111,7 @@ void TaskFindInteriorPoint::run()
             env->output->outputInfo("\n        Valid interior point with constraint deviation "
                 + Utilities::toString(maxDev.normalizedValue) + " found.");
 
-            env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
+            env->dualSolver->interiorPts.push_back(tmpIP);
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
@@ -143,7 +141,7 @@ void TaskFindInteriorPoint::run()
 
     env->output->outputDebug("     Finished solving NLP problem.");
 
-    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->MIPSolver->interiorPts.size();
+    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
 
     env->timing->stopTimer("InteriorPointSearch");
 }

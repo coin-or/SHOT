@@ -303,7 +303,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                 hyperplane.generatedPoint = tmpPoint;
                 hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
 
-                env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
             }
         }
 

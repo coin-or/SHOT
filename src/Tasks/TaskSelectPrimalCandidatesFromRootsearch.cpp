@@ -12,7 +12,6 @@
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
-#include "../MIPSolver/IMIPSolver.h"
 #include "../Results.h"
 #include "../PrimalSolver.h"
 #include "../Settings.h"
@@ -52,7 +51,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
 
         for(auto& P : solPoints)
         {
-            for(auto& IP : env->dualSolver->MIPSolver->interiorPts)
+            for(auto& IP : env->dualSolver->interiorPts)
             {
                 auto xNLP = IP->point;
 

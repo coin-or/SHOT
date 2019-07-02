@@ -100,7 +100,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
                       ->calculateValue(hyperplane.generatedPoint);
         }
 
-        env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+        env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
 
         env->output->outputCritical("        Primal objective cut added.");
     }*/

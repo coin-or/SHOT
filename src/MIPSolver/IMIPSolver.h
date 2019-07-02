@@ -120,14 +120,6 @@ public:
 
     virtual std::string getConstraintIdentifier(E_HyperplaneSource source) = 0;
 
-    // First is binaries = 1, second is binaries = 0
-    std::vector<std::pair<VectorInteger, VectorInteger>> integerCutWaitingList;
-    std::vector<Hyperplane> addedHyperplanes;
-
-    std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
-
-    std::vector<Hyperplane> hyperplaneWaitingList;
-
 protected:
 };
 } // namespace SHOT

@@ -1280,6 +1280,8 @@ void Solver::setConvexityBasedSettings()
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
+            env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
 

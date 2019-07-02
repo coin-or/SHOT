@@ -137,7 +137,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
                 < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
             {
-                int waitingListSize = env->dualSolver->MIPSolver->hyperplaneWaitingList.size();
+                int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
 
                 std::vector<SolutionPoint> solutionPoints(1);
 
@@ -190,7 +190,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 }
 
                 env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-                    += (env->dualSolver->MIPSolver->hyperplaneWaitingList.size() - waitingListSize);
+                    += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
             }
         }
 
@@ -276,7 +276,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             {
                 bool addedIntegerCut = false;
 
-                for(auto& ic : env->dualSolver->MIPSolver->integerCutWaitingList)
+                for(auto& ic : env->dualSolver->integerCutWaitingList)
                 {
                     this->createIntegerCut(ic.first, ic.second, context);
                     addedIntegerCut = true;
@@ -285,11 +285,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 if(addedIntegerCut)
                 {
                     env->output->outputDebug("        Added "
-                        + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
+                        + std::to_string(env->dualSolver->integerCutWaitingList.size())
                         + " integer cut(s).                                        ");
                 }
 
-                env->dualSolver->MIPSolver->integerCutWaitingList.clear();
+                env->dualSolver->integerCutWaitingList.clear();
             }
 
             currIter->isSolved = true;
@@ -402,9 +402,6 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
         env->dualSolver->addGeneratedHyperplane(hyperplane);
 
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
-
         tmpRange.end();
         expr.end();
     }
@@ -461,13 +458,13 @@ void CplexCallback::addLazyConstraint(
             taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
         }
 
-        for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
+        for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {
             this->createHyperplane(hp, context);
             this->lastNumAddedHyperplanes++;
         }
 
-        env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
+        env->dualSolver->hyperplaneWaitingList.clear();
     }
     catch(IloException& e)
     {

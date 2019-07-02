@@ -149,10 +149,6 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
         addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
         env->dualSolver->addGeneratedHyperplane(hyperplane);
-        env->solutionStatistics.iterationLastDualCutAdded = currIter->iterationNumber;
-
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
     }
 }
 

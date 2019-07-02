@@ -1285,8 +1285,6 @@ void MIPSolverCplex::createHyperplane(
 
         addConstraintFunction(tmpRange);
 
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
         expr.end();
     }
 }

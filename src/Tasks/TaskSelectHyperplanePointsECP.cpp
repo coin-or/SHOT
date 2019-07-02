@@ -10,7 +10,6 @@
 #include "TaskSelectHyperplanePointsECP.h"
 
 #include "../DualSolver.h"
-#include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -133,7 +132,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
         }
 
-        env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+        env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
 
         addedHyperplanes++;
         hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
@@ -171,7 +170,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
                 hyperplane.source = E_HyperplaneSource::LPRelaxedSolutionPoint;
             }
 
-            env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
 
             hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
         }

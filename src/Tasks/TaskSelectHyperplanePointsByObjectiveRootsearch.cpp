@@ -11,7 +11,6 @@
 #include "TaskSelectHyperplanePointsByObjectiveRootsearch.h"
 
 #include "../DualSolver.h"
-#include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -71,7 +70,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
                 hyperplane.generatedPoint = SOLPT.point;
                 hyperplane.objectiveFunctionValue = rootBound.second;
 
-                env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
             }
             catch(std::exception& e)
             {
@@ -106,7 +105,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
                           ->calculateValue(hyperplane.generatedPoint);
             }
 
-            env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
         }
     }
 
