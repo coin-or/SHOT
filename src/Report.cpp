@@ -816,9 +816,9 @@ void Report::outputSolutionReport()
 
     switch(env->results->getModelReturnStatus())
     {
-    case E_ModelReturnStatus::OptimalLocal:
+    /* case E_ModelReturnStatus::OptimalLocal:
         report << " Optimal primal solution found, but it might be local since the model seems to be nonconvex.\r\n";
-        break;
+        break;*/
     case E_ModelReturnStatus::OptimalGlobal:
         report << " Globally optimal primal solution found.\r\n";
         break;

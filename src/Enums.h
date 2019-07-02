@@ -100,7 +100,7 @@ enum class E_ModelReturnStatus
 {
     None,
     OptimalGlobal,
-    OptimalLocal,
+    // OptimalLocal,
     Unbounded,
     UnboundedNoSolution,
     InfeasibleGlobal,

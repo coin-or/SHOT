@@ -402,7 +402,7 @@ std::string Results::getResultsOSrL()
     else if(this->terminationReason == E_TerminationReason::InfeasibleProblem)
     {
         statusNode->SetAttribute("type", "infeasible");
-        statusNode->SetAttribute("description", "No solution found since problem is infeasible");
+        statusNode->SetAttribute("description", "No solution found since dual problem is infeasible");
 
         if(terminationReasonDescription != "")
         {
@@ -417,7 +417,7 @@ std::string Results::getResultsOSrL()
     else if(this->terminationReason == E_TerminationReason::UnboundedProblem)
     {
         statusNode->SetAttribute("type", "unbounded");
-        statusNode->SetAttribute("description", "No solution found since problem is unbounded");
+        statusNode->SetAttribute("description", "No solution found since dual problem is unbounded");
 
         if(terminationReasonDescription != "")
         {
@@ -740,9 +740,9 @@ std::string Results::getResultsTrace()
     // set model status
     switch(this->getModelReturnStatus())
     {
-    case E_ModelReturnStatus::OptimalLocal:
+    /* case E_ModelReturnStatus::OptimalLocal:
         modelStatus = "2";
-        break;
+        break;*/
     case E_ModelReturnStatus::OptimalGlobal:
         modelStatus = "1";
         break;
@@ -864,9 +864,10 @@ double Results::getRelativeCurrentObjectiveGap()
 E_ModelReturnStatus Results::getModelReturnStatus()
 {
     if(isRelativeObjectiveGapToleranceMet() || isAbsoluteObjectiveGapToleranceMet())
-    {
-        return (solutionIsGlobal ? E_ModelReturnStatus::OptimalGlobal : E_ModelReturnStatus::OptimalLocal);
-    }
+        return (E_ModelReturnStatus::OptimalGlobal);
+
+    if(hasPrimalSolution())
+        return (E_ModelReturnStatus::FeasibleSolution);
 
     if(terminationReason == E_TerminationReason::UnboundedProblem)
         return (hasPrimalSolution() ? E_ModelReturnStatus::Unbounded : E_ModelReturnStatus::UnboundedNoSolution);
@@ -876,9 +877,6 @@ E_ModelReturnStatus Results::getModelReturnStatus()
 
     if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
         return (hasPrimalSolution() ? E_ModelReturnStatus::ErrorUnknown : E_ModelReturnStatus::ErrorNoSolution);
-
-    if(hasPrimalSolution())
-        return (E_ModelReturnStatus::FeasibleSolution);
 
     return (E_ModelReturnStatus::NoSolutionReturned);
 }

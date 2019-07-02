@@ -35,25 +35,26 @@ void TaskCheckIterationError::run()
     {
         env->results->terminationReason = E_TerminationReason::Error;
         env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription = "Terminated since an error occured.";
+        env->results->terminationReasonDescription = "Terminated since an error occured when solving the dual problem.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
         env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription = "Terminated since the problem is infeasible.";
+        env->results->terminationReasonDescription = "Terminated since the dual problem is infeasible.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::UnboundedProblem;
         env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription = "Terminated since the problem is unbounded.";
+        env->results->terminationReasonDescription = "Terminated since the dual problem is unbounded.";
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric && currIter->solutionPoints.size() == 0)
     {
         env->results->terminationReason = E_TerminationReason::NumericIssues;
         env->tasks->setNextTask(taskIDIfTrue);
-        env->results->terminationReasonDescription = "Terminated due to numerical issues.";
+        env->results->terminationReasonDescription
+            = "Terminated due to numerical issues when solving the dual problem.";
     }
 }
 
