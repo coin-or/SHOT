@@ -147,6 +147,9 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
         if(hyperplane.sourceConstraint != nullptr)
             identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
+        identifier += "_" + std::to_string(constraintCounter);
+        constraintCounter++;
+
         addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
     }
 }
