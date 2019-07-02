@@ -43,7 +43,8 @@ public:
     /** Method to return the bounds for my problem */
     bool get_bounds_info(
 
-        Ipopt::Index n, Ipopt::Number* x_l, Ipopt::Number* x_u, Ipopt::Index m, Ipopt::Number* g_l, Ipopt::Number* g_u) override;
+        Ipopt::Index n, Ipopt::Number* x_l, Ipopt::Number* x_u, Ipopt::Index m, Ipopt::Number* g_l,
+        Ipopt::Number* g_u) override;
 
     /** Method to return the starting point for the algorithm */
     bool get_starting_point(Ipopt::Index n, bool init_sx, Ipopt::Number* x, bool init_z, Ipopt::Number* z_L,
@@ -77,17 +78,16 @@ public:
         Ipopt::Number* x_scaling, bool& use_g_scaling, Ipopt::Index m, Ipopt::Number* g_scaling) override;
 
     /** This method is called when the algorithm is complete so the TNLP can store/write the solution */
-    void finalize_solution(Ipopt::SolverReturn status, Ipopt::Index n, const Ipopt::Number* x,
-        const Ipopt::Number* z_L, const Ipopt::Number* z_U, Ipopt::Index m, const Ipopt::Number* g,
-        const Ipopt::Number* lambda, Ipopt::Number obj_value, const Ipopt::IpoptData* ip_data,
-        Ipopt::IpoptCalculatedQuantities* ip_cq) override;
+    void finalize_solution(Ipopt::SolverReturn status, Ipopt::Index n, const Ipopt::Number* x, const Ipopt::Number* z_L,
+        const Ipopt::Number* z_U, Ipopt::Index m, const Ipopt::Number* g, const Ipopt::Number* lambda,
+        Ipopt::Number obj_value, const Ipopt::IpoptData* ip_data, Ipopt::IpoptCalculatedQuantities* ip_cq) override;
 
 private:
-    ProblemPtr sourceProblem;
-
     EnvironmentPtr env;
 
     NLPSolverIpoptBase* ipoptSolver;
+
+    ProblemPtr sourceProblem;
 
     std::map<std::pair<int, int>, int> lagrangianHessianCounterPlacement;
     std::map<std::pair<int, int>, int> jacobianCounterPlacement;

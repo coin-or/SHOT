@@ -16,7 +16,6 @@
 
 #include "../Model/Simplifications.h"
 
-#include "OSIpoptSolver.h"
 #include "OSOption.h"
 #include "OSResult.h"
 
@@ -40,9 +39,9 @@ ModelingSystemOS::ModelingSystemOS(EnvironmentPtr envPtr) : IModelingSystem(envP
 
 ModelingSystemOS::~ModelingSystemOS() = default;
 
-void ModelingSystemOS::augmentSettings(SettingsPtr settings) {}
+void ModelingSystemOS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
 
-void ModelingSystemOS::updateSettings(SettingsPtr settings) {}
+void ModelingSystemOS::updateSettings([[maybe_unused]] SettingsPtr settings) {}
 
 E_ProblemCreationStatus ModelingSystemOS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& type)
@@ -424,7 +423,6 @@ bool ModelingSystemOS::copyLinearTerms(OSInstance* source, ProblemPtr destinatio
         && source->instanceData->linearConstraintCoefficients->numberOfValues > 0)
     {
         int variableIndex = 0;
-        int constraintIndex = 0;
         int numConstraints = source->getConstraintNumber();
 
         SparseMatrix* linearConstraintCoefficients = source->getLinearConstraintCoefficientsInRowMajor();
@@ -458,8 +456,6 @@ bool ModelingSystemOS::copyLinearTerms(OSInstance* source, ProblemPtr destinatio
                 return (false);
             }
         }
-
-        // delete linearConstraintCoefficients;
     }
     else
     {

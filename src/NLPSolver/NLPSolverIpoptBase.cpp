@@ -69,8 +69,9 @@ bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, N
 }
 
 // returns the initial point for the problem
-bool IpoptProblem::get_starting_point(
-    Index n, bool init_x, Number* x, bool init_z, Number* z_L, Number* z_U, Index m, bool init_lambda, Number* lambda)
+bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init_z, [[maybe_unused]] Number* z_L,
+    [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m, [[maybe_unused]] bool init_lambda,
+    [[maybe_unused]] Number* lambda)
 {
     assert(init_x == true);
     assert(init_z == false);
@@ -78,7 +79,7 @@ bool IpoptProblem::get_starting_point(
 
     std::vector<bool> isInitialized(n, false);
 
-    for(int k = 0; k < ipoptSolver->startingPointVariableIndexes.size(); k++)
+    for(size_t k = 0; k < ipoptSolver->startingPointVariableIndexes.size(); k++)
     {
         int variableIndex = ipoptSolver->startingPointVariableIndexes[k];
 
@@ -158,7 +159,7 @@ bool IpoptProblem::get_starting_point(
 }
 
 // Returns the value of the objective function
-bool IpoptProblem::eval_f(Index n, const Number* x, bool new_x, Number& obj_value)
+bool IpoptProblem::eval_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number& obj_value)
 {
     VectorDouble vectorPoint(n);
 
@@ -171,7 +172,7 @@ bool IpoptProblem::eval_f(Index n, const Number* x, bool new_x, Number& obj_valu
 }
 
 // Returns the gradient of the objective function
-bool IpoptProblem::eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f)
+bool IpoptProblem::eval_grad_f(Index n, const Number* x, [[maybe_unused]] bool new_x, Number* grad_f)
 {
     VectorDouble vectorPoint(n);
 
@@ -188,7 +189,7 @@ bool IpoptProblem::eval_grad_f(Index n, const Number* x, bool new_x, Number* gra
 }
 
 // Return the value of the constraints
-bool IpoptProblem::eval_g(Index n, const Number* x, bool new_x, Index m, Number* g)
+bool IpoptProblem::eval_g(Index n, const Number* x, [[maybe_unused]] bool new_x, Index m, Number* g)
 {
     VectorDouble vectorPoint(n);
 
@@ -205,8 +206,8 @@ bool IpoptProblem::eval_g(Index n, const Number* x, bool new_x, Index m, Number*
 }
 
 // Return the structure or values of the jacobian
-bool IpoptProblem::eval_jac_g(
-    Index n, const Number* x, bool new_x, Index m, Index nele_jac, Index* iRow, Index* jCol, Number* values)
+bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool new_x, [[maybe_unused]] Index m,
+    Index nele_jac, Index* iRow, Index* jCol, Number* values)
 {
     // The structure
     if(values == nullptr)
@@ -258,8 +259,9 @@ bool IpoptProblem::eval_jac_g(
 }
 
 // Return the structure or values of the Hessian of the Langragian
-bool IpoptProblem::eval_h(Index n, const Number* x, bool new_x, Number obj_factor, Index m, const Number* lambda,
-    bool new_lambda, Index nele_hess, Index* iRow, Index* jCol, Number* values)
+bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x, Number obj_factor,
+    [[maybe_unused]] Index m, const Number* lambda, [[maybe_unused]] bool new_lambda, Index nele_hess, Index* iRow,
+    Index* jCol, Number* values)
 {
     // The structure
     if(values == nullptr)
@@ -283,8 +285,6 @@ bool IpoptProblem::eval_h(Index n, const Number* x, bool new_x, Number obj_facto
     }
 
     // The values
-
-    int counter = 0;
 
     VectorDouble vectorPoint(n);
 
@@ -325,8 +325,9 @@ bool IpoptProblem::eval_h(Index n, const Number* x, bool new_x, Number obj_facto
     return (true);
 }
 
-bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, bool& use_x_scaling, Index n, Number* x_scaling,
-    bool& use_g_scaling, Index m, Number* g_scaling)
+bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, [[maybe_unused]] bool& use_x_scaling,
+    [[maybe_unused]] Index n, [[maybe_unused]] Number* x_scaling, [[maybe_unused]] bool& use_g_scaling,
+    [[maybe_unused]] Index m, [[maybe_unused]] Number* g_scaling)
 {
     obj_scaling = sourceProblem->objectiveFunction->properties.isMinimize ? 1.0 : -1.0;
 
@@ -336,9 +337,10 @@ bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, bool& use_x_scali
     return (true);
 }
 
-void IpoptProblem::finalize_solution(SolverReturn status, Index n, const Number* x, const Number* z_L,
-    const Number* z_U, Index m, const Number* g, const Number* lambda, Number obj_value, const IpoptData* ip_data,
-    IpoptCalculatedQuantities* ip_cq)
+void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index n, const Number* x,
+    [[maybe_unused]] const Number* z_L, [[maybe_unused]] const Number* z_U, [[maybe_unused]] Index m,
+    [[maybe_unused]] const Number* g, [[maybe_unused]] const Number* lambda, Number obj_value,
+    [[maybe_unused]] const IpoptData* ip_data, [[maybe_unused]] IpoptCalculatedQuantities* ip_cq)
 {
     int numberOfVariables = sourceProblem->properties.numberOfVariables;
 
@@ -857,7 +859,7 @@ void NLPSolverIpoptBase::unfixVariables()
 {
     env->output->outputDebug(" Starting reset of fixed variables in Ipopt.");
 
-    for(int k = 0; k < fixedVariableIndexes.size(); k++)
+    for(size_t k = 0; k < fixedVariableIndexes.size(); k++)
     {
         int currVarIndex = fixedVariableIndexes.at(k);
         double newLB = lowerBoundsBeforeFix.at(k);
@@ -893,7 +895,7 @@ void NLPSolverIpoptBase::updateVariableUpperBound(int variableIndex, double boun
 
 void NLPSolverIpoptBase::updateSettings() {}
 
-void NLPSolverIpoptBase::saveOptionsToFile(std::string fileName) {}
+void NLPSolverIpoptBase::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
 
-void NLPSolverIpoptBase::saveProblemToFile(std::string fileName) {}
+void NLPSolverIpoptBase::saveProblemToFile([[maybe_unused]] std::string fileName) {}
 } // namespace SHOT

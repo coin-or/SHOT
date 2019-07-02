@@ -204,7 +204,7 @@ public:
 
     inline Interval getBounds() const override { return Interval(constant); };
 
-    inline bool tightenBounds(Interval bound) override { return false; };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return false; };
 
     inline FactorableFunction getFactorableFunction() override { return constant; };
 
@@ -852,7 +852,7 @@ public:
 
     inline Interval getBounds() const override { return (sin(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (sin(child->getFactorableFunction())); }
 
@@ -952,7 +952,7 @@ public:
 
     inline Interval getBounds() const override { return (cos(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (cos(child->getFactorableFunction())); }
 
@@ -1052,7 +1052,7 @@ public:
 
     inline Interval getBounds() const override { return (tan(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (tan(child->getFactorableFunction())); }
 
@@ -1119,7 +1119,7 @@ public:
 
     inline Interval getBounds() const override { return (asin(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (asin(child->getFactorableFunction())); }
 
@@ -1176,7 +1176,7 @@ public:
 
     inline Interval getBounds() const override { return (acos(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (acos(child->getFactorableFunction())); }
 
@@ -1234,7 +1234,7 @@ public:
 
     inline Interval getBounds() const override { return (atan(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (atan(child->getFactorableFunction())); }
 
@@ -1291,7 +1291,7 @@ public:
 
     inline Interval getBounds() const override { return (abs(child->getBounds())); }
 
-    inline bool tightenBounds(Interval bound) override { return (false); };
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (fabs(child->getFactorableFunction())); }
 
@@ -1385,7 +1385,7 @@ public:
 
     inline Interval getBounds() const override { return (firstChild->getBounds() / secondChild->getBounds()); }
 
-    inline bool tightenBounds(Interval bound) override
+    inline bool tightenBounds([[maybe_unused]] Interval bound) override
     {
         // TODO
         return (false);

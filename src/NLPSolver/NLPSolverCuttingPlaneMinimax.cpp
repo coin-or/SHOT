@@ -225,7 +225,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             mu = minimizationResult.second; // The objective value
 
             // Calculates the corresponding solution point
-            for(int i = 0; i < LPVarSol.size(); i++)
+            for(size_t i = 0; i < LPVarSol.size(); i++)
             {
                 currSol.at(i) = lambda * LPVarSol.at(i) + (1 - lambda) * prevSol.at(i);
             }
@@ -352,7 +352,6 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
     }
 
     // Auxiliary objective variable for minimax problem
-    double objLowerBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
     double objUpperBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
 
     variablesInitialized = variablesInitialized

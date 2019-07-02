@@ -48,7 +48,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
-        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -80,7 +80,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
-        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -104,7 +104,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
-        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -135,7 +135,7 @@ void TaskUpdateInteriorPoint::run()
 
         // Add the new point only
         tmpIP->point = tmpPrimalPoint;
-        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
@@ -164,7 +164,7 @@ void TaskUpdateInteriorPoint::run()
             tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
-        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);

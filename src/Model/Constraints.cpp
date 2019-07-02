@@ -183,7 +183,7 @@ Interval LinearConstraint::getConstraintFunctionBounds()
     Interval value = linearTerms.getBounds();
     value += Interval(constant);
     return value;
-};
+}
 
 bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
 
@@ -225,7 +225,8 @@ SparseVariableMatrix LinearConstraint::calculateHessian(
     return hessian;
 }
 
-NumericConstraintValue LinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
+NumericConstraintValue LinearConstraint::calculateNumericValue(
+    const VectorDouble& point, [[maybe_unused]] double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 }
@@ -410,7 +411,8 @@ void QuadraticConstraint::initializeHessianSparsityPattern()
     }
 }
 
-NumericConstraintValue QuadraticConstraint::calculateNumericValue(const VectorDouble& point, double correction)
+NumericConstraintValue QuadraticConstraint::calculateNumericValue(
+    const VectorDouble& point, [[maybe_unused]] double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 }
@@ -558,7 +560,7 @@ Interval NonlinearConstraint::getConstraintFunctionBounds()
         value += nonlinearExpression->getBounds();
 
     return value;
-};
+}
 
 SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
@@ -825,7 +827,8 @@ void NonlinearConstraint::takeOwnership(ProblemPtr owner)
         nonlinearExpression->takeOwnership(owner);
 }
 
-NumericConstraintValue NonlinearConstraint::calculateNumericValue(const VectorDouble& point, double correction)
+NumericConstraintValue NonlinearConstraint::calculateNumericValue(
+    const VectorDouble& point, [[maybe_unused]] double correction)
 {
     return NumericConstraint::calculateNumericValue(point);
 }

@@ -88,7 +88,7 @@ void TaskFindInteriorPoint::run()
             = static_cast<ES_InteriorPointStrategy>(env->settings->getSetting<int>("ESH.InteriorPoint.Solver", "Dual"));
 
         tmpIP->point = NLPSolvers.at(i)->getSolution();
-        assert(tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
         auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
             tmpIP->point, env->reformulatedProblem->nonlinearConstraints);

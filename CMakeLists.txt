@@ -474,7 +474,11 @@ endif(GENERATE_EXE)
 if(MSVC)
   target_compile_options(SHOTSolver PRIVATE /W4 /WX)
 else()
-  target_compile_options(SHOTSolver PRIVATE -Wall -Wextra -pedantic)
+  target_compile_options(SHOTSolver
+                         PRIVATE -Wall
+                                 -Wextra
+                                 -pedantic
+                                 -Wno-unused-local-typedefs)
 endif()
 
 if(HAS_GAMS)

@@ -1438,12 +1438,10 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
     double signfactor = reversedSigns ? -1.0 : 1.0;
 
-    bool allTermsAreBinary = true;
     for(auto& T : monomialTerms)
     {
         if(!T->isBinary)
         {
-            allTermsAreBinary = false;
             break;
         }
     }

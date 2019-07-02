@@ -84,7 +84,7 @@ bool Variable::tightenBounds(const Interval bound)
     }
 
     return tightened;
-};
+}
 
 bool Variable::isDualUnbounded()
 {

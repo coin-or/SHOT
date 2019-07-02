@@ -36,7 +36,6 @@ void TaskPrintIterationReport::run()
 
     std::stringstream tmpType;
 
-    bool hasSolution = true;
     auto dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
 
     switch(dualProblemClass)
@@ -63,13 +62,9 @@ void TaskPrintIterationReport::run()
         break;
     }
 
-    if(currIter->solutionPoints.size() == 0)
-        hasSolution = false;
-
     if(currIter->solutionStatus == E_ProblemSolutionStatus::Error)
     {
         tmpType << "-E";
-        hasSolution = false;
         forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Feasible)
@@ -79,7 +74,6 @@ void TaskPrintIterationReport::run()
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
         tmpType << "-I";
-        hasSolution = false;
         forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
@@ -106,19 +100,16 @@ void TaskPrintIterationReport::run()
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::TimeLimit)
     {
         tmpType << "-TL";
-        hasSolution = false;
         forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         tmpType << "-U";
-        hasSolution = false;
         forcePrint = true;
     }
     else
     {
         tmpType << "";
-        hasSolution = false;
     }
 
     env->report->outputIterationDetail(currIter->iterationNumber, tmpType.str(), env->timing->getElapsedTime("Total"),
