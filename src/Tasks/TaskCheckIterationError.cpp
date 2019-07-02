@@ -31,7 +31,7 @@ void TaskCheckIterationError::run()
     auto currIter = env->results->getCurrentIteration();
 
     // Always also check whether we actually got a solution in the current interation
-    if(currIter->solutionStatus == E_ProblemSolutionStatus::Error && currIter->solutionPoints.size() == 0)
+    if(currIter->solutionStatus == E_ProblemSolutionStatus::Error /* && currIter->solutionPoints.size() == 0*/)
     {
         env->results->terminationReason = E_TerminationReason::Error;
         env->tasks->setNextTask(taskIDIfTrue);

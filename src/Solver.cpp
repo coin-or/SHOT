@@ -1305,10 +1305,19 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting("Rootsearch.Use", "Primal", true);
 
-            env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
-            env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
-            env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
-            env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
+#ifdef HAS_CPLEX
+
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
+            {
+                env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
+                env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
+                env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
+                env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
+
+                if(env->reformulatedProblem->properties.isMIQPProblem)
+                    env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3);
+            }
+#endif
         }
     }
 }
