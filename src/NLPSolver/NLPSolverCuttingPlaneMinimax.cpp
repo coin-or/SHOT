@@ -291,7 +291,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             numHyperTot++;
             numHyperAdded++;
 
-            if(mu >= 0 && env->settings->getSetting<bool>("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual"))
+            if(mu >= 0 && env->settings->getSetting<bool>("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual")
+                && NCV.constraint->properties.convexity == E_Convexity::Convex)
             {
                 auto tmpPoint = currSol;
                 tmpPoint.pop_back();
