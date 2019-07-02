@@ -568,7 +568,7 @@ bool ModelingSystemOS::copyNonlinearExpressions(OSInstance* source, ProblemPtr d
     env->output->outputDebug("Finished copying nonlinear expressions between OSInstance and SHOT problem objects.");
 
     return (true);
-} // namespace SHOT
+}
 
 // Modified from Optimization Services file OSCouenneSolver.cpp
 NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, const ProblemPtr& destination)
@@ -704,7 +704,7 @@ bool ModelingSystemOS::isObjectiveGenerallyNonlinear(OSInstance* instance)
             return (true);
     }
     return (false);
-};
+}
 
 bool ModelingSystemOS::isObjectiveQuadratic(OSInstance* instance)
 {
@@ -717,7 +717,7 @@ bool ModelingSystemOS::isObjectiveQuadratic(OSInstance* instance)
     }
 
     return (false);
-};
+}
 
 std::vector<E_ConstraintClassification> ModelingSystemOS::getConstraintClassifications(OSInstance* instance)
 {
@@ -745,6 +745,6 @@ std::vector<E_ConstraintClassification> ModelingSystemOS::getConstraintClassific
     }
 
     return classifications;
-};
+}
 
 } // Namespace SHOT
