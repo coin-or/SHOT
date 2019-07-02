@@ -19,11 +19,7 @@
 
 #ifdef HAS_CPLEX
 #include "../MIPSolver/MIPSolverCplex.h"
-
-#ifdef HAS_CPLEX_NEW_CALLBACK
 #include "../MIPSolver/MIPSolverCplexLazy.h"
-#endif
-
 #include "../MIPSolver/MIPSolverCplexLazyOriginalCallback.h"
 #endif
 
@@ -58,7 +54,6 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #ifdef HAS_CPLEX
         if(solver == ES_MIPSolver::Cplex)
         {
-#ifdef HAS_CPLEX_NEW_CALLBACK
             if(env->settings->getSetting<bool>("Cplex.UseNewCallbackType", "Subsolver"))
             {
                 env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexLazy>(env));
@@ -67,7 +62,6 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
                 solverSelected = true;
             }
             else
-#endif
             {
                 env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverCplexLazyOriginalCallback>(env));
                 env->results->usedMIPSolver = ES_MIPSolver::Cplex;

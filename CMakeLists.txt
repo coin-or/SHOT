@@ -31,11 +31,6 @@ set(OS_DIR
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
-cmake_dependent_option(HAS_CPLEX_NEW_CALLBACK
-                       "Is Cplex version >12.8 so the new callbacks are available?"
-                       ON
-                       "HAS_CPLEX"
-                       OFF)
 set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
@@ -168,9 +163,6 @@ if(HAS_CPLEX)
   find_package(CPLEX)
   add_definitions(-DIL_STD)
   add_definitions(-DHAS_CPLEX)
-  if(HAS_CPLEX_NEW_CALLBACK)
-    add_definitions(-DHAS_CPLEX_NEW_CALLBACK)
-  endif(HAS_CPLEX_NEW_CALLBACK)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
@@ -287,10 +279,8 @@ if(HAS_CPLEX)
     set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
     set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
-    if(HAS_CPLEX_NEW_CALLBACK)
-      set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.cpp")
-      set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
-    endif(HAS_CPLEX_NEW_CALLBACK)
+    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.cpp")
+    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazy.h")
 
     set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexLazyOriginalCallback.cpp")
     set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")

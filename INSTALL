@@ -22,10 +22,6 @@ Main installation:
     2.1 If you wish to compile with support for CPLEX and/or Gurobi, please set the 
         corresponding switches (HAS_CPLEX, HAS_GUROBI). You will also need to provide the 
         location of their main installation folders. 
-
-        Depending on whether you have a version of CPLEX >12.8, you can also set the 
-        switch HAS_CPLEX_NEW_CALLBACK to activate the new type of callback functionality
-        in CPLEX.
     
     2.2 If you have GAMS installed, you can activate this as well using the switch HAS_GAMS.
         
