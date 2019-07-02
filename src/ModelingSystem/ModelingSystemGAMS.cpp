@@ -322,10 +322,10 @@ void ModelingSystemGAMS::finalizeSolution()
     // set model status
     switch(r->getModelReturnStatus())
     {
-    case E_ModelReturnStatus::OptimalLocal:
+    /*case E_ModelReturnStatus::OptimalLocal:
         gmoModelStatSet(
             modelingObject, gmoNDisc(modelingObject) > 0 ? gmoModelStat_Integer : gmoModelStat_OptimalLocal);
-        break;
+        break; */
     case E_ModelReturnStatus::OptimalGlobal:
         gmoModelStatSet(modelingObject, gmoModelStat_OptimalGlobal);
         break;

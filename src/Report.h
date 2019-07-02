@@ -34,7 +34,7 @@ public:
     void outputIterationDetail(int iterationNumber, std::string iterationDesc, double totalTime, int dualCutsAdded,
         int dualCutsTotal, double dualObjectiveValue, double primalObjectiveValue, double absoluteObjectiveGap,
         double relativeObjectiveGap, double currentObjectiveValue, int maxConstraintIndex, double maxConstraintError,
-        E_IterationLineType lineType);
+        E_IterationLineType lineType, bool forcePrint = false);
 
     void outputIterationDetailHeaderMinimax();
 

@@ -44,12 +44,12 @@ void TaskAddHyperplanes::run()
     {
         int addedHyperplanes = 0;
 
-        for(auto k = env->dualSolver->MIPSolver->hyperplaneWaitingList.size(); k > 0; k--)
+        for(auto k = env->dualSolver->hyperplaneWaitingList.size(); k > 0; k--)
         {
             if(addedHyperplanes >= env->settings->getSetting<int>("HyperplaneCuts.MaxPerIteration", "Dual"))
                 break;
 
-            auto tmpItem = env->dualSolver->MIPSolver->hyperplaneWaitingList.at(k - 1);
+            auto tmpItem = env->dualSolver->hyperplaneWaitingList.at(k - 1);
 
             if(tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
             {
@@ -58,40 +58,15 @@ void TaskAddHyperplanes::run()
             else
             {
                 env->dualSolver->MIPSolver->createHyperplane(tmpItem);
-
-                env->dualSolver->MIPSolver->addedHyperplanes.push_back(tmpItem);
-
-                if(tmpItem.isObjectiveHyperplane)
-                {
-                    bool isObjectiveConvex
-                        = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex
-                        || env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear;
-
-                    if(!isObjectiveConvex)
-                    {
-                        env->results->solutionIsGlobal = false;
-                        env->output->outputDebug("Solution is no longer global");
-                    }
-                }
-                else
-                {
-                    bool isConstraintConvex = tmpItem.sourceConstraint->properties.convexity == E_Convexity::Convex
-                        || tmpItem.sourceConstraint->properties.convexity == E_Convexity::Linear;
-
-                    if(!isConstraintConvex)
-                    {
-                        env->results->solutionIsGlobal = false;
-                        env->output->outputDebug("Solution is no longer global");
-                    }
-                }
-
-                addedHyperplanes++;
             }
+
+            env->dualSolver->addGeneratedHyperplane(tmpItem);
+            addedHyperplanes++;
         }
 
         if(!env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
-            env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
+            env->dualSolver->hyperplaneWaitingList.clear();
         }
 
         itersWithoutAddedHPs = 0;

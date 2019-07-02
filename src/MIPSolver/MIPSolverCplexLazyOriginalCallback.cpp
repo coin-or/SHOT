@@ -107,7 +107,7 @@ void HCallbackI::main() // Called at each node...
     if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
         < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
     {
-        int waitingListSize = env->dualSolver->MIPSolver->hyperplaneWaitingList.size();
+        int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
 
         std::vector<SolutionPoint> solutionPoints(1);
 
@@ -151,7 +151,7 @@ void HCallbackI::main() // Called at each node...
         }
 
         env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-            += (env->dualSolver->MIPSolver->hyperplaneWaitingList.size() - waitingListSize);
+            += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
     }
 
     return;
@@ -463,19 +463,19 @@ void CtCallbackI::main()
         taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
     }
 
-    for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
+    for(auto& hp : env->dualSolver->hyperplaneWaitingList)
     {
         this->createHyperplane(hp);
         this->lastNumAddedHyperplanes++;
     }
 
-    env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
+    env->dualSolver->hyperplaneWaitingList.clear();
 
     if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
     {
         bool addedIntegerCut = false;
 
-        for(auto& ic : env->dualSolver->MIPSolver->integerCutWaitingList)
+        for(auto& ic : env->dualSolver->integerCutWaitingList)
         {
             this->createIntegerCut(ic.first, ic.second);
             addedIntegerCut = true;
@@ -483,12 +483,11 @@ void CtCallbackI::main()
 
         if(addedIntegerCut)
         {
-            env->output->outputDebug("        Added "
-                + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
+            env->output->outputDebug("        Added " + std::to_string(env->dualSolver->integerCutWaitingList.size())
                 + " integer cut(s).                                        ");
         }
 
-        env->dualSolver->MIPSolver->integerCutWaitingList.clear();
+        env->dualSolver->integerCutWaitingList.clear();
     }
 
     candidatePoints.clear();
@@ -550,9 +549,6 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
             identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
         env->dualSolver->addGeneratedHyperplane(hyperplane);
-
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
     }
 
     optional.value().first.clear();

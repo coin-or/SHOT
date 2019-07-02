@@ -174,9 +174,20 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
             genHyperplane.isSourceConvex = false;
     }
 
+    if(!genHyperplane.isSourceConvex)
+    {
+        env->results->solutionIsGlobal = false;
+        env->output->outputDebug("Solution is no longer global");
+    }
+
     genHyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
 
     generatedHyperplanes.push_back(genHyperplane);
+
+    auto currentIteration = env->results->getCurrentIteration();
+    currentIteration->numHyperplanesAdded++;
+    currentIteration->totNumHyperplanes++;
+    env->solutionStatistics.iterationLastDualCutAdded = currentIteration->iterationNumber;
 
     env->output->outputTrace("     Hyperplane generated from: " + source);
 }

@@ -67,7 +67,7 @@ void displayVector(const VectorDouble& point)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const VectorDouble& point1, const VectorDouble& point2)
 {
@@ -140,7 +140,7 @@ void displayDifferencesInVector(const VectorDouble& point1, const VectorDouble& 
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const VectorInteger& point)
 {
@@ -158,7 +158,7 @@ void displayVector(const VectorInteger& point)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const VectorString& point)
 {
@@ -176,7 +176,7 @@ void displayVector(const VectorString& point)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const std::vector<VectorDouble>& points)
 {
@@ -197,7 +197,7 @@ void displayVector(const std::vector<VectorDouble>& points)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const std::vector<VectorInteger>& points)
 {
@@ -217,7 +217,7 @@ void displayVector(const std::vector<VectorInteger>& points)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const std::vector<VectorString>& points)
 {
@@ -237,7 +237,7 @@ void displayVector(const std::vector<VectorString>& points)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 double L2Norm(const VectorDouble& ptA, const VectorDouble& ptB)
 {
@@ -256,7 +256,7 @@ double L2Norm(const VectorDouble& ptA, const VectorDouble& ptB)
     norm = sqrt(norm);
 
     return (norm);
-};
+}
 
 VectorDouble L2Norms(const std::vector<VectorDouble>& ptsA, const VectorDouble& ptB)
 {
@@ -289,7 +289,7 @@ VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts)
     }
 
     return (newPt);
-};
+}
 
 int numDifferentRoundedSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
@@ -304,7 +304,7 @@ int numDifferentRoundedSelectedElements(
         }
     }
     return (numDiff);
-};
+}
 
 bool isDifferentRoundedSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
@@ -316,7 +316,7 @@ bool isDifferentRoundedSelectedElements(
     }
 
     return (false);
-};
+}
 
 bool isDifferentSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes)
@@ -328,7 +328,7 @@ bool isDifferentSelectedElements(
     }
 
     return (false);
-};
+}
 
 std::string toStringFormat(const double value, const std::string& format)
 {
@@ -353,7 +353,7 @@ std::string toStringFormat(double value, const std::string& format, const bool u
     }
 
     return (str);
-};
+}
 
 std::string toString(double value) { return (toStringFormat(value, "{:.3f}", true)); }
 
@@ -376,7 +376,7 @@ void displayVector(const VectorInteger& point1, const VectorInteger& point2)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 void displayVector(const VectorInteger& point1, const VectorDouble& point2)
 {
@@ -397,7 +397,7 @@ void displayVector(const VectorInteger& point1, const VectorDouble& point2)
     }
 
     std::cout << str.str() << '\n';
-};
+}
 
 double getJulianFractionalDate()
 {
@@ -419,7 +419,7 @@ double getJulianFractionalDate()
         - (3 * ((Y + 4900 + (M - 14) / 12) / 100)) / 4 + D - 32075 + secstoday / 86400.0;
 
     return julianDate;
-};
+}
 
 bool writeStringToFile(const std::string& fileName, const std::string& str)
 {
@@ -436,7 +436,7 @@ bool writeStringToFile(const std::string& fileName, const std::string& str)
 
     f.close();
     return true;
-};
+}
 
 std::string getFileAsString(const std::string& fileName)
 {
@@ -453,7 +453,7 @@ std::string getFileAsString(const std::string& fileName)
     }
 
     throw(errno);
-};
+}
 
 std::size_t calculateHash(VectorDouble const& point)
 {

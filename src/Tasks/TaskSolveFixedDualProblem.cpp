@@ -171,9 +171,9 @@ void TaskSolveFixedDualProblem::run()
 
             VectorDouble externalPoint = varSol;
 
-            if(env->dualSolver->MIPSolver->interiorPts.size() > 0)
+            if(env->dualSolver->interiorPts.size() > 0)
             {
-                VectorDouble internalPoint = env->dualSolver->MIPSolver->interiorPts.at(0)->point;
+                VectorDouble internalPoint = env->dualSolver->interiorPts.at(0)->point;
 
                 try
                 {

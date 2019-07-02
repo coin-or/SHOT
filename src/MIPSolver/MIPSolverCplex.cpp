@@ -645,20 +645,21 @@ bool MIPSolverCplex::repairInfeasibility()
 
         relax.add(numOrigConstraints, 0.0);
 
-        int cutoffOffset = 0;
+        int offset = 0;
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
             {
                 relax.add(0.0);
-                cutoffOffset = 1;
-            }
-            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - cutoffOffset).isSourceConvex)
-            {
-                relax.add(0);
+                offset++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
+            {
+                relax.add(0);
+                offset++;
+            }
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - offset).isSourceConvex)
             {
                 relax.add(0);
             }
@@ -1285,8 +1286,6 @@ void MIPSolverCplex::createHyperplane(
 
         addConstraintFunction(tmpRange);
 
-        currIter->numHyperplanesAdded++;
-        currIter->totNumHyperplanes++;
         expr.end();
     }
 }

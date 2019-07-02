@@ -30,11 +30,11 @@ Report::~Report() = default;
 void Report::outputIterationDetail(int iterationNumber, std::string iterationDesc, double totalTime, int dualCutsAdded,
     int dualCutsTotal, double dualObjectiveValue, double primalObjectiveValue, double absoluteObjectiveGap,
     double relativeObjectiveGap, double currentObjectiveValue, int maxConstraintIndex, double maxConstraintError,
-    E_IterationLineType lineType)
+    E_IterationLineType lineType, bool forcePrint)
 {
     try
     {
-        bool printLine = false;
+        bool printLine = forcePrint;
 
         if(env->results->getNumberOfIterations() == 1)
         {
@@ -105,17 +105,25 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         std::string combObjectiveValue;
 
-        if(env->problem->objectiveFunction->properties.isMinimize)
+        if(lineType == E_IterationLineType::DualReductionCut)
         {
-            combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
-                Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
-                Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+            combObjectiveValue
+                = fmt::format("Cutoff: {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
         }
         else
         {
-            combObjectiveValue
-                = fmt::format("{:>12s} | {:<12s}{}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
+            if(env->problem->objectiveFunction->properties.isMinimize)
+            {
+                combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
+                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
+                    Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+            }
+            else
+            {
+                combObjectiveValue = fmt::format("{:>12s} | {:<12s}{}",
+                    Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
                     Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*");
+            }
         }
 
         std::string combObjectiveGap
@@ -138,13 +146,26 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
                 = fmt::format("{:>12g} | {}: {:.2e}", currentObjectiveValue, maxConstraintIndex, maxConstraintError);
         }
 
-        auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-            iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
-
-        env->output->outputInfo(tmpLine);
+        if(lineType == E_IterationLineType::DualRepair)
+        {
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, "", "", "");
+            env->output->outputInfo(tmpLine);
+        }
+        else if(lineType == E_IterationLineType::DualReductionCut)
+        {
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, combObjectiveValue, "", "");
+            env->output->outputInfo(tmpLine);
+        }
+        else
+        {
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, combObjectiveValue, combObjectiveGap, combCurrSol);
+            env->output->outputInfo(tmpLine);
+        }
 
         std::stringstream nodes;
-
         nodes << "        Explored nodes: ";
 
         if(env->results->getCurrentIteration()->numberOfExploredNodes > 0)
@@ -808,9 +829,9 @@ void Report::outputSolutionReport()
 
     switch(env->results->getModelReturnStatus())
     {
-    case E_ModelReturnStatus::OptimalLocal:
+    /* case E_ModelReturnStatus::OptimalLocal:
         report << " Optimal primal solution found, but it might be local since the model seems to be nonconvex.\r\n";
-        break;
+        break;*/
     case E_ModelReturnStatus::OptimalGlobal:
         report << " Globally optimal primal solution found.\r\n";
         break;

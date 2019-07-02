@@ -26,5 +26,6 @@ public:
 private:
     std::string taskIDIfTrue;
     std::string taskIDIfFalse;
+    int totalReductionCutUpdates = 0;
 };
 } // namespace SHOT

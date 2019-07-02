@@ -11,7 +11,6 @@
 #include "TaskSelectHyperplanePointsESH.h"
 
 #include "../DualSolver.h"
-#include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -43,7 +42,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
     env->timing->startTimer("DualCutGenerationRootSearch");
 
-    if(env->dualSolver->MIPSolver->interiorPts.size() == 0)
+    if(env->dualSolver->interiorPts.size() == 0)
     {
         if(!hyperplaneSolutionPointStrategyInitialized)
         {
@@ -94,7 +93,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         for(auto& NCV : numericConstraintValues)
         {
-            for(size_t j = 0; j < env->dualSolver->MIPSolver->interiorPts.size(); j++)
+            for(size_t j = 0; j < env->dualSolver->interiorPts.size(); j++)
             {
                 if(addedHyperplanes >= maxHyperplanesPerIter)
                 {
@@ -154,9 +153,9 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
         try
         {
             env->timing->startTimer("DualCutGenerationRootSearch");
-            auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
-                solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
-                currentConstraint, true);
+            auto xNewc
+                = env->rootsearchMethod->findZero(env->dualSolver->interiorPts.at(j)->point, solPoints.at(i).point,
+                    rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance, currentConstraint, true);
 
             env->timing->stopTimer("DualCutGenerationRootSearch");
             internalPoint = xNewc.first;
@@ -205,7 +204,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
             }
 
-            env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
 
             hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
 
@@ -244,9 +243,9 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
             try
             {
                 env->timing->startTimer("DualCutGenerationRootSearch");
-                auto xNewc = env->rootsearchMethod->findZero(env->dualSolver->MIPSolver->interiorPts.at(j)->point,
-                    solPoints.at(i).point, rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance,
-                    currentConstraint, true);
+                auto xNewc
+                    = env->rootsearchMethod->findZero(env->dualSolver->interiorPts.at(j)->point, solPoints.at(i).point,
+                        rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance, currentConstraint, true);
 
                 env->timing->stopTimer("DualCutGenerationRootSearch");
                 internalPoint = xNewc.first;
@@ -296,7 +295,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
                 }
 
-                env->dualSolver->MIPSolver->hyperplaneWaitingList.push_back(hyperplane);
+                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
                 addedHyperplanes++;
 
                 hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;

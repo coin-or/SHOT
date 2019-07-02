@@ -12,9 +12,11 @@
 
 #include "../DualSolver.h"
 #include "../Enums.h"
+#include "../Report.h"
 #include "../Results.h"
 #include "../Settings.h"
 #include "../TaskHandler.h"
+#include "../Timing.h"
 
 #include "../MIPSolver/IMIPSolver.h"
 
@@ -45,7 +47,15 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+    if(env->results->solutionIsGlobal
+        && (env->results->isRelativeObjectiveGapToleranceMet() || env->results->isAbsoluteObjectiveGapToleranceMet()))
+    {
+        env->tasks->setNextTask(taskIDIfFalse);
+        return;
+    }
+
+    if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
+        >= env->settings->getSetting<int>("ReductionCut.MaxIterations", "Primal"))
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
@@ -59,74 +69,31 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    if(env->results->solutionIsGlobal
-        && (env->results->isRelativeObjectiveGapToleranceMet() || env->results->isAbsoluteObjectiveGapToleranceMet()))
+    double reductionFactor = env->settings->getSetting<double>("ReductionCut.ReductionFactor", "Primal");
+
+    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
     {
-        env->tasks->setNextTask(taskIDIfFalse);
-        return;
-    }
-
-    if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
-        >= env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination"))
-    {
-        env->output->outputCritical("********No update since number of nonconvex objective cutoffs tried: "
-            + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));
-
-        env->tasks->setNextTask(taskIDIfFalse);
-        return;
-    }
-
-    if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
-        == env->settings->getSetting<int>("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination") - 1)
-    {
-        env->output->outputCritical("********Final update since number of nonconvex objective cutoffs tried: "
-            + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));
-
-        double reductionFactor = 0.01;
-
-        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
-        {
-            env->dualSolver->cutOffToUse
-                = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
-            env->results->currentDualBound = SHOT_DBL_MIN;
-        }
-        else
-        {
-            env->dualSolver->cutOffToUse
-                = env->dualSolver->cutOffToUse + reductionFactor * std::abs(env->dualSolver->cutOffToUse);
-            env->results->currentDualBound = SHOT_DBL_MAX;
-        }
-
-        env->output->outputCritical("        New cutoff: " + std::to_string(env->dualSolver->cutOffToUse));
-
-        // Want to solve the following subproblems to optimality
-        // env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
-
-        env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect++;
-        env->tasks->setNextTask(taskIDIfTrue);
-        return;
-    }
-
-    env->output->outputCritical("********Number of nonconvex objective cutoffs tried: "
-        + std::to_string(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect));
-
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize && env->dualSolver->cutOffToUse > 0)
-    {
-        env->dualSolver->cutOffToUse = 0.999 * env->dualSolver->cutOffToUse;
+        env->dualSolver->cutOffToUse
+            = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
         env->results->currentDualBound = SHOT_DBL_MIN;
     }
     else
     {
-        env->dualSolver->cutOffToUse = 1.001 * env->dualSolver->cutOffToUse;
+        env->dualSolver->cutOffToUse
+            = env->dualSolver->cutOffToUse + reductionFactor * std::abs(env->dualSolver->cutOffToUse);
         env->results->currentDualBound = SHOT_DBL_MAX;
     }
 
-    // menv->dualSolver->MIPSolver->setSolutionLimit(1 + env->dualSolver->MIPSolver->getSolutionLimit());
-    env->output->outputCritical("        New cutoff: " + std::to_string(env->dualSolver->cutOffToUse));
-    env->output->outputCritical(
-        "        New solution limit: " + std::to_string(env->dualSolver->MIPSolver->getSolutionLimit()));
+    std::stringstream tmpType;
+    tmpType << "REDCUT-" << env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect + 1;
+
+    env->report->outputIterationDetail(totalReductionCutUpdates + 1, tmpType.str(),
+        env->timing->getElapsedTime("Total"), 0, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0, currIter->maxDeviation,
+        E_IterationLineType::DualReductionCut, true);
 
     env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect++;
+    totalReductionCutUpdates++;
+
     env->tasks->setNextTask(taskIDIfTrue);
 }
 

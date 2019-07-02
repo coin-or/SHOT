@@ -71,6 +71,8 @@ enum class E_IterationLineType
     DualSolution,
     DualCallback,
     DualIntegerFixed,
+    DualRepair,
+    DualReductionCut,
     PrimalNLP
 };
 
@@ -99,7 +101,7 @@ enum class E_ModelReturnStatus
 {
     None,
     OptimalGlobal,
-    OptimalLocal,
+    // OptimalLocal,
     Unbounded,
     UnboundedNoSolution,
     InfeasibleGlobal,

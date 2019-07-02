@@ -704,22 +704,20 @@ bool MIPSolverGurobi::repairInfeasibility()
         VectorDouble relaxParameters;
         int numConstraintsToRepair = 0;
 
-        int cutoffOffset = 0;
+        int offset = 0;
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
             {
-                cutoffOffset = 1;
-                continue;
-            }
-            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - cutoffOffset).isSourceConvex)
-            {
-                continue;
+                offset++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                continue;
+                offset++;
+            }
+            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - offset).isSourceConvex)
+            {
             }
             else
             {

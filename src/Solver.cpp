@@ -940,6 +940,14 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
+    // Primal settings: reduction cuts for nonconvex problems
+
+    env->settings->createSetting("ReductionCut.MaxIterations", "Primal", 5,
+        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting(
+        "ReductionCut.ReductionFactor", "Primal", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
+
     // Primal settings: rootsearch
 
     env->settings->createSetting("Rootsearch.Use", "Primal", true, "Use a rootsearch to find primal solutions");
@@ -1096,9 +1104,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("InfeasibilityRepair.TimeLimit", "Termination", 10.0,
         "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
-
-    env->settings->createSetting("PrimalStagnation.MaxNumberOfPrimalCutReduction", "Termination", 5,
-        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
 
     env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 
@@ -1280,8 +1285,9 @@ void Solver::setConvexityBasedSettings()
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
+            env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
-            env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
 
             env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
@@ -1302,12 +1308,22 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
 
-            env->settings->updateSetting("Rootsearch.Use", "Primal", false);
+            env->settings->updateSetting("Rootsearch.Use", "Primal", true);
 
-            env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
-            env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
-            env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
-            env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
+#ifdef HAS_CPLEX
+
+            if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cplex)
+            {
+                env->settings->updateSetting("Cplex.MIPEmphasis", "Subsolver", 4);
+                env->settings->updateSetting("Cplex.NumericalEmphasis", "Subsolver", 1);
+                env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
+                env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
+
+                if(env->reformulatedProblem->objectiveFunction->properties.classification
+                    == E_ObjectiveFunctionClassification::Quadratic)
+                    env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3);
+            }
+#endif
         }
     }
 }

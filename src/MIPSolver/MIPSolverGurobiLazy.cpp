@@ -193,7 +193,7 @@ void GurobiCallback::callback()
             if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
                 < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
             {
-                int waitingListSize = env->dualSolver->MIPSolver->hyperplaneWaitingList.size();
+                int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
                 std::vector<SolutionPoint> solutionPoints(1);
 
                 int numModelVars = static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
@@ -235,7 +235,7 @@ void GurobiCallback::callback()
                 }
 
                 env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-                    += (env->dualSolver->MIPSolver->hyperplaneWaitingList.size() - waitingListSize);
+                    += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
             }
         }
 
@@ -322,7 +322,7 @@ void GurobiCallback::callback()
             {
                 bool addedIntegerCut = false;
 
-                for(auto& ic : env->dualSolver->MIPSolver->integerCutWaitingList)
+                for(auto& ic : env->dualSolver->integerCutWaitingList)
                 {
                     this->createIntegerCut(ic.first, ic.second);
                     addedIntegerCut = true;
@@ -331,11 +331,11 @@ void GurobiCallback::callback()
                 if(addedIntegerCut)
                 {
                     env->output->outputDebug("        Added "
-                        + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
+                        + std::to_string(env->dualSolver->integerCutWaitingList.size())
                         + " integer cut(s).                                        ");
                 }
 
-                env->dualSolver->MIPSolver->integerCutWaitingList.clear();
+                env->dualSolver->integerCutWaitingList.clear();
             }
 
             currIter->isSolved = true;
@@ -451,15 +451,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 
             addLazy(expr <= -tmpPair.second);
 
-            // std::string identifier = env->dualSolver->MIPSolver->getConstraintIdentifier(hyperplane.source);
-
-            // if(hyperplane.sourceConstraint != nullptr)
-            //    identifier = identifier + "_" + hyperplane.sourceConstraint->name;
-
             env->dualSolver->addGeneratedHyperplane(hyperplane);
-
-            currIter->numHyperplanesAdded++;
-            currIter->totNumHyperplanes++;
         }
     }
     catch(GRBException& e)
@@ -567,13 +559,13 @@ void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoint
             taskSelectHPPtsByObjectiveRootsearch->run(candidatePoints);
         }
 
-        for(auto& hp : env->dualSolver->MIPSolver->hyperplaneWaitingList)
+        for(auto& hp : env->dualSolver->hyperplaneWaitingList)
         {
             this->createHyperplane(hp);
             this->lastNumAddedHyperplanes++;
         }
 
-        env->dualSolver->MIPSolver->hyperplaneWaitingList.clear();
+        env->dualSolver->hyperplaneWaitingList.clear();
     }
     catch(GRBException& e)
     {

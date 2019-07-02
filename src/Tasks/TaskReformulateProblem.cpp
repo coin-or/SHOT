@@ -777,6 +777,11 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 copyOriginalNonlinearExpression = true;
             }
         }
+        else if(sourceConstraint->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
+            && std::dynamic_pointer_cast<ExpressionConstant>(sourceConstraint->nonlinearExpression)->constant == 0.0)
+        {
+            // Nonlinear expression is constant zero
+        }
         else
         {
             copyOriginalNonlinearExpression = true;

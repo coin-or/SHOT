@@ -29,26 +29,25 @@ void TaskAddIntegerCuts::run()
 
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    if(env->dualSolver->MIPSolver->integerCutWaitingList.size() == 0)
+    if(env->dualSolver->integerCutWaitingList.size() == 0)
         return;
 
     if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
         || !currIter->MIPSolutionLimitUpdated)
     {
 
-        for(size_t j = 0; j < env->dualSolver->MIPSolver->integerCutWaitingList.size(); j++)
+        for(size_t j = 0; j < env->dualSolver->integerCutWaitingList.size(); j++)
         {
-            auto [ones, zeroes] = env->dualSolver->MIPSolver->integerCutWaitingList.at(j);
+            auto [ones, zeroes] = env->dualSolver->integerCutWaitingList.at(j);
 
             env->dualSolver->MIPSolver->createIntegerCut(ones, zeroes);
             env->solutionStatistics.numberOfIntegerCuts++;
         }
 
-        env->output->outputDebug("        Added "
-            + std::to_string(env->dualSolver->MIPSolver->integerCutWaitingList.size())
+        env->output->outputDebug("        Added " + std::to_string(env->dualSolver->integerCutWaitingList.size())
             + " integer cut(s) to waiting list.");
 
-        env->dualSolver->MIPSolver->integerCutWaitingList.clear();
+        env->dualSolver->integerCutWaitingList.clear();
     }
 
     env->timing->stopTimer("DualStrategy");

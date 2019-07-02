@@ -32,6 +32,12 @@ public:
 
     std::vector<GeneratedHyperplane> generatedHyperplanes;
 
+    // First is binaries = 1, second is binaries = 0
+    std::vector<std::pair<VectorInteger, VectorInteger>> integerCutWaitingList;
+    std::vector<Hyperplane> hyperplaneWaitingList;
+
+    std::vector<std::shared_ptr<InteriorPoint>> interiorPts;
+
     double cutOffToUse;
     bool useCutOff = false;
     bool isSingleTree = false;

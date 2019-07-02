@@ -16,8 +16,6 @@
 #include "../Settings.h"
 #include "../Timing.h"
 
-#include "../MIPSolver/IMIPSolver.h"
-
 #include "../Model/Problem.h"
 
 namespace SHOT
@@ -42,7 +40,7 @@ void TaskUpdateInteriorPoint::run()
     auto tmpPrimalPoint = env->results->primalSolutions.at(0).point;
 
     // If we do not have an interior point, but uses the ESH dual strategy, update with primal solution
-    if(env->dualSolver->MIPSolver->interiorPts.size() == 0 && maxDevPrimal.value < 0)
+    if(env->dualSolver->interiorPts.size() == 0 && maxDevPrimal.value < 0)
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
@@ -59,19 +57,19 @@ void TaskUpdateInteriorPoint::run()
         env->output->outputDebug("     Interior point replaced with primal solution point since no interior point was "
                                  "previously available.");
 
-        env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
+        env->dualSolver->interiorPts.push_back(tmpIP);
 
         env->timing->stopTimer("InteriorPointSearch");
         return;
     }
-    else if(env->dualSolver->MIPSolver->interiorPts.size() == 0)
+    else if(env->dualSolver->interiorPts.size() == 0)
     {
         env->timing->stopTimer("InteriorPointSearch");
         return;
     }
 
     // Add the new point if it is deeper within the feasible region
-    if(maxDevPrimal.value < env->dualSolver->MIPSolver->interiorPts.at(0)->maxDevatingConstraint.value)
+    if(maxDevPrimal.value < env->dualSolver->interiorPts.at(0)->maxDevatingConstraint.value)
     {
         auto tmpIP = std::make_shared<InteriorPoint>();
 
@@ -91,7 +89,7 @@ void TaskUpdateInteriorPoint::run()
         env->output->outputDebug(
             "     Interior point replaced with primal solution point due to constraint deviation.");
 
-        env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
+        env->dualSolver->interiorPts.back() = tmpIP;
     }
     else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
@@ -114,14 +112,13 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputDebug("     Primal solution point used as additional interior point.");
 
-        if((int)env->dualSolver->MIPSolver->interiorPts.size()
-            == env->solutionStatistics.numberOfOriginalInteriorPoints)
+        if((int)env->dualSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
-            env->dualSolver->MIPSolver->interiorPts.push_back(tmpIP);
+            env->dualSolver->interiorPts.push_back(tmpIP);
         }
         else
         {
-            env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
+            env->dualSolver->interiorPts.back() = tmpIP;
         }
     }
     else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
@@ -146,7 +143,7 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputDebug("     Interior point replaced with primal solution point.");
 
-        env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
+        env->dualSolver->interiorPts.back() = tmpIP;
     }
     else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
@@ -157,8 +154,7 @@ void TaskUpdateInteriorPoint::run()
         // Find a new point in the midpoint between the original and new
         for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
         {
-            tmpPrimalPoint.at(i)
-                = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->MIPSolver->interiorPts.at(0)->point.at(i));
+            tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->interiorPts.at(0)->point.at(i));
         }
 
         for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
@@ -176,7 +172,7 @@ void TaskUpdateInteriorPoint::run()
 
         env->output->outputDebug("     Interior point replaced with primal solution point.");
 
-        env->dualSolver->MIPSolver->interiorPts.back() = tmpIP;
+        env->dualSolver->interiorPts.back() = tmpIP;
     }
 
     env->timing->stopTimer("InteriorPointSearch");
