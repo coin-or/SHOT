@@ -1281,7 +1281,6 @@ void Solver::setConvexityBasedSettings()
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
-            env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
 
             env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
