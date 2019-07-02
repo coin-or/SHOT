@@ -1045,9 +1045,12 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
 
     if(expression->getType() == E_NonlinearExpressionTypes::Constant)
     {
-        constant += std::dynamic_pointer_cast<ExpressionConstant>(expression)->constant;
+        auto expressionConstant = std::dynamic_pointer_cast<ExpressionConstant>(expression);
 
-        nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+        if(expressionConstant->constant != 0.0)
+        {
+            constant += expressionConstant->constant;
+        }
     }
     else if(expression->getType() == E_NonlinearExpressionTypes::Variable)
     {
