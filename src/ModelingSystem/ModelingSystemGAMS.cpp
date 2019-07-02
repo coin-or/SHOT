@@ -246,7 +246,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
      */
     snprintf(gamscall, sizeof(gamscall),
         GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > test.log",
+                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
         filename.c_str());
 
     /* printf(gamscall); fflush(stdout); */
