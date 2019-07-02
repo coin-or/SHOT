@@ -148,7 +148,6 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
             identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
         addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
-        env->dualSolver->addGeneratedHyperplane(hyperplane);
     }
 }
 
