@@ -37,6 +37,8 @@ public:
 
     void setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink);
 
+    void setFileSink(std::string filename);
+
 private:
     std::shared_ptr<spdlog::sinks::sink> consoleSink;
     std::shared_ptr<spdlog::sinks::basic_file_sink_mt> fileSink;

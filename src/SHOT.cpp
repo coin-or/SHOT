@@ -32,9 +32,25 @@ int main(int argc, char* argv[])
 
     argh::parser cmdl;
     cmdl.add_params({ "--opt", "--osol" });
-    cmdl.add_params({ "--osrl", "--trc" });
+    cmdl.add_params({ "--osrl", "--trc", "--log" });
 
     cmdl.parse(argc, argv);
+
+    // Read or create the file for the log
+
+    std::string filename;
+    std::filesystem::path resultFile, optionsFile, traceFile, logFile;
+
+    if(cmdl("--log") >> filename) // Have specified a log-file
+    {
+        logFile = std::filesystem::current_path() / std::filesystem::path(filename);
+        solver->setLogFile(logFile);
+    }
+    else
+    {
+        logFile = std::filesystem::current_path() / std::filesystem::path("SHOT.log");
+        solver->setLogFile(logFile);
+    }
 
     env->report->outputSolverHeader();
 
@@ -63,12 +79,10 @@ int main(int argc, char* argv[])
         env->output->outputCritical("                          If FILE is empty, a new options file will be created");
         env->output->outputCritical("   --osrl FILE            Sets the filename for the OSrL result file");
         env->output->outputCritical("   --trc FILE             Sets the filename for the GAMS trace file");
+        env->output->outputCritical("   --log FILE             Sets the filename for the log file");
 
         return (0);
     }
-
-    std::string filename;
-    std::filesystem::path resultFile, optionsFile, traceFile;
 
     // Read or create options file
 
@@ -167,7 +181,6 @@ int main(int argc, char* argv[])
     if(cmdl("--trc") >> filename) // Have specified a trace-file
     {
         traceFile = std::filesystem::current_path() / std::filesystem::path(filename);
-        std::cout << traceFile << std::endl;
     }
 
     // Read problem file

@@ -58,6 +58,8 @@ public:
     bool setOptionsFromString(std::string options);
     bool setOptionsFromOSoL(std::string options);
 
+    bool setLogFile(std::string filename);
+
     bool setProblem(std::string fileName);
     bool setProblem(ProblemPtr problem, ModelingSystemPtr modelingSystem);
 

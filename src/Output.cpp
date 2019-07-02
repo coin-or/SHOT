@@ -20,16 +20,13 @@ Output::Output()
 #endif
 
     consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("multisink.txt", true);
-    std::vector<spdlog::sink_ptr> sinks{ consoleSink, fileSink };
+    std::vector<spdlog::sink_ptr> sinks{ consoleSink };
     logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
     logger->set_pattern("%v");
 
     // The maximum level of logging to use by all sinks
     logger->set_level(spdlog::level::trace);
-
-    setLogLevels(E_LogLevel::Info, E_LogLevel::Info);
 }
 
 Output::~Output() = default;
@@ -49,7 +46,7 @@ void Output::outputInfo(std::string message) { logger->info(message); }
 
 void Output::outputDebug(std::string message) { logger->debug(message); }
 
-void Output::outputTrace(std::string message)
+void Output::outputTrace([[maybe_unused]] std::string message)
 {
 #ifndef NDEBUG
     logger->trace(message);
@@ -149,6 +146,18 @@ void Output::setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink)
     // install new consoleSink
     consoleSink = newSink;
     logger->sinks()[0] = consoleSink;
+}
+
+void Output::setFileSink(std::string filename)
+{
+    fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, true);
+    fileSink->set_pattern("%v");
+    fileSink->set_level(consoleSink->level());
+
+    std::vector<spdlog::sink_ptr> sinks{ consoleSink, fileSink };
+    logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+
+    logger->set_pattern("%v");
 }
 
 } // namespace SHOT

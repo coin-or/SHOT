@@ -163,6 +163,12 @@ bool Solver::setOptionsFromOSoL(std::string options)
     return (status);
 }
 
+bool Solver::setLogFile(std::string filename)
+{
+    env->output->setFileSink(filename);
+    return (true);
+}
+
 bool Solver::setProblem(std::string fileName)
 {
     if(!std::filesystem::exists(fileName))
