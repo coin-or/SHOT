@@ -377,6 +377,8 @@ void MIPSolverBase::presolveAndUpdateBounds()
             env->output->outputDebug("     Bounds updated also in MIP problem");
         }
     }
+
+    env->reformulatedProblem->doFBBT();
 }
 
 void MIPSolverBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)

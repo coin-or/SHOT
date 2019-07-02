@@ -315,11 +315,14 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         }
     }
 
-    // Removes the objective variable
-    currSol.pop_back();
+    if(currSol.size() > 0)
+    {
+        // Removes the objective variable
+        currSol.pop_back();
 
-    solution = currSol;
-    objectiveValue = LPObjVar;
+        solution = currSol;
+        objectiveValue = LPObjVar;
+    }
 
     return (statusCode);
 }

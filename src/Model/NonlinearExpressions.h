@@ -129,6 +129,8 @@ public:
     virtual Interval calculate([[maybe_unused]] const IntervalVector& intervalVector) const = 0;
     virtual Interval getBounds() const = 0;
 
+    virtual bool tightenBounds(Interval bound) = 0;
+
     virtual FactorableFunction getFactorableFunction() = 0;
 
     virtual std::ostream& print(std::ostream&) const = 0;
@@ -202,6 +204,8 @@ public:
 
     inline Interval getBounds() const override { return Interval(constant); };
 
+    inline bool tightenBounds(Interval bound) override { return false; };
+
     inline FactorableFunction getFactorableFunction() override { return constant; };
 
     inline std::ostream& print(std::ostream& stream) const override { return stream << constant; };
@@ -246,6 +250,8 @@ public:
     };
 
     inline Interval getBounds() const override { return (variable->getBound()); };
+
+    inline bool tightenBounds(Interval bound) override { return (variable->tightenBounds(bound)); };
 
     inline std::ostream& print(std::ostream& stream) const override { return stream << variable->name; };
 
@@ -370,6 +376,8 @@ public:
 
     inline Interval getBounds() const override { return (-child->getBounds()); };
 
+    inline bool tightenBounds(Interval bound) override { return (child->tightenBounds(-bound)); };
+
     inline FactorableFunction getFactorableFunction() override { return (-child->getFactorableFunction()); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -448,6 +456,14 @@ public:
 
     inline Interval getBounds() const override { return (1.0 / child->getBounds()); }
 
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() <= 0.0 && bound.u() >= 0.0)
+            return (false);
+
+        return (child->tightenBounds(1.0 / bound));
+    };
+
     inline FactorableFunction getFactorableFunction() override { return (1 / child->getFactorableFunction()); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -522,6 +538,16 @@ public:
     }
 
     inline Interval getBounds() const override { return (sqrt(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() < 0.0 && bound.u() < 0.0)
+            return (false);
+
+        auto interval = pow(bound, 2);
+
+        return (child->tightenBounds(interval));
+    };
 
     inline FactorableFunction getFactorableFunction() override { return (sqrt(child->getFactorableFunction())); }
 
@@ -606,6 +632,17 @@ public:
 
     inline Interval getBounds() const override { return (log(child->getBounds())); }
 
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() < 0.0 && bound.u() < 0.0)
+            return (false);
+
+        if(bound.l() < 0.0)
+            bound.l(SHOT_DBL_EPS);
+
+        return (child->tightenBounds(exp(bound)));
+    };
+
     inline FactorableFunction getFactorableFunction() override { return (log(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -658,6 +695,14 @@ public:
 
     inline Interval getBounds() const override { return (exp(child->getBounds())); }
 
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() <= 0)
+            return false;
+
+        return (child->tightenBounds(log(bound)));
+    };
+
     inline FactorableFunction getFactorableFunction() override { return (exp(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -709,20 +754,28 @@ public:
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
         auto value = child->calculate(intervalVector);
-        return (value * value);
+
+        auto interval = pow(value, 2);
+
+        return (interval);
     }
 
     inline Interval getBounds() const override
     {
         auto value = child->getBounds();
 
-        auto interval = value * value;
-
-        if(interval.l() <= 0)
-            interval.l(0.0);
+        auto interval = pow(value, 2);
 
         return (interval);
     }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(bound.l() < 0)
+            return false;
+
+        return (child->tightenBounds(sqrt(bound)));
+    };
 
     inline FactorableFunction getFactorableFunction() override
     {
@@ -798,6 +851,8 @@ public:
     }
 
     inline Interval getBounds() const override { return (sin(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (sin(child->getFactorableFunction())); }
 
@@ -897,6 +952,8 @@ public:
 
     inline Interval getBounds() const override { return (cos(child->getBounds())); }
 
+    inline bool tightenBounds(Interval bound) override { return (false); };
+
     inline FactorableFunction getFactorableFunction() override { return (cos(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -995,6 +1052,8 @@ public:
 
     inline Interval getBounds() const override { return (tan(child->getBounds())); }
 
+    inline bool tightenBounds(Interval bound) override { return (false); };
+
     inline FactorableFunction getFactorableFunction() override { return (tan(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -1060,6 +1119,8 @@ public:
 
     inline Interval getBounds() const override { return (asin(child->getBounds())); }
 
+    inline bool tightenBounds(Interval bound) override { return (false); };
+
     inline FactorableFunction getFactorableFunction() override { return (asin(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -1114,6 +1175,8 @@ public:
     }
 
     inline Interval getBounds() const override { return (acos(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (acos(child->getFactorableFunction())); }
 
@@ -1171,6 +1234,8 @@ public:
 
     inline Interval getBounds() const override { return (atan(child->getBounds())); }
 
+    inline bool tightenBounds(Interval bound) override { return (false); };
+
     inline FactorableFunction getFactorableFunction() override { return (atan(child->getFactorableFunction())); }
 
     inline std::ostream& print(std::ostream& stream) const override
@@ -1225,6 +1290,8 @@ public:
     }
 
     inline Interval getBounds() const override { return (abs(child->getBounds())); }
+
+    inline bool tightenBounds(Interval bound) override { return (false); };
 
     inline FactorableFunction getFactorableFunction() override { return (fabs(child->getFactorableFunction())); }
 
@@ -1317,6 +1384,12 @@ public:
     }
 
     inline Interval getBounds() const override { return (firstChild->getBounds() / secondChild->getBounds()); }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        // TODO
+        return (false);
+    }
 
     inline FactorableFunction getFactorableFunction() override
     {
@@ -1632,6 +1705,24 @@ public:
 
         return (bounds);
     }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        if(secondChild->getMonotonicity() != E_Monotonicity::Constant)
+            return (false);
+
+        double exponentValue = secondChild->getBounds().l();
+
+        if(std::abs(exponentValue - 2.0) <= 1e-10 * std::abs(exponentValue))
+            return (false);
+
+        if(bound.l() < 0)
+            return (false);
+
+        auto interval = sqrt(bound);
+
+        return (firstChild->tightenBounds(interval));
+    };
 
     inline FactorableFunction getFactorableFunction() override
     {
@@ -1990,6 +2081,30 @@ public:
         return (tmpInterval);
     }
 
+    inline bool tightenBounds(Interval bound) override
+    {
+        bool tightened = false;
+
+        for(auto& T : children)
+        {
+            Interval newBound = Interval(0.0);
+
+            for(auto& T2 : children)
+            {
+                if(T2 == T)
+                    continue;
+
+                newBound += T2->getBounds();
+            }
+
+            Interval candidate = bound - newBound;
+
+            tightened = T->tightenBounds(candidate) || tightened;
+        }
+
+        return (tightened);
+    };
+
     inline FactorableFunction getFactorableFunction() override
     {
         FactorableFunction funct;
@@ -2097,7 +2212,7 @@ public:
     };
 };
 
-class ExpressionProduct : public ExpressionGeneral
+class ExpressionProduct : public ExpressionGeneral, public std::enable_shared_from_this<ExpressionProduct>
 {
 public:
     ExpressionProduct() = default;
@@ -2153,6 +2268,42 @@ public:
 
         return (tmpInterval);
     }
+
+    inline bool tightenBounds(Interval bound) override
+    {
+        int numberOfChildren = getNumberOfChildren();
+
+        if(numberOfChildren == 0)
+            return (false);
+
+        if(numberOfChildren == 1)
+            return (children.at(0)->tightenBounds(bound));
+
+        bool tightened = false;
+
+        for(auto& C1 : children)
+        {
+            Interval othersBound(1.0);
+
+            for(auto& C2 : children)
+            {
+                if(C1 == C2)
+                    continue;
+
+                othersBound *= C2->getBounds();
+            }
+
+            // To avoid division by zero
+            if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                continue;
+
+            auto childBound = bound / othersBound;
+
+            tightened = C1->tightenBounds(childBound);
+        }
+
+        return (tightened);
+    };
 
     inline FactorableFunction getFactorableFunction() override
     {

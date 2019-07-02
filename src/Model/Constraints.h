@@ -125,6 +125,8 @@ public:
     virtual double calculateFunctionValue(const VectorDouble& point) = 0;
     virtual Interval calculateFunctionValue(const IntervalVector& intervalVector) = 0;
 
+    virtual Interval getConstraintFunctionBounds() = 0;
+
     virtual SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) = 0;
     virtual std::shared_ptr<Variables> getGradientSparsityPattern();
 
@@ -178,6 +180,8 @@ public:
 
     double calculateFunctionValue(const VectorDouble& point) override;
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
+
+    Interval getConstraintFunctionBounds() override;
 
     bool isFulfilled(const VectorDouble& point) override;
 
@@ -254,6 +258,8 @@ public:
 
     double calculateFunctionValue(const VectorDouble& point) override;
     Interval calculateFunctionValue(const IntervalVector& intervalVector) override;
+
+    Interval getConstraintFunctionBounds() override;
 
     bool isFulfilled(const VectorDouble& point) override;
 
@@ -377,6 +383,8 @@ public:
     void updateFactorableFunction();
 
     double calculateFunctionValue(const VectorDouble& point) override;
+
+    Interval getConstraintFunctionBounds() override;
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 

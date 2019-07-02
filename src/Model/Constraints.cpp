@@ -178,6 +178,13 @@ Interval LinearConstraint::calculateFunctionValue(const IntervalVector& interval
     return value;
 }
 
+Interval LinearConstraint::getConstraintFunctionBounds()
+{
+    Interval value = linearTerms.getBounds();
+    value += Interval(constant);
+    return value;
+};
+
 bool LinearConstraint::isFulfilled(const VectorDouble& point) { return NumericConstraint::isFulfilled(point); }
 
 void LinearConstraint::takeOwnership(ProblemPtr owner)
@@ -281,6 +288,13 @@ Interval QuadraticConstraint::calculateFunctionValue(const IntervalVector& inter
 {
     Interval value = LinearConstraint::calculateFunctionValue(intervalVector);
     value += quadraticTerms.calculate(intervalVector);
+    return value;
+}
+
+Interval QuadraticConstraint::getConstraintFunctionBounds()
+{
+    Interval value = LinearConstraint::getConstraintFunctionBounds();
+    value += quadraticTerms.getBounds();
     return value;
 }
 
@@ -529,6 +543,22 @@ Interval NonlinearConstraint::calculateFunctionValue(const IntervalVector& inter
 
     return value;
 }
+
+Interval NonlinearConstraint::getConstraintFunctionBounds()
+{
+    Interval value = QuadraticConstraint::getConstraintFunctionBounds();
+
+    if(this->properties.hasMonomialTerms)
+        value += monomialTerms.getBounds();
+
+    if(this->properties.hasSignomialTerms)
+        value += signomialTerms.getBounds();
+
+    if(this->properties.hasNonlinearExpression)
+        value += nonlinearExpression->getBounds();
+
+    return value;
+};
 
 SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& point, bool eraseZeroes = true)
 {
