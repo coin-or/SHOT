@@ -1416,7 +1416,7 @@ void Problem::doFBBT()
     for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
-        env->output->outputInfo(fmt::format("Bound tightening pass {} of {}.", i + 1, numberOfIterations));
+        env->output->outputDebug(fmt::format("Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
         for(auto& C : linearConstraints)
             boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
@@ -1484,7 +1484,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
                 if(T->variable->tightenBounds(termBound))
                 {
                     boundsUpdated = true;
-                    env->output->outputInfo(
+                    env->output->outputDebug(
                         fmt::format("  bound tightened using linear term in constraint {} .", constraint->name));
                 }
             }
@@ -1534,7 +1534,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
                     if(T->firstVariable->tightenBounds(sqrt(termBound)))
                     {
                         boundsUpdated = true;
-                        env->output->outputInfo(
+                        env->output->outputDebug(
                             fmt::format("  bound tightened using quadratic term in constraint {}.", constraint->name));
                     }
                 }
@@ -1547,7 +1547,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
                         && T->secondVariable->tightenBounds(termBound / firstVariableBound))
                     {
                         boundsUpdated = true;
-                        env->output->outputInfo(
+                        env->output->outputDebug(
                             fmt::format("  bound tightened using quadratic term in constraint {}.", constraint->name));
                     }
 
@@ -1555,7 +1555,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
                         && T->firstVariable->tightenBounds(termBound / secondVariableBound))
                     {
                         boundsUpdated = true;
-                        env->output->outputInfo(
+                        env->output->outputDebug(
                             fmt::format("  bound tightened using quadratic term in constraint {}.", constraint->name));
                     }
                 }
@@ -1586,7 +1586,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             if(std::dynamic_pointer_cast<NonlinearConstraint>(constraint)
                     ->nonlinearExpression->tightenBounds(candidate))
             {
-                env->output->outputInfo(
+                env->output->outputDebug(
                     fmt::format("  bound tightened using nonlinear expression in constraint {}.", constraint->name));
                 boundsUpdated = true;
             }
@@ -1594,7 +1594,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
     }
     catch(const mc::Interval::Exceptions& e)
     {
-        env->output->outputInfo(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
+        env->output->outputDebug(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
     }
 
     return (boundsUpdated);

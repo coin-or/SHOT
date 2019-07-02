@@ -76,7 +76,7 @@ bool Variable::tightenBounds(const Interval bound)
         {
             if(sharedOwnerProblem->env->output)
             {
-                sharedOwnerProblem->env->output->outputInfo(
+                sharedOwnerProblem->env->output->outputDebug(
                     fmt::format(" Bounds tightened for variable {}:\t[{},{}] -> [{},{}].", this->name,
                         originalLowerBound, originalUpperBound, this->lowerBound, this->upperBound));
             }
