@@ -1474,13 +1474,85 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
                     newBound += T2->getBounds();
                 }
 
-                Interval candidate = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
-                candidate = candidate / T->coefficient;
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+                termBound = termBound / T->coefficient;
 
-                if(T->variable->tightenBounds(candidate))
+                if(T->variable->tightenBounds(termBound))
                 {
                     boundsUpdated = true;
                     env->output->outputInfo(fmt::format("  bound tightened in constraint {}.", constraint->name));
+                }
+            }
+        }
+
+        if(constraint->properties.hasQuadraticTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms;
+
+            for(auto& T : terms)
+            {
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+                termBound = termBound / T->coefficient;
+
+                if(T->firstVariable == T->secondVariable)
+                {
+                    if(termBound.l() < 0)
+                        continue;
+
+                    if(T->firstVariable->tightenBounds(sqrt(termBound)))
+                    {
+                        boundsUpdated = true;
+                        env->output->outputInfo(fmt::format(
+                            "  bound tightened in nonlinear constraint {} for quadratic term.", constraint->name));
+                    }
+                }
+                else
+                {
+                    Interval firstVariableBound = T->firstVariable->getBound();
+                    Interval secondVariableBound = T->secondVariable->getBound();
+
+                    if((firstVariableBound.l() > 0 || firstVariableBound.u() < 0)
+                        && T->secondVariable->tightenBounds(termBound / firstVariableBound))
+                    {
+                        boundsUpdated = true;
+                        env->output->outputInfo(fmt::format(
+                            "  bound tightened in nonlinear constraint {} for quadratic term.", constraint->name));
+                    }
+
+                    if((secondVariableBound.l() > 0 || secondVariableBound.u() < 0)
+                        && T->firstVariable->tightenBounds(termBound / secondVariableBound))
+                    {
+                        boundsUpdated = true;
+                        env->output->outputInfo(fmt::format(
+                            "  bound tightened in nonlinear constraint {} for quadratic term.", constraint->name));
+                    }
                 }
             }
         }
