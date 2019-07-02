@@ -88,6 +88,7 @@ void TaskRepairInfeasibleDualProblem::run()
     env->dualSolver->MIPSolver->setSolutionLimit(currentSolutionLimit);
 
     env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate++;
+    env->results->solutionIsGlobal = false;
     env->timing->stopTimer("DualStrategy");
 }
 
