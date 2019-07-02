@@ -1319,7 +1319,8 @@ void Solver::setConvexityBasedSettings()
                 env->settings->updateSetting("Cplex.Probe", "Subsolver", 3);
                 env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
 
-                if(env->reformulatedProblem->properties.isMIQPProblem)
+                if(env->reformulatedProblem->objectiveFunction->properties.classification
+                    == E_ObjectiveFunctionClassification::Quadratic)
                     env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3);
             }
 #endif
