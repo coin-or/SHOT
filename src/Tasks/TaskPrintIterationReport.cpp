@@ -32,6 +32,8 @@ void TaskPrintIterationReport::run()
 {
     auto currIter = env->results->getCurrentIteration();
 
+    bool forcePrint = false;
+
     std::stringstream tmpType;
 
     bool hasSolution = true;
@@ -68,6 +70,7 @@ void TaskPrintIterationReport::run()
     {
         tmpType << "-E";
         hasSolution = false;
+        forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Feasible)
     {
@@ -77,10 +80,12 @@ void TaskPrintIterationReport::run()
     {
         tmpType << "-I";
         hasSolution = false;
+        forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::IterationLimit)
     {
         tmpType << "-IL";
+        forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Optimal)
     {
@@ -102,11 +107,13 @@ void TaskPrintIterationReport::run()
     {
         tmpType << "-TL";
         hasSolution = false;
+        forcePrint = true;
     }
     else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
         tmpType << "-U";
         hasSolution = false;
+        forcePrint = true;
     }
     else
     {
@@ -118,7 +125,7 @@ void TaskPrintIterationReport::run()
         currIter->numHyperplanesAdded, currIter->totNumHyperplanes, env->results->getCurrentDualBound(),
         env->results->getPrimalBound(), env->results->getAbsoluteCurrentObjectiveGap(),
         env->results->getRelativeCurrentObjectiveGap(), currIter->objectiveValue, currIter->maxDeviationConstraint,
-        currIter->maxDeviation, E_IterationLineType::DualSolution);
+        currIter->maxDeviation, E_IterationLineType::DualSolution, forcePrint);
 }
 
 std::string TaskPrintIterationReport::getType()
