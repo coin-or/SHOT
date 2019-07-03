@@ -26,7 +26,7 @@ Output::Output()
     logger->set_pattern("%v");
 
     // The maximum level of logging to use by all sinks
-    logger->set_level(spdlog::level::trace);
+    logger->set_level(spdlog::level::info);
 }
 
 Output::~Output() = default;
