@@ -537,7 +537,15 @@ public:
         return (sqrt(child->calculate(intervalVector)));
     }
 
-    inline Interval getBounds() const override { return (sqrt(child->getBounds())); }
+    inline Interval getBounds() const override
+    {
+        auto childBounds = child->getBounds();
+
+        if(childBounds.l() < 0.0)
+            childBounds.l(0.0);
+
+        return (sqrt(childBounds));
+    }
 
     inline bool tightenBounds(Interval bound) override
     {
@@ -625,12 +633,23 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        auto childValue = log(child->calculate(intervalVector));
+        auto childValue = child->calculate(intervalVector);
 
-        return (log(child->calculate(intervalVector)));
+        if(childValue.l() <= 0)
+            childValue.l(SHOT_DBL_EPS);
+
+        return (log(childValue));
     }
 
-    inline Interval getBounds() const override { return (log(child->getBounds())); }
+    inline Interval getBounds() const override
+    {
+        auto childValue = child->getBounds();
+
+        if(childValue.l() <= 0)
+            childValue.l(SHOT_DBL_EPS);
+
+        return (log(childValue));
+    }
 
     inline bool tightenBounds(Interval bound) override
     {
@@ -1683,27 +1702,88 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (pow(firstChild->calculate(intervalVector), secondChild->calculate(intervalVector)));
+        auto baseBounds = firstChild->calculate(intervalVector);
+        auto powerBounds = secondChild->calculate(intervalVector);
+
+        Interval bounds(0.0);
+
+        if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            double power = powerBounds.l();
+
+            double intpart;
+            bool isInteger = (std::modf(power, &intpart) == 0.0);
+            int integerValue = (int)round(intpart);
+            bool isEven = (integerValue % 2 == 0);
+
+            if(!isInteger && baseBounds.l() <= 0)
+                baseBounds.l(SHOT_DBL_EPS);
+
+            auto bounds = pow(baseBounds, power);
+
+            if(isInteger && isEven && bounds.l() <= 0.0)
+                bounds.l(0.0);
+
+            return (bounds);
+        }
+
+        if(powerBounds.l() < 0)
+        {
+            if(baseBounds.l() <= 0)
+                baseBounds.l(SHOT_DBL_EPS);
+        }
+        else if(powerBounds.l() == 0.0)
+        {
+            if(baseBounds.l() < 0)
+                baseBounds.l(0.0);
+            if(baseBounds.l() <= 0)
+                baseBounds.l(SHOT_DBL_EPS);
+        }
+
+        return (pow(baseBounds, powerBounds));
     }
 
     inline Interval getBounds() const override
     {
-        auto bounds = pow(firstChild->getBounds(), secondChild->getBounds());
+        auto baseBounds = firstChild->getBounds();
+        auto powerBounds = secondChild->getBounds();
+
+        Interval bounds(0.0);
 
         if(secondChild->getType() == E_NonlinearExpressionTypes::Constant)
         {
-            double constant = std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
+            double power = powerBounds.l();
 
             double intpart;
-            bool isInteger = (std::modf(constant, &intpart) == 0.0);
+            bool isInteger = (std::modf(power, &intpart) == 0.0);
             int integerValue = (int)round(intpart);
             bool isEven = (integerValue % 2 == 0);
 
+            if(!isInteger && baseBounds.l() <= 0)
+                baseBounds.l(SHOT_DBL_EPS);
+
+            auto bounds = pow(baseBounds, powerBounds);
+
             if(isInteger && isEven && bounds.l() <= 0.0)
                 bounds.l(0.0);
+
+            return (bounds);
         }
 
-        return (bounds);
+        if(powerBounds.l() < 0)
+        {
+            if(baseBounds.l() <= 0)
+                baseBounds.l(SHOT_DBL_EPS);
+        }
+        else if(powerBounds.l() == 0.0)
+        {
+            if(baseBounds.l() < 0)
+                baseBounds.l(0.0);
+            if(baseBounds.l() <= 0)
+                baseBounds.l(SHOT_DBL_EPS);
+        }
+
+        return (pow(baseBounds, powerBounds));
     }
 
     inline bool tightenBounds(Interval bound) override

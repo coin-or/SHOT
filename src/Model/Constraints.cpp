@@ -589,10 +589,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
             }
 
             if(value[0] != value[0])
-            {
-                std::cout << "nan" << std::endl;
                 value[0] = 0.0;
-            }
 
             if(eraseZeroes && value[0] == 0.0)
                 continue;

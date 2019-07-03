@@ -707,6 +707,9 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
                 &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
         }
 
+        if(value[0] != value[0])
+            value[0] = 0.0;
+
         auto element = gradient.emplace(E.first, value[0]);
 
         if(!element.second)
