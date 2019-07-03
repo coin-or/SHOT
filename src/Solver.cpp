@@ -52,8 +52,9 @@ Solver::Solver()
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
-
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
+    env->timing->createTimer("BoundTightening", " - bound tightening");
+    env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -80,9 +81,7 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->startTimer("Total");
 
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
-
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
-
     env->timing->createTimer("BoundTightening", " - bound tightening");
     env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
 
@@ -848,7 +847,7 @@ void Solver::initializeSettings()
     enumQPStrategy.push_back("Use quadratic objective");
     enumQPStrategy.push_back("Use quadratic objective and constraints");
     env->settings->createSetting("Reformulation.Quadratics.Strategy", "Model",
-        static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective), "How to treat quadratic functions",
+        static_cast<int>(ES_QuadraticProblemStrategy::QuadraticallyConstrained), "How to treat quadratic functions",
         enumQPStrategy);
     enumQPStrategy.clear();
 
