@@ -220,6 +220,16 @@ bool Solver::setProblem(std::string fileName)
         initializeDebugMode();
     }
 
+    // Do not do convexifying reformulations if the problem is assumed to be convex
+    if(env->settings->getSetting<bool>("AssumeConvex", "Convexity"))
+    {
+        env->settings->updateSetting(
+            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+
+        env->settings->updateSetting(
+            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+    }
+
 #ifndef HAS_OS
     if(problemExtension == ".osil" || problemExtension == ".xml")
     {

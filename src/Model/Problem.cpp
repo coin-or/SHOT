@@ -1468,6 +1468,9 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
             for(auto& T : terms)
             {
+                if(T->coefficient == 0.0)
+                    continue;
+
                 Interval newBound = otherTermsBound;
 
                 for(auto& T2 : terms)
@@ -1513,6 +1516,9 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
             for(auto& T : terms)
             {
+                if(T->coefficient == 0.0)
+                    continue;
+
                 Interval newBound = otherTermsBound;
 
                 for(auto& T2 : terms)
