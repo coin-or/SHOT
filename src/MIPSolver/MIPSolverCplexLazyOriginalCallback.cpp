@@ -636,6 +636,13 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
         cplexInstance.solve();
 
         MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
+
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        {
+            repairInfeasibility();
+            MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+        }
     }
     catch(IloException& e)
     {
