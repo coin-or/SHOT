@@ -36,6 +36,8 @@ E_DualProblemClass MIPSolverBase::getProblemClass()
         return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else if(hasQuadraticObjective)
         return (isMIP ? E_DualProblemClass::MIQP : E_DualProblemClass::QP);
+    else if(hasQudraticConstraint)
+        return (isMIP ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
     else
         return (isMIP ? E_DualProblemClass::MIP : E_DualProblemClass::LP);
 }
