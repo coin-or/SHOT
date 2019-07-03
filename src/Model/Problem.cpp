@@ -678,8 +678,13 @@ void Problem::finalize()
     updateProperties();
     updateFactorableFunctions();
 
-    if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
-        doFBBT();
+    // Do not do bound tightening on problems solved by MIP solver
+    if(this->properties.numberOfNonlinearConstraints > 0
+        || this->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    {
+        if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
+            doFBBT();
+    }
 }
 
 void Problem::add(Variables variables)
