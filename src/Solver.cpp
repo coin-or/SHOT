@@ -1335,7 +1335,8 @@ void Solver::setConvexityBasedSettings()
                 env->settings->updateSetting("Cplex.SolnPoolIntensity", "Subsolver", 4);
 
                 if(env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic)
+                        == E_ObjectiveFunctionClassification::Quadratic
+                    || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
                     env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3);
             }
 #endif
