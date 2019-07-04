@@ -684,18 +684,50 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
-        if(static_cast<ES_PartitionNonlinearSums>(
-               env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
-                == ES_PartitionNonlinearSums::Always
-            && sourceConstraint->monomialTerms.size() > 1)
+        if(env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
+            != static_cast<int>(ES_ReformulationBinaryMonomials::None))
+        // The product was a monomial term
         {
-            auto tmpLinearTerms = partitionMonomialTerms(sourceConstraint->monomialTerms, isSignReversed);
-            destinationLinearTerms.add(tmpLinearTerms);
+            auto [tmpLinearTerms, tmpMonomialTerms]
+                = reformulateMonomialSum(sourceConstraint->monomialTerms, isSignReversed);
+
+            if(tmpMonomialTerms.size() == 0)
+            {
+                // All monomials have been reformulated
+                destinationLinearTerms.add(tmpLinearTerms);
+            }
+            else
+            {
+                if(static_cast<ES_PartitionNonlinearSums>(
+                       env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                        == ES_PartitionNonlinearSums::Always
+                    && tmpMonomialTerms.size() > 1)
+                {
+                    auto tmpLinearTerms = partitionMonomialTerms(tmpMonomialTerms, isSignReversed);
+                    destinationLinearTerms.add(tmpLinearTerms);
+                }
+                else // Monomials are always nonconvex
+                {
+                    for(auto& T : sourceConstraint->monomialTerms)
+                        destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+                }
+            }
         }
-        else // Monomials are always nonconvex
+        else
         {
-            for(auto& T : sourceConstraint->monomialTerms)
-                destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+            if(static_cast<ES_PartitionNonlinearSums>(
+                   env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                    == ES_PartitionNonlinearSums::Always
+                && destinationMonomialTerms.size() > 1)
+            {
+                auto tmpLinearTerms = partitionMonomialTerms(destinationMonomialTerms, isSignReversed);
+                destinationLinearTerms.add(tmpLinearTerms);
+            }
+            else // Monomials are always nonconvex
+            {
+                for(auto& T : sourceConstraint->monomialTerms)
+                    destinationMonomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+            }
         }
     }
 
