@@ -735,7 +735,64 @@ public:
 
     inline Interval calculate(const IntervalVector& intervalVector) const
     {
-        return pow(variable->calculate(intervalVector), power);
+        auto variableBound = variable->calculate(intervalVector);
+
+        double intpart;
+        bool isInteger = (std::modf(power, &intpart) == 0.0);
+        int integerValue = (int)round(intpart);
+        bool isEven = (integerValue % 2 == 0);
+
+        if(!isInteger && variableBound.l() <= 0)
+            variableBound.l(SHOT_DBL_EPS);
+
+        auto bounds = pow(variableBound, power);
+
+        if(isInteger && isEven && bounds.l() <= 0.0)
+            bounds.l(0.0);
+
+        return (bounds);
+    }
+
+    inline Interval getBounds()
+    {
+        auto variableBound = variable->getBound();
+
+        double intpart;
+        bool isInteger = (std::modf(power, &intpart) == 0.0);
+
+        if(isInteger && power > 0 && variableBound.l() < 0.0)
+            variableBound.l(0.0);
+        else if(!isInteger && variableBound.l() <= 0.0)
+            variableBound.l(SHOT_DBL_EPS);
+        else if(variableBound.l() <= 0)
+            variableBound.l(0.0);
+
+        auto bounds = pow(variableBound, 1.0 / power);
+
+        if(bounds.l() <= 0.0)
+            bounds.l(0.0);
+
+        return (bounds);
+    }
+
+    inline bool tightenBounds(Interval bound)
+    {
+        if(bound.l() < 0)
+            return (false);
+
+        double intpart;
+        bool isInteger = (std::modf(power, &intpart) == 0.0);
+
+        if(isInteger && power > 0 && bound.l() < 0.0)
+            bound.l(0.0);
+        else if(bound.l() <= 0.0)
+            bound.l(SHOT_DBL_EPS);
+        else if(bound.l() < 0.0)
+            bound.l(0.0);
+
+        auto interval = pow(bound, 1.0 / power);
+
+        return (variable->tightenBounds(interval));
     }
 };
 

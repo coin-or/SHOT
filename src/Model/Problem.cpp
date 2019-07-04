@@ -1573,6 +1573,147 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
 
+        if(constraint->properties.hasMonomialTerms)
+        {
+            std::cout << "in monomial\n";
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasSignomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms;
+
+            for(auto& T : terms)
+            {
+                if(T->coefficient == 0.0)
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+                termBound = termBound / T->coefficient;
+
+                for(auto& V1 : T->variables)
+                {
+                    Interval othersBound(1.0);
+
+                    for(auto& V2 : T->variables)
+                    {
+                        if(V1 == V2)
+                            continue;
+
+                        othersBound *= V2->getBound();
+                    }
+
+                    // To avoid division by zero
+                    if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                        continue;
+
+                    auto childBound = termBound / othersBound;
+
+                    if(V1->tightenBounds(childBound))
+                    {
+                        boundsUpdated = true;
+                        env->output->outputDebug(
+                            fmt::format("  bound tightened using monomial term in constraint {}.", constraint->name));
+                    }
+                }
+            }
+        }
+
+        if(constraint->properties.hasSignomialTerms)
+        {
+            Interval otherTermsBound(constraint->constant);
+
+            if(constraint->properties.hasLinearTerms)
+                otherTermsBound += std::dynamic_pointer_cast<LinearConstraint>(constraint)->linearTerms.getBounds();
+
+            if(constraint->properties.hasQuadraticTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<QuadraticConstraint>(constraint)->quadraticTerms.getBounds();
+
+            if(constraint->properties.hasMonomialTerms)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->monomialTerms.getBounds();
+
+            if(constraint->properties.hasNonlinearExpression)
+                otherTermsBound
+                    += std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->nonlinearExpression->getBounds();
+
+            auto terms = std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->signomialTerms;
+
+            for(auto& T : terms)
+            {
+                if(T->coefficient == 0.0)
+                    continue;
+
+                Interval newBound = otherTermsBound;
+
+                for(auto& T2 : terms)
+                {
+                    if(T2 == T)
+                        continue;
+
+                    newBound += T2->getBounds();
+                }
+
+                Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
+
+                if(T->coefficient > 0 && termBound.l() < 0)
+                    termBound.l(0.0);
+                else if(T->coefficient < 0 && termBound.u() > 0)
+                    termBound.u(0.0);
+
+                termBound = termBound / T->coefficient;
+
+                for(auto& E1 : T->elements)
+                {
+                    Interval othersBound(1.0);
+
+                    for(auto& E2 : T->elements)
+                    {
+                        if(E1 == E2)
+                            continue;
+
+                        othersBound *= E2->getBounds();
+                    }
+
+                    // To avoid division by zero
+                    if(othersBound.l() <= 0 && othersBound.u() >= 0)
+                        continue;
+
+                    auto childBound = termBound / othersBound;
+
+                    if(E1->tightenBounds(childBound))
+                    {
+                        boundsUpdated = true;
+                        env->output->outputDebug(
+                            fmt::format("  bound tightened using signomial term in constraint {}.", constraint->name));
+                    }
+                }
+            }
+        }
+
         if(constraint->properties.hasNonlinearExpression)
         {
             Interval otherTermsBound(constraint->constant);
