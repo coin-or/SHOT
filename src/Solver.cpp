@@ -1300,16 +1300,19 @@ void Solver::setConvexityBasedSettings()
     {
         if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
         {
-            env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
-
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
 
             env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
+            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 10);
+
+            env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
             env->settings->updateSetting("MIP.Presolve.UpdateObtainedBounds", "Dual", false);
 
             env->settings->updateSetting("Relaxation.Use", "Dual", false);
+
+            env->settings->updateSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", true);
 
             env->settings->updateSetting(
                 "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
@@ -1322,8 +1325,9 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);
             env->settings->updateSetting("FixedInteger.Source", "Primal", 0);
+            env->settings->updateSetting("FixedInteger.Warmstart", "Primal", false);
 
-            env->settings->updateSetting("Rootsearch.Use", "Primal", true);
+            env->settings->updateSetting("Rootsearch.Use", "Primal", false);
 
 #ifdef HAS_CPLEX
 

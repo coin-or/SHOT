@@ -1575,7 +1575,6 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
         if(constraint->properties.hasMonomialTerms)
         {
-            std::cout << "in monomial\n";
             Interval otherTermsBound(constraint->constant);
 
             if(constraint->properties.hasLinearTerms)
