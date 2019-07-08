@@ -79,9 +79,9 @@ if(GENERATE_EXE AND NOT (HAS_GAMS OR HAS_OS))
 endif()
 
 # Sets version number
-set(SHOT_VERSION_MAJOR 0)
-set(SHOT_VERSION_MINOR 9)
-set(SHOT_VERSION_PATCH 2)
+set(SHOT_VERSION_MAJOR 1)
+set(SHOT_VERSION_MINOR 0)
+set(SHOT_VERSION_PATCH "\"alpha 1\"")
 
 # Try to find Git
 find_program(GIT git)
