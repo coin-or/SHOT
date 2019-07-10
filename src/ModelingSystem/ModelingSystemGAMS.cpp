@@ -1185,8 +1185,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             }
 
             case fnexp:
-            case fnslexp:
-            case fnsqexp:
             {
                 auto expression = std::make_shared<ExpressionExp>(stack.rbegin()[0]);
                 stack.pop_back();
@@ -1203,8 +1201,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             }
 
             case fnlog10:
-            case fnsllog10:
-            case fnsqlog10:
             {
                 auto expression
                     = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(1.0 / log(10.0)),
@@ -1276,21 +1272,9 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             }
 
             case fndiv:
-            case fndiv0:
             {
                 auto expression = std::make_shared<ExpressionDivide>(stack.rbegin()[1], stack.rbegin()[0]);
                 stack.pop_back();
-                stack.pop_back();
-                stack.push_back(expression);
-                break;
-            }
-
-            case fnslrec: // 1/x
-            case fnsqrec: // 1/x
-            {
-                stack.push_back(std::make_shared<ExpressionConstant>(1.0));
-                auto expression
-                    = std::make_shared<ExpressionDivide>(stack.rbegin()[0], std::make_shared<ExpressionConstant>(1.0));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;
