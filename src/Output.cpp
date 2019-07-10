@@ -57,6 +57,7 @@ void Output::setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel)
 {
     // Sets the correct log levels
 
+    assert(consoleSink != NULL);
     switch(consoleLogLevel)
     {
     case E_LogLevel::Off:
@@ -91,39 +92,40 @@ void Output::setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel)
         break;
     }
 
-    switch(fileLogLevel)
-    {
-    case E_LogLevel::Off:
-        fileSink->set_level(spdlog::level::off);
-        break;
+    if( fileSink != NULL )
+        switch(fileLogLevel)
+        {
+        case E_LogLevel::Off:
+            fileSink->set_level(spdlog::level::off);
+            break;
 
-    case E_LogLevel::Critical:
-        fileSink->set_level(spdlog::level::critical);
-        break;
+        case E_LogLevel::Critical:
+            fileSink->set_level(spdlog::level::critical);
+            break;
 
-    case E_LogLevel::Error:
-        fileSink->set_level(spdlog::level::err);
-        break;
+        case E_LogLevel::Error:
+            fileSink->set_level(spdlog::level::err);
+            break;
 
-    case E_LogLevel::Warning:
-        fileSink->set_level(spdlog::level::warn);
-        break;
+        case E_LogLevel::Warning:
+            fileSink->set_level(spdlog::level::warn);
+            break;
 
-    case E_LogLevel::Info:
-        fileSink->set_level(spdlog::level::info);
-        break;
+        case E_LogLevel::Info:
+            fileSink->set_level(spdlog::level::info);
+            break;
 
-    case E_LogLevel::Debug:
-        fileSink->set_level(spdlog::level::debug);
-        break;
+        case E_LogLevel::Debug:
+            fileSink->set_level(spdlog::level::debug);
+            break;
 
-    case E_LogLevel::Trace:
-        fileSink->set_level(spdlog::level::trace);
-        break;
+        case E_LogLevel::Trace:
+            fileSink->set_level(spdlog::level::trace);
+            break;
 
-    default:
-        break;
-    }
+        default:
+            break;
+        }
 
     // Also set the level for the main logger
     if((int)consoleLogLevel <= (int)fileLogLevel)
