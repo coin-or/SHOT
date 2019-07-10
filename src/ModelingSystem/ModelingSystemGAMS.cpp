@@ -290,8 +290,7 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
-        snprintf(buffer, sizeof(buffer) + 36, "Error registering GAMS Environment: %s", buffer);
-        throw std::logic_error(buffer);
+        throw std::logic_error(std::string("Error registering GAMS Environment: ") + buffer);
     }
 
     if(gmoLoadDataLegacy(modelingObject, buffer))
