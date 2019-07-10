@@ -19,6 +19,8 @@
 
 #include "../Model/Simplifications.h"
 
+#include "GamsNLinstr.h"
+
 #include <filesystem>
 
 namespace SHOT

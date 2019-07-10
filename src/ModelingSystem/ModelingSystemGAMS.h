@@ -17,7 +17,6 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
-#include "GamsNLinstr.h"
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
