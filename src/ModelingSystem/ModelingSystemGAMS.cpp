@@ -247,8 +247,13 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
      * for this gams call
      */
     snprintf(gamscall, sizeof(gamscall),
+#ifdef GAMSDIR
         GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
                 "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+#else
+                "gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
+                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+#endif
         filename.c_str());
 
     /* printf(gamscall); fflush(stdout); */
@@ -274,8 +279,13 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
     char buffer[GMS_SSSIZE];
 
     /* initialize GMO and GEV libraries */
+#ifdef GAMSDIR
     if(!gmoCreateDD(&modelingObject, GAMSDIR, buffer, sizeof(buffer))
         || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
+#else
+    if(!gmoCreate(&modelingObject, buffer, sizeof(buffer))
+        || !gevCreate(&modelingEnvironment, buffer, sizeof(buffer)))
+#endif
         throw std::logic_error(buffer);
 
     createdgmo = true;
