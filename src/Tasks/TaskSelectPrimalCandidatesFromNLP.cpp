@@ -20,6 +20,7 @@
 #include "../Timing.h"
 #include "../Utilities.h"
 
+#include "../Model/Problem.h"
 #include "../NLPSolver/INLPSolver.h"
 
 #include "../Tasks/TaskSelectHyperplanePointsESH.h"
