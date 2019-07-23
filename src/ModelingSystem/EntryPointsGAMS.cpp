@@ -9,6 +9,10 @@
    Please see the README and LICENSE files for more information.
  */
 
+#ifdef __GNUC__
+#define DllExport __attribute__((__visibility__("default")))
+#endif
+
 #include "ModelingSystemGAMS.h"
 
 #include "../Output.h"
@@ -37,6 +41,7 @@ extern "C"
         optHandle_t opt;
     } gamsshot;
 
+    DllExport void STDCALL shtXCreate(void** Cptr);
     DllExport void STDCALL shtXCreate(void** Cptr)
     {
         assert(Cptr != nullptr);
@@ -44,6 +49,7 @@ extern "C"
         *Cptr = calloc(1, sizeof(gamsshot));
     }
 
+    DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen);
     DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen)
     {
         assert(Cptr != nullptr);
@@ -57,6 +63,7 @@ extern "C"
         return 1;
     }
 
+    DllExport void STDCALL shtXFree(void** Cptr);
     DllExport void STDCALL shtXFree(void** Cptr)
     {
         assert(Cptr != nullptr);
@@ -69,6 +76,7 @@ extern "C"
         gevLibraryUnload();
     }
 
+    DllExport int STDCALL shtfree(void** Cptr);
     DllExport int STDCALL shtfree(void** Cptr)
     {
         shtXFree(Cptr);
@@ -83,12 +91,14 @@ extern "C"
            3: client is newer than DLL, forward compatibility
            FIXME: for now, we just claim full compatibility
      */
+    DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp);
     DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
     {
         *comp = 1;
         return 1;
     }
 
+    DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp);
     DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
     {
         *comp = 1;
@@ -96,17 +106,22 @@ extern "C"
     }
 
     DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
+                                       [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
+    DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
         [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
     {
         return 1;
     }
 
     DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
+        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
+    DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
         [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
     {
         return 1;
     }
 
+    DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr);
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
         gamsshot* gs;
@@ -164,6 +179,7 @@ extern "C"
         return true;
     }
 
+    DllExport int STDCALL C__shtCallSolver(void* Cptr);
     DllExport int STDCALL C__shtCallSolver(void* Cptr)
     {
         gamsshot* gs;
@@ -258,8 +274,10 @@ extern "C"
         return 0;
     }
 
+    DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr);
     DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr) { return 0; }
 
+    DllExport int STDCALL C__shtModifyProblem(void* Cptr);
     DllExport int STDCALL C__shtModifyProblem(void* Cptr)
     {
         assert(Cptr != nullptr);
