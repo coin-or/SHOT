@@ -20,6 +20,7 @@
 #include "../Model/Simplifications.h"
 
 #include "GamsNLinstr.h"
+#include "palmcc.h"
 
 #include <filesystem>
 
@@ -50,6 +51,21 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) 
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 {
+#ifdef GAMS_BUILD
+    palHandle_t pal;
+    char buffer[GMS_SSSIZE];
+    if(!palCreate(&pal, buffer, sizeof(buffer)))
+        throw Error(buffer);
+
+    palLicenseRegisterGAMS(pal, 1, gevGetStrOpt(modelingEnvironment, "License1", buffer));
+    palLicenseRegisterGAMS(pal, 2, gevGetStrOpt(modelingEnvironment, "License2", buffer));
+    palLicenseRegisterGAMS(pal, 3, gevGetStrOpt(modelingEnvironment, "License3", buffer));
+    palLicenseRegisterGAMS(pal, 4, gevGetStrOpt(modelingEnvironment, "License4", buffer));
+    palLicenseRegisterGAMS(pal, 5, gevGetStrOpt(modelingEnvironment, "License5", buffer));
+    palLicenseRegisterGAMSDone(pal);
+    /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
+#endif
+
     // Process GAMS options.
     // We do not want to use GAMS defaults if called on a gms file, in which case we would have created our own GMO.
     if(!createdgmo)
@@ -90,8 +106,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
-        gevLogPChar(modelingEnvironment, "Reading options from ");
-        gevLog(modelingEnvironment, buffer);
+        env->output->outputInfo(" Reading options from " + std::string(buffer));
 
         if(!std::filesystem::exists(buffer))
             throw std::logic_error("Options file not found.");
@@ -111,6 +126,19 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
 
     env->output->setLogLevels(static_cast<E_LogLevel>(settings->getSetting<int>("Console.LogLevel", "Output")),
         static_cast<E_LogLevel>(settings->getSetting<int>("File.LogLevel", "Output")));
+
+#ifdef GAMS_BUILD
+    /* if CPLEX is set, then check whether GAMS/CPLEX license is present */
+    if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
+    {
+        /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
+        if(palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) != 0)
+        {
+            env->output->outputInfo(" CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
+            env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+        }
+    }
+#endif
 }
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
