@@ -37,6 +37,8 @@ public:
     ModelingSystemGAMS(EnvironmentPtr envPtr);
     ~ModelingSystemGAMS() override;
 
+    void setModelingObject(gmoHandle_t gmo);
+
     // Adds modeling system specific settings
     void augmentSettings(SettingsPtr settings) override;
 
@@ -48,8 +50,8 @@ public:
     E_ProblemCreationStatus createProblem(
         ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource);
 
-    // Create the optimization problem by filename from a GAMS model instance object
-    E_ProblemCreationStatus createProblem(ProblemPtr& problem, gmoHandle_t gmo);
+    // Create the optimization problem from the stored GAMS model instance object
+    E_ProblemCreationStatus createProblem(ProblemPtr& problem);
 
     // Move the solution and statistics from SHOT to the modeling system
     void finalizeSolution() override;

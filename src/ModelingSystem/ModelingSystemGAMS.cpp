@@ -39,6 +39,12 @@ ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
 {
 }
 
+void ModelingSystemGAMS::setModelingObject(gmoHandle_t gmo)
+{
+    modelingObject = gmo;
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
+}
+
 ModelingSystemGAMS::~ModelingSystemGAMS()
 {
     clearGAMSObjects();
@@ -54,6 +60,9 @@ void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) 
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings, palHandle_t pal)
 {
+    assert(modelingEnvironment != nullptr);
+    assert(modelingObject != nullptr);
+
 #ifdef GAMS_BUILD
     assert(pal != nullptr);
     if(palLicenseCheckSubSys(pal, const_cast<char*>("IP")) == 0)
@@ -173,15 +182,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         return (E_ProblemCreationStatus::Error);
     }
 
-    return createProblem(problem, modelingObject);
+    return createProblem(problem);
 }
 
-E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, gmoHandle_t gmo)
+E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 {
-    assert(gmo != nullptr);
-
-    modelingObject = gmo;
-    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
+    assert(modelingObject != nullptr);
+    assert(modelingEnvironment != nullptr);
 
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(modelingObject, 1);

@@ -206,11 +206,13 @@ extern "C"
         {
             env->report->outputSolverHeader();
 
-            env->timing->startTimer("ProblemInitialization");
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+            modelingSystem->setModelingObject(gs->gmo);
+            modelingSystem->updateSettings(env->settings, gs->pal);
 
+            env->timing->startTimer("ProblemInitialization");
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-            switch(modelingSystem->createProblem(problem, gs->gmo))
+            switch(modelingSystem->createProblem(problem))
             {
             case E_ProblemCreationStatus::NormalCompletion:
                 break;
@@ -226,9 +228,6 @@ extern "C"
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
             env->timing->stopTimer("ProblemInitialization");
-
-            /* correct to call this here? */
-            modelingSystem->updateSettings(env->settings, gs->pal);
 
             solver.registerCallback(
                 E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)] {
