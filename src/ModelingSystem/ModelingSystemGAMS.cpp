@@ -22,7 +22,6 @@
 
 #include "GamsNLinstr.h"
 #ifdef GAMS_BUILD
-#include "palmcc.h"
 extern "C" void HSLInit();
 #endif
 
@@ -53,22 +52,10 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
 
 void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
 
-void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
+void ModelingSystemGAMS::updateSettings(SettingsPtr settings, palHandle_t pal)
 {
 #ifdef GAMS_BUILD
-    palHandle_t pal;
-    char buffer[GMS_SSSIZE];
-    if(!palCreate(&pal, buffer, sizeof(buffer)))
-        throw Error(buffer);
-
-    palLicenseRegisterGAMS(pal, 1, gevGetStrOpt(modelingEnvironment, "License1", buffer));
-    palLicenseRegisterGAMS(pal, 2, gevGetStrOpt(modelingEnvironment, "License2", buffer));
-    palLicenseRegisterGAMS(pal, 3, gevGetStrOpt(modelingEnvironment, "License3", buffer));
-    palLicenseRegisterGAMS(pal, 4, gevGetStrOpt(modelingEnvironment, "License4", buffer));
-    palLicenseRegisterGAMS(pal, 5, gevGetStrOpt(modelingEnvironment, "License5", buffer));
-    palLicenseRegisterGAMSDone(pal);
-    /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
-
+    assert(pal != nullptr);
     if(palLicenseCheckSubSys(pal, const_cast<char*>("IP")) == 0)
     {
         /* IPOPTH is licensed: use HSL MA27 and make it available */

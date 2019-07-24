@@ -27,6 +27,7 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
+#include "palmcc.h"
 #include "optcc.h"
 
 using namespace SHOT;
@@ -38,6 +39,7 @@ extern "C"
     {
         gmoHandle_t gmo;
         optHandle_t opt;
+        palHandle_t pal;
     } gamsshot;
 
     DllExport void STDCALL shtXCreate(void** Cptr);
@@ -68,11 +70,17 @@ extern "C"
         assert(Cptr != nullptr);
         assert(*Cptr != nullptr);
 
+        if(((gamsshot*)*Cptr)->pal != NULL)
+            palFree(&((gamsshot*)*Cptr)->pal);
+
         free(*Cptr);
         *Cptr = nullptr;
 
         gmoLibraryUnload();
         gevLibraryUnload();
+#ifdef GAMS_BUILD
+        palLibraryUnload();
+#endif
     }
 
     DllExport int STDCALL shtfree(void** Cptr);
@@ -124,19 +132,57 @@ extern "C"
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
         gamsshot* gs;
+        gevHandle_t gev;
 
         assert(Cptr != nullptr);
         assert(Gptr != nullptr);
 
         char msg[256];
         if(!gmoGetReady(msg, sizeof(msg)))
+        {
+            fputs(msg, stderr);
             return 1;
+        }
         if(!gevGetReady(msg, sizeof(msg)))
+        {
+            fputs(msg, stderr);
             return 1;
+        }
 
         gs = (gamsshot*)Cptr;
         gs->gmo = Gptr;
         gs->opt = Optr;
+        gev = (gevHandle_t)gmoEnvironment(Gptr);
+
+#ifdef GAMS_BUILD
+        if(!palGetReady(msg, sizeof(msg)))
+        {
+            gevLogStat(gev, msg);
+            return 1;
+        }
+        if(!palCreate(&gs->pal, msg, sizeof(msg)))
+        {
+            gevLogStat(gev, msg);
+            return 1;
+        }
+
+        /* print auditline */
+#define PALPTR gs->pal
+#include "shotCLsvn.h"
+        palGetAuditLine(gs->pal, msg);
+        gevLogStat(gev, "");
+        gevLogStat(gev, msg);
+        gevStatAudit(gev, msg);
+
+        /* initialize licensing */
+        palLicenseRegisterGAMS(gs->pal, 1, gevGetStrOpt(gev, "License1", msg));
+        palLicenseRegisterGAMS(gs->pal, 2, gevGetStrOpt(gev, "License2", msg));
+        palLicenseRegisterGAMS(gs->pal, 3, gevGetStrOpt(gev, "License3", msg));
+        palLicenseRegisterGAMS(gs->pal, 4, gevGetStrOpt(gev, "License4", msg));
+        palLicenseRegisterGAMS(gs->pal, 5, gevGetStrOpt(gev, "License5", msg));
+        palLicenseRegisterGAMSDone(gs->pal);
+        /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
+#endif
 
         return 0;
     }
@@ -182,7 +228,7 @@ extern "C"
             env->timing->stopTimer("ProblemInitialization");
 
             /* correct to call this here? */
-            modelingSystem->updateSettings(env->settings);
+            modelingSystem->updateSettings(env->settings, gs->pal);
 
             solver.registerCallback(
                 E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)] {

@@ -17,6 +17,7 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
+#include "palmcc.h"
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
@@ -40,7 +41,8 @@ public:
     void augmentSettings(SettingsPtr settings) override;
 
     // Get specific settings from modeling system
-    void updateSettings(SettingsPtr settings) override;
+    void updateSettings(SettingsPtr settings) override { updateSettings(settings, NULL); }
+    void updateSettings(SettingsPtr settings, palHandle_t pal);
 
     // Create the optimization problem by filename either directly from a gms-file or from a compiled GAMS model
     E_ProblemCreationStatus createProblem(
