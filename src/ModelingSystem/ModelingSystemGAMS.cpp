@@ -16,11 +16,15 @@
 #include "../Settings.h"
 #include "../Timing.h"
 #include "../Utilities.h"
+#include "../Enums.h"
 
 #include "../Model/Simplifications.h"
 
 #include "GamsNLinstr.h"
+#ifdef GAMS_BUILD
 #include "palmcc.h"
+extern "C" void HSLInit();
+#endif
 
 #include <filesystem>
 
@@ -64,6 +68,15 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     palLicenseRegisterGAMS(pal, 5, gevGetStrOpt(modelingEnvironment, "License5", buffer));
     palLicenseRegisterGAMSDone(pal);
     /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
+
+    if(palLicenseCheckSubSys(pal, const_cast<char*>("IP")) == 0)
+    {
+        /* IPOPTH is licensed: use HSL MA27 and make it available */
+        env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
+        HSLInit();
+    }
+    else
+        env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
 #endif
 
     // Process GAMS options.
