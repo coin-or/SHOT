@@ -54,6 +54,7 @@ HCallbackI::~HCallbackI() = default;
 
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
 
+static
 IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
 {
     return (IloCplex::Callback(new(iloEnv) HCallbackI(envPtr, iloEnv, cplexVars)));
@@ -167,6 +168,7 @@ InfoCallbackI::~InfoCallbackI() = default;
 
 IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const { return (new(getEnv()) InfoCallbackI(*this)); }
 
+static
 IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
 {
     return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv, cplexVars)));
@@ -261,6 +263,7 @@ CtCallbackI::~CtCallbackI() = default;
 
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
 
+static
 IloCplex::Callback CtCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
 {
     return (IloCplex::Callback(new(iloEnv) CtCallbackI(envPtr, iloEnv, cplexVars)));
