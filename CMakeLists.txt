@@ -173,7 +173,12 @@ endif(HAS_GUROBI)
 # NLP solvers
 
 if(HAS_IPOPT)
+  find_package(PkgConfig)
+  if(PkgConfig_FOUND)
+    include(FindPkgConfig)
+  endif()
   set(ENV{PKG_CONFIG_PATH} "${IPOPT_DIR}/lib/pkgconfig")
+
   pkg_search_module(IPOPT REQUIRED ipopt)
   link_directories(${IPOPT_LIBRARY_DIRS})
   include_directories(${IPOPT_INCLUDE_DIRS})
