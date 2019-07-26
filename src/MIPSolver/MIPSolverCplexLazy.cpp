@@ -556,7 +556,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
 
 int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
 {
-    int sollim;
+    int sollim = 0;
 
     try
     {

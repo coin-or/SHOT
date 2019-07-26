@@ -731,7 +731,7 @@ bool MIPSolverCplex::repairInfeasibility()
 
 int MIPSolverCplex::increaseSolutionLimit(int increment)
 {
-    int sollim;
+    int sollim = 0;
 
     try
     {

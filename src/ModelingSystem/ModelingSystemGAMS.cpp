@@ -352,13 +352,17 @@ void ModelingSystemGAMS::finalizeSolution()
 {
     ResultsPtr r = env->results;
     assert(r != nullptr);
+#ifndef NDEBUG
     bool haveSolution = false;
+#endif
 
     // set primal solution and model status
     if(r->hasPrimalSolution())
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
+#ifndef NDEBUG
         haveSolution = true;
+#endif
     }
     else
     {

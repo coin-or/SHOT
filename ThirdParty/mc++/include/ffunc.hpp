@@ -4164,8 +4164,7 @@ FFGraph::eval
   // Nothing to do!
   if( !nDep ) return;
   assert( pDep && vDep );
-  const unsigned nIndep = nVar.size();
-  assert( pVar.size() == nIndep && vVar.size() == nIndep );
+  assert( pVar.size() == nVar.size() && vVar.size() == nVar.size() );
   //assert( !nVar || ( pVar && vVar ) );
 #ifdef MC__FFUNC_CPU_EVAL
   double cputime;

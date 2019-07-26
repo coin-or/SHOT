@@ -658,7 +658,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
 
 int MIPSolverCplexLazyOriginalCallback::increaseSolutionLimit(int increment)
 {
-    int sollim;
+    int sollim = 0;
 
     try
     {
