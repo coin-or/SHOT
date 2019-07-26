@@ -9,10 +9,6 @@
    Please see the README and LICENSE files for more information.
  */
 
-#ifdef __GNUC__
-#define DllExport __attribute__((__visibility__("default")))
-#endif
-
 #include "ModelingSystemGAMS.h"
 
 #include "../Output.h"

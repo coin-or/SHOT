@@ -20,22 +20,26 @@
 
 // For DLL support in Windows
 #if defined(_WIN32)
-#if !defined(STDCALL)
-#define STDCALL __stdcall
-#endif
-#if !defined(DllExport)
-#define DllExport __declspec(dllexport)
-#endif
+# if !defined(STDCALL)
+#  define STDCALL __stdcall
+# endif
+# if !defined(DllExport)
+#  define DllExport __declspec(dllexport)
+# endif
 #else
-#if !defined(STDCALL)
-#define STDCALL
-#endif
-#if !defined(DllExport)
-#define DllExport
-#endif
+# if !defined(STDCALL)
+#  define STDCALL
+# endif
+# if !defined(DllExport)
+#  ifdef __GNUC__
+#   define DllExport __attribute__((__visibility__("default")))
+#  else
+#   define DllExport
+#  endif
+# endif
 #endif
 
-// Fix for missing NAN i Visual Studio
+// Fix for missing NAN in Visual Studio
 #ifdef WIN32
 #ifndef NAN
 static const unsigned long __nan[2] = { 0xffffffff, 0x7fffffff };
