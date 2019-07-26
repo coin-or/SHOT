@@ -58,7 +58,7 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
 
 void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
 
-void ModelingSystemGAMS::updateSettings(SettingsPtr settings, palHandle_t pal)
+void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] palHandle_t pal)
 {
     assert(modelingEnvironment != nullptr);
     assert(modelingObject != nullptr);

@@ -128,7 +128,9 @@ extern "C"
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
         gamsshot* gs;
+#ifdef GAMS_BUILD
         gevHandle_t gev;
+#endif
 
         assert(Cptr != nullptr);
         assert(Gptr != nullptr);
@@ -148,9 +150,9 @@ extern "C"
         gs = (gamsshot*)Cptr;
         gs->gmo = Gptr;
         gs->opt = Optr;
-        gev = (gevHandle_t)gmoEnvironment(Gptr);
 
 #ifdef GAMS_BUILD
+        gev = (gevHandle_t)gmoEnvironment(Gptr);
         if(!palGetReady(msg, sizeof(msg)))
         {
             gevLogStat(gev, msg);
