@@ -115,22 +115,22 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
-        env->output->outputInfo(" Reading options from " + std::string(buffer));
-
-        if(!std::filesystem::exists(buffer))
-            throw std::logic_error("Options file not found.");
-
-        try
+        if(std::filesystem::exists(buffer))
         {
-            std::string fileContents = Utilities::getFileAsString(buffer);
-
-            settings->readSettingsFromString(fileContents);
+            env->output->outputInfo(" Reading options from " + std::string(buffer));
+            try
+            {
+                std::string fileContents = Utilities::getFileAsString(buffer);
+                settings->readSettingsFromString(fileContents);
+            }
+            catch(std::exception& e)
+            {
+                env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
+                throw std::logic_error("Cannot read GAMS options file.");
+            }
         }
-        catch(std::exception& e)
-        {
-            env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
-            throw std::logic_error("Cannot read GAMS options file.");
-        }
+        else  /* in GAMS, solvers don't stop if the options file is not present */
+            env->output->outputError(" Error: Options file " + std::string(buffer) + " not found.");
     }
 
     env->output->setLogLevels(static_cast<E_LogLevel>(settings->getSetting<int>("Console.LogLevel", "Output")),
