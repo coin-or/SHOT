@@ -31,7 +31,7 @@ set(OS_DIR
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio128" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio129" CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
 option(HAS_GUROBI "Is Gurobi available" ON)
@@ -380,20 +380,20 @@ if(HAS_CPLEX)
     message("-- The following CPLEX libraries will be used:")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
       message("   ${CPLEX_LIBRARY_DEBUG}")
-      message("   ${CPLEX_CONCERT_LIBRARY_DEBUG}")
       message("   ${CPLEX_ILOCPLEX_LIBRARY_DEBUG}")
+      message("   ${CPLEX_CONCERT_LIBRARY_DEBUG}")
 
-      target_link_libraries(SHOTSolver ${CPLEX_LIBRARY_DEBUG})
       target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY_DEBUG})
       target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY_DEBUG})
+      target_link_libraries(SHOTSolver ${CPLEX_LIBRARY_DEBUG})
     else()
       message("   ${CPLEX_LIBRARY}")
       message("   ${CPLEX_CONCERT_LIBRARY}")
       message("   ${CPLEX_ILOCPLEX_LIBRARY}")
 
-      target_link_libraries(SHOTSolver ${CPLEX_LIBRARY})
       target_link_libraries(SHOTSolver ${CPLEX_CONCERT_LIBRARY})
       target_link_libraries(SHOTSolver ${CPLEX_ILOCPLEX_LIBRARY})
+      target_link_libraries(SHOTSolver ${CPLEX_LIBRARY})
     endif()
   endif()
 endif(HAS_CPLEX)
