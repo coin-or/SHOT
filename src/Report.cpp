@@ -311,7 +311,7 @@ void Report::outputSolverHeader()
 
     header << ". ";
 
-    if(SHOT_GITHASH != "")
+    if(*SHOT_GITHASH != '\0')
     {
         header << "Git hash: ";
         header << SHOT_GITHASH;

@@ -16,8 +16,14 @@
 #include "../Settings.h"
 #include "../Timing.h"
 #include "../Utilities.h"
+#include "../Enums.h"
 
 #include "../Model/Simplifications.h"
+
+#include "GamsNLinstr.h"
+#ifdef GAMS_BUILD
+extern "C" void HSLInit();
+#endif
 
 #include <filesystem>
 
@@ -33,6 +39,12 @@ ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
 {
 }
 
+void ModelingSystemGAMS::setModelingObject(gmoHandle_t gmo)
+{
+    modelingObject = gmo;
+    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
+}
+
 ModelingSystemGAMS::~ModelingSystemGAMS()
 {
     clearGAMSObjects();
@@ -46,8 +58,23 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
 
 void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings) {}
 
-void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
+void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] palHandle_t pal)
 {
+    assert(modelingEnvironment != nullptr);
+    assert(modelingObject != nullptr);
+
+#ifdef GAMS_BUILD
+    assert(pal != nullptr);
+    if(palLicenseCheckSubSys(pal, const_cast<char*>("IP")) == 0)
+    {
+        /* IPOPTH is licensed: use HSL MA27 and make it available */
+        env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
+        HSLInit();
+    }
+    else
+        env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
+#endif
+
     // Process GAMS options.
     // We do not want to use GAMS defaults if called on a gms file, in which case we would have created our own GMO.
     if(!createdgmo)
@@ -88,27 +115,39 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
-        gevLogPChar(modelingEnvironment, "Reading options from ");
-        gevLog(modelingEnvironment, buffer);
-
-        if(!std::filesystem::exists(buffer))
-            throw std::logic_error("Options file not found.");
-
-        try
+        if(std::filesystem::exists(buffer))
         {
-            std::string fileContents = Utilities::getFileAsString(buffer);
-
-            settings->readSettingsFromString(fileContents);
+            env->output->outputInfo(" Reading options from " + std::string(buffer));
+            try
+            {
+                std::string fileContents = Utilities::getFileAsString(buffer);
+                settings->readSettingsFromString(fileContents);
+            }
+            catch(std::exception& e)
+            {
+                env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
+                throw std::logic_error("Cannot read GAMS options file.");
+            }
         }
-        catch(std::exception& e)
-        {
-            env->output->outputError("Error when reading GAMS options file " + std::string(buffer), e.what());
-            throw std::logic_error("Cannot read GAMS options file.");
-        }
+        else  /* in GAMS, solvers don't stop if the options file is not present */
+            env->output->outputError(" Error: Options file " + std::string(buffer) + " not found.");
     }
 
     env->output->setLogLevels(static_cast<E_LogLevel>(settings->getSetting<int>("Console.LogLevel", "Output")),
         static_cast<E_LogLevel>(settings->getSetting<int>("File.LogLevel", "Output")));
+
+#ifdef GAMS_BUILD
+    /* if CPLEX is set, then check whether GAMS/CPLEX license is present */
+    if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
+    {
+        /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
+        if(palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) != 0)
+        {
+            env->output->outputInfo(" CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
+            env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
+        }
+    }
+#endif
 }
 
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
@@ -143,15 +182,13 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
         return (E_ProblemCreationStatus::Error);
     }
 
-    return createProblem(problem, modelingObject);
+    return createProblem(problem);
 }
 
-E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem, gmoHandle_t gmo)
+E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 {
-    assert(gmo != nullptr);
-
-    modelingObject = gmo;
-    modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
+    assert(modelingObject != nullptr);
+    assert(modelingEnvironment != nullptr);
 
     /* reformulate objective variable out of model, if possible */
     gmoObjReformSet(modelingObject, 1);
@@ -245,8 +282,13 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
      * for this gams call
      */
     snprintf(gamscall, sizeof(gamscall),
+#ifdef GAMSDIR
         GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
                 "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+#else
+                "gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
+                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+#endif
         filename.c_str());
 
     /* printf(gamscall); fflush(stdout); */
@@ -272,8 +314,13 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
     char buffer[GMS_SSSIZE];
 
     /* initialize GMO and GEV libraries */
+#ifdef GAMSDIR
     if(!gmoCreateDD(&modelingObject, GAMSDIR, buffer, sizeof(buffer))
         || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
+#else
+    if(!gmoCreate(&modelingObject, buffer, sizeof(buffer))
+        || !gevCreate(&modelingEnvironment, buffer, sizeof(buffer)))
+#endif
         throw std::logic_error(buffer);
 
     createdgmo = true;
@@ -290,8 +337,7 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
-        snprintf(buffer, sizeof(buffer) + 36, "Error registering GAMS Environment: %s", buffer);
-        throw std::logic_error(buffer);
+        throw std::logic_error(std::string("Error registering GAMS Environment: ") + buffer);
     }
 
     if(gmoLoadDataLegacy(modelingObject, buffer))
@@ -306,13 +352,17 @@ void ModelingSystemGAMS::finalizeSolution()
 {
     ResultsPtr r = env->results;
     assert(r != nullptr);
+#ifndef NDEBUG
     bool haveSolution = false;
+#endif
 
     // set primal solution and model status
     if(r->hasPrimalSolution())
     {
         gmoSetSolutionPrimal(modelingObject, &r->primalSolution[0]);
+#ifndef NDEBUG
         haveSolution = true;
+#endif
     }
     else
     {
@@ -1186,8 +1236,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             }
 
             case fnexp:
-            case fnslexp:
-            case fnsqexp:
             {
                 auto expression = std::make_shared<ExpressionExp>(stack.rbegin()[0]);
                 stack.pop_back();
@@ -1204,8 +1252,6 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             }
 
             case fnlog10:
-            case fnsllog10:
-            case fnsqlog10:
             {
                 auto expression
                     = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(1.0 / log(10.0)),
@@ -1277,21 +1323,9 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             }
 
             case fndiv:
-            case fndiv0:
             {
                 auto expression = std::make_shared<ExpressionDivide>(stack.rbegin()[1], stack.rbegin()[0]);
                 stack.pop_back();
-                stack.pop_back();
-                stack.push_back(expression);
-                break;
-            }
-
-            case fnslrec: // 1/x
-            case fnsqrec: // 1/x
-            {
-                stack.push_back(std::make_shared<ExpressionConstant>(1.0));
-                auto expression
-                    = std::make_shared<ExpressionDivide>(stack.rbegin()[0], std::make_shared<ExpressionConstant>(1.0));
                 stack.pop_back();
                 stack.push_back(expression);
                 break;

@@ -131,9 +131,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
     double maxObjDiffAbs = SHOT_DBL_MAX;
     double maxObjDiffRel = SHOT_DBL_MAX;
 
-    double LPObjVar;
+    double LPObjVar = 0.0;
 
-    E_NLPSolutionStatus statusCode;
+    E_NLPSolutionStatus statusCode = E_NLPSolutionStatus::Error;
 
     int numHyperAdded = 0;
     int numHyperTot = 0;

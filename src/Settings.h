@@ -108,7 +108,7 @@ public:
     template <typename T> T getSetting(std::string name, std::string category)
     {
         // Check that setting is of the correct type
-        using value_type = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
+        using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
                 || std::is_same<int, T>::value || std::is_same<bool, T>::value,
             T>::type;
 

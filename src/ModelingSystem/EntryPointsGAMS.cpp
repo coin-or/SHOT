@@ -23,8 +23,8 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
-#include "optcc.h"
 #include "palmcc.h"
+#include "optcc.h"
 
 using namespace SHOT;
 
@@ -35,8 +35,10 @@ extern "C"
     {
         gmoHandle_t gmo;
         optHandle_t opt;
+        palHandle_t pal;
     } gamsshot;
 
+    DllExport void STDCALL shtXCreate(void** Cptr);
     DllExport void STDCALL shtXCreate(void** Cptr)
     {
         assert(Cptr != nullptr);
@@ -44,6 +46,7 @@ extern "C"
         *Cptr = calloc(1, sizeof(gamsshot));
     }
 
+    DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen);
     DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen)
     {
         assert(Cptr != nullptr);
@@ -57,18 +60,26 @@ extern "C"
         return 1;
     }
 
+    DllExport void STDCALL shtXFree(void** Cptr);
     DllExport void STDCALL shtXFree(void** Cptr)
     {
         assert(Cptr != nullptr);
         assert(*Cptr != nullptr);
+
+        if(((gamsshot*)*Cptr)->pal != NULL)
+            palFree(&((gamsshot*)*Cptr)->pal);
 
         free(*Cptr);
         *Cptr = nullptr;
 
         gmoLibraryUnload();
         gevLibraryUnload();
+#ifdef GAMS_BUILD
+        palLibraryUnload();
+#endif
     }
 
+    DllExport int STDCALL shtfree(void** Cptr);
     DllExport int STDCALL shtfree(void** Cptr)
     {
         shtXFree(Cptr);
@@ -83,12 +94,14 @@ extern "C"
            3: client is newer than DLL, forward compatibility
            FIXME: for now, we just claim full compatibility
      */
+    DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp);
     DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
     {
         *comp = 1;
         return 1;
     }
 
+    DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp);
     DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
     {
         *comp = 1;
@@ -96,74 +109,83 @@ extern "C"
     }
 
     DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
+                                       [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
+    DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
         [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
     {
         return 1;
     }
 
     DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
+        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
+    DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
         [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
     {
         return 1;
     }
 
+    DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr);
     DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
         gamsshot* gs;
+#ifdef GAMS_BUILD
+        gevHandle_t gev;
+#endif
 
         assert(Cptr != nullptr);
         assert(Gptr != nullptr);
 
         char msg[256];
         if(!gmoGetReady(msg, sizeof(msg)))
+        {
+            fputs(msg, stderr);
             return 1;
+        }
         if(!gevGetReady(msg, sizeof(msg)))
+        {
+            fputs(msg, stderr);
             return 1;
+        }
 
         gs = (gamsshot*)Cptr;
         gs->gmo = Gptr;
         gs->opt = Optr;
 
+#ifdef GAMS_BUILD
+        gev = (gevHandle_t)gmoEnvironment(Gptr);
+        if(!palGetReady(msg, sizeof(msg)))
+        {
+            gevLogStat(gev, msg);
+            return 1;
+        }
+        if(!palCreate(&gs->pal, msg, sizeof(msg)))
+        {
+            gevLogStat(gev, msg);
+            return 1;
+        }
+
+        /* print auditline */
+#define PALPTR gs->pal
+#include "shotCLsvn.h"
+        palGetAuditLine(gs->pal, msg);
+        gevLogStat(gev, "");
+        gevLogStat(gev, msg);
+        gevStatAudit(gev, msg);
+
+        /* initialize licensing */
+        palLicenseRegisterGAMS(gs->pal, 1, gevGetStrOpt(gev, "License1", msg));
+        palLicenseRegisterGAMS(gs->pal, 2, gevGetStrOpt(gev, "License2", msg));
+        palLicenseRegisterGAMS(gs->pal, 3, gevGetStrOpt(gev, "License3", msg));
+        palLicenseRegisterGAMS(gs->pal, 4, gevGetStrOpt(gev, "License4", msg));
+        palLicenseRegisterGAMS(gs->pal, 5, gevGetStrOpt(gev, "License5", msg));
+        palLicenseRegisterGAMSDone(gs->pal);
+        /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
+#endif
+
         return 0;
     }
 
-    static bool doLicenseChecks([[maybe_unused]] void* Cptr, [[maybe_unused]] Solver& solver)
-    {
-#ifdef GAMS_BUILD
-        gamsshot* gs;
-
-        assert(Cptr != nullptr);
-        gs = (gamsshot*)Cptr;
-        assert(gs->gmo != nullptr);
-        gevHandle_t gev = (gevHandle_t)gmoEnvironment(gs->gmo);
-
-        if(solver.getEnvironment()->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
-        {
-            char buffer[GMS_SSSIZE];
-
-            palHandle_t pal;
-            if(!palCreate(&pal, buffer, sizeof(buffer)))
-            {
-                gevLogStat(gev, buffer);
-                gmoSolveStatSet(gs->gmo, gmoSolveStat_SystemErr);
-                gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
-                return false;
-            }
-
-            if(!palLicenseIsDemoCheckout(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")))
-            {
-                // TODO if user set CPLEX explicitly, then we should stop
-                gevLogStat(gev, " CPLEX chosen as MIP solver, but no CPLEX license available. Changing to CBC.\n");
-                // gmoSolveStatSet(gs->gmo, gmoSolveStat_License);
-                // gmoModelStatSet(gs->gmo, gmoModelStat_LicenseError);
-                // return false;
-                solver.getEnvironment()->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
-            }
-        }
-#endif
-        return true;
-    }
-
+    DllExport int STDCALL C__shtCallSolver(void* Cptr);
     DllExport int STDCALL C__shtCallSolver(void* Cptr)
     {
         gamsshot* gs;
@@ -182,11 +204,13 @@ extern "C"
         {
             env->report->outputSolverHeader();
 
-            env->timing->startTimer("ProblemInitialization");
             std::shared_ptr<ModelingSystemGAMS> modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
+            modelingSystem->setModelingObject(gs->gmo);
+            modelingSystem->updateSettings(env->settings, gs->pal);
 
+            env->timing->startTimer("ProblemInitialization");
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-            switch(modelingSystem->createProblem(problem, gs->gmo))
+            switch(modelingSystem->createProblem(problem))
             {
             case E_ProblemCreationStatus::NormalCompletion:
                 break;
@@ -202,13 +226,6 @@ extern "C"
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
             env->timing->stopTimer("ProblemInitialization");
-
-            /* correct to call this here? */
-            modelingSystem->updateSettings(env->settings);
-
-            // check for licenses on commercial solvers, if used
-            if(!doLicenseChecks(Cptr, solver))
-                return 0;
 
             solver.registerCallback(
                 E_EventType::UserTerminationCheck, [&env, gev = (gevHandle_t)gmoEnvironment(gs->gmo)] {
@@ -258,8 +275,10 @@ extern "C"
         return 0;
     }
 
+    DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr);
     DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr) { return 0; }
 
+    DllExport int STDCALL C__shtModifyProblem(void* Cptr);
     DllExport int STDCALL C__shtModifyProblem(void* Cptr)
     {
         assert(Cptr != nullptr);

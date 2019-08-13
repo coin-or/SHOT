@@ -86,6 +86,7 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
     return (hessianSparsityPattern);
 }
 
+static
 std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
 {
     return objective.print(stream); // polymorphic print via reference
@@ -248,6 +249,7 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
+[[maybe_unused]] static
 std::ostream& operator<<(std::ostream& stream, LinearObjectiveFunctionPtr objective)
 {
     stream << *objective;
@@ -508,6 +510,7 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
+[[maybe_unused]] static
 std::ostream& operator<<(std::ostream& stream, QuadraticObjectiveFunctionPtr objective)
 {
     stream << *objective;

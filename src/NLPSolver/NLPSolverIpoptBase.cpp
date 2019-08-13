@@ -735,17 +735,19 @@ void NLPSolverIpoptBase::setInitialSettings()
     switch(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")))
     {
     case E_LogLevel::Off:
+        ipoptApplication->Options()->SetIntegerValue("print_level", J_NONE);
     case E_LogLevel::Critical:
     case E_LogLevel::Error:
+        ipoptApplication->Options()->SetIntegerValue("print_level", J_ERROR);
     case E_LogLevel::Warning:
     case E_LogLevel::Info:
-        ipoptApplication->Options()->SetIntegerValue("print_level", 0);
+        ipoptApplication->Options()->SetIntegerValue("print_level", J_STRONGWARNING);
         break;
     case E_LogLevel::Debug:
-        ipoptApplication->Options()->SetIntegerValue("print_level", 8);
+        ipoptApplication->Options()->SetIntegerValue("print_level", J_ITERSUMMARY);
         break;
     case E_LogLevel::Trace:
-        ipoptApplication->Options()->SetIntegerValue("print_level", 10);
+        ipoptApplication->Options()->SetIntegerValue("print_level", J_MATRIX);
         break;
     default:
         break;

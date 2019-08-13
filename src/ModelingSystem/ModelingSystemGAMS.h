@@ -17,7 +17,7 @@
 
 #include "gmomcc.h"
 #include "gevmcc.h"
-#include "GamsNLinstr.h"
+#include "palmcc.h"
 
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
@@ -37,18 +37,21 @@ public:
     ModelingSystemGAMS(EnvironmentPtr envPtr);
     ~ModelingSystemGAMS() override;
 
+    void setModelingObject(gmoHandle_t gmo);
+
     // Adds modeling system specific settings
     void augmentSettings(SettingsPtr settings) override;
 
     // Get specific settings from modeling system
-    void updateSettings(SettingsPtr settings) override;
+    void updateSettings(SettingsPtr settings) override { updateSettings(settings, NULL); }
+    void updateSettings(SettingsPtr settings, palHandle_t pal);
 
     // Create the optimization problem by filename either directly from a gms-file or from a compiled GAMS model
     E_ProblemCreationStatus createProblem(
         ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource);
 
-    // Create the optimization problem by filename from a GAMS model instance object
-    E_ProblemCreationStatus createProblem(ProblemPtr& problem, gmoHandle_t gmo);
+    // Create the optimization problem from the stored GAMS model instance object
+    E_ProblemCreationStatus createProblem(ProblemPtr& problem);
 
     // Move the solution and statistics from SHOT to the modeling system
     void finalizeSolution() override;
