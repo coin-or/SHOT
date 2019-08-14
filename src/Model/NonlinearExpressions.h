@@ -454,7 +454,15 @@ public:
         return (1.0 / child->calculate(intervalVector));
     }
 
-    inline Interval getBounds() const override { return (1.0 / child->getBounds()); }
+    inline Interval getBounds() const override
+    {
+        auto denominatorBounds = child->getBounds();
+
+        if(denominatorBounds.l() * denominatorBounds.u() <= 0)
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+        return (1.0 / child->getBounds());
+    }
 
     inline bool tightenBounds(Interval bound) override
     {
@@ -1402,7 +1410,15 @@ public:
         return (firstChild->calculate(intervalVector) / secondChild->calculate(intervalVector));
     }
 
-    inline Interval getBounds() const override { return (firstChild->getBounds() / secondChild->getBounds()); }
+    inline Interval getBounds() const override
+    {
+        auto denominatorBounds = secondChild->getBounds();
+
+        if(denominatorBounds.l() * denominatorBounds.u() <= 0)
+            return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+
+        return (firstChild->getBounds() / secondChild->getBounds());
+    }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override
     {
