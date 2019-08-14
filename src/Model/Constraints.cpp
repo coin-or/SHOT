@@ -556,8 +556,15 @@ Interval NonlinearConstraint::getConstraintFunctionBounds()
     if(this->properties.hasSignomialTerms)
         value += signomialTerms.getBounds();
 
-    if(this->properties.hasNonlinearExpression)
-        value += nonlinearExpression->getBounds();
+    try
+    {
+        if(this->properties.hasNonlinearExpression)
+            value += nonlinearExpression->getBounds();
+    }
+    catch(const mc::Interval::Exceptions& e)
+    {
+        return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+    }
 
     return value;
 }
@@ -848,8 +855,15 @@ void NonlinearConstraint::updateProperties()
 
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        auto convexity = nonlinearExpression->getConvexity();
-        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        try
+        {
+            auto convexity = nonlinearExpression->getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
+        catch(const mc::Interval::Exceptions& e)
+        {
+            properties.convexity = E_Convexity::Unknown;
+        }
     }
     else
     {

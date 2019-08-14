@@ -2251,10 +2251,17 @@ public:
 
     inline bool checkAllForConvexityType(E_Convexity convexityType)
     {
-        for(auto& C : children)
+        try
         {
-            if(C->getConvexity() != convexityType)
-                return (false);
+            for(auto& C : children)
+            {
+                if(C->getConvexity() != convexityType)
+                    return (false);
+            }
+        }
+        catch(const mc::Interval::Exceptions& e)
+        {
+            return (false);
         }
 
         return (true);

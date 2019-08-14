@@ -86,8 +86,7 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
     return (hessianSparsityPattern);
 }
 
-static
-std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
+static std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
 {
     return objective.print(stream); // polymorphic print via reference
 }
@@ -249,8 +248,7 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
-[[maybe_unused]] static
-std::ostream& operator<<(std::ostream& stream, LinearObjectiveFunctionPtr objective)
+[[maybe_unused]] static std::ostream& operator<<(std::ostream& stream, LinearObjectiveFunctionPtr objective)
 {
     stream << *objective;
     return stream;
@@ -510,8 +508,7 @@ std::ostream& QuadraticObjectiveFunction::print(std::ostream& stream) const
     return stream;
 }
 
-[[maybe_unused]] static
-std::ostream& operator<<(std::ostream& stream, QuadraticObjectiveFunctionPtr objective)
+[[maybe_unused]] static std::ostream& operator<<(std::ostream& stream, QuadraticObjectiveFunctionPtr objective)
 {
     stream << *objective;
     return stream;
@@ -596,8 +593,15 @@ void NonlinearObjectiveFunction::updateProperties()
 
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
 
-        auto convexity = nonlinearExpression->getConvexity();
-        properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        try
+        {
+            auto convexity = nonlinearExpression->getConvexity();
+            properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+        }
+        catch(const mc::Interval::Exceptions& e)
+        {
+            properties.convexity = E_Convexity::Unknown;
+        }
     }
     else
     {
@@ -680,8 +684,15 @@ Interval NonlinearObjectiveFunction::calculateValue(const IntervalVector& interv
     value += monomialTerms.calculate(intervalVector);
     value += signomialTerms.calculate(intervalVector);
 
-    if(this->properties.hasNonlinearExpression)
-        value += nonlinearExpression->calculate(intervalVector);
+    try
+    {
+        if(this->properties.hasNonlinearExpression)
+            value += nonlinearExpression->calculate(intervalVector);
+    }
+    catch(const mc::Interval::Exceptions& e)
+    {
+        return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
+    }
 
     return value;
 }
