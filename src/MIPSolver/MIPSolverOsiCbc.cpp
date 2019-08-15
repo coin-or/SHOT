@@ -127,7 +127,8 @@ bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableI
     return (true);
 }
 
-bool MIPSolverOsiCbc::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
+bool MIPSolverOsiCbc::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
+    [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // Not implemented
     return (false);
@@ -177,7 +178,8 @@ bool MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variable
     return (true);
 }
 
-bool MIPSolverOsiCbc::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
+bool MIPSolverOsiCbc::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
+    [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // Not implemented
     return (false);
@@ -502,7 +504,7 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverOsiCbc::setCutOffAsConstraint(double cutOff)
+void MIPSolverOsiCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 {
     // TODO
 }
@@ -763,7 +765,7 @@ std::pair<VectorDouble, VectorDouble> MIPSolverOsiCbc::presolveAndGetNewBounds()
     return (std::make_pair(variableLowerBounds, variableUpperBounds));
 }
 
-void MIPSolverOsiCbc::writePresolvedToFile(std::string filename)
+void MIPSolverOsiCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
 {
     // Not implemented
 }
