@@ -233,8 +233,6 @@ class ExpressionVariable : public NonlinearExpression
 public:
     VariablePtr variable;
 
-    ExpressionVariable() { variable->properties.isNonlinear = true; };
-
     ExpressionVariable(VariablePtr variable) : variable(variable) { variable->properties.isNonlinear = true; };
 
     inline double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
@@ -1532,7 +1530,6 @@ public:
                 && sum->children[1]->getType() == E_NonlinearExpressionTypes::Constant
                 && sum->children[0]->getNumberOfChildren() == 2)
             {
-                ExpressionVariable newVariable;
                 auto prod = std::dynamic_pointer_cast<ExpressionGeneral>(sum->children[0]);
 
                 if(prod->children[0]->getType() == E_NonlinearExpressionTypes::Variable
@@ -1560,7 +1557,6 @@ public:
                 && sum->children[0]->getType() == E_NonlinearExpressionTypes::Constant
                 && sum->children[1]->getNumberOfChildren() == 2)
             {
-                ExpressionVariable newVariable;
                 auto prod = std::dynamic_pointer_cast<ExpressionGeneral>(sum->children[1]);
 
                 if(prod->children[0]->getType() == E_NonlinearExpressionTypes::Variable
