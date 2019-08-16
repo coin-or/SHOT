@@ -29,12 +29,12 @@ enum class E_AuxiliaryVariableType
 
 enum class E_Convexity
 {
-    NotSet,
-    Unknown,
     Linear,
     Convex,
     Concave,
-    Nonconvex
+    Nonconvex,
+    Unknown,
+    NotSet
 };
 
 enum class E_DualSolutionSource

@@ -537,7 +537,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         return (NumericConstraints({ constraint }));
     }
 
-    if(useQuadraticConstraints
+    if(useQuadraticConstraints && (C->properties.convexity == E_Convexity::Convex)
         && (C->properties.classification == E_ConstraintClassification::Quadratic
                || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
                       && !C->properties.hasSignomialTerms)))
@@ -827,7 +827,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Nonlinear;
     }
-    else if(destinationQuadraticTerms.size() > 0 && !useQuadraticConstraints)
+    else if(destinationQuadraticTerms.size() > 0
+        && (!useQuadraticConstraints || C->properties.convexity != E_Convexity::Convex))
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Nonlinear;
@@ -837,7 +838,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
     }
-    else if(destinationQuadraticTerms.size() > 0)
+    else if(destinationQuadraticTerms.size() > 0 && C->properties.convexity == E_Convexity::Convex)
     {
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Quadratic;
