@@ -210,7 +210,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             context.getCandidatePoint(cplexVars, tmpVals);
 
-            int numberOfVariables = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable())
+            int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
                 ? tmpVals.getSize() - 1
                 : tmpVals.getSize();
 
@@ -320,6 +320,8 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             if(env->reformulatedProblem->auxiliaryObjectiveVariable)
                 tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
+            else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
             lastUpdatedPrimal = primalBound;
 

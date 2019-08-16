@@ -134,13 +134,16 @@ public:
     int getNumberOfExploredNodes() override;
     int getNumberOfOpenNodes() override;
 
-    bool hasAuxiliaryObjectiveVariable() override { return (MIPSolverBase::hasAuxiliaryObjectiveVariable()); }
+    bool hasDualAuxiliaryObjectiveVariable() override { return (MIPSolverBase::hasDualAuxiliaryObjectiveVariable()); }
 
-    int getAuxiliaryObjectiveVariableIndex() override { return (MIPSolverBase::getAuxiliaryObjectiveVariableIndex()); }
-
-    void setAuxiliaryObjectiveVariableIndex(int index) override
+    int getDualAuxiliaryObjectiveVariableIndex() override
     {
-        return (MIPSolverBase::setAuxiliaryObjectiveVariableIndex(index));
+        return (MIPSolverBase::getDualAuxiliaryObjectiveVariableIndex());
+    }
+
+    void setDualAuxiliaryObjectiveVariableIndex(int index) override
+    {
+        return (MIPSolverBase::setDualAuxiliaryObjectiveVariableIndex(index));
     }
 
     std::string getConstraintIdentifier(E_HyperplaneSource source) override

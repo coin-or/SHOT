@@ -114,9 +114,9 @@ public:
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes() = 0;
 
-    virtual bool hasAuxiliaryObjectiveVariable() = 0;
-    virtual int getAuxiliaryObjectiveVariableIndex() = 0;
-    virtual void setAuxiliaryObjectiveVariableIndex(int index) = 0;
+    virtual bool hasDualAuxiliaryObjectiveVariable() = 0;
+    virtual int getDualAuxiliaryObjectiveVariableIndex() = 0;
+    virtual void setDualAuxiliaryObjectiveVariableIndex(int index) = 0;
 
     virtual std::string getConstraintIdentifier(E_HyperplaneSource source) = 0;
 

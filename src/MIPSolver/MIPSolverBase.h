@@ -29,8 +29,8 @@ private:
     VectorInteger fixedVariableIndexes;
     std::vector<PairDouble> fixedVariableOriginalBounds;
 
-    bool auxiliaryObjectiveVariableDefined = false;
-    int auxiliaryObjectiveVariableIndex;
+    bool dualAuxiliaryObjectiveVariableDefined = false;
+    int dualAuxiliaryObjectiveVariableIndex;
     int constraintCounter = 0;
 
 protected:
@@ -92,13 +92,13 @@ public:
     virtual int getNumberOfExploredNodes() = 0;
     virtual int getNumberOfOpenNodes();
 
-    virtual bool hasAuxiliaryObjectiveVariable() { return auxiliaryObjectiveVariableDefined; };
-    virtual int getAuxiliaryObjectiveVariableIndex() { return auxiliaryObjectiveVariableIndex; };
+    virtual bool hasDualAuxiliaryObjectiveVariable() { return dualAuxiliaryObjectiveVariableDefined; };
+    virtual int getDualAuxiliaryObjectiveVariableIndex() { return dualAuxiliaryObjectiveVariableIndex; };
 
-    virtual void setAuxiliaryObjectiveVariableIndex(int index)
+    virtual void setDualAuxiliaryObjectiveVariableIndex(int index)
     {
-        auxiliaryObjectiveVariableIndex = index;
-        auxiliaryObjectiveVariableDefined = true;
+        dualAuxiliaryObjectiveVariableIndex = index;
+        dualAuxiliaryObjectiveVariableDefined = true;
     };
 
     virtual inline std::string getConstraintIdentifier(E_HyperplaneSource source)

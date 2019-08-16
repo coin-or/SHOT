@@ -87,7 +87,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     if(sourceProblem->auxiliaryObjectiveVariable) // The source problem already has a nonlinear objective variable
     {
-        destination->setAuxiliaryObjectiveVariableIndex(sourceProblem->auxiliaryObjectiveVariable->index);
+        destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->auxiliaryObjectiveVariable->index);
     }
     else if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -104,7 +104,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
             objectiveBound = Interval(-objVarBound, objVarBound);
         }
 
-        destination->setAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
+        destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
 
         if(sourceProblem->objectiveFunction->properties.isMinimize)
             destination->addVariable("shot_dual_objvar", E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
@@ -119,10 +119,10 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
 
     objectiveInitialized = objectiveInitialized && destination->initializeObjective();
 
-    if(destination->hasAuxiliaryObjectiveVariable())
+    if(destination->hasDualAuxiliaryObjectiveVariable())
     {
         objectiveInitialized = objectiveInitialized
-            && destination->addLinearTermToObjective(1.0, destination->getAuxiliaryObjectiveVariableIndex());
+            && destination->addLinearTermToObjective(1.0, destination->getDualAuxiliaryObjectiveVariableIndex());
 
         objectiveInitialized = objectiveInitialized
             && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize);

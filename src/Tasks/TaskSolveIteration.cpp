@@ -75,19 +75,19 @@ void TaskSolveIteration::run()
             env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
 
-    if(env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()
+    if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
         && env->settings->getSetting<bool>("MIP.UpdateObjectiveBounds", "Dual") && !currIter->MIPSolutionLimitUpdated)
     {
         auto newLB = env->results->getCurrentDualBound();
         auto newUB = env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(
-            env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex());
+            env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex());
 
         if(newLB > currBounds.first || newUB < currBounds.second)
         {
             env->dualSolver->MIPSolver->updateVariableBound(
-                env->dualSolver->MIPSolver->getAuxiliaryObjectiveVariableIndex(), newLB, newUB);
+                env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), newLB, newUB);
             env->output->outputDebug("     Bounds for nonlinear objective function updated to "
                 + Utilities::toString(newLB) + " and " + Utilities::toString(newUB));
         }
@@ -151,14 +151,6 @@ void TaskSolveIteration::run()
             ss << ".txt";
             Utilities::saveVariablePointVectorToFile(sols.at(0).point, variableNames, ss.str());
         }
-
-        /*if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-        {
-            for(auto& S : sols)
-            {
-                S.point.pop_back();
-            }
-        }*/
 
         currIter->solutionPoints = sols;
 
