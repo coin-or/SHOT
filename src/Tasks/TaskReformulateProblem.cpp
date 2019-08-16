@@ -823,30 +823,34 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     NumericConstraintPtr constraint;
 
     if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
+    // We have a nonlinear constraint
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Nonlinear;
     }
-    else if(destinationQuadraticTerms.size() > 0
-        && (!useQuadraticConstraints || C->properties.convexity != E_Convexity::Convex))
-    {
-        constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
-        constraint->properties.classification = E_ConstraintClassification::Nonlinear;
-    }
-    else if(destinationQuadraticTerms.size() > 0 && useQuadraticConstraints)
-    {
-        constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
-        constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
-    }
-    else if(destinationQuadraticTerms.size() > 0 && C->properties.convexity == E_Convexity::Convex)
-    {
-        constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
-        constraint->properties.classification = E_ConstraintClassification::Quadratic;
-    }
-    else
+    else if(destinationQuadraticTerms.size() == 0)
+    // We have a linear constraint
     {
         constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Linear;
+    }
+    else if(!useQuadraticConstraints)
+    // We have a quadratic constraint, but it will be considered as nonlinear since either the user demands it
+    {
+        constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
+    }
+    else if(C->properties.convexity != E_Convexity::Convex)
+    // We have a quadratic constraint, but it will be considered as nonlinear since it is nonconvex
+    {
+        constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
+    }
+    else
+    // We have quadratic (convex) constraint
+    {
+        constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
+        constraint->properties.classification = E_ConstraintClassification::Quadratic;
     }
 
     constraint->constant = constant;
