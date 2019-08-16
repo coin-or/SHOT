@@ -37,12 +37,8 @@ public:
 
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
-    inline void addFixedNLPCandidate(
-        VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
-    {
-        PrimalFixedNLPCandidate cand = { pt, source, objVal, iter, maxConstrDev };
-        fixedPrimalNLPCandidates.push_back(cand);
-    }
+    void addFixedNLPCandidate(
+        VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev);
 
     std::vector<PrimalSolution> primalSolutionCandidates;
     std::vector<PrimalFixedNLPCandidate> fixedPrimalNLPCandidates;

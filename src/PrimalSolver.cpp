@@ -438,4 +438,14 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     return (true);
 }
 
+void PrimalSolver::addFixedNLPCandidate(
+    VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
+{
+    assert(pt.size() >= env->problem->properties.numberOfVariables);
+
+    fixedPrimalNLPCandidates.push_back(
+        PrimalFixedNLPCandidate{ VectorDouble(pt.begin(), pt.begin() + env->problem->properties.numberOfVariables),
+            source, objVal, iter, maxConstrDev });
+}
+
 } // namespace SHOT
