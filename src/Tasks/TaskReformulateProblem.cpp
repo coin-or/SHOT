@@ -835,7 +835,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint->properties.classification = E_ConstraintClassification::Linear;
     }
     else if(!useQuadraticConstraints)
-    // We have a quadratic constraint, but it will be considered as nonlinear since either the user demands it
+    // We have a quadratic constraint, but it will be considered as nonlinear since the user demands it
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
