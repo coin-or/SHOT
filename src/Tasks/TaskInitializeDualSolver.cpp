@@ -72,7 +72,7 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
 
 #ifdef HAS_GUROBI
-        else if(solver == ES_MIPSolver::Gurobi)
+        if(solver == ES_MIPSolver::Gurobi)
         {
             env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobiLazy>(env));
             env->results->usedMIPSolver = ES_MIPSolver::Gurobi;
