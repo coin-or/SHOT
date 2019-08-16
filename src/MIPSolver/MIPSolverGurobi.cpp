@@ -927,6 +927,8 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             startVal.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(point));
+        else if(this->hasDualAuxiliaryObjectiveVariable())
+            startVal.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(point));
 
         for(size_t i = 0; i < startVal.size(); i++)
         {

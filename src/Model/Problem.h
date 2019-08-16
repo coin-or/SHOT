@@ -105,7 +105,7 @@ public:
     Variables nonlinearVariables;
 
     AuxiliaryVariables auxiliaryVariables;
-    AuxiliaryVariablePtr auxiliaryObjectiveVariable;
+    AuxiliaryVariablePtr auxiliaryObjectiveVariable; // This is not the same as one created in the dual problem
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;

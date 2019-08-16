@@ -54,8 +54,7 @@ HCallbackI::~HCallbackI() = default;
 
 IloCplex::CallbackI* HCallbackI::duplicateCallback() const { return (new(getEnv()) HCallbackI(*this)); }
 
-static
-IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
+static IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
 {
     return (IloCplex::Callback(new(iloEnv) HCallbackI(envPtr, iloEnv, cplexVars)));
 }
@@ -89,6 +88,8 @@ void HCallbackI::main() // Called at each node...
 
         if(env->reformulatedProblem->auxiliaryObjectiveVariable)
             tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
+        else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+            tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
         try
         {
@@ -168,8 +169,7 @@ InfoCallbackI::~InfoCallbackI() = default;
 
 IloCplex::CallbackI* InfoCallbackI::duplicateCallback() const { return (new(getEnv()) InfoCallbackI(*this)); }
 
-static
-IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
+static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
 {
     return (IloCplex::Callback(new(iloEnv) InfoCallbackI(envPtr, iloEnv, cplexVars)));
 }
@@ -263,8 +263,7 @@ CtCallbackI::~CtCallbackI() = default;
 
 IloCplex::CallbackI* CtCallbackI::duplicateCallback() const { return (new(getEnv()) CtCallbackI(*this)); }
 
-static
-IloCplex::Callback CtCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
+static IloCplex::Callback CtCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray cplexVars)
 {
     return (IloCplex::Callback(new(iloEnv) CtCallbackI(envPtr, iloEnv, cplexVars)));
 }
@@ -293,7 +292,7 @@ void CtCallbackI::main()
     this->getValues(tmpVals, cplexVars);
 
     int size
-        = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+        = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
 
     VectorDouble solution(size);
 

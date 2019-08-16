@@ -199,8 +199,9 @@ void GurobiCallback::callback()
                 int numModelVars = static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
                                        ->gurobiModel->get(GRB_IntAttr_NumVars);
 
-                int numberOfVariables
-                    = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
+                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    ? numModelVars - 1
+                    : numModelVars;
 
                 VectorDouble solution(numberOfVariables);
 
@@ -255,7 +256,7 @@ void GurobiCallback::callback()
                                    ->gurobiModel->get(GRB_IntAttr_NumVars);
 
             int numberOfVariables
-                = (env->dualSolver->MIPSolver->hasAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
+                = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()) ? numModelVars - 1 : numModelVars;
 
             VectorDouble solution(numberOfVariables);
 
@@ -379,6 +380,9 @@ void GurobiCallback::callback()
                 if(env->reformulatedProblem->auxiliaryObjectiveVariable)
                     setSolution(vars[env->reformulatedProblem->auxiliaryVariables.size() + primalSol.size()],
                         env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
+                else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    setSolution(vars[env->reformulatedProblem->auxiliaryVariables.size() + primalSol.size()],
+                        env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
                 lastUpdatedPrimal = primalBound;
             }
