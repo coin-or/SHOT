@@ -134,7 +134,7 @@ public:
 
     void setDualAuxiliaryObjectiveVariableIndex(int index) override
     {
-        return (MIPSolverBase::setDualAuxiliaryObjectiveVariableIndex(index));
+        MIPSolverBase::setDualAuxiliaryObjectiveVariableIndex(index);
     }
 
     std::string getConstraintIdentifier(E_HyperplaneSource source) override
