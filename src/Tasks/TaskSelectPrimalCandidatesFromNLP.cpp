@@ -187,6 +187,7 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
         int sizeOfVariableVector = env->problem->properties.numberOfVariables;
 
+        // TODO: remove?
         if(env->settings->getSetting<bool>("FixedInteger.UsePresolveBounds", "Primal"))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
