@@ -416,6 +416,8 @@ bool Solver::selectStrategy()
     bool useQuadraticObjective
         = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
 
+    bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
+
     if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
     // MIQP problem
     {
@@ -431,7 +433,7 @@ bool Solver::selectStrategy()
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     // MIQCQP problem
-    else if(useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
+    else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
     {
         env->output->outputDebug(" Using MIQCQP solution strategy.");
 
@@ -439,7 +441,7 @@ bool Solver::selectStrategy()
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
     // QCQP problem
-    else if((useQuadraticConstraints || useQuadraticConstraints) && env->problem->properties.isQCQPProblem)
+    else if(isConvex && (useQuadraticConstraints || useQuadraticConstraints) && env->problem->properties.isQCQPProblem)
     {
         env->output->outputDebug(" Using QCQP solution strategy.");
 
