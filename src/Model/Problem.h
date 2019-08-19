@@ -65,6 +65,7 @@ struct ProblemProperties
 
     std::string name = "";
     std::string description = "";
+    bool isReformulated = false; // True if this is the reformulated problem
 };
 
 using FactorableFunctionGraph = mc::FFGraph;

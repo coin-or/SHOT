@@ -1748,6 +1748,19 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
         env->output->outputDebug(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
     }
 
+    // Update variable bounds for original variables also in original problem if tightened in reformulated one
+    if(boundsUpdated && this->properties.isReformulated)
+    {
+        for(size_t i = 0; i < env->problem->allVariables.size(); i++)
+        {
+            if(allVariables[i]->lowerBound > env->problem->allVariables[i]->lowerBound)
+                env->problem->allVariables[i]->lowerBound = allVariables[i]->lowerBound;
+
+            if(allVariables[i]->upperBound < env->problem->allVariables[i]->upperBound)
+                env->problem->allVariables[i]->upperBound = allVariables[i]->upperBound;
+        }
+    }
+
     return (boundsUpdated);
 }
 
