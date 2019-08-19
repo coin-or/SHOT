@@ -11,7 +11,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <string>
 
 #include "Environment.h"
@@ -84,7 +83,8 @@ public:
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();
 
-    std::optional<PrimalSolution> getPrimalSolution();
+    bool hasPrimalSolution();
+    PrimalSolution getPrimalSolution();
     std::vector<PrimalSolution> getPrimalSolutions();
 
     E_TerminationReason getTerminationReason();

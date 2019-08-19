@@ -521,12 +521,9 @@ bool Solver::solveProblem()
         env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
-    bool result = solutionStrategy->solveProblem();
+    isProblemSolved = solutionStrategy->solveProblem();
 
-    if(result)
-        isProblemSolved = true;
-
-    return (result);
+    return (isProblemSolved);
 }
 
 std::string Solver::getResultsOSrL() { return (env->results->getResultsOSrL()); }
@@ -1368,14 +1365,14 @@ double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteGlob
 
 double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeGlobalObjectiveGap()); }
 
-std::optional<PrimalSolution> Solver::getPrimalSolution()
+bool Solver::hasPrimalSolution() { return (isProblemSolved && env->results->hasPrimalSolution() ? true : false); }
+
+PrimalSolution Solver::getPrimalSolution()
 {
-    std::optional<PrimalSolution> optionalPrimalSolution;
+    if(hasPrimalSolution())
+        return (env->results->primalSolutions[0]);
 
-    if(isProblemSolved && env->results->hasPrimalSolution())
-        optionalPrimalSolution = env->results->primalSolutions.at(0);
-
-    return (optionalPrimalSolution);
+    throw NoPrimalSolutionException("Can not get primal solution since none has been found.");
 }
 
 std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results->primalSolutions); }

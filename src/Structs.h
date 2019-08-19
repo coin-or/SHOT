@@ -20,23 +20,23 @@
 
 // For DLL support in Windows
 #if defined(_WIN32)
-# if !defined(STDCALL)
-#  define STDCALL __stdcall
-# endif
-# if !defined(DllExport)
-#  define DllExport __declspec(dllexport)
-# endif
+#if !defined(STDCALL)
+#define STDCALL __stdcall
+#endif
+#if !defined(DllExport)
+#define DllExport __declspec(dllexport)
+#endif
 #else
-# if !defined(STDCALL)
-#  define STDCALL
-# endif
-# if !defined(DllExport)
-#  ifdef __GNUC__
-#   define DllExport __attribute__((__visibility__("default")))
-#  else
-#   define DllExport
-#  endif
-# endif
+#if !defined(STDCALL)
+#define STDCALL
+#endif
+#if !defined(DllExport)
+#ifdef __GNUC__
+#define DllExport __attribute__((__visibility__("default")))
+#else
+#define DllExport
+#endif
+#endif
 #endif
 
 // Fix for missing NAN in Visual Studio
@@ -311,5 +311,27 @@ public:
 
         return (message.str().c_str());
     }
+};
+
+class NoPrimalSolutionException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    NoPrimalSolutionException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw() override { return (errorMessage.c_str()); }
+};
+
+class UnsolvedProblemException : public std::exception
+{
+private:
+    std::string errorMessage;
+
+public:
+    UnsolvedProblemException(std::string message) : errorMessage(message) {}
+
+    inline const char* what() const throw() override { return (errorMessage.c_str()); }
 };
 } // namespace SHOT
