@@ -1368,16 +1368,14 @@ double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteGlob
 
 double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeGlobalObjectiveGap()); }
 
-PrimalSolution Solver::getPrimalSolution()
+std::optional<PrimalSolution> Solver::getPrimalSolution()
 {
-    if(isProblemSolved && env->results->hasPrimalSolution())
-    {
-        PrimalSolution primalSol = env->results->primalSolutions.at(0);
-        return (primalSol);
-    }
+    std::optional<PrimalSolution> optionalPrimalSolution;
 
-    PrimalSolution primalSol;
-    return (primalSol);
+    if(isProblemSolved && env->results->hasPrimalSolution())
+        optionalPrimalSolution = env->results->primalSolutions.at(0);
+
+    return (optionalPrimalSolution);
 }
 
 std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results->primalSolutions); }
