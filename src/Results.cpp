@@ -44,25 +44,83 @@ void Results::addDualSolution(DualSolution solution)
 
 void Results::addPrimalSolution(PrimalSolution solution)
 {
-    if(env->settings->getSetting<int>("SaveNumberOfSolutions", "Output") > 1)
+    bool isDifferent = true;
+
+    for(auto& S : env->results->primalSolutions)
     {
-        env->results->primalSolutions.insert(env->results->primalSolutions.begin(), solution);
+        if(Utilities::isDifferent(S.point, solution.point))
+            continue;
+
+        isDifferent = false;
+        break;
+    }
+
+    if(!isDifferent) // The same solution point is already saved
+        return;
+
+    if(env->results->primalSolutions.size() == 0)
+    {
+        // This is the first solution, save it
+        env->results->primalSolutions.push_back(solution);
+        env->results->primalSolution = solution.point;
+        env->results->setPrimalBound(solution.objValue);
+
+        env->output->outputDebug(fmt::format(
+            "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
+    }
+    else if((env->problem->objectiveFunction->properties.isMinimize
+                && solution.objValue < env->results->primalSolutions.back().objValue)
+        || (!env->problem->objectiveFunction->properties.isMinimize
+               && solution.objValue > env->results->primalSolutions.back().objValue))
+    {
+        // Have a solution which is better than the worst one in the solution pool
+        env->results->primalSolutions.back() = solution;
+        env->results->primalSolution = solution.point;
+        env->results->setPrimalBound(solution.objValue);
+
+        env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
+            solution.objValue, solution.sourceDescription));
+    }
+    else if(env->results->primalSolutions.size() < env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"))
+    {
+        // The solution pool is not yet full, save the solution
+        env->results->primalSolutions.push_back(solution);
+
+        env->output->outputDebug(fmt::format("        New primal solution {} from {} found and added to solution pool.",
+            solution.objValue, solution.sourceDescription));
     }
     else
     {
-        if(!env->results->hasPrimalSolution())
-        {
-            env->results->primalSolutions.push_back(solution);
-        }
-        else
-        {
-            env->results->primalSolutions.at(0) = solution;
-        }
+        // Will not save this solution
+        return;
     }
 
-    env->results->primalSolution = solution.point;
-    env->results->setPrimalBound(solution.objValue);
+    // Sorts the solutions so that the best one is at the first position
+    if(env->problem->objectiveFunction->properties.isMinimize)
+    {
+        std::sort(env->results->primalSolutions.begin(), env->results->primalSolutions.end(),
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue < secondSolution.objValue);
+            });
+    }
+    else
+    {
+        std::sort(env->results->primalSolutions.begin(), env->results->primalSolutions.end(),
+            [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
+                return (firstSolution.objValue > secondSolution.objValue);
+            });
+    }
+
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
+
+    // Saves statistics for the sources of primal solutions
+    auto element = env->results->primalSolutionSourceStatistics.emplace(solution.sourceType, 1);
+
+    if(!element.second)
+    {
+        // Element already exists
+        element.first->second += 1;
+    }
 
     // Write the new primal point to a file
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -70,7 +128,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
         std::stringstream fileName;
         fileName << env->settings->getSetting<std::string>("Debug.Path", "Output");
         fileName << "/primalpoint";
-        fileName << env->results->primalSolutions.size();
+        fileName << env->solutionStatistics.numberOfFoundPrimalSolutions;
         fileName << ".txt";
 
         savePrimalSolutionToFile(solution, env->problem->allVariables, fileName.str());
@@ -90,13 +148,15 @@ void Results::addPrimalSolution(PrimalSolution solution)
         if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
         {
             hyperplane.objectiveFunctionValue
-                = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                =
+    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->calculateValue(hyperplane.generatedPoint);
         }
         else
         {
             hyperplane.objectiveFunctionValue
-                = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                =
+    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
                       ->calculateValue(hyperplane.generatedPoint);
         }
 

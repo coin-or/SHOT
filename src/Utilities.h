@@ -64,6 +64,8 @@ bool isDifferentRoundedSelectedElements(
 bool isDifferentSelectedElements(
     const VectorDouble& firstPt, const VectorDouble& secondPt, const VectorInteger& indexes);
 
+bool isDifferent(const VectorDouble& firstPt, const VectorDouble& secondPt);
+
 std::string toStringFormat(const double value, const std::string& format, const bool useInfinitySymbol);
 std::string toStringFormat(const double value, const std::string& format);
 std::string toString(const double value);

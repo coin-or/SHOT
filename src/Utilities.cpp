@@ -330,6 +330,19 @@ bool isDifferentSelectedElements(
     return (false);
 }
 
+bool isDifferent(const VectorDouble& firstPt, const VectorDouble& secondPt)
+{
+    assert(firstPt.size() == secondPt.size());
+
+    for(size_t i = 0; i < firstPt.size(); i++)
+    {
+        if(firstPt.at(i) != secondPt.at(i))
+            return (true);
+    }
+
+    return (false);
+}
+
 std::string toStringFormat(const double value, const std::string& format)
 {
     return (toStringFormat(value, format, true));

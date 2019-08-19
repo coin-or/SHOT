@@ -293,22 +293,6 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         tmpObjVal = env->problem->objectiveFunction->calculateValue(tmpPoint);
     }
 
-    // Check if primal bound is worse than current
-    if((env->problem->objectiveFunction->properties.isMinimize && tmpObjVal < env->results->getPrimalBound())
-        || (!env->problem->objectiveFunction->properties.isMinimize && tmpObjVal > env->results->getPrimalBound()))
-    {
-        auto tmpLine = fmt::format("     Testing primal bound {} found from {}:", tmpObjVal, sourceDesc);
-        env->output->outputDebug(tmpLine);
-    }
-    else
-    {
-        auto tmpLine = fmt::format("     Primal bound candidate ({}) from {} is not an improvement over current ({}).",
-            tmpObjVal, sourceDesc, env->results->getPrimalBound());
-        env->output->outputDebug(tmpLine);
-
-        return (false);
-    }
-
     // For example rootsearches may violate linear constraints
     bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
         || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
@@ -355,6 +339,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.maxDevatingConstraintLinear = mostDevLinearConstraints;
     }
 
+    // Check if quadratic constraints are fulfilled
     if(env->problem->properties.numberOfQuadraticConstraints > 0)
     {
         PairIndexValue mostDevQuadraticConstraints;
@@ -385,6 +370,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         primalSol.maxDevatingConstraintQuadratic = mostDevQuadraticConstraints;
     }
 
+    // Check if nonlinear constraints are fulfilled
     if(env->problem->properties.numberOfNonlinearConstraints > 0)
     {
         PairIndexValue mostDevNonlinearConstraints;
@@ -417,21 +403,11 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     primalSol.objValue = tmpObjVal;
 
+    // Make sure no extra (auxiliary) values are in the vector
     if((int)tmpPoint.size() > env->problem->properties.numberOfVariables)
         tmpPoint = std::vector(tmpPoint.begin(), tmpPoint.begin() + env->problem->properties.numberOfVariables);
 
     primalSol.point = tmpPoint;
-
-    auto element = env->results->primalSolutionSourceStatistics.emplace(primalSol.sourceType, 1);
-
-    if(!element.second)
-    {
-        // Element already exists
-        element.first->second += 1;
-    }
-
-    auto tmpLine = fmt::format("        New primal bound {} from {} accepted.", tmpObjVal, sourceDesc);
-    env->output->outputDebug(tmpLine);
 
     env->results->addPrimalSolution(primalSol);
 
@@ -441,7 +417,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 void PrimalSolver::addFixedNLPCandidate(
     VectorDouble pt, E_PrimalNLPSource source, double objVal, int iter, PairIndexValue maxConstrDev)
 {
-    assert(pt.size() >= env->problem->properties.numberOfVariables);
+    assert((int)pt.size() >= env->problem->properties.numberOfVariables);
 
     fixedPrimalNLPCandidates.push_back(
         PrimalFixedNLPCandidate{ VectorDouble(pt.begin(), pt.begin() + env->problem->properties.numberOfVariables),
