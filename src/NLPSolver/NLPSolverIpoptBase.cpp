@@ -594,6 +594,11 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             env->output->outputDebug(" No solution found to problem with Ipopt: Time limit exceeded.");
             break;
 
+        case Ipopt::ApplicationReturnStatus::Diverging_Iterates:
+            status = E_NLPSolutionStatus::Unbounded;
+            env->output->outputDebug(" No solution found to problem with Ipopt: Diverging iterates.");
+            break;
+
         default:
             status = E_NLPSolutionStatus::Error;
             env->output->outputError(" Error when solving NLP problem with Ipopt.");
