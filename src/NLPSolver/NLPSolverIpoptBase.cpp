@@ -605,6 +605,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
             break;
         }
     }
+
     catch(std::exception& e)
     {
         env->output->outputError(" Error when solving relaxed problem with Ipopt!", e.what());

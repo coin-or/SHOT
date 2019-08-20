@@ -73,9 +73,9 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
     }
-    catch(const Error& eclass)
+    catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading problem from \"" + filename + "\"", eclass.message);
+        env->output->outputError(fmt::format("Error when reading OS model from \"{}\": {}", filename, e.what()));
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -656,11 +656,11 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
         return std::make_shared<ExpressionCos>(convertOSNonlinearNode(((OSnLNode*)node->m_mChildren[0]), destination));
 
     case OS_MIN:
-        throw OperationNotImplementedException("min");
+        throw OperationNotImplementedException("Error: Unsupported GAMS function min");
         break;
 
     case OS_MAX:
-        throw OperationNotImplementedException("max");
+        throw OperationNotImplementedException("Error: Unsupported GAMS function max");
         break;
 
     case OS_NUMBER:
@@ -684,7 +684,8 @@ NonlinearExpressionPtr ModelingSystemOS::convertOSNonlinearNode(OSnLNode* node, 
             std::make_shared<ExpressionVariable>(destination->getVariable(varnode->idx)));
     }
     default:
-        throw OperationNotImplementedException(node->getTokenName());
+        throw OperationNotImplementedException(
+            fmt::format("Error: Unsupported GAMS function {}", node->getTokenName()));
         break;
     }
 

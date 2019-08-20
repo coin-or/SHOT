@@ -70,6 +70,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 
     default:
         // We should never get here since there is a check in Solver.cpp that makes sure that the correct solver is used
+        break;
     }
 
     if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))

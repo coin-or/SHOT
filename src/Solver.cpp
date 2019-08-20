@@ -129,9 +129,9 @@ bool Solver::setOptionsFromFile(std::string fileName)
             result = false;
         }
     }
-    catch(const Error& eclass)
+    catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading options from \"" + fileName + "\"", eclass.message);
+        env->output->outputError("Error when reading options from \"" + fileName + "\"", e.what());
         result = false;
     }
 
@@ -332,9 +332,9 @@ bool Solver::setProblem(std::string fileName)
             Utilities::writeStringToFile(problemFilename.str(), problemText.str());
         }
     }
-    catch(const Error& eclass)
+    catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading problem from \"" + fileName + "\"", eclass.message);
+        env->output->outputError(fmt::format("Error when reading problem from \"{0}\"", e.what()));
 
         return (false);
     }

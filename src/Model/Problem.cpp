@@ -872,7 +872,8 @@ VariablePtr Problem::getVariable(int variableIndex)
 {
     if(variableIndex > (int)allVariables.size())
     {
-        throw VariableNotFoundException(" with index " + std::to_string(variableIndex));
+        throw VariableNotFoundException(
+            fmt::format("Cannot find variable with index {} ", std::to_string(variableIndex)));
     }
 
     return allVariables.at(variableIndex);
@@ -882,7 +883,8 @@ ConstraintPtr Problem::getConstraint(int constraintIndex)
 {
     if(constraintIndex > (int)numericConstraints.size())
     {
-        throw ConstraintNotFoundException(" with index " + std::to_string(constraintIndex));
+        throw ConstraintNotFoundException(
+            fmt::format("Cannot find constraint with index {}", std::to_string(constraintIndex)));
     }
 
     return numericConstraints.at(constraintIndex);
