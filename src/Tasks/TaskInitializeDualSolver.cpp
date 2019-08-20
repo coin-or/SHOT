@@ -41,12 +41,6 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 
     env->timing->startTimer("DualStrategy");
 
-    if(solver != ES_MIPSolver::Cplex && solver != ES_MIPSolver::Gurobi && solver != ES_MIPSolver::Cbc)
-    {
-        env->output->outputError("Error in solver definition. Check option 'Dual.MIP.Solver'.");
-        throw Error("Error in MIP solver definition.  Check option 'Dual.MIP.Solver'.");
-    }
-
     bool solverSelected = false;
 
     if(useLazyStrategy)
