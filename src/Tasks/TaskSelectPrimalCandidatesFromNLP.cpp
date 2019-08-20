@@ -69,9 +69,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
 #endif
 
     default:
-        auto value = env->settings->getSetting<int>("FixedInteger.Solver", "Primal");
-        throw Error("Error in solver definition for primal NLP solver. Value '" + std::to_string(value)
-            + "' for setting 'Primal.FixedInteger.Solver' not valid.");
+        // We should never get here since there is a check in Solver.cpp that makes sure that the correct solver is used
     }
 
     if(env->settings->getSetting<bool>("FixedInteger.CreateInfeasibilityCut", "Primal"))
