@@ -109,7 +109,7 @@ extern "C"
     }
 
     DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
-                                       [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
+        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
     DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
         [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
     {
@@ -253,18 +253,9 @@ extern "C"
             // pass solution info, etc. to GAMS
             modelingSystem->finalizeSolution();
         }
-        catch(const Error& eclass)
-        {
-            env->output->outputError(eclass.message);
-
-            gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
-            gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);
-
-            return (0);
-        }
         catch(const std::exception& e)
         {
-            env->output->outputError(std::string("Error: ") + e.what());
+            env->output->outputError(fmt::format("Error when solving problem with GAMS: {}", e.what()));
 
             gmoSolveStatSet(gs->gmo, gmoSolveStat_Solver);
             gmoModelStatSet(gs->gmo, gmoModelStat_ErrorNoSolution);

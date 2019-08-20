@@ -129,7 +129,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
                 throw std::logic_error("Cannot read GAMS options file.");
             }
         }
-        else  /* in GAMS, solvers don't stop if the options file is not present */
+        else /* in GAMS, solvers don't stop if the options file is not present */
             env->output->outputError(" Error: Options file " + std::string(buffer) + " not found.");
     }
 
@@ -143,7 +143,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
         /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
         if(palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) != 0)
         {
-            env->output->outputInfo(" CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
+            env->output->outputInfo(
+                " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
             env->settings->updateSetting("MIP.Solver", "Dual", (int)ES_MIPSolver::Cbc);
         }
     }
@@ -175,9 +176,9 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
     }
-    catch(const Error& eclass)
+    catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading GAMS model from \"" + filename + "\"", eclass.message);
+        env->output->outputError(fmt::format("Error when reading GAMS model from \"{}\": {}", filename, e.what()));
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -286,8 +287,8 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
         GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
                 "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
 #else
-                "gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+        "gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
+        "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
 #endif
         filename.c_str());
 
@@ -318,8 +319,7 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
     if(!gmoCreateDD(&modelingObject, GAMSDIR, buffer, sizeof(buffer))
         || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
 #else
-    if(!gmoCreate(&modelingObject, buffer, sizeof(buffer))
-        || !gevCreate(&modelingEnvironment, buffer, sizeof(buffer)))
+    if(!gmoCreate(&modelingObject, buffer, sizeof(buffer)) || !gevCreate(&modelingEnvironment, buffer, sizeof(buffer)))
 #endif
         throw std::logic_error(buffer);
 
@@ -1392,7 +1392,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
                 char buffer[256];
                 sprintf(buffer, "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
-                throw OperationNotImplementedException("Error: Unsupported GAMS function " + std::string(buffer));
+                throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS function {}", buffer));
             }
             }
             break;
@@ -1404,7 +1404,7 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             char buffer[256];
             sprintf(buffer, "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
             gevLogStatPChar(modelingEnvironment, buffer);
-            throw OperationNotImplementedException("Error: Unsupported GAMS opcode " + std::string(buffer));
+            throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS opcode {}", buffer));
         }
         }
     }

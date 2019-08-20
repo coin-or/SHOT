@@ -20,23 +20,23 @@
 
 // For DLL support in Windows
 #if defined(_WIN32)
-# if !defined(STDCALL)
-#  define STDCALL __stdcall
-# endif
-# if !defined(DllExport)
-#  define DllExport __declspec(dllexport)
-# endif
+#if !defined(STDCALL)
+#define STDCALL __stdcall
+#endif
+#if !defined(DllExport)
+#define DllExport __declspec(dllexport)
+#endif
 #else
-# if !defined(STDCALL)
-#  define STDCALL
-# endif
-# if !defined(DllExport)
-#  ifdef __GNUC__
-#   define DllExport __attribute__((__visibility__("default")))
-#  else
-#   define DllExport
-#  endif
-# endif
+#if !defined(STDCALL)
+#define STDCALL
+#endif
+#if !defined(DllExport)
+#ifdef __GNUC__
+#define DllExport __attribute__((__visibility__("default")))
+#else
+#define DllExport
+#endif
+#endif
 #endif
 
 // Fix for missing NAN in Visual Studio
@@ -251,65 +251,44 @@ struct SolutionStatistics
     int getNumberOfTotalNLPProblems() { return (numberOfProblemsNLPInteriorPointSearch + numberOfProblemsFixedNLP); };
 };
 
-class Error
+class Exception : public std::exception
 {
-public:
-    Error(std::string message) : message(message){};
-
+private:
     std::string message;
-};
-
-class VariableNotFoundException : public std::exception
-{
-private:
-    std::string errorMessage;
 
 public:
-    VariableNotFoundException(std::string message) : errorMessage(message) {}
+    Exception(std::string message) : message(message) {}
 
-    inline const char* what() const throw() override
-    {
-        std::stringstream message;
-        message << "Could not find variable ";
-        message << errorMessage;
-
-        return (message.str().c_str());
-    }
+    inline const char* what() const throw() override { return (message.c_str()); }
 };
 
-class ConstraintNotFoundException : public std::exception
+class VariableNotFoundException : public Exception
 {
-private:
-    std::string errorMessage;
-
 public:
-    ConstraintNotFoundException(std::string message) : errorMessage(message) {}
-
-    inline const char* what() const throw() override
-    {
-        std::stringstream message;
-        message << "Could not find constraint ";
-        message << errorMessage;
-
-        return (message.str().c_str());
-    }
+    VariableNotFoundException(std::string message) : Exception(message) {}
 };
 
-class OperationNotImplementedException : public std::exception
+class ConstraintNotFoundException : public Exception
 {
-private:
-    std::string errorMessage;
-
 public:
-    OperationNotImplementedException(std::string message) : errorMessage(message) {}
+    ConstraintNotFoundException(std::string message) : Exception(message) {}
+};
 
-    inline const char* what() const throw() override
-    {
-        std::stringstream message;
-        message << "The following operation is not implemented: ";
-        message << errorMessage;
+class OperationNotImplementedException : public Exception
+{
+public:
+    OperationNotImplementedException(std::string message) : Exception(message) {}
+};
 
-        return (message.str().c_str());
-    }
+class NoPrimalSolutionException : public Exception
+{
+public:
+    NoPrimalSolutionException(std::string message) : Exception(message) {}
+};
+
+class UnsolvedProblemException : public Exception
+{
+public:
+    UnsolvedProblemException(std::string message) : Exception(message) {}
 };
 } // namespace SHOT

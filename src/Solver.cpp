@@ -129,9 +129,9 @@ bool Solver::setOptionsFromFile(std::string fileName)
             result = false;
         }
     }
-    catch(const Error& eclass)
+    catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading options from \"" + fileName + "\"", eclass.message);
+        env->output->outputError("Error when reading options from \"" + fileName + "\"", e.what());
         result = false;
     }
 
@@ -332,9 +332,9 @@ bool Solver::setProblem(std::string fileName)
             Utilities::writeStringToFile(problemFilename.str(), problemText.str());
         }
     }
-    catch(const Error& eclass)
+    catch(const std::exception& e)
     {
-        env->output->outputError("Error when reading problem from \"" + fileName + "\"", eclass.message);
+        env->output->outputError(fmt::format("Error when reading problem from \"{0}\"", e.what()));
 
         return (false);
     }
@@ -521,12 +521,9 @@ bool Solver::solveProblem()
         env->results->setPrimalBound(SHOT_DBL_MIN);
     }
 
-    bool result = solutionStrategy->solveProblem();
+    isProblemSolved = solutionStrategy->solveProblem();
 
-    if(result)
-        isProblemSolved = true;
-
-    return (result);
+    return (isProblemSolved);
 }
 
 std::string Solver::getResultsOSrL() { return (env->results->getResultsOSrL()); }
@@ -1368,16 +1365,14 @@ double Solver::getAbsoluteObjectiveGap() { return (env->results->getAbsoluteGlob
 
 double Solver::getRelativeObjectiveGap() { return (env->results->getRelativeGlobalObjectiveGap()); }
 
+bool Solver::hasPrimalSolution() { return (isProblemSolved && env->results->hasPrimalSolution() ? true : false); }
+
 PrimalSolution Solver::getPrimalSolution()
 {
-    if(isProblemSolved && env->results->hasPrimalSolution())
-    {
-        PrimalSolution primalSol = env->results->primalSolutions.at(0);
-        return (primalSol);
-    }
+    if(hasPrimalSolution())
+        return (env->results->primalSolutions[0]);
 
-    PrimalSolution primalSol;
-    return (primalSol);
+    throw NoPrimalSolutionException("Can not get primal solution since none has been found.");
 }
 
 std::vector<PrimalSolution> Solver::getPrimalSolutions() { return (env->results->primalSolutions); }
