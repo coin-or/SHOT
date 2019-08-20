@@ -1040,8 +1040,8 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
             const std::pair<VariablePtr, VariablePtr>& elementTwo) {
             if(elementOne.first->index < elementTwo.first->index)
                 return (true);
-            if(elementOne.second->index == elementTwo.second->index)
-                return (elementOne.first->index < elementTwo.first->index);
+            if(elementOne.first->index == elementTwo.first->index)
+                return (elementOne.second->index < elementTwo.second->index);
             return (false);
         });
 
