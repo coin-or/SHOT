@@ -83,6 +83,7 @@ public:
     double getAbsoluteObjectiveGap();
     double getRelativeObjectiveGap();
 
+    bool hasPrimalSolution();
     PrimalSolution getPrimalSolution();
     std::vector<PrimalSolution> getPrimalSolutions();
 

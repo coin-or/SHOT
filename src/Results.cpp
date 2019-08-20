@@ -81,7 +81,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
         env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
             solution.objValue, solution.sourceDescription));
     }
-    else if(env->results->primalSolutions.size() < env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"))
+    else if((int) env->results->primalSolutions.size() < env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"))
     {
         // The solution pool is not yet full, save the solution
         env->results->primalSolutions.push_back(solution);
@@ -859,7 +859,7 @@ IterationPtr Results::getPreviousIteration()
     if(getNumberOfIterations() > 1)
         return (iterations[getNumberOfIterations() - 2]);
     else
-        throw Error("Only one iteration!");
+        throw Exception("Only one iteration!");
 }
 
 int Results::getNumberOfIterations() { return (iterations.size()); }

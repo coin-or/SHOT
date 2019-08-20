@@ -11,6 +11,8 @@
 
 #include "Simplifications.h"
 
+#include "spdlog/fmt/fmt.h"
+
 namespace SHOT
 {
 
@@ -403,7 +405,8 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
         return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
     }
     default:
-        throw new OperationNotImplementedException(std::to_string((int)(expression->getType())));
+        throw new OperationNotImplementedException(
+            fmt::format("The following operation is not implemented {}", (int)(expression->getType())));
         break;
     }
 
