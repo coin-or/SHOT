@@ -380,9 +380,10 @@ bool ModelTestCreateProblem()
 {
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
-    env->output = std::make_shared<SHOT::Output>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    env->problem = problem;
 
     // Creating variables
 
@@ -487,10 +488,6 @@ bool ModelTestCreateProblem()
     std::cout << '\n';
     std::cout << "Problem created:\n\n";
     std::cout << problem << '\n';
-
-    std::cout << '\n';
-    std::cout << "Nonlinear DAG:\n";
-    std::cout << problem->factorableFunctionsDAG;
 
     SHOT::VectorDouble point;
     point.push_back(2.0);
@@ -694,9 +691,10 @@ bool ModelTestCreateProblem2()
     // Nonlinear constraint with only one variable (out of a total of two)
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
-    env->output = std::make_shared<SHOT::Output>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    env->problem = problem;
 
     // Creating variables
     auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.0, 100.0);
@@ -733,10 +731,6 @@ bool ModelTestCreateProblem2()
     std::cout << '\n';
     std::cout << "Problem created:\n\n";
     std::cout << problem << '\n';
-
-    std::cout << '\n';
-    std::cout << "Nonlinear DAG:\n";
-    std::cout << problem->factorableFunctionsDAG << '\n';
 
     SHOT::VectorDouble point;
     point.push_back(2.0);
@@ -797,9 +791,10 @@ bool ModelTestCreateProblem3()
     // Two nonlinear constraint with only one variable each
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
-    env->output = std::make_shared<SHOT::Output>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    env->problem = problem;
 
     // Creating variables
 
@@ -847,10 +842,6 @@ bool ModelTestCreateProblem3()
     std::cout << '\n';
     std::cout << "Problem created:\n\n";
     std::cout << problem << '\n';
-
-    std::cout << '\n';
-    std::cout << "Nonlinear DAG:\n";
-    std::cout << problem->factorableFunctionsDAG << '\n';
 
     SHOT::VectorDouble point;
     point.push_back(2.0);
@@ -930,9 +921,10 @@ bool ModelTestConvexity()
 {
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
-    env->output = std::make_shared<SHOT::Output>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+    env->problem = problem;
 
     // Creating variables
 
