@@ -216,7 +216,6 @@ bool TestGradientOS(const std::string& problemFile)
     {
         std::cout << "Problem read successfully:\n\n";
         std::cout << problem << "\n\n";
-        std::cout << problem->factorableFunctionsDAG << '\n';
     }
 
     VectorDouble point;
