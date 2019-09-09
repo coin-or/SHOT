@@ -58,7 +58,7 @@ option(GENERATE_EXE "Should the SHOT executable be generated (requires at least 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(ARGH_DIR "ThirdParty/argh")
 set(BOOST_DIR "ThirdParty/boost")
-set(CPPAD_DIR "/home/andreas/Research/CppAD/cppad/build/install")
+set(CPPAD_DIR "ThirdParty/CppAD")
 set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
@@ -268,7 +268,8 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
      "${PROJECT_SOURCE_DIR}/src/Settings.h"
-     "${TINYXML2_DIR}/tinyxml2.h")
+     "${TINYXML2_DIR}/tinyxml2.h"
+     "${CPPAD_DIR}/include/cppad/cppad.hpp")
 
 if(HAS_CBC)
   if(CBC_FOUND)
@@ -463,8 +464,6 @@ if(GENERATE_EXE)
   add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/SHOT.cpp")
   target_link_libraries(${PROJECT_NAME} SHOTSolver)
 endif(GENERATE_EXE)
-
-target_link_libraries(SHOTSolver ${CPPAD_DIR}/lib/libcppad_lib.so)
 
 # Set compiler warnings levels
 if(MSVC)
