@@ -344,7 +344,7 @@ bool ModelTestConstraints()
         + quadraticTerm1->coefficient * point.at(0) * point.at(1)
         + quadraticTerm2->coefficient * point.at(0) * point.at(0) + point.at(0) * point.at(0) * point.at(1);
 
-    std::cout << "Calculating nonlinear constraint value " << constraintValue.functionValue << "(should be equal to "
+    std::cout << "Calculating nonlinear constraint value " << constraintValue.functionValue << " (should be equal to "
               << realValue << ").\n";
 
     if(constraintValue.functionValue != realValue)
@@ -493,6 +493,8 @@ bool ModelTestCreateProblem()
     point.push_back(2.0);
     point.push_back(3.0);
     point.push_back(1.0);
+    std::cout << '\n';
+    std::cout << "Considering point (" << point[0] << ',' << point[1] << ',' << point[2] << ')' << '\n';
 
     std::cout << "\nJacobian sparsity pattern:\n";
     auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
@@ -559,7 +561,7 @@ bool ModelTestCreateProblem()
         std::cout << G.first->name << ":  " << G.second << '\n';
     }
 
-    std::cout << "\nCalculating hessian for function in first nonlinear constraint (there should be no elements):\n";
+    std::cout << "\nCalculating hessian for function in first nonlinear constraint (there should be one element):\n";
     auto hessianNonlinear = nonlinearConstraint->calculateHessian(point, true);
 
     for(auto const& H : hessianNonlinear)
@@ -632,6 +634,9 @@ bool ModelTestCreateProblem()
     point.at(1) = 1.0;
     point.at(2) = 1.0;
 
+    std::cout << '\n';
+    std::cout << "Considering point (" << point[0] << ',' << point[1] << ',' << point[2] << ')' << '\n';
+
     std::cout << "\nTesting for an invalid point for all constraints:\n";
     auto mostDevConstraint = problem->getMostDeviatingNumericConstraint(point);
     if(!mostDevConstraint)
@@ -642,8 +647,7 @@ bool ModelTestCreateProblem()
     {
         double error = mostDevConstraint.value().error;
         auto name = mostDevConstraint.value().constraint->name;
-        std::cout << "The most deviating constraint in the point (x,y) = (" << point.at(0) << ',' << point.at(1)
-                  << ") is " << name << " with error " << error << "\n";
+        std::cout << "The most deviating constraint is " << name << " with error " << error << "\n";
 
         if(error != 800.0)
             passed = false;
@@ -654,11 +658,13 @@ bool ModelTestCreateProblem()
     point.at(0) = 0.0;
     point.at(1) = 1.0;
 
+    std::cout << '\n';
+    std::cout << "Considering point (" << point[0] << ',' << point[1] << ',' << point[2] << ')' << '\n';
+
     std::cout << "Testing to get all deviating constraint values in a valid point (there should be none)\n";
 
     auto deviatingConstraints = problem->getAllDeviatingNumericConstraints(point, 0.0);
-    std::cout << "Number of invalid constraints in the point (x,y) = (" << point.at(0) << ',' << point.at(1) << ") is "
-              << deviatingConstraints.size() << '\n';
+    std::cout << "Number of invalid constraints in the point is " << deviatingConstraints.size() << '\n';
 
     if(deviatingConstraints.size() != 0)
     {
@@ -737,6 +743,9 @@ bool ModelTestCreateProblem2()
     point.push_back(3.0);
 
     std::cout << '\n';
+    std::cout << "Considering point (" << point[0] << ',' << point[1] << ')' << '\n';
+
+    std::cout << '\n';
     std::cout << "Jacobian sparsity pattern:\n";
     auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
 
@@ -807,8 +816,8 @@ bool ModelTestCreateProblem3()
     SHOT::Variables variables = { var_x, var_y };
     problem->add(variables);
 
-    SHOT::LinearObjectiveFunctionPtr objectiveFunction
-        = std::make_shared<SHOT::LinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
+    SHOT::NonlinearObjectiveFunctionPtr objectiveFunction
+        = std::make_shared<SHOT::NonlinearObjectiveFunction>(SHOT::E_ObjectiveFunctionDirection::Minimize);
     SHOT::LinearTermPtr objLinearTerm1 = std::make_shared<SHOT::LinearTerm>(1.0, var_x);
     SHOT::LinearTermPtr objLinearTerm2 = std::make_shared<SHOT::LinearTerm>(1.0, var_y);
 
@@ -816,7 +825,11 @@ bool ModelTestCreateProblem3()
     objLinearTerms.add(objLinearTerm1);
     objLinearTerms.add(objLinearTerm2);
 
+    SHOT::NonlinearExpressionPtr exprProd
+        = std::make_shared<SHOT::ExpressionProduct>(expressionVariable_x, expressionVariable_y);
+
     objectiveFunction->add(objLinearTerms);
+    objectiveFunction->add(exprProd);
     problem->add(objectiveFunction);
 
     SHOT::NonlinearExpressionPtr exprConstant = std::make_shared<SHOT::ExpressionConstant>(3);
@@ -848,6 +861,9 @@ bool ModelTestCreateProblem3()
     point.push_back(3.0);
 
     std::cout << '\n';
+    std::cout << "Considering point (" << point[0] << ',' << point[1] << ')' << '\n';
+
+    std::cout << '\n';
     std::cout << "Jacobian sparsity pattern:\n";
     auto jacobianSparsityPattern = problem->getConstraintsJacobianSparsityPattern();
 
@@ -866,7 +882,7 @@ bool ModelTestCreateProblem3()
     }
 
     std::cout << '\n';
-    std::cout << "Hessian of the Lagrangian sparsity pattern:\n";
+    std::cout << "Hessian of the Lagrangian sparsity pattern (constraints only):\n";
     auto lagrangianSparsityPattern = problem->getConstraintsHessianSparsityPattern();
 
     for(auto& E : *lagrangianSparsityPattern)
@@ -877,6 +893,24 @@ bool ModelTestCreateProblem3()
     if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
            && lagrangianSparsityPattern->at(1).first->index == 1
            && lagrangianSparsityPattern->at(1).second->index == 1))
+    {
+        std::cout << "The sparsity pattern is wrong!\n";
+        passed = false;
+    }
+
+    std::cout << '\n';
+    std::cout << "Hessian of the Lagrangian sparsity pattern (with objective function):\n";
+    lagrangianSparsityPattern = problem->getLagrangianHessianSparsityPattern();
+
+    for(auto& E : *lagrangianSparsityPattern)
+    {
+        std::cout << "(" << E.first->index << "," << E.second->index << ")\n";
+    }
+
+    if(!(lagrangianSparsityPattern->at(0).first->index == 0 && lagrangianSparsityPattern->at(0).second->index == 0
+           && lagrangianSparsityPattern->at(1).first->index == 0 && lagrangianSparsityPattern->at(1).second->index == 1
+           && lagrangianSparsityPattern->at(2).first->index == 1
+           && lagrangianSparsityPattern->at(2).second->index == 1))
     {
         std::cout << "The sparsity pattern is wrong!\n";
         passed = false;
@@ -970,7 +1004,7 @@ bool ModelTestConvexity()
 
     problem->finalize();
 
-    std::cout << "Objective function " << objectiveFunction << "created. ";
+    std::cout << "Objective function " << problem->objectiveFunction << " created.\n";
 
     auto convexity = objQuadraticTerms.getConvexity();
 
@@ -999,7 +1033,7 @@ bool ModelTestConvexity()
         break;
     }
 
-    std::cout << "Constraint " << quadraticConstraint << "created. ";
+    std::cout << "\nConstraint " << quadraticConstraint << " created.\n";
 
     convexity = quadraticTerms.getConvexity();
 
