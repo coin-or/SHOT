@@ -19,13 +19,14 @@
 #include <string>
 
 #include "ffunc.hpp"
+#include "cppad/cppad.hpp"
 
 namespace SHOT
 {
 using Interval = mc::Interval;
 using IntervalVector = std::vector<Interval>;
 
-using FactorableFunction = mc::FFVar;
+using FactorableFunction = CppAD::AD<double>;
 using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
 using Interval = mc::Interval;
 using IntervalVector = std::vector<Interval>;
@@ -49,6 +50,8 @@ struct VariableProperties
 
     bool hasUpperBoundBeenTightened = false;
     bool hasLowerBoundBeenTightened = false;
+
+    int nonlinearVariableIndex = -1;
 };
 
 class Variable
@@ -64,7 +67,7 @@ public:
     double upperBound;
     double lowerBound;
 
-    FactorableFunctionPtr factorableFunctionVariable;
+    FactorableFunction* factorableFunctionVariable;
 
     Variable()
     {

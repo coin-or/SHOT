@@ -17,6 +17,9 @@
 
 #include <vector>
 
+#include "cppad/cppad.hpp"
+#include "cppad/utility.hpp"
+
 namespace SHOT
 {
 
@@ -304,14 +307,18 @@ public:
 
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
-    std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
-    std::vector<std::pair<std::pair<VariablePtr, VariablePtr>, FactorableFunction>> symbolicSparseHessian;
+
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
+
+    bool nonlinearGradientSparsityMapGenerated = false;
+    bool nonlinearHessianSparsityMapGenerated = false;
 
     Variables variablesInMonomialTerms;
     Variables variablesInSignomialTerms;
     Variables variablesInNonlinearExpression;
 
-    int factorableFunctionIndex;
+    int nonlinearExpressionIndex = -1;
 
     void add(LinearTerms terms) { LinearObjectiveFunction::add(terms); }
 

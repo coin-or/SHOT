@@ -64,7 +64,7 @@ void Problem::updateConstraints()
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
 
-            auto auxConstraint = std::make_shared<NonlinearConstraint>();
+            auto auxConstraint = std::make_shared<QuadraticConstraint>();
 
             auxConstraint->constant = -C->constant;
             auxConstraint->valueRHS = -valueLHS;
@@ -79,6 +79,7 @@ void Problem::updateConstraints()
                 auxConstraint->add(
                     std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, T->firstVariable, T->secondVariable));
 
+            auxConstraint->updateProperties();
             auxConstraints.push_back(auxConstraint);
         }
     }
@@ -137,6 +138,7 @@ void Problem::updateConstraints()
                 auxConstraint->nonlinearExpression = simplify(
                     std::make_shared<ExpressionNegate>(copyNonlinearExpression(C->nonlinearExpression.get(), this)));
 
+            auxConstraint->updateProperties();
             auxConstraints.push_back(auxConstraint);
         }
     }
@@ -265,7 +267,10 @@ void Problem::updateVariables()
         }
 
         for(auto& V : C->variablesInNonlinearExpression)
+        {
+            V->properties.inNonlinearExpression = true;
             V->properties.inNonlinearConstraints = true;
+        }
     }
 
     allVariables.takeOwnership(shared_from_this());
@@ -294,8 +299,7 @@ void Problem::updateProperties()
             C->properties.convexity = E_Convexity::Convex;
     }
 
-    if(!variablesUpdated)
-        updateVariables();
+    updateVariables();
 
     if(assumeConvex)
     {
@@ -357,6 +361,12 @@ void Problem::updateProperties()
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
+
+    properties.numberOfVariablesInNonlinearExpressions = 0;
+
+    for(auto& V : nonlinearVariables)
+        if(V->properties.inNonlinearExpression)
+            properties.numberOfVariablesInNonlinearExpressions++;
 
     if(auxiliaryObjectiveVariable)
         properties.numberOfAuxiliaryVariables++;
@@ -505,27 +515,40 @@ void Problem::updateProperties()
 
 void Problem::updateFactorableFunctions()
 {
-    factorableFunctionsDAG = std::make_shared<FactorableFunctionGraph>();
+    if(properties.numberOfVariablesInNonlinearExpressions == 0)
+        return;
+
+    int nonlinearVariableCounter = 0;
+
+    factorableFunctionVariables = std::vector<CppAD::AD<double>>(properties.numberOfVariablesInNonlinearExpressions);
 
     for(auto& V : nonlinearVariables)
     {
-        auto factorableFunctionsVar = std::make_shared<FactorableFunction>();
-        factorableFunctionsVar->set(factorableFunctionsDAG.get());
-        V->factorableFunctionVariable = factorableFunctionsVar;
-        factorableFunctionVariables.push_back(*factorableFunctionsVar.get());
+        if(!V->properties.inNonlinearExpression)
+            continue;
+
+        factorableFunctionVariables[nonlinearVariableCounter] = 3.0;
+        V->factorableFunctionVariable = &factorableFunctionVariables[nonlinearVariableCounter];
+        V->properties.nonlinearVariableIndex = nonlinearVariableCounter;
+
+        nonlinearVariableCounter++;
     }
+
+    CppAD::Independent(factorableFunctionVariables);
+
+    int nonlinearExpressionCounter = 0;
 
     for(auto& C : nonlinearConstraints)
     {
         if(C->properties.hasNonlinearExpression && C->variablesInNonlinearExpression.size() > 0)
         {
-            C->updateFactorableFunction();
-            factorableFunctions.push_back(*C->factorableFunction.get());
+            factorableFunctions.push_back(C->nonlinearExpression->getFactorableFunction());
             constraintsWithNonlinearExpressions.push_back(C);
+            C->nonlinearExpressionIndex = nonlinearExpressionCounter;
+            nonlinearExpressionCounter++;
         }
     }
 
-    int objectiveFactorableFunctionIndex = -1;
     if(objectiveFunction->properties.hasNonlinearExpression
         && std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)
                 ->variablesInNonlinearExpression.size()
@@ -534,117 +557,15 @@ void Problem::updateFactorableFunctions()
         auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
 
         objective->updateFactorableFunction();
-        factorableFunctions.push_back(*objective->factorableFunction.get());
+        factorableFunctions.push_back(objective->nonlinearExpression->getFactorableFunction());
 
-        objective->factorableFunctionIndex = factorableFunctions.size() - 1;
-        objectiveFactorableFunctionIndex = objective->factorableFunctionIndex;
+        objective->nonlinearExpressionIndex = nonlinearExpressionCounter;
     }
 
     if(factorableFunctions.size() > 0)
     {
-        auto jacobian = factorableFunctionsDAG->SFAD(factorableFunctions.size(), &factorableFunctions[0],
-            factorableFunctionVariables.size(), &factorableFunctionVariables[0]);
-
-        for(size_t i = 0; i < std::get<0>(jacobian); i++)
-        {
-            auto nonlinearVariable = nonlinearVariables[std::get<2>(jacobian)[i]];
-            auto jacobianElement = std::get<3>(jacobian)[i];
-
-            if(objectiveFunction->properties.hasNonlinearExpression
-                && (int)std::get<1>(jacobian)[i] == objectiveFactorableFunctionIndex)
-            {
-                auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
-                objective->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
-            }
-            else
-            {
-                auto nonlinearConstraint = constraintsWithNonlinearExpressions[std::get<1>(jacobian)[i]];
-                nonlinearConstraint->symbolicSparseJacobian.emplace_back(nonlinearVariable, jacobianElement);
-            }
-        }
-
-        delete[] std::get<1>(jacobian);
-        delete[] std::get<2>(jacobian);
-        delete[] std::get<3>(jacobian);
-    }
-
-    for(auto& C : nonlinearConstraints)
-    {
-        if(C->properties.hasNonlinearExpression && C->symbolicSparseJacobian.size() > 0)
-        {
-            std::vector<FactorableFunction> jacobianElements;
-
-            for(auto JE : C->symbolicSparseJacobian)
-            {
-                jacobianElements.push_back(JE.second);
-            }
-
-            std::vector<FactorableFunction> tmpFactorableFunctions;
-
-            for(auto& V : C->variablesInNonlinearExpression)
-            {
-                tmpFactorableFunctions.push_back(*V->factorableFunctionVariable.get());
-            }
-
-            auto hessian = factorableFunctionsDAG->SFAD(jacobianElements.size(), &jacobianElements[0],
-                tmpFactorableFunctions.size(), &tmpFactorableFunctions[0]);
-
-            for(size_t i = 0; i < std::get<0>(hessian); i++)
-            {
-                auto firstNonlinearVariable = C->variablesInNonlinearExpression[std::get<1>(hessian)[i]];
-                auto secondNonlinearVariable = C->variablesInNonlinearExpression[std::get<2>(hessian)[i]];
-                auto hessianElement = std::get<3>(hessian)[i];
-
-                if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
-                {
-                    C->symbolicSparseHessian.emplace_back(
-                        std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement);
-                }
-            }
-
-            delete[] std::get<1>(hessian);
-            delete[] std::get<2>(hessian);
-            delete[] std::get<3>(hessian);
-        }
-    }
-
-    if(objectiveFunction->properties.hasNonlinearExpression)
-    {
-        auto nonlinearObjective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction);
-
-        std::vector<FactorableFunction> jacobianElements;
-
-        for(auto JE : nonlinearObjective->symbolicSparseJacobian)
-        {
-            jacobianElements.push_back(JE.second);
-        }
-
-        std::vector<FactorableFunction> tmpFactorableFunctions;
-
-        for(auto& V : nonlinearObjective->variablesInNonlinearExpression)
-        {
-            tmpFactorableFunctions.push_back(*V->factorableFunctionVariable.get());
-        }
-
-        auto hessian = factorableFunctionsDAG->SFAD(
-            jacobianElements.size(), &jacobianElements[0], tmpFactorableFunctions.size(), &tmpFactorableFunctions[0]);
-
-        for(size_t i = 0; i < std::get<0>(hessian); i++)
-        {
-            auto firstNonlinearVariable = nonlinearObjective->variablesInNonlinearExpression[std::get<1>(hessian)[i]];
-            auto secondNonlinearVariable = nonlinearObjective->variablesInNonlinearExpression[std::get<2>(hessian)[i]];
-            auto hessianElement = std::get<3>(hessian)[i];
-
-            if(firstNonlinearVariable->index <= secondNonlinearVariable->index)
-            {
-                nonlinearObjective->symbolicSparseHessian.emplace_back(
-                    std::make_pair(firstNonlinearVariable, secondNonlinearVariable), hessianElement);
-            }
-        }
-
-        delete[] std::get<1>(hessian);
-        delete[] std::get<2>(hessian);
-        delete[] std::get<3>(hessian);
+        ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
+        ADFunctions.optimize();
     }
 }
 
@@ -762,6 +683,7 @@ void Problem::add(AuxiliaryVariablePtr variable)
 
 void Problem::add(NumericConstraintPtr constraint)
 {
+    constraint->index = numericConstraints.size();
     numericConstraints.push_back(constraint);
 
     if(constraint->properties.hasNonlinearExpression || constraint->properties.hasMonomialTerms
@@ -790,6 +712,7 @@ void Problem::add(NumericConstraintPtr constraint)
 
 void Problem::add(LinearConstraintPtr constraint)
 {
+    constraint->index = numericConstraints.size();
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     linearConstraints.push_back(constraint);
 
@@ -800,6 +723,7 @@ void Problem::add(LinearConstraintPtr constraint)
 
 void Problem::add(QuadraticConstraintPtr constraint)
 {
+    constraint->index = numericConstraints.size();
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     quadraticConstraints.push_back(constraint);
 
@@ -810,6 +734,7 @@ void Problem::add(QuadraticConstraintPtr constraint)
 
 void Problem::add(NonlinearConstraintPtr constraint)
 {
+    constraint->index = numericConstraints.size();
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     nonlinearConstraints.push_back(constraint);
 

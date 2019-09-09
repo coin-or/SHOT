@@ -701,35 +701,46 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 {
     SparseVariableVector gradient = QuadraticObjectiveFunction::calculateGradient(point, eraseZeroes);
 
-    for(auto& E : symbolicSparseJacobian)
+    if(this->properties.hasNonlinearExpression)
     {
-        double value[1];
+        // if(!nonlinearGradientSparsityMapGenerated)
+        // initializeGradientSparsityPattern();
 
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-            // Collecting the values corresponding to nonlinear variables from the point
-            VectorDouble newPoint;
-            newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
+            int numberOfNonlinearVariables = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
 
-            for(auto& V : sharedOwnerProblem->nonlinearVariables)
+            std::vector<double> pointNonlinearSubset(numberOfNonlinearVariables, 0.0);
+
+            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+                pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
+
+            auto jacobian = sharedOwnerProblem->ADFunctions.Jacobian(pointNonlinearSubset);
+            /*auto jacobian = sharedOwnerProblem->ADFunctions.SparseJacobian(
+                pointNonlinearSubset, nonlinearGradientSparsityPattern);*/
+
+            for(int i = this->nonlinearExpressionIndex * numberOfNonlinearVariables;
+                i < this->nonlinearExpressionIndex * numberOfNonlinearVariables + numberOfNonlinearVariables; i++)
             {
-                newPoint.push_back(point.at(V->index));
+                double coefficient = jacobian[i];
+
+                if(coefficient == 0.0)
+                    continue;
+
+                // TODO does not work!!
+                int variableIndex
+                    = sharedOwnerProblem
+                          ->nonlinearVariables[i - this->nonlinearExpressionIndex * numberOfNonlinearVariables]
+                          ->index;
+
+                auto element = gradient.emplace(sharedOwnerProblem->allVariables[variableIndex], coefficient);
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += coefficient;
+                }
             }
-
-            sharedOwnerProblem->factorableFunctionsDAG->eval(1, &E.second, value,
-                sharedOwnerProblem->factorableFunctionVariables.size(),
-                &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
-        }
-
-        if(value[0] != value[0])
-            value[0] = 0.0;
-
-        auto element = gradient.emplace(E.first, value[0]);
-
-        if(!element.second)
-        {
-            // Element already exists for the variable
-            element.first->second += value[0];
         }
     }
 
@@ -791,71 +802,53 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
         }
     }
 
-    for(auto& E : symbolicSparseJacobian)
+    if(this->properties.hasNonlinearExpression)
     {
-        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E.first)
-            == gradientSparsityPattern->end())
-            gradientSparsityPattern->push_back(E.first);
+        if(auto sharedOwnerProblem = ownerProblem.lock())
+        {
+            auto nonlinearVariablesInExpressionMap
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, false);
+
+            for(auto& VAR : variablesInNonlinearExpression)
+                nonlinearVariablesInExpressionMap[VAR->properties.nonlinearVariableIndex] = true;
+
+            auto nonlinearFunctionMap
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
+
+            nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
+
+            CppAD::sparse_rc<std::vector<size_t>> pattern;
+
+            sharedOwnerProblem->ADFunctions.subgraph_sparsity(
+                nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+
+            nonlinearGradientSparsityPattern = pattern;
+
+            const std::vector<size_t>& variableIndices(nonlinearGradientSparsityPattern.col());
+
+            for(size_t i = 0; i < nonlinearGradientSparsityPattern.nnz(); i++)
+            {
+                for(auto& VAR : variablesInNonlinearExpression)
+                {
+                    if(VAR->properties.nonlinearVariableIndex == variableIndices[i])
+                    {
+                        if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
+                            == gradientSparsityPattern->end())
+                            gradientSparsityPattern->push_back(VAR);
+
+                        continue;
+                    }
+                }
+            }
+        }
     }
+
+    nonlinearGradientSparsityMapGenerated = true;
 }
 
 SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDouble& point, bool eraseZeroes = true)
 {
     SparseVariableMatrix hessian = QuadraticObjectiveFunction::calculateHessian(point, eraseZeroes);
-
-    try
-    {
-        for(auto& E : symbolicSparseHessian)
-        {
-            auto factorableFunction = E.second;
-
-            double value[1];
-
-            if(auto sharedOwnerProblem = ownerProblem.lock())
-            {
-                // Collecting the values corresponding to nonlinear variables from the point
-                VectorDouble newPoint;
-                newPoint.reserve(sharedOwnerProblem->factorableFunctionVariables.size());
-
-                for(auto& V : sharedOwnerProblem->nonlinearVariables)
-                {
-                    newPoint.push_back(point.at(V->index));
-                }
-
-                sharedOwnerProblem->factorableFunctionsDAG->eval(1, &factorableFunction, value,
-                    sharedOwnerProblem->factorableFunctionVariables.size(),
-                    &sharedOwnerProblem->factorableFunctionVariables[0], &newPoint[0]);
-            }
-
-            if(value[0] != value[0])
-            {
-                std::cout << "nan when calculating hessian" << std::endl;
-                value[0] = 0.0;
-            }
-
-            if(eraseZeroes && value[0] == 0.0)
-                continue;
-
-            // Hessian is symmetric, so discard elements below the diagonal
-            if(E.first.first->index > E.first.second->index)
-                continue;
-
-            auto element = hessian.emplace(std::get<0>(E), value[0]);
-
-            if(!element.second)
-            {
-                // Element already exists for the variable
-                element.first->second += value[0];
-            }
-        }
-
-        if(eraseZeroes)
-            Utilities::erase_if<std::pair<VariablePtr, VariablePtr>, double>(hessian, 0.0);
-    }
-    catch(mc::FFGraph::Exceptions& e)
-    {
-        std::cout << "Error when evaluating hessian: " << e.what();
-    }
 
     if(properties.hasMonomialTerms)
     {
@@ -865,6 +858,56 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
     if(properties.hasSignomialTerms)
     {
         hessian = Utilities::combineSparseVariableMatrices(signomialTerms.calculateHessian(point), hessian);
+    }
+
+    if(this->properties.hasNonlinearExpression)
+    {
+        if(!nonlinearHessianSparsityMapGenerated)
+            initializeHessianSparsityPattern();
+
+        if(auto sharedOwnerProblem = ownerProblem.lock())
+        {
+            int numberOfNonlinearVariables = sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions;
+
+            std::vector<double> pointNonlinearSubset(numberOfNonlinearVariables, 0.0);
+
+            std::vector<double> weights(sharedOwnerProblem->properties.numberOfNonlinearExpressions, 0.0);
+            weights[this->nonlinearExpressionIndex] = 1.0;
+
+            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+                pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
+            CppAD::sparse_rc<std::vector<size_t>> pattern = nonlinearHessianSparsityPattern;
+
+            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(pattern);
+
+            auto calculatedHessian = sharedOwnerProblem->ADFunctions.SparseHessian(pointNonlinearSubset, weights);
+
+            for(auto& V1 : variablesInNonlinearExpression)
+            {
+                for(auto& V2 : variablesInNonlinearExpression)
+                {
+                    size_t hessianIndex = V1->properties.nonlinearVariableIndex * numberOfNonlinearVariables
+                        + V2->properties.nonlinearVariableIndex;
+
+                    double hessianValue = calculatedHessian[hessianIndex];
+
+                    if(hessianValue == 0.0)
+                        continue;
+
+                    // Only save elements above the diagonal since the Hessian is symmetric
+                    if(V1->index <= V2->index)
+                    {
+                        auto element = hessian.emplace(std::make_pair(V1, V2), hessianValue);
+
+                        if(!element.second)
+                        {
+                            // Element already exists for the variable
+                            element.first->second += hessianValue;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     return hessian;
@@ -930,12 +973,60 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
         }
     }
 
-    for(auto& E : symbolicSparseHessian)
+    if(this->properties.hasNonlinearExpression)
     {
-        if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), E.first)
-            == hessianSparsityPattern->end())
-            hessianSparsityPattern->push_back(E.first);
+        if(auto sharedOwnerProblem = ownerProblem.lock())
+        {
+            auto nonlinearVariablesInExpressionMap
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, false);
+
+            for(auto& VAR : variablesInNonlinearExpression)
+                nonlinearVariablesInExpressionMap[VAR->properties.nonlinearVariableIndex] = true;
+
+            auto nonlinearFunctionMap
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, true);
+
+            nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
+
+            CppAD::sparse_rc<std::vector<size_t>> pattern;
+
+            sharedOwnerProblem->ADFunctions.for_hes_sparsity(
+                nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
+
+            nonlinearHessianSparsityPattern = pattern;
+
+            const std::vector<size_t>& rowIndices(nonlinearHessianSparsityPattern.row());
+            const std::vector<size_t>& colIndices(nonlinearHessianSparsityPattern.col());
+
+            for(size_t i = 0; i < nonlinearHessianSparsityPattern.nnz(); i++)
+            {
+                for(auto& V1 : variablesInNonlinearExpression)
+                {
+                    for(auto& V2 : variablesInNonlinearExpression)
+                    {
+                        if(V1->properties.nonlinearVariableIndex == rowIndices[i]
+                            && V2->properties.nonlinearVariableIndex == colIndices[i])
+                        {
+                            std::pair<VariablePtr, VariablePtr> variablePair;
+
+                            if(V1->index < V2->index)
+                                variablePair = std::make_pair(V1, V2);
+                            else
+                                variablePair = std::make_pair(V2, V1);
+
+                            if(std::find(hessianSparsityPattern->begin(), hessianSparsityPattern->end(), variablePair)
+                                == hessianSparsityPattern->end())
+                                hessianSparsityPattern->push_back(variablePair);
+
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    nonlinearHessianSparsityMapGenerated = true;
 }
 
 std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
