@@ -43,12 +43,13 @@ Interval ObjectiveFunction::getBounds()
     return (interval);
 }
 
+void ObjectiveFunction::initializeGradientSparsityPattern() { gradientSparsityPattern = std::make_shared<Variables>(); }
+
 std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
 {
     if(gradientSparsityPattern)
         return (gradientSparsityPattern);
 
-    gradientSparsityPattern = std::make_shared<Variables>();
     initializeGradientSparsityPattern();
 
     // Sorts the variables
@@ -64,12 +65,16 @@ std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
     return (gradientSparsityPattern);
 }
 
+void ObjectiveFunction::initializeHessianSparsityPattern()
+{
+    hessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
+}
+
 std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunction::getHessianSparsityPattern()
 {
     if(hessianSparsityPattern)
         return (hessianSparsityPattern);
 
-    hessianSparsityPattern = std::make_shared<std::vector<std::pair<VariablePtr, VariablePtr>>>();
     initializeHessianSparsityPattern();
 
     // Sorts the elements
@@ -192,6 +197,8 @@ SparseVariableVector LinearObjectiveFunction::calculateGradient(
 
 void LinearObjectiveFunction::initializeGradientSparsityPattern()
 {
+    ObjectiveFunction::initializeGradientSparsityPattern();
+
     for(auto& T : linearTerms)
     {
         if(T->coefficient == 0.0)
@@ -211,7 +218,10 @@ SparseVariableMatrix LinearObjectiveFunction::calculateHessian(
     return hessian;
 }
 
-void LinearObjectiveFunction::initializeHessianSparsityPattern() {}
+void LinearObjectiveFunction::initializeHessianSparsityPattern()
+{
+    ObjectiveFunction::initializeHessianSparsityPattern();
+}
 
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
@@ -703,8 +713,8 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 
     if(this->properties.hasNonlinearExpression)
     {
-        // if(!nonlinearGradientSparsityMapGenerated)
-        // initializeGradientSparsityPattern();
+        if(!nonlinearGradientSparsityMapGenerated)
+            initializeGradientSparsityPattern();
 
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
@@ -715,25 +725,25 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
             for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
-            auto jacobian = sharedOwnerProblem->ADFunctions.Jacobian(pointNonlinearSubset);
-            /*auto jacobian = sharedOwnerProblem->ADFunctions.SparseJacobian(
-                pointNonlinearSubset, nonlinearGradientSparsityPattern);*/
+            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
+            sharedOwnerProblem->ADFunctions.subgraph_jac_rev(pointNonlinearSubset, subset);
 
-            for(int i = this->nonlinearExpressionIndex * numberOfNonlinearVariables;
-                i < this->nonlinearExpressionIndex * numberOfNonlinearVariables + numberOfNonlinearVariables; i++)
+            const std::vector<size_t>& row(subset.row());
+            const std::vector<size_t>& col(subset.col());
+            const std::vector<double>& value(subset.val());
+
+            std::vector<size_t> rowMajor = subset.row_major();
+
+            for(auto k : rowMajor)
             {
-                double coefficient = jacobian[i];
+                double coefficient = value[k];
 
                 if(coefficient == 0.0)
                     continue;
 
-                // TODO does not work!!
-                int variableIndex
-                    = sharedOwnerProblem
-                          ->nonlinearVariables[i - this->nonlinearExpressionIndex * numberOfNonlinearVariables]
-                          ->index;
+                auto VAR = sharedOwnerProblem->nonlinearVariables[col[k]];
 
-                auto element = gradient.emplace(sharedOwnerProblem->allVariables[variableIndex], coefficient);
+                auto element = gradient.emplace(VAR, coefficient);
 
                 if(!element.second)
                 {
@@ -822,6 +832,7 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             sharedOwnerProblem->ADFunctions.subgraph_sparsity(
                 nonlinearVariablesInExpressionMap, nonlinearFunctionMap, false, pattern);
 
+            // Save for later use when calculating gradients
             nonlinearGradientSparsityPattern = pattern;
 
             const std::vector<size_t>& variableIndices(nonlinearGradientSparsityPattern.col());
@@ -876,9 +887,8 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
 
             for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
-            CppAD::sparse_rc<std::vector<size_t>> pattern = nonlinearHessianSparsityPattern;
 
-            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(pattern);
+            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
 
             auto calculatedHessian = sharedOwnerProblem->ADFunctions.SparseHessian(pointNonlinearSubset, weights);
 
