@@ -104,9 +104,9 @@ bool SettingsTestOptions(bool useOSiL)
             passed = false;
         }
     }
-    catch(Error& e)
+    catch(Exception& e)
     {
-        std::cout << "Error: " << e.message << std::endl;
+        std::cout << "Error: " << e.what() << std::endl;
         passed = false;
     }
 

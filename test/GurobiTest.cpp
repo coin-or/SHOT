@@ -77,9 +77,9 @@ bool GurobiTest1(std::string filename)
             passed = false;
         }
     }
-    catch(Error& e)
+    catch(Exception& e)
     {
-        std::cout << "Error: " << e.message << std::endl;
+        std::cout << "Error: " << e.what() << std::endl;
         return false;
     }
 

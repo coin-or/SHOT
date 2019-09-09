@@ -28,30 +28,12 @@ bool IpoptTest1()
 {
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
 
-    env->output = std::make_shared<SHOT::Output>();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
-    env->settings = std::make_shared<Settings>(env->output);
-
-    VectorString enumLogLevel;
-    enumLogLevel.push_back("Trace");
-    enumLogLevel.push_back("Debug");
-    enumLogLevel.push_back("Info");
-    enumLogLevel.push_back("Warning");
-    enumLogLevel.push_back("Error");
-    enumLogLevel.push_back("Critical");
-    enumLogLevel.push_back("Off");
-    env->settings->createSetting(
-        "Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for console output", enumLogLevel);
-
-    env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
-
-    env->timing = std::make_shared<Timing>(env);
-
-    env->timing->createTimer("Total", "Total solution time");
-    env->timing->startTimer("Total");
+    env->problem = problem;
 
     // Creating variables
 
@@ -169,30 +151,12 @@ bool IpoptTest2()
 {
     bool passed = true;
 
-    SHOT::EnvironmentPtr env = std::make_shared<SHOT::Environment>();
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
 
-    env->output = std::make_shared<SHOT::Output>();
     SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
-    env->settings = std::make_shared<Settings>(env->output);
-
-    VectorString enumLogLevel;
-    enumLogLevel.push_back("Trace");
-    enumLogLevel.push_back("Debug");
-    enumLogLevel.push_back("Info");
-    enumLogLevel.push_back("Warning");
-    enumLogLevel.push_back("Error");
-    enumLogLevel.push_back("Critical");
-    enumLogLevel.push_back("Off");
-    env->settings->createSetting(
-        "Console.LogLevel", "Output", static_cast<int>(E_LogLevel::Info), "Log level for console output", enumLogLevel);
-
-    env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
-
-    env->timing = std::make_shared<Timing>(env);
-
-    env->timing->createTimer("Total", "Total solution time");
-    env->timing->startTimer("Total");
+    env->problem = problem;
 
     auto var_x = std::make_shared<SHOT::Variable>("x", 0, SHOT::E_VariableType::Real, 0.1, 2.0);
     SHOT::ExpressionVariablePtr expressionVariable_x = std::make_shared<SHOT::ExpressionVariable>(var_x);

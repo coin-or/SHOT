@@ -20,6 +20,9 @@
 #include "Terms.h"
 #include "NonlinearExpressions.h"
 
+#include "cppad/cppad.hpp"
+#include "cppad/utility.hpp"
+
 namespace SHOT
 {
 enum class E_ConstraintClassification
@@ -297,12 +300,17 @@ public:
     NonlinearExpressionPtr nonlinearExpression;
     FactorableFunctionPtr factorableFunction;
 
-    std::vector<std::pair<VariablePtr, FactorableFunction>> symbolicSparseJacobian;
-    std::vector<std::pair<std::pair<VariablePtr, VariablePtr>, FactorableFunction>> symbolicSparseHessian;
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearGradientSparsityPattern;
+    CppAD::sparse_rc<std::vector<size_t>> nonlinearHessianSparsityPattern;
+
+    bool nonlinearGradientSparsityMapGenerated = false;
+    bool nonlinearHessianSparsityMapGenerated = false;
 
     Variables variablesInMonomialTerms;
     Variables variablesInSignomialTerms;
     Variables variablesInNonlinearExpression;
+
+    int nonlinearExpressionIndex = -1;
 
     NonlinearConstraint() = default;
 

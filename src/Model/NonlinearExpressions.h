@@ -18,11 +18,12 @@
 #include "../Utilities.h"
 
 #include "ffunc.hpp"
+#include "cppad/cppad.hpp"
 
 namespace SHOT
 {
 
-using FactorableFunction = mc::FFVar;
+using FactorableFunction = CppAD::AD<double>;
 using FactorableFunctionPtr = std::shared_ptr<FactorableFunction>;
 using Interval = mc::Interval;
 using IntervalVector = std::vector<Interval>;
@@ -242,10 +243,7 @@ public:
         return (variable->calculate(intervalVector));
     };
 
-    inline FactorableFunction getFactorableFunction() override
-    {
-        return *(variable->factorableFunctionVariable.get());
-    };
+    inline FactorableFunction getFactorableFunction() override { return *(variable->factorableFunctionVariable); };
 
     inline Interval getBounds() const override { return (variable->getBound()); };
 

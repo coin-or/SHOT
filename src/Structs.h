@@ -142,9 +142,9 @@ struct PrimalSolution
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraintLinear;
-    PairIndexValue maxDevatingConstraintQuadratic;
-    PairIndexValue maxDevatingConstraintNonlinear;
+    PairIndexValue maxDevatingConstraintLinear {-1, SHOT_DBL_INF};
+    PairIndexValue maxDevatingConstraintQuadratic{ -1, SHOT_DBL_INF };
+    PairIndexValue maxDevatingConstraintNonlinear{ -1, SHOT_DBL_INF };
     double maxIntegerToleranceError; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?

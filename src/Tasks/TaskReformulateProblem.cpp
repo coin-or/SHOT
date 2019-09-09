@@ -82,6 +82,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         }
     }
 
+    reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->finalize();
 
     // Fixing that a quadratic objective changed into a nonlinear constraint is correctly identified

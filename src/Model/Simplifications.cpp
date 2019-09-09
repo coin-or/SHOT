@@ -169,7 +169,10 @@ void simplifyNonlinearExpressions(
             if(tmpNonlinearExpression)
                 nonlinearConstraint->nonlinearExpression = tmpNonlinearExpression;
             else
-                nonlinearConstraint->nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
+            {
+                nonlinearConstraint->nonlinearExpression = nullptr;
+                nonlinearConstraint->properties.hasNonlinearExpression = false;
+            }
 
             if(tmpConstant != 0.0)
                 nonlinearConstraint->constant += tmpConstant;
@@ -178,7 +181,8 @@ void simplifyNonlinearExpressions(
 
     for(auto& C : problem->nonlinearConstraints)
     {
-        if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.size() == 0
+        if(C->properties.hasNonlinearExpression
+            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.size() == 0
             && C->quadraticTerms.size() == 0)
         {
             // Can take the square of both sides
@@ -193,7 +197,7 @@ void simplifyNonlinearExpressions(
 
     for(auto& C : problem->nonlinearConstraints)
     {
-        if(C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+        if(C->properties.hasNonlinearExpression && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             // Removes linear terms, quadratics and constants
 
@@ -294,10 +298,13 @@ void simplifyNonlinearExpressions(
         }
     }
 
-    // Runs again to remove zeroes
     for(auto& C : problem->nonlinearConstraints)
     {
-        C->nonlinearExpression = simplify(C->nonlinearExpression);
+        if(C->properties.hasNonlinearExpression)
+        {
+            // Runs again to remove zeroes
+            C->nonlinearExpression = simplify(C->nonlinearExpression);
+        }
     }
 }
 

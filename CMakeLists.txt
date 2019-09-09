@@ -15,7 +15,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Sets the release types, e.g. Release, Debug: set(CMAKE_BUILD_TYPE Debug)
 
-option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
+option(COMPILE_TESTS "Should the automated tests be compiled" ON)
 
 # Activates extra functionality, note that corresponding libraries are needed
 
@@ -24,7 +24,7 @@ option(HAS_GAMS "Is GAMS available" ON)
 set(GAMS_DIR "/opt/gams/gams26.1" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" ON)
+option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
 set(OS_DIR
     "/opt/OS-2.10"
     CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
@@ -38,7 +38,7 @@ option(HAS_GUROBI "Is Gurobi available" ON)
 set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" ON)
+option(HAS_CBC "Is Cbc available" OFF)
 set(CBC_DIR
     "/opt/Cbc-2.10"
     CACHE STRING
@@ -51,16 +51,14 @@ set(IPOPT_DIR
     CACHE STRING
           "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
 
-# Boost
-set(Boost_INCLUDE_DIR "ThirdParty/boost") # May be needed to specify where Boost is installed, if not automatically
-                                          # detected
-
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
        ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
 set(ARGH_DIR "ThirdParty/argh")
+set(BOOST_DIR "ThirdParty/boost")
+set(CPPAD_DIR "ThirdParty/CppAD")
 set(EIGEN_DIR "ThirdParty/eigen")
 set(MCPP_DIR "ThirdParty/mc++")
 set(SPDLOG_DIR "ThirdParty/spdlog")
@@ -121,7 +119,7 @@ file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
-file(TO_CMAKE_PATH "${Boost_INCLUDE_DIR}" ${Boost_INCLUDE_DIR})
+file(TO_CMAKE_PATH "${BOOST_DIR}" ${BOOST_DIR})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 
@@ -270,7 +268,8 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.h"
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
      "${PROJECT_SOURCE_DIR}/src/Settings.h"
-     "${TINYXML2_DIR}/tinyxml2.h")
+     "${TINYXML2_DIR}/tinyxml2.h"
+     "${CPPAD_DIR}/include/cppad/cppad.hpp")
 
 if(HAS_CBC)
   if(CBC_FOUND)
@@ -343,13 +342,14 @@ include_directories(${INCLUDE_DIRS})
 find_package(Boost 1.63.0 REQUIRED)
 
 include_directories(SYSTEM "${ARGH_DIR}")
-include_directories(SYSTEM "${Boost_INCLUDE_DIR}")
+include_directories(SYSTEM "${BOOST_DIR}")
 include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${SPDLOG_DIR}")
 include_directories(SYSTEM "${TINYXML2_DIR}/")
+include_directories(SYSTEM "${CPPAD_DIR}/include/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 

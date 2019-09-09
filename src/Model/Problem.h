@@ -16,7 +16,6 @@
 
 #include "Variables.h"
 #include "AuxiliaryVariables.h"
-
 #include "ObjectiveFunction.h"
 #include "Constraints.h"
 
@@ -25,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include "ffunc.hpp"
+#include "cppad/cppad.hpp"
 
 namespace SHOT
 {
@@ -57,6 +56,8 @@ struct ProblemProperties
     int numberOfNonlinearVariables = 0;
     int numberOfAuxiliaryVariables = 0;
 
+    int numberOfVariablesInNonlinearExpressions = 0;
+
     int numberOfNumericConstraints = 0;
     int numberOfLinearConstraints = 0;
     int numberOfQuadraticConstraints = 0;
@@ -65,10 +66,8 @@ struct ProblemProperties
 
     std::string name = "";
     std::string description = "";
+    bool isReformulated = false; // True if this is the reformulated problem
 };
-
-using FactorableFunctionGraph = mc::FFGraph;
-using FactorableFunctionGraphPtr = std::shared_ptr<FactorableFunctionGraph>;
 
 class DllExport Problem : public std::enable_shared_from_this<Problem>
 {
@@ -118,9 +117,9 @@ public:
     QuadraticConstraints quadraticConstraints;
     NonlinearConstraints nonlinearConstraints;
 
-    FactorableFunctionGraphPtr factorableFunctionsDAG;
-    std::vector<FactorableFunction> factorableFunctionVariables;
-    std::vector<FactorableFunction> factorableFunctions;
+    std::vector<CppAD::AD<double>> factorableFunctionVariables;
+    std::vector<CppAD::AD<double>> factorableFunctions;
+    CppAD::ADFun<double> ADFunctions;
 
     void updateProperties();
 
@@ -236,12 +235,6 @@ public:
 inline std::ostream& operator<<(std::ostream& stream, ProblemPtr problem)
 {
     stream << *problem;
-    return stream;
-}
-
-inline std::ostream& operator<<(std::ostream& stream, FactorableFunctionGraphPtr graph)
-{
-    stream << *graph;
     return stream;
 }
 
