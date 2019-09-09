@@ -611,7 +611,6 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
             sharedOwnerProblem->ADFunctions.subgraph_jac_rev(pointNonlinearSubset, subset);
 
-            const std::vector<size_t>& row(subset.row());
             const std::vector<size_t>& col(subset.col());
             const std::vector<double>& value(subset.val());
 
@@ -757,8 +756,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
-            CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
-
+            // TODO: utilize sparsity pattern
             auto calculatedHessian = sharedOwnerProblem->ADFunctions.SparseHessian(pointNonlinearSubset, weights);
 
             for(auto& V1 : variablesInNonlinearExpression)
