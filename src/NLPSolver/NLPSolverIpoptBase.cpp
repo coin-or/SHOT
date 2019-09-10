@@ -301,6 +301,8 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
             int location
                 = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
 
+            assert(location < nele_hess);
+
             values[location] = obj_factor * E.second;
         }
     }

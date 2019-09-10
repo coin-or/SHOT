@@ -951,7 +951,15 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
         lagrangianHessianSparsityPattern->push_back(E);
     }
 
-    for(auto& C : numericConstraints)
+    for(auto& C : quadraticConstraints)
+    {
+        for(auto& E : *C->getHessianSparsityPattern())
+        {
+            lagrangianHessianSparsityPattern->push_back(E);
+        }
+    }
+
+    for(auto& C : nonlinearConstraints)
     {
         for(auto& E : *C->getHessianSparsityPattern())
         {

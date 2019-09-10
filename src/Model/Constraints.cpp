@@ -806,9 +806,6 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
         {
             for(auto& V2 : T->variables)
             {
-                if(V1 == V2)
-                    continue;
-
                 std::pair<VariablePtr, VariablePtr> variablePair;
 
                 if(V1->index < V2->index)
@@ -834,9 +831,6 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
         {
             for(auto& E2 : T->elements)
             {
-                if(E1 == E2)
-                    continue;
-
                 std::pair<VariablePtr, VariablePtr> variablePair;
 
                 if(E1->variable->index < E2->variable->index)
