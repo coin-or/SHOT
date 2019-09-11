@@ -618,6 +618,14 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
     }
     catch(IloException& e)
     {
+        std::string errorString = e.getMessage();
+
+        if(errorString.rfind("CPLEX Error  5002", 0) == 0)
+        {
+            cplexInstance.setParam(IloCplex::Param::OptimalityTarget, CPX_OPTIMALITYTARGET_OPTIMALGLOBAL);
+            return (solveProblem());
+        }
+
         env->output->outputError("        Error when solving MIP/LP problem", e.getMessage());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
