@@ -627,6 +627,9 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
 bool MIPSolverCplex::repairInfeasibility()
 {
+    if(env->dualSolver->generatedHyperplanes.size() == 0)
+        return (false);
+
     try
     {
         if(modelUpdated)
