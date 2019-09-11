@@ -383,6 +383,7 @@ void Problem::updateProperties()
 
     int numQuadraticConstraints = 0;
     int numNonlinearConstraints = 0;
+    int numNonlinearExpressions = 0;
 
     for(auto& C : quadraticConstraints)
     {
@@ -395,11 +396,17 @@ void Problem::updateProperties()
         if(C->properties.hasQuadraticTerms || C->properties.hasMonomialTerms || C->properties.hasSignomialTerms
             || C->properties.hasNonlinearExpression)
             numNonlinearConstraints++;
+
+        if(C->properties.hasNonlinearExpression)
+            numNonlinearExpressions++;
     }
+
+    if(objectiveFunction->properties.hasNonlinearExpression)
+        numNonlinearExpressions++;
 
     properties.numberOfQuadraticConstraints = numQuadraticConstraints;
     properties.numberOfNonlinearConstraints = numNonlinearConstraints;
-    properties.numberOfNonlinearExpressions = numNonlinearConstraints + (isObjNonlinear ? 1 : 0);
+    properties.numberOfNonlinearExpressions = numNonlinearExpressions;
 
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
@@ -409,9 +416,6 @@ void Problem::updateProperties()
 
     if(areConstrsNonlinear || isObjNonlinear)
         properties.isNonlinear = true;
-
-    // if(objectiveFunction->properties.hasNonlinearExpression)
-    //    properties.numberOfNonlinearExpressions++;
 
     if(properties.isDiscrete)
     {
