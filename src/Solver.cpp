@@ -27,6 +27,8 @@
 #include "ModelingSystem/ModelingSystemGAMS.h"
 #endif
 
+#include "ModelingSystem/ModelingSystemAMPL.h"
+
 #include "SolutionStrategy/SolutionStrategySingleTree.h"
 #include "SolutionStrategy/SolutionStrategyMultiTree.h"
 #include "SolutionStrategy/SolutionStrategyMIQCQP.h"
@@ -235,12 +237,6 @@ bool Solver::setProblem(std::string fileName)
         env->output->outputError(" SHOT has not been compiled with support for OSiL files.");
         return (false);
     }
-
-    if(problemExtension == ".nl")
-    {
-        env->output->outputError(" SHOT has not been compiled with support for NL files.");
-        return (false);
-    }
 #endif
 
 #ifndef HAS_GAMS
@@ -275,7 +271,7 @@ bool Solver::setProblem(std::string fileName)
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
-        else if(problemExtension == ".nl")
+        /*else if(problemExtension == ".nl")
         {
             auto modelingSystem = std::make_shared<ModelingSystemOS>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -294,8 +290,28 @@ bool Solver::setProblem(std::string fileName)
             taskReformulateProblem->run();
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
-        }
+        }*/
 #endif
+
+        if(problemExtension == ".nl")
+        {
+            auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
+            ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
+
+            if(modelingSystem->createProblem(problem, fileName) != E_ProblemCreationStatus::NormalCompletion)
+            {
+                env->output->outputError(" Error while reading problem.");
+                return (false);
+            }
+
+            env->modelingSystem = modelingSystem;
+            env->problem = problem;
+
+            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+            taskReformulateProblem->run();
+
+            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
+        }
 
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
