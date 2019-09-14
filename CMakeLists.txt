@@ -56,6 +56,7 @@ option(GENERATE_EXE "Should the SHOT executable be generated (requires at least 
        ON)
 
 # External libraries; these are included in SHOT's source tree, and should not need to be modified
+set(AMPL_DIR "ThirdParty/ampl")
 set(ARGH_DIR "ThirdParty/argh")
 set(BOOST_DIR "ThirdParty/boost")
 set(CPPAD_DIR "ThirdParty/CppAD")
@@ -113,13 +114,14 @@ configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR
 include_directories("${PROJECT_BINARY_DIR}")
 
 # Makes sure the provided directories are in CMake format
-file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
-file(TO_CMAKE_PATH "${OS_DIR}" ${OS_DIR})
-file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
-file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
-file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
-file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
+file(TO_CMAKE_PATH "${AMPL_DIR}" ${AMPL_DIR})
 file(TO_CMAKE_PATH "${BOOST_DIR}" ${BOOST_DIR})
+file(TO_CMAKE_PATH "${CBC_DIR}" ${CBC_DIR})
+file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
+file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
+file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
+file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
+file(TO_CMAKE_PATH "${OS_DIR}" ${OS_DIR})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 
@@ -205,6 +207,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
      "${PROJECT_SOURCE_DIR}/src/Utilities.cpp"
      "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
+     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
      "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
      "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
@@ -219,7 +222,14 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
      "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
-     "${TINYXML2_DIR}/tinyxml2.cpp")
+     "${TINYXML2_DIR}/tinyxml2.cpp"
+     "${AMPL_DIR}/src/expr-info.cc"
+     "${AMPL_DIR}/src/format.cc"
+     "${AMPL_DIR}/src/gen-expr-info.cc"
+     "${AMPL_DIR}/src/nl-reader.cc"
+     "${AMPL_DIR}/src/posix.cc"
+     "${AMPL_DIR}/src/problem.cc"
+     "${AMPL_DIR}/src/os.cc")
 
 # Adding header files
 file(GLOB_RECURSE
@@ -249,6 +259,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/Utilities.h"
      "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
+     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h"
      "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
@@ -269,7 +280,8 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
      "${PROJECT_SOURCE_DIR}/src/Settings.h"
      "${TINYXML2_DIR}/tinyxml2.h"
-     "${CPPAD_DIR}/include/cppad/cppad.hpp")
+     "${CPPAD_DIR}/include/cppad/cppad.hpp"
+     "${AMPL_DIR}/include/mp/*.h")
 
 if(HAS_CBC)
   if(CBC_FOUND)
@@ -341,15 +353,16 @@ include_directories(${INCLUDE_DIRS})
 
 find_package(Boost 1.63.0 REQUIRED)
 
+include_directories(SYSTEM "${AMPL_DIR}/include")
 include_directories(SYSTEM "${ARGH_DIR}")
 include_directories(SYSTEM "${BOOST_DIR}")
+include_directories(SYSTEM "${CPPAD_DIR}/include/")
 include_directories(SYSTEM "${EIGEN_DIR}")
 include_directories(SYSTEM "${MCPP_DIR}/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/cpplapack/include")
 include_directories(SYSTEM "${MCPP_DIR}/3rdparty/fadbad++")
 include_directories(SYSTEM "${SPDLOG_DIR}")
 include_directories(SYSTEM "${TINYXML2_DIR}/")
-include_directories(SYSTEM "${CPPAD_DIR}/include/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
