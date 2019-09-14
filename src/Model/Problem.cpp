@@ -569,7 +569,7 @@ void Problem::updateFactorableFunctions()
     if(factorableFunctions.size() > 0)
     {
         ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
-        ADFunctions.optimize();
+        // ADFunctions.optimize();
     }
 }
 
