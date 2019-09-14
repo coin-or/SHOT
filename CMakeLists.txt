@@ -72,11 +72,6 @@ if(NOT (HAS_CPLEX OR HAS_GUROBI OR HAS_CBC))
   message(FATAL_ERROR "No MIP solver defined. SHOT needs at least one!")
 endif()
 
-# Check if a modeling system is defined if we want to build the executable
-if(GENERATE_EXE AND NOT (HAS_GAMS OR HAS_OS))
-  message(FATAL_ERROR "No modeling system defined which is required if  you want to build an executable!")
-endif()
-
 # Sets version number
 set(SHOT_VERSION_MAJOR 1)
 set(SHOT_VERSION_MINOR 0)
