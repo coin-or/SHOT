@@ -266,9 +266,6 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
-            taskReformulateProblem->run();
-
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
         /*else if(problemExtension == ".nl")
@@ -285,9 +282,6 @@ bool Solver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
-
-            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
-            taskReformulateProblem->run();
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }*/
@@ -306,9 +300,6 @@ bool Solver::setProblem(std::string fileName)
 
             env->modelingSystem = modelingSystem;
             env->problem = problem;
-
-            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
-            taskReformulateProblem->run();
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
@@ -329,12 +320,14 @@ bool Solver::setProblem(std::string fileName)
             env->modelingSystem = modelingSystem;
             env->problem = problem;
 
-            auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
-            taskReformulateProblem->run();
-
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
 #endif
+        if(env->problem->name == "")
+            env->problem->name = problemName;
+
+        auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
+        taskReformulateProblem->run();
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {

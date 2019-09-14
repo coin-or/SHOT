@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
     if(resultFile.empty())
     {
         std::filesystem::path resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
-        resultPath /= env->problem->name;
+        resultPath /= env->settings->getSetting<std::string>("ProblemName", "Input");
         resultPath = resultPath.replace_extension(".osrl");
 
         if(!Utilities::writeStringToFile(resultPath.string(), osrl))
