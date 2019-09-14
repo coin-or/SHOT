@@ -15,9 +15,6 @@
 #include "../Enums.h"
 #include "../Structs.h"
 
-#include "../Model/NonlinearExpressions.h"
-#include "../Model/Problem.h"
-
 #include <memory>
 #include <string>
 
@@ -29,6 +26,9 @@ class OSoLReader;
 
 namespace SHOT
 {
+
+class NonlinearExpression;
+using NonlinearExpressionPtr = std::shared_ptr<NonlinearExpression>;
 
 enum class E_OSInputFileFormat
 {

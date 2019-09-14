@@ -12,9 +12,6 @@
 #pragma once
 #include "IModelingSystem.h"
 
-#include "../Model/NonlinearExpressions.h"
-#include "../Model/Problem.h"
-
 #include "gmomcc.h"
 #include "gevmcc.h"
 #include "palmcc.h"
@@ -22,8 +19,14 @@
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
+#include <memory>
+#include <string>
+
 namespace SHOT
 {
+
+class NonlinearExpression;
+using NonlinearExpressionPtr = std::shared_ptr<NonlinearExpression>;
 
 enum class E_GAMSInputSource
 {
