@@ -125,6 +125,15 @@ public:
         updateProperties();
     }
 
+    LinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, double constValue)
+    {
+        linearTerms = LinearTerms();
+        constant = constValue;
+
+        direction = objectiveDirection;
+        updateProperties();
+    }
+
     LinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, LinearTerms linTerms, double constValue)
     {
         linearTerms = LinearTerms();
@@ -180,6 +189,16 @@ public:
         quadraticTerms = QuadraticTerms();
 
         direction = objectiveDirection;
+        updateProperties();
+    }
+
+    QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, double constValue)
+    {
+        linearTerms = LinearTerms();
+        quadraticTerms = QuadraticTerms();
+
+        direction = objectiveDirection;
+        constant = constValue;
         updateProperties();
     }
 
@@ -255,6 +274,18 @@ public:
         this->signomialTerms = SignomialTerms();
 
         direction = objectiveDirection;
+        updateProperties();
+    }
+
+    NonlinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection, double constValue)
+    {
+        linearTerms = LinearTerms();
+        quadraticTerms = QuadraticTerms();
+        this->monomialTerms = MonomialTerms();
+        this->signomialTerms = SignomialTerms();
+
+        direction = objectiveDirection;
+        constant = constValue;
         updateProperties();
     }
 
