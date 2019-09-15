@@ -39,15 +39,13 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-if(HAS_OS)
-  set(OS_parts
-      1
-      2
-      3
-      4
-      5)
-  set(cpptests ${cpptests} OS)
-endif()
+set(Solver_parts
+    1
+    2
+    3
+    4
+    5)
+set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)

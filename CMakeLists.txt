@@ -23,12 +23,6 @@ option(COMPILE_TESTS "Should the automated tests be compiled" ON)
 option(HAS_GAMS "Is GAMS available" ON)
 set(GAMS_DIR "/opt/gams/gams26.1" CACHE STRING "The base directory where GAMS is located (if available)")
 
-# COIN-OR Optimization Services
-option(HAS_OS "Is COIN-OR Optimization Services (OS) available" OFF)
-set(OS_DIR
-    "/opt/OS-2.10"
-    CACHE STRING "The base directory where COIN-OR Optimization Services is located (if available)")
-
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
 set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio129" CACHE STRING "The base directory where CPLEX is located (if available)")
@@ -39,17 +33,11 @@ set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gu
 
 # Cbc
 option(HAS_CBC "Is Cbc available" OFF)
-set(CBC_DIR
-    "/opt/Cbc-2.10"
-    CACHE STRING
-          "The base directory where Cbc is located (if available), if OS provides CBC use the same value as OS_DIR")
+set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" ON)
-set(IPOPT_DIR
-    "/opt/ipopt"
-    CACHE STRING
-          "The base directory where Ipopt is located (if available), if OS provides Ipopt use the same value as OS_DIR")
+set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
 
 # Create also the executable
 option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
@@ -116,7 +104,6 @@ file(TO_CMAKE_PATH "${CPLEX_DIR}" ${CPLEX_DIR})
 file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
-file(TO_CMAKE_PATH "${OS_DIR}" ${OS_DIR})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 
@@ -125,20 +112,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
 if(HAS_GAMS)
   add_definitions(-DHAS_GAMS)
 endif(HAS_GAMS)
-
-if(HAS_OS)
-  find_package(PkgConfig)
-
-  if(PkgConfig_FOUND)
-    include(FindPkgConfig)
-    set(ENV{PKG_CONFIG_PATH} "${OS_DIR}/lib/pkgconfig:${OS_DIR}/share/pkgconfig")
-    pkg_search_module(OS REQUIRED os)
-    link_directories(${OS_LIBRARY_DIRS})
-    include_directories(SYSTEM ${OS_INCLUDE_DIRS})
-    add_definitions(-DHAS_OS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register") # To remove some warnings in OS
-  endif()
-endif(HAS_OS)
 
 # MIP solvers
 
@@ -203,6 +176,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/Utilities.cpp"
      "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
+     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.cpp"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
      "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
      "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyAdaptive.cpp"
@@ -255,6 +229,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h"
+     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.h"
      "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.h"
@@ -329,11 +304,6 @@ if(HAS_GAMS)
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GamsNLinstr.h")
 endif(HAS_GAMS)
-
-if(HAS_OS)
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOS.h")
-endif(HAS_OS)
 
 # Finding out link directories
 set(INCLUDE_DIRS "")
@@ -460,12 +430,6 @@ if(HAS_GAMS)
   include_directories(SYSTEM "${GAMS_DIR}/apifiles/C/api")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGAMSDIR=\\\"${GAMS_DIR}\\\"")
 endif(HAS_GAMS)
-
-if(HAS_OS)
-  target_link_libraries(SHOTSolver ${OS_LIBRARIES})
-  target_include_directories(SHOTSolver PUBLIC "${OS_DIR}/include/coin")
-  target_compile_options(SHOTSolver PUBLIC ${OS_CFLAGS_OTHER})
-endif(HAS_OS)
 
 # Generates the SHOT executable
 if(GENERATE_EXE)
