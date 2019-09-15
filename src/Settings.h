@@ -11,14 +11,10 @@
 #pragma once
 
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
-#include <algorithm>
 #include <map>
-
-#include "tinyxml2.h"
 
 #include "Enums.h"
 #include "Output.h"
@@ -108,8 +104,8 @@ public:
     template <typename T> T getSetting(std::string name, std::string category)
     {
         // Check that setting is of the correct type
-        using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
-                || std::is_same<int, T>::value || std::is_same<bool, T>::value,
+        using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+                || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
             T>::type;
 
         PairString key = make_pair(category, name);
