@@ -11,6 +11,11 @@
 #include "Settings.h"
 #include "Utilities.h"
 
+#include "tinyxml2.h"
+
+#include <algorithm>
+#include <sstream>
+
 namespace SHOT
 {
 Settings::Settings(OutputPtr outputPtr) : output(outputPtr) {}
@@ -22,8 +27,8 @@ void Settings::createBaseSetting(
     std::string name, std::string category, T value, std::string description, bool isPrivate)
 {
     // Check that setting is of the correct type
-    using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
-            || std::is_same<int, T>::value || std::is_same<bool, T>::value,
+    using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+            || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
         T>::type;
 
     PairString key = make_pair(category, name);
@@ -72,8 +77,8 @@ template void Settings::updateSetting(std::string name, std::string category, bo
 template <typename T> void Settings::updateSetting(std::string name, std::string category, T value)
 {
     // Check that setting is of the correct type
-    using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value || std::is_same<double, T>::value
-            || std::is_same<int, T>::value || std::is_same<bool, T>::value,
+    using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+            || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
         T>::type;
 
     PairString key = make_pair(category, name);

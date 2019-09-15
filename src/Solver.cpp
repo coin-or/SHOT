@@ -19,15 +19,12 @@
 #include "Timing.h"
 #include "Utilities.h"
 
-#ifdef HAS_OS
-#include "ModelingSystem/ModelingSystemOS.h"
-#endif
-
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
 #endif
 
 #include "ModelingSystem/ModelingSystemAMPL.h"
+#include "ModelingSystem/ModelingSystemOSiL.h"
 
 #include "SolutionStrategy/SolutionStrategySingleTree.h"
 #include "SolutionStrategy/SolutionStrategyMultiTree.h"
@@ -231,14 +228,6 @@ bool Solver::setProblem(std::string fileName)
             "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
     }
 
-#ifndef HAS_OS
-    if(problemExtension == ".osil" || problemExtension == ".xml")
-    {
-        env->output->outputError(" SHOT has not been compiled with support for OSiL files.");
-        return (false);
-    }
-#endif
-
 #ifndef HAS_GAMS
     if(problemExtension == ".gms")
     {
@@ -249,15 +238,12 @@ bool Solver::setProblem(std::string fileName)
 
     try
     {
-
-#ifdef HAS_OS
         if(problemExtension == ".osil" || problemExtension == ".xml")
         {
-            auto modelingSystem = std::make_shared<ModelingSystemOS>(env);
+            auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
-            if(modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::OSiL)
-                != E_ProblemCreationStatus::NormalCompletion)
+            if(modelingSystem->createProblem(problem, fileName) != E_ProblemCreationStatus::NormalCompletion)
             {
                 env->output->outputError(" Error while reading problem.");
                 return (false);
@@ -268,24 +254,6 @@ bool Solver::setProblem(std::string fileName)
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
-        /*else if(problemExtension == ".nl")
-        {
-            auto modelingSystem = std::make_shared<ModelingSystemOS>(env);
-            ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
-
-            if(modelingSystem->createProblem(problem, fileName, E_OSInputFileFormat::Ampl)
-                != E_ProblemCreationStatus::NormalCompletion)
-            {
-                env->output->outputError(" Error while reading problem.");
-                return (false);
-            }
-
-            env->modelingSystem = modelingSystem;
-            env->problem = problem;
-
-            env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
-        }*/
-#endif
 
         if(problemExtension == ".nl")
         {
@@ -323,6 +291,7 @@ bool Solver::setProblem(std::string fileName)
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::GAMS));
         }
 #endif
+
         if(env->problem->name == "")
             env->problem->name = problemName;
 
