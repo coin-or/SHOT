@@ -63,10 +63,9 @@ int main(int argc, char* argv[])
         env->output->outputCritical("  Usage: SHOT PROBLEMFILE [OPTIONS]");
         env->output->outputCritical("");
         env->output->outputCritical("  SHOT has been compiled with support for the following problem formats ");
-#ifdef HAS_OS
+
         env->output->outputCritical("   OSiL (.osil or .xml) ");
         env->output->outputCritical("   AMPL (.nl) ");
-#endif
 #ifdef HAS_GAMS
         env->output->outputCritical("   GAMS (.gms) ");
 #endif
