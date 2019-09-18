@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include "spdlog/sinks/stdout_sinks.h"
 #include "spdlog/sinks/basic_file_sink.h"
 
 namespace SHOT
@@ -41,7 +41,7 @@ public:
 
 private:
     std::shared_ptr<spdlog::sinks::sink> consoleSink;
-    std::shared_ptr<spdlog::sinks::basic_file_sink_mt> fileSink;
+    std::shared_ptr<spdlog::sinks::basic_file_sink_st> fileSink;
 
     std::shared_ptr<spdlog::logger> logger;
 };

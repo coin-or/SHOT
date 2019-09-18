@@ -71,8 +71,6 @@ if(NOT CPLEX_STUDIO_DIR)
   set(CPLEX_STUDIO_DIR ${CPLEX_STUDIO_DIR_} CACHE PATH "Path to the CPLEX Studio directory")
 endif()
 
-find_package(Threads)
-
 # ----------------------------------------------------------------------------
 # CPLEX
 

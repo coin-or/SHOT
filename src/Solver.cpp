@@ -33,7 +33,15 @@
 
 #include "../Tasks/TaskReformulateProblem.h"
 
+#ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
 
 namespace SHOT
 {
@@ -106,7 +114,7 @@ bool Solver::setOptionsFromFile(std::string fileName)
     try
     {
         std::string fileContents;
-        std::string fileExtension = std::filesystem::path(fileName).extension().string();
+        std::string fileExtension = fs::filesystem::path (fileName).extension().string();
 
         if(fileExtension == ".xml" || fileExtension == ".osol")
         {
@@ -169,14 +177,14 @@ bool Solver::setLogFile(std::string filename)
 
 bool Solver::setProblem(std::string fileName)
 {
-    if(!std::filesystem::exists(fileName))
+    if(!fs::filesystem::exists(fileName))
     {
         env->output->outputError("Problem file \"" + fileName + "\" does not exist.");
 
         return (false);
     }
 
-    std::filesystem::path problemFile(fileName);
+    fs::filesystem::path  problemFile(fileName);
 
     if(!problemFile.has_extension())
     {
@@ -185,28 +193,28 @@ bool Solver::setProblem(std::string fileName)
         return (false);
     }
 
-    std::filesystem::path problemExtension = problemFile.extension();
-    std::filesystem::path problemPath = problemFile.parent_path();
+    fs::filesystem::path  problemExtension = problemFile.extension();
+    fs::filesystem::path  problemPath = problemFile.parent_path();
 
     env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
 
     // Removes path
-    std::filesystem::path problemName = problemFile.stem();
+    fs::filesystem::path  problemName = problemFile.stem();
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
     env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
 
     if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
-        std::filesystem::path debugPath(std::filesystem::current_path());
+        fs::filesystem::path  debugPath(fs::filesystem::current_path ());
         debugPath /= problemName;
 
         env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
-        env->settings->updateSetting("ResultPath", "Output", std::filesystem::current_path().string());
+        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path ().string());
     }
     else
     {
-        std::filesystem::path debugPath(problemPath);
+        fs::filesystem::path  debugPath(problemPath);
         debugPath /= problemName;
 
         env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
@@ -293,7 +301,7 @@ bool Solver::setProblem(std::string fileName)
 #endif
 
         if(env->problem->name == "")
-            env->problem->name = problemName;
+            env->problem->name = problemName.string();
 
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
@@ -335,11 +343,11 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
-        std::filesystem::path debugPath(std::filesystem::current_path());
+        fs::filesystem::path  debugPath(fs::filesystem::current_path ());
         debugPath /= problem->name;
 
         env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problem->name);
-        env->settings->updateSetting("ResultPath", "Output", std::filesystem::current_path().string());
+        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path ().string());
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -1126,15 +1134,15 @@ void Solver::initializeSettings()
 void Solver::initializeDebugMode()
 {
     auto debugPath = env->settings->getSetting<std::string>("Debug.Path", "Output");
-    std::filesystem::path debugDir(debugPath);
+    fs::filesystem::path debugDir(debugPath);
 
-    if(std::filesystem::exists(debugDir))
+    if(fs::filesystem::exists(debugDir))
     {
         env->output->outputDebug("Debug directory " + debugPath + " already exists.");
     }
     else
     {
-        if(std::filesystem::create_directories(debugDir))
+        if(fs::filesystem::create_directories(debugDir))
         {
             env->output->outputDebug("Debug directory " + debugPath + " created.");
         }
@@ -1144,9 +1152,9 @@ void Solver::initializeDebugMode()
         }
     }
 
-    std::filesystem::path source(env->settings->getSetting<std::string>("ProblemFile", "Input"));
-    std::filesystem::copy_file(std::filesystem::canonical(source), debugDir / source.filename(),
-        std::filesystem::copy_options::overwrite_existing);
+    fs::filesystem::path  source(env->settings->getSetting<std::string>("ProblemFile", "Input"));
+    fs::filesystem::copy_file(fs::filesystem::canonical(source), debugDir / source.filename(),
+        fs::filesystem::copy_options::overwrite_existing);
 }
 
 void Solver::verifySettings()

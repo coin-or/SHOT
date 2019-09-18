@@ -12,7 +12,16 @@
 #include "../src/Solver.h"
 #include "../src/Utilities.h"
 
+#ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
+namespace fs = std::filesystem;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
+
 #include <iostream>
 
 using namespace SHOT;
@@ -78,7 +87,7 @@ bool SettingsTestOptions(bool useOSiL)
         filename = "options.opt";
     }
 
-    if(std::filesystem::exists(filename))
+    if(fs::filesystem::exists(filename))
         std::remove(filename.c_str());
 
     try

@@ -30,7 +30,15 @@
 #include "CoinPackedVector.hpp"
 #include "CoinFinite.hpp"
 
+#ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
+namespace fs = std::filesystem;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 namespace SHOT
 {
@@ -46,15 +54,15 @@ void ModelingSystemOS::updateSettings([[maybe_unused]] SettingsPtr settings) {}
 E_ProblemCreationStatus ModelingSystemOS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& type)
 {
-    if(false && !std::filesystem::exists(std::filesystem::path(filename)))
+    if(false && !fs::filesystem::exists(fs::filesystem::path (filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
-    std::filesystem::path problemFile(filename);
-    std::filesystem::path problemPath = problemFile.parent_path();
+    fs::filesystem::path  problemFile(filename);
+    fs::filesystem::path  problemPath = problemFile.parent_path();
 
     std::shared_ptr<OSInstance> instance;
 

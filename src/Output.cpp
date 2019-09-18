@@ -19,7 +19,7 @@ Output::Output()
     SetConsoleOutputCP(CP_UTF8); // For correct output of special characters on Windows
 #endif
 
-    consoleSink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    consoleSink = std::make_shared<spdlog::sinks::stdout_sink_st>();
     std::vector<spdlog::sink_ptr> sinks{ consoleSink };
     logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
@@ -152,7 +152,7 @@ void Output::setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink)
 
 void Output::setFileSink(std::string filename)
 {
-    fileSink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, true);
+    fileSink = std::make_shared<spdlog::sinks::basic_file_sink_st>(filename, true);
     fileSink->set_pattern("%v");
     fileSink->set_level(consoleSink->level());
 

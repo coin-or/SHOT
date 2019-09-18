@@ -25,7 +25,17 @@
 
 #include <cstdlib>
 #include <cstring>
+
+#ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
+
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -349,15 +359,15 @@ void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) {
 
 E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, const std::string& filename)
 {
-    if(false && !std::filesystem::exists(std::filesystem::path(filename)))
+    if(false && !fs::filesystem::exists(fs::filesystem::path (filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
-    std::filesystem::path problemFile(filename);
-    std::filesystem::path problemPath = problemFile.parent_path();
+    fs::filesystem::path  problemFile(filename);
+    fs::filesystem::path  problemPath = problemFile.parent_path();
 
     try
     {
