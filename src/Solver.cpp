@@ -114,7 +114,7 @@ bool Solver::setOptionsFromFile(std::string fileName)
     try
     {
         std::string fileContents;
-        std::string fileExtension = fs::filesystem::path (fileName).extension().string();
+        std::string fileExtension = fs::filesystem::path(fileName).extension().string();
 
         if(fileExtension == ".xml" || fileExtension == ".osol")
         {
@@ -184,7 +184,7 @@ bool Solver::setProblem(std::string fileName)
         return (false);
     }
 
-    fs::filesystem::path  problemFile(fileName);
+    fs::filesystem::path problemFile(fileName);
 
     if(!problemFile.has_extension())
     {
@@ -193,28 +193,28 @@ bool Solver::setProblem(std::string fileName)
         return (false);
     }
 
-    fs::filesystem::path  problemExtension = problemFile.extension();
-    fs::filesystem::path  problemPath = problemFile.parent_path();
+    fs::filesystem::path problemExtension = problemFile.extension();
+    fs::filesystem::path problemPath = problemFile.parent_path();
 
     env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
 
     // Removes path
-    fs::filesystem::path  problemName = problemFile.stem();
+    fs::filesystem::path problemName = problemFile.stem();
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
     env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
 
     if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
-        fs::filesystem::path  debugPath(fs::filesystem::current_path ());
+        fs::filesystem::path debugPath(fs::filesystem::current_path());
         debugPath /= problemName;
 
         env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
-        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path ().string());
+        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path().string());
     }
     else
     {
-        fs::filesystem::path  debugPath(problemPath);
+        fs::filesystem::path debugPath(problemPath);
         debugPath /= problemName;
 
         env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
@@ -343,11 +343,11 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
-        fs::filesystem::path  debugPath(fs::filesystem::current_path ());
+        fs::filesystem::path debugPath(fs::filesystem::current_path());
         debugPath /= problem->name;
 
         env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problem->name);
-        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path ().string());
+        env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path().string());
     }
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -1152,7 +1152,7 @@ void Solver::initializeDebugMode()
         }
     }
 
-    fs::filesystem::path  source(env->settings->getSetting<std::string>("ProblemFile", "Input"));
+    fs::filesystem::path source(env->settings->getSetting<std::string>("ProblemFile", "Input"));
     fs::filesystem::copy_file(fs::filesystem::canonical(source), debugDir / source.filename(),
         fs::filesystem::copy_options::overwrite_existing);
 }
@@ -1236,6 +1236,11 @@ void Solver::verifySettings()
     {
         MIPSolverDefined = true;
         unboundedVariableBound = 1e50;
+
+        // Some features are not available in Cbc
+        env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+        env->settings->updateSetting(
+            "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
     }
 #endif
 
