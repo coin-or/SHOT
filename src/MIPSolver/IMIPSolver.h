@@ -13,6 +13,7 @@
 #include "../Enums.h"
 #include "../Structs.h"
 
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -73,9 +74,9 @@ public:
     virtual void writePresolvedToFile(std::string filename) = 0;
 
     virtual std::vector<SolutionPoint> getAllVariableSolutions() = 0;
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) = 0;
+    virtual int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) = 0;
     virtual int addLinearConstraint(
-        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
         = 0;
 
     virtual void setTimeLimit(double seconds) = 0;
@@ -103,8 +104,7 @@ public:
     virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) = 0;
     virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
-    virtual std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane)
-        = 0;
+    virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
 
     virtual bool supportsQuadraticObjective() = 0;
     virtual bool supportsQuadraticConstraints() = 0;

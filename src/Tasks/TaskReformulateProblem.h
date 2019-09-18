@@ -45,8 +45,8 @@ private:
     bool useQuadraticConstraints = false;
     bool useQuadraticObjective = true;
     bool quadraticObjectiveRegardedAsNonlinear = false;
-    bool PartitionQuadraticTermsInObjective = false;
-    bool PartitionQuadraticTermsInConstraint = false;
+    bool partitionQuadraticTermsInObjective = false;
+    bool partitionQuadraticTermsInConstraint = false;
 
     void reformulateObjectiveFunction();
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);

@@ -122,18 +122,18 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     for(auto& E : tmpPair.first)
     {
-        if(E.value != E.value || std::isinf(E.value)) // Check for NaN or inf
+        if(E.second != E.second || std::isinf(E.second)) // Check for NaN or inf
         {
             if(hyperplane.isObjectiveHyperplane)
                 env->output->outputError("        Warning: hyperplane for objective function not generated, NaN or inf "
                                          "found in linear terms for "
-                    + env->problem->getVariable(E.index)->name + " = "
-                    + std::to_string(hyperplane.generatedPoint.at(E.index)));
+                    + env->problem->getVariable(E.first)->name + " = "
+                    + std::to_string(hyperplane.generatedPoint.at(E.first)));
             else
                 env->output->outputError("        Warning: hyperplane for constraint "
                     + hyperplane.sourceConstraint->name + " not generated,  NaN or inf found in linear terms for "
-                    + env->problem->getVariable(E.index)->name + " = "
-                    + std::to_string(hyperplane.generatedPoint.at(E.index)));
+                    + env->problem->getVariable(E.first)->name + " = "
+                    + std::to_string(hyperplane.generatedPoint.at(E.first)));
 
             hyperplaneIsOk = false;
             break;
@@ -156,18 +156,15 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
     }
 }
 
-std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::createHyperplaneTerms(
-    Hyperplane hyperplane)
+std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
 {
-    std::vector<PairIndexValue> elements;
+    std::map<int, double> elements;
     double constant = 0.0;
     SparseVariableVector gradient;
     double signFactor = 1.0; // Will be -1.0 for greater than constraints
 
     if(hyperplane.isObjectiveHyperplane)
     {
-        // constant =
-        // std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)->calculateValue(hyperplane.generatedPoint);
         constant = hyperplane.objectiveFunctionValue;
 
         if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression)
@@ -183,11 +180,7 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
                       ->calculateGradient(hyperplane.generatedPoint, true);
         }
 
-        PairIndexValue pair;
-        pair.index = dualAuxiliaryObjectiveVariableIndex;
-        pair.value = -1.0;
-
-        elements.push_back(pair);
+        elements.emplace(dualAuxiliaryObjectiveVariableIndex, -1.0);
 
         env->output->outputTrace("     HP point generated for objective function with "
             + std::to_string(gradient.size()) + " elements and constant " + std::to_string(constant));
@@ -236,20 +229,24 @@ std::optional<std::pair<std::vector<PairIndexValue>, double>> MIPSolverBase::cre
 
     for(auto const& G : gradient)
     {
-        PairIndexValue pair;
-        pair.index = G.first->index;
-        pair.value = signFactor * G.second;
+        double coefficient = signFactor * G.second;
+        int variableIndex = G.first->index;
 
-        elements.push_back(pair);
+        auto element = elements.emplace(variableIndex, coefficient);
 
-        constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(G.first->index);
+        if(!element.second)
+        {
+            // Element already exists for the variable
+            element.first->second += coefficient;
+        }
+
+        constant += signFactor * (-G.second) * hyperplane.generatedPoint.at(variableIndex);
 
         env->output->outputTrace("     Gradient for variable " + G.first->name + " in point "
-            + std::to_string(hyperplane.generatedPoint.at(G.first->index)) + ": "
-            + std::to_string(signFactor * G.second));
+            + std::to_string(hyperplane.generatedPoint.at(variableIndex)) + ": " + std::to_string(coefficient));
     }
 
-    std::optional<std::pair<std::vector<PairIndexValue>, double>> optional;
+    std::optional<std::pair<std::map<int, double>, double>> optional;
 
     if(elements.size() > 0)
         optional = std::make_pair(elements, constant);

@@ -42,8 +42,6 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
 }
 
 MIPSolverGurobiLazy::~MIPSolverGurobiLazy() = default;
@@ -433,12 +431,12 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 
         for(auto& E : tmpPair.first)
         {
-            if(E.value != E.value) // Check for NaN
+            if(E.second != E.second) // Check for NaN
             {
                 env->output->outputError("     Warning: hyperplane for constraint "
                     + std::to_string(hyperplane.sourceConstraint->index)
                     + " not generated, NaN found in linear terms for variable "
-                    + env->problem->getVariable(E.index)->name);
+                    + env->problem->getVariable(E.first)->name);
                 hyperplaneIsOk = false;
                 break;
             }
@@ -450,7 +448,7 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 
             for(auto& P : tmpPair.first)
             {
-                expr += +(P.value) * (vars[P.index]);
+                expr += +(P.second) * (vars[P.first]);
             }
 
             addLazy(expr <= -tmpPair.second);

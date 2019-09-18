@@ -11,11 +11,13 @@
 #pragma once
 #include "MIPSolverBase.h"
 
-#include "CoinBuild.hpp"
-#include "CoinModel.hpp"
-#include "CoinPragma.hpp"
-#include "CbcModel.hpp"
-#include "OsiClpSolverInterface.hpp"
+#include <optional>
+
+#include "CoinPackedVector.hpp"
+
+class OsiClpSolverInterface;
+class CbcModel;
+class CoinModel;
 
 namespace SHOT
 {
@@ -48,12 +50,12 @@ public:
     void writeProblemToFile(std::string filename) override;
     void writePresolvedToFile(std::string filename) override;
 
-    int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) override
+    int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) override
     {
         return (addLinearConstraint(elements, constant, name, false));
     }
     int addLinearConstraint(
-        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan) override;
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) override;
 
     void createHyperplane(Hyperplane hyperplane) override { MIPSolverBase::createHyperplane(hyperplane); }
 
@@ -67,7 +69,7 @@ public:
         MIPSolverBase::createInteriorHyperplane(hyperplane);
     }
 
-    std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane) override
+    std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
     }
@@ -117,7 +119,6 @@ public:
 
     void setCutOff(double cutOff) override;
     void setCutOffAsConstraint(double cutOff) override;
-
     void addMIPStart(VectorDouble point) override;
     void deleteMIPStarts() override;
 
@@ -151,6 +152,8 @@ private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;
     std::unique_ptr<CbcModel> cbcModel;
     std::unique_ptr<CoinModel> coinModel;
+
+    CoinPackedVector objectiveLinearExpression;
 
     long int solLimit;
     double cutOff;

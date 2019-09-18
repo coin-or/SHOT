@@ -21,6 +21,12 @@
 
 #include "../Model/Problem.h"
 
+#include "CoinBuild.hpp"
+#include "CoinModel.hpp"
+#include "CoinPragma.hpp"
+#include "CbcModel.hpp"
+#include "OsiClpSolverInterface.hpp"
+
 namespace SHOT
 {
 
@@ -52,8 +58,6 @@ bool MIPSolverOsiCbc::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
     return (true);
 }
 
@@ -117,6 +121,8 @@ bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableI
     try
     {
         coinModel->setColObjective(variableIndex, coefficient);
+
+        objectiveLinearExpression.insert(variableIndex, coefficient);
     }
     catch(std::exception& e)
     {
@@ -260,20 +266,31 @@ void MIPSolverOsiCbc::initializeSolverSettings()
 }
 
 int MIPSolverOsiCbc::addLinearConstraint(
-    const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
 {
-    CoinPackedVector cut;
-
-    for(auto E : elements)
+    try
     {
-        cut.insert(E.index, E.value);
-    }
+        CoinPackedVector cut;
 
-    // Adds the cutting plane
-    if(isGreaterThan)
-        osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
-    else
-        osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+        for(auto E : elements)
+        {
+            cut.insert(E.first, E.second);
+        }
+
+        // Adds the cutting plane
+        if(isGreaterThan)
+            osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
+        else
+            osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.what());
+    }
+    catch(CoinError& e)
+    {
+        env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.message());
+    }
 
     return (osiInterface->getNumRows() - 1);
 }
@@ -320,6 +337,10 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     else if(cbcModel->isProvenInfeasible())
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+    }
+    else if(cbcModel->isProvenDualInfeasible())
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
     }
     else if(cbcModel->isSolutionLimitReached())
     {
@@ -384,7 +405,8 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        cbcModel->branchAndBound();
+        const char* argv[] = { "", "-solve", "-quit" };
+        CbcMain1(3, argv, *cbcModel);
 
         MIPSolutionStatus = getSolutionStatus();
     }
@@ -392,6 +414,35 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
     {
         env->output->outputError("Error when solving subproblem with Cbc", e.what());
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+    }
+
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
+    {
+        if((env->reformulatedProblem->objectiveFunction->properties.classification
+               == E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
+        {
+            osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -1000000000.0, 1000000000.0);
+
+            cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+            initializeSolverSettings();
+
+            CbcMain0(*cbcModel);
+
+            if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+            {
+                cbcModel->setLogLevel(0);
+                osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            }
+
+            const char* argv[] = { "", "-solve", "-quit" };
+            CbcMain1(3, argv, *cbcModel);
+
+            MIPSolutionStatus = getSolutionStatus();
+
+            osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue(),
+                getUnboundedVariableBoundValue());
+        }
     }
 
     // To find a feasible point for an unbounded dual problem
@@ -433,7 +484,8 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            cbcModel->branchAndBound();
+            const char* argv[] = { "", "-solve", "-quit" };
+            CbcMain1(3, argv, *cbcModel);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -507,6 +559,48 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
 void MIPSolverOsiCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 {
     // TODO
+
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
+    try
+    {
+        if(!cutOffConstraintDefined)
+        {
+            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+                osiInterface->addRow(objectiveLinearExpression, cutOff, osiInterface->getInfinity(), "CUTOFF_C");
+            else
+                osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(), cutOff, "CUTOFF_C");
+
+            cutOffConstraintDefined = true;
+            cutOffConstraintIndex = osiInterface->getNumRows() - 1;
+
+            modelUpdated = true;
+        }
+        else
+        {
+            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+            {
+                osiInterface->setRowUpper(cutOffConstraintIndex, -cutOff);
+
+                env->output->outputCritical(
+                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+            }
+            else
+            {
+                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff);
+
+                env->output->outputDebug(
+                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+            }
+
+            modelUpdated = true;
+        }
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("Error when setting cut off constraint value", e.what());
+    }
 }
 
 void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
@@ -775,11 +869,6 @@ void MIPSolverOsiCbc::checkParameters()
     // Check if Cbc has been compiled with support for multiple threads
     if(!cbcModel->haveMultiThreadSupport())
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
-
-    // Some features are not available in Cbc
-    env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
-    env->settings->updateSetting(
-        "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
