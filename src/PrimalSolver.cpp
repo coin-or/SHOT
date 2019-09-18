@@ -405,7 +405,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
 
     // Make sure no extra (auxiliary) values are in the vector
     if((int)tmpPoint.size() > env->problem->properties.numberOfVariables)
-        tmpPoint = std::vector(tmpPoint.begin(), tmpPoint.begin() + env->problem->properties.numberOfVariables);
+        tmpPoint.resize(env->problem->properties.numberOfVariables);
 
     primalSol.point = tmpPoint;
 
