@@ -121,6 +121,8 @@ bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableI
     try
     {
         coinModel->setColObjective(variableIndex, coefficient);
+
+        objectiveLinearExpression.insert(variableIndex, coefficient);
     }
     catch(std::exception& e)
     {
@@ -399,6 +401,35 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
+    {
+        if((env->reformulatedProblem->objectiveFunction->properties.classification
+               == E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
+        {
+            osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -1000000000.0, 1000000000.0);
+
+            cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+            initializeSolverSettings();
+
+            CbcMain0(*cbcModel);
+
+            if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+            {
+                cbcModel->setLogLevel(0);
+                osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+            }
+
+            const char* argv[] = { "", "-solve", "-quit" };
+            CbcMain1(3, argv, *cbcModel);
+
+            MIPSolutionStatus = getSolutionStatus();
+
+            osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue(),
+                getUnboundedVariableBoundValue());
+        }
+    }
+
     // To find a feasible point for an unbounded dual problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
@@ -438,7 +469,8 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            cbcModel->branchAndBound();
+            const char* argv[] = { "", "-solve", "-quit" };
+            CbcMain1(3, argv, *cbcModel);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -512,6 +544,48 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
 void MIPSolverOsiCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 {
     // TODO
+
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
+    try
+    {
+        if(!cutOffConstraintDefined)
+        {
+            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+                osiInterface->addRow(objectiveLinearExpression, cutOff, osiInterface->getInfinity(), "CUTOFF_C");
+            else
+                osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(), cutOff, "CUTOFF_C");
+
+            cutOffConstraintDefined = true;
+            cutOffConstraintIndex = osiInterface->getNumRows() - 1;
+
+            modelUpdated = true;
+        }
+        else
+        {
+            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
+            {
+                osiInterface->setRowUpper(cutOffConstraintIndex, -cutOff);
+
+                env->output->outputCritical(
+                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+            }
+            else
+            {
+                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff);
+
+                env->output->outputDebug(
+                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+            }
+
+            modelUpdated = true;
+        }
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("Error when setting cut off constraint value", e.what());
+    }
 }
 
 void MIPSolverOsiCbc::addMIPStart(VectorDouble point)

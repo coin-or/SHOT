@@ -303,6 +303,15 @@ bool Solver::setProblem(std::string fileName)
         if(env->problem->name == "")
             env->problem->name = problemName.string();
 
+#ifdef HAS_CBC
+        // TODO: figure out a better way to do this
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+        {
+            env->settings->updateSetting(
+                "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+        }
+#endif
+
         auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
         taskReformulateProblem->run();
 
@@ -1333,6 +1342,7 @@ void Solver::setConvexityBasedSettings()
                     || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
                     env->settings->updateSetting("Cplex.OptimalityTarget", "Subsolver", 3);
             }
+
 #endif
         }
     }

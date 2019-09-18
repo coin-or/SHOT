@@ -13,6 +13,8 @@
 
 #include <optional>
 
+#include "CoinPackedVector.hpp"
+
 class OsiClpSolverInterface;
 class CbcModel;
 class CoinModel;
@@ -150,6 +152,8 @@ private:
     std::unique_ptr<OsiClpSolverInterface> osiInterface;
     std::unique_ptr<CbcModel> cbcModel;
     std::unique_ptr<CoinModel> coinModel;
+
+    CoinPackedVector objectiveLinearExpression;
 
     long int solLimit;
     double cutOff;
