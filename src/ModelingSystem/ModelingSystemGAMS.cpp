@@ -25,7 +25,15 @@
 extern "C" void HSLInit();
 #endif
 
+#ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
+namespace fs = std::filesystem;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#endif
 
 namespace SHOT
 {
@@ -115,7 +123,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
     if(gmoOptFile(modelingObject) > 0) // GAMS provides an option file
     {
         gmoNameOptFile(modelingObject, buffer);
-        if(std::filesystem::exists(buffer))
+        if(fs::filesystem::exists(buffer))
         {
             env->output->outputInfo(" Reading options from " + std::string(buffer));
             try
@@ -154,7 +162,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource)
 {
-    if(!std::filesystem::exists(filename))
+    if(!std::experimental::filesystem::exists(filename))
     {
         env->output->outputError("File \"" + filename + "\" does not exist.");
 
@@ -263,8 +271,8 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     assert(modelingEnvironment == nullptr);
 
     /* create temporary directory */
-    std::filesystem::create_directory("loadgms.tmp");
-    std::filesystem::permissions("loadgms.tmp", std::filesystem::perms::all);
+    std::experimental::filesystem::create_directory("loadgms.tmp");
+    std::experimental::filesystem::permissions("loadgms.tmp", std::experimental::filesystem::perms::all);
 
     createdtmpdir = true;
 

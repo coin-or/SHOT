@@ -18,7 +18,16 @@
 
 #include "argh.h"
 
+#ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
+namespace fs = std;
+#endif
+
+#ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
+#include <experimental/filesystem>
+namespace fs = std::experimental;
+#endif
+
 #include <iostream>
 #include <memory>
 #include <string>
@@ -39,17 +48,17 @@ int main(int argc, char* argv[])
     // Read or create the file for the log
 
     std::string filename;
-    std::filesystem::path resultFile, optionsFile, traceFile, logFile;
+    fs::filesystem::path  resultFile, optionsFile, traceFile, logFile;
 
     if(cmdl("--log") >> filename) // Have specified a log-file
     {
-        logFile = std::filesystem::current_path() / std::filesystem::path(filename);
-        solver->setLogFile(logFile);
+        logFile = fs::filesystem::current_path () / fs::filesystem::path (filename);
+        solver->setLogFile(logFile.string());
     }
     else
     {
-        logFile = std::filesystem::current_path() / std::filesystem::path("SHOT.log");
-        solver->setLogFile(logFile);
+        logFile = fs::filesystem::current_path () / fs::filesystem::path ("SHOT.log");
+        solver->setLogFile(logFile.string());
     }
 
     env->report->outputSolverHeader();
@@ -89,9 +98,9 @@ int main(int argc, char* argv[])
 
     if(cmdl("--opt") >> filename) // Have specified a opt-file
     {
-        auto filepath = std::filesystem::current_path() / std::filesystem::path(filename);
+        auto filepath = fs::filesystem::current_path () / fs::filesystem::path (filename);
 
-        if(std::filesystem::exists(filepath))
+        if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
         }
@@ -103,9 +112,9 @@ int main(int argc, char* argv[])
     }
     else if(cmdl["--opt"]) // Create a new opt-file
     {
-        auto filepath = std::filesystem::current_path() / std::filesystem::path("options.opt");
+        auto filepath = fs::filesystem::current_path () / fs::filesystem::path ("options.opt");
 
-        if(std::filesystem::exists(filepath))
+        if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
         }
@@ -124,9 +133,9 @@ int main(int argc, char* argv[])
     }
     else if(cmdl("--osol") >> filename) // Have specified a OSoL-file
     {
-        auto filepath = std::filesystem::current_path() / std::filesystem::path(filename);
+        auto filepath = fs::filesystem::current_path () / fs::filesystem::path (filename);
 
-        if(std::filesystem::exists(filepath))
+        if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
             env->output->outputInfo("  Default options file written to: " + filepath.string());
@@ -139,9 +148,9 @@ int main(int argc, char* argv[])
     }
     else if(cmdl["--osol"]) // Create a new OSoL-file
     {
-        auto filepath = std::filesystem::current_path() / std::filesystem::path("options.xml");
+        auto filepath = fs::filesystem::current_path () / fs::filesystem::path ("options.xml");
 
-        if(std::filesystem::exists(filepath))
+        if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
         }
@@ -174,12 +183,12 @@ int main(int argc, char* argv[])
 
     if(cmdl("--osrl") >> filename) // Have specified a OSrL-file
     {
-        resultFile = std::filesystem::current_path() / std::filesystem::path(filename);
+        resultFile = fs::filesystem::current_path () / fs::filesystem::path (filename);
     }
 
     if(cmdl("--trc") >> filename) // Have specified a trace-file
     {
-        traceFile = std::filesystem::current_path() / std::filesystem::path(filename);
+        traceFile = fs::filesystem::current_path () / fs::filesystem::path (filename);
     }
 
     // Read problem file
@@ -191,7 +200,7 @@ int main(int argc, char* argv[])
         return (0);
     }
 
-    if(!std::filesystem::exists(filename))
+    if(!fs::filesystem::exists(filename))
     {
 
         env->output->outputCritical("   Problem file " + filename + " not found!");
@@ -230,7 +239,7 @@ int main(int argc, char* argv[])
 
     if(resultFile.empty())
     {
-        std::filesystem::path resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+        fs::filesystem::path  resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
         resultPath /= env->settings->getSetting<std::string>("ProblemName", "Input");
         resultPath = resultPath.replace_extension(".osrl");
 
@@ -251,7 +260,7 @@ int main(int argc, char* argv[])
 
     if(traceFile.empty())
     {
-        std::filesystem::path tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+        fs::filesystem::path  tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
         tracePath /= env->problem->name;
         tracePath = tracePath.replace_extension(".trc");
 
