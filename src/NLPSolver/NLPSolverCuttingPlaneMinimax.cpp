@@ -19,6 +19,7 @@
 #include "../MIPSolver/IMIPSolver.h"
 
 #include <functional>
+#include <map>
 
 #include "boost/math/tools/minima.hpp"
 
@@ -255,28 +256,31 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         for(auto& NCV : constraintValues)
         {
             // Contains the coefficient and variable index for the terms in the generated cut
-            std::vector<PairIndexValue> elements;
+            std::map<int, double> elements;
 
             double constant = NCV.normalizedValue;
             auto gradient = NCV.constraint->calculateGradient(currSol, true);
 
             for(auto& G : gradient)
             {
-                PairIndexValue pair;
-                pair.index = G.first->index;
-                pair.value = G.second;
+                int variableIndex = G.first->index;
+                int coefficient = G.second;
 
-                elements.push_back(pair);
+                elements.emplace(variableIndex, coefficient);
 
-                constant = constant - G.second * currSol.at(G.first->index);
+                auto element = elements.emplace(variableIndex, coefficient);
+
+                if(!element.second)
+                {
+                    // Element already exists for the variable
+                    element.first->second += coefficient;
+                }
+
+                constant = constant - coefficient * currSol.at(variableIndex);
             }
 
             // Adding the objective term
-            PairIndexValue pair;
-            pair.index = numVar;
-            pair.value = -1.0;
-
-            elements.push_back(pair);
+            elements.emplace(numVar, -1.0);
 
             // Adds the linear constraint
             LPSolver->addLinearConstraint(elements, constant,

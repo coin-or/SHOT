@@ -375,10 +375,10 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
     for(auto& E : tmpPair.first)
     {
-        if(E.value != E.value) // Check for NaN
+        if(E.second != E.second) // Check for NaN
         {
             env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
-                + env->problem->getVariable(E.index)->name);
+                + env->problem->getVariable(E.first)->name);
             hyperplaneIsOk = false;
             break;
         }
@@ -390,7 +390,7 @@ void CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
 
         for(auto& P : tmpPair.first)
         {
-            expr += P.value * cplexVars[P.index];
+            expr += P.second * cplexVars[P.first];
         }
 
         IloRange tmpRange(context.getEnv(), -IloInfinity, expr, -tmpPair.second);

@@ -400,7 +400,7 @@ void MIPSolverGurobi::initializeSolverSettings()
 }
 
 int MIPSolverGurobi::addLinearConstraint(
-    const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
 {
     try
     {
@@ -408,8 +408,8 @@ int MIPSolverGurobi::addLinearConstraint(
 
         for(auto E : elements)
         {
-            auto variable = gurobiModel->getVar(E.index);
-            *expr.get() = *expr.get() + E.value * variable;
+            auto variable = gurobiModel->getVar(E.first);
+            *expr.get() = *expr.get() + E.second * variable;
         }
 
         if(isGreaterThan)

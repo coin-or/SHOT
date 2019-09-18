@@ -18,6 +18,7 @@
 #include "RelaxationStrategyStandard.h"
 #include "RelaxationStrategyNone.h"
 
+#include <map>
 #include <optional>
 #include <utility>
 
@@ -57,7 +58,7 @@ public:
 
     virtual void createInteriorHyperplane(Hyperplane hyperplane);
 
-    std::optional<std::pair<std::vector<PairIndexValue>, double>> createHyperplaneTerms(Hyperplane hyperplane);
+    std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane);
 
     virtual void setCutOffAsConstraint(double cutOff) = 0;
 
@@ -82,9 +83,9 @@ public:
     virtual void unfixVariables();
     virtual void updateVariableBound(int varIndex, double lowerBound, double upperBound) = 0;
 
-    virtual int addLinearConstraint(const std::vector<PairIndexValue>& elements, double constant, std::string name) = 0;
+    virtual int addLinearConstraint(std::map<int, double>& elements, double constant, std::string name) = 0;
     virtual int addLinearConstraint(
-        const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+        const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
         = 0;
 
     virtual void activateDiscreteVariables(bool activate) = 0;

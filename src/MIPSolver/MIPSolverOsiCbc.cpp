@@ -266,20 +266,31 @@ void MIPSolverOsiCbc::initializeSolverSettings()
 }
 
 int MIPSolverOsiCbc::addLinearConstraint(
-    const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
 {
-    CoinPackedVector cut;
-
-    for(auto E : elements)
+    try
     {
-        cut.insert(E.index, E.value);
-    }
+        CoinPackedVector cut;
 
-    // Adds the cutting plane
-    if(isGreaterThan)
-        osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
-    else
-        osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+        for(auto E : elements)
+        {
+            cut.insert(E.first, E.second);
+        }
+
+        // Adds the cutting plane
+        if(isGreaterThan)
+            osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
+        else
+            osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.what());
+    }
+    catch(CoinError& e)
+    {
+        env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.message());
+    }
 
     return (osiInterface->getNumRows() - 1);
 }

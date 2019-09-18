@@ -417,7 +417,7 @@ void MIPSolverCplex::initializeSolverSettings()
 }
 
 int MIPSolverCplex::addLinearConstraint(
-    const std::vector<PairIndexValue>& elements, double constant, std::string name, bool isGreaterThan)
+    const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
 {
     try
     {
@@ -425,7 +425,7 @@ int MIPSolverCplex::addLinearConstraint(
 
         for(auto E : elements)
         {
-            expr += E.value * cplexVars[E.index];
+            expr += E.second * cplexVars[E.first];
         }
 
         if(isGreaterThan)
@@ -1276,10 +1276,10 @@ void MIPSolverCplex::createHyperplane(
 
     for(auto& E : tmpPair.first)
     {
-        if(E.value != E.value) // Check for NaN
+        if(E.second != E.second) // Check for NaN
         {
             env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
-                + env->problem->getVariable(E.index)->name);
+                + env->problem->getVariable(E.first)->name);
             hyperplaneIsOk = false;
             break;
         }
@@ -1291,7 +1291,7 @@ void MIPSolverCplex::createHyperplane(
 
         for(auto& P : tmpPair.first)
         {
-            expr += P.value * cplexVars[P.index];
+            expr += P.second * cplexVars[P.first];
         }
 
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);

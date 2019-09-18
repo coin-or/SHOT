@@ -37,10 +37,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     quadraticObjectiveRegardedAsNonlinear = false;
 
-    PartitionQuadraticTermsInObjective
+    partitionQuadraticTermsInObjective
         = env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model");
 
-    PartitionQuadraticTermsInConstraint
+    partitionQuadraticTermsInConstraint
         = env->settings->getSetting<bool>("Reformulation.Constraint.PartitionQuadraticTerms", "Model");
 
     auxVariableCounter = env->problem->properties.numberOfVariables;
@@ -341,11 +341,41 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
-            sourceObjective->quadraticTerms, isSignReversed, PartitionQuadraticTermsInObjective);
+        // Check whether we should partition the quadratic terms at all
+        if(quadraticObjectiveRegardedAsNonlinear)
+        {
+            if(env->problem->objectiveFunction->properties.isMinimize)
+            {
+                // Quadratic objective is convex, but not all terms are
+                if(sourceObjective->properties.convexity == E_Convexity::Convex
+                    && !sourceObjective->quadraticTerms.checkAllForConvexityType(E_Convexity::Convex))
+                {
+                    partitionQuadraticTermsInObjective = false;
+                }
+            }
+            else
+            {
+                // Quadratic objective is concave, but not all terms are
+                if(sourceObjective->properties.convexity == E_Convexity::Concave
+                    && !sourceObjective->quadraticTerms.checkAllForConvexityType(E_Convexity::Concave))
+                {
+                    partitionQuadraticTermsInObjective = false;
+                }
+            }
+        }
 
-        destinationLinearTerms.add(tmpLinearTerms);
-        destinationQuadraticTerms.add(tmpQuadraticTerms);
+        if(partitionQuadraticTermsInObjective)
+        {
+            auto [tmpLinearTerms, tmpQuadraticTerms]
+                = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed, false);
+
+            destinationLinearTerms.add(tmpLinearTerms);
+            destinationQuadraticTerms.add(tmpQuadraticTerms);
+        }
+        else
+        {
+            destinationQuadraticTerms.add(sourceObjective->quadraticTerms);
+        }
     }
 
     if(env->problem->objectiveFunction->properties.hasMonomialTerms)
@@ -674,8 +704,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
-        auto [tmpLinearTerms, tmpQuadraticTerms] = reformulateAndPartitionQuadraticSum(
-            sourceConstraint->quadraticTerms, isSignReversed, PartitionQuadraticTermsInConstraint);
+        auto [tmpLinearTerms, tmpQuadraticTerms]
+            = reformulateAndPartitionQuadraticSum(sourceConstraint->quadraticTerms, isSignReversed, false);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
