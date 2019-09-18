@@ -11,11 +11,11 @@
 #pragma once
 #include "MIPSolverBase.h"
 
-#include "CoinBuild.hpp"
-#include "CoinModel.hpp"
-#include "CoinPragma.hpp"
-#include "CbcModel.hpp"
-#include "OsiClpSolverInterface.hpp"
+#include <optional>
+
+class OsiClpSolverInterface;
+class CbcModel;
+class CoinModel;
 
 namespace SHOT
 {
@@ -117,7 +117,6 @@ public:
 
     void setCutOff(double cutOff) override;
     void setCutOffAsConstraint(double cutOff) override;
-
     void addMIPStart(VectorDouble point) override;
     void deleteMIPStarts() override;
 

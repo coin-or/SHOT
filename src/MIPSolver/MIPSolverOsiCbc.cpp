@@ -21,6 +21,12 @@
 
 #include "../Model/Problem.h"
 
+#include "CoinBuild.hpp"
+#include "CoinModel.hpp"
+#include "CoinPragma.hpp"
+#include "CbcModel.hpp"
+#include "OsiClpSolverInterface.hpp"
+
 namespace SHOT
 {
 
@@ -384,7 +390,8 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        cbcModel->branchAndBound();
+        const char* argv[] = { "", "-solve", "-quit" };
+        CbcMain1(3, argv, *cbcModel);
 
         MIPSolutionStatus = getSolutionStatus();
     }
