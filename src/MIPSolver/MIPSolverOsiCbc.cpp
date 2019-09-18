@@ -338,6 +338,10 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
     }
+    else if(cbcModel->isProvenDualInfeasible())
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+    }
     else if(cbcModel->isSolutionLimitReached())
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
