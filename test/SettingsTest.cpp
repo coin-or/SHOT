@@ -14,12 +14,12 @@
 
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
-namespace fs = std::filesystem;
+namespace fs = std;
 #endif
 
 #ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+namespace fs = std::experimental;
 #endif
 
 #include <iostream>

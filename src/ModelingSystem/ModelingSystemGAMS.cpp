@@ -27,12 +27,12 @@ extern "C" void HSLInit();
 
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
-namespace fs = std::filesystem;
+namespace fs = std;
 #endif
 
 #ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+namespace fs = std::experimental;
 #endif
 
 namespace SHOT
@@ -162,7 +162,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
 E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_GAMSInputSource& inputSource)
 {
-    if(!std::experimental::filesystem::exists(filename))
+    if(!fs::filesystem::exists(filename))
     {
         env->output->outputError("File \"" + filename + "\" does not exist.");
 
@@ -271,8 +271,8 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     assert(modelingEnvironment == nullptr);
 
     /* create temporary directory */
-    std::experimental::filesystem::create_directory("loadgms.tmp");
-    std::experimental::filesystem::permissions("loadgms.tmp", std::experimental::filesystem::perms::all);
+    fs::filesystem::create_directory("loadgms.tmp");
+    fs::filesystem::permissions("loadgms.tmp", fs::filesystem::perms::all);
 
     createdtmpdir = true;
 

@@ -32,12 +32,12 @@
 
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
-namespace fs = std::filesystem;
+namespace fs = std;
 #endif
 
 #ifdef HAS_STD_EXPERIMENTAL_FILESYSTEM
 #include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+namespace fs = std::experimental;
 #endif
 
 namespace SHOT
@@ -54,15 +54,15 @@ void ModelingSystemOS::updateSettings([[maybe_unused]] SettingsPtr settings) {}
 E_ProblemCreationStatus ModelingSystemOS::createProblem(
     ProblemPtr& problem, const std::string& filename, const E_OSInputFileFormat& type)
 {
-    if(false && !fs::filesystem::exists(fs::filesystem::path (filename)))
+    if(false && !fs::filesystem::exists(fs::filesystem::path(filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
-    fs::filesystem::path  problemFile(filename);
-    fs::filesystem::path  problemPath = problemFile.parent_path();
+    fs::filesystem::path problemFile(filename);
+    fs::filesystem::path problemPath = problemFile.parent_path();
 
     std::shared_ptr<OSInstance> instance;
 
