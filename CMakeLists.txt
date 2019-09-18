@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
 
-# For options depending on other options
-include(CMakeDependentOption)
-
 # For ccache
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
@@ -13,9 +10,23 @@ endif()
 project(SHOT)
 set(CMAKE_CXX_STANDARD 17)
 
+# Location of extra CMake scripts
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
+
+# Find std::filesystem or std::experimental::filesystem
+find_package(Filesystem REQUIRED)
+
+if(HAVE_STD_FILESYSTEM)
+  add_definitions(-DHAS_STD_FILESYSTEM)
+elseif(HAVE_STD_EXPERIMENTAL_FILESYSTEM)
+  add_definitions(-DHAS_STD_EXPERIMENTAL_FILESYSTEM)
+else()
+  message(SEND_ERROR "SHOT needs support for C++17 filesystem.")
+endif()
+
 # Sets the release types, e.g. Release, Debug: set(CMAKE_BUILD_TYPE Debug)
 
-option(COMPILE_TESTS "Should the automated tests be compiled" ON)
+option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # Activates extra functionality, note that corresponding libraries are needed
 
@@ -32,7 +43,7 @@ option(HAS_GUROBI "Is Gurobi available" ON)
 set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
-option(HAS_CBC "Is Cbc available" OFF)
+option(HAS_CBC "Is Cbc available" ON)
 set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
@@ -68,9 +79,6 @@ set(SHOT_VERSION_PATCH "\"alpha 1\"")
 # Try to find Git
 find_program(GIT git)
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-
 if((GIT) AND (EXISTS ${CMAKE_CURRENT_LIST_DIR}/.git))
   execute_process(COMMAND ${GIT}
                           describe
@@ -105,10 +113,6 @@ file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/misc")
-
-# Passes the parameters to the compiler
-
 if(HAS_GAMS)
   add_definitions(-DHAS_GAMS)
 endif(HAS_GAMS)
@@ -118,8 +122,7 @@ endif(HAS_GAMS)
 if(HAS_CBC)
 
   find_package(CBC)
-  # set(ENV{PKG_CONFIG_PATH} "${CBC_DIR}/lib/pkgconfig") pkg_search_module(CBC REQUIRED cbc)
-
+  
   if(CBC_FOUND)
     link_directories(${CBC_LIBRARY_DIRS})
     include_directories(SYSTEM ${CBC_INCLUDE_DIRS})
@@ -154,7 +157,6 @@ if(HAS_IPOPT)
 endif(HAS_IPOPT)
 
 set_property(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS ON)
-# set(Boost_USE_STATIC_LIBS OFF)
 
 # Adding source files
 file(GLOB_RECURSE
@@ -316,8 +318,6 @@ list(REMOVE_DUPLICATES INCLUDE_DIRS)
 
 include_directories(${INCLUDE_DIRS})
 
-find_package(Boost 1.63.0 REQUIRED)
-
 include_directories(SYSTEM "${AMPL_DIR}/include")
 include_directories(SYSTEM "${ARGH_DIR}")
 include_directories(SYSTEM "${BOOST_DIR}")
@@ -332,14 +332,10 @@ include_directories(SYSTEM "${TINYXML2_DIR}/")
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
 # Creates the SHOT library that is linked to the executable
-add_library(SHOTSolver SHARED ${SOURCES})
+add_library(SHOTSolver  SHARED ${SOURCES})
 
-# For gcc and C++ filesystem support; TODO, verify if needed for other compilers
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-  target_link_libraries(SHOTSolver stdc++fs)
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  target_link_libraries(SHOTSolver stdc++fs)
-endif()
+# Link the standard library required for std::filesystem (if needed)
+target_link_libraries(SHOTSolver CXX::Filesystem )
 
 # Extra flags for Visual Studio compilers
 if(MSVC)
@@ -457,11 +453,6 @@ if(HAS_GAMS)
     endif(APPLE)
   endif(UNIX)
 endif(HAS_GAMS)
-
-target_link_libraries(SHOTSolver Threads::Threads)
-
-target_link_libraries(SHOTSolver ${CMAKE_DL_LIBS})
-target_link_libraries(SHOTSolver ${Boost_LIBRARIES})
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
