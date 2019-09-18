@@ -593,9 +593,8 @@ MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(Environme
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
     modelUpdated = false;
+    checkParameters();
 }
 
 MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback() = default;

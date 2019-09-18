@@ -34,6 +34,7 @@ MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
     env = envPtr;
 
     initializeProblem();
+    checkParameters();
 }
 
 MIPSolverGurobi::~MIPSolverGurobi() = default;
@@ -67,8 +68,6 @@ bool MIPSolverGurobi::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
 
     return (true);
 }

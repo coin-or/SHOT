@@ -487,9 +487,8 @@ MIPSolverCplexLazy::MIPSolverCplexLazy(EnvironmentPtr envPtr)
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
     modelUpdated = false;
+    checkParameters();
 }
 
 MIPSolverCplexLazy::~MIPSolverCplexLazy() = default;

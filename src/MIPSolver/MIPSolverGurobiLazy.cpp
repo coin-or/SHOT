@@ -42,8 +42,6 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
 }
 
 MIPSolverGurobiLazy::~MIPSolverGurobiLazy() = default;

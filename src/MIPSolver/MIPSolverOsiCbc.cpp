@@ -58,8 +58,6 @@ bool MIPSolverOsiCbc::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
     return (true);
 }
 
@@ -782,11 +780,6 @@ void MIPSolverOsiCbc::checkParameters()
     // Check if Cbc has been compiled with support for multiple threads
     if(!cbcModel->haveMultiThreadSupport())
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
-
-    // Some features are not available in Cbc
-    env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
-    env->settings->updateSetting(
-        "Reformulation.Quadratics.Strategy", "Model", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);

@@ -33,6 +33,7 @@ MIPSolverCplex::MIPSolverCplex(EnvironmentPtr envPtr)
     env = envPtr;
 
     initializeProblem();
+    checkParameters();
 }
 
 MIPSolverCplex::~MIPSolverCplex()
@@ -78,8 +79,6 @@ bool MIPSolverCplex::initializeProblem()
 
     cachedSolutionHasChanged = true;
     isVariablesFixed = false;
-
-    checkParameters();
     modelUpdated = false;
 
     return (true);
