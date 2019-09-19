@@ -65,6 +65,8 @@ public:
 
     bool solveProblem();
 
+    void finalizeSolution();
+
     template <typename Callback> inline void registerCallback(const E_EventType& event, Callback&& callback)
     {
         env->events->registerCallback(event, callback);
@@ -75,6 +77,7 @@ public:
 
     std::string getResultsOSrL();
     std::string getResultsTrace();
+    std::string getResultsSol();
 
     template <typename T> void updateSetting(std::string name, std::string category, T value);
 

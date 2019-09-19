@@ -521,6 +521,12 @@ bool Solver::solveProblem()
     return (isProblemSolved);
 }
 
+void Solver::finalizeSolution()
+{
+    if(env->modelingSystem)
+        env->modelingSystem->finalizeSolution();
+}
+
 std::string Solver::getResultsOSrL() { return (env->results->getResultsOSrL()); }
 
 std::string Solver::getOptionsOSoL()
@@ -540,6 +546,8 @@ std::string Solver::getOptions()
 }
 
 std::string Solver::getResultsTrace() { return (env->results->getResultsTrace()); }
+
+std::string Solver::getResultsSol() { return (env->results->getResultsSol()); }
 
 void Solver::initializeSettings()
 {

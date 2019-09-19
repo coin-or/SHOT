@@ -83,6 +83,7 @@ public:
 
     std::string getResultsOSrL();
     std::string getResultsTrace();
+    std::string getResultsSol();
 
     void savePrimalSolutionToFile(
         const PrimalSolution& solution, const VectorString& variables, const std::string& fileName);
