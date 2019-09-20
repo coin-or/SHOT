@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
 
     // We always want to write to where the problem is when called by ASL
     if(useASL)
-        env->settings->updateSetting("OutputDirectory", "Output", (int)ES_OutputDirectory::Problem);
+        solver->updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
 
     // Read problem file
 
