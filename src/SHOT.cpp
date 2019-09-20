@@ -38,26 +38,28 @@ int main(int argc, char* argv[])
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
+    bool useASL = false;
 
     argh::parser cmdl;
     cmdl.add_params({ "--opt", "--osol" });
     cmdl.add_params({ "--osrl", "--trc", "--log" });
+    cmdl.add_params({ "--AMPL", "--sol" });
 
     cmdl.parse(argc, argv);
 
     // Read or create the file for the log
 
     std::string filename;
-    fs::filesystem::path  resultFile, optionsFile, traceFile, logFile;
+    fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile;
 
     if(cmdl("--log") >> filename) // Have specified a log-file
     {
-        logFile = fs::filesystem::current_path () / fs::filesystem::path (filename);
+        logFile = fs::filesystem::current_path() / fs::filesystem::path(filename);
         solver->setLogFile(logFile.string());
     }
     else
     {
-        logFile = fs::filesystem::current_path () / fs::filesystem::path ("SHOT.log");
+        logFile = fs::filesystem::current_path() / fs::filesystem::path("SHOT.log");
         solver->setLogFile(logFile.string());
     }
 
@@ -65,7 +67,6 @@ int main(int argc, char* argv[])
 
     if(cmdl["--help"])
     {
-
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                                 "───────────────────────────────────╴\r\n");
 
@@ -88,9 +89,14 @@ int main(int argc, char* argv[])
         env->output->outputCritical("   --osrl FILE            Sets the filename for the OSrL result file");
         env->output->outputCritical("   --trc FILE             Sets the filename for the GAMS trace file");
         env->output->outputCritical("   --log FILE             Sets the filename for the log file");
+        env->output->outputCritical("   --AMPL                 Activates ASL support. Only to be used with AMPL-files");
 
         return (0);
     }
+
+    // Check if we want to use the ASL calling format
+    if(cmdl["--AMPL"])
+        useASL = true;
 
     // Read or create options file
 
@@ -98,7 +104,7 @@ int main(int argc, char* argv[])
 
     if(cmdl("--opt") >> filename) // Have specified a opt-file
     {
-        auto filepath = fs::filesystem::current_path () / fs::filesystem::path (filename);
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path(filename);
 
         if(fs::filesystem::exists(filepath))
         {
@@ -112,7 +118,7 @@ int main(int argc, char* argv[])
     }
     else if(cmdl["--opt"]) // Create a new opt-file
     {
-        auto filepath = fs::filesystem::current_path () / fs::filesystem::path ("options.opt");
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.opt");
 
         if(fs::filesystem::exists(filepath))
         {
@@ -133,7 +139,7 @@ int main(int argc, char* argv[])
     }
     else if(cmdl("--osol") >> filename) // Have specified a OSoL-file
     {
-        auto filepath = fs::filesystem::current_path () / fs::filesystem::path (filename);
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path(filename);
 
         if(fs::filesystem::exists(filepath))
         {
@@ -148,7 +154,7 @@ int main(int argc, char* argv[])
     }
     else if(cmdl["--osol"]) // Create a new OSoL-file
     {
-        auto filepath = fs::filesystem::current_path () / fs::filesystem::path ("options.xml");
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.xml");
 
         if(fs::filesystem::exists(filepath))
         {
@@ -179,17 +185,9 @@ int main(int argc, char* argv[])
             static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
     }
 
-    // Define result file locations
-
-    if(cmdl("--osrl") >> filename) // Have specified a OSrL-file
-    {
-        resultFile = fs::filesystem::current_path () / fs::filesystem::path (filename);
-    }
-
-    if(cmdl("--trc") >> filename) // Have specified a trace-file
-    {
-        traceFile = fs::filesystem::current_path () / fs::filesystem::path (filename);
-    }
+    // We always want to write to where the problem is when called by ASL
+    if(useASL)
+        solver->updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
 
     // Read problem file
 
@@ -202,15 +200,48 @@ int main(int argc, char* argv[])
 
     if(!fs::filesystem::exists(filename))
     {
-
-        env->output->outputCritical("   Problem file " + filename + " not found!");
-        return (0);
+        if(useASL && fs::filesystem::exists(filename + ".nl"))
+        {
+            filename += ".nl";
+        }
+        else
+        {
+            env->output->outputCritical("   Problem file " + filename + " not found!");
+            return (0);
+        }
     }
 
     if(!solver->setProblem(filename))
     {
         env->output->outputCritical("   Error when reading problem file.");
         return (0);
+    }
+
+    // Check if we want to use the ASL calling format
+    if(useASL && !((ES_SourceFormat)env->settings->getSetting<int>("SourceFormat", "Input") == ES_SourceFormat::NL))
+    {
+        env->output->outputCritical("  Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
+        return (0);
+    }
+
+    // Define result file locations
+
+    if(cmdl("--osrl") >> filename) // Have specified a OSrL-file location
+    {
+        resultFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
+            / fs::filesystem::path(filename);
+    }
+
+    if(cmdl("--trc") >> filename) // Have specified a trace-file location
+    {
+        traceFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
+            / fs::filesystem::path(filename);
+    }
+
+    if(cmdl("--sol") >> filename) // Have specified an sol-file location
+    {
+        solFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
+            / fs::filesystem::path(filename);
     }
 
     env->report->outputOptionsReport();
@@ -239,7 +270,7 @@ int main(int argc, char* argv[])
 
     if(resultFile.empty())
     {
-        fs::filesystem::path  resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+        fs::filesystem::path resultPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
         resultPath /= env->settings->getSetting<std::string>("ProblemName", "Input");
         resultPath = resultPath.replace_extension(".osrl");
 
@@ -256,25 +287,52 @@ int main(int argc, char* argv[])
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
 
-    std::string trace = solver->getResultsTrace();
-
-    if(traceFile.empty())
+    if(cmdl["--trc"])
     {
-        fs::filesystem::path  tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
-        tracePath /= env->problem->name;
-        tracePath = tracePath.replace_extension(".trc");
+        std::string trace = solver->getResultsTrace();
 
-        if(!Utilities::writeStringToFile(tracePath.string(), trace))
-            env->output->outputCritical(" Error when writing trace file: " + tracePath.string());
+        if(traceFile.empty())
+        {
+            fs::filesystem::path tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+            tracePath /= env->problem->name;
+            tracePath = tracePath.replace_extension(".trc");
+
+            if(!Utilities::writeStringToFile(tracePath.string(), trace))
+                env->output->outputCritical(" Error when writing trace file: " + tracePath.string());
+            else
+                env->output->outputInfo("                     " + tracePath.string());
+        }
         else
-            env->output->outputInfo("                     " + tracePath.string());
+        {
+            if(!Utilities::writeStringToFile(traceFile.string(), trace))
+                env->output->outputCritical(" Error when writing trace file: " + traceFile.string());
+            else
+                env->output->outputInfo("                     " + traceFile.string());
+        }
     }
-    else
+
+    if(cmdl["--sol"] || useASL)
     {
-        if(!Utilities::writeStringToFile(traceFile.string(), trace))
-            env->output->outputCritical(" Error when writing trace file: " + traceFile.string());
+        std::string sol = solver->getResultsSol();
+
+        if(solFile.empty())
+        {
+            fs::filesystem::path solPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
+            solPath /= env->problem->name;
+            solPath = solPath.replace_extension(".sol");
+
+            if(!Utilities::writeStringToFile(solPath.string(), sol))
+                env->output->outputCritical(" Error when writing AMPL sol file: " + solPath.string());
+            else
+                env->output->outputInfo("                     " + solPath.string());
+        }
         else
-            env->output->outputInfo("                     " + traceFile.string());
+        {
+            if(!Utilities::writeStringToFile(solFile.string(), sol))
+                env->output->outputCritical(" Error when writing AMPL sol file: " + solFile.string());
+            else
+                env->output->outputInfo("                     " + solFile.string());
+        }
     }
 
     env->output->outputInfo("\r\n Log written to:     " + logFile.string());

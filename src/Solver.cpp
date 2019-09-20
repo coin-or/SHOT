@@ -521,6 +521,12 @@ bool Solver::solveProblem()
     return (isProblemSolved);
 }
 
+void Solver::finalizeSolution()
+{
+    if(env->modelingSystem)
+        env->modelingSystem->finalizeSolution();
+}
+
 std::string Solver::getResultsOSrL() { return (env->results->getResultsOSrL()); }
 
 std::string Solver::getOptionsOSoL()
@@ -540,6 +546,8 @@ std::string Solver::getOptions()
 }
 
 std::string Solver::getResultsTrace() { return (env->results->getResultsTrace()); }
+
+std::string Solver::getResultsSol() { return (env->results->getResultsSol()); }
 
 void Solver::initializeSettings()
 {
@@ -1348,12 +1356,22 @@ void Solver::setConvexityBasedSettings()
     }
 }
 
-template void Solver::updateSetting(std::string name, std::string category, std::string value);
-template void Solver::updateSetting(std::string name, std::string category, double value);
-template void Solver::updateSetting(std::string name, std::string category, int value);
-template void Solver::updateSetting(std::string name, std::string category, bool value);
+void Solver::updateSetting(std::string name, std::string category, int value)
+{
+    env->settings->updateSetting(name, category, value);
+}
 
-template <typename T> void Solver::updateSetting(std::string name, std::string category, T value)
+void Solver::updateSetting(std::string name, std::string category, std::string value)
+{
+    env->settings->updateSetting(name, category, value);
+}
+
+void Solver::updateSetting(std::string name, std::string category, double value)
+{
+    env->settings->updateSetting(name, category, value);
+}
+
+void Solver::updateSetting(std::string name, std::string category, bool value)
 {
     env->settings->updateSetting(name, category, value);
 }

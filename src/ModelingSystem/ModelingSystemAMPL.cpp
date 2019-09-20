@@ -11,6 +11,7 @@
 #include "ModelingSystemAMPL.h"
 
 #include "../Output.h"
+#include "../Results.h"
 #include "../Settings.h"
 #include "../Utilities.h"
 
@@ -22,6 +23,7 @@
 #include "mp/nl.h"
 #include "mp/problem.h"
 #include "mp/nl-reader.h"
+#include "mp/sol.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -359,15 +361,15 @@ void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) {
 
 E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, const std::string& filename)
 {
-    if(false && !fs::filesystem::exists(fs::filesystem::path (filename)))
+    if(false && !fs::filesystem::exists(fs::filesystem::path(filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
-    fs::filesystem::path  problemFile(filename);
-    fs::filesystem::path  problemPath = problemFile.parent_path();
+    fs::filesystem::path problemFile(filename);
+    fs::filesystem::path problemPath = problemFile.parent_path();
 
     try
     {
@@ -394,6 +396,96 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     return (E_ProblemCreationStatus::NormalCompletion);
 }
 
-void ModelingSystemAMPL::finalizeSolution() {}
+void ModelingSystemAMPL::finalizeSolution()
+{
+    std::string fileName = env->settings->getSetting<std::string>("ProblemName", "Input") + ".sol";
+
+    std::string status = "";
+    std::string description = "";
+
+    if(env->results->terminationReason == E_TerminationReason::AbsoluteGap
+        || env->results->terminationReason == E_TerminationReason::RelativeGap)
+    {
+        status = "0";
+        description = "Solved to global optimality";
+    }
+    else if(env->results->hasPrimalSolution())
+    {
+        status = "100";
+        description = "Solved to local optimality";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::InfeasibleProblem)
+    {
+        status = "200";
+        description = "No solution found since dual problem is infeasible";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::UnboundedProblem)
+    {
+        status = "300";
+        description = "No solution found since dual problem is unbounded";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::ObjectiveStagnation)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::NoDualCutsAdded)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::IterationLimit)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::TimeLimit)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::NumericIssues)
+    {
+        status = "500";
+        description = "No solution found since an error occured";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::UserAbort)
+    {
+        status = "600";
+        description = "No solution found due to user abort";
+    }
+    else if(env->results->terminationReason == E_TerminationReason::Error)
+    {
+        status = "500";
+        description = "No solution found since an error occured";
+    }
+    else
+    {
+        status = "500";
+        description = "No solution found since an error occured";
+    }
+
+    std::stringstream ss;
+
+    ss << fmt::format("SHOT: {}\n", description);
+
+    ss << "Options\n";
+
+    ss << fmt::format("{0}\n{0}\n{1}\n{1}\n", env->problem->properties.numberOfNumericConstraints,
+        env->problem->properties.numberOfVariables);
+
+    for(auto const& V : env->results->primalSolution)
+        ss << fmt::format("{}\n", V);
+
+    for(auto const& C : env->problem->numericConstraints)
+        ss << fmt::format("{}\n", C->calculateNumericValue(env->results->primalSolution).normalizedRHSValue);
+
+    ss << fmt::format("objno 0 {}\n", status);
+
+    if(!Utilities::writeStringToFile(fileName, ss.str()))
+        env->output->outputCritical(" Error when writing sol file: " + fileName);
+    else
+        env->output->outputInfo("                     " + fileName);
+}
 
 } // Namespace SHOT

@@ -444,6 +444,7 @@ bool writeStringToFile(const std::string& fileName, const std::string& str)
     }
     else
     {
+        f.close();
         return false;
     }
 

@@ -46,7 +46,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
 {
     bool isDifferent = true;
 
-    for(auto& S : env->results->primalSolutions)
+    for(auto& S : this->primalSolutions)
     {
         if(Utilities::isDifferent(S.point, solution.point))
             continue;
@@ -58,33 +58,33 @@ void Results::addPrimalSolution(PrimalSolution solution)
     if(!isDifferent) // The same solution point is already saved
         return;
 
-    if(env->results->primalSolutions.size() == 0)
+    if(this->primalSolutions.size() == 0)
     {
         // This is the first solution, save it
-        env->results->primalSolutions.push_back(solution);
-        env->results->primalSolution = solution.point;
-        env->results->setPrimalBound(solution.objValue);
+        this->primalSolutions.push_back(solution);
+        this->primalSolution = solution.point;
+        this->setPrimalBound(solution.objValue);
 
         env->output->outputDebug(fmt::format(
             "        First primal solution {} from {} found.", solution.objValue, solution.sourceDescription));
     }
     else if((env->problem->objectiveFunction->properties.isMinimize
-                && solution.objValue < env->results->primalSolutions.back().objValue)
+                && solution.objValue < this->primalSolutions.back().objValue)
         || (!env->problem->objectiveFunction->properties.isMinimize
-               && solution.objValue > env->results->primalSolutions.back().objValue))
+               && solution.objValue > this->primalSolutions.back().objValue))
     {
         // Have a solution which is better than the worst one in the solution pool
-        env->results->primalSolutions.back() = solution;
-        env->results->primalSolution = solution.point;
-        env->results->setPrimalBound(solution.objValue);
+        this->primalSolutions.back() = solution;
+        this->primalSolution = solution.point;
+        this->setPrimalBound(solution.objValue);
 
         env->output->outputDebug(fmt::format("        New (currently best) primal solution {} from {} found.",
             solution.objValue, solution.sourceDescription));
     }
-    else if((int) env->results->primalSolutions.size() < env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"))
+    else if((int)this->primalSolutions.size() < env->settings->getSetting<int>("SaveNumberOfSolutions", "Output"))
     {
         // The solution pool is not yet full, save the solution
-        env->results->primalSolutions.push_back(solution);
+        this->primalSolutions.push_back(solution);
 
         env->output->outputDebug(fmt::format("        New primal solution {} from {} found and added to solution pool.",
             solution.objValue, solution.sourceDescription));
@@ -98,14 +98,14 @@ void Results::addPrimalSolution(PrimalSolution solution)
     // Sorts the solutions so that the best one is at the first position
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
-        std::sort(env->results->primalSolutions.begin(), env->results->primalSolutions.end(),
+        std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
             [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
                 return (firstSolution.objValue < secondSolution.objValue);
             });
     }
     else
     {
-        std::sort(env->results->primalSolutions.begin(), env->results->primalSolutions.end(),
+        std::sort(this->primalSolutions.begin(), this->primalSolutions.end(),
             [](const PrimalSolution& firstSolution, const PrimalSolution& secondSolution) {
                 return (firstSolution.objValue > secondSolution.objValue);
             });
@@ -114,7 +114,7 @@ void Results::addPrimalSolution(PrimalSolution solution)
     env->solutionStatistics.numberOfFoundPrimalSolutions++;
 
     // Saves statistics for the sources of primal solutions
-    auto element = env->results->primalSolutionSourceStatistics.emplace(solution.sourceType, 1);
+    auto element = this->primalSolutionSourceStatistics.emplace(solution.sourceType, 1);
 
     if(!element.second)
     {
@@ -327,7 +327,7 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("description", "The number of primal solutions found");
     otherResultsNode->InsertEndChild(otherNode);
 
-    for(auto& S : env->results->primalSolutionSourceStatistics)
+    for(auto& S : this->primalSolutionSourceStatistics)
     {
         otherNode = osrlDocument.NewElement("other");
 
@@ -423,7 +423,7 @@ std::string Results::getResultsOSrL()
         || this->terminationReason == E_TerminationReason::RelativeGap)
     {
         statusNode->SetAttribute("type", "globallyOptimal");
-        statusNode->SetAttribute("description", "Solved to global optimality (assuming the problem is convex)");
+        statusNode->SetAttribute("description", "Solved to global optimality");
 
         statusNode->SetAttribute("numberOfSubstatuses", 1);
 
@@ -714,7 +714,7 @@ std::string Results::getResultsTrace()
     ss << "SHOT"
        << ",";
 
-    switch(static_cast<ES_PrimalNLPSolver>(env->results->usedPrimalNLPSolver))
+    switch(static_cast<ES_PrimalNLPSolver>(this->usedPrimalNLPSolver))
     {
     case(ES_PrimalNLPSolver::None):
         ss << "NONE";
@@ -732,7 +732,7 @@ std::string Results::getResultsTrace()
 
     ss << ",";
 
-    switch(static_cast<ES_MIPSolver>(env->results->usedMIPSolver))
+    switch(static_cast<ES_MIPSolver>(this->usedMIPSolver))
     {
     case(ES_MIPSolver::Cplex):
         ss << "CPLEX";
@@ -846,6 +846,93 @@ std::string Results::getResultsTrace()
        << ",";
     ss << env->solutionStatistics.numberOfExploredNodes << ",";
     ss << "#";
+
+    return (ss.str());
+}
+
+std::string Results::getResultsSol()
+{
+    std::string status = "";
+    std::string description = "";
+
+    if(this->terminationReason == E_TerminationReason::AbsoluteGap
+        || this->terminationReason == E_TerminationReason::RelativeGap)
+    {
+        status = "0";
+        description = "Solved to global optimality";
+    }
+    else if(this->hasPrimalSolution())
+    {
+        status = "100";
+        description = "Solved to local optimality";
+    }
+    else if(this->terminationReason == E_TerminationReason::InfeasibleProblem)
+    {
+        status = "200";
+        description = "No solution found since dual problem is infeasible";
+    }
+    else if(this->terminationReason == E_TerminationReason::UnboundedProblem)
+    {
+        status = "300";
+        description = "No solution found since dual problem is unbounded";
+    }
+    else if(this->terminationReason == E_TerminationReason::ObjectiveStagnation)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(this->terminationReason == E_TerminationReason::NoDualCutsAdded)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(this->terminationReason == E_TerminationReason::IterationLimit)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(this->terminationReason == E_TerminationReason::TimeLimit)
+    {
+        status = "400";
+        description = "No solution found";
+    }
+    else if(this->terminationReason == E_TerminationReason::NumericIssues)
+    {
+        status = "500";
+        description = "No solution found since an error occured";
+    }
+    else if(this->terminationReason == E_TerminationReason::UserAbort)
+    {
+        status = "600";
+        description = "No solution found due to user abort";
+    }
+    else if(this->terminationReason == E_TerminationReason::Error)
+    {
+        status = "500";
+        description = "No solution found since an error occured";
+    }
+    else
+    {
+        status = "500";
+        description = "No solution found since an error occured";
+    }
+
+    std::stringstream ss;
+
+    ss << fmt::format("\nSHOT: {}\n", description);
+
+    ss << "\nOptions\n\n";
+
+    ss << fmt::format("{0}\n{0}\n{1}\n{1}\n", env->problem->properties.numberOfNumericConstraints,
+        env->problem->properties.numberOfVariables);
+
+    for(auto const& V : this->primalSolution)
+        ss << fmt::format("{}\n", V);
+
+    for(auto const& C : env->problem->numericConstraints)
+        ss << fmt::format("{}\n", C->calculateNumericValue(this->primalSolution).normalizedRHSValue);
+
+    ss << fmt::format("objno 0 {}", status);
 
     return (ss.str());
 }
