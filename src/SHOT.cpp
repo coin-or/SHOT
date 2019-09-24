@@ -317,8 +317,7 @@ int main(int argc, char* argv[])
 
         if(solFile.empty())
         {
-            fs::filesystem::path solPath(env->settings->getSetting<std::string>("ResultPath", "Output"));
-            solPath /= env->problem->name;
+            fs::filesystem::path solPath(filename);
             solPath = solPath.replace_extension(".sol");
 
             if(!Utilities::writeStringToFile(solPath.string(), sol))
