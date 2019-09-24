@@ -436,7 +436,7 @@ double getJulianFractionalDate()
 
 bool writeStringToFile(const std::string& fileName, const std::string& str)
 {
-    std::ofstream f(fileName);
+    std::ofstream f(fileName, std::ios::binary);
 
     if(f)
     {
