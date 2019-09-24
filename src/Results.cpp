@@ -921,16 +921,18 @@ std::string Results::getResultsSol()
 
     ss << fmt::format("\nSHOT: {}\n", description);
 
-    ss << "\nOptions\n\n";
+    ss << "\nOptions\n";
+
+    ss << "0\n"; // Number of options
 
     ss << fmt::format("{0}\n{0}\n{1}\n{1}\n", env->problem->properties.numberOfNumericConstraints,
         env->problem->properties.numberOfVariables);
 
-    for(auto const& V : this->primalSolution)
-        ss << fmt::format("{}\n", V);
-
     for(auto const& C : env->problem->numericConstraints)
         ss << fmt::format("{}\n", C->calculateNumericValue(this->primalSolution).normalizedRHSValue);
+
+    for(auto const& V : this->primalSolution)
+        ss << fmt::format("{}\n", V);
 
     ss << fmt::format("objno 0 {}", status);
 
