@@ -287,14 +287,14 @@ int main(int argc, char* argv[])
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
 
-    if(cmdl["--trc"])
+    if(cmdl("--trc"))
     {
         std::string trace = solver->getResultsTrace();
 
         if(traceFile.empty())
         {
             fs::filesystem::path tracePath(env->settings->getSetting<std::string>("ResultPath", "Output"));
-            tracePath /= env->problem->name;
+            tracePath /= env->settings->getSetting<std::string>("ProblemName", "Input");
             tracePath = tracePath.replace_extension(".trc");
 
             if(!Utilities::writeStringToFile(tracePath.string(), trace))
@@ -311,7 +311,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if(cmdl["--sol"] || useASL)
+    if(cmdl("--sol") || useASL)
     {
         std::string sol = solver->getResultsSol();
 
