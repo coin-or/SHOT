@@ -506,8 +506,6 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProdu
         C = simplify(C);
         // Can now assume there are no Times types in the child
 
-        auto t = C->getType();
-
         if(C->getType() == E_NonlinearExpressionTypes::Constant)
         {
             constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;

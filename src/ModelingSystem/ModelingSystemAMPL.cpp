@@ -74,10 +74,6 @@ public:
 
     void OnHeader(const mp::NLHeader& h)
     {
-        fmt::print("Variables:   {}\n", h.num_vars);
-        fmt::print("Constraints: {}\n", h.num_algebraic_cons);
-        fmt::print("Nonzeros:    {}\n", h.num_con_nonzeros);
-
         destination->allVariables.reserve(h.num_vars);
         destination->integerVariables.reserve(h.num_integer_vars());
         destination->realVariables.reserve(h.num_continuous_vars());
