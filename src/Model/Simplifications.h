@@ -27,6 +27,9 @@
 namespace SHOT
 {
 
+NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
+NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination = nullptr);
+
 inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression);
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionConstant> expression)
@@ -441,60 +444,6 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
     return (std::make_shared<ExpressionPower>(firstChild, secondChild));
 }
 
-inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProduct> expression)
-{
-    double constant = 1.0;
-
-    NonlinearExpressions children;
-
-    for(auto& C : expression->children)
-    {
-        C = simplify(C);
-        // Can now assume there are no Times types in the child
-
-        if(C->getType() == E_NonlinearExpressionTypes::Constant)
-        {
-            constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
-
-            if(constant == 0.0)
-                return (std::make_shared<ExpressionConstant>(0.0));
-        }
-        else if(C->getType() == E_NonlinearExpressionTypes::Product)
-        {
-            for(auto& CC : std::dynamic_pointer_cast<ExpressionProduct>(C)->children)
-            {
-                if(CC->getType() == E_NonlinearExpressionTypes::Constant)
-                {
-                    constant *= std::dynamic_pointer_cast<ExpressionConstant>(CC)->constant;
-
-                    if(constant == 0.0)
-                        return (std::make_shared<ExpressionConstant>(0.0));
-                }
-                else
-                {
-                    children.add(CC);
-                }
-            }
-        }
-        else
-        {
-            children.add(C);
-        }
-    }
-
-    auto product = std::make_shared<ExpressionProduct>();
-
-    if(constant != 1.0)
-        product->children.add(std::make_shared<ExpressionConstant>(constant));
-
-    for(auto& C : children)
-    {
-        product->children.add(C);
-    }
-
-    return (product);
-}
-
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> expression)
 {
     double constant = 0.0;
@@ -543,6 +492,96 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
     }
 
     return (sum);
+}
+
+inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProduct> expression)
+{
+    double constant = 1.0;
+
+    NonlinearExpressions children;
+    NonlinearExpressions unaddedChildren;
+
+    for(auto& C : expression->children)
+    {
+        C = simplify(C);
+        // Can now assume there are no Times types in the child
+
+        auto t = C->getType();
+
+        if(C->getType() == E_NonlinearExpressionTypes::Constant)
+        {
+            constant *= std::dynamic_pointer_cast<ExpressionConstant>(C)->constant;
+
+            if(constant == 0.0)
+                return (std::make_shared<ExpressionConstant>(0.0));
+        }
+        else if(C->getType() == E_NonlinearExpressionTypes::Sum)
+        {
+            unaddedChildren.add(C);
+        }
+        else if(C->getType() == E_NonlinearExpressionTypes::Product)
+        {
+            for(auto& CC : std::dynamic_pointer_cast<ExpressionProduct>(C)->children)
+            {
+                if(CC->getType() == E_NonlinearExpressionTypes::Constant)
+                {
+                    constant *= std::dynamic_pointer_cast<ExpressionConstant>(CC)->constant;
+
+                    if(constant == 0.0)
+                        return (std::make_shared<ExpressionConstant>(0.0));
+                }
+                else
+                {
+                    children.add(CC);
+                }
+            }
+        }
+        else
+        {
+            children.add(C);
+        }
+    }
+
+    if(unaddedChildren.size() == 1)
+    {
+        auto sum = std::make_shared<ExpressionSum>();
+
+        for(auto& T : std::dynamic_pointer_cast<ExpressionSum>(unaddedChildren[0])->children)
+        {
+            auto newProduct = std::make_shared<ExpressionProduct>();
+
+            if(constant != 1.0)
+                newProduct->children.add(std::make_shared<ExpressionConstant>(constant));
+
+            for(auto& C : children)
+            {
+                newProduct->children.add(copyNonlinearExpression(C.get()));
+            }
+
+            newProduct->children.add(copyNonlinearExpression(T.get()));
+
+            sum->children.add(newProduct);
+        }
+
+        return (simplifyExpression(sum));
+    }
+
+    auto product = std::make_shared<ExpressionProduct>();
+
+    if(constant != 1.0)
+        product->children.add(std::make_shared<ExpressionConstant>(constant));
+
+    for(auto& C : children)
+    {
+        product->children.add(C);
+    }
+
+    for(auto& C : unaddedChildren)
+    {
+        product->children.add(C);
+    }
+
+    return (product);
 }
 
 inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
@@ -1231,8 +1270,5 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
 
 void simplifyNonlinearExpressions(
     ProblemPtr problem, bool extractMonomials, bool extractSignomials, bool extractQuadratics);
-
-NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, const ProblemPtr destination);
-NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, Problem* destination);
 
 } // namespace SHOT

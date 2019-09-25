@@ -52,7 +52,8 @@ void simplifyNonlinearExpressions(
                 if(tmpConstant != 0.0)
                     newObjective->constant += tmpConstant;
 
-                problem->objectiveFunction = nonlinearObjective;
+                newObjective->updateProperties();
+                problem->objectiveFunction = newObjective;
             }
             else
             {
@@ -68,7 +69,8 @@ void simplifyNonlinearExpressions(
                 if(tmpConstant != 0.0)
                     newObjective->constant += tmpConstant;
 
-                problem->objectiveFunction = nonlinearObjective;
+                newObjective->updateProperties();
+                problem->objectiveFunction = newObjective;
             }
         }
         else
@@ -408,8 +410,15 @@ NonlinearExpressionPtr copyNonlinearExpression(NonlinearExpression* expression, 
 
     case E_NonlinearExpressionTypes::Variable:
     {
-        int variableIndex = ((ExpressionVariable*)expression)->variable->index;
-        return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
+        if(destination == nullptr)
+        {
+            return std::make_shared<ExpressionVariable>(((ExpressionVariable*)expression)->variable);
+        }
+        else
+        {
+            int variableIndex = ((ExpressionVariable*)expression)->variable->index;
+            return std::make_shared<ExpressionVariable>(destination->getVariable(variableIndex));
+        }
     }
     default:
         throw new OperationNotImplementedException(
