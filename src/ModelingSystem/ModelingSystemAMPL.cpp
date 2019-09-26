@@ -78,108 +78,100 @@ public:
         destination->integerVariables.reserve(h.num_integer_vars());
         destination->realVariables.reserve(h.num_continuous_vars());
 
-        int addedVariables = 0;
+        int variableIndex = 0;
 
         // Nonlinear variables in both constraints and objective
 
-        int startingIndex = 0;
-        int stoppingIndex = h.num_nl_vars_in_both - h.num_nl_integer_vars_in_both;
+        int number = h.num_nl_vars_in_both - h.num_nl_integer_vars_in_both;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
-        startingIndex = stoppingIndex;
-        stoppingIndex += h.num_nl_integer_vars_in_both;
+        number = h.num_nl_integer_vars_in_both;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>(
-                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
+                E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
         // Nonlinear variables in constraints
 
-        startingIndex = stoppingIndex;
-        stoppingIndex += h.num_nl_vars_in_cons - h.num_nl_integer_vars_in_cons;
+        number = (h.num_nl_vars_in_cons - h.num_nl_vars_in_both) - h.num_nl_integer_vars_in_cons;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
-        startingIndex = stoppingIndex;
-        stoppingIndex += h.num_nl_integer_vars_in_cons;
+        number = h.num_nl_integer_vars_in_cons;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>(
-                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
+                E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
         // Nonlinear variables in objective
 
-        startingIndex = stoppingIndex;
-        stoppingIndex += h.num_nl_vars_in_objs - h.num_nl_integer_vars_in_objs;
+        number = (h.num_nl_vars_in_objs - h.num_nl_vars_in_cons) - h.num_nl_integer_vars_in_objs;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
-        startingIndex = stoppingIndex;
-        stoppingIndex += h.num_nl_integer_vars_in_objs;
+        number = h.num_nl_integer_vars_in_objs;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
-            destination->add(std::make_shared<SHOT::Variable>(
-                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
+                E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
         // Linear variables real
 
-        startingIndex = stoppingIndex;
-        stoppingIndex = h.num_vars - h.num_linear_binary_vars - h.num_linear_integer_vars;
+        number = (h.num_vars - variableIndex) - (h.num_linear_binary_vars + h.num_linear_integer_vars);
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+                "x_" + std::to_string(variableIndex), variableIndex, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            variableIndex++;
         }
 
         // Linear variables binaries
 
-        startingIndex = stoppingIndex;
-        stoppingIndex = h.num_vars - h.num_linear_integer_vars;
+        number = h.num_linear_binary_vars;
 
-        for(int i = startingIndex; i < stoppingIndex; i++)
-        {
-            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(i), i, E_VariableType::Binary));
-            addedVariables++;
-        }
-
-        startingIndex = stoppingIndex;
-        stoppingIndex = h.num_vars;
-
-        for(int i = startingIndex; i < stoppingIndex; i++)
+        for(int i = 0; i < number; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
-                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
-            addedVariables++;
+                "b_" + std::to_string(variableIndex), variableIndex, E_VariableType::Binary));
+            variableIndex++;
         }
 
-        assert(addedVariables = h.num_vars);
+        number = h.num_linear_integer_vars;
+
+        for(int i = 0; i < number; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(variableIndex), variableIndex,
+                E_VariableType::Integer, -SHOT_INT_MAX, SHOT_INT_MAX));
+            variableIndex++;
+        }
+
+        assert(variableIndex == h.num_vars);
 
         destination->numericConstraints.reserve(h.num_algebraic_cons);
         destination->linearConstraints.reserve(h.num_algebraic_cons - h.num_nl_cons);
@@ -462,7 +454,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     {
         AMPLProblemHandler handler(env, problem);
         mp::ReadNLFile(filename, handler);
-        }
+    }
     catch(const std::exception& e)
     {
         env->output->outputError(fmt::format("Error when reading AMPL model from \"{}\": {}", filename, e.what()));
