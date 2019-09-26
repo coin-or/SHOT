@@ -76,6 +76,8 @@ bool DllExport writeStringToFile(const std::string& fileName, const std::string&
 
 std::string getFileAsString(const std::string& fileName);
 
+VectorString getLinesInFile(const std::string& fileName);
+
 /*
  * Generic implementation to erase elements by value
  * It iterates over all the elements and for every element it matches

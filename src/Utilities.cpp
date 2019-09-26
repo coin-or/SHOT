@@ -469,6 +469,25 @@ std::string getFileAsString(const std::string& fileName)
     throw(errno);
 }
 
+VectorString getLinesInFile(const std::string& fileName)
+{
+    VectorString lines;
+
+    std::ifstream myfile(fileName);
+
+    if(myfile.is_open())
+    {
+        std::string line;
+
+        while(getline(myfile, line))
+            lines.push_back(line);
+
+        myfile.close();
+    }
+
+    return (lines);
+}
+
 std::size_t calculateHash(VectorDouble const& point)
 {
     std::size_t seed = 0;
