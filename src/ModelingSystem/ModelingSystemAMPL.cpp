@@ -78,17 +78,108 @@ public:
         destination->integerVariables.reserve(h.num_integer_vars());
         destination->realVariables.reserve(h.num_continuous_vars());
 
-        for(int i = 0; i < h.num_continuous_vars(); i++)
+        int addedVariables = 0;
+
+        // Nonlinear variables in both constraints and objective
+
+        int startingIndex = 0;
+        int stoppingIndex = h.num_nl_vars_in_both - h.num_nl_integer_vars_in_both;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
                 "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
         }
 
-        for(int i = h.num_continuous_vars(); i < h.num_vars; i++)
+        startingIndex = stoppingIndex;
+        stoppingIndex += h.num_nl_integer_vars_in_both;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
         {
             destination->add(std::make_shared<SHOT::Variable>(
                 "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
         }
+
+        // Nonlinear variables in constraints
+
+        startingIndex = stoppingIndex;
+        stoppingIndex += h.num_nl_vars_in_cons - h.num_nl_integer_vars_in_cons;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>(
+                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
+        }
+
+        startingIndex = stoppingIndex;
+        stoppingIndex += h.num_nl_integer_vars_in_cons;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
+        }
+
+        // Nonlinear variables in objective
+
+        startingIndex = stoppingIndex;
+        stoppingIndex += h.num_nl_vars_in_objs - h.num_nl_integer_vars_in_objs;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>(
+                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
+        }
+
+        startingIndex = stoppingIndex;
+        stoppingIndex += h.num_nl_integer_vars_in_objs;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
+        }
+
+        // Linear variables real
+
+        startingIndex = stoppingIndex;
+        stoppingIndex = h.num_vars - h.num_linear_binary_vars - h.num_linear_integer_vars;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>(
+                "x_" + std::to_string(i), i, E_VariableType::Real, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
+        }
+
+        // Linear variables binaries
+
+        startingIndex = stoppingIndex;
+        stoppingIndex = h.num_vars - h.num_linear_integer_vars;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>("i_" + std::to_string(i), i, E_VariableType::Binary));
+            addedVariables++;
+        }
+
+        startingIndex = stoppingIndex;
+        stoppingIndex = h.num_vars;
+
+        for(int i = startingIndex; i < stoppingIndex; i++)
+        {
+            destination->add(std::make_shared<SHOT::Variable>(
+                "i_" + std::to_string(i), i, E_VariableType::Integer, SHOT_DBL_MIN, SHOT_DBL_MAX));
+            addedVariables++;
+        }
+
+        assert(addedVariables = h.num_vars);
 
         destination->numericConstraints.reserve(h.num_algebraic_cons);
         destination->linearConstraints.reserve(h.num_algebraic_cons - h.num_nl_cons);
@@ -357,7 +448,7 @@ void ModelingSystemAMPL::updateSettings([[maybe_unused]] SettingsPtr settings) {
 
 E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, const std::string& filename)
 {
-    if(false && !fs::filesystem::exists(fs::filesystem::path(filename)))
+    if(!fs::filesystem::exists(fs::filesystem::path(filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
@@ -371,12 +462,47 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     {
         AMPLProblemHandler handler(env, problem);
         mp::ReadNLFile(filename, handler);
-    }
+        }
     catch(const std::exception& e)
     {
         env->output->outputError(fmt::format("Error when reading AMPL model from \"{}\": {}", filename, e.what()));
 
         return (E_ProblemCreationStatus::Error);
+    }
+
+    auto colFile = fs::filesystem::path(filename).replace_extension(".col");
+
+    if(fs::filesystem::exists(colFile))
+    {
+        auto variableNames = Utilities::getLinesInFile(colFile);
+
+        if(variableNames.size() != problem->allVariables.size())
+        {
+            env->output->outputError(fmt::format(
+                "Error when reading AMPL model (variable names in col-file \"{}\" does not match).", colFile.string()));
+            return (E_ProblemCreationStatus::Error);
+        }
+
+        for(size_t i = 0; i < variableNames.size(); i++)
+            problem->allVariables[i]->name = variableNames[i];
+    }
+
+    auto rowFile = fs::filesystem::path(filename).replace_extension(".row");
+
+    if(fs::filesystem::exists(rowFile))
+    {
+        auto constraintNames = Utilities::getLinesInFile(rowFile);
+
+        if(constraintNames.size() != problem->numericConstraints.size() + 1) // Last one is objective
+        {
+            env->output->outputError(
+                fmt::format("Error when reading AMPL model (constraint names in row-file \"{}\" does not match).",
+                    colFile.string()));
+            return (E_ProblemCreationStatus::Error);
+        }
+
+        for(size_t i = 0; i < problem->numericConstraints.size(); i++)
+            problem->numericConstraints[i]->name = constraintNames[i];
     }
 
     problem->updateProperties();
