@@ -684,11 +684,10 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
+            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
+            // the gradient may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, false);
-
-            for(auto& VAR : variablesInNonlinearExpression)
-                nonlinearVariablesInExpressionMap[VAR->properties.nonlinearVariableIndex] = true;
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
@@ -851,14 +850,13 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
+            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
+            // the hessian may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, false);
-
-            for(auto& VAR : variablesInNonlinearExpression)
-                nonlinearVariablesInExpressionMap[VAR->properties.nonlinearVariableIndex] = true;
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
 
             auto nonlinearFunctionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
 
             nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
 
