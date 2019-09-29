@@ -901,6 +901,25 @@ std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
         constraintGradientSparsityPattern->push_back(std::make_pair(C, *C->getGradientSparsityPattern()));
     }
 
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        std::stringstream filename;
+        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
+        filename << "/sparsitypattern_jacobian.txt";
+
+        std::stringstream stream;
+
+        for(auto& P : *constraintGradientSparsityPattern)
+        {
+            stream << P.first->name << ":\n";
+
+            for(auto& V : P.second)
+                stream << "\t " << V->name << '\n';
+        }
+
+        Utilities::writeStringToFile(filename.str(), stream.str());
+    }
+
     return (constraintGradientSparsityPattern);
 }
 
@@ -969,6 +988,22 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
         {
             lagrangianHessianSparsityPattern->push_back(E);
         }
+    }
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        std::stringstream filename;
+        filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
+        filename << "/sparsitypattern_hessianoflagrangian.txt";
+
+        std::stringstream stream;
+
+        for(auto& P : *lagrangianHessianSparsityPattern)
+        {
+            stream << P.first->name << "\t" << P.second->name << '\n';
+        }
+
+        Utilities::writeStringToFile(filename.str(), stream.str());
     }
 
     // Sorts the elements
