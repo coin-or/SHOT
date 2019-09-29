@@ -68,6 +68,59 @@ bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, N
     return (true);
 }
 
+// gets the linearity of the variables
+bool IpoptProblem::get_variables_linearity(Ipopt::Index n, LinearityType* var_types)
+{
+    assert(n == sourceProblem->properties.numberOfVariables);
+
+    for(int i = 0; i < n; ++i)
+    {
+        if(sourceProblem->allVariables[i]->properties.isNonlinear)
+            var_types[i] = NON_LINEAR;
+        else
+            var_types[i] = LINEAR;
+    }
+
+    return true;
+}
+
+// gets the linearity of the constraints
+bool IpoptProblem::get_constraints_linearity(Ipopt::Index m, LinearityType* const_types)
+{
+    assert(m == sourceProblem->properties.numberOfNumericConstraints);
+
+    for(int i = 0; i < m; ++i)
+    {
+        if(sourceProblem->numericConstraints[i]->properties.classification > E_ConstraintClassification::Linear)
+            const_types[i] = NON_LINEAR;
+        else
+            const_types[i] = LINEAR;
+    }
+
+    return true;
+}
+
+Ipopt::Index IpoptProblem::get_number_of_nonlinear_variables()
+{
+    return (sourceProblem->properties.numberOfNonlinearVariables);
+}
+
+bool IpoptProblem::get_list_of_nonlinear_variables(Ipopt::Index num_nonlin_vars, Ipopt::Index* pos_nonlin_vars)
+{
+    VectorInteger nonlinearVariables;
+    int count;
+
+    for(int i = 0; i < sourceProblem->properties.numberOfNonlinearVariables; i++)
+    {
+        pos_nonlin_vars[i] = sourceProblem->nonlinearVariables[i]->index;
+        count++;
+    }
+
+    assert(count == num_nonlin_vars);
+
+    return true;
+}
+
 // returns the initial point for the problem
 bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init_z, [[maybe_unused]] Number* z_L,
     [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m, [[maybe_unused]] bool init_lambda,
@@ -117,6 +170,22 @@ bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init
                     + std::to_string(variableLB) + "," + std::to_string(variableUB));
                 continue;
             }
+        }
+
+        if(variableValue < -divergingIterativesTolerance)
+        {
+            variableValue = -0.99 * divergingIterativesTolerance;
+            env->output->outputInfo(fmt::format("  Starting point value for variable with index {} is below diverging "
+                                                "iterates tolerance {}. Setting value to {}.",
+                variableIndex, divergingIterativesTolerance, variableValue));
+        }
+        else if(variableValue > divergingIterativesTolerance)
+        {
+            variableValue = 0.99 * divergingIterativesTolerance;
+
+            env->output->outputInfo(fmt::format("  Starting point value for variable with index {} is above diverging "
+                                                "iterates tolerance {}. Setting value to {}.",
+                variableIndex, divergingIterativesTolerance, variableValue));
         }
 
         x[variableIndex] = variableValue;
@@ -786,10 +855,13 @@ void NLPSolverIpoptBase::setInitialSettings()
     ipoptApplication->Options()->SetStringValue("mu_strategy", "adaptive", true, true);
     ipoptApplication->Options()->SetStringValue("ma86_order", "auto", true, true);
 
-    // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and Ipopt
-    // can make use of this
+    // if we have linear constraint and a quadratic objective, then the hessian of the Lagrangian is constant, and
+    // Ipopt can make use of this
     if(sourceProblem->properties.isMIQPProblem)
         ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
+
+    ipoptApplication->Options()->GetNumericValue(
+        "diverging_iterates_tol", ipoptProblem->divergingIterativesTolerance, "");
 
     setSolverSpecificInitialSettings();
 }
