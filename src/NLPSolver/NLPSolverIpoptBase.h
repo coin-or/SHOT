@@ -48,9 +48,21 @@ public:
         Ipopt::Index n, Ipopt::Number* x_l, Ipopt::Number* x_u, Ipopt::Index m, Ipopt::Number* g_l,
         Ipopt::Number* g_u) override;
 
+    /** Method to get the linearity of variables */
+    bool get_variables_linearity(Ipopt::Index n, LinearityType* var_types);
+
+    /** Method to get the linearity of constraints */
+    bool get_constraints_linearity(Ipopt::Index m, LinearityType* const_types);
+
     /** Method to return the starting point for the algorithm */
     bool get_starting_point(Ipopt::Index n, bool init_sx, Ipopt::Number* x, bool init_z, Ipopt::Number* z_L,
         Ipopt::Number* z_U, Ipopt::Index m, bool init_lambda, Ipopt::Number* lambda) override;
+
+    /** Method to get the number of nonlinear variables in the problem */
+    Ipopt::Index get_number_of_nonlinear_variables();
+
+    /** Method to get a list of the nonlinear variable indices */
+    bool get_list_of_nonlinear_variables(Ipopt::Index num_nonlin_vars, Ipopt::Index* pos_nonlin_vars);
 
     /** Method to return the objective value */
     bool eval_f(Ipopt::Index n, const Ipopt::Number* x, bool new_x, Ipopt::Number& obj_value) override;
