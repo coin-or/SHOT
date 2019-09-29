@@ -228,6 +228,8 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
                 jacobianCounterPlacement.emplace(std::make_pair(C->index, G->index), counter);
                 counter++;
             }
+
+            assert(counter <= nele_jac);
         }
 
         return (true);
@@ -252,6 +254,9 @@ bool IpoptProblem::eval_jac_g(Index n, const Number* x, [[maybe_unused]] bool ne
             int location = jacobianCounterPlacement[std::make_pair(C->index, G.first->index)];
 
             values[location] += G.second;
+
+            assert(location < nele_jac);
+            assert(location >= 0);
         }
     }
 
@@ -302,6 +307,7 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
                 = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
 
             assert(location < nele_hess);
+            assert(location >= 0);
 
             values[location] = obj_factor * E.second;
         }
@@ -319,6 +325,9 @@ bool IpoptProblem::eval_h(Index n, const Number* x, [[maybe_unused]] bool new_x,
         {
             int location
                 = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->index, E.first.second->index)];
+
+            assert(location < nele_hess);
+            assert(location >= 0);
 
             values[location] += lambda[C->index] * E.second;
         }
@@ -739,6 +748,7 @@ void NLPSolverIpoptBase::setInitialSettings()
     }
 
     // ipoptApplication->Options()->SetStringValue("fixed_variable_treatment", "make_parameter");
+    // ipoptApplication->Options()->SetStringValue("hessian_approximation", "limited-memory");
 
     switch(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")))
     {
@@ -769,8 +779,8 @@ void NLPSolverIpoptBase::setInitialSettings()
         ipoptApplication->Options()->SetStringValue("sb", "yes");
     }
 
-    // ipoptApplication->Options()->SetStringValue("derivative_test", "second-order");
-    // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "yes");
+    // ipoptApplication->Options()->SetStringValue("derivative_test", "sencond-order");
+    // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "no");
 
     ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
     ipoptApplication->Options()->SetStringValue("mu_strategy", "adaptive", true, true);
