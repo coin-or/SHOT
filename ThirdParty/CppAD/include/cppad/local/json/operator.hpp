@@ -36,34 +36,41 @@ $head json_op_enum$$
 In the $code local::json$$ namespace:
 $srccode%hpp% BEGIN_SORT_THIS_LINE_PLUS_2 */
     enum json_op_enum  {
-        abs_json_op,   // 1 result, 1 argument
-        acosh_json_op, // 1 result, 1 argument
-        acos_json_op,  // 1 result, 1 argument
-        add_json_op,   // 1 result, 2 arguments
-        asinh_json_op, // 1 result, 1 argument
-        asin_json_op,  // 1 result, 1 argument
-        atanh_json_op, // 1 result, 1 argument
-        atan_json_op,  // 1 result, 1 argument
-        atom_json_op,  // variable number of results and arguments
-        cosh_json_op,  // 1 result, 1 argument
-        cos_json_op,   // 1 result, 1 argument
-        div_json_op,   // 1 result, 2 arguments
-        erf_json_op,   // 1 result, 1 argument
-        erfc_json_op,  // 1 result, 1 argument
-        exp_json_op,   // 1 result, 1 argument
-        expm1_json_op, // 1 result, 1 argument
-        log1p_json_op, // 1 result, 1 argument
-        log_json_op,   // 1 result, 1 argument
-        mul_json_op,   // 1 result, 2 arguments
-        sign_json_op,  // 1 result, 1 argument
-        sinh_json_op,  // 1 result, 1 argument
-        sin_json_op,   // 1 result, 1 argument
-        sqrt_json_op,  // 1 result, 1 argument
-        sub_json_op,   // 1 result, 2 arguments
-        sum_json_op,   // 1 result, variable number of arguments
-        tanh_json_op,  // 1 result, 1 argument
-        tan_json_op,   // 1 result, 1 argument
-        n_json_op      // number of operators defined so far
+        abs_json_op,      // 1 result, 1 argument
+        acos_json_op,     // 1 result, 1 argument
+        acosh_json_op,    // 1 result, 1 argument
+        add_json_op,      // 1 result, 2 arguments
+        asin_json_op,     // 1 result, 1 argument
+        asinh_json_op,    // 1 result, 1 argument
+        atan_json_op,     // 1 result, 1 argument
+        atanh_json_op,    // 1 result, 1 argument
+        atom_json_op,     // variable number of results and arguments
+        cexp_eq_json_op,  // 1 result, 4 arguments
+        cexp_le_json_op,  // 1 result, 4 arguments
+        cexp_lt_json_op,  // 1 result, 4 arguments
+        comp_eq_json_op,  // 0 result, 2 arguments
+        comp_le_json_op,  // 0 result, 2 arguments
+        comp_lt_json_op,  // 0 result, 2 arguments
+        comp_ne_json_op,  // 0 result, 2 arguments
+        cos_json_op,      // 1 result, 1 argument
+        cosh_json_op,     // 1 result, 1 argument
+        div_json_op,      // 1 result, 2 arguments
+        erf_json_op,      // 1 result, 1 argument
+        erfc_json_op,     // 1 result, 1 argument
+        exp_json_op,      // 1 result, 1 argument
+        expm1_json_op,    // 1 result, 1 argument
+        log1p_json_op,    // 1 result, 1 argument
+        log_json_op,      // 1 result, 1 argument
+        mul_json_op,      // 1 result, 2 arguments
+        sign_json_op,     // 1 result, 1 argument
+        sin_json_op,      // 1 result, 1 argument
+        sinh_json_op,     // 1 result, 1 argument
+        sqrt_json_op,     // 1 result, 1 argument
+        sub_json_op,      // 1 result, 2 arguments
+        sum_json_op,      // 1 result, variable number of arguments
+        tan_json_op,      // 1 result, 1 argument
+        tanh_json_op,     // 1 result, 1 argument
+        n_json_op         // number of operators defined so far
     };
 /* END_SORT_THIS_LINE_MINUS_3 %$$
 
@@ -71,13 +78,23 @@ $head json_op_struct$$
 In the $code local::json$$ namespace:
 $srccode%hpp% */
     struct json_op_struct {
-        size_t        n_result;     // number of resuts for this usage
-        size_t        n_arg;        // number of arguments for this usage
-        size_t        start_arg;    // index where the arguments start
-        size_t        atomic_index; // non-zero for atomic functions
-        json_op_enum  op_enum;      // which operator is being used
+        size_t        n_result;   // number of resuts for this usage
+        size_t        n_arg;      // number of arguments for this usage
+        size_t        start_arg;  // index where the arguments start
+        size_t        extra;      // extra information for certain operators
+        json_op_enum  op_enum;    // which operator is being used
     };
 /* %$$
+The $code extra$$ field is only defined for the following operators
+$table
+$icode op_enum$$   $cnext $pre  $$ $icode extra$$ $rnext
+$cref/Atomic Functions/json_op_define/Atomic Functions/$$ $cnext
+    $pre  $$ $cref atomic_index$$
+$rnext
+$cref/compare/json_op_define/Compare Operators/$$ $cnext
+    $pre  $$ 1 if result it true, 0 otherwise
+$tend
+
 
 $head op_name2enum$$
 This is a mapping from the operator name to its enum value.

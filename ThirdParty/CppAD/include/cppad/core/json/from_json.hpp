@@ -196,8 +196,8 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             // argument to graph operator
             arg[j]  = addr_t( operator_arg[start_arg + j] );
             CPPAD_ASSERT_KNOWN( size_t(arg[j]) < start_result,
-                "from_json graph op argument index is less that or equal\n"
-                "the starting index for its results"
+                "from_json graph op argument index is less than\n"
+                "the starting index for the next result"
             );
             CPPAD_ASSERT_UNKNOWN( node2fun[ arg[j] ] != 0 );
             //
@@ -221,9 +221,119 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
         //
         addr_t i_result = 0; // invalid value
         // -------------------------------------------------------------------
+        // conditional expressions
+        // -------------------------------------------------------------------
+        if( op_enum == local::json::cexp_eq_json_op ||
+            op_enum == local::json::cexp_le_json_op ||
+            op_enum == local::json::cexp_lt_json_op )
+        {   CPPAD_ASSERT_UNKNOWN( n_result == 1 && n_arg == 4 );
+            // cop
+            CompareOp cop;
+            if( op_enum == local::json::cexp_eq_json_op )
+                cop = CompareEq;
+            else if ( op_enum == local::json::cexp_le_json_op )
+                cop = CompareLe;
+            else
+                cop = CompareLt;
+            //
+            if( n_var_arg == 0 )
+            {   if( n_dyn_arg == 0 )
+                {   // result is a constant parameter
+                    Base result = CondExpOp(cop,
+                        parameter[arg[0]],  // left
+                        parameter[arg[1]],  // right
+                        parameter[arg[2]],  // if_true
+                        parameter[arg[3]]   // if_false
+                    );
+                    i_result = rec.put_con_par(result);
+                }
+                else
+                {   i_result = rec.put_dyn_cond_exp(
+                        nan, cop, arg[0], arg[1], arg[2], arg[3]
+                    );
+                }
+            }
+            else
+            {   // flag marking which arguments are variables
+                addr_t flag = 0;
+                addr_t bit  = 1;
+                for(size_t j = 0; j < 4; ++j)
+                {   if( type_x[j] == variable_enum )
+                        flag |= bit;
+                    bit = 2 * bit;
+                }
+                CPPAD_ASSERT_UNKNOWN( flag != 0 );
+                rec.PutArg(addr_t(cop), flag, arg[0], arg[1], arg[2], arg[3]);
+                i_result = rec.PutOp(local::CExpOp);
+            }
+        }
+        // -------------------------------------------------------------------
+        // compare operators
+        // -------------------------------------------------------------------
+        else if(
+            op_enum == local::json::comp_eq_json_op ||
+            op_enum == local::json::comp_le_json_op ||
+            op_enum == local::json::comp_lt_json_op ||
+            op_enum == local::json::comp_ne_json_op )
+        {   CPPAD_ASSERT_UNKNOWN( n_result == 0 && n_arg == 2 );
+            //
+            bool var_left  = type_x[0] == variable_enum;
+            bool var_right = type_x[1] == variable_enum;
+            bool dyn_left  = type_x[0] == dynamic_enum;
+            bool dyn_right = type_x[1] == dynamic_enum;
+            //
+            ax.resize(n_arg);
+            // ax[0]
+            if( var_left | dyn_left )
+                ax[0].taddr_ = arg[0];
+            else
+                ax[0].value_ = parameter_x[0];
+            // ax[1]
+            if( var_right | dyn_right )
+                ax[1].taddr_ = arg[1];
+            else
+                ax[1].value_ = parameter_x[1];
+            //
+            bool result;
+            switch( op_enum )
+            {
+                case local::json::comp_eq_json_op:
+                result = true;
+                rec.comp_eq(
+                var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
+                );
+                break;
+
+                case local::json::comp_le_json_op:
+                result = true;
+                rec.comp_le(
+                var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
+                );
+                break;
+
+                case local::json::comp_lt_json_op:
+                result = true;
+                rec.comp_lt(
+                var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
+                );
+                break;
+
+                case local::json::comp_ne_json_op:
+                result = false;
+                rec.comp_eq(
+                var_left, var_right, dyn_left, dyn_right, ax[0], ax[1], result
+                );
+                break;
+
+
+                default:
+                CPPAD_ASSERT_UNKNOWN(false);
+            }
+        }
+        // -------------------------------------------------------------------
         // sum operator
         // -------------------------------------------------------------------
-        if( op_enum == local::json::sum_json_op )
+        else if( op_enum == local::json::sum_json_op )
         {
             CPPAD_ASSERT_KNOWN( n_result == 1 ,
                 "Json: sum operator: n_result is not 1"
@@ -292,8 +402,7 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
         else if( op_enum == local::json::atom_json_op )
         {   //
             // atomic_index
-            size_t atomic_index = json_op.atomic_index;
-            CPPAD_ASSERT_UNKNOWN( atomic_index != 0 );
+            size_t atomic_index = json_op.extra;
             //
             // afun
             bool         set_null = false;
@@ -955,7 +1064,7 @@ void CppAD::ADFun<Base,RecBase>::from_json(const std::string& graph)
             }
         }
         // case where node_type and node2fun for the results are set above
-        if( op_enum != local::json::atom_json_op )
+        if( op_enum != local::json::atom_json_op && n_result != 0 )
         {   // set node_type and node2fun for result
             //
             CPPAD_ASSERT_UNKNOWN( i_result != 0 );
