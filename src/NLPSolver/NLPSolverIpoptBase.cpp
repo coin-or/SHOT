@@ -119,6 +119,22 @@ bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init
             }
         }
 
+        if(variableValue < -divergingIterativesTolerance)
+        {
+            variableValue = -0.99 * divergingIterativesTolerance;
+            env->output->outputInfo(fmt::format("  Starting point value for variable with index {} is below diverging "
+                                                "iterates tolerance {}. Setting value to {}.",
+                variableIndex, divergingIterativesTolerance, variableValue));
+        }
+        else if(variableValue > divergingIterativesTolerance)
+        {
+            variableValue = 0.99 * divergingIterativesTolerance;
+
+            env->output->outputInfo(fmt::format("  Starting point value for variable with index {} is above diverging "
+                                                "iterates tolerance {}. Setting value to {}.",
+                variableIndex, divergingIterativesTolerance, variableValue));
+        }
+
         x[variableIndex] = variableValue;
         isInitialized[variableIndex] = true;
     }
@@ -790,6 +806,9 @@ void NLPSolverIpoptBase::setInitialSettings()
     // can make use of this
     if(sourceProblem->properties.isMIQPProblem)
         ipoptApplication->Options()->SetStringValue("hessian_constant", "yes", true, true);
+
+    ipoptApplication->Options()->GetNumericValue(
+        "diverging_iterates_tol", ipoptProblem->divergingIterativesTolerance, "");
 
     setSolverSpecificInitialSettings();
 }

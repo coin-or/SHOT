@@ -32,6 +32,8 @@ public:
     E_NLPSolutionStatus solutionStatus;
     std::string solutionDescription;
 
+    double divergingIterativesTolerance = 1e20;
+
     /** the IpoptProblemclass constructor */
     IpoptProblem(EnvironmentPtr envPtr, NLPSolverIpoptBase* ipoptSolver, ProblemPtr problem);
     ~IpoptProblem() override = default;
