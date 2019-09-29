@@ -727,7 +727,6 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
             sharedOwnerProblem->ADFunctions.subgraph_jac_rev(pointNonlinearSubset, subset);
 
-            const std::vector<size_t>& row(subset.row());
             const std::vector<size_t>& col(subset.col());
             const std::vector<double>& value(subset.val());
 
@@ -839,7 +838,7 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             {
                 for(auto& VAR : variablesInNonlinearExpression)
                 {
-                    if(VAR->properties.nonlinearVariableIndex == variableIndices[i])
+                    if((size_t)VAR->properties.nonlinearVariableIndex == variableIndices[i])
                     {
                         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
                             == gradientSparsityPattern->end())
@@ -1005,8 +1004,8 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
                 {
                     for(auto& V2 : variablesInNonlinearExpression)
                     {
-                        if(V1->properties.nonlinearVariableIndex == rowIndices[i]
-                            && V2->properties.nonlinearVariableIndex == colIndices[i])
+                        if((size_t)V1->properties.nonlinearVariableIndex == rowIndices[i]
+                            && (size_t)V2->properties.nonlinearVariableIndex == colIndices[i])
                         {
                             std::pair<VariablePtr, VariablePtr> variablePair;
 

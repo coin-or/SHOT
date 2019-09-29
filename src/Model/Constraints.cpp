@@ -708,7 +708,7 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
             {
                 for(auto& VAR : variablesInNonlinearExpression)
                 {
-                    if(VAR->properties.nonlinearVariableIndex == variableIndices[i])
+                    if((size_t)VAR->properties.nonlinearVariableIndex == variableIndices[i])
                     {
                         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
                             == gradientSparsityPattern->end())
@@ -876,8 +876,8 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
                 {
                     for(auto& V2 : variablesInNonlinearExpression)
                     {
-                        if(V1->properties.nonlinearVariableIndex == rowIndices[i]
-                            && V2->properties.nonlinearVariableIndex == colIndices[i])
+                        if((size_t)V1->properties.nonlinearVariableIndex == rowIndices[i]
+                            && (size_t)V2->properties.nonlinearVariableIndex == colIndices[i])
                         {
                             std::pair<VariablePtr, VariablePtr> variablePair;
 
