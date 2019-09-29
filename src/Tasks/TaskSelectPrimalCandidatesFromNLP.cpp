@@ -389,10 +389,6 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 }
             }
         }
-        else if(env->problem->properties.numberOfNonlinearConstraints == 0)
-        {
-            // TODO
-        }
         else if(env->problem->properties.numberOfNonlinearConstraints > 0)
         {
             double tmpObj = NLPSolver->getObjectiveValue();
