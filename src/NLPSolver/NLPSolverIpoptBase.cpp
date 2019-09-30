@@ -848,7 +848,7 @@ void NLPSolverIpoptBase::setInitialSettings()
         ipoptApplication->Options()->SetStringValue("sb", "yes");
     }
 
-    // ipoptApplication->Options()->SetStringValue("derivative_test", "sencond-order");
+    // ipoptApplication->Options()->SetStringValue("derivative_test", "second-order");
     // ipoptApplication->Options()->SetStringValue("derivative_test_print_all", "no");
 
     ipoptApplication->Options()->SetNumericValue("bound_relax_factor", 1e-10, true, true);
