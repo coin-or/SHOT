@@ -466,7 +466,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
 
     if(fs::filesystem::exists(colFile))
     {
-        auto variableNames = Utilities::getLinesInFile(colFile);
+        auto variableNames = Utilities::getLinesInFile(colFile.string());
 
         if(variableNames.size() != problem->allVariables.size())
         {
@@ -483,7 +483,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
 
     if(fs::filesystem::exists(rowFile))
     {
-        auto constraintNames = Utilities::getLinesInFile(rowFile);
+        auto constraintNames = Utilities::getLinesInFile(rowFile.string());
 
         if(constraintNames.size() != problem->numericConstraints.size() + 1) // Last one is objective
         {
