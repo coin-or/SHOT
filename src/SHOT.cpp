@@ -69,33 +69,67 @@ int main(int argc, char* argv[])
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                                 "───────────────────────────────────╴\r\n");
 
-        env->output->outputCritical("  Usage: SHOT PROBLEMFILE [OPTIONS]");
+        env->output->outputCritical("  Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
         env->output->outputCritical("");
         env->output->outputCritical("  SHOT has been compiled with support for the following problem formats ");
 
-        env->output->outputCritical("   OSiL (.osil or .xml) ");
         env->output->outputCritical("   AMPL (.nl) ");
 #ifdef HAS_GAMS
         env->output->outputCritical("   GAMS (.gms) ");
 #endif
+        env->output->outputCritical("   OSiL (.osil or .xml) ");
         env->output->outputCritical("");
-        env->output->outputCritical("  The following command line options can also be used:");
+        env->output->outputCritical("  The following command line arguments can also be used:");
         env->output->outputCritical("");
-        env->output->outputCritical("   --opt [FILE]           Reads in options from FILE in GAMS format");
-        env->output->outputCritical("                          If FILE is empty, a new options file will be created");
-        env->output->outputCritical("   --osol [FILE]          Reads in options from FILE in OSoL format");
-        env->output->outputCritical("                          If FILE is empty, a new options file will be created");
-        env->output->outputCritical("   --osrl FILE            Sets the filename for the OSrL result file");
-        env->output->outputCritical("   --trc FILE             Sets the filename for the GAMS trace file");
-        env->output->outputCritical("   --log FILE             Sets the filename for the log file");
-        env->output->outputCritical("   --AMPL                 Activates ASL support. Only to be used with AMPL-files");
+        env->output->outputCritical("   --AMPL                   Activates ASL support. Only to be used with nl-files");
+        env->output->outputCritical("   --debug                  Activates the debug mode");
+        env->output->outputCritical("   --log FILE               Sets the filename for the log file");
+        env->output->outputCritical("   --opt [FILE]             Reads in options from FILE in GAMS format");
+        env->output->outputCritical("                            If FILE is empty, a new options file will be created");
+        env->output->outputCritical("   --osol [FILE]            Reads in options from FILE in OSoL format");
+        env->output->outputCritical("                            If FILE is empty, a new options file will be created");
+        env->output->outputCritical("   --osrl FILE              Sets the filename for the OSrL result file");
+        env->output->outputCritical(
+            "   --trc [FILE]             Prints a trace file to <problemname>.trc or specified filename");
+        env->output->outputCritical("");
+        env->output->outputCritical("");
+        env->output->outputCritical("  It is possible to specify options directly using the the command line:");
+        env->output->outputCritical("");
+        env->output->outputCritical("   OPTIONNAME=VALUE OPTIONNAME=VALUE ...");
+        env->output->outputCritical("");
+        env->output->outputCritical("  See the documentation for valid options. For example:");
+        env->output->outputCritical("");
+        env->output->outputCritical("   Termination.TimeLimit=100.0   Sets the time limit to 100 seconds");
+        env->output->outputCritical("");
+        env->output->outputCritical("  Can also use the following shorthand options:");
+        env->output->outputCritical("");
+        env->output->outputCritical("   --convex                 Assumes the problem is convex");
+#ifdef HAS_CBC
+        env->output->outputCritical("   --mip=cbc                Sets the MIP solver to Cbc");
+#endif
+#ifdef HAS_CPLEX
+        env->output->outputCritical("   --mip=cplex              Sets the MIP solver to Cplex");
+#endif
+#ifdef HAS_GUROBI
+        env->output->outputCritical("   --mip=gurobi             Sets the MIP solver to Gurobi");
+#endif
+#ifdef HAS_GAMS
+        env->output->outputCritical("   --nlp={ipopt, gams}      Sets the NLP solver to use");
+#endif
+#ifdef HAS_CPLEX
+        env->output->outputCritical("   --tree={single, multi}   Activates single- or multi-tree strategy");
+#elif HAS_GUROBI
+
+        env->output->outputCritical("   --tree={single, multi}   Activates single- or multi-tree strategy");
+#endif
+        env->output->outputCritical("   --threads=VALUE          Sets the maximum number of threads to use");
+        env->output->outputCritical("   --absgap=VALUE           Sets the absolute objective gap tolerance");
+        env->output->outputCritical("   --relgap=VALUE           Sets the relative objective gap tolerance");
+        env->output->outputCritical("   --timelimit=VALUE        Sets the time-limit in seconds");
+        env->output->outputCritical("");
 
         return (0);
     }
-
-    // Check if we want to use the ASL calling format
-    if(cmdl["--AMPL"])
-        useASL = true;
 
     // Read or create options file
 
@@ -185,6 +219,115 @@ int main(int argc, char* argv[])
     }
 
     // Reads options specified in the command line arguments
+
+    if(cmdl["--AMPL"])
+    {
+        useASL = true;
+
+        // We always want to write to where the problem is when called by ASL
+        solver->updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
+    }
+
+    if(cmdl["--convex"])
+        solver->updateSetting("AssumeConvex", "Convexity", true);
+
+    if(cmdl["--debug"])
+        solver->updateSetting("Debug.Enable", "Output", true);
+
+    std::string argValue;
+
+    if(cmdl("--mip") >> argValue)
+    {
+#ifdef HAS_CBC
+        if(argValue == "cbc")
+            solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+#endif
+#ifdef HAS_CPLEX
+        if(argValue == "cplex")
+            solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+#endif
+#ifdef HAS_GUROBI
+        if(argValue == "gurobi")
+            solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
+#endif
+    }
+
+    if(cmdl("--nlp") >> argValue)
+    {
+#ifdef HAS_GAMS
+        if(argValue == "gams")
+            solver->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
+#endif
+#ifdef HAS_IPOPT
+        if(argValue == "ipopt")
+            solver->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
+#endif
+    }
+
+    if(cmdl("--tree") >> argValue)
+    {
+#ifdef HAS_CPLEX
+        if(argValue == "single")
+            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+        else if(argValue == "multi")
+            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+#endif
+#ifdef HAS_GUROBI
+        if(argValue == "single")
+            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+        else if(argValue == "multi")
+            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+#endif
+    }
+
+    if(cmdl("--threads") >> argValue)
+    {
+        try
+        {
+            solver->updateSetting("MIP.NumberOfThreads", "Dual", std::stoi(argValue));
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputCritical("  Cannot read value for parameter 'threads'");
+        }
+    }
+
+    if(cmdl("--absgap") >> argValue)
+    {
+        try
+        {
+            solver->updateSetting("ObjectiveGap.Absolute", "Termination", std::stod(argValue));
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputCritical("  Cannot read value for parameter 'absgap'");
+        }
+    }
+
+    if(cmdl("--relgap") >> argValue)
+    {
+        try
+        {
+            solver->updateSetting("ObjectiveGap.Relative", "Termination", std::stod(argValue));
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputCritical("  Cannot read value for parameter 'relgap'");
+        }
+    }
+
+    if(cmdl("--timelimit") >> argValue)
+    {
+        try
+        {
+            solver->updateSetting("TimeLimit", "Termination", std::stod(argValue));
+        }
+        catch(const std::exception& e)
+        {
+            env->output->outputCritical("  Cannot read value for parameter 'timelimit'");
+        }
+    }
+
     for(auto& ARG : cmdl.pos_args())
     {
         int dotLocation = ARG.find('.');
@@ -297,15 +440,11 @@ int main(int argc, char* argv[])
         }
     }
 
-    // We always want to write to where the problem is when called by ASL
-    if(useASL)
-        solver->updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
-
     // Read problem file
 
     if(!cmdl(1) || !(cmdl(1) >> filename))
     {
-        env->output->outputCritical("  No problem file specified.");
+        env->output->outputCritical("  No problem file specified.\r\n");
         env->output->outputCritical("  Try 'SHOT --help' for more information.");
         return (0);
     }
@@ -338,22 +477,25 @@ int main(int argc, char* argv[])
 
     // Define result file locations
 
-    if(cmdl("--osrl") >> filename) // Have specified a OSrL-file location
+    std::string osrlFilename;
+    if(cmdl("--osrl") >> osrlFilename) // Have specified a OSrL-file location
     {
         resultFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
-            / fs::filesystem::path(filename);
+            / fs::filesystem::path(osrlFilename);
     }
 
-    if(cmdl("--trc") >> filename) // Have specified a trace-file location
+    std::string trcFilename;
+    if(cmdl("--trc") >> trcFilename) // Have specified a trace-file location
     {
         traceFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
-            / fs::filesystem::path(filename);
+            / fs::filesystem::path(trcFilename);
     }
 
-    if(cmdl("--sol") >> filename) // Have specified an sol-file location
+    std::string solFilename;
+    if(cmdl("--sol") >> solFilename) // Have specified an sol-file location
     {
         solFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
-            / fs::filesystem::path(filename);
+            / fs::filesystem::path(solFilename);
     }
 
     env->report->outputOptionsReport();
@@ -391,7 +533,7 @@ int main(int argc, char* argv[])
             env->output->outputInfo(" Results written to: " + resultFile.string());
     }
 
-    if(cmdl("--trc"))
+    if(cmdl["--trc"] || cmdl("--trc"))
     {
         std::string trace = solver->getResultsTrace();
 
@@ -415,7 +557,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if(cmdl("--sol") || useASL)
+    if(cmdl["--sol"] || cmdl("--sol") || useASL)
     {
         std::string sol = solver->getResultsSol();
 
@@ -438,7 +580,15 @@ int main(int argc, char* argv[])
         }
     }
 
-    env->output->outputInfo("\r\n Log written to:     " + logFile.string());
+    env->output->outputInfo("\r\n");
+    env->output->outputInfo(" Log written to:     " + logFile.string());
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+    {
+        auto debugDirectory = fs::filesystem::current_path()
+            / fs::filesystem::path(env->settings->getSetting<std::string>("Debug.Path", "Output"));
+        env->output->outputInfo(" Debug directory:    " + debugDirectory.string());
+    }
 
     return (0);
 }
