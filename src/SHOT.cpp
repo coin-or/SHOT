@@ -44,6 +44,7 @@ int main(int argc, char* argv[])
     cmdl.add_params({ "--opt", "--osol" });
     cmdl.add_params({ "--osrl", "--trc", "--log" });
     cmdl.add_params({ "--sol" });
+    cmdl.add_params({ "--debug" });
 
     cmdl.parse(argc, argv);
 
@@ -82,7 +83,9 @@ int main(int argc, char* argv[])
         env->output->outputCritical("  The following command line arguments can also be used:");
         env->output->outputCritical("");
         env->output->outputCritical("   --AMPL                   Activates ASL support. Only to be used with nl-files");
-        env->output->outputCritical("   --debug                  Activates the debug mode");
+        env->output->outputCritical("   --debug [DIRECTORY]      Saves debug information in the specified directory");
+        env->output->outputCritical(
+            "                            If DIRECTORY is empty 'debug/<problem_name>/' is used");
         env->output->outputCritical("   --log FILE               Sets the filename for the log file");
         env->output->outputCritical("   --opt [FILE]             Reads in options from FILE in GAMS format");
         env->output->outputCritical("                            If FILE is empty, a new options file will be created");
@@ -233,6 +236,13 @@ int main(int argc, char* argv[])
 
     if(cmdl["--debug"])
         solver->updateSetting("Debug.Enable", "Output", true);
+
+    std::string debugPath;
+    if(cmdl("--debug") >> debugPath)
+    {
+        solver->updateSetting("Debug.Enable", "Output", true);
+        solver->updateSetting("Debug.Path", "Output", debugPath);
+    }
 
     std::string argValue;
 

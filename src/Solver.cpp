@@ -203,21 +203,34 @@ bool Solver::setProblem(std::string fileName)
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
     env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
 
+    // Sets the debug path if not already set
+    if(env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
+    {
+        if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
+            == ES_OutputDirectory::Program)
+        {
+            fs::filesystem::path debugPath(fs::filesystem::current_path());
+            debugPath /= problemName;
+
+            env->settings->updateSetting("Debug.Path", "Output", "debug/" + problemName.string());
+        }
+        else
+        {
+            fs::filesystem::path debugPath(problemPath);
+            debugPath /= problemName;
+
+            env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
+        }
+    }
+
+    // Sets the result path
     if(static_cast<ES_OutputDirectory>(env->settings->getSetting<int>("OutputDirectory", "Output"))
         == ES_OutputDirectory::Program)
     {
-        fs::filesystem::path debugPath(fs::filesystem::current_path());
-        debugPath /= problemName;
-
-        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problemName.string());
         env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path().string());
     }
     else
     {
-        fs::filesystem::path debugPath(problemPath);
-        debugPath /= problemName;
-
-        env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
         env->settings->updateSetting("ResultPath", "Output", problemPath.string());
     }
 
