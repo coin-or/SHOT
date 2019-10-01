@@ -1801,15 +1801,30 @@ public:
         if(secondChild->getMonotonicity() != E_Monotonicity::Constant)
             return (false);
 
-        double exponentValue = secondChild->getBounds().l();
+        auto baseBounds = firstChild->getBounds();
+        double power = secondChild->getBounds().l();
 
-        if(std::abs(exponentValue - 2.0) <= 1e-10 * std::abs(exponentValue))
-            return (false);
+        double intpart;
+        bool isInteger = (std::modf(power, &intpart) == 0.0);
+        int integerValue = (int)round(intpart);
+        bool isEven = (integerValue % 2 == 0);
 
-        if(bound.l() < 0)
-            return (false);
+        Interval interval(0.0);
 
-        auto interval = sqrt(bound);
+        if(!isInteger && baseBounds.l() <= 0)
+            baseBounds.l(SHOT_DBL_EPS);
+
+        if(std::abs(power - 2.0) <= 2e-10)
+        {
+            interval = pow(bound, 1.0 / power);
+        }
+        else
+        {
+            if(bound.l() < 0)
+                return (false);
+
+            interval = sqrt(bound);
+        }
 
         return (firstChild->tightenBounds(interval));
     };
