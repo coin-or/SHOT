@@ -41,15 +41,15 @@ void ModelingSystemOSiL::updateSettings([[maybe_unused]] SettingsPtr settings) {
 
 E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, const std::string& filename)
 {
-    if(false && !fs::filesystem::exists(fs::filesystem::path (filename)))
+    if(false && !fs::filesystem::exists(fs::filesystem::path(filename)))
     {
         env->output->outputError("Problem file \"" + filename + "\" does not exist.");
 
         return (E_ProblemCreationStatus::FileDoesNotExist);
     }
 
-    fs::filesystem::path  problemFile(filename);
-    fs::filesystem::path  problemPath = problemFile.parent_path();
+    fs::filesystem::path problemFile(filename);
+    fs::filesystem::path problemPath = problemFile.parent_path();
 
     using namespace tinyxml2;
 
