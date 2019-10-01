@@ -1225,32 +1225,25 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             signomialTerms.add(tmpSignomialTerms);
             constant += tmpConstant;
 
-            if(tmpNonlinearExpression == nullptr) // the nonlinear expression has been fully extracted
-            {
-                C = std::make_shared<ExpressionConstant>(0.0);
-            }
-            else
-            {
-                C = tmpNonlinearExpression;
-            }
+            C = tmpNonlinearExpression;
         }
 
-        bool areAllZero = true;
+        NonlinearExpressions children;
 
         for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
         {
-            if(!(C->getType() == E_NonlinearExpressionTypes::Constant
-                   && std::dynamic_pointer_cast<ExpressionConstant>(C)->constant == 0.0))
-            {
-                areAllZero = false;
-                break;
-            }
+            if(C != nullptr)
+                children.push_back(C);
         }
 
-        if(areAllZero)
+        if(children.size() == 0)
+            // The nonlinear expression has been fully extracted
             nonlinearExpression = std::make_shared<ExpressionConstant>(0.0);
         else
+        {
+            std::dynamic_pointer_cast<ExpressionSum>(expression)->children = children;
             nonlinearExpression = expression;
+        }
     }
     else
     {
