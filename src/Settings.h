@@ -167,6 +167,7 @@ public:
     std::string getSettingsAsOSoL();
     std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);
     VectorString getChangedSettings();
+    VectorString getSettingIdentifiers(E_SettingType type);
 
     bool readSettingsFromOSoL(std::string osol);
     bool readSettingsFromString(std::string options);

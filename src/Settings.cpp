@@ -453,6 +453,26 @@ VectorString Settings::getChangedSettings()
     return (result);
 }
 
+VectorString Settings::getSettingIdentifiers(E_SettingType type)
+{
+    VectorString names;
+
+    for(auto& T : settingTypes)
+    {
+        auto key = T.first;
+        std::string name = T.first.second;
+        std::string category = T.first.first;
+
+        if(settingIsPrivate[key])
+            continue; // Do not include an internal setting
+
+        if(T.second == type)
+            names.push_back(fmt::format("{}.{}", category, name));
+    }
+
+    return (names);
+}
+
 bool Settings::readSettingsFromOSoL(std::string osol)
 {
     using namespace tinyxml2;

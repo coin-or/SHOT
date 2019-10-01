@@ -84,6 +84,8 @@ public:
     void updateSetting(std::string name, std::string category, double value);
     void updateSetting(std::string name, std::string category, bool value);
 
+    VectorString getSettingIdentifiers(E_SettingType type);
+
     double getCurrentDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();

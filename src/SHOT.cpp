@@ -43,9 +43,24 @@ int main(int argc, char* argv[])
     argh::parser cmdl;
     cmdl.add_params({ "--opt", "--osol" });
     cmdl.add_params({ "--osrl", "--trc", "--log" });
-    cmdl.add_params({ "--AMPL", "--sol" });
+    cmdl.add_params({ "--sol" });
 
     cmdl.parse(argc, argv);
+
+    for(auto& ARG : cmdl.pos_args())
+    {
+        std::cout << ARG << '\n';
+    }
+
+    for(auto& ARG : cmdl.flags())
+    {
+        std::cout << ARG << '\n';
+    }
+
+    for(auto& ARG : cmdl.params())
+    {
+        std::cout << ARG.first << " " << ARG.second << '\n';
+    }
 
     // Read or create the file for the log
 
@@ -183,6 +198,94 @@ int main(int argc, char* argv[])
 
         env->output->setLogLevels(static_cast<E_LogLevel>(env->settings->getSetting<int>("Console.LogLevel", "Output")),
             static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
+    }
+
+    for(auto& ARG : cmdl.pos_args())
+    {
+        int dotLocation = ARG.find('.');
+
+        if(dotLocation == std::string::npos)
+            continue;
+
+        int equalLocation = ARG.find('=');
+
+        if(equalLocation == std::string::npos)
+            continue;
+
+        if(equalLocation <= dotLocation)
+            continue;
+
+        auto category = ARG.substr(0, dotLocation);
+        auto name = ARG.substr(dotLocation + 1, equalLocation - dotLocation - 1);
+        auto value = ARG.substr(equalLocation + 1, ARG.size());
+
+        bool found = false;
+
+        for(auto& S : solver->getSettingIdentifiers(E_SettingType::String))
+        {
+            if(ARG.find(S) == 0)
+            {
+                solver->updateSetting(name, category, value);
+                found = true;
+                break;
+            }
+        }
+
+        if(found)
+            continue;
+
+        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Boolean))
+        {
+            if(ARG.find(S) == 0)
+            {
+                if(value == "true" || value == "false")
+                    solver->updateSetting(name, category, (value == "true" ? true : false));
+
+                found = true;
+                break;
+            }
+        }
+
+        if(found)
+            continue;
+
+        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Integer))
+        {
+            if(ARG.find(S) == 0)
+            {
+                // Should make sure the conversion works
+                solver->updateSetting(name, category, std::stoi(value));
+                found = true;
+                break;
+            }
+        }
+
+        if(found)
+            continue;
+
+        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Enum))
+        {
+            if(ARG.find(S) == 0)
+            {
+                // Should make sure the conversion works
+                solver->updateSetting(name, category, std::stoi(value));
+                found = true;
+                break;
+            }
+        }
+
+        if(found)
+            continue;
+
+        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Double))
+        {
+            if(ARG.find(S) == 0)
+            {
+                // Should make sure the conversion works
+                solver->updateSetting(name, category, std::stod(value));
+                break;
+            }
+        }
     }
 
     // We always want to write to where the problem is when called by ASL

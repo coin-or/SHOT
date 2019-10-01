@@ -1376,6 +1376,8 @@ void Solver::updateSetting(std::string name, std::string category, bool value)
     env->settings->updateSetting(name, category, value);
 }
 
+VectorString Solver::getSettingIdentifiers(E_SettingType type) { return (env->settings->getSettingIdentifiers(type)); }
+
 double Solver::getCurrentDualBound() { return (env->results->getCurrentDualBound()); }
 
 double Solver::getPrimalBound() { return (env->results->getPrimalBound()); }
