@@ -1395,7 +1395,7 @@ void Problem::doFBBT()
     for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
-        env->output->outputInfo(fmt::format("  Bound tightening pass {} of {}.", i + 1, numberOfIterations));
+        env->output->outputDebug(fmt::format("  Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
         for(auto& C : linearConstraints)
             boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
