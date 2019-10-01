@@ -47,26 +47,10 @@ int main(int argc, char* argv[])
 
     cmdl.parse(argc, argv);
 
-    for(auto& ARG : cmdl.pos_args())
-    {
-        std::cout << ARG << '\n';
-    }
-
-    for(auto& ARG : cmdl.flags())
-    {
-        std::cout << ARG << '\n';
-    }
-
-    for(auto& ARG : cmdl.params())
-    {
-        std::cout << ARG.first << " " << ARG.second << '\n';
-    }
-
-    // Read or create the file for the log
-
     std::string filename;
     fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile;
 
+    // Read or create the file for the log
     if(cmdl("--log") >> filename) // Have specified a log-file
     {
         logFile = fs::filesystem::current_path() / fs::filesystem::path(filename);
@@ -200,6 +184,7 @@ int main(int argc, char* argv[])
             static_cast<E_LogLevel>(env->settings->getSetting<int>("File.LogLevel", "Output")));
     }
 
+    // Reads options specified in the command line arguments
     for(auto& ARG : cmdl.pos_args())
     {
         int dotLocation = ARG.find('.');
@@ -240,6 +225,8 @@ int main(int argc, char* argv[])
             {
                 if(value == "true" || value == "false")
                     solver->updateSetting(name, category, (value == "true" ? true : false));
+                else
+                    env->output->outputCritical("  Cannot read boolean option in " + ARG);
 
                 found = true;
                 break;
@@ -253,8 +240,15 @@ int main(int argc, char* argv[])
         {
             if(ARG.find(S) == 0)
             {
-                // Should make sure the conversion works
-                solver->updateSetting(name, category, std::stoi(value));
+                try
+                {
+                    solver->updateSetting(name, category, std::stoi(value));
+                }
+                catch(const std::exception& e)
+                {
+                    env->output->outputCritical("  Cannot read integer option in " + ARG);
+                }
+
                 found = true;
                 break;
             }
@@ -267,8 +261,15 @@ int main(int argc, char* argv[])
         {
             if(ARG.find(S) == 0)
             {
-                // Should make sure the conversion works
-                solver->updateSetting(name, category, std::stoi(value));
+                try
+                {
+                    solver->updateSetting(name, category, std::stoi(value));
+                }
+                catch(const std::exception& e)
+                {
+                    env->output->outputCritical("  Cannot read integer option in " + ARG);
+                }
+
                 found = true;
                 break;
             }
@@ -281,8 +282,16 @@ int main(int argc, char* argv[])
         {
             if(ARG.find(S) == 0)
             {
-                // Should make sure the conversion works
-                solver->updateSetting(name, category, std::stod(value));
+                try
+                {
+                    solver->updateSetting(name, category, std::stod(value));
+                }
+                catch(const std::exception& e)
+                {
+                    env->output->outputCritical("  Cannot read numeric option in " + ARG);
+                }
+
+                found = true;
                 break;
             }
         }
@@ -350,8 +359,6 @@ int main(int argc, char* argv[])
     env->report->outputOptionsReport();
     env->report->outputProblemInstanceReport();
 
-    // try
-    //{
     if(!solver->solveProblem()) // Solve the problem
     {
         env->output->outputCritical(" Error when solving problem.");
@@ -362,12 +369,6 @@ int main(int argc, char* argv[])
 
     env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                             "───────────────────────────────────╴\r\n");
-    //}
-    /*catch(const std::exception& error)
-    {
-        env->output->outputError(" Error when solving problem", error.what());
-        return (0);
-    }*/
 
     std::string osrl = solver->getResultsOSrL();
 
