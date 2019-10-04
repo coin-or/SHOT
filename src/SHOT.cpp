@@ -74,7 +74,9 @@ int main(int argc, char* argv[])
         env->output->outputCritical("");
         env->output->outputCritical("  SHOT has been compiled with support for the following problem formats ");
 
+#ifdef HAS_AMPL
         env->output->outputCritical("   AMPL (.nl) ");
+#endif
 #ifdef HAS_GAMS
         env->output->outputCritical("   GAMS (.gms) ");
 #endif
@@ -82,7 +84,9 @@ int main(int argc, char* argv[])
         env->output->outputCritical("");
         env->output->outputCritical("  The following command line arguments can also be used:");
         env->output->outputCritical("");
+#ifdef HAS_AMPL
         env->output->outputCritical("   --AMPL                   Activates ASL support. Only to be used with nl-files");
+#endif
         env->output->outputCritical("   --debug [DIRECTORY]      Saves debug information in the specified directory");
         env->output->outputCritical(
             "                            If DIRECTORY is empty 'debug/<problem_name>/' is used");
@@ -222,7 +226,7 @@ int main(int argc, char* argv[])
     }
 
     // Reads options specified in the command line arguments
-
+#if HAS_AMPL
     if(cmdl["--AMPL"])
     {
         useASL = true;
@@ -230,6 +234,7 @@ int main(int argc, char* argv[])
         // We always want to write to where the problem is when called by ASL
         solver->updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
     }
+#endif
 
     if(cmdl["--convex"])
         solver->updateSetting("AssumeConvex", "Convexity", true);
