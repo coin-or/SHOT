@@ -44,6 +44,7 @@ int main(int argc, char* argv[])
     cmdl.add_params({ "--opt", "--osol" });
     cmdl.add_params({ "--osrl", "--trc", "--log" });
     cmdl.add_params({ "--sol" });
+    cmdl.add_params({ "--docs" });
     cmdl.add_params({ "--debug" });
 
     cmdl.parse(argc, argv);
@@ -132,6 +133,16 @@ int main(int argc, char* argv[])
         env->output->outputCritical("");
 
         return (0);
+    }
+
+    // Generate a markup file with the options
+    if(cmdl["--docs"])
+    {
+        std::string markup = env->settings->getSettingsAsMarkup();
+
+        auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
+        if(!Utilities::writeStringToFile(filepath.string(), markup))
+            env->output->outputCritical(" Error when writing markup file: " + filepath.string());
     }
 
     // Read or create options file
