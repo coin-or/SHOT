@@ -222,8 +222,7 @@ void Settings::createSetting(
     std::string name, std::string category, int value, std::string description, VectorString enumDesc, bool isPrivate)
 {
     createBaseSetting<int>(name, category, value, description, isPrivate);
-    settingBounds[make_pair(category, name)]
-        = std::make_pair(std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max());
+    settingBounds[make_pair(category, name)] = std::make_pair(0, enumDesc.size() - 1);
 
     for(size_t i = 0; i < enumDesc.size(); i++)
     {
@@ -244,6 +243,21 @@ std::string Settings::getEnumDescriptionList(std::string name, std::string categ
         if(name == std::get<1>(E.first) && category == std::get<0>(E.first))
         {
             desc << std::get<2>(E.first) << ": " << E.second << ". ";
+        }
+    }
+
+    return desc.str();
+}
+
+std::string Settings::getEnumDescriptionListMarkup(std::string name, std::string category)
+{
+    std::stringstream desc;
+
+    for(auto& E : enumDescriptions)
+    {
+        if(name == std::get<1>(E.first) && category == std::get<0>(E.first))
+        {
+            desc << std::get<2>(E.first) << ": " << E.second << " ";
         }
     }
 
@@ -403,6 +417,115 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
         default:
             break;
         }
+    }
+
+    return (ss.str());
+}
+
+std::string Settings::getSettingsAsMarkup()
+{
+    std::stringstream ss;
+
+    std::string currentCategory = "";
+
+    for(auto& T : settingTypes)
+    {
+        auto key = T.first;
+
+        if(settingIsPrivate[key])
+            continue; // Do not include an internal setting
+
+        std::string name = T.first.second;
+        std::string category = T.first.first;
+        std::string fullname = fmt::format("{}.{}", category, name);
+
+        std::string description;
+        std::string validValues;
+        std::string defaultValue;
+
+        if(category != currentCategory)
+        {
+            ss << fmt::format("# {}\n", category);
+            ss << fmt::format("|Name and description|Valid values|Default value|\n");
+            ss << fmt::format("|-|:-:|:-:|\n");
+
+            currentCategory = category;
+        }
+
+        if(settingEnums[key] == true)
+        {
+            description = fmt::format(
+                "**{}**<br>{}<br>{}", fullname, settingDescriptions[key], getEnumDescriptionListMarkup(name, category));
+        }
+        else
+        {
+            description = fmt::format("**{}**<br>{}", fullname, settingDescriptions[key]);
+        }
+
+        PairDouble bounds;
+
+        switch(T.second)
+        {
+        case(E_SettingType::String):
+            validValues = fmt::format("string");
+            defaultValue = getSetting<std::string>(name, category);
+            break;
+
+        case(E_SettingType::Double):
+            bounds = settingBounds[key];
+            validValues = fmt::format("[{},{}]", Utilities::toStringFormat(bounds.first, "{}", true, "∞"),
+                Utilities::toStringFormat(bounds.second, "{}", true, "∞"));
+            defaultValue = fmt::format("{}", getSetting<double>(name, category));
+            break;
+
+        case(E_SettingType::Integer):
+            bounds = settingBounds[key];
+
+            if(std::round(bounds.second) == std::round(bounds.first) + 1)
+            {
+                validValues = fmt::format("{{{},{}}}", bounds.first, bounds.second);
+            }
+            else if(std::round(bounds.second) == SHOT_INT_MAX)
+            {
+                validValues = fmt::format("{{{},...,∞}}", bounds.first);
+            }
+            else
+            {
+                validValues = fmt::format("{{{},...,{}}}", bounds.first, bounds.second);
+            }
+
+            defaultValue = fmt::format("{}", getSetting<int>(name, category));
+            break;
+
+        case(E_SettingType::Enum):
+            bounds = settingBounds[key];
+
+            if(std::round(bounds.second) == std::round(bounds.first) + 1)
+            {
+                validValues = fmt::format("{{{},{}}}", bounds.first, bounds.second);
+            }
+            else if(std::round(bounds.second) == SHOT_INT_MAX)
+            {
+                validValues = fmt::format("{{{},...,∞}}", bounds.first);
+            }
+            else
+            {
+                validValues = fmt::format("{{{},...,{}}}", bounds.first, bounds.second);
+            }
+
+            defaultValue = fmt::format("{}", getSetting<int>(name, category));
+            break;
+
+        case(E_SettingType::Boolean):
+            validValues = fmt::format("true/false");
+            defaultValue = getSetting<bool>(name, category) ? "true" : "false";
+            break;
+
+        default:
+            break;
+        }
+
+        ss << fmt::format("|{}|{}|{}|\n", description, validValues, defaultValue);
     }
 
     return (ss.str());
