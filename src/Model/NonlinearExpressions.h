@@ -1806,8 +1806,8 @@ public:
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
-        int integerValue = (int)round(intpart);
-        bool isEven = (integerValue % 2 == 0);
+        // int integerValue = (int)round(intpart);
+        // bool isEven = (integerValue % 2 == 0);
 
         Interval interval(0.0);
 
