@@ -110,7 +110,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 }
 
 std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const VectorDouble& ptA, const VectorDouble& ptB,
-    int Nmax, double lambdaTol, double constrTol, const std::vector<NumericConstraint*> constraints,
+    int Nmax, double lambdaTol, [[maybe_unused]] double constrTol, const std::vector<NumericConstraint*> constraints,
     bool addPrimalCandidate = true)
 {
     if(ptA.size() != ptB.size())
@@ -224,7 +224,7 @@ std::pair<VectorDouble, VectorDouble> RootsearchMethodBoost::findZero(const Vect
 }
 
 std::pair<double, double> RootsearchMethodBoost::findZero(const VectorDouble& pt, double objectiveLB,
-    double objectiveUB, int Nmax, double lambdaTol, double constrTol,
+    double objectiveUB, int Nmax, double lambdaTol, [[maybe_unused]] double constrTol,
     const NonlinearObjectiveFunction* objectiveFunction)
 {
     testObjective->solutionPoint = pt;
