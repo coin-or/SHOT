@@ -22,8 +22,9 @@
 #ifdef HAS_GAMS
 #include "ModelingSystem/ModelingSystemGAMS.h"
 #endif
-
+#ifdef HAS_AMPL
 #include "ModelingSystem/ModelingSystemAMPL.h"
+#endif
 #include "ModelingSystem/ModelingSystemOSiL.h"
 
 #include "SolutionStrategy/SolutionStrategySingleTree.h"
@@ -257,6 +258,14 @@ bool Solver::setProblem(std::string fileName)
     }
 #endif
 
+#ifndef HAS_AMPL
+    if(problemExtension == ".nl")
+    {
+        env->output->outputError(" SHOT has not been compiled with support for AMPL .nl files.");
+        return (false);
+    }
+#endif
+
     try
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
@@ -276,6 +285,7 @@ bool Solver::setProblem(std::string fileName)
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::OSiL));
         }
 
+#ifdef HAS_AMPL
         if(problemExtension == ".nl")
         {
             auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
@@ -292,6 +302,7 @@ bool Solver::setProblem(std::string fileName)
 
             env->settings->updateSetting("SourceFormat", "Input", static_cast<int>(ES_SourceFormat::NL));
         }
+#endif
 
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
