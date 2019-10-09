@@ -12,8 +12,7 @@
 
 namespace SHOT
 {
-
-double AuxiliaryVariable::calculateAuxiliaryValue(VectorDouble point)
+double AuxiliaryVariable::calculate(const VectorDouble& point) const
 {
     double value = constant;
 
@@ -26,6 +25,21 @@ double AuxiliaryVariable::calculateAuxiliaryValue(VectorDouble point)
         value += nonlinearExpression->calculate(point);
 
     return value;
+}
+
+Interval AuxiliaryVariable::calculate(const IntervalVector& intervalVector) const
+{
+    Interval interval = constant;
+
+    interval += linearTerms.calculate(intervalVector);
+    interval += quadraticTerms.calculate(intervalVector);
+    interval += monomialTerms.calculate(intervalVector);
+    interval += signomialTerms.calculate(intervalVector);
+
+    if(nonlinearExpression)
+        interval += nonlinearExpression->calculate(intervalVector);
+
+    return interval;
 }
 
 std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)

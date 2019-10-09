@@ -57,7 +57,8 @@ public:
         properties.isAuxiliary = true;
     }
 
-    double calculateAuxiliaryValue(VectorDouble point);
+    double calculate(const VectorDouble& point) const;
+    Interval calculate(const IntervalVector& intervalVector) const;
 };
 
 using AuxiliaryVariablePtr = std::shared_ptr<AuxiliaryVariable>;
