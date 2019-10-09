@@ -28,7 +28,10 @@ endif()
 
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
-# Activates extra functionality, note that corresponding libraries are needed
+# Activates extra functionality, note that corresponding libraries may be needed
+
+# AMPL
+option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
@@ -113,6 +116,10 @@ file(TO_CMAKE_PATH "${GAMS_DIR}" ${GAMS_DIR})
 file(TO_CMAKE_PATH "${GUROBI_DIR}" ${GUROBI_DIR})
 file(TO_CMAKE_PATH "${IPOPT_DIR}" ${IPOPT_DIR})
 
+if(HAS_AMPL)
+  add_definitions(-DHAS_AMPL)
+endif(HAS_AMPL)
+
 if(HAS_GAMS)
   add_definitions(-DHAS_GAMS)
 endif(HAS_GAMS)
@@ -177,7 +184,6 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/TaskHandler.cpp"
      "${PROJECT_SOURCE_DIR}/src/Utilities.cpp"
      "${PROJECT_SOURCE_DIR}/src/Simplifications.cpp"
-     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.cpp"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
      "${PROJECT_SOURCE_DIR}/src/MIPSolver/IMIPSolutionLimitStrategy.cpp"
@@ -193,14 +199,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/SolutionStrategy/*.cpp"
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.cpp"
      "${PROJECT_SOURCE_DIR}/src/Settings.cpp"
-     "${TINYXML2_DIR}/tinyxml2.cpp"
-     "${AMPL_DIR}/src/expr-info.cc"
-     "${AMPL_DIR}/src/format.cc"
-     "${AMPL_DIR}/src/gen-expr-info.cc"
-     "${AMPL_DIR}/src/nl-reader.cc"
-     "${AMPL_DIR}/src/posix.cc"
-     "${AMPL_DIR}/src/problem.cc"
-     "${AMPL_DIR}/src/os.cc")
+     "${TINYXML2_DIR}/tinyxml2.cpp")
 
 # Adding header files
 file(GLOB_RECURSE
@@ -230,7 +229,6 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/Utilities.h"
      "${PROJECT_SOURCE_DIR}/src/Simplifications.h"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/IModelingSystem.h"
-     "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h"
      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemOSiL.h"
      "${PROJECT_SOURCE_DIR}/src/ConstraintSelectionStrategy/*.h"
      "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/IRootsearchMethod.h"
@@ -252,8 +250,7 @@ file(GLOB_RECURSE
      "${PROJECT_SOURCE_DIR}/src/Tasks/*.h"
      "${PROJECT_SOURCE_DIR}/src/Settings.h"
      "${TINYXML2_DIR}/tinyxml2.h"
-     "${CPPAD_DIR}/include/cppad/cppad.hpp"
-     "${AMPL_DIR}/include/mp/*.h")
+     "${CPPAD_DIR}/include/cppad/cppad.hpp")
 
 if(HAS_CBC)
   if(CBC_FOUND)
@@ -294,6 +291,19 @@ if(HAS_IPOPT)
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
 endif(HAS_IPOPT)
+
+if(HAS_AMPL)
+  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
+     "${AMPL_DIR}/src/expr-info.cc"
+     "${AMPL_DIR}/src/format.cc"
+     "${AMPL_DIR}/src/gen-expr-info.cc"
+     "${AMPL_DIR}/src/nl-reader.cc"
+     "${AMPL_DIR}/src/posix.cc"
+     "${AMPL_DIR}/src/problem.cc"
+     "${AMPL_DIR}/src/os.cc")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h"
+      "${AMPL_DIR}/include/mp/*.h")
+endif(HAS_AMPL)
 
 if(HAS_GAMS)
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
