@@ -24,8 +24,22 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     for(auto& V : sourceProblem->allVariables)
         originalVariableType.push_back(V->properties.type);
 
-    lowerBounds = sourceProblem->getVariableLowerBounds();
-    upperBounds = sourceProblem->getVariableUpperBounds();
+    updateSettings();
+
+    ipoptProblem = std::make_shared<IpoptProblem>(env, sourceProblem);
+    ipoptApplication = std::make_shared<Ipopt::IpoptApplication>();
+
+    setInitialSettings();
+
+    ipoptProblem->lowerBounds = sourceProblem->getVariableLowerBounds();
+    ipoptProblem->upperBounds = sourceProblem->getVariableUpperBounds();
+
+    Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize();
+
+    if(ipoptStatus != Ipopt::Solve_Succeeded)
+    {
+        env->output->outputError(" Error when initializing Ipopt.");
+    }
 }
 
 NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() = default;

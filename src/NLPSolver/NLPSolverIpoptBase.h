@@ -25,6 +25,15 @@ class NLPSolverIpoptBase;
 class IpoptProblem : public Ipopt::TNLP
 {
 public:
+    VectorInteger fixedVariableIndexes;
+    VectorDouble fixedVariableValues;
+
+    VectorInteger startingPointVariableIndexes;
+    VectorDouble startingPointVariableValues;
+
+    VectorDouble lowerBounds;
+    VectorDouble upperBounds;
+
     bool hasSolution = false;
     VectorDouble variableSolution;
     double objectiveValue;
@@ -35,7 +44,7 @@ public:
     double divergingIterativesTolerance = 1e20;
 
     /** the IpoptProblemclass constructor */
-    IpoptProblem(EnvironmentPtr envPtr, NLPSolverIpoptBase* ipoptSolver, ProblemPtr problem);
+    IpoptProblem(EnvironmentPtr envPtr, ProblemPtr problem);
     ~IpoptProblem() override = default;
 
     /** IPOpt specific methods for defining the nlp problem */
@@ -99,8 +108,6 @@ public:
 private:
     EnvironmentPtr env;
 
-    NLPSolverIpoptBase* ipoptSolver;
-
     ProblemPtr sourceProblem;
 
     std::map<std::pair<int, int>, int> lagrangianHessianCounterPlacement;
@@ -112,20 +119,13 @@ class NLPSolverIpoptBase : virtual public INLPSolver
     friend IpoptProblem;
 
 private:
+    bool hasBeenSolved = false;
+
 protected:
     std::shared_ptr<IpoptProblem> ipoptProblem;
     ProblemPtr sourceProblem;
 
-    std::unique_ptr<Ipopt::IpoptApplication> ipoptApplication;
-
-    VectorInteger fixedVariableIndexes;
-    VectorDouble fixedVariableValues;
-
-    VectorInteger startingPointVariableIndexes;
-    VectorDouble startingPointVariableValues;
-
-    VectorDouble lowerBounds;
-    VectorDouble upperBounds;
+    std::shared_ptr<Ipopt::IpoptApplication> ipoptApplication;
 
     E_NLPSolutionStatus solveProblemInstance() override;
 
@@ -148,7 +148,7 @@ protected:
     std::vector<E_VariableType> originalVariableType;
 
 public:
-    ~NLPSolverIpoptBase() override = default;
+    //~NLPSolverIpoptBase() override = default;
 
     void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void clearStartingPoint() override;

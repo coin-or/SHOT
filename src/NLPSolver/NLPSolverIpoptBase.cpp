@@ -19,10 +19,7 @@ namespace SHOT
 
 using namespace Ipopt;
 
-IpoptProblem::IpoptProblem(EnvironmentPtr envPtr, NLPSolverIpoptBase* solver, ProblemPtr problem)
-    : env(envPtr), ipoptSolver(solver), sourceProblem(problem)
-{
-}
+IpoptProblem::IpoptProblem(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), sourceProblem(problem) {}
 
 bool IpoptProblem::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style)
 {
@@ -48,8 +45,8 @@ bool IpoptProblem::get_bounds_info(Index n, Number* x_l, Number* x_u, Index m, N
 {
     for(int i = 0; i < n; i++)
     {
-        x_l[i] = ipoptSolver->lowerBounds[i];
-        x_u[i] = ipoptSolver->upperBounds[i];
+        x_l[i] = lowerBounds[i];
+        x_u[i] = upperBounds[i];
     }
 
     // Ipopt interprets any number greater than nlp_upper_bound_inf as
@@ -132,11 +129,11 @@ bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init
 
     std::vector<bool> isInitialized(n, false);
 
-    for(size_t k = 0; k < ipoptSolver->startingPointVariableIndexes.size(); k++)
+    for(size_t k = 0; k < startingPointVariableIndexes.size(); k++)
     {
-        int variableIndex = ipoptSolver->startingPointVariableIndexes[k];
+        int variableIndex = startingPointVariableIndexes[k];
 
-        double variableValue = ipoptSolver->startingPointVariableValues[k];
+        double variableValue = startingPointVariableValues[k];
 
         double variableLB = sourceProblem->getVariableLowerBound(variableIndex);
         double variableUB = sourceProblem->getVariableUpperBound(variableIndex);
@@ -628,23 +625,17 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     try
     {
-        updateSettings();
+        Ipopt::ApplicationReturnStatus ipoptStatus;
 
-        ipoptProblem = std::make_shared<IpoptProblem>(env, this, sourceProblem);
-
-        ipoptApplication = std::make_unique<Ipopt::IpoptApplication>();
-
-        setInitialSettings();
-
-        Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize();
-
-        if(ipoptStatus != Ipopt::Solve_Succeeded)
+        if(!hasBeenSolved)
         {
-            env->output->outputError(" Error when initializing Ipopt.");
-            return (E_NLPSolutionStatus::Error);
+            ipoptStatus = ipoptApplication->OptimizeTNLP(ipoptProblem.get());
         }
-
-        ipoptStatus = ipoptApplication->OptimizeTNLP(ipoptProblem.get());
+        else
+        {
+            ipoptStatus = ipoptApplication->ReOptimizeTNLP(ipoptProblem.get());
+            hasBeenSolved = true;
+        }
 
         switch(ipoptStatus)
         {
@@ -708,10 +699,10 @@ double NLPSolverIpoptBase::getObjectiveValue() { return (ipoptProblem->objective
 
 void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-    startingPointVariableIndexes = variableIndexes;
-    startingPointVariableValues = variableValues;
+    ipoptProblem->startingPointVariableIndexes = variableIndexes;
+    ipoptProblem->startingPointVariableValues = variableValues;
 
-    int startingPointSize = startingPointVariableIndexes.size();
+    int startingPointSize = ipoptProblem->startingPointVariableIndexes.size();
 
     if(startingPointSize == 0)
         return;
@@ -720,8 +711,8 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
 
     for(int k = 0; k < startingPointSize; k++)
     {
-        int currVarIndex = startingPointVariableIndexes.at(k);
-        auto currPt = startingPointVariableValues.at(k);
+        int currVarIndex = ipoptProblem->startingPointVariableIndexes.at(k);
+        auto currPt = ipoptProblem->startingPointVariableValues.at(k);
 
         auto currLB = sourceProblem->getVariableLowerBound(currVarIndex);
         auto currUB = sourceProblem->getVariableUpperBound(currVarIndex);
@@ -757,7 +748,7 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
             }
         }
 
-        startingPointVariableValues.at(k) = currPt;
+        ipoptProblem->startingPointVariableValues.at(k) = currPt;
 
         env->output->outputTrace("  Starting point value for " + std::to_string(currVarIndex) + " set: "
             + Utilities::toString(currLB) + " < " + Utilities::toString(currPt) + " < " + Utilities::toString(currUB));
@@ -768,15 +759,15 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
 
 void NLPSolverIpoptBase::clearStartingPoint()
 {
-    startingPointVariableIndexes.clear();
-    startingPointVariableValues.clear();
+    ipoptProblem->startingPointVariableIndexes.clear();
+    ipoptProblem->startingPointVariableValues.clear();
     setInitialSettings();
     setSolverSpecificInitialSettings();
 }
 
-VectorDouble NLPSolverIpoptBase::getVariableLowerBounds() { return (lowerBounds); }
+VectorDouble NLPSolverIpoptBase::getVariableLowerBounds() { return (ipoptProblem->lowerBounds); }
 
-VectorDouble NLPSolverIpoptBase::getVariableUpperBounds() { return (upperBounds); }
+VectorDouble NLPSolverIpoptBase::getVariableUpperBounds() { return (ipoptProblem->upperBounds); }
 
 VectorDouble NLPSolverIpoptBase::getSolution() { return (ipoptProblem->variableSolution); }
 
@@ -868,10 +859,10 @@ void NLPSolverIpoptBase::setInitialSettings()
 
 void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
-    fixedVariableIndexes = variableIndexes;
-    fixedVariableValues = variableValues;
+    ipoptProblem->fixedVariableIndexes = variableIndexes;
+    ipoptProblem->fixedVariableValues = variableValues;
 
-    int size = fixedVariableIndexes.size();
+    int size = ipoptProblem->fixedVariableIndexes.size();
 
     if(size == 0)
         return;
@@ -887,8 +878,8 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
 
     for(int k = 0; k < size; k++)
     {
-        int currVarIndex = fixedVariableIndexes.at(k);
-        double currPt = fixedVariableValues.at(k);
+        int currVarIndex = ipoptProblem->fixedVariableIndexes.at(k);
+        double currPt = ipoptProblem->fixedVariableValues.at(k);
 
         double currLB = sourceProblem->getVariableLowerBound(currVarIndex);
         double currUB = sourceProblem->getVariableUpperBound(currVarIndex);
@@ -933,8 +924,8 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
         if(currPt >= sourceProblem->getVariableLowerBound(currVarIndex)
             && currPt <= sourceProblem->getVariableUpperBound(currVarIndex))
         {
-            lowerBounds.at(currVarIndex) = currPt;
-            upperBounds.at(currVarIndex) = currPt;
+            ipoptProblem->lowerBounds.at(currVarIndex) = currPt;
+            ipoptProblem->upperBounds.at(currVarIndex) = currPt;
         }
         else
         {
@@ -953,21 +944,21 @@ void NLPSolverIpoptBase::unfixVariables()
 {
     env->output->outputDebug(" Starting reset of fixed variables in Ipopt.");
 
-    for(size_t k = 0; k < fixedVariableIndexes.size(); k++)
+    for(size_t k = 0; k < ipoptProblem->fixedVariableIndexes.size(); k++)
     {
-        int currVarIndex = fixedVariableIndexes.at(k);
+        int currVarIndex = ipoptProblem->fixedVariableIndexes.at(k);
         double newLB = lowerBoundsBeforeFix.at(k);
         double newUB = upperBoundsBeforeFix.at(k);
 
-        lowerBounds[currVarIndex] = newLB;
-        upperBounds[currVarIndex] = newUB;
+        ipoptProblem->lowerBounds[currVarIndex] = newLB;
+        ipoptProblem->upperBounds[currVarIndex] = newUB;
 
         env->output->outputDebug("  Resetting initial bounds for variable " + std::to_string(currVarIndex)
             + " lb = " + Utilities::toString(newLB) + " ub = " + Utilities::toString(newUB));
     }
 
-    fixedVariableIndexes.clear();
-    fixedVariableValues.clear();
+    ipoptProblem->fixedVariableIndexes.clear();
+    ipoptProblem->fixedVariableValues.clear();
     lowerBoundsBeforeFix.clear();
     upperBoundsBeforeFix.clear();
 
@@ -979,12 +970,12 @@ void NLPSolverIpoptBase::unfixVariables()
 
 void NLPSolverIpoptBase::updateVariableLowerBound(int variableIndex, double bound)
 {
-    lowerBounds[variableIndex] = bound;
+    ipoptProblem->lowerBounds[variableIndex] = bound;
 }
 
 void NLPSolverIpoptBase::updateVariableUpperBound(int variableIndex, double bound)
 {
-    upperBounds[variableIndex] = bound;
+    ipoptProblem->upperBounds[variableIndex] = bound;
 }
 
 void NLPSolverIpoptBase::updateSettings() {}
