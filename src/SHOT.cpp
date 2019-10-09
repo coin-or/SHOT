@@ -29,15 +29,14 @@ namespace fs = std::experimental;
 #endif
 
 #include <iostream>
-#include <memory>
 #include <string>
 
 using namespace SHOT;
 
 int main(int argc, char* argv[])
 {
-    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
-    auto env = solver->getEnvironment();
+    Solver solver;
+    auto env = solver.getEnvironment();
     bool useASL = false;
 
     argh::parser cmdl;
@@ -55,12 +54,12 @@ int main(int argc, char* argv[])
     if(cmdl("--log") >> filename) // Have specified a log-file
     {
         logFile = fs::filesystem::current_path() / fs::filesystem::path(filename);
-        solver->setLogFile(logFile.string());
+        solver.setLogFile(logFile.string());
     }
     else
     {
         logFile = fs::filesystem::current_path() / fs::filesystem::path("SHOT.log");
-        solver->setLogFile(logFile.string());
+        solver.setLogFile(logFile.string());
     }
 
     env->report->outputSolverHeader();
@@ -167,7 +166,7 @@ int main(int argc, char* argv[])
         else
         {
             // Create option file
-            if(!Utilities::writeStringToFile(filepath.string(), solver->getOptions()))
+            if(!Utilities::writeStringToFile(filepath.string(), solver.getOptions()))
             {
                 env->output->outputCritical("  Error when writing options file: " + filepath.string());
                 return 0;
@@ -203,7 +202,7 @@ int main(int argc, char* argv[])
         else
         {
             // Create OSoL-file
-            if(!Utilities::writeStringToFile(filepath.string(), solver->getOptionsOSoL()))
+            if(!Utilities::writeStringToFile(filepath.string(), solver.getOptionsOSoL()))
             {
                 env->output->outputCritical("  Error when writing OSoL file: " + filepath.string());
                 return 0;
@@ -215,7 +214,7 @@ int main(int argc, char* argv[])
 
     if(!defaultOptionsGenerated)
     {
-        if(!optionsFile.empty() && !solver->setOptionsFromFile(optionsFile.string()))
+        if(!optionsFile.empty() && !solver.setOptionsFromFile(optionsFile.string()))
         {
             env->output->outputCritical("  Cannot set options from file: " + optionsFile.string());
             return (0);
@@ -232,21 +231,21 @@ int main(int argc, char* argv[])
         useASL = true;
 
         // We always want to write to where the problem is when called by ASL
-        solver->updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
+        solver.updateSetting("OutputDirectory", "Output", static_cast<int>(ES_OutputDirectory::Problem));
     }
 #endif
 
     if(cmdl["--convex"])
-        solver->updateSetting("AssumeConvex", "Convexity", true);
+        solver.updateSetting("AssumeConvex", "Convexity", true);
 
     if(cmdl["--debug"])
-        solver->updateSetting("Debug.Enable", "Output", true);
+        solver.updateSetting("Debug.Enable", "Output", true);
 
     std::string debugPath;
     if(cmdl("--debug") >> debugPath)
     {
-        solver->updateSetting("Debug.Enable", "Output", true);
-        solver->updateSetting("Debug.Path", "Output", debugPath);
+        solver.updateSetting("Debug.Enable", "Output", true);
+        solver.updateSetting("Debug.Path", "Output", debugPath);
     }
 
     std::string argValue;
@@ -255,15 +254,15 @@ int main(int argc, char* argv[])
     {
 #ifdef HAS_CBC
         if(argValue == "cbc")
-            solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
+            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cbc));
 #endif
 #ifdef HAS_CPLEX
         if(argValue == "cplex")
-            solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
+            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex));
 #endif
 #ifdef HAS_GUROBI
         if(argValue == "gurobi")
-            solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
+            solver.updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 #endif
     }
 
@@ -271,11 +270,11 @@ int main(int argc, char* argv[])
     {
 #ifdef HAS_GAMS
         if(argValue == "gams")
-            solver->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
+            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::GAMS));
 #endif
 #ifdef HAS_IPOPT
         if(argValue == "ipopt")
-            solver->updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
+            solver.updateSetting("FixedInteger.Solver", "Primal", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
 #endif
     }
 
@@ -283,15 +282,15 @@ int main(int argc, char* argv[])
     {
 #ifdef HAS_CPLEX
         if(argValue == "single")
-            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
         else if(argValue == "multi")
-            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 #endif
 #ifdef HAS_GUROBI
         if(argValue == "single")
-            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
+            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::SingleTree));
         else if(argValue == "multi")
-            solver->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
+            solver.updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 #endif
     }
 
@@ -299,7 +298,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver->updateSetting("MIP.NumberOfThreads", "Dual", std::stoi(argValue));
+            solver.updateSetting("MIP.NumberOfThreads", "Dual", std::stoi(argValue));
         }
         catch(const std::exception& e)
         {
@@ -311,7 +310,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver->updateSetting("ObjectiveGap.Absolute", "Termination", std::stod(argValue));
+            solver.updateSetting("ObjectiveGap.Absolute", "Termination", std::stod(argValue));
         }
         catch(const std::exception& e)
         {
@@ -323,7 +322,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver->updateSetting("ObjectiveGap.Relative", "Termination", std::stod(argValue));
+            solver.updateSetting("ObjectiveGap.Relative", "Termination", std::stod(argValue));
         }
         catch(const std::exception& e)
         {
@@ -335,7 +334,7 @@ int main(int argc, char* argv[])
     {
         try
         {
-            solver->updateSetting("TimeLimit", "Termination", std::stod(argValue));
+            solver.updateSetting("TimeLimit", "Termination", std::stod(argValue));
         }
         catch(const std::exception& e)
         {
@@ -364,11 +363,11 @@ int main(int argc, char* argv[])
 
         bool found = false;
 
-        for(auto& S : solver->getSettingIdentifiers(E_SettingType::String))
+        for(auto& S : solver.getSettingIdentifiers(E_SettingType::String))
         {
             if(ARG.find(S) == 0)
             {
-                solver->updateSetting(name, category, value);
+                solver.updateSetting(name, category, value);
                 found = true;
                 break;
             }
@@ -377,12 +376,12 @@ int main(int argc, char* argv[])
         if(found)
             continue;
 
-        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Boolean))
+        for(auto& S : solver.getSettingIdentifiers(E_SettingType::Boolean))
         {
             if(ARG.find(S) == 0)
             {
                 if(value == "true" || value == "false")
-                    solver->updateSetting(name, category, (value == "true" ? true : false));
+                    solver.updateSetting(name, category, (value == "true" ? true : false));
                 else
                     env->output->outputCritical("  Cannot read boolean option in " + ARG);
 
@@ -394,13 +393,13 @@ int main(int argc, char* argv[])
         if(found)
             continue;
 
-        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Integer))
+        for(auto& S : solver.getSettingIdentifiers(E_SettingType::Integer))
         {
             if(ARG.find(S) == 0)
             {
                 try
                 {
-                    solver->updateSetting(name, category, std::stoi(value));
+                    solver.updateSetting(name, category, std::stoi(value));
                 }
                 catch(const std::exception& e)
                 {
@@ -415,13 +414,13 @@ int main(int argc, char* argv[])
         if(found)
             continue;
 
-        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Enum))
+        for(auto& S : solver.getSettingIdentifiers(E_SettingType::Enum))
         {
             if(ARG.find(S) == 0)
             {
                 try
                 {
-                    solver->updateSetting(name, category, std::stoi(value));
+                    solver.updateSetting(name, category, std::stoi(value));
                 }
                 catch(const std::exception& e)
                 {
@@ -436,13 +435,13 @@ int main(int argc, char* argv[])
         if(found)
             continue;
 
-        for(auto& S : solver->getSettingIdentifiers(E_SettingType::Double))
+        for(auto& S : solver.getSettingIdentifiers(E_SettingType::Double))
         {
             if(ARG.find(S) == 0)
             {
                 try
                 {
-                    solver->updateSetting(name, category, std::stod(value));
+                    solver.updateSetting(name, category, std::stod(value));
                 }
                 catch(const std::exception& e)
                 {
@@ -477,7 +476,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if(!solver->setProblem(filename))
+    if(!solver.setProblem(filename))
     {
         env->output->outputCritical("   Error when reading problem file.");
         return (0);
@@ -516,7 +515,7 @@ int main(int argc, char* argv[])
     env->report->outputOptionsReport();
     env->report->outputProblemInstanceReport();
 
-    if(!solver->solveProblem()) // Solve the problem
+    if(!solver.solveProblem()) // Solve the problem
     {
         env->output->outputCritical(" Error when solving problem.");
         return (0);
@@ -527,7 +526,7 @@ int main(int argc, char* argv[])
     env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                             "───────────────────────────────────╴\r\n");
 
-    std::string osrl = solver->getResultsOSrL();
+    std::string osrl = solver.getResultsOSrL();
 
     if(resultFile.empty())
     {
@@ -550,7 +549,7 @@ int main(int argc, char* argv[])
 
     if(cmdl["--trc"] || cmdl("--trc"))
     {
-        std::string trace = solver->getResultsTrace();
+        std::string trace = solver.getResultsTrace();
 
         if(traceFile.empty())
         {
@@ -574,7 +573,7 @@ int main(int argc, char* argv[])
 
     if(cmdl["--sol"] || cmdl("--sol") || useASL)
     {
-        std::string sol = solver->getResultsSol();
+        std::string sol = solver.getResultsSol();
 
         if(solFile.empty())
         {
