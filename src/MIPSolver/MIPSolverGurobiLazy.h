@@ -39,6 +39,7 @@ class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
 public:
     GRBVar* vars;
     GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr);
+    ~GurobiCallback();
 
 protected:
     void callback() override;

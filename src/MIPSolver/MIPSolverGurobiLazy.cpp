@@ -168,6 +168,10 @@ void GurobiCallback::callback()
                         primalSolution, env->problem->nonlinearConstraints);
                     tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
                 }
+                else
+                {
+                    tmpPt.maxDeviation = PairIndexValue(-1, 0.0);
+                }
 
                 tmpPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
                 tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
@@ -213,6 +217,10 @@ void GurobiCallback::callback()
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
                     tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                }
+                else
+                {
+                    tmpSolPt.maxDeviation = PairIndexValue(-1, 0.0);
                 }
 
                 tmpSolPt.point = solution;
@@ -275,6 +283,10 @@ void GurobiCallback::callback()
                 }
 
                 solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            }
+            else
+            {
+                solutionCandidate.maxDeviation = PairIndexValue(-1, 0.0);
             }
 
             solutionCandidate.point = solution;
@@ -370,12 +382,12 @@ void GurobiCallback::callback()
                 for(size_t i = 0; i < env->reformulatedProblem->auxiliaryVariables.size(); i++)
                 {
                     setSolution(vars[i + primalSol.size()],
-                        env->reformulatedProblem->auxiliaryVariables.at(i)->calculateAuxiliaryValue(primalSol));
+                        env->reformulatedProblem->auxiliaryVariables.at(i)->calculate(primalSol));
                 }
 
                 if(env->reformulatedProblem->auxiliaryObjectiveVariable)
                     setSolution(vars[env->reformulatedProblem->auxiliaryVariables.size() + primalSol.size()],
-                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
+                        env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
                 else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
                     setSolution(vars[env->reformulatedProblem->auxiliaryVariables.size() + primalSol.size()],
                         env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
@@ -506,6 +518,8 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 
     lastUpdatedPrimal = env->results->getPrimalBound();
 }
+
+GurobiCallback::~GurobiCallback() { delete[] vars; }
 
 void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {

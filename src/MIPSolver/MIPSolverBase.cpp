@@ -96,6 +96,10 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
                 tmpPt, env->reformulatedProblem->nonlinearConstraints);
             tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
         }
+        else
+        {
+            tmpSolPt.maxDeviation = PairIndexValue(-1, 0.0);
+        }
 
         lastSolutions.at(i) = tmpSolPt;
     }

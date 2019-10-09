@@ -116,6 +116,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                     = env->problem->getMaxNumericConstraintValue(primalSolution, env->problem->nonlinearConstraints);
                 tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
             }
+            else
+            {
+                tmpPt.maxDeviation = PairIndexValue(-1, 0.0);
+            }
 
             tmpPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
             tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
@@ -163,6 +167,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
                     tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                }
+                else
+                {
+                    tmpSolPt.maxDeviation = PairIndexValue(-1, 0.0);
                 }
 
                 tmpSolPt.point = solution;
@@ -231,6 +239,10 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
                 solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+            }
+            else
+            {
+                solutionCandidate.maxDeviation = PairIndexValue(-1, 0.0);
             }
 
             solutionCandidate.point = solution;
@@ -315,11 +327,11 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
             for(auto& V : env->reformulatedProblem->auxiliaryVariables)
             {
-                tmpVals.add(V->calculateAuxiliaryValue(primalSol));
+                tmpVals.add(V->calculate(primalSol));
             }
 
             if(env->reformulatedProblem->auxiliaryObjectiveVariable)
-                tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculateAuxiliaryValue(primalSol));
+                tmpVals.add(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(primalSol));
             else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
                 tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
