@@ -147,13 +147,11 @@ public:
     void createSetting(
         std::string name, std::string category, std::string value, std::string description, bool isPrivate = false);
 
-    void createSetting(std::string name, std::string category, int value, std::string description,
-        double minVal = std::numeric_limits<double>::lowest(), double maxVal = std::numeric_limits<double>::max(),
-        bool isPrivate = false);
+    void createSetting(std::string name, std::string category, int value, std::string description, double minVal = 0,
+        double maxVal = SHOT_INT_MAX, bool isPrivate = false);
 
     void createSetting(std::string name, std::string category, double value, std::string description,
-        double minVal = std::numeric_limits<double>::lowest(), double maxVal = std::numeric_limits<double>::max(),
-        bool isPrivate = false);
+        double minVal = SHOT_DBL_MIN, double maxVal = SHOT_DBL_MAX, bool isPrivate = false);
 
     void createSetting(std::string name, std::string category, int value, std::string description,
         VectorString enumDesc, bool isPrivate = false);
@@ -162,10 +160,13 @@ public:
         std::string name, std::string category, bool value, std::string description, bool isPrivate = false);
 
     std::string getEnumDescriptionList(std::string name, std::string category);
+    std::string getEnumDescriptionListMarkup(std::string name, std::string category);
     std::string getEnumDescription(std::string name, std::string category);
 
     std::string getSettingsAsOSoL();
     std::string getSettingsAsString(bool showUnchanged, bool showDescriptions);
+    std::string getSettingsAsMarkup();
+
     VectorString getChangedSettings();
     VectorString getSettingIdentifiers(E_SettingType type);
 
