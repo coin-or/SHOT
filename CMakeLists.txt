@@ -293,16 +293,17 @@ if(HAS_IPOPT)
 endif(HAS_IPOPT)
 
 if(HAS_AMPL)
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
-     "${AMPL_DIR}/src/expr-info.cc"
-     "${AMPL_DIR}/src/format.cc"
-     "${AMPL_DIR}/src/gen-expr-info.cc"
-     "${AMPL_DIR}/src/nl-reader.cc"
-     "${AMPL_DIR}/src/posix.cc"
-     "${AMPL_DIR}/src/problem.cc"
-     "${AMPL_DIR}/src/os.cc")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h"
-      "${AMPL_DIR}/include/mp/*.h")
+  set(SOURCES
+      ${SOURCES}
+      "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp"
+      "${AMPL_DIR}/src/expr-info.cc"
+      "${AMPL_DIR}/src/format.cc"
+      "${AMPL_DIR}/src/gen-expr-info.cc"
+      "${AMPL_DIR}/src/nl-reader.cc"
+      "${AMPL_DIR}/src/posix.cc"
+      "${AMPL_DIR}/src/problem.cc"
+      "${AMPL_DIR}/src/os.cc")
+  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h" "${AMPL_DIR}/include/mp/*.h")
 endif(HAS_AMPL)
 
 if(HAS_GAMS)
@@ -340,6 +341,8 @@ include_directories(SYSTEM "${SPDLOG_DIR}")
 include_directories(SYSTEM "${TINYXML2_DIR}/")
 
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
+
+# set(THREADS_PREFER_PTHREAD_FLAG ON) find_package(Threads REQUIRED)
 
 # Creates the SHOT library that is linked to the executable
 add_library(SHOTSolver SHARED ${SOURCES})
