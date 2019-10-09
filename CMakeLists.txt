@@ -32,7 +32,7 @@ option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams26.1" CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR "/opt/gams/gams27.3" CACHE STRING "The base directory where GAMS is located (if available)")
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
@@ -122,7 +122,7 @@ endif(HAS_GAMS)
 if(HAS_CBC)
 
   find_package(CBC)
-  
+
   if(CBC_FOUND)
     link_directories(${CBC_LIBRARY_DIRS})
     include_directories(SYSTEM ${CBC_INCLUDE_DIRS})
@@ -332,10 +332,10 @@ include_directories(SYSTEM "${TINYXML2_DIR}/")
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 
 # Creates the SHOT library that is linked to the executable
-add_library(SHOTSolver  SHARED ${SOURCES})
+add_library(SHOTSolver SHARED ${SOURCES})
 
 # Link the standard library required for std::filesystem (if needed)
-target_link_libraries(SHOTSolver CXX::Filesystem )
+target_link_libraries(SHOTSolver CXX::Filesystem)
 
 # Extra flags for Visual Studio compilers
 if(MSVC)
