@@ -196,6 +196,11 @@ void TaskSolveIteration::run()
                 Utilities::saveVariablePointVectorToFile(tmpMostDevValue, tmpConstrIndex, ss.str());
             }
         }
+        else
+        {
+            currIter->maxDeviationConstraint = -1;
+            currIter->maxDeviation = 0.0;
+        }
 
         if(!env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed)
         {
