@@ -87,11 +87,9 @@ E_ProblemSolutionStatus MIPSolverGurobiLazy::solveProblem()
 
     try
     {
-        if(getDiscreteVariableStatus())
-        {
-            GurobiCallback gurobiCallback = GurobiCallback(gurobiModel->getVars(), env);
-            gurobiModel->setCallback(&gurobiCallback);
-        }
+        gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
+        GurobiCallback gurobiCallback = GurobiCallback(gurobiModel->getVars(), env);
+        gurobiModel->setCallback(&gurobiCallback);
 
         gurobiModel->optimize();
 
