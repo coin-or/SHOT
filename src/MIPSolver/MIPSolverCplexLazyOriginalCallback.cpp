@@ -29,6 +29,8 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
 {
     env = envPtr;
 
+    lastUpdatedPrimal = env->results->getPrimalBound();
+
     std::lock_guard<std::mutex> lock(
         (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
@@ -67,10 +69,9 @@ void HCallbackI::main() // Called at each node...
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
-    auto primalBound = env->results->getPrimalBound();
-
     if(env->results->hasPrimalSolution()
-        && ((isMinimization && lastUpdatedPrimal < primalBound) || (!isMinimization && primalBound > primalBound)))
+        && ((isMinimization && lastUpdatedPrimal < env->results->getPrimalBound())
+               || (!isMinimization && lastUpdatedPrimal > env->results->getPrimalBound())))
     {
         auto primalSol = env->results->primalSolution;
 
@@ -103,7 +104,7 @@ void HCallbackI::main() // Called at each node...
 
         tmpVals.end();
 
-        lastUpdatedPrimal = primalBound;
+        lastUpdatedPrimal = env->results->getPrimalBound();
     }
 
     if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded

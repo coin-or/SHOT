@@ -475,6 +475,8 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 {
     env = envPtr;
+    lastUpdatedPrimal = env->results->getPrimalBound();
+        
     vars = xvars;
 
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;

@@ -49,7 +49,7 @@ public:
     // For minimization problems, the lower bound is the dual while the upper bound is the primal objective value
     // for maximization problems, the lower bound is the primal while the upper bound is the dual objective value
     double currentDualBound;
-    double currentPrimalBound;
+    double currentPrimalBound = NAN;
 
     double globalDualBound;
 

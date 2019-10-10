@@ -29,6 +29,7 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
     std::lock_guard<std::mutex> lock(callbackMutex);
 
     env = envPtr;
+    lastUpdatedPrimal = env->results->getPrimalBound();
 
     cplexVars = vars;
     cplexInst = inst;

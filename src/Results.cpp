@@ -953,7 +953,15 @@ IterationPtr Results::getPreviousIteration()
 
 int Results::getNumberOfIterations() { return (iterations.size()); }
 
-double Results::getPrimalBound() { return (this->currentPrimalBound); }
+double Results::getPrimalBound()
+{
+    if(this->currentPrimalBound != NAN)
+        return (this->currentPrimalBound);
+    else if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+        return (SHOT_DBL_MAX);
+    else
+        return (SHOT_DBL_MIN);
+}
 
 void Results::setPrimalBound(double value)
 {
