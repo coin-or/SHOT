@@ -604,5 +604,7 @@ int main(int argc, char* argv[])
         env->output->outputInfo(" Debug directory:    " + debugDirectory.string());
     }
 
+    env->results = NULL;
+
     return (0);
 }
