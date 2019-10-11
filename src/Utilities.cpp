@@ -348,17 +348,17 @@ std::string toStringFormat(const double value, const std::string& format)
     return (toStringFormat(value, format, true));
 }
 
-std::string toStringFormat(double value, const std::string& format, const bool useInfinitySymbol)
+std::string toStringFormat(double value, const std::string& format, const bool useInfinitySymbol, std::string infLabel)
 {
     std::string str;
 
     if(useInfinitySymbol && value < -1.e20)
     {
-        str = "-inf.";
+        str = "-" + infLabel;
     }
     else if(useInfinitySymbol && value > 1.e20)
     {
-        str = "inf.";
+        str = infLabel;
     }
     else
     {

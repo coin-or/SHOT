@@ -66,7 +66,8 @@ bool isDifferentSelectedElements(
 
 bool isDifferent(const VectorDouble& firstPt, const VectorDouble& secondPt);
 
-std::string toStringFormat(const double value, const std::string& format, const bool useInfinitySymbol);
+std::string toStringFormat(
+    const double value, const std::string& format, const bool useInfinitySymbol, const std::string infLabel = "inf.");
 std::string toStringFormat(const double value, const std::string& format);
 std::string toString(const double value);
 
