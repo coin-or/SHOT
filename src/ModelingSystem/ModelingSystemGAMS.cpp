@@ -994,6 +994,9 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
         }
         catch(const ConstraintNotFoundException& e)
         {
+            delete[] opcodes;
+            delete[] fields;
+            delete[] constants;
             return (false);
         }
     }
@@ -1016,10 +1019,16 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
             }
             catch(const ConstraintNotFoundException& e)
             {
+                delete[] opcodes;
+                delete[] fields;
+                delete[] constants;
                 return (false);
             }
         }
     }
+
+    delete[] opcodes;
+    delete[] fields;
 
     env->output->outputDebug("Finished copying nonlinear expressions between GAMS modeling and SHOT problem objects.");
 
