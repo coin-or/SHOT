@@ -115,7 +115,11 @@ std::ostream& operator<<(std::ostream& stream, ObjectiveFunctionPtr objective);
 class LinearObjectiveFunction : public ObjectiveFunction
 {
 public:
-    LinearObjectiveFunction() { linearTerms = LinearTerms(); }
+    LinearObjectiveFunction()
+    {
+        linearTerms = LinearTerms();
+        direction = E_ObjectiveFunctionDirection::Minimize;
+    }
 
     LinearObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
     {
@@ -181,6 +185,7 @@ public:
     {
         linearTerms = LinearTerms();
         quadraticTerms = QuadraticTerms();
+        direction = E_ObjectiveFunctionDirection::Minimize;
     }
 
     QuadraticObjectiveFunction(E_ObjectiveFunctionDirection objectiveDirection)
