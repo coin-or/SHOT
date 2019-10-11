@@ -558,8 +558,6 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
 
 void MIPSolverOsiCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 {
-    // TODO
-
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
 
