@@ -15,24 +15,6 @@
 
 namespace SHOT
 {
-class MIPSolverGurobiLazy : public MIPSolverGurobi
-{
-public:
-    MIPSolverGurobiLazy(EnvironmentPtr envPtr);
-    ~MIPSolverGurobiLazy() override;
-
-    void checkParameters() override;
-
-    void initializeSolverSettings() override;
-
-    int increaseSolutionLimit(int increment) override;
-    void setSolutionLimit(long limit) override;
-    int getSolutionLimit() override;
-
-    E_ProblemSolutionStatus solveProblem() override;
-
-private:
-};
 
 class GurobiCallback : public GRBCallback, public MIPSolverCallbackBase
 {
@@ -53,5 +35,26 @@ private:
     virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
+};
+
+class MIPSolverGurobiLazy : public MIPSolverGurobi
+{
+public:
+    MIPSolverGurobiLazy(EnvironmentPtr envPtr);
+    ~MIPSolverGurobiLazy() override;
+
+    void checkParameters() override;
+
+    void initializeSolverSettings() override;
+
+    int increaseSolutionLimit(int increment) override;
+    void setSolutionLimit(long limit) override;
+    int getSolutionLimit() override;
+
+    E_ProblemSolutionStatus solveProblem() override;
+
+private:
+    bool isCallbackInitialized = false;
+    std::unique_ptr<GurobiCallback> gurobiCallback;
 };
 } // namespace SHOT

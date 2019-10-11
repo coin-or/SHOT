@@ -37,7 +37,13 @@ MIPSolverGurobi::MIPSolverGurobi(EnvironmentPtr envPtr)
     checkParameters();
 }
 
-MIPSolverGurobi::~MIPSolverGurobi() = default;
+MIPSolverGurobi::~MIPSolverGurobi()
+{
+    objectiveLinearExpression.clear();
+    objectiveQuadraticExpression.clear();
+    constraintLinearExpression.clear();
+    constraintQuadraticExpression.clear();
+}
 
 bool MIPSolverGurobi::initializeProblem()
 {

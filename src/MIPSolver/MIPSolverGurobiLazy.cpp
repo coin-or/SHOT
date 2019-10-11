@@ -87,9 +87,14 @@ E_ProblemSolutionStatus MIPSolverGurobiLazy::solveProblem()
 
     try
     {
+        if(!isCallbackInitialized)
+        {
+            gurobiCallback = std::make_unique<GurobiCallback>(gurobiModel->getVars(), env);
+            isCallbackInitialized = true;
+        }
+
         gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
-        GurobiCallback gurobiCallback = GurobiCallback(gurobiModel->getVars(), env);
-        gurobiModel->setCallback(&gurobiCallback);
+        gurobiModel->setCallback(gurobiCallback.get());
 
         gurobiModel->optimize();
 
@@ -476,7 +481,7 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 {
     env = envPtr;
     lastUpdatedPrimal = env->results->getPrimalBound();
-        
+
     vars = xvars;
 
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
