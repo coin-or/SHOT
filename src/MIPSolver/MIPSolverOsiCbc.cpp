@@ -700,6 +700,38 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
 
 void MIPSolverOsiCbc::deleteMIPStarts() { MIPStarts.clear(); }
 
+void MIPSolverOsiCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+{
+    try
+    {
+        CoinPackedVector cut;
+
+        for(int I : binaryIndexesOnes)
+        {
+            cut.insert(I, 1.0);
+        }
+
+        for(int I : binaryIndexesZeroes)
+        {
+            cut.insert(I, -1.0);
+        }
+
+        osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0, "IC");
+
+        modelUpdated = true;
+
+        env->solutionStatistics.numberOfIntegerCuts++;
+    }
+    catch(CoinError& e)
+    {
+        env->output->outputError("Error when adding term to integer cut in Cbc: ", e.message());
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("Error when adding term to integer cut in Cbc: ", e.what());
+    }
+}
+
 VectorDouble MIPSolverOsiCbc::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();

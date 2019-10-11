@@ -59,10 +59,7 @@ public:
 
     void createHyperplane(Hyperplane hyperplane) override { MIPSolverBase::createHyperplane(hyperplane); }
 
-    void createIntegerCut(
-        [[maybe_unused]] VectorInteger& binaryIndexesOnes, [[maybe_unused]] VectorInteger& binaryIndexesZeroes) override
-    { /*MIPSolverBase::createIntegerCut(binaryIndexes); TODO*/
-    }
+    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) override;
 
     void createInteriorHyperplane(Hyperplane hyperplane) override
     {
