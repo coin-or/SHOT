@@ -1726,10 +1726,18 @@ public:
             int integerValue = (int)round(intpart);
             bool isEven = (integerValue % 2 == 0);
 
-            if(!isInteger && baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
+            if(baseBounds.l() <= 0)
+            {
+                if(!isInteger)
+                    baseBounds.l(SHOT_DBL_EPS);
+                else if(isInteger && power < 0)
+                    baseBounds.l(SHOT_DBL_EPS);
+            }
 
-            auto bounds = pow(baseBounds, power);
+            if(isInteger)
+                bounds = pow(baseBounds, (int)power);
+            else
+                bounds = pow(baseBounds, power);
 
             if(isInteger && isEven && bounds.l() <= 0.0)
                 bounds.l(0.0);
@@ -1769,10 +1777,18 @@ public:
             int integerValue = (int)round(intpart);
             bool isEven = (integerValue % 2 == 0);
 
-            if(!isInteger && baseBounds.l() <= 0)
-                baseBounds.l(SHOT_DBL_EPS);
+            if(baseBounds.l() <= 0)
+            {
+                if(!isInteger)
+                    baseBounds.l(SHOT_DBL_EPS);
+                else if(isInteger && power < 0)
+                    baseBounds.l(SHOT_DBL_EPS);
+            }
 
-            auto bounds = pow(baseBounds, powerBounds);
+            if(isInteger)
+                bounds = pow(baseBounds, (int)power);
+            else
+                bounds = pow(baseBounds, power);
 
             if(isInteger && isEven && bounds.l() <= 0.0)
                 bounds.l(0.0);

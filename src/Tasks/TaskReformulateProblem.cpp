@@ -1104,7 +1104,7 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
         auto auxConstraint = std::make_shared<NonlinearConstraint>(
-            auxConstraintCounter, "s_psig_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+            auxConstraintCounter, "cs_psig_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
         auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
         auxConstraintCounter++;
 
@@ -1114,15 +1114,15 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
         {
             signomialTerm->coefficient *= -1.0;
         }
-        /*
-                if(signomialTerm->coefficient < 0)
-                {
-                    auxVariable->upperBound = 0.0;
-                }
-                else
-                {
-                    auxVariable->lowerBound = 0.0;
-                }*/
+
+        if(signomialTerm->coefficient < 0)
+        {
+            auxVariable->upperBound = 0.0;
+        }
+        else
+        {
+            auxVariable->lowerBound = 0.0;
+        }
 
         auxConstraint->add(signomialTerm);
 

@@ -1652,11 +1652,6 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
                 Interval termBound = Interval(constraint->valueLHS, constraint->valueRHS) - newBound;
 
-                if(T->coefficient > 0 && termBound.l() < 0)
-                    termBound.l(0.0);
-                else if(T->coefficient < 0 && termBound.u() > 0)
-                    termBound.u(0.0);
-
                 termBound = termBound / T->coefficient;
 
                 for(auto& E1 : T->elements)
@@ -1719,7 +1714,7 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
     }
     catch(const mc::Interval::Exceptions& e)
     {
-        env->output->outputDebug(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
+        env->output->outputError(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
     }
 
     // Update variable bounds for original variables also in original problem if tightened in reformulated one

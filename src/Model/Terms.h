@@ -742,10 +742,20 @@ public:
         int integerValue = (int)round(intpart);
         bool isEven = (integerValue % 2 == 0);
 
-        if(!isInteger && variableBound.l() <= 0)
-            variableBound.l(SHOT_DBL_EPS);
+        if(variableBound.l() <= 0)
+        {
+            if(!isInteger)
+                variableBound.l(SHOT_DBL_EPS);
+            else if(isInteger && power < 0)
+                variableBound.l(SHOT_DBL_EPS);
+        }
 
-        auto bounds = pow(variableBound, power);
+        Interval bounds;
+
+        if(isInteger)
+            bounds = pow(variableBound, (int)power);
+        else
+            bounds = pow(variableBound, power);
 
         if(isInteger && isEven && bounds.l() <= 0.0)
             bounds.l(0.0);
@@ -778,7 +788,7 @@ public:
     inline bool tightenBounds(Interval bound)
     {
         if(bound.l() < 0)
-            return (false);
+            bound.l(SHOT_DBL_EPS);
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
