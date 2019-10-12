@@ -109,7 +109,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
     return (lastSolutions);
 }
 
-void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
+bool MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
@@ -117,12 +117,10 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
 
     if(!optional)
     {
-        return;
+        return (false);
     }
 
     auto tmpPair = optional.value();
-
-    bool hyperplaneIsOk = true;
 
     for(auto& E : tmpPair.first)
     {
@@ -139,25 +137,24 @@ void MIPSolverBase::createHyperplane(Hyperplane hyperplane)
                     + env->problem->getVariable(E.first)->name + " = "
                     + std::to_string(hyperplane.generatedPoint.at(E.first)));
 
-            hyperplaneIsOk = false;
-            break;
+            return (false);
         }
     }
 
     std::string constraintName;
 
-    if(hyperplaneIsOk)
-    {
-        std::string identifier = getConstraintIdentifier(hyperplane.source);
+    std::string identifier = getConstraintIdentifier(hyperplane.source);
 
-        if(hyperplane.sourceConstraint != nullptr)
-            identifier = identifier + "_" + hyperplane.sourceConstraint->name;
+    if(hyperplane.sourceConstraint != nullptr)
+        identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
-        identifier += "_" + std::to_string(constraintCounter);
-        constraintCounter++;
+    identifier += "_" + std::to_string(constraintCounter);
+    constraintCounter++;
 
-        addLinearConstraint(tmpPair.first, tmpPair.second, identifier);
-    }
+    if(addLinearConstraint(tmpPair.first, tmpPair.second, identifier) < 0)
+        return (false);
+
+    return (true);
 }
 
 std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyperplaneTerms(Hyperplane hyperplane)
@@ -260,7 +257,7 @@ std::optional<std::pair<std::map<int, double>, double>> MIPSolverBase::createHyp
     return (optional);
 }
 
-void MIPSolverBase::createInteriorHyperplane([[maybe_unused]] Hyperplane hyperplane)
+bool MIPSolverBase::createInteriorHyperplane([[maybe_unused]] Hyperplane hyperplane)
 {
     /*
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
@@ -328,6 +325,8 @@ void MIPSolverBase::createInteriorHyperplane([[maybe_unused]] Hyperplane hyperpl
 
     currIter->totNumHyperplanes = env->results->getPreviousIteration()->totNumHyperplanes +
     currIter->numHyperplanesAdded;*/
+
+    return (false);
 }
 
 void MIPSolverBase::presolveAndUpdateBounds()

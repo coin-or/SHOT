@@ -53,10 +53,9 @@ protected:
 public:
     ~MIPSolverBase();
 
-    virtual void createHyperplane(Hyperplane hyperplane);
-    // virtual void createIntegerCut(VectorInteger &binaryIndexes);
+    virtual bool createHyperplane(Hyperplane hyperplane);
 
-    virtual void createInteriorHyperplane(Hyperplane hyperplane);
+    virtual bool createInteriorHyperplane(Hyperplane hyperplane);
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane);
 

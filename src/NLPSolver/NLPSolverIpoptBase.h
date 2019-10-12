@@ -148,7 +148,11 @@ protected:
     std::vector<E_VariableType> originalVariableType;
 
 public:
-    //~NLPSolverIpoptBase() override = default;
+    ~NLPSolverIpoptBase()
+    {
+        ipoptProblem = NULL;
+        ipoptApplication = NULL;
+    }
 
     void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void clearStartingPoint() override;

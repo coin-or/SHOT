@@ -76,9 +76,9 @@ class CtCallbackI : public IloCplex::LazyConstraintCallbackI, public MIPSolverCa
 {
     IloNumVarArray cplexVars;
 
-    void createHyperplane(Hyperplane hyperplane);
+    bool createHyperplane(Hyperplane hyperplane);
 
-    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
+    bool createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes);
 
 public:
     IloCplex::CallbackI* duplicateCallback() const override;

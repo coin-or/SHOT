@@ -428,7 +428,7 @@ void GurobiCallback::callback()
     }
 }
 
-void GurobiCallback::createHyperplane(Hyperplane hyperplane)
+bool GurobiCallback::createHyperplane(Hyperplane hyperplane)
 {
     try
     {
@@ -437,12 +437,10 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
 
         if(!optional)
         {
-            return;
+            return (false);
         }
 
         auto tmpPair = optional.value();
-
-        bool hyperplaneIsOk = true;
 
         for(auto& E : tmpPair.first)
         {
@@ -452,29 +450,27 @@ void GurobiCallback::createHyperplane(Hyperplane hyperplane)
                     + std::to_string(hyperplane.sourceConstraint->index)
                     + " not generated, NaN found in linear terms for variable "
                     + env->problem->getVariable(E.first)->name);
-                hyperplaneIsOk = false;
-                break;
+                return (false);
             }
         }
+        GRBLinExpr expr = 0;
 
-        if(hyperplaneIsOk)
+        for(auto& P : tmpPair.first)
         {
-            GRBLinExpr expr = 0;
-
-            for(auto& P : tmpPair.first)
-            {
-                expr += +(P.second) * (vars[P.first]);
-            }
-
-            addLazy(expr <= -tmpPair.second);
-
-            env->dualSolver->addGeneratedHyperplane(hyperplane);
+            expr += +(P.second) * (vars[P.first]);
         }
+
+        addLazy(expr <= -tmpPair.second);
+
+        env->dualSolver->addGeneratedHyperplane(hyperplane);
     }
     catch(GRBException& e)
     {
         env->output->outputError("Gurobi error when creating lazy hyperplane", e.getMessage());
+        return (false);
     }
+
+    return (true);
 }
 
 GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
@@ -528,7 +524,7 @@ GurobiCallback::GurobiCallback(GRBVar* xvars, EnvironmentPtr envPtr)
 
 GurobiCallback::~GurobiCallback() { delete[] vars; }
 
-void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
     try
     {
@@ -551,7 +547,10 @@ void GurobiCallback::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
     catch(GRBException& e)
     {
         env->output->outputError("Gurobi error when adding lazy integer cut", e.getMessage());
+        return (false);
     }
+
+    return (true);
 }
 
 void GurobiCallback::addLazyConstraint(std::vector<SolutionPoint> candidatePoints)

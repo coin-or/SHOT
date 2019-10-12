@@ -14,7 +14,7 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
-#include "ilcplex/ilocplex.h"
+#include <ilcplex/ilocplex.h>
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
@@ -60,15 +60,15 @@ public:
     int addLinearConstraint(
         const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan) override;
 
-    void createHyperplane(Hyperplane hyperplane) override { MIPSolverBase::createHyperplane(hyperplane); }
+    bool createHyperplane(Hyperplane hyperplane) override { return (MIPSolverBase::createHyperplane(hyperplane)); }
 
-    void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) override;
+    bool createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) override;
 
-    virtual void createHyperplane(Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
+    virtual bool createHyperplane(Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
 
-    void createInteriorHyperplane(Hyperplane hyperplane) override
+    bool createInteriorHyperplane(Hyperplane hyperplane) override
     {
-        MIPSolverBase::createInteriorHyperplane(hyperplane);
+        return (MIPSolverBase::createInteriorHyperplane(hyperplane));
     }
 
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane) override

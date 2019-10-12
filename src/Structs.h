@@ -142,7 +142,7 @@ struct PrimalSolution
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraintLinear {-1, SHOT_DBL_INF};
+    PairIndexValue maxDevatingConstraintLinear{ -1, SHOT_DBL_INF };
     PairIndexValue maxDevatingConstraintQuadratic{ -1, SHOT_DBL_INF };
     PairIndexValue maxDevatingConstraintNonlinear{ -1, SHOT_DBL_INF };
     double maxIntegerToleranceError; // The maximum integer error before rounding
@@ -182,11 +182,11 @@ struct Hyperplane
 struct GeneratedHyperplane
 {
     int sourceConstraintIndex;
-    E_HyperplaneSource source;
-    bool isLazy;
-    bool isRemoved;
-    bool isSourceConvex;
-    int iterationGenerated;
+    E_HyperplaneSource source = E_HyperplaneSource::None;
+    bool isLazy = false;
+    bool isRemoved = false;
+    bool isSourceConvex = false;
+    int iterationGenerated = -1;
 
     std::size_t pointHash;
 };

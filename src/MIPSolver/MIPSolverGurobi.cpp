@@ -439,7 +439,7 @@ int MIPSolverGurobi::addLinearConstraint(
     return (gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
 }
 
-void MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
     try
     {
@@ -466,7 +466,10 @@ void MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
     catch(GRBException& e)
     {
         env->output->outputError("        Gurobi error when adding lazy integer cut", e.getMessage());
+        return (false);
     }
+
+    return (true);
 }
 
 VectorDouble MIPSolverGurobi::getVariableSolution(int solIdx)

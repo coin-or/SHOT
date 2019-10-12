@@ -51,29 +51,33 @@ void TaskAddHyperplanes::run()
 
             auto tmpItem = env->dualSolver->hyperplaneWaitingList.at(k - 1);
 
+            bool cutAddedSuccessfully = false;
+
             if(tmpItem.source == E_HyperplaneSource::PrimalSolutionSearchInteriorObjective)
             {
-                env->dualSolver->MIPSolver->createInteriorHyperplane(tmpItem);
+                cutAddedSuccessfully = env->dualSolver->MIPSolver->createInteriorHyperplane(tmpItem);
             }
             else
             {
-                env->dualSolver->MIPSolver->createHyperplane(tmpItem);
+                cutAddedSuccessfully = env->dualSolver->MIPSolver->createHyperplane(tmpItem);
             }
 
-            env->dualSolver->addGeneratedHyperplane(tmpItem);
-            addedHyperplanes++;
+            if(cutAddedSuccessfully)
+            {
+                env->dualSolver->addGeneratedHyperplane(tmpItem);
+                addedHyperplanes++;
+                this->itersWithoutAddedHPs = 0;
+            }
         }
 
         if(!env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             env->dualSolver->hyperplaneWaitingList.clear();
         }
-
-        itersWithoutAddedHPs = 0;
     }
     else
     {
-        itersWithoutAddedHPs++;
+        this->itersWithoutAddedHPs++;
     }
 
     env->timing->stopTimer("DualStrategy");

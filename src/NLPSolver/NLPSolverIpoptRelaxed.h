@@ -17,7 +17,7 @@ class NLPSolverIpoptRelaxed : public NLPSolverBase, public NLPSolverIpoptBase
 {
 public:
     NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr source);
-    ~NLPSolverIpoptRelaxed() override;
+    ~NLPSolverIpoptRelaxed() override = default;
 
     VectorDouble getSolution() override;
 

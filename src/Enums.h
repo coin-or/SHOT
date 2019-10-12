@@ -52,6 +52,7 @@ enum class E_EventType
 
 enum class E_HyperplaneSource
 {
+    None,
     MIPOptimalRootsearch,
     MIPSolutionPoolRootsearch,
     LPRelaxedRootsearch,

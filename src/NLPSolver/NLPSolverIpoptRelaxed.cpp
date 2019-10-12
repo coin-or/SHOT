@@ -42,8 +42,6 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     }
 }
 
-NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed() = default;
-
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
     ipoptApplication->Options()->SetNumericValue("constr_viol_tol",

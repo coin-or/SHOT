@@ -700,7 +700,7 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
 
 void MIPSolverOsiCbc::deleteMIPStarts() { MIPStarts.clear(); }
 
-void MIPSolverOsiCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverOsiCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
     try
     {
@@ -725,11 +725,15 @@ void MIPSolverOsiCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
     catch(CoinError& e)
     {
         env->output->outputError("Error when adding term to integer cut in Cbc: ", e.message());
+        return (false);
     }
     catch(std::exception& e)
     {
         env->output->outputError("Error when adding term to integer cut in Cbc: ", e.what());
+        return (false);
     }
+
+    return (true);
 }
 
 VectorDouble MIPSolverOsiCbc::getVariableSolution(int solIdx)
@@ -898,7 +902,9 @@ void MIPSolverOsiCbc::checkParameters()
 {
     // Check if Cbc has been compiled with support for multiple threads
     if(!cbcModel->haveMultiThreadSupport())
+    {
         env->settings->updateSetting("MIP.NumberOfThreads", "Dual", 1);
+    }
 
     // For stability
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);

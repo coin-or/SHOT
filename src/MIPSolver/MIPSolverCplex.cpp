@@ -282,14 +282,14 @@ bool MIPSolverCplex::finalizeConstraint(std::string name, double valueLHS, doubl
         if(valueLHS <= valueRHS)
         {
             IloRange tmpRange = IloRange(cplexEnv, valueLHS, constrExpression, valueRHS, name.c_str());
-            cplexConstrs.add(tmpRange);
             cplexModel.add(tmpRange);
+            cplexConstrs.add(tmpRange);
         }
         else
         {
             IloRange tmpRange = IloRange(cplexEnv, valueRHS, constrExpression, valueLHS, name.c_str());
-            cplexConstrs.add(tmpRange);
             cplexModel.add(tmpRange);
+            cplexConstrs.add(tmpRange);
         }
     }
     catch(IloException& e)
@@ -432,15 +432,15 @@ int MIPSolverCplex::addLinearConstraint(
         {
             IloRange tmpRange(cplexEnv, -constant, expr, IloInfinity);
             tmpRange.setName(name.c_str());
-            cplexConstrs.add(tmpRange);
             cplexModel.add(tmpRange);
+            cplexConstrs.add(tmpRange);
         }
         else
         {
             IloRange tmpRange(cplexEnv, -IloInfinity, expr, -constant);
             tmpRange.setName(name.c_str());
-            cplexConstrs.add(tmpRange);
             cplexModel.add(tmpRange);
+            cplexConstrs.add(tmpRange);
         }
 
         modelUpdated = true;
@@ -943,8 +943,8 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             {
                 IloRange tmpRange(cplexEnv, cutOff, cplexObjectiveExpression);
                 tmpRange.setName("CUTOFF_C");
-                cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
+                cplexConstrs.add(tmpRange);
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for maximization.");
@@ -953,8 +953,8 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
             {
                 IloRange tmpRange(cplexEnv, -IloInfinity, cplexObjectiveExpression, cutOff);
                 tmpRange.setName("CUTOFF_C");
-                cplexConstrs.add(tmpRange);
                 cplexModel.add(tmpRange);
+                cplexConstrs.add(tmpRange);
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
@@ -1257,7 +1257,7 @@ void MIPSolverCplex::writePresolvedToFile([[maybe_unused]] std::string filename)
 
 void MIPSolverCplex::checkParameters() {}
 
-void MIPSolverCplex::createHyperplane(
+bool MIPSolverCplex::createHyperplane(
     Hyperplane hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
 {
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
@@ -1266,13 +1266,10 @@ void MIPSolverCplex::createHyperplane(
 
     if(!optional)
     {
-        return;
+        return (false);
     }
 
     auto tmpPair = optional.value();
-
-    // auto tmpPair = createHyperplaneTerms(hyperplane);
-    bool hyperplaneIsOk = true;
 
     for(auto& E : tmpPair.first)
     {
@@ -1280,12 +1277,11 @@ void MIPSolverCplex::createHyperplane(
         {
             env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
                 + env->problem->getVariable(E.first)->name);
-            hyperplaneIsOk = false;
-            break;
+            return (false);
         }
     }
 
-    if(hyperplaneIsOk)
+    try
     {
         IloExpr expr(cplexEnv);
 
@@ -1300,33 +1296,50 @@ void MIPSolverCplex::createHyperplane(
 
         expr.end();
     }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when creating hyperplane in Cplex", e.getMessage());
+        return (false);
+    }
+
+    return (true);
 }
 
-void MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
-    IloExpr expr(cplexEnv);
-
-    for(int I : binaryIndexesOnes)
+    try
     {
-        expr += 1.0 * cplexVars[I];
+        IloExpr expr(cplexEnv);
+
+        for(int I : binaryIndexesOnes)
+        {
+            expr += 1.0 * cplexVars[I];
+        }
+
+        for(int I : binaryIndexesZeroes)
+        {
+            expr += (1 - 1.0 * cplexVars[I]);
+        }
+
+        IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
+        tmpRange.setName("IC");
+
+        integerCuts.push_back(cplexConstrs.getSize());
+
+        env->solutionStatistics.numberOfIntegerCuts++;
+
+        cplexModel.add(tmpRange);
+        cplexConstrs.add(tmpRange);
+
+        expr.end();
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when creating integer cut in Cplex", e.getMessage());
+        return (false);
     }
 
-    for(int I : binaryIndexesZeroes)
-    {
-        expr += (1 - 1.0 * cplexVars[I]);
-    }
-
-    IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
-    tmpRange.setName("IC");
-
-    integerCuts.push_back(cplexConstrs.getSize());
-
-    env->solutionStatistics.numberOfIntegerCuts++;
-
-    cplexConstrs.add(tmpRange);
-    cplexModel.add(tmpRange);
-
-    expr.end();
+    return (true);
 }
 
 int MIPSolverCplex::getNumberOfExploredNodes()

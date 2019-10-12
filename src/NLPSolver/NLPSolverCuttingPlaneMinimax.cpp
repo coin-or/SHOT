@@ -195,7 +195,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         if(std::isnan(LPObjVar))
         {
             statusCode = E_NLPSolutionStatus::Error;
-            continue;
+            break;
         }
 
         numHyperAdded = 0;
@@ -219,9 +219,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             mu = minimizationResult.second; // The objective value
 
             // Calculates the corresponding solution point
-            for(size_t i = 0; i < LPVarSol.size(); i++)
+            for(size_t j = 0; j < LPVarSol.size(); j++)
             {
-                currSol.at(i) = lambda * LPVarSol.at(i) + (1 - lambda) * prevSol.at(i);
+                currSol.at(j) = lambda * LPVarSol.at(j) + (1 - lambda) * prevSol.at(j);
             }
 
             // The difference between linesearch and LP objective values
@@ -281,25 +281,27 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             elements.emplace(numVar, -1.0);
 
             // Adds the linear constraint
-            LPSolver->addLinearConstraint(elements, constant,
-                "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot));
-
-            numHyperTot++;
-            numHyperAdded++;
-
-            if(mu >= 0 && env->settings->getSetting<bool>("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual")
-                && NCV.constraint->properties.convexity == E_Convexity::Convex)
+            if(LPSolver->addLinearConstraint(elements, constant,
+                   "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
+                > 0)
             {
-                auto tmpPoint = currSol;
-                tmpPoint.pop_back();
+                numHyperTot++;
+                numHyperAdded++;
 
-                Hyperplane hyperplane;
-                hyperplane.sourceConstraint = NCV.constraint;
-                hyperplane.sourceConstraintIndex = NCV.constraint->index;
-                hyperplane.generatedPoint = tmpPoint;
-                hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
+                if(mu >= 0 && env->settings->getSetting<bool>("ESH.InteriorPoint.CuttingPlane.Reuse", "Dual")
+                    && NCV.constraint->properties.convexity == E_Convexity::Convex)
+                {
+                    auto tmpPoint = currSol;
+                    tmpPoint.pop_back();
 
-                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                    Hyperplane hyperplane;
+                    hyperplane.sourceConstraint = NCV.constraint;
+                    hyperplane.sourceConstraintIndex = NCV.constraint->index;
+                    hyperplane.generatedPoint = tmpPoint;
+                    hyperplane.source = E_HyperplaneSource::InteriorPointSearch;
+
+                    env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                }
             }
         }
 
@@ -308,6 +310,12 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         if(i == maxIter - 1)
         {
             statusCode = E_NLPSolutionStatus::IterationLimit;
+            break;
+        }
+
+        if(numHyperAdded == 0)
+        {
+            statusCode = (objectiveValue > 0) ? E_NLPSolutionStatus::Infeasible : E_NLPSolutionStatus::Feasible;
             break;
         }
     }

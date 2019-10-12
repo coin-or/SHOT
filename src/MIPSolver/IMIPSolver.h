@@ -100,9 +100,9 @@ public:
     virtual void presolveAndUpdateBounds() = 0;
     virtual std::pair<VectorDouble, VectorDouble> presolveAndGetNewBounds() = 0;
 
-    virtual void createHyperplane(Hyperplane hyperplane) = 0;
-    virtual void createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) = 0;
-    virtual void createInteriorHyperplane(Hyperplane hyperplane) = 0;
+    virtual bool createHyperplane(Hyperplane hyperplane) = 0;
+    virtual bool createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes) = 0;
+    virtual bool createInteriorHyperplane(Hyperplane hyperplane) = 0;
 
     virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(Hyperplane hyperplane) = 0;
 

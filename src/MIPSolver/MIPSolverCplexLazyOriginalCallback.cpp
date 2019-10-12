@@ -509,32 +509,30 @@ void CtCallbackI::main()
     solution.clear();
 }
 
-void CtCallbackI::createHyperplane(Hyperplane hyperplane)
+bool CtCallbackI::createHyperplane(Hyperplane hyperplane)
 {
     auto optional = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane);
 
     if(!optional)
     {
-        return;
+        return (false);
     }
 
     auto tmpPair = optional.value();
 
-    bool hyperplaneIsOk = true;
     for(auto& E : tmpPair.first)
     {
         if(E.second != E.second) // Check for NaN
         {
             env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
                 + env->problem->getVariable(E.first)->name);
-            hyperplaneIsOk = false;
-            break;
+            return (false);
         }
     }
 
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    if(hyperplaneIsOk)
+    try
     {
         IloExpr expr(this->getEnv());
 
@@ -564,33 +562,51 @@ void CtCallbackI::createHyperplane(Hyperplane hyperplane)
             identifier = identifier + "_" + hyperplane.sourceConstraint->name;
 
         env->dualSolver->addGeneratedHyperplane(hyperplane);
+
+        optional.value().first.clear();
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when creating hyperplane in Cplex callback ", e.getMessage());
+        return (false);
     }
 
-    optional.value().first.clear();
+    return (true);
 }
 
-void CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
-    IloExpr expr(this->getEnv());
-
-    for(int I : binaryIndexesOnes)
+    try
     {
-        expr += 1.0 * cplexVars[I];
+        IloExpr expr(this->getEnv());
+
+        for(int I : binaryIndexesOnes)
+        {
+            expr += 1.0 * cplexVars[I];
+        }
+
+        for(int I : binaryIndexesZeroes)
+        {
+            expr += (1 - 1.0 * cplexVars[I]);
+        }
+
+        IloRange tmpRange(
+            this->getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
+        tmpRange.setName("IC");
+
+        add(tmpRange);
+        env->solutionStatistics.numberOfIntegerCuts++;
+
+        tmpRange.end();
+        expr.end();
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when creating integer cut in Cplex callback ", e.getMessage());
+        return (false);
     }
 
-    for(int I : binaryIndexesZeroes)
-    {
-        expr += (1 - 1.0 * cplexVars[I]);
-    }
-
-    IloRange tmpRange(this->getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
-    tmpRange.setName("IC");
-
-    add(tmpRange);
-    env->solutionStatistics.numberOfIntegerCuts++;
-
-    tmpRange.end();
-    expr.end();
+    return (true);
 }
 
 MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(EnvironmentPtr envPtr)
