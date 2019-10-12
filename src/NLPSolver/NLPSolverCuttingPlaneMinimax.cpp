@@ -264,9 +264,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             for(auto& G : gradient)
             {
                 int variableIndex = G.first->index;
-                int coefficient = G.second;
-
-                elements.emplace(variableIndex, coefficient);
+                double coefficient = G.second;
 
                 auto element = elements.emplace(variableIndex, coefficient);
 
