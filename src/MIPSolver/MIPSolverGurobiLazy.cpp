@@ -281,12 +281,6 @@ void GurobiCallback::callback()
                 auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                     solution, env->reformulatedProblem->nonlinearConstraints);
 
-                // Remove??
-                if(maxDev.normalizedValue <= env->settings->getSetting<double>("ConstraintTolerance", "Termination"))
-                {
-                    // return;
-                }
-
                 solutionCandidate.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
             }
             else
