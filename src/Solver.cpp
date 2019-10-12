@@ -614,7 +614,7 @@ void Solver::initializeSettings()
         "Iteration limit for minimization subsolver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
-        "ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", true, "Reuse valid cutting planes in main dual model");
+        "ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false, "Reuse valid cutting planes in main dual model");
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual", 1.0,
         "Absolute termination tolerance between LP and linesearch objective", 0.0, SHOT_DBL_MAX);
@@ -646,11 +646,11 @@ void Solver::initializeSettings()
     enumAddPrimalPointAsInteriorPoint.push_back("Replace old");
     enumAddPrimalPointAsInteriorPoint.push_back("Use avarage");
     env->settings->createSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual",
-        static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage), "Utilize primal solution as interior point",
+        static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth), "Utilize primal solution as interior point",
         enumAddPrimalPointAsInteriorPoint);
     enumAddPrimalPointAsInteriorPoint.clear();
 
-    env->settings->createSetting("HyperplaneCuts.MaxConstraintFactor", "Dual", 0.5,
+    env->settings->createSetting("HyperplaneCuts.MaxConstraintFactor", "Dual", 0.1,
         "Rootsearch performed on constraints with values larger than this factor times the maximum value", 1e-6, 1.0);
 
     env->settings->createSetting(
