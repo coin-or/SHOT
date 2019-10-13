@@ -106,6 +106,58 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    // To find a feasible point for an unbounded dual problem
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+    {
+        bool variableBoundsUpdated = false;
+
+        if((env->reformulatedProblem->objectiveFunction->properties.classification
+                   == E_ObjectiveFunctionClassification::Linear
+               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                      ->isDualUnbounded())
+            || (env->reformulatedProblem->objectiveFunction->properties.classification
+                       == E_ObjectiveFunctionClassification::Quadratic
+                   && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
+                          ->isDualUnbounded()))
+        {
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(V->isDualUnbounded())
+                {
+                    updateVariableBound(
+                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
+                    variableBoundsUpdated = true;
+                }
+            }
+        }
+
+        if(variableBoundsUpdated)
+        {
+            gurobiModel->update();
+
+            if(!isCallbackInitialized)
+            {
+                gurobiCallback = std::make_unique<GurobiCallback>(gurobiModel->getVars(), env);
+                isCallbackInitialized = true;
+            }
+
+            gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
+            gurobiModel->setCallback(gurobiCallback.get());
+
+            gurobiModel->optimize();
+
+            MIPSolutionStatus = getSolutionStatus();
+
+            for(auto& V : env->reformulatedProblem->allVariables)
+            {
+                if(V->isDualUnbounded())
+                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
+            }
+
+            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+        }
+    }
+
     return (MIPSolutionStatus);
 }
 
