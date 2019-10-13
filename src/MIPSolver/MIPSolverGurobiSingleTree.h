@@ -37,11 +37,11 @@ private:
     void addLazyConstraint(std::vector<SolutionPoint> candidatePoints);
 };
 
-class MIPSolverGurobiLazy : public MIPSolverGurobi
+class MIPSolverGurobiSingleTree : public MIPSolverGurobi
 {
 public:
-    MIPSolverGurobiLazy(EnvironmentPtr envPtr);
-    ~MIPSolverGurobiLazy() override;
+    MIPSolverGurobiSingleTree(EnvironmentPtr envPtr);
+    ~MIPSolverGurobiSingleTree() override;
 
     void checkParameters() override;
 

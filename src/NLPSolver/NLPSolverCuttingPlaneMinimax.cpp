@@ -81,7 +81,7 @@ NLPSolverCuttingPlaneMinimax::NLPSolverCuttingPlaneMinimax(EnvironmentPtr envPtr
 #ifdef HAS_CBC
     if(solver == ES_MIPSolver::Cbc)
     {
-        LPSolver = std::make_unique<MIPSolverOsiCbc>(env);
+        LPSolver = std::make_unique<MIPSolverCbc>(env);
         env->output->outputDebug("Cbc selected as MIP solver for minimax solver.");
     }
 #endif

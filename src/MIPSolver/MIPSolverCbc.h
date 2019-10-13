@@ -21,11 +21,11 @@ class CoinModel;
 
 namespace SHOT
 {
-class MIPSolverOsiCbc : public IMIPSolver, MIPSolverBase
+class MIPSolverCbc : public IMIPSolver, MIPSolverBase
 {
 public:
-    MIPSolverOsiCbc(EnvironmentPtr envPtr);
-    ~MIPSolverOsiCbc() override;
+    MIPSolverCbc(EnvironmentPtr envPtr);
+    ~MIPSolverCbc() override;
 
     bool initializeProblem() override;
 

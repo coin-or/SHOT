@@ -1049,8 +1049,8 @@ void Solver::initializeSettings()
         "diverse.",
         0, 2);
 
-    env->settings->createSetting("Cplex.UseNewCallbackType", "Subsolver", false,
-        "Use the new callback type (vers. >12.8) with single-tree strategy (experimental)");
+    env->settings->createSetting("Cplex.UseGenericCallback", "Subsolver", false,
+        "Use the new generic callback (vers. >12.8) in the single-tree strategy (experimental)");
 
     std::string workdir = "/data/stuff/tmp/";
     env->settings->createSetting("Cplex.WorkDir", "Subsolver", workdir, "Directory for swap file");

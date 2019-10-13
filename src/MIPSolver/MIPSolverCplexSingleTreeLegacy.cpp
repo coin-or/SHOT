@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "MIPSolverCplexLazyOriginalCallback.h"
+#include "MIPSolverCplexSingleTreeLegacy.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -32,7 +32,7 @@ HCallbackI::HCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx2)
     lastUpdatedPrimal = env->results->getPrimalBound();
 
     std::lock_guard<std::mutex> lock(
-        (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
+        (static_cast<MIPSolverCplexSingleTreeLegacy*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
         == ES_HyperplaneCutStrategy::ESH)
@@ -65,7 +65,7 @@ static IloCplex::Callback HCallback(EnvironmentPtr envPtr, IloEnv iloEnv, IloNum
 void HCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock(
-        (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
+        (static_cast<MIPSolverCplexSingleTreeLegacy*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     bool isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 
@@ -182,7 +182,7 @@ static IloCplex::Callback InfoCallback(EnvironmentPtr envPtr, IloEnv iloEnv, Ilo
 void InfoCallbackI::main() // Called at each node...
 {
     std::lock_guard<std::mutex> lock(
-        (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
+        (static_cast<MIPSolverCplexSingleTreeLegacy*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     auto absObjGap = env->results->getAbsoluteGlobalObjectiveGap();
     auto relObjGap = env->results->getRelativeGlobalObjectiveGap();
@@ -229,7 +229,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     env = envPtr;
 
     std::lock_guard<std::mutex> lock(
-        (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
+        (static_cast<MIPSolverCplexSingleTreeLegacy*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
@@ -287,7 +287,7 @@ void CtCallbackI::main()
     currIter->isSolved = true;
 
     std::lock_guard<std::mutex> lock(
-        (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
+        (static_cast<MIPSolverCplexSingleTreeLegacy*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
 
     IloNumArray tmpVals(this->getEnv());
 
@@ -606,7 +606,7 @@ bool CtCallbackI::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteg
     return (true);
 }
 
-MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(EnvironmentPtr envPtr)
+MIPSolverCplexSingleTreeLegacy::MIPSolverCplexSingleTreeLegacy(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
@@ -623,9 +623,9 @@ MIPSolverCplexLazyOriginalCallback::MIPSolverCplexLazyOriginalCallback(Environme
     checkParameters();
 }
 
-MIPSolverCplexLazyOriginalCallback::~MIPSolverCplexLazyOriginalCallback() = default;
+MIPSolverCplexSingleTreeLegacy::~MIPSolverCplexSingleTreeLegacy() = default;
 
-void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
+void MIPSolverCplexSingleTreeLegacy::initializeSolverSettings()
 {
     try
     {
@@ -637,7 +637,7 @@ void MIPSolverCplexLazyOriginalCallback::initializeSolverSettings()
     }
 }
 
-E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
+E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
     MIPSolverCplex::cachedSolutionHasChanged = true;
@@ -680,7 +680,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazyOriginalCallback::solveProblem()
     return (MIPSolutionStatus);
 }
 
-int MIPSolverCplexLazyOriginalCallback::increaseSolutionLimit(int increment)
+int MIPSolverCplexSingleTreeLegacy::increaseSolutionLimit(int increment)
 {
     int sollim = 0;
 
@@ -697,7 +697,7 @@ int MIPSolverCplexLazyOriginalCallback::increaseSolutionLimit(int increment)
     return (sollim);
 }
 
-void MIPSolverCplexLazyOriginalCallback::setSolutionLimit(long limit)
+void MIPSolverCplexSingleTreeLegacy::setSolutionLimit(long limit)
 {
     try
     {
@@ -709,7 +709,7 @@ void MIPSolverCplexLazyOriginalCallback::setSolutionLimit(long limit)
     }
 }
 
-int MIPSolverCplexLazyOriginalCallback::getSolutionLimit()
+int MIPSolverCplexSingleTreeLegacy::getSolutionLimit()
 {
     int solLim = 0;
 
@@ -726,5 +726,5 @@ int MIPSolverCplexLazyOriginalCallback::getSolutionLimit()
     return (solLim);
 }
 
-void MIPSolverCplexLazyOriginalCallback::checkParameters() {}
+void MIPSolverCplexSingleTreeLegacy::checkParameters() {}
 } // namespace SHOT

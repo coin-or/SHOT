@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "MIPSolverCplexLazy.h"
+#include "MIPSolverCplexSingleTree.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -32,6 +32,36 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
     cplexVars = vars;
     cplexInst = inst;
 
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    {
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ESH)
+        {
+            tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+        }
+        else
+        {
+            taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+        }
+    }
+
+    if(env->reformulatedProblem->objectiveFunction->properties.classification
+        > E_ObjectiveFunctionClassification::Quadratic)
+    {
+        taskSelectHPPtsByObjectiveRootsearch = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
+    }
+
+    tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
+
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
+        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
+    {
+        taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
+    }
+
+    lastUpdatedPrimal = env->results->getPrimalBound();
+
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 }
 
@@ -39,51 +69,6 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 {
     try
     {
-        if(context.inThreadUp())
-        {
-            if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
-            {
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-                    == ES_HyperplaneCutStrategy::ESH)
-                {
-                    tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
-                    taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
-                }
-                else
-                {
-                    taskSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
-                }
-            }
-
-            if(env->reformulatedProblem->objectiveFunction->properties.classification
-                > E_ObjectiveFunctionClassification::Quadratic)
-            {
-                taskSelectHPPtsByObjectiveRootsearch
-                    = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
-            }
-
-            tSelectPrimNLP = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
-
-            if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
-                && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
-            {
-                taskSelectPrimalSolutionFromRootsearch
-                    = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
-            }
-
-            lastUpdatedPrimal = env->results->getPrimalBound();
-
-            return;
-        }
-
-        if(context.inThreadDown())
-        {
-            tUpdateInteriorPoint = nullptr;
-            taskSelectHPPts = nullptr;
-            taskSelectHPPtsByObjectiveRootsearch = nullptr;
-            return;
-        }
-
         // Check if better dual bound
         double tmpDualObjBound = context.getDoubleInfo(IloCplex::Callback::Context::Info::BestBound);
 
@@ -389,7 +374,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
         if(isMinimization)
         {
-            (static_cast<MIPSolverCplexLazy*>(env->dualSolver->MIPSolver.get()))
+            (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
                 ->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
 
             env->output->outputDebug(
@@ -398,7 +383,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         }
         else
         {
-            (static_cast<MIPSolverCplexLazy*>(env->dualSolver->MIPSolver.get()))
+            (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
                 ->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
 
             env->output->outputDebug(
@@ -546,7 +531,7 @@ void CplexCallback::addLazyConstraint(
     }
 }
 
-MIPSolverCplexLazy::MIPSolverCplexLazy(EnvironmentPtr envPtr)
+MIPSolverCplexSingleTree::MIPSolverCplexSingleTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
@@ -563,9 +548,9 @@ MIPSolverCplexLazy::MIPSolverCplexLazy(EnvironmentPtr envPtr)
     checkParameters();
 }
 
-MIPSolverCplexLazy::~MIPSolverCplexLazy() = default;
+MIPSolverCplexSingleTree::~MIPSolverCplexSingleTree() = default;
 
-void MIPSolverCplexLazy::initializeSolverSettings()
+void MIPSolverCplexSingleTree::initializeSolverSettings()
 {
     try
     {
@@ -579,7 +564,7 @@ void MIPSolverCplexLazy::initializeSolverSettings()
     }
 }
 
-E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
+E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
     MIPSolverCplex::cachedSolutionHasChanged = true;
@@ -600,8 +585,8 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             contextMask |= IloCplex::Callback::Context::Id::Relaxation;
             // contextMask |= IloCplex::Callback::Context::Id::GlobalProgress;
             // contextMask |= IloCplex::Callback::Context::Id::LocalProgress;
-            contextMask |= IloCplex::Callback::Context::Id::ThreadUp;
-            contextMask |= IloCplex::Callback::Context::Id::ThreadDown;
+            // contextMask |= IloCplex::Callback::Context::Id::ThreadUp;
+            // contextMask |= IloCplex::Callback::Context::Id::ThreadDown;
 
             if(contextMask != 0)
                 cplexInstance.use(&cCallback, contextMask);
@@ -637,7 +622,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
     return (MIPSolutionStatus);
 }
 
-int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
+int MIPSolverCplexSingleTree::increaseSolutionLimit(int increment)
 {
     int sollim = 0;
 
@@ -654,7 +639,7 @@ int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
     return (sollim);
 }
 
-void MIPSolverCplexLazy::setSolutionLimit(long limit)
+void MIPSolverCplexSingleTree::setSolutionLimit(long limit)
 {
     try
     {
@@ -666,7 +651,7 @@ void MIPSolverCplexLazy::setSolutionLimit(long limit)
     }
 }
 
-int MIPSolverCplexLazy::getSolutionLimit()
+int MIPSolverCplexSingleTree::getSolutionLimit()
 {
     int solLim = 0;
 
@@ -683,5 +668,5 @@ int MIPSolverCplexLazy::getSolutionLimit()
     return (solLim);
 }
 
-void MIPSolverCplexLazy::checkParameters() {}
+void MIPSolverCplexSingleTree::checkParameters() {}
 } // namespace SHOT

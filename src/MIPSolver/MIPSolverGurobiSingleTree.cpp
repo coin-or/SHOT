@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "MIPSolverGurobiLazy.h"
+#include "MIPSolverGurobiSingleTree.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -24,7 +24,7 @@
 namespace SHOT
 {
 
-MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
+MIPSolverGurobiSingleTree::MIPSolverGurobiSingleTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
     discreteVariablesActivated = true;
@@ -44,9 +44,9 @@ MIPSolverGurobiLazy::MIPSolverGurobiLazy(EnvironmentPtr envPtr)
     isVariablesFixed = false;
 }
 
-MIPSolverGurobiLazy::~MIPSolverGurobiLazy() = default;
+MIPSolverGurobiSingleTree::~MIPSolverGurobiSingleTree() = default;
 
-void MIPSolverGurobiLazy::initializeSolverSettings()
+void MIPSolverGurobiSingleTree::initializeSolverSettings()
 {
     MIPSolverGurobi::initializeSolverSettings();
 
@@ -60,7 +60,7 @@ void MIPSolverGurobiLazy::initializeSolverSettings()
     }
 }
 
-int MIPSolverGurobiLazy::increaseSolutionLimit(int increment)
+int MIPSolverGurobiSingleTree::increaseSolutionLimit(int increment)
 {
     gurobiModel->getEnv().set(
         GRB_IntParam_SolutionLimit, gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit) + increment);
@@ -68,7 +68,7 @@ int MIPSolverGurobiLazy::increaseSolutionLimit(int increment)
     return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit));
 }
 
-void MIPSolverGurobiLazy::setSolutionLimit(long limit)
+void MIPSolverGurobiSingleTree::setSolutionLimit(long limit)
 {
     if(limit > GRB_MAXINT)
         gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
@@ -76,11 +76,11 @@ void MIPSolverGurobiLazy::setSolutionLimit(long limit)
         gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, limit);
 }
 
-int MIPSolverGurobiLazy::getSolutionLimit() { return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit)); }
+int MIPSolverGurobiSingleTree::getSolutionLimit() { return (gurobiModel->getEnv().get(GRB_IntParam_SolutionLimit)); }
 
-void MIPSolverGurobiLazy::checkParameters() {}
+void MIPSolverGurobiSingleTree::checkParameters() {}
 
-E_ProblemSolutionStatus MIPSolverGurobiLazy::solveProblem()
+E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
@@ -200,7 +200,7 @@ void GurobiCallback::callback()
             {
                 int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
 
-                int numModelVars = static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
+                int numModelVars = static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                                        ->gurobiModel->get(GRB_IntAttr_NumVars);
 
                 int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
@@ -268,7 +268,7 @@ void GurobiCallback::callback()
                 currIter->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
             }
 
-            int numModelVars = static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
+            int numModelVars = static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                                    ->gurobiModel->get(GRB_IntAttr_NumVars);
 
             int numberOfVariables
@@ -397,7 +397,7 @@ void GurobiCallback::callback()
 
         if(isMinimization)
         {
-            static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
+            static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                 ->gurobiModel->set(GRB_DoubleParam_Cutoff, primalBound + cutOffTol);
 
             env->output->outputDebug("     Setting cutoff value to "
@@ -405,7 +405,7 @@ void GurobiCallback::callback()
         }
         else
         {
-            static_cast<MIPSolverGurobiLazy*>(env->dualSolver->MIPSolver.get())
+            static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                 ->gurobiModel->set(GRB_DoubleParam_Cutoff, -primalBound - cutOffTol);
 
             env->output->outputDebug("     Setting cutoff value to "

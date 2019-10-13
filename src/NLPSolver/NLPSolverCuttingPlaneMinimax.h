@@ -22,7 +22,7 @@
 #endif
 
 #ifdef HAS_CBC
-#include "MIPSolver/MIPSolverOsiCbc.h"
+#include "MIPSolver/MIPSolverCbc.h"
 #endif
 
 #include "../Model/Problem.h"
