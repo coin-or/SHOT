@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "MIPSolverCplexLazy.h"
+#include "MIPSolverCplexSingleTree.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -26,17 +26,11 @@ namespace SHOT
 
 CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, const IloCplex& inst)
 {
-    std::lock_guard<std::mutex> lock(callbackMutex);
-
     env = envPtr;
     lastUpdatedPrimal = env->results->getPrimalBound();
 
     cplexVars = vars;
     cplexInst = inst;
-
-    isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
-
-    env->solutionStatistics.iterationLastLazyAdded = 0;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
@@ -67,13 +61,12 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
     }
 
     lastUpdatedPrimal = env->results->getPrimalBound();
+
+    isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
 }
 
 void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 {
-    std::lock_guard<std::mutex> lock(callbackMutex);
-    this->cbCalls++;
-
     try
     {
         // Check if better dual bound
@@ -82,75 +75,91 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         if((isMinimization && tmpDualObjBound > env->results->getCurrentDualBound())
             || (!isMinimization && tmpDualObjBound < env->results->getCurrentDualBound()))
         {
+            std::lock_guard<std::mutex> lock(callbackMutex);
             VectorDouble doubleSolution; // Empty since we have no point
 
             DualSolution sol = { doubleSolution, E_DualSolutionSource::MIPSolverBound, tmpDualObjBound,
                 env->results->getCurrentIteration()->iterationNumber, false };
+
             env->dualSolver->addDualSolutionCandidate(sol);
         }
 
-        // Check for new primal solution
-        double tmpPrimalObjBound = context.getIncumbentObjective();
-
-        if((tmpPrimalObjBound < 1e74)
-            && ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound())
-                   || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
+        if(context.inCandidate())
         {
-            IloNumArray tmpPrimalVals(context.getEnv());
+            // Check for new primal solution
+            double tmpPrimalObjBound = context.getCandidateObjective();
 
-            context.getIncumbent(cplexVars, tmpPrimalVals);
-
-            int numberOfVariables = env->problem->properties.numberOfVariables;
-
-            VectorDouble primalSolution(numberOfVariables);
-
-            for(int i = 0; i < numberOfVariables; i++)
+            if((tmpPrimalObjBound < 1e74)
+                && ((isMinimization && tmpPrimalObjBound < env->results->getPrimalBound())
+                       || (!isMinimization && tmpPrimalObjBound > env->results->getPrimalBound())))
             {
-                primalSolution.at(i) = tmpPrimalVals[i];
+                IloNumArray tmpPrimalVals(context.getEnv());
+
+                context.getCandidatePoint(cplexVars, tmpPrimalVals);
+
+                int numberOfVariables = env->problem->properties.numberOfVariables;
+
+                VectorDouble primalSolution(numberOfVariables);
+
+                for(int i = 0; i < numberOfVariables; i++)
+                {
+                    primalSolution.at(i) = tmpPrimalVals[i];
+                }
+
+                tmpPrimalVals.end();
+
+                SolutionPoint tmpPt;
+
+                if(env->problem->properties.numberOfNonlinearConstraints > 0)
+                {
+                    auto maxDev = env->problem->getMaxNumericConstraintValue(
+                        primalSolution, env->problem->nonlinearConstraints);
+                    tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                }
+                else
+                {
+                    tmpPt.maxDeviation = PairIndexValue(-1, 0.0);
+                }
+
+                std::lock_guard<std::mutex> lock(callbackMutex);
+
+                tmpPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
+                tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
+                tmpPt.point = primalSolution;
+
+                env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
             }
-
-            SolutionPoint tmpPt;
-
-            if(env->problem->properties.numberOfNonlinearConstraints > 0)
-            {
-                auto maxDev
-                    = env->problem->getMaxNumericConstraintValue(primalSolution, env->problem->nonlinearConstraints);
-                tmpPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
-            }
-            else
-            {
-                tmpPt.maxDeviation = PairIndexValue(-1, 0.0);
-            }
-
-            tmpPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
-            tmpPt.objectiveValue = env->problem->objectiveFunction->calculateValue(primalSolution);
-            tmpPt.point = primalSolution;
-
-            env->primalSolver->addPrimalSolutionCandidate(tmpPt, E_PrimalSolutionSource::LazyConstraintCallback);
-
-            tmpPrimalVals.end();
         }
 
         if(env->results->isAbsoluteObjectiveGapToleranceMet() || env->results->isRelativeObjectiveGapToleranceMet()
             || checkIterationLimit() || checkUserTermination())
         {
+            context.abort();
             return;
         }
 
         if(context.inRelaxation())
         {
-            if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-                < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
+            int numberOfAddedHyperplanes;
+            int iterationNumber;
+
+            {
+                std::lock_guard<std::mutex> lock(callbackMutex);
+                numberOfAddedHyperplanes = env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded;
+                iterationNumber = env->results->getCurrentIteration()->iterationNumber;
+            }
+
+            if(numberOfAddedHyperplanes < env->settings->getSetting<int>("Relaxation.MaxLazyConstraints", "Dual"))
             {
                 int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
-
-                std::vector<SolutionPoint> solutionPoints(1);
 
                 IloNumArray tmpVals(context.getEnv());
 
                 context.getRelaxationPoint(cplexVars, tmpVals);
 
-                int numberOfVariables = env->reformulatedProblem->properties.numberOfVariables;
+                int numberOfVariables = (env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
+                    ? tmpVals.getSize() - 1
+                    : tmpVals.getSize();
 
                 VectorDouble solution(numberOfVariables);
 
@@ -161,51 +170,63 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
 
                 tmpVals.end();
 
-                SolutionPoint tmpSolPt;
+                SolutionPoint solutionRelaxed;
 
                 if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
                 {
                     auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
                         solution, env->reformulatedProblem->nonlinearConstraints);
-                    tmpSolPt.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+                    solutionRelaxed.maxDeviation = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
                 }
                 else
                 {
-                    tmpSolPt.maxDeviation = PairIndexValue(-1, 0.0);
+                    solutionRelaxed.maxDeviation = PairIndexValue(-1, 0.0);
                 }
 
-                tmpSolPt.point = solution;
-                tmpSolPt.objectiveValue = context.getRelaxationObjective();
-                tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;
-                tmpSolPt.isRelaxedPoint = true;
+                solutionRelaxed.point = solution;
+                solutionRelaxed.objectiveValue = context.getRelaxationObjective();
+                solutionRelaxed.iterFound = iterationNumber;
+                solutionRelaxed.isRelaxedPoint = true;
 
-                solutionPoints.at(0) = tmpSolPt;
+                std::vector<SolutionPoint> solutionPoints = { solutionRelaxed };
 
-                if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
-                    == ES_HyperplaneCutStrategy::ESH)
                 {
-                    tUpdateInteriorPoint->run();
-                    static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(solutionPoints);
-                }
-                else
-                {
-                    static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(solutionPoints);
-                }
+                    std::lock_guard<std::mutex> lock(callbackMutex);
+                    if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+                        == ES_HyperplaneCutStrategy::ESH)
+                    {
+                        tUpdateInteriorPoint->run();
+                        static_cast<TaskSelectHyperplanePointsESH*>(taskSelectHPPts.get())->run(solutionPoints);
+                    }
+                    else
+                    {
+                        static_cast<TaskSelectHyperplanePointsECP*>(taskSelectHPPts.get())->run(solutionPoints);
+                    }
 
-                if(env->reformulatedProblem->objectiveFunction->properties.classification
-                    > E_ObjectiveFunctionClassification::Quadratic)
-                {
-                    taskSelectHPPtsByObjectiveRootsearch->run(solutionPoints);
-                }
+                    if(env->reformulatedProblem->objectiveFunction->properties.classification
+                        > E_ObjectiveFunctionClassification::Quadratic)
+                    {
+                        taskSelectHPPtsByObjectiveRootsearch->run(solutionPoints);
+                    }
 
-                env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
-                    += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
+                    env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
+                        += (env->dualSolver->hyperplaneWaitingList.size() - waitingListSize);
+                }
             }
         }
 
         if(context.inCandidate())
         {
-            auto currIter = env->results->getCurrentIteration();
+            IterationPtr currIter;
+
+            {
+                std::lock_guard<std::mutex> lock(callbackMutex);
+                currIter = env->results->getCurrentIteration();
+            }
+
+            std::vector<SolutionPoint> candidatePoints;
+
+            std::lock_guard<std::mutex> lock(callbackMutex);
 
             if(currIter->isSolved)
             {
@@ -250,8 +271,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             solutionCandidate.objectiveValue = context.getCandidateObjective();
             solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-            std::vector<SolutionPoint> candidatePoints(1);
-            candidatePoints.at(0) = solutionCandidate;
+            candidatePoints.push_back(solutionCandidate);
 
             addLazyConstraint(candidatePoints, context);
 
@@ -260,7 +280,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             currIter->solutionStatus = E_ProblemSolutionStatus::Feasible;
             currIter->objectiveValue = context.getCandidateObjective();
 
-            env->results->getCurrentIteration()->numberOfOpenNodes = cplexInst.getNnodesLeft();
+            currIter->numberOfOpenNodes = cplexInst.getNnodesLeft();
             env->solutionStatistics.numberOfExploredNodes
                 = std::max(context.getIntInfo(IloCplex::Callback::Context::Info::NodeCount),
                     env->solutionStatistics.numberOfExploredNodes);
@@ -272,7 +292,13 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                 && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
             {
                 taskSelectPrimalSolutionFromRootsearch->run(candidatePoints);
+                env->primalSolver->checkPrimalSolutionCandidates();
             }
+
+            currIter->isSolved = true;
+
+            auto threadId = std::to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
+            printIterationReport(candidatePoints.at(0), threadId);
 
             if(checkFixedNLPStrategy(candidatePoints.at(0)))
             {
@@ -281,41 +307,30 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
                     candidatePoints.at(0).maxDeviation);
 
                 tSelectPrimNLP.get()->run();
-
                 env->primalSolver->checkPrimalSolutionCandidates();
             }
 
             if(env->settings->getSetting<bool>("HyperplaneCuts.UseIntegerCuts", "Dual"))
             {
-                bool addedIntegerCut = false;
+                int addedIntegerCuts = 0;
 
-                for(auto& ic : env->dualSolver->integerCutWaitingList)
+                for(auto& IC : env->dualSolver->integerCutWaitingList)
                 {
-                    this->createIntegerCut(ic.first, ic.second, context);
-                    addedIntegerCut = true;
+                    if(this->createIntegerCut(IC.first, IC.second, context))
+                        addedIntegerCuts++;
                 }
 
-                if(addedIntegerCut)
-                {
-                    env->output->outputDebug("        Added "
-                        + std::to_string(env->dualSolver->integerCutWaitingList.size())
-                        + " integer cut(s).                                        ");
-                }
+                if(addedIntegerCuts > 0)
+                    env->output->outputDebug(fmt::format("        Added {} integer cut(s)", addedIntegerCuts));
 
                 env->dualSolver->integerCutWaitingList.clear();
             }
-
-            currIter->isSolved = true;
-
-            auto threadId = std::to_string(context.getIntInfo(IloCplex::Callback::Context::Info::ThreadId));
-            printIterationReport(candidatePoints.at(0), threadId);
         }
 
         // Add current primal solution as new incumbent candidate
         auto primalBound = env->results->getPrimalBound();
 
-        if(env->results->hasPrimalSolution()
-            && ((isMinimization && lastUpdatedPrimal < primalBound) || (!isMinimization && primalBound > primalBound)))
+        if((isMinimization && lastUpdatedPrimal < primalBound) || (!isMinimization && lastUpdatedPrimal > primalBound))
         {
             auto primalSol = env->results->primalSolution;
 
@@ -336,32 +351,46 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
             else if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable())
                 tmpVals.add(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
-            lastUpdatedPrimal = primalBound;
-
-            /*
-            // Adds cutoff
-
-                double cutOffTol
-                = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
-
-            if(isMinimization)
+            try
             {
-                (static_cast<MIPSolverCplexLazy*>(env->dualSolver->MIPSolver.get()))
-                    ->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
-
-                env->output->outputDebug(
-                    "     Setting cutoff value to " + std::to_string(primalBound + cutOffTol) + " for minimization.");
+                context.postHeuristicSolution(cplexVars, tmpVals, env->results->currentPrimalBound,
+                    IloCplex::Callback::Context::SolutionStrategy::CheckFeasible);
             }
-            else
+            catch(IloException& e)
             {
-                (static_cast<MIPSolverCplexLazy*>(env->dualSolver->MIPSolver.get()))
-                    ->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
-
-                env->output->outputDebug(
-                    "     Setting cutoff value to " + std::to_string(primalBound - cutOffTol) + " for maximization.");
+                env->output->outputError(
+                    "Error when setting primal solution as starting point in heuristic callback:", e.getMessage());
             }
-            */
+
+            tmpVals.end();
+
+            lastUpdatedPrimal = env->results->getPrimalBound();
         }
+        /*
+        // Adds cutoff
+
+            double cutOffTol
+            = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+
+        if(isMinimization)
+        {
+            (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
+                ->cplexInstance.setParam(IloCplex::CutUp, primalBound + cutOffTol);
+
+            env->output->outputDebug(
+                "     Setting cutoff value to " + std::to_string(primalBound + cutOffTol) + " for
+        minimization.");
+        }
+        else
+        {
+            (static_cast<MIPSolverCplexSingleTree*>(env->dualSolver->MIPSolver.get()))
+                ->cplexInstance.setParam(IloCplex::CutLo, primalBound - cutOffTol);
+
+            env->output->outputDebug(
+                "     Setting cutoff value to " + std::to_string(primalBound - cutOffTol) + " for
+        maximization.");
+        }
+        */
     }
     catch(IloException& e)
     {
@@ -442,6 +471,7 @@ bool CplexCallback::createIntegerCut(
         {
             expr += (1 - 1.0 * cplexVars[I]);
         }
+
         IloRange tmpRange(
             context.getEnv(), -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
         tmpRange.setName("IC");
@@ -468,6 +498,7 @@ void CplexCallback::addLazyConstraint(
     {
         if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
         {
+
             if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
                 == ES_HyperplaneCutStrategy::ESH)
             {
@@ -500,7 +531,7 @@ void CplexCallback::addLazyConstraint(
     }
 }
 
-MIPSolverCplexLazy::MIPSolverCplexLazy(EnvironmentPtr envPtr)
+MIPSolverCplexSingleTree::MIPSolverCplexSingleTree(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
@@ -517,9 +548,9 @@ MIPSolverCplexLazy::MIPSolverCplexLazy(EnvironmentPtr envPtr)
     checkParameters();
 }
 
-MIPSolverCplexLazy::~MIPSolverCplexLazy() = default;
+MIPSolverCplexSingleTree::~MIPSolverCplexSingleTree() = default;
 
-void MIPSolverCplexLazy::initializeSolverSettings()
+void MIPSolverCplexSingleTree::initializeSolverSettings()
 {
     try
     {
@@ -533,7 +564,7 @@ void MIPSolverCplexLazy::initializeSolverSettings()
     }
 }
 
-E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
+E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
     MIPSolverCplex::cachedSolutionHasChanged = true;
@@ -546,22 +577,32 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
             cplexInstance.extract(cplexModel);
         }
 
-        CPXLONG contextMask = 0;
-
         if(getDiscreteVariableStatus())
         {
+            CPXLONG contextMask = 0;
             CplexCallback cCallback(env, cplexVars, cplexInstance);
             contextMask |= IloCplex::Callback::Context::Id::Candidate;
             contextMask |= IloCplex::Callback::Context::Id::Relaxation;
+            // contextMask |= IloCplex::Callback::Context::Id::GlobalProgress;
+            // contextMask |= IloCplex::Callback::Context::Id::LocalProgress;
+            // contextMask |= IloCplex::Callback::Context::Id::ThreadUp;
+            // contextMask |= IloCplex::Callback::Context::Id::ThreadDown;
 
             if(contextMask != 0)
                 cplexInstance.use(&cCallback, contextMask);
+
+            // This fixes a bug in CPLEX
+            cplexEnv.setNormalizer(false);
+
+            cplexInstance.solve();
         }
+        else
+        {
+            // This fixes a bug in CPLEX
+            cplexEnv.setNormalizer(false);
 
-        // This fixes a bug in CPLEX
-        cplexEnv.setNormalizer(false);
-
-        cplexInstance.solve();
+            cplexInstance.solve();
+        }
 
         MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
 
@@ -581,7 +622,7 @@ E_ProblemSolutionStatus MIPSolverCplexLazy::solveProblem()
     return (MIPSolutionStatus);
 }
 
-int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
+int MIPSolverCplexSingleTree::increaseSolutionLimit(int increment)
 {
     int sollim = 0;
 
@@ -598,7 +639,7 @@ int MIPSolverCplexLazy::increaseSolutionLimit(int increment)
     return (sollim);
 }
 
-void MIPSolverCplexLazy::setSolutionLimit(long limit)
+void MIPSolverCplexSingleTree::setSolutionLimit(long limit)
 {
     try
     {
@@ -610,7 +651,7 @@ void MIPSolverCplexLazy::setSolutionLimit(long limit)
     }
 }
 
-int MIPSolverCplexLazy::getSolutionLimit()
+int MIPSolverCplexSingleTree::getSolutionLimit()
 {
     int solLim = 0;
 
@@ -627,5 +668,5 @@ int MIPSolverCplexLazy::getSolutionLimit()
     return (solLim);
 }
 
-void MIPSolverCplexLazy::checkParameters() {}
+void MIPSolverCplexSingleTree::checkParameters() {}
 } // namespace SHOT

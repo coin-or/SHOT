@@ -1049,8 +1049,8 @@ void Solver::initializeSettings()
         "diverse.",
         0, 2);
 
-    env->settings->createSetting("Cplex.UseNewCallbackType", "Subsolver", false,
-        "Use the new callback type (vers. >12.8) with single-tree strategy (experimental)");
+    env->settings->createSetting("Cplex.UseGenericCallback", "Subsolver", false,
+        "Use the new generic callback (vers. >12.8) in the single-tree strategy (experimental)");
 
     std::string workdir = "/data/stuff/tmp/";
     env->settings->createSetting("Cplex.WorkDir", "Subsolver", workdir, "Directory for swap file");
@@ -1060,7 +1060,7 @@ void Solver::initializeSettings()
 
     // Subsolver settings: Gurobi
     env->settings->createSetting(
-        "Gurobi.ScaleFlag", "Subsolver", 1, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
+        "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
 
     env->settings->createSetting("Gurobi.MIPFocus", "Subsolver", 0,
         "MIP focus: 0: Automatic. 1: Feasibility. 2: Optimality. 3: Best bound.", 0, 3);

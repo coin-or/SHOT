@@ -8,7 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
-#include "MIPSolverOsiCbc.h"
+#include "MIPSolverCbc.h"
 
 #include "../DualSolver.h"
 #include "../Iteration.h"
@@ -30,7 +30,7 @@
 namespace SHOT
 {
 
-MIPSolverOsiCbc::MIPSolverOsiCbc(EnvironmentPtr envPtr)
+MIPSolverCbc::MIPSolverCbc(EnvironmentPtr envPtr)
 {
     env = envPtr;
 
@@ -38,9 +38,9 @@ MIPSolverOsiCbc::MIPSolverOsiCbc(EnvironmentPtr envPtr)
     checkParameters();
 }
 
-MIPSolverOsiCbc::~MIPSolverOsiCbc() = default;
+MIPSolverCbc::~MIPSolverCbc() = default;
 
-bool MIPSolverOsiCbc::initializeProblem()
+bool MIPSolverCbc::initializeProblem()
 {
     discreteVariablesActivated = true;
 
@@ -61,7 +61,7 @@ bool MIPSolverOsiCbc::initializeProblem()
     return (true);
 }
 
-bool MIPSolverOsiCbc::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
+bool MIPSolverCbc::addVariable(std::string name, E_VariableType type, double lowerBound, double upperBound)
 {
     int index = numberOfVariables;
 
@@ -114,9 +114,9 @@ bool MIPSolverOsiCbc::addVariable(std::string name, E_VariableType type, double 
     return (true);
 }
 
-bool MIPSolverOsiCbc::initializeObjective() { return (true); }
+bool MIPSolverCbc::initializeObjective() { return (true); }
 
-bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableIndex)
+bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableIndex)
 {
     try
     {
@@ -133,14 +133,14 @@ bool MIPSolverOsiCbc::addLinearTermToObjective(double coefficient, int variableI
     return (true);
 }
 
-bool MIPSolverOsiCbc::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
+bool MIPSolverCbc::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // Not implemented
     return (false);
 }
 
-bool MIPSolverOsiCbc::finalizeObjective(bool isMinimize, double constant)
+bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
 {
     try
     {
@@ -167,9 +167,9 @@ bool MIPSolverOsiCbc::finalizeObjective(bool isMinimize, double constant)
     return (true);
 }
 
-bool MIPSolverOsiCbc::initializeConstraint() { return (true); }
+bool MIPSolverCbc::initializeConstraint() { return (true); }
 
-bool MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
+bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableIndex)
 {
     try
     {
@@ -184,14 +184,14 @@ bool MIPSolverOsiCbc::addLinearTermToConstraint(double coefficient, int variable
     return (true);
 }
 
-bool MIPSolverOsiCbc::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
+bool MIPSolverCbc::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
     [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
 {
     // Not implemented
     return (false);
 }
 
-bool MIPSolverOsiCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
+bool MIPSolverCbc::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
 {
     int index = numberOfConstraints;
     try
@@ -217,7 +217,7 @@ bool MIPSolverOsiCbc::finalizeConstraint(std::string name, double valueLHS, doub
     return (true);
 }
 
-bool MIPSolverOsiCbc::finalizeProblem()
+bool MIPSolverCbc::finalizeProblem()
 {
     try
     {
@@ -242,7 +242,7 @@ bool MIPSolverOsiCbc::finalizeProblem()
     return (true);
 }
 
-void MIPSolverOsiCbc::initializeSolverSettings()
+void MIPSolverCbc::initializeSolverSettings()
 {
     if(cbcModel->haveMultiThreadSupport())
         cbcModel->setNumberThreads(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
@@ -265,7 +265,7 @@ void MIPSolverOsiCbc::initializeSolverSettings()
     }
 }
 
-int MIPSolverOsiCbc::addLinearConstraint(
+int MIPSolverCbc::addLinearConstraint(
     const std::map<int, double>& elements, double constant, std::string name, bool isGreaterThan)
 {
     try
@@ -295,7 +295,7 @@ int MIPSolverOsiCbc::addLinearConstraint(
     return (osiInterface->getNumRows() - 1);
 }
 
-void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
+void MIPSolverCbc::activateDiscreteVariables(bool activate)
 {
     if(activate)
     {
@@ -326,7 +326,7 @@ void MIPSolverOsiCbc::activateDiscreteVariables(bool activate)
     }
 }
 
-E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
+E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
 
@@ -371,7 +371,7 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::getSolutionStatus()
     return (MIPSolutionStatus);
 }
 
-E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
+E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
@@ -502,9 +502,9 @@ E_ProblemSolutionStatus MIPSolverOsiCbc::solveProblem()
     return (MIPSolutionStatus);
 }
 
-bool MIPSolverOsiCbc::repairInfeasibility() { return false; }
+bool MIPSolverCbc::repairInfeasibility() { return false; }
 
-int MIPSolverOsiCbc::increaseSolutionLimit(int increment)
+int MIPSolverCbc::increaseSolutionLimit(int increment)
 {
     this->solLimit += increment;
 
@@ -513,11 +513,11 @@ int MIPSolverOsiCbc::increaseSolutionLimit(int increment)
     return (this->solLimit);
 }
 
-void MIPSolverOsiCbc::setSolutionLimit(long int limit) { this->solLimit = limit; }
+void MIPSolverCbc::setSolutionLimit(long int limit) { this->solLimit = limit; }
 
-int MIPSolverOsiCbc::getSolutionLimit() { return (this->solLimit); }
+int MIPSolverCbc::getSolutionLimit() { return (this->solLimit); }
 
-void MIPSolverOsiCbc::setTimeLimit(double seconds)
+void MIPSolverCbc::setTimeLimit(double seconds)
 {
     try
     {
@@ -529,7 +529,7 @@ void MIPSolverOsiCbc::setTimeLimit(double seconds)
     }
 }
 
-void MIPSolverOsiCbc::setCutOff(double cutOff)
+void MIPSolverCbc::setCutOff(double cutOff)
 {
     double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
 
@@ -556,7 +556,7 @@ void MIPSolverOsiCbc::setCutOff(double cutOff)
     }
 }
 
-void MIPSolverOsiCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
+void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
 {
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
@@ -601,7 +601,7 @@ void MIPSolverOsiCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
     }
 }
 
-void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
+void MIPSolverCbc::addMIPStart(VectorDouble point)
 {
     std::vector<std::pair<std::string, double>> variableValues;
 
@@ -638,7 +638,7 @@ void MIPSolverOsiCbc::addMIPStart(VectorDouble point)
     MIPStarts.push_back(variableValues);
 }
 
-void MIPSolverOsiCbc::writeProblemToFile(std::string filename)
+void MIPSolverCbc::writeProblemToFile(std::string filename)
 {
     try
     {
@@ -650,7 +650,7 @@ void MIPSolverOsiCbc::writeProblemToFile(std::string filename)
     }
 }
 
-double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
+double MIPSolverCbc::getObjectiveValue(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
 
@@ -698,9 +698,9 @@ double MIPSolverOsiCbc::getObjectiveValue(int solIdx)
     return (objVal);
 }
 
-void MIPSolverOsiCbc::deleteMIPStarts() { MIPStarts.clear(); }
+void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
 
-bool MIPSolverOsiCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
+bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInteger& binaryIndexesZeroes)
 {
     try
     {
@@ -736,7 +736,7 @@ bool MIPSolverOsiCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
     return (true);
 }
 
-VectorDouble MIPSolverOsiCbc::getVariableSolution(int solIdx)
+VectorDouble MIPSolverCbc::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
     int numVar = cbcModel->getNumCols();
@@ -770,7 +770,7 @@ VectorDouble MIPSolverOsiCbc::getVariableSolution(int solIdx)
     return (solution);
 }
 
-int MIPSolverOsiCbc::getNumberOfSolutions()
+int MIPSolverCbc::getNumberOfSolutions()
 {
     int numSols = 0;
     bool isMIP = getDiscreteVariableStatus();
@@ -792,9 +792,9 @@ int MIPSolverOsiCbc::getNumberOfSolutions()
     return (numSols);
 }
 
-void MIPSolverOsiCbc::fixVariable(int varIndex, double value) { updateVariableBound(varIndex, value, value); }
+void MIPSolverCbc::fixVariable(int varIndex, double value) { updateVariableBound(varIndex, value, value); }
 
-void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, double upperBound)
+void MIPSolverCbc::updateVariableBound(int varIndex, double lowerBound, double upperBound)
 {
     auto currentVariableBounds = getCurrentVariableBounds(varIndex);
 
@@ -812,7 +812,7 @@ void MIPSolverOsiCbc::updateVariableBound(int varIndex, double lowerBound, doubl
     }
 }
 
-void MIPSolverOsiCbc::updateVariableLowerBound(int varIndex, double lowerBound)
+void MIPSolverCbc::updateVariableLowerBound(int varIndex, double lowerBound)
 {
     auto currentVariableBounds = getCurrentVariableBounds(varIndex);
 
@@ -830,7 +830,7 @@ void MIPSolverOsiCbc::updateVariableLowerBound(int varIndex, double lowerBound)
     }
 }
 
-void MIPSolverOsiCbc::updateVariableUpperBound(int varIndex, double upperBound)
+void MIPSolverCbc::updateVariableUpperBound(int varIndex, double upperBound)
 {
     auto currentVariableBounds = getCurrentVariableBounds(varIndex);
 
@@ -848,7 +848,7 @@ void MIPSolverOsiCbc::updateVariableUpperBound(int varIndex, double upperBound)
     }
 }
 
-PairDouble MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
+PairDouble MIPSolverCbc::getCurrentVariableBounds(int varIndex)
 {
     PairDouble tmpBounds;
 
@@ -866,13 +866,13 @@ PairDouble MIPSolverOsiCbc::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverOsiCbc::supportsQuadraticObjective() { return (false); }
+bool MIPSolverCbc::supportsQuadraticObjective() { return (false); }
 
-bool MIPSolverOsiCbc::supportsQuadraticConstraints() { return (false); }
+bool MIPSolverCbc::supportsQuadraticConstraints() { return (false); }
 
-double MIPSolverOsiCbc::getUnboundedVariableBoundValue() { return (1e+50); }
+double MIPSolverCbc::getUnboundedVariableBoundValue() { return (1e+50); }
 
-double MIPSolverOsiCbc::getDualObjectiveValue()
+double MIPSolverCbc::getDualObjectiveValue()
 {
     double objVal = NAN;
 
@@ -888,17 +888,17 @@ double MIPSolverOsiCbc::getDualObjectiveValue()
     return (objVal);
 }
 
-std::pair<VectorDouble, VectorDouble> MIPSolverOsiCbc::presolveAndGetNewBounds()
+std::pair<VectorDouble, VectorDouble> MIPSolverCbc::presolveAndGetNewBounds()
 {
     return (std::make_pair(variableLowerBounds, variableUpperBounds));
 }
 
-void MIPSolverOsiCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
+void MIPSolverCbc::writePresolvedToFile([[maybe_unused]] std::string filename)
 {
     // Not implemented
 }
 
-void MIPSolverOsiCbc::checkParameters()
+void MIPSolverCbc::checkParameters()
 {
     // Check if Cbc has been compiled with support for multiple threads
     if(!cbcModel->haveMultiThreadSupport())
@@ -910,7 +910,7 @@ void MIPSolverOsiCbc::checkParameters()
     env->settings->updateSetting("Tolerance.TrustLinearConstraintValues", "Primal", false);
 }
 
-int MIPSolverOsiCbc::getNumberOfExploredNodes()
+int MIPSolverCbc::getNumberOfExploredNodes()
 {
     try
     {

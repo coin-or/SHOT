@@ -32,7 +32,6 @@ public:
 
 private:
 protected:
-    int cbCalls = 0;
     bool isMinimization = true;
     int lastNumAddedHyperplanes = 0;
     double lastUpdatedPrimal;

@@ -24,11 +24,11 @@
 
 namespace SHOT
 {
-class MIPSolverCplexLazy : public MIPSolverCplex
+class MIPSolverCplexSingleTree : public MIPSolverCplex
 {
 public:
-    MIPSolverCplexLazy(EnvironmentPtr envPtr);
-    ~MIPSolverCplexLazy() override;
+    MIPSolverCplexSingleTree(EnvironmentPtr envPtr);
+    ~MIPSolverCplexSingleTree() override;
 
     void checkParameters() override;
 
