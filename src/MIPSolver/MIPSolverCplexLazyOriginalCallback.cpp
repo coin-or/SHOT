@@ -233,7 +233,6 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
 
     env->solutionStatistics.iterationLastLazyAdded = 0;
     isMinimization = env->reformulatedProblem->objectiveFunction->properties.isMinimize;
-    cbCalls = 0;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
@@ -260,7 +259,7 @@ CtCallbackI::CtCallbackI(EnvironmentPtr envPtr, IloEnv iloEnv, IloNumVarArray xx
     if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
         && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        taskSelectPrimalSolutionFromRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
+        taskSelectPrimalSolutionFromRootsearch = std::make_unique<TaskSelectPrimalCandidatesFromRootsearch>(env);
     }
 }
 
@@ -289,8 +288,6 @@ void CtCallbackI::main()
 
     std::lock_guard<std::mutex> lock(
         (static_cast<MIPSolverCplexLazyOriginalCallback*>(env->dualSolver->MIPSolver.get()))->callbackMutex2);
-
-    this->cbCalls++;
 
     IloNumArray tmpVals(this->getEnv());
 
