@@ -116,7 +116,6 @@ private:
 
 class NLPSolverIpoptBase : virtual public INLPSolver
 {
-    friend IpoptProblem;
 
 private:
     bool hasBeenSolved = false;
@@ -148,11 +147,7 @@ protected:
     std::vector<E_VariableType> originalVariableType;
 
 public:
-    ~NLPSolverIpoptBase()
-    {
-        ipoptProblem = NULL;
-        ipoptApplication = NULL;
-    }
+    ~NLPSolverIpoptBase() = default;
 
     void setStartingPoint(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void clearStartingPoint() override;
