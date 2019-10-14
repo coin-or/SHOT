@@ -34,7 +34,9 @@ void Problem::updateConstraints()
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
         {
-            C->valueRHS = -C->valueLHS;
+            if(C->valueRHS != 0.0)
+                C->valueRHS = -C->valueLHS;
+
             C->valueLHS = SHOT_DBL_MIN;
 
             for(auto& T : C->linearTerms)
@@ -48,7 +50,9 @@ void Problem::updateConstraints()
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
         {
-            C->valueRHS = -C->valueLHS;
+            if(C->valueRHS != 0.0)
+                C->valueRHS = -C->valueLHS;
+
             C->valueLHS = SHOT_DBL_MIN;
 
             for(auto& T : C->linearTerms)
@@ -67,7 +71,12 @@ void Problem::updateConstraints()
             auto auxConstraint = std::make_shared<QuadraticConstraint>();
 
             auxConstraint->constant = -C->constant;
-            auxConstraint->valueRHS = -valueLHS;
+
+            if(valueLHS != 0.0)
+                auxConstraint->valueRHS = -valueLHS;
+            else
+                auxConstraint->valueRHS = 0.0;
+
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
             auxConstraint->index = this->numericConstraints.size() - 1;
@@ -88,7 +97,9 @@ void Problem::updateConstraints()
     {
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
         {
-            C->valueRHS = -C->valueLHS;
+            if(C->valueRHS != 0.0)
+                C->valueRHS = -C->valueLHS;
+
             C->valueLHS = SHOT_DBL_MIN;
 
             for(auto& T : C->linearTerms)
@@ -116,7 +127,12 @@ void Problem::updateConstraints()
             auto auxConstraint = std::make_shared<NonlinearConstraint>();
 
             auxConstraint->constant = -C->constant;
-            auxConstraint->valueRHS = -valueLHS;
+
+            if(valueLHS != 0.0)
+                auxConstraint->valueRHS = -valueLHS;
+            else
+                auxConstraint->valueRHS = 0.0;
+
             auxConstraint->name = C->name + "_rf";
             auxConstraint->ownerProblem = C->ownerProblem;
             auxConstraint->index = this->numericConstraints.size() - 1;
