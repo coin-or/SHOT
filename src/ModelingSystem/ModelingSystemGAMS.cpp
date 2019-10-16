@@ -456,9 +456,9 @@ void ModelingSystemGAMS::finalizeSolution()
     gmoSetHeadnTail(modelingObject, gmoTmipbest,
         r->currentDualBound); // TODO how do we know that a dual bound has actually been computed
     gmoSetHeadnTail(modelingObject, gmoHiterused, r->getCurrentIteration()->iterationNumber);
+    // TODO this seems to be 0: gmoSetHeadnTail(modelingObject, gmoHiterused, env->solutionStatistics.numberOfIterations);
     gmoSetHeadnTail(modelingObject, gmoHresused, env->timing->getElapsedTime("Total"));
-    // TODO gmoSetHeadnTail(modelingObject, gmoTmipnod,   );
-    // TODO? gmoHdomused
+    gmoSetHeadnTail(modelingObject, gmoTmipnod, env->solutionStatistics.numberOfExploredNodes);
 
     // if we created the GMO object due to starting from a .gms or .dat file, then we should write the solution into a
     // GAMS solution file (though it's probably of no interest if started from .gms and starting from .dat has been
