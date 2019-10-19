@@ -263,6 +263,12 @@ void MIPSolverCbc::initializeSolverSettings()
         cbcModel->setCutoff(this->cutOff);
         env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
     }
+
+    if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
+    {
+        // TODO check maximum allowed value
+        cbcModel->setMaximumNodes((int) env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+    }
 }
 
 int MIPSolverCbc::addLinearConstraint(

@@ -396,6 +396,11 @@ void MIPSolverGurobi::initializeSolverSettings()
         gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->getEnv().set(
             GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual") + 1);
+
+        if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
+        {
+            gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+        }
     }
     catch(GRBException& e)
     {

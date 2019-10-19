@@ -98,10 +98,15 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
         env->settings->updateSetting(
             "ObjectiveGap.Relative", "Termination", gevGetDblOpt(modelingEnvironment, gevOptCR));
 
-        env->settings->updateSetting("MIP.NumberOfThreads", "Dual", gevThreads(modelingEnvironment));
+        if(gevGetIntOpt(modelingEnvironment, gevNodeLim) > 0)
+        {
+            env->settings->updateSetting(
+                "MIP.NodeLimit", "Dual", (double)gevGetIntOpt(modelingEnvironment, gevNodeLim));
+        }
+
+        env->settings->updateSetting("MIP.NumberOfThreads", "Dual",gevThreads(modelingEnvironment));
 
         // TODO? gevDomLim: stop if so many evaluation errors in nonlinear functions
-        // TODO gevNodeLim: should be node limit for single-tree strategy, if > 0
         // TODO? gevCutOff, gevUseCutOff: stop if dual bound is above this value (if I remember right)
         // TODO gevCheat, gevUseCheat -> MIP.CutOffTolerance ?
         // TODO?? gevTryInt: handling of fractional values in initial solution for repair heuristics
@@ -456,7 +461,8 @@ void ModelingSystemGAMS::finalizeSolution()
     gmoSetHeadnTail(modelingObject, gmoTmipbest,
         r->currentDualBound); // TODO how do we know that a dual bound has actually been computed
     gmoSetHeadnTail(modelingObject, gmoHiterused, r->getCurrentIteration()->iterationNumber);
-    // TODO this seems to be 0: gmoSetHeadnTail(modelingObject, gmoHiterused, env->solutionStatistics.numberOfIterations);
+    // TODO this seems to be 0: gmoSetHeadnTail(modelingObject, gmoHiterused,
+    // env->solutionStatistics.numberOfIterations);
     gmoSetHeadnTail(modelingObject, gmoHresused, env->timing->getElapsedTime("Total"));
     gmoSetHeadnTail(modelingObject, gmoTmipnod, env->solutionStatistics.numberOfExploredNodes);
 
