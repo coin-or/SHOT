@@ -392,14 +392,20 @@ void MIPSolverGurobi::initializeSolverSettings()
         // gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
         // gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
         // gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
-        // gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, 1e15);
+
         gurobiModel->getEnv().set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
         gurobiModel->getEnv().set(
             GRB_IntParam_SolutionNumber, env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual") + 1);
 
+        // Adds a user-provided node limit
         if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
         {
-            gurobiModel->getEnv().set(GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+            gurobiModel->getEnv().set(
+                GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+        }
+
+        if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
+        {
         }
     }
     catch(GRBException& e)
@@ -844,7 +850,7 @@ void MIPSolverGurobi::setCutOff(double cutOff)
     {
         // Gurobi has problems if not an epsilon value is added to the cutoff...
 
-        double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+        double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
 
         if(isMinimizationProblem)
         {

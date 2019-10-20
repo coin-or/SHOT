@@ -693,7 +693,12 @@ void Solver::initializeSettings()
 
     // Dual strategy settings: MIP solver
 
-    env->settings->createSetting("MIP.CutOffTolerance", "Dual", 0.00001,
+    env->settings->createSetting(
+        "MIP.CutOff.InitialValue", "Dual", SHOT_DBL_MAX, "Initial cutoff value to use", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    env->settings->createSetting("MIP.CutOff.UseInitialValue", "Dual", false, "Use the initial cutoff value");
+
+    env->settings->createSetting("MIP.CutOff.Tolerance", "Dual", 0.00001,
         "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN,
         SHOT_DBL_MAX);
 

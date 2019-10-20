@@ -55,16 +55,26 @@ void TaskSolveIteration::run()
         double cutOffValue;
         double cutOffValueConstraint;
 
+        // Setting a user provided cutoff value
+        if(env->dualSolver->cutOffToUse == SHOT_DBL_MAX
+            && env->settings->getSetting<bool>("MIP.CutOff.UseInitialValue", "Dual"))
+        {
+            env->dualSolver->useCutOff = true;
+            env->dualSolver->cutOffToUse = env->settings->getSetting<double>("MIP.CutOff.InitialValue", "Dual");
+            env->output->outputDebug(
+                fmt::format(" Setting user-provided cutoff value to {}.", env->dualSolver->cutOffToUse));
+        }
+
         if(isMinimization)
         {
             cutOffValue
-                = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+                = env->dualSolver->cutOffToUse + env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
             cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
         else
         {
             cutOffValue
-                = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+                = env->dualSolver->cutOffToUse - env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
             cutOffValueConstraint = env->dualSolver->cutOffToUse;
         }
 

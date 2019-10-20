@@ -370,7 +370,7 @@ void CplexCallback::invoke(const IloCplex::Callback::Context& context)
         // Adds cutoff
 
             double cutOffTol
-            = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+            = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
 
         if(isMinimization)
         {

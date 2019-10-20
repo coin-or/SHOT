@@ -56,6 +56,7 @@ const double SHOT_DBL_MAX = std::numeric_limits<double>::max();
 const double SHOT_DBL_INF = std::numeric_limits<double>::infinity();
 const double SHOT_DBL_EPS = std::numeric_limits<double>::epsilon();
 const int SHOT_INT_MAX = std::numeric_limits<int>::max();
+const long SHOT_LONG_MAX = std::numeric_limits<long>::max();
 
 class Results;
 class Settings;
@@ -110,7 +111,7 @@ struct PairIndexValue
 
 public:
     PairIndexValue() = default;
-    PairIndexValue(int index, double value) : index(index), value(value){};
+    PairIndexValue(int index, double value) : index(index), value(value) {};
 };
 
 struct PairCoordinateValue
@@ -142,9 +143,9 @@ struct PrimalSolution
     std::string sourceDescription;
     double objValue;
     int iterFound;
-    PairIndexValue maxDevatingConstraintLinear{ -1, SHOT_DBL_INF };
-    PairIndexValue maxDevatingConstraintQuadratic{ -1, SHOT_DBL_INF };
-    PairIndexValue maxDevatingConstraintNonlinear{ -1, SHOT_DBL_INF };
+    PairIndexValue maxDevatingConstraintLinear { -1, SHOT_DBL_INF };
+    PairIndexValue maxDevatingConstraintQuadratic { -1, SHOT_DBL_INF };
+    PairIndexValue maxDevatingConstraintNonlinear { -1, SHOT_DBL_INF };
     double maxIntegerToleranceError; // The maximum integer error before rounding
     bool boundProjectionPerformed = false; // Has the variable bounds been corrected to either upper or lower bounds?
     bool integerRoundingPerformed = false; // Has the integers been rounded?

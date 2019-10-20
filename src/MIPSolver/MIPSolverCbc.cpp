@@ -264,10 +264,15 @@ void MIPSolverCbc::initializeSolverSettings()
         env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
     }
 
+    // Adds a user-provided node limit
     if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
     {
-        // TODO check maximum allowed value
-        cbcModel->setMaximumNodes((int) env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+        auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual");
+
+        if(nodeLimit > SHOT_INT_MAX)
+            nodeLimit = SHOT_INT_MAX;
+
+        cbcModel->setMaximumNodes(nodeLimit);
     }
 }
 
@@ -537,7 +542,7 @@ void MIPSolverCbc::setTimeLimit(double seconds)
 
 void MIPSolverCbc::setCutOff(double cutOff)
 {
-    double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+    double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
 
     try
     {
