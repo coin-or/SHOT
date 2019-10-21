@@ -693,9 +693,20 @@ void Solver::initializeSettings()
 
     // Dual strategy settings: MIP solver
 
-    env->settings->createSetting("MIP.CutOffTolerance", "Dual", 0.00001,
+    env->settings->createSetting(
+        "MIP.CutOff.InitialValue", "Dual", SHOT_DBL_MAX, "Initial cutoff value to use", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    env->settings->createSetting("MIP.CutOff.UseInitialValue", "Dual", false, "Use the initial cutoff value");
+
+    env->settings->createSetting("MIP.CutOff.Tolerance", "Dual", 0.00001,
         "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN,
         SHOT_DBL_MAX);
+
+    env->settings->createSetting("MIP.NodeLimit", "Dual", SHOT_DBL_MAX,
+        "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
+
+    env->settings->createSetting(
+        "MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     VectorString enumPresolve;
     enumPresolve.push_back("Never");
@@ -710,9 +721,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting(
         "MIP.Presolve.UpdateObtainedBounds", "Dual", true, "Update bounds (from presolve) to the MIP model");
-
-    env->settings->createSetting(
-        "MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     env->settings->createSetting("MIP.SolutionLimit.ForceOptimal.Iteration", "Dual", 10000,
         "Iterations without dual bound updates for forcing optimal MIP solution", 0, SHOT_INT_MAX);

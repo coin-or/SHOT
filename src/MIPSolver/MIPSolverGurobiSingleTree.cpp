@@ -351,7 +351,7 @@ void GurobiCallback::callback()
             solutionCandidate.objectiveValue = getDoubleInfo(GRB_CB_MIPSOL_OBJ);
             solutionCandidate.iterFound = env->results->getCurrentIteration()->iterationNumber;
 
-            std::vector<SolutionPoint> candidatePoints{ solutionCandidate };
+            std::vector<SolutionPoint> candidatePoints { solutionCandidate };
 
             addLazyConstraint(candidatePoints);
 
@@ -445,7 +445,7 @@ void GurobiCallback::callback()
 
         // Adds cutoff
 
-        /*double cutOffTol = env->settings->getSetting<double>("MIP.CutOffTolerance", "Dual");
+        /*double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
 
         if(isMinimization)
         {

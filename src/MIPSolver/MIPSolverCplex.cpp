@@ -409,6 +409,18 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getSetting<int>("Cplex.NodeFileInd", "Subsolver"));
 
         cplexInstance.setParam(IloCplex::FeasOptMode, 2);
+
+        // Adds a user-provided node limit
+        if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
+        {
+            auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual");
+
+            if(nodeLimit > SHOT_LONG_MAX)
+                nodeLimit = SHOT_LONG_MAX;
+
+            cplexInstance.setParam(
+                IloCplex::NodeLim, (CPXLONG)env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+        }
     }
     catch(IloException& e)
     {
