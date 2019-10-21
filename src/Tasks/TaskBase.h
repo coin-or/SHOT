@@ -3,20 +3,23 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "../Enums.h"
-#include <iostream>
-#include <typeinfo>
-#include "TaskException.h"
+
+#include "../Environment.h"
+
+#include <string>
+
+namespace SHOT
+{
 
 class TaskBase
 {
-  public:
+public:
     virtual bool isActive();
     virtual void activate();
     virtual void deactivate();
@@ -27,9 +30,16 @@ class TaskBase
 
     virtual void run();
 
-    virtual ~TaskBase(){};
+    TaskBase(EnvironmentPtr envPtr);
+    virtual ~TaskBase() = default;
 
-  protected:
-  private:
+protected:
+    EnvironmentPtr env;
+
+private:
     bool m_isActive;
 };
+
+using TaskPtr =std::shared_ptr<TaskBase> ;
+
+} // namespace SHOT

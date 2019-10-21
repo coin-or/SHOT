@@ -3,24 +3,52 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../PrimalSolutionStrategy/PrimalSolutionStrategyFixedNLP.h"
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "../Structs.h"
+
+namespace SHOT
+{
+class INLPSolver;
 
 class TaskSelectPrimalCandidatesFromNLP : public TaskBase
 {
-  public:
-	TaskSelectPrimalCandidatesFromNLP();
-	virtual ~TaskSelectPrimalCandidatesFromNLP();
-	virtual void run();
-	virtual std::string getType();
+public:
+    TaskSelectPrimalCandidatesFromNLP(EnvironmentPtr envPtr);
+    ~TaskSelectPrimalCandidatesFromNLP() override;
+    void run() override;
+    std::string getType() override;
 
-  private:
-	PrimalSolutionStrategyFixedNLP *primalStrategyFixedNLP;
+private:
+    virtual bool solveFixedNLP();
+
+    std::shared_ptr<INLPSolver> NLPSolver;
+
+    VectorInteger discreteVariableIndexes;
+    std::vector<VectorDouble> testedPoints;
+    VectorDouble fixPoint;
+
+    double originalNLPTime;
+    double originalNLPIter;
+
+    VectorDouble originalLBs;
+    VectorDouble originalUBs;
+
+    VectorString variableNames;
+
+    std::shared_ptr<TaskBase> taskSelectHPPts;
+
+    int originalIterFrequency;
+    double originalTimeFrequency;
 };
+} // namespace SHOT

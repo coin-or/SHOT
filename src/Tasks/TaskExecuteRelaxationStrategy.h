@@ -3,32 +3,25 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
 
-#include "../MIPSolver/IRelaxationStrategy.h"
-#include "../MIPSolver/RelaxationStrategyStandard.h"
-#include "../MIPSolver/RelaxationStrategyNone.h"
-
+namespace SHOT
+{
 class TaskExecuteRelaxationStrategy : public TaskBase
 {
-  public:
-    TaskExecuteRelaxationStrategy(IMIPSolver *MIPSolver);
-    virtual ~TaskExecuteRelaxationStrategy();
+public:
+    TaskExecuteRelaxationStrategy(EnvironmentPtr envPtr);
+    ~TaskExecuteRelaxationStrategy() override;
 
-    void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
-  private:
-    IRelaxationStrategy *relaxationStrategy;
-
-    bool isInitialized;
-
-    IMIPSolver *MIPSolver;
+private:
 };
+} // namespace SHOT

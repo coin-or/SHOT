@@ -1,161 +1,237 @@
 /**
-	The Supporting Hyperplane Optimization Toolkit (SHOT).
+        The Supporting Hyperplane Optimization Toolkit (SHOT).
 
-	@author Andreas Lundell, Åbo Akademi University
+        @author Andreas Lundell, Åbo Akademi University
 
-	@section LICENSE 
-	This software is licensed under the Eclipse Public License 2.0. 
-	Please see the README and LICENSE files for more information.
+        @section LICENSE
+        This software is licensed under the Eclipse Public License 2.0.
+        Please see the README and LICENSE files for more information.
 */
 
 #include "SolutionStrategyNLP.h"
 
-SolutionStrategyNLP::SolutionStrategyNLP(OSInstance *osInstance)
+#include "../TaskHandler.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+#include "../Tasks/TaskFindInteriorPoint.h"
+#include "../Tasks/TaskBase.h"
+#include "../Tasks/TaskSequential.h"
+#include "../Tasks/TaskGoto.h"
+#include "../Tasks/TaskConditional.h"
+
+#include "../Tasks/TaskInitializeIteration.h"
+#include "../Tasks/TaskTerminate.h"
+
+#include "../Tasks/TaskInitializeDualSolver.h"
+#include "../Tasks/TaskCreateDualProblem.h"
+
+#include "../Tasks/TaskExecuteSolutionLimitStrategy.h"
+#include "../Tasks/TaskExecuteRelaxationStrategy.h"
+
+#include "../Tasks/TaskPrintIterationReport.h"
+
+#include "../Tasks/TaskSolveIteration.h"
+#include "../Tasks/TaskPresolve.h"
+
+#include "../Tasks/TaskRepairInfeasibleDualProblem.h"
+
+#include "../Tasks/TaskCheckAbsoluteGap.h"
+#include "../Tasks/TaskCheckIterationError.h"
+#include "../Tasks/TaskCheckIterationLimit.h"
+#include "../Tasks/TaskCheckDualStagnation.h"
+#include "../Tasks/TaskCheckPrimalStagnation.h"
+#include "../Tasks/TaskCheckConstraintTolerance.h"
+#include "../Tasks/TaskCheckRelativeGap.h"
+#include "../Tasks/TaskCheckTimeLimit.h"
+#include "../Tasks/TaskCheckUserTermination.h"
+
+#include "../Tasks/TaskInitializeRootsearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Tasks/TaskAddHyperplanes.h"
+#include "../Tasks/TaskAddPrimalReductionCut.h"
+#include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
+
+#include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+#include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+
+#include "../Tasks/TaskUpdateInteriorPoint.h"
+
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "../Tasks/TaskSolveFixedDualProblem.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+
+#include "../Output.h"
+#include "../Model/Problem.h"
+#include "../Model/ObjectiveFunction.h"
+#include "../Settings.h"
+#include "../Timing.h"
+
+namespace SHOT
 {
-    ProcessInfo::getInstance().createTimer("ProblemInitialization", " - problem initialization");
-    ProcessInfo::getInstance().createTimer("InteriorPointSearch", " - interior point search");
 
-    ProcessInfo::getInstance().createTimer("DualStrategy", " - dual strategy");
-    ProcessInfo::getInstance().createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
-    ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
-    ProcessInfo::getInstance().createTimer("DualCutGenerationRootSearch", "   - performing root search for cuts");
-    ProcessInfo::getInstance().createTimer("DualObjectiveLiftRootSearch", "   - performing root search for objective lift");
+SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
+{
+    env = envPtr;
 
-    ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
-    ProcessInfo::getInstance().createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
+    env->timing->createTimer("InteriorPointSearch", " - interior point search");
 
-    auto solver = static_cast<ES_InteriorPointStrategy>(Settings::getInstance().getIntSetting("ESH.InteriorPoint.Solver", "Dual"));
-    auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+    env->timing->createTimer("DualStrategy", " - dual strategy");
+    env->timing->createTimer("DualProblemsRelaxed", "   - solving relaxed problems");
+    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+    env->timing->createTimer("DualCutGenerationRootSearch", "   - root search for constraint cuts");
+    env->timing->createTimer("DualObjectiveRootSearch", "   - root search for objective cut");
 
-    TaskBase *tFinalizeSolution = new TaskSequential();
+    env->timing->createTimer("PrimalStrategy", " - primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyRootSearch", "   - performing root searches");
 
-    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
-    ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+    auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
-    auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
+    auto tInitMIPSolver = std::make_shared<TaskInitializeDualSolver>(env, false);
+    env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
-    ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
-
-    if (Settings::getInstance().getIntSetting("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH && (ProcessInfo::getInstance().originalProblem->getObjectiveFunctionType() != E_ObjectiveFunctionType::Quadratic || ProcessInfo::getInstance().originalProblem->getNumberOfNonlinearConstraints() != 0))
+    if(env->settings->getSetting<int>("CutStrategy", "Dual") == (int)ES_HyperplaneCutStrategy::ESH
+        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase *tFindIntPoint = new TaskFindInteriorPoint();
-        ProcessInfo::getInstance().tasks->addTask(tFindIntPoint, "FindIntPoint");
+        auto tFindIntPoint = std::make_shared<TaskFindInteriorPoint>(env);
+        env->tasks->addTask(tFindIntPoint, "FindIntPoint");
     }
 
-    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateDualProblem");
+    auto tCreateDualProblem = std::make_shared<TaskCreateDualProblem>(env);
+    env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase *tInitializeLinesearch = new TaskInitializeLinesearch();
-    ProcessInfo::getInstance().tasks->addTask(tInitializeLinesearch, "InitializeLinesearch");
+    auto tInitializeRootsearch = std::make_shared<TaskInitializeRootsearch>(env);
+    env->tasks->addTask(tInitializeRootsearch, "InitializeRootsearch");
 
-    TaskBase *tInitializeIteration = new TaskInitializeIteration();
-    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+    auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
+    env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase *tAddHPs = new TaskAddHyperplanes(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
+    auto tAddHPs = std::make_shared<TaskAddHyperplanes>(env);
+    env->tasks->addTask(tAddHPs, "AddHPs");
 
-    if (static_cast<ES_MIPPresolveStrategy>(Settings::getInstance().getIntSetting("MIP.Presolve.Frequency", "Dual")) != ES_MIPPresolveStrategy::Never)
+    if(static_cast<ES_MIPPresolveStrategy>(env->settings->getSetting<int>("MIP.Presolve.Frequency", "Dual"))
+        != ES_MIPPresolveStrategy::Never)
     {
-        TaskBase *tPresolve = new TaskPresolve(MIPSolver);
-        ProcessInfo::getInstance().tasks->addTask(tPresolve, "Presolve");
+        auto tPresolve = std::make_shared<TaskPresolve>(env);
+        env->tasks->addTask(tPresolve, "Presolve");
     }
 
-    TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
+    auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
+    env->tasks->addTask(tSolveIteration, "SolveIter");
 
-    if (ProcessInfo::getInstance().originalProblem->isObjectiveFunctionNonlinear() && Settings::getInstance().getBoolSetting("ObjectiveLinesearch.Use", "Dual"))
+    auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
+    env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+
+    if(env->settings->getSetting<bool>("Rootsearch.Use", "Primal")
+        && env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase *tUpdateNonlinearObjectiveSolution = new TaskUpdateNonlinearObjectiveByLinesearch();
-        ProcessInfo::getInstance().tasks->addTask(tUpdateNonlinearObjectiveSolution, "UpdateNonlinearObjective");
+        auto tSelectPrimRootsearch = std::make_shared<TaskSelectPrimalCandidatesFromRootsearch>(env);
+        env->tasks->addTask(tSelectPrimRootsearch, "SelectPrimRootsearch");
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimRootsearch);
     }
 
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
+    env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    if (Settings::getInstance().getBoolSetting("Linesearch.Use", "Primal"))
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
     {
-        TaskBase *tSelectPrimLinesearch = new TaskSelectPrimalCandidatesFromLinesearch();
-        ProcessInfo::getInstance().tasks->addTask(tSelectPrimLinesearch, "SelectPrimLinesearch");
-        dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimLinesearch);
+        auto tRepairInfeasibility = std::make_shared<TaskRepairInfeasibleDualProblem>(env, "SolveIter", "CheckAbsGap");
+        env->tasks->addTask(tRepairInfeasibility, "RepairInfeasibility");
     }
 
-    TaskBase *tPrintIterReport = new TaskPrintIterationReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
+    auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    auto tCheckRelGap = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    auto tCheckIterLim = std::make_shared<TaskCheckIterationLimit>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
+    auto tCheckTimeLim = std::make_shared<TaskCheckTimeLimit>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    TaskBase *tCheckObjStag = new TaskCheckObjectiveStagnation("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckObjStag, "CheckObjStag");
+    auto tCheckPrimalStag = std::make_shared<TaskCheckPrimalStagnation>(env, "AddObjectiveCut", "CheckDualStag");
+    env->tasks->addTask(tCheckPrimalStag, "CheckPrimalStag");
 
-    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+    auto tAddObjectiveCut = std::make_shared<TaskAddPrimalReductionCut>(env, "CheckDualStag", "CheckDualStag");
+    env->tasks->addTask(tAddObjectiveCut, "AddObjectiveCut");
 
-    if (static_cast<ES_HyperplaneCutStrategy>(Settings::getInstance().getIntSetting("CutStrategy", "Dual")) == ES_HyperplaneCutStrategy::ESH)
+    auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckDualStag, "CheckDualStag");
+
+    env->tasks->addTask(tInitializeIteration, "InitIter2");
+
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
     {
-        TaskBase *tUpdateInteriorPoint = new TaskUpdateInteriorPoint();
-        ProcessInfo::getInstance().tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
-
-        if (static_cast<ES_RootsearchConstraintStrategy>(Settings::getInstance().getIntSetting(
-                "ESH.Linesearch.ConstraintStrategy", "Dual")) == ES_RootsearchConstraintStrategy::AllAsMaxFunct)
+        if(static_cast<ES_HyperplaneCutStrategy>(env->settings->getSetting<int>("CutStrategy", "Dual"))
+            == ES_HyperplaneCutStrategy::ESH)
         {
-            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsLinesearch();
-            ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+            auto tUpdateInteriorPoint = std::make_shared<TaskUpdateInteriorPoint>(env);
+            env->tasks->addTask(tUpdateInteriorPoint, "UpdateInteriorPoint");
+
+            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsESH>(env);
+            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
         }
         else
         {
-            TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsIndividualLinesearch();
-            ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+            auto tSelectHPPts = std::make_shared<TaskSelectHyperplanePointsECP>(env);
+            env->tasks->addTask(tSelectHPPts, "SelectHPPts");
         }
     }
-    else
+
+    if(env->reformulatedProblem->objectiveFunction->properties.classification
+        > E_ObjectiveFunctionClassification::Quadratic)
     {
-        TaskBase *tSelectHPPts = new TaskSelectHyperplanePointsSolution();
-        ProcessInfo::getInstance().tasks->addTask(tSelectHPPts, "SelectHPPts");
+        auto tSelectObjectiveHPPts = std::make_shared<TaskSelectHyperplanePointsByObjectiveRootsearch>(env);
+        env->tasks->addTask(tSelectObjectiveHPPts, "SelectObjectiveHPPts");
     }
 
-    ProcessInfo::getInstance().tasks->addTask(tAddHPs, "AddHPs");
+    env->tasks->addTask(tAddHPs, "AddHPs");
 
-    TaskBase *tGoto = new TaskGoto("PrintIterHeaderCheck");
-    ProcessInfo::getInstance().tasks->addTask(tGoto, "Goto");
+    auto tGoto = std::make_shared<TaskGoto>(env, "SolveIter");
+    env->tasks->addTask(tGoto, "Goto");
 
-    ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+    env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+
+    if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex)
+    {
+        auto tAddObjectiveCutFinal = std::make_shared<TaskAddPrimalReductionCut>(env, "InitIter2", "Terminate");
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tAddObjectiveCutFinal);
+    }
+
+    auto tTerminate = std::make_shared<TaskTerminate>(env);
+    env->tasks->addTask(tTerminate, "Terminate");
 }
 
-SolutionStrategyNLP::~SolutionStrategyNLP()
-{
-}
+SolutionStrategyNLP::~SolutionStrategyNLP() = default;
 
 bool SolutionStrategyNLP::solveProblem()
 {
-    TaskBase *nextTask;
+    TaskPtr nextTask;
 
-    while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
+    while(env->tasks->getNextTask(nextTask))
     {
-        Output::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
+        env->output->outputTrace("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
-        Output::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
+        env->output->outputTrace("└─── Finished task: " + nextTask->getType());
     }
 
     return (true);
 }
 
-void SolutionStrategyNLP::initializeStrategy()
-{
-}
+void SolutionStrategyNLP::initializeStrategy() {}
+} // namespace SHOT

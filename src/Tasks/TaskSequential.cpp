@@ -3,49 +3,50 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskSequential.h"
 
-TaskSequential::TaskSequential()
-{
-}
+#include <vector>
 
-TaskSequential::TaskSequential(int numberOfTasks)
+#include "../Output.h"
+
+namespace SHOT
+{
+
+TaskSequential::TaskSequential(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+
+TaskSequential::TaskSequential(EnvironmentPtr envPtr, int numberOfTasks) : TaskBase(envPtr)
 {
     m_tasks.reserve(numberOfTasks);
 }
 
-TaskSequential::~TaskSequential()
-{
-}
+TaskSequential::~TaskSequential() = default;
 
 void TaskSequential::run()
 {
-    for (auto T : m_tasks)
+    for(auto& T : m_tasks)
     {
-        Output::getInstance().outputInfo("┌─── Started task:  " + T->getType());
+        env->output->outputTrace("┌─── Started task:  " + T->getType());
         T->run();
-        Output::getInstance().outputInfo("└─── Finished task: " + T->getType());
+        env->output->outputTrace("└─── Finished task: " + T->getType());
     }
 }
 
-void TaskSequential::addTasks(std::vector<TaskBase *> tasks)
+void TaskSequential::addTasks(std::vector<TaskPtr> tasks)
 {
-    for (auto T : tasks)
+    for(auto& T : tasks)
         addTask(T);
 }
 
-void TaskSequential::addTask(TaskBase *task)
-{
-    m_tasks.emplace_back(task);
-}
+void TaskSequential::addTask(TaskPtr task) { m_tasks.emplace_back(task); }
 
 std::string TaskSequential::getType()
 {
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

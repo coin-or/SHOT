@@ -3,25 +3,34 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
-#include "SHOTSolver.h"
+#include "../src/Solver.h"
+#include "../src/Output.h"
+#include "../src/Settings.h"
+#include "../src/Utilities.h"
+
+#include "../src/Model/Problem.h"
+
+#include <iostream>
+
+using namespace SHOT;
 
 bool GurobiTest1(std::string filename);
 
-int GurobiTest(int argc, char *argv[])
+int GurobiTest(int argc, char* argv[])
 {
 
     int defaultchoice = 1;
 
     int choice = defaultchoice;
 
-    if (argc > 1)
+    if(argc > 1)
     {
-        if (sscanf(argv[1], "%d", &choice) != 1)
+        if(sscanf(argv[1], "%d", &choice) != 1)
         {
             printf("Couldn't parse that input as a number\n");
             return -1;
@@ -30,7 +39,7 @@ int GurobiTest(int argc, char *argv[])
 
     bool passed = true;
 
-    switch (choice)
+    switch(choice)
     {
     case 1:
         std::cout << "Starting test to solve a MINLP problem with Gurobi." << std::endl;
@@ -39,10 +48,10 @@ int GurobiTest(int argc, char *argv[])
         break;
     default:
         passed = false;
-        cout << "Test #" << choice << " does not exist!\n";
+        std::cout << "Test #" << choice << " does not exist!\n";
     }
 
-    if (passed)
+    if(passed)
         return 0;
     else
         return -1;
@@ -52,12 +61,14 @@ bool GurobiTest1(std::string filename)
 {
     bool passed = true;
 
-    unique_ptr<SHOTSolver> solver(new SHOTSolver());
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
     solver->updateSetting("MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Gurobi));
 
     try
     {
-        if (solver->setProblem(filename))
+        if(solver->setProblem(filename))
         {
             passed = true;
         }
@@ -66,31 +77,30 @@ bool GurobiTest1(std::string filename)
             passed = false;
         }
     }
-    catch (ErrorClass &e)
+    catch(Exception& e)
     {
-        std::cout << "Error: " << e.errormsg << std::endl;
+        std::cout << "Error: " << e.what() << std::endl;
         return false;
     }
 
     solver->solveProblem();
-    std::string osrl = solver->getOSrL();
-    std::string trace = solver->getTraceResult();
-    if (!UtilityFunctions::writeStringToFile("result.osrl", osrl))
+    std::string osrl = solver->getResultsOSrL();
+    std::string trace = solver->getResultsTrace();
+    if(!Utilities::writeStringToFile("result.osrl", osrl))
     {
         std::cout << "Could not write results to OSrL file." << std::endl;
         passed = false;
     }
 
-    if (!UtilityFunctions::writeStringToFile("trace.trc", trace))
+    if(!Utilities::writeStringToFile("trace.trc", trace))
     {
         std::cout << "Could not write results to trace file." << std::endl;
         passed = false;
     }
 
-    if (solver->getNumberOfPrimalSolutions() > 0)
+    if(solver->getPrimalSolutions().size() > 0)
     {
-        std::cout << std::endl
-                  << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
+        std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
     }
     else
     {

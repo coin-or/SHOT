@@ -3,112 +3,179 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskUpdateInteriorPoint.h"
 
-TaskUpdateInteriorPoint::TaskUpdateInteriorPoint()
-{
-}
+#include "../DualSolver.h"
+#include "../Output.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
 
-TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint()
+#include "../Model/Problem.h"
+
+namespace SHOT
 {
-}
+
+TaskUpdateInteriorPoint::TaskUpdateInteriorPoint(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+
+TaskUpdateInteriorPoint::~TaskUpdateInteriorPoint() = default;
 
 void TaskUpdateInteriorPoint::run()
 {
     // If we do not yet have a valid primal solution we can't do anything
-    if (ProcessInfo::getInstance().primalSolutions.size() == 0)
+    if(!env->results->hasPrimalSolution())
         return;
 
-    ProcessInfo::getInstance().startTimer("InteriorPointSearch");
+    if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
+        return;
 
-    auto maxDevPrimal = ProcessInfo::getInstance().primalSolutions.at(0).maxDevatingConstraintNonlinear;
-    auto tmpPrimalPoint = ProcessInfo::getInstance().primalSolutions.at(0).point;
+    env->timing->startTimer("InteriorPointSearch");
+
+    auto maxDevPrimal = env->results->primalSolutions.at(0).maxDevatingConstraintNonlinear;
+    auto tmpPrimalPoint = env->results->primalSolutions.at(0).point;
 
     // If we do not have an interior point, but uses the ESH dual strategy, update with primal solution
-    if (ProcessInfo::getInstance().interiorPts.size() == 0 && maxDevPrimal.value < 0)
+    if(env->dualSolver->interiorPts.size() == 0 && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
-        tmpIP->point = ProcessInfo::getInstance().primalSolutions.at(0).point;
-        tmpIP->maxDevatingConstraint = ProcessInfo::getInstance().primalSolutions.at(0).maxDevatingConstraintNonlinear;
+        auto tmpIP = std::make_shared<InteriorPoint>();
 
-        Output::getInstance().outputInfo("     Interior point replaced with primal solution point since no interior point was previously available.");
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
 
-        ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
+        tmpIP->point = tmpPrimalPoint;
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
+
+        env->output->outputDebug("     Interior point replaced with primal solution point since no interior point was "
+                                 "previously available.");
+
+        env->dualSolver->interiorPts.push_back(tmpIP);
+
+        env->timing->stopTimer("InteriorPointSearch");
         return;
     }
-    else if (ProcessInfo::getInstance().interiorPts.size() == 0)
+    else if(env->dualSolver->interiorPts.size() == 0)
     {
-        ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
+        env->timing->stopTimer("InteriorPointSearch");
         return;
     }
 
     // Add the new point if it is deeper within the feasible region
-    if (maxDevPrimal.value < ProcessInfo::getInstance().interiorPts.at(0)->maxDevatingConstraint.value)
+    if(maxDevPrimal.value < env->dualSolver->interiorPts.at(0)->maxDevatingConstraint.value)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
+
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = maxDevPrimal;
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        Output::getInstance().outputInfo("     Interior point replaced with primal solution point due to constraint deviation.");
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        ProcessInfo::getInstance().interiorPts.back() = tmpIP;
+        env->output->outputDebug(
+            "     Interior point replaced with primal solution point due to constraint deviation.");
+
+        env->dualSolver->interiorPts.back() = tmpIP;
     }
-    else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth) && maxDevPrimal.value < 0)
+    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+            == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepBoth)
+        && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
+
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = maxDevPrimal;
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        Output::getInstance().outputInfo("     Primal solution point used as additional interior point.");
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        if (ProcessInfo::getInstance().interiorPts.size() == ProcessInfo::getInstance().solutionStatistics.numberOfOriginalInteriorPoints)
+        env->output->outputDebug("     Primal solution point used as additional interior point.");
+
+        if((int)env->dualSolver->interiorPts.size() == env->solutionStatistics.numberOfOriginalInteriorPoints)
         {
-            ProcessInfo::getInstance().interiorPts.push_back(tmpIP);
+            env->dualSolver->interiorPts.push_back(tmpIP);
         }
         else
         {
-            ProcessInfo::getInstance().interiorPts.back() = tmpIP;
+            env->dualSolver->interiorPts.back() = tmpIP;
         }
     }
-    else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew) && maxDevPrimal.value < 0)
+    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+            == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::KeepNew)
+        && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
+
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
 
         // Add the new point only
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = maxDevPrimal;
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        Output::getInstance().outputInfo("     Interior point replaced with primal solution point.");
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        ProcessInfo::getInstance().interiorPts.back() = tmpIP;
+        env->output->outputDebug("     Interior point replaced with primal solution point.");
+
+        env->dualSolver->interiorPts.back() = tmpIP;
     }
-    else if (Settings::getInstance().getIntSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual") == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage) && maxDevPrimal.value < 0)
+    else if(env->settings->getSetting<int>("ESH.InteriorPoint.UsePrimalSolution", "Dual")
+            == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
+        && maxDevPrimal.value < 0)
     {
-        std::shared_ptr<InteriorPoint> tmpIP(new InteriorPoint());
+        auto tmpIP = std::make_shared<InteriorPoint>();
 
         // Find a new point in the midpoint between the original and new
-        for (int i = 0; i < tmpPrimalPoint.size(); i++)
+        for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
         {
-            tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * ProcessInfo::getInstance().interiorPts.at(0)->point.at(i));
+            tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->interiorPts.at(0)->point.at(i));
         }
 
+        for(auto& VAR : env->reformulatedProblem->auxiliaryVariables)
+            tmpPrimalPoint.push_back(VAR->calculate(tmpPrimalPoint));
+
+        if(env->reformulatedProblem->auxiliaryObjectiveVariable)
+            tmpPrimalPoint.push_back(env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(tmpPrimalPoint));
+
         tmpIP->point = tmpPrimalPoint;
-        tmpIP->maxDevatingConstraint = ProcessInfo::getInstance().originalProblem->getMostDeviatingConstraint(tmpPrimalPoint);
+        assert((int)tmpIP->point.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-        Output::getInstance().outputInfo("     Interior point replaced with primal solution point.");
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
+        tmpIP->maxDevatingConstraint = PairIndexValue(maxDev.constraint->index, maxDev.normalizedValue);
 
-        ProcessInfo::getInstance().interiorPts.back() = tmpIP;
+        env->output->outputDebug("     Interior point replaced with primal solution point.");
+
+        env->dualSolver->interiorPts.back() = tmpIP;
     }
 
-    ProcessInfo::getInstance().stopTimer("InteriorPointSearch");
+    env->timing->stopTimer("InteriorPointSearch");
 }
 
 std::string TaskUpdateInteriorPoint::getType()
@@ -116,3 +183,4 @@ std::string TaskUpdateInteriorPoint::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

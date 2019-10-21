@@ -3,25 +3,26 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
-#include "../OptProblems/OptProblemOriginal.h"
 
+namespace SHOT
+{
 class TaskPrintIterationReport : public TaskBase
 {
-  public:
-	TaskPrintIterationReport();
-	virtual ~TaskPrintIterationReport();
+public:
+    TaskPrintIterationReport(EnvironmentPtr envPtr);
+    ~TaskPrintIterationReport() override;
 
-	void run();
-	virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
-  private:
-	int lastNumHyperplane;
+private:
+    int lastNumHyperplane;
 };
+} // namespace SHOT

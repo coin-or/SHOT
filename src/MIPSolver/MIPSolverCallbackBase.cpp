@@ -3,83 +3,112 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "MIPSolverCallbackBase.h"
+#include "../EventHandler.h"
+#include "../Iteration.h"
+#include "../Report.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+namespace SHOT
+{
 
 bool MIPSolverCallbackBase::checkIterationLimit()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
-
-    if (currIter->iterationNumber >= Settings::getInstance().getIntSetting("Relaxation.IterationLimit", "Dual") + Settings::getInstance().getIntSetting("IterationLimit", "Termination"))
-    {
+    if(env->tasks->isTerminated())
         return (true);
-    }
+
+    auto mainlimit = env->settings->getSetting<int>("IterationLimit", "Termination");
+
+    if(mainlimit == SHOT_INT_MAX)
+        return (false);
+
+    auto currIter = env->results->getCurrentIteration();
+
+    if(currIter->iterationNumber >= mainlimit)
+        return (true);
+
+    return (false);
+}
+
+bool MIPSolverCallbackBase::checkUserTermination()
+{
+    env->events->notify(E_EventType::UserTerminationCheck);
+
+    if(env->tasks->isTerminated())
+        return (true);
 
     return (false);
 }
 
 bool MIPSolverCallbackBase::checkFixedNLPStrategy(SolutionPoint point)
 {
-    if (!Settings::getInstance().getBoolSetting("FixedInteger.Use", "Primal"))
+    if(!env->settings->getSetting<bool>("FixedInteger.Use", "Primal"))
     {
         return (false);
     }
 
-    ProcessInfo::getInstance().startTimer("PrimalStrategy");
-    ProcessInfo::getInstance().startTimer("PrimalBoundStrategyNLP");
+    env->timing->startTimer("PrimalStrategy");
+    env->timing->startTimer("PrimalBoundStrategyNLP");
 
     bool callNLPSolver = false;
 
-    auto userSettingStrategy = Settings::getInstance().getIntSetting("FixedInteger.CallStrategy", "Primal");
-    auto userSetting = Settings::getInstance().getIntSetting("FixedInteger.Source", "Primal");
+    auto userSettingStrategy = env->settings->getSetting<int>("FixedInteger.CallStrategy", "Primal");
 
-    auto dualBound = ProcessInfo::getInstance().getDualBound();
+    auto dualBound = env->results->getCurrentDualBound();
 
-    if (abs(point.objectiveValue - dualBound) / ((1e-10) + abs(dualBound)) < Settings::getInstance().getDoubleSetting("FixedInteger.DualPointGap.Relative", "Primal"))
+    if(std::abs(point.objectiveValue - dualBound) / ((1e-10) + std::abs(dualBound))
+        < env->settings->getSetting<double>("FixedInteger.DualPointGap.Relative", "Primal"))
     {
         callNLPSolver = true;
     }
-    else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
+    else if(userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::AlwaysUse))
     {
         callNLPSolver = true;
     }
-    else if (userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime) || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
+    else if(userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTime)
+        || userSettingStrategy == static_cast<int>(ES_PrimalNLPStrategy::IterationOrTimeAndAllFeasibleSolutions))
     {
-        if (ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP >= Settings::getInstance().getIntSetting("FixedInteger.Frequency.Iteration", "Primal"))
+        if(env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP
+            >= env->settings->getSetting<int>("FixedInteger.Frequency.Iteration", "Primal"))
         {
-            Output::getInstance().outputInfo(
+            env->output->outputDebug(
                 "     Activating fixed NLP primal strategy since max iterations since last call has been reached.");
             callNLPSolver = true;
         }
-        else if (ProcessInfo::getInstance().getElapsedTime("Total") - ProcessInfo::getInstance().solutionStatistics.timeLastFixedNLPCall > Settings::getInstance().getDoubleSetting("FixedInteger.Frequency.Time", "Primal"))
+        else if(env->timing->getElapsedTime("Total") - env->solutionStatistics.timeLastFixedNLPCall
+            > env->settings->getSetting<double>("FixedInteger.Frequency.Time", "Primal"))
         {
-            Output::getInstance().outputInfo(
+            env->output->outputDebug(
                 "     Activating fixed NLP primal strategy since max time limit since last call has been reached.");
             callNLPSolver = true;
         }
     }
 
-    if (!callNLPSolver)
+    if(!callNLPSolver)
     {
-        ProcessInfo::getInstance().solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
+        env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP++;
     }
 
-    ProcessInfo::getInstance().stopTimer("PrimalBoundStrategyNLP");
-    ProcessInfo::getInstance().stopTimer("PrimalStrategy");
+    env->timing->stopTimer("PrimalBoundStrategyNLP");
+    env->timing->stopTimer("PrimalStrategy");
 
     return (callNLPSolver);
 }
 
 void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::string threadId)
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
     std::stringstream tmpType;
-    if (threadId != "")
+    if(threadId != "")
     {
         tmpType << "CB (th: " << threadId << ")";
     }
@@ -88,23 +117,13 @@ void MIPSolverCallbackBase::printIterationReport(SolutionPoint solution, std::st
         tmpType << "CB";
     }
 
-    Output::getInstance().outputIterationDetail(currIter->iterationNumber,
-                                                tmpType.str(),
-                                                ProcessInfo::getInstance().getElapsedTime("Total"),
-                                                this->lastNumAddedHyperplanes,
-                                                currIter->totNumHyperplanes,
-                                                ProcessInfo::getInstance().getDualBound(),
-                                                ProcessInfo::getInstance().getPrimalBound(),
-                                                ProcessInfo::getInstance().getAbsoluteObjectiveGap(),
-                                                ProcessInfo::getInstance().getRelativeObjectiveGap(),
-                                                solution.objectiveValue,
-                                                solution.maxDeviation.idx,
-                                                solution.maxDeviation.value,
-                                                E_IterationLineType::DualCallback);
+    env->report->outputIterationDetail(currIter->iterationNumber, tmpType.str(), env->timing->getElapsedTime("Total"),
+        this->lastNumAddedHyperplanes, currIter->totNumHyperplanes, env->results->getCurrentDualBound(),
+        env->results->getPrimalBound(), env->results->getAbsoluteGlobalObjectiveGap(),
+        env->results->getRelativeGlobalObjectiveGap(), solution.objectiveValue, solution.maxDeviation.index,
+        solution.maxDeviation.value, E_IterationLineType::DualCallback);
 
     this->lastNumAddedHyperplanes = 0;
 }
 
-MIPSolverCallbackBase::~MIPSolverCallbackBase()
-{
-}
+} // namespace SHOT

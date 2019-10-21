@@ -3,29 +3,31 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskSequential : public TaskBase
 {
-  public:
-    TaskSequential();
-    TaskSequential(int numberOfTasks);
+public:
+    TaskSequential(EnvironmentPtr envPtr);
+    TaskSequential(EnvironmentPtr envPtr, int numberOfTasks);
 
-    virtual ~TaskSequential();
+    ~TaskSequential() override;
 
-    void addTasks(std::vector<TaskBase *> tasks);
-    void addTask(TaskBase *task);
+    void addTasks(std::vector<TaskPtr> tasks);
+    void addTask(TaskPtr task);
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
-  private:
-    std::vector<TaskBase *> m_tasks;
+private:
+    std::vector<TaskPtr> m_tasks;
 };
+} // namespace SHOT

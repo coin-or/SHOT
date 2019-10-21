@@ -3,26 +3,28 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include <sstream>
-#include <exception>
+#include "../Environment.h"
 
+#include <sstream>
+#include <string>
+
+namespace SHOT
+{
 class TaskException : public std::exception
 {
-  public:
-    TaskException(std::string msg) : message(msg)
-    {
-    }
-    TaskException();
+public:
+    TaskException(EnvironmentPtr envPtr[[maybe_unused]], std::string msg) : message(msg) {}
+    TaskException() = default;
 
-    const char *what() const throw()
+    const char* what() const throw() override
     {
-        if (message == "")
+        if(message == "")
             return "Unspecified task exception occurred!";
         else
         {
@@ -34,18 +36,16 @@ class TaskException : public std::exception
         }
     }
 
-  private:
+private:
     std::string message;
 };
 
 class TaskExceptionFunctionNotDefined : public std::exception
 {
-  public:
-    TaskExceptionFunctionNotDefined(std::string task) : taskName(task)
-    {
-    }
+public:
+    TaskExceptionFunctionNotDefined(EnvironmentPtr envPtr[[maybe_unused]], std::string task) : taskName(task) {}
 
-    const char *what() const throw()
+    const char* what() const throw() override
     {
         std::stringstream message;
         message << "Exception: task function in ";
@@ -55,18 +55,16 @@ class TaskExceptionFunctionNotDefined : public std::exception
         return (message.str().c_str());
     }
 
-  private:
+private:
     std::string taskName;
 };
 
 class TaskExceptionNotFound : public std::exception
 {
-  public:
-    TaskExceptionNotFound(std::string task) : taskID(task)
-    {
-    }
+public:
+    TaskExceptionNotFound(EnvironmentPtr envPtr[[maybe_unused]], std::string task) : taskID(task) {}
 
-    const char *what() const throw()
+    const char* what() const throw() override
     {
         std::stringstream message;
         message << "Exception: task with ID ";
@@ -76,6 +74,7 @@ class TaskExceptionNotFound : public std::exception
         return (message.str().c_str());
     }
 
-  private:
+private:
     std::string taskID;
 };
+} // namespace SHOT

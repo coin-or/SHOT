@@ -3,24 +3,29 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "IMIPSolutionLimitStrategy.h"
 
+#include "IMIPSolutionLimitStrategy.h"
+#include "Environment.h"
+
+namespace SHOT
+{
 class MIPSolutionLimitStrategyAdaptive : public IMIPSolutionLimitStrategy
 {
-  public:
-	MIPSolutionLimitStrategyAdaptive(IMIPSolver *MIPSolver);
-	~MIPSolutionLimitStrategyAdaptive();
+public:
+    MIPSolutionLimitStrategyAdaptive(EnvironmentPtr envPtr);
+    ~MIPSolutionLimitStrategyAdaptive() override = default;
 
-	virtual bool updateLimit();
-	virtual int getNewLimit();
-	virtual int getInitialLimit();
+    bool updateLimit() override;
+    int getNewLimit() override;
+    int getInitialLimit() override;
 
-	int lastIterSolLimIncreased;
-	int numSolLimIncremented;
+    int lastIterSolLimIncreased;
+    int numSolLimIncremented;
 };
+} // namespace SHOT

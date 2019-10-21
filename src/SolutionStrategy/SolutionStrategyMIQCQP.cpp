@@ -3,91 +3,145 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "SolutionStrategyMIQCQP.h"
 
-SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(OSInstance *osInstance)
+#include "../TaskHandler.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+#include "../Tasks/TaskFindInteriorPoint.h"
+#include "../Tasks/TaskBase.h"
+#include "../Tasks/TaskSequential.h"
+#include "../Tasks/TaskGoto.h"
+#include "../Tasks/TaskConditional.h"
+
+#include "../Tasks/TaskInitializeIteration.h"
+#include "../Tasks/TaskTerminate.h"
+
+#include "../Tasks/TaskInitializeDualSolver.h"
+#include "../Tasks/TaskCreateDualProblem.h"
+
+#include "../Tasks/TaskExecuteSolutionLimitStrategy.h"
+#include "../Tasks/TaskExecuteRelaxationStrategy.h"
+
+#include "../Tasks/TaskPrintIterationReport.h"
+
+#include "../Tasks/TaskSolveIteration.h"
+#include "../Tasks/TaskPresolve.h"
+
+#include "../Tasks/TaskRepairInfeasibleDualProblem.h"
+
+#include "../Tasks/TaskCheckAbsoluteGap.h"
+#include "../Tasks/TaskCheckIterationError.h"
+#include "../Tasks/TaskCheckIterationLimit.h"
+#include "../Tasks/TaskCheckDualStagnation.h"
+#include "../Tasks/TaskCheckPrimalStagnation.h"
+#include "../Tasks/TaskCheckConstraintTolerance.h"
+#include "../Tasks/TaskCheckRelativeGap.h"
+#include "../Tasks/TaskCheckTimeLimit.h"
+#include "../Tasks/TaskCheckUserTermination.h"
+
+#include "../Tasks/TaskInitializeRootsearch.h"
+#include "../Tasks/TaskSelectHyperplanePointsESH.h"
+#include "../Tasks/TaskSelectHyperplanePointsECP.h"
+#include "../Tasks/TaskAddHyperplanes.h"
+#include "../Tasks/TaskAddPrimalReductionCut.h"
+#include "../Tasks/TaskCheckMaxNumberOfPrimalReductionCuts.h"
+
+#include "../Tasks/TaskSelectPrimalCandidatesFromSolutionPool.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromRootsearch.h"
+#include "../Tasks/TaskSelectPrimalCandidatesFromNLP.h"
+#include "../Tasks/TaskSelectPrimalFixedNLPPointsFromSolutionPool.h"
+
+#include "../Tasks/TaskSelectHyperplanePointsByObjectiveRootsearch.h"
+#include "../Tasks/TaskSolveFixedDualProblem.h"
+
+#include "../Tasks/TaskAddIntegerCuts.h"
+
+#include "../Output.h"
+#include "../Timing.h"
+
+namespace SHOT
 {
-    ProcessInfo::getInstance().createTimer("ProblemInitialization", " - problem initialization");
-    ProcessInfo::getInstance().createTimer("InteriorPointSearch", " - interior point search");
 
-    ProcessInfo::getInstance().createTimer("DualStrategy", " - dual strategy");
-    ProcessInfo::getInstance().createTimer("DualProblemsDiscrete", "   - solving MIP problems");
+SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
+{
+    env = envPtr;
 
-    ProcessInfo::getInstance().createTimer("PrimalStrategy", " - primal strategy");
+    env->timing->createTimer("InteriorPointSearch", " - interior point search");
 
-    auto solverMIP = static_cast<ES_MIPSolver>(Settings::getInstance().getIntSetting("MIP.Solver", "Dual"));
+    env->timing->createTimer("DualStrategy", " - dual strategy");
+    env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
 
-    TaskBase *tFinalizeSolution = new TaskSequential();
+    env->timing->createTimer("PrimalStrategy", " - primal strategy");
 
-    TaskBase *tInitMIPSolver = new TaskInitializeDualSolver(solverMIP, false);
-    ProcessInfo::getInstance().tasks->addTask(tInitMIPSolver, "InitMIPSolver");
+    auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
-    auto MIPSolver = ProcessInfo::getInstance().MIPSolver;
+    auto tInitMIPSolver = std::make_shared<TaskInitializeDualSolver>(env, false);
+    env->tasks->addTask(tInitMIPSolver, "InitMIPSolver");
 
-    TaskBase *tInitOrigProblem = new TaskInitializeOriginalProblem(osInstance);
-    ProcessInfo::getInstance().tasks->addTask(tInitOrigProblem, "InitOrigProb");
+    auto tCreateDualProblem = std::make_shared<TaskCreateDualProblem>(env);
+    env->tasks->addTask(tCreateDualProblem, "CreateDualProblem");
 
-    TaskBase *tCreateDualProblem = new TaskCreateDualProblem(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tCreateDualProblem, "CreateDualProblem");
+    auto tInitializeIteration = std::make_shared<TaskInitializeIteration>(env);
+    env->tasks->addTask(tInitializeIteration, "InitIter");
 
-    TaskBase *tInitializeIteration = new TaskInitializeIteration();
-    ProcessInfo::getInstance().tasks->addTask(tInitializeIteration, "InitIter");
+    auto tSolveIteration = std::make_shared<TaskSolveIteration>(env);
+    env->tasks->addTask(tSolveIteration, "SolveIter");
 
+    auto tSelectPrimSolPool = std::make_shared<TaskSelectPrimalCandidatesFromSolutionPool>(env);
+    env->tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
+    std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
 
-    TaskBase *tSolveIteration = new TaskSolveIteration(MIPSolver);
-    ProcessInfo::getInstance().tasks->addTask(tSolveIteration, "SolveIter");
+    auto tPrintIterReport = std::make_shared<TaskPrintIterationReport>(env);
+    env->tasks->addTask(tPrintIterReport, "PrintIterReport");
 
-    TaskBase *tSelectPrimSolPool = new TaskSelectPrimalCandidatesFromSolutionPool();
-    ProcessInfo::getInstance().tasks->addTask(tSelectPrimSolPool, "SelectPrimSolPool");
-    dynamic_cast<TaskSequential *>(tFinalizeSolution)->addTask(tSelectPrimSolPool);
+    auto tCheckAbsGap = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckAbsGap, "CheckAbsGap");
 
-    TaskBase *tPrintIterReport = new TaskPrintIterationReport();
-    ProcessInfo::getInstance().tasks->addTask(tPrintIterReport, "PrintIterReport");
+    auto tCheckRelGap = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckRelGap, "CheckRelGap");
 
-    TaskBase *tCheckIterError = new TaskCheckIterationError("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterError, "CheckIterError");
+    auto tCheckTimeLim = std::make_shared<TaskCheckTimeLimit>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
 
-    TaskBase *tCheckAbsGap = new TaskCheckAbsoluteGap("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckAbsGap, "CheckAbsGap");
+    auto tCheckUserTerm = std::make_shared<TaskCheckUserTermination>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckUserTerm, "CheckUserTermination");
 
-    TaskBase *tCheckRelGap = new TaskCheckRelativeGap("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckRelGap, "CheckRelGap");
+    auto tCheckIterLim = std::make_shared<TaskCheckIterationLimit>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterLim, "CheckIterLim");
 
-    TaskBase *tCheckTimeLim = new TaskCheckTimeLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckTimeLim, "CheckTimeLim");
+    auto tCheckIterError = std::make_shared<TaskCheckIterationError>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckIterError, "CheckIterError");
 
-    TaskBase *tCheckIterLim = new TaskCheckIterationLimit("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckIterLim, "CheckIterLim");
+    auto tCheckDualStag = std::make_shared<TaskCheckDualStagnation>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckDualStag, "CheckDualStag");
 
-    TaskBase *tCheckConstrTol = new TaskCheckConstraintTolerance("FinalizeSolution");
-    ProcessInfo::getInstance().tasks->addTask(tCheckConstrTol, "CheckConstrTol");
+    auto tCheckConstrTol = std::make_shared<TaskCheckConstraintTolerance>(env, "FinalizeSolution");
+    env->tasks->addTask(tCheckConstrTol, "CheckConstrTol");
 
-    ProcessInfo::getInstance().tasks->addTask(tFinalizeSolution, "FinalizeSolution");
+    env->tasks->addTask(tFinalizeSolution, "FinalizeSolution");
 }
 
-SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP()
-{
-}
+SolutionStrategyMIQCQP::~SolutionStrategyMIQCQP() = default;
 
 bool SolutionStrategyMIQCQP::solveProblem()
 {
-    TaskBase *nextTask;
+    TaskPtr nextTask;
 
-    while (ProcessInfo::getInstance().tasks->getNextTask(nextTask))
+    while(env->tasks->getNextTask(nextTask))
     {
-        Output::getInstance().outputInfo("┌─── Started task:  " + nextTask->getType());
+        env->output->outputTrace("┌─── Started task:  " + nextTask->getType());
         nextTask->run();
-        Output::getInstance().outputInfo("└─── Finished task: " + nextTask->getType());
+        env->output->outputTrace("└─── Finished task: " + nextTask->getType());
     }
 
     return (true);
 }
 
-void SolutionStrategyMIQCQP::initializeStrategy()
-{
-}
+void SolutionStrategyMIQCQP::initializeStrategy() {}
+} // namespace SHOT

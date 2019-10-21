@@ -3,36 +3,40 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
+
 #include <functional>
 
+namespace SHOT
+{
 class TaskConditional : public TaskBase
 {
-  public:
-    TaskConditional(std::function<bool()> conditionFunct, TaskBase *taskIfTrue, TaskBase *taskIfFalse);
-    TaskConditional();
-    virtual ~TaskConditional();
+public:
+    TaskConditional(
+        EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskPtr taskIfTrue, TaskPtr taskIfFalse);
+    TaskConditional(EnvironmentPtr envPtr);
+    ~TaskConditional() override;
 
-    void setTaskIfTrue(TaskBase *task);
-    void setTaskIfFalse(TaskBase *task);
+    void setTaskIfTrue(TaskPtr task);
+    void setTaskIfFalse(TaskPtr task);
     void setCondition(std::function<bool()> conditionFunct);
 
-    virtual void run();
-    virtual std::string getType();
+    void run() override;
+    std::string getType() override;
 
-  private:
+private:
     std::function<bool()> condition;
 
-    TaskBase *taskIfTrue;
-    TaskBase *taskIfFalse;
+    TaskPtr taskIfTrue;
+    TaskPtr taskIfFalse;
     bool taskFalseIsSet;
 
-  protected:
+protected:
 };
+} // namespace SHOT

@@ -27,7 +27,7 @@
 *.out
 *.app
 
-.vs/*
 .vscode/*
 build/*
-MSVisualStudio/*
+/.vs
+/out/build

@@ -3,12 +3,39 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
+
+namespace SHOT
+{
+
+enum class E_AuxiliaryVariableType
+{
+    None,
+    NonlinearObjectiveFunction, // From epigraph formulation of (nonlinear) objective function
+    NonlinearExpressionPartitioning, // From reformulating nonlinear terms as constraints
+    MonomialTermsPartitioning, // From reformulating monoial terms as constraints
+    SignomialTermsPartitioning, // From reformulating signomial terms as constraints
+    ContinuousBilinear, // From linearizing a bilinear term x1 * x2 where x1 and x2 are real
+    BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
+    BinaryContinuousOrIntegerBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or
+                                       // integer
+    IntegerBilinear // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
+};
+
+enum class E_Convexity
+{
+    Linear,
+    Convex,
+    Concave,
+    Nonconvex,
+    Unknown,
+    NotSet
+};
 
 enum class E_DualSolutionSource
 {
@@ -18,11 +45,17 @@ enum class E_DualSolutionSource
     MIPSolverBound
 };
 
+enum class E_EventType
+{
+    UserTerminationCheck
+};
+
 enum class E_HyperplaneSource
 {
-    MIPOptimalLinesearch,
-    MIPSolutionPoolLinesearch,
-    LPRelaxedLinesearch,
+    None,
+    MIPOptimalRootsearch,
+    MIPSolutionPoolRootsearch,
+    LPRelaxedRootsearch,
     MIPOptimalSolutionPoint,
     MIPSolutionPoolSolutionPoint,
     LPRelaxedSolutionPoint,
@@ -30,7 +63,8 @@ enum class E_HyperplaneSource
     PrimalSolutionSearch,
     PrimalSolutionSearchInteriorObjective,
     InteriorPointSearch,
-    MIPCallbackRelaxed
+    MIPCallbackRelaxed,
+    ObjectiveRootsearch
 };
 
 enum class E_IterationLineType
@@ -38,13 +72,54 @@ enum class E_IterationLineType
     DualSolution,
     DualCallback,
     DualIntegerFixed,
+    DualRepair,
+    DualReductionCut,
     PrimalNLP
 };
 
-enum class E_IterationProblemType
+enum class E_DualProblemClass
 {
+    LP,
+    QP,
+    QCQP,
     MIP,
-    Relaxed
+    MIQP,
+    MIQCQP
+};
+
+enum class E_LogLevel
+{
+    Off = 6,
+    Critical = 5,
+    Error = 4,
+    Warning = 3,
+    Info = 2,
+    Debug = 1,
+    Trace = 0
+};
+
+enum class E_ModelReturnStatus
+{
+    None,
+    OptimalGlobal,
+    // OptimalLocal,
+    Unbounded,
+    UnboundedNoSolution,
+    InfeasibleGlobal,
+    InfeasibleLocal,
+    FeasibleSolution,
+    NoSolutionReturned,
+    ErrorUnknown,
+    ErrorNoSolution
+};
+
+enum class E_Monotonicity
+{
+    NotSet,
+    Unknown,
+    Nondecreasing,
+    Nonincreasing,
+    Constant
 };
 
 enum class E_PrimalNLPSource
@@ -58,16 +133,22 @@ enum class E_PrimalNLPSource
 
 enum class E_PrimalSolutionSource
 {
-    Linesearch,
-    LinesearchFixedIntegers,
+    Rootsearch,
+    RootsearchFixedIntegers,
     NLPFixedIntegers,
     NLPRelaxed,
     MIPSolutionPool,
-    ObjectiveConstraint,
     LPFixedIntegers,
     LazyConstraintCallback,
     HeuristicCallback,
     IncumbentCallback
+};
+
+enum class E_ProblemConvexity
+{
+    NotSet,
+    Convex,
+    Nonconvex
 };
 
 enum class E_NLPSolutionStatus
@@ -120,6 +201,15 @@ enum class E_ProblemType
     None
 };
 
+enum E_SettingType
+{
+    String,
+    Integer,
+    Double,
+    Enum,
+    Boolean
+};
+
 enum class E_SolutionStrategy
 {
     SingleTree,
@@ -141,11 +231,19 @@ enum class E_TerminationReason
     Error,
     AbsoluteGap,
     RelativeGap,
-    InteriorPointError,
     NumericIssues,
     UserAbort,
-    ObjectiveGapNotReached,
+    NoDualCutsAdded,
     None
+};
+
+enum class E_VariableType
+{
+    None,
+    Real,
+    Binary,
+    Integer,
+    Semicontinuous
 };
 
 enum class ES_AddPrimalPointAsInteriorPoint
@@ -172,6 +270,7 @@ enum class ES_InteriorPointStrategy
 
 enum class ES_IpoptSolver
 {
+    IpoptDefault,
     ma27,
     ma57,
     ma86,
@@ -207,23 +306,6 @@ enum class ES_MIPSolver
     None
 };
 
-enum class ES_PrimalNLPFixedPoint
-{
-    AllSolutions,
-    FirstSolution,
-    AllFeasibleSolutions,
-    FirstAndFeasibleSolutions,
-    SmallestDeviationSolution
-};
-
-enum class ES_PrimalNLPSolver
-{
-    CuttingPlane,
-    Ipopt,
-    GAMS,
-    None
-};
-
 enum class ES_MIPPresolveStrategy
 {
     Never,
@@ -237,11 +319,48 @@ enum class ES_OutputDirectory
     Program
 };
 
+enum class ES_PrimalNLPFixedPoint
+{
+    AllSolutions,
+    FirstSolution,
+    AllFeasibleSolutions,
+    FirstAndFeasibleSolutions,
+    SmallestDeviationSolution
+};
+
+enum class ES_PrimalNLPSolver
+{
+    Ipopt,
+    GAMS,
+    None
+};
+
 enum class ES_PrimalNLPStrategy
 {
     AlwaysUse,
     IterationOrTime,
     IterationOrTimeAndAllFeasibleSolutions
+};
+
+enum class ES_ReformulationBinaryMonomials
+{
+    None,
+    Simple,
+    CostaLiberti
+};
+
+enum class ES_ReformulatiomBilinearInteger
+{
+    None,
+    OneDiscretization,
+    TwoDiscretization
+};
+
+enum class ES_PartitionNonlinearSums
+{
+    Always,
+    IfConvex,
+    Never
 };
 
 enum class ES_QuadraticProblemStrategy
@@ -264,3 +383,4 @@ enum class ES_TreeStrategy
     MultiTree,
     SingleTree
 };
+} // namespace SHOT

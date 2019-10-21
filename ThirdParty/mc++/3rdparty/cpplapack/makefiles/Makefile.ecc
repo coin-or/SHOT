@@ -1,0 +1,37 @@
+CPP = ecc
+
+COMP_FLAGS = -O2 -w1
+LINK_FLAGS = -O2 -w1
+
+#MACROS = -DCPPL_VERBOSE -DCPPL_DEBUG
+
+CPPLAPACK_INCLUDE_DIR = $(HOME)/local/lib/cpplapack/include
+ECC_INCLUDE_DIR = /opt/intel/compiler70/ia64/include
+MKL_LIB_DIR = /opt/intel/mkl/lib/64/
+
+INCLUDE_DIRS = -I$(ECC_INCLUDE_DIR) -I$(CPPLAPACK_INCLUDE_DIR)
+LIB_DIRS = -L$(MKL_LIB_DIR)
+
+LIBS = -lmkl_lapack -lmkl -lguide -lF90
+OBJECTS = main.o
+
+###############################################################################
+
+A.OUT: $(OBJECTS)
+	$(CPP) $(OBJECTS) $(LINK_FLAGS) $(LIB_DIRS) $(LIBS) -o $@
+
+.SUFFIXES: .cpp .o
+
+.cpp.o:
+	$(CPP) -c $< $(COMP_FLAGS) $(INCLUDE_DIRS) $(MACROS)
+
+do: A.OUT
+	./A.OUT > std 2> err
+
+clean:
+	rm -f *~ $(OBJECTS)
+
+fullclean:
+	rm -f *~ $(OBJECTS) A.OUT std err 
+
+remake: clean A.OUT

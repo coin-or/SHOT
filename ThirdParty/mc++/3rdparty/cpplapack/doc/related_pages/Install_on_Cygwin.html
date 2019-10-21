@@ -1,0 +1,37 @@
+[Install ATLAS]
+(In case of atlas-3.2.1)
+<ul>
+<li>exec "mkdir ~/local", "mkdir ~/local/lib", "cd ~/local/lib"</li>
+<li>get atlas3.2.1.tar.bz2 at http://sourceforge.net/projects/math-atlas/</li>
+<li>exec "tar xjf atlas3.2.1.tar.bz2"</li>
+<li>exec "cd ATLAS"</li>
+<li>exec "make config"</li>
+<li>answer several questions properly</li>
+<li>exec "make install arch=[your architecture]"</li>
+<li>wait till the compilation is finished</li>
+<li>exec "ln -s lib/[your architecture]/libf77blas.a", "ln -s lib/[your architecture]/libatlas.a"</li>
+</ul>
+
+[Install LAPACK]
+<ul>
+<li>exec "cd ~/local/lib"</li>
+<li>get lapack.tgz at http://www.netlib.org/lapack/</li>
+<li>exec "tar xzf lapack.tgz"</li>
+<li>exec "cd LAPACK"</li>
+<li>edit the file 'make.inc' properly</li>
+<li>exec "make libs"</li>
+<li>wait till the compilation is finished</li>
+<li>exec "ln -s lapack_WinNT.a liblapack.a"</li>
+</ul>
+
+[Verification of CPPLapack]
+<ul>
+<li>exec "cd ~/local/lib"</li>
+<li>get cpplapack-XXXX_XX_XX.tar.gz at http://sourceforge.net/projects/cpplapack/</li>
+<li>exec "tar xzf cpplapack-XXXX_XX_XX.tar.gz"</li>
+<li>exec "ln -s cpplapack-XXXX_XX_XX cpplapack"</li>
+<li>exec "cd cpplapack/test"</li>
+<li>edit the file 'do' (Makefile.icc -> Makefile.cygwin)</li>
+<li>exec "./do"</li>
+<li>wait till all test programs are run</li>
+</ul>

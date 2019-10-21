@@ -3,37 +3,39 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-#include "IRelaxationStrategy.h"
 #include "RelaxationStrategyBase.h"
+#include "../Environment.h"
+#include "../Enums.h"
 
-class RelaxationStrategyStandard : public IRelaxationStrategy, RelaxationStrategyBase
+namespace SHOT
 {
-  public:
-    RelaxationStrategyStandard(IMIPSolver *MIPSolver);
-    virtual ~RelaxationStrategyStandard();
+class RelaxationStrategyStandard : public IRelaxationStrategy, public RelaxationStrategyBase
+{
+public:
+    RelaxationStrategyStandard(EnvironmentPtr envPtr);
+    ~RelaxationStrategyStandard() override;
 
-    virtual void executeStrategy();
+    void executeStrategy() override;
 
-    virtual void setActive();
+    void setActive() override;
 
-    virtual void setInactive();
+    void setInactive() override;
 
-    virtual void setInitial();
+    void setInitial() override;
 
-    virtual E_IterationProblemType getProblemType();
-
-  private:
+private:
     bool isIterationLimitReached();
     bool isTimeLimitReached();
     bool isLPStepFinished();
     bool isObjectiveStagnant();
 
     bool LPFinished;
-    IMIPSolver *MIPSolver;
 };
+
+} // namespace SHOT

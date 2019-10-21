@@ -3,59 +3,42 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "Iteration.h"
+#include "Results.h"
+#include "Settings.h"
 
-Iteration::Iteration()
+namespace SHOT
 {
-    this->iterationNumber = ProcessInfo::getInstance().iterations.size() + 1;
+
+Iteration::Iteration(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+    this->iterationNumber = env->results->getNumberOfIterations() + 1;
 
     this->numHyperplanesAdded = 0;
 
-    if (ProcessInfo::getInstance().iterations.size() == 0)
+    if(env->results->getNumberOfIterations() == 0)
+        this->totNumHyperplanes = 0;
+    else if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         this->totNumHyperplanes = 0;
     else
-        this->totNumHyperplanes = ProcessInfo::getInstance().iterations.at(ProcessInfo::getInstance().iterations.size() - 1).totNumHyperplanes;
+        this->totNumHyperplanes
+            = env->results->iterations.at(env->results->getNumberOfIterations() - 1)->totNumHyperplanes;
 
-    this->maxDeviation = OSDBL_MAX;
-    this->boundaryDistance = OSDBL_MAX;
+    this->maxDeviation = SHOT_DBL_MAX;
+    this->boundaryDistance = SHOT_DBL_MAX;
 
     this->objectiveValue = NAN;
     this->MIPSolutionLimitUpdated = false;
     this->solutionStatus = E_ProblemSolutionStatus::None;
 
-    currentObjectiveBounds.first = ProcessInfo::getInstance().getDualBound();
-    currentObjectiveBounds.second = ProcessInfo::getInstance().getPrimalBound();
-
-    if (ProcessInfo::getInstance().relaxationStrategy != NULL)
-    {
-        this->type = ProcessInfo::getInstance().relaxationStrategy->getProblemType();
-    }
-    else
-    {
-        switch (static_cast<E_SolutionStrategy>(ProcessInfo::getInstance().usedSolutionStrategy))
-        {
-        case (E_SolutionStrategy::MIQCQP):
-            this->type = E_IterationProblemType::MIP;
-            break;
-        case (E_SolutionStrategy::MIQP):
-            this->type = E_IterationProblemType::MIP;
-            break;
-        case (E_SolutionStrategy::NLP):
-            this->type = E_IterationProblemType::Relaxed;
-            break;
-        case (E_SolutionStrategy::SingleTree):
-            this->type = E_IterationProblemType::MIP;
-            break;
-        default:
-            this->type = E_IterationProblemType::MIP;
-            break;
-        }
-    }
+    currentObjectiveBounds.first = env->results->getCurrentDualBound();
+    currentObjectiveBounds.second = env->results->getPrimalBound();
 }
 
 Iteration::~Iteration()
@@ -65,19 +48,16 @@ Iteration::~Iteration()
     hyperplanePoints.clear();
 }
 
-bool Iteration::isMIP()
-{
-    return (this->type == E_IterationProblemType::MIP);
-}
+bool Iteration::isMIP() { return (this->isDualProblemDiscrete); }
 
 SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 {
-    double tmpVal = -OSDBL_MAX;
+    double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
-    for (int i = 0; i < solutionPoints.size(); i++)
+    for(size_t i = 0; i < solutionPoints.size(); i++)
     {
-        if (solutionPoints.at(i).maxDeviation.value > tmpVal)
+        if(solutionPoints.at(i).maxDeviation.value > tmpVal)
         {
             tmpIdx = i;
             tmpVal = solutionPoints.at(i).maxDeviation.value;
@@ -89,12 +69,12 @@ SolutionPoint Iteration::getSolutionPointWithSmallestDeviation()
 
 int Iteration::getSolutionPointWithSmallestDeviationIndex()
 {
-    double tmpVal = -OSDBL_MAX;
+    double tmpVal = SHOT_DBL_MIN;
     int tmpIdx = 0;
 
-    for (int i = 0; i < solutionPoints.size(); i++)
+    for(size_t i = 0; i < solutionPoints.size(); i++)
     {
-        if (solutionPoints.at(i).maxDeviation.value > tmpVal)
+        if(solutionPoints.at(i).maxDeviation.value > tmpVal)
         {
             tmpIdx = i;
             tmpVal = solutionPoints.at(i).maxDeviation.value;
@@ -103,3 +83,4 @@ int Iteration::getSolutionPointWithSmallestDeviationIndex()
 
     return (tmpIdx);
 }
+} // namespace SHOT

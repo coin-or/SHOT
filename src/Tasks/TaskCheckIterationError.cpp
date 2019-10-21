@@ -3,56 +3,58 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskCheckIterationError.h"
 
-TaskCheckIterationError::TaskCheckIterationError(std::string taskIDTrue)
+#include "../Iteration.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../TaskHandler.h"
+#include "../Timing.h"
+
+namespace SHOT
 {
-    taskIDIfTrue = taskIDTrue;
+
+TaskCheckIterationError::TaskCheckIterationError(EnvironmentPtr envPtr, std::string taskIDTrue)
+    : TaskBase(envPtr), taskIDIfTrue(taskIDTrue)
+{
 }
 
-TaskCheckIterationError::~TaskCheckIterationError()
-{
-}
+TaskCheckIterationError::~TaskCheckIterationError() = default;
 
 void TaskCheckIterationError::run()
 {
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration();
+    auto currIter = env->results->getCurrentIteration();
 
-    if (currIter->solutionStatus == E_ProblemSolutionStatus::Error)
+    // Always also check whether we actually got a solution in the current interation
+    if(currIter->solutionStatus == E_ProblemSolutionStatus::Error /* && currIter->solutionPoints.size() == 0*/)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::Error;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReason = E_TerminationReason::Error;
+        env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since an error occured when solving the dual problem.";
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && currIter->solutionPoints.size() == 0)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::InfeasibleProblem;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReason = E_TerminationReason::InfeasibleProblem;
+        env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since the dual problem is infeasible.";
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::CutOff)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded && currIter->solutionPoints.size() == 0)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::InfeasibleProblem;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReason = E_TerminationReason::UnboundedProblem;
+        env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription = "Terminated since the dual problem is unbounded.";
     }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::Unbounded)
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Numeric && currIter->solutionPoints.size() == 0)
     {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::UnboundedProblem;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-    }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::Numeric)
-    {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::NumericIssues;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
-    }
-    else if (currIter->solutionStatus == E_ProblemSolutionStatus::None &&
-             ProcessInfo::getInstance().primalSolutions.size() > 0)
-    {
-        ProcessInfo::getInstance().terminationReason = E_TerminationReason::ObjectiveGapNotReached;
-        ProcessInfo::getInstance().tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReason = E_TerminationReason::NumericIssues;
+        env->tasks->setNextTask(taskIDIfTrue);
+        env->results->terminationReasonDescription
+            = "Terminated due to numerical issues when solving the dual problem.";
     }
 }
 
@@ -61,3 +63,4 @@ std::string TaskCheckIterationError::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

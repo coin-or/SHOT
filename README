@@ -1,21 +1,21 @@
 Supporting Hyperplane Optimization Toolkit (SHOT):
 
 SHOT is a solver for convex mixed-integer nonlinear programming (MINLP) problems. It is
-described in the paper:
+described in the forthcoming paper:
 
 The Supporting Hyperplane Optimization Toolkit: A Polyhedral Outer Approximation Based 
 Convex MINLP Solver Utilizing a Single Branching Tree Approach
 
 by Andreas Lundell, Jan Kronqvist and Tapio Westerlund
 
-Link here: http://www.optimization-online.org/DB_FILE/2018/06/6680.pdf
+Link here:
 
 Please cite this paper if you use the solver for your own research purposes.
 
 
 See the INSTALL file for installation instructions.
 
-More information is available at the URL: http://github.com/coin-or/SHOT
+More information is available at the URL: http://github.com/andreaslundell/SHOT
 
 
 SHOT utilizes the following COIN-OR subprojects

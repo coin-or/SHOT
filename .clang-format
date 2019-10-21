@@ -1,0 +1,11 @@
+---
+Language: Cpp
+BasedOnStyle: WebKit
+BreakBeforeBraces: Allman
+BreakConstructorInitializersBeforeComma: false
+ColumnLimit: 120
+IndentWrappedFunctionNames: true
+SortIncludes: false
+SpaceBeforeParens: Never
+SpaceInEmptyParentheses: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true

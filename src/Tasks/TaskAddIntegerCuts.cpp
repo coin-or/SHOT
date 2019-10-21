@@ -3,63 +3,54 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "TaskAddIntegerCuts.h"
 
-TaskAddIntegerCuts::TaskAddIntegerCuts(IMIPSolver *MIPSolver)
-{
-    ProcessInfo::getInstance().startTimer("DualStrategy");
-    this->MIPSolver = MIPSolver;
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
-}
+#include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
+#include "../Results.h"
+#include "../Settings.h"
+#include "../Timing.h"
 
-TaskAddIntegerCuts::~TaskAddIntegerCuts()
+namespace SHOT
 {
-}
+
+TaskAddIntegerCuts::TaskAddIntegerCuts(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+
+TaskAddIntegerCuts::~TaskAddIntegerCuts() = default;
 
 void TaskAddIntegerCuts::run()
 {
-    ProcessInfo::getInstance().startTimer("DualStrategy");
+    env->timing->startTimer("DualStrategy");
 
-    auto currIter = ProcessInfo::getInstance().getCurrentIteration(); // The unsolved new iteration
+    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    if (ProcessInfo::getInstance().integerCutWaitingList.size() == 0)
+    if(env->dualSolver->integerCutWaitingList.size() == 0)
         return;
 
-    if (!currIter->isMIP() || !Settings::getInstance().getBoolSetting("HyperplaneCuts.Delay", "Dual") || !currIter->MIPSolutionLimitUpdated)
+    if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
+        || !currIter->MIPSolutionLimitUpdated)
     {
 
-        for (int j = 0; j < ProcessInfo::getInstance().integerCutWaitingList.size(); j++)
+        for(size_t j = 0; j < env->dualSolver->integerCutWaitingList.size(); j++)
         {
-            auto tmpBinaryCombination = ProcessInfo::getInstance().integerCutWaitingList.at(j);
-            int numOnes = tmpBinaryCombination.size();
+            auto [ones, zeroes] = env->dualSolver->integerCutWaitingList.at(j);
 
-            std::vector<IndexValuePair> elements;
-
-            for (int i = 0; i < numOnes; i++)
-            {
-                IndexValuePair pair;
-                pair.idx = tmpBinaryCombination.at(i);
-                pair.value = 1.0;
-
-                elements.push_back(pair);
-            }
-
-            this->MIPSolver->addLinearConstraint(elements, -(numOnes - 1.0));
-            ProcessInfo::getInstance().solutionStatistics.numberOfIntegerCuts++;
+            env->dualSolver->MIPSolver->createIntegerCut(ones, zeroes);
+            env->solutionStatistics.numberOfIntegerCuts++;
         }
 
-        Output::getInstance().outputInfo(
-            "     Added " + to_string(ProcessInfo::getInstance().integerCutWaitingList.size()) + " integer cut(s).                                        ");
+        env->output->outputDebug("        Added " + std::to_string(env->dualSolver->integerCutWaitingList.size())
+            + " integer cut(s) to waiting list.");
 
-        ProcessInfo::getInstance().integerCutWaitingList.clear();
+        env->dualSolver->integerCutWaitingList.clear();
     }
 
-    ProcessInfo::getInstance().stopTimer("DualStrategy");
+    env->timing->stopTimer("DualStrategy");
 }
 
 std::string TaskAddIntegerCuts::getType()
@@ -67,3 +58,4 @@ std::string TaskAddIntegerCuts::getType()
     std::string type = typeid(this).name();
     return (type);
 }
+} // namespace SHOT

@@ -3,25 +3,27 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
 #include "TaskBase.h"
-#include "../ProcessInfo.h"
 
+namespace SHOT
+{
 class TaskCheckAbsoluteGap : public TaskBase
 {
-  public:
-	TaskCheckAbsoluteGap(std::string taskIDTrue);
-	virtual ~TaskCheckAbsoluteGap();
+public:
+    TaskCheckAbsoluteGap(EnvironmentPtr envPtr, std::string taskIDTrue);
+    ~TaskCheckAbsoluteGap() override;
 
-	virtual void run();
+    void run() override;
 
-	virtual std::string getType();
+    std::string getType() override;
 
-  private:
-	std::string taskIDIfTrue;
+private:
+    std::string taskIDIfTrue;
 };
+} // namespace SHOT

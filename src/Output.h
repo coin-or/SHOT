@@ -3,100 +3,46 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #pragma once
-
 #include "Enums.h"
-#include "SHOTSettings.h"
-#include "ProcessInfo.h"
-//#include "OptProblems/OptProblem.h"
-//#include "OptProblems/OptProblemOriginal.h"
+#include "Structs.h"
+#include <memory>
 
-// Used for OSOutput
-#include "cstdio"
-#define HAVE_STDIO_H 1
-#include "OSOutput.h"
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_sinks.h"
+#include "spdlog/sinks/basic_file_sink.h"
 
-#include <boost/format.hpp>
-
-class Output
+namespace SHOT
 {
-  public:
+class DllExport Output
+{
+public:
+    Output();
     virtual ~Output();
 
-    static Output &getInstance()
-    {
-        static Output inst;
-        return (inst);
-    }
-
-    void outputAlways(std::string message);
+    void outputCritical(std::string message);
     void outputError(std::string message);
     void outputError(std::string message, std::string errormessage);
-    void outputSummary(std::string message);
     void outputWarning(std::string message);
     void outputInfo(std::string message);
     void outputDebug(std::string message);
     void outputTrace(std::string message);
-    void outputDetailedTrace(std::string message);
 
-    void setLogLevels();
+    void setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel);
 
-    void outputSolverHeader();
+    void setConsoleSink(std::shared_ptr<spdlog::sinks::sink> newSink);
 
-    void outputOptionsReport();
+    void setFileSink(std::string filename);
 
-    void outputProblemInstanceReport();
+private:
+    std::shared_ptr<spdlog::sinks::sink> consoleSink;
+    std::shared_ptr<spdlog::sinks::basic_file_sink_st> fileSink;
 
-    void outputInteriorPointPreReport();
-
-    void outputIterationDetailHeader();
-
-    void outputIterationDetail(int iterationNumber,
-                               std::string iterationDesc,
-                               double totalTime,
-                               int dualCutsAdded,
-                               int dualCutsTotal,
-                               double dualObjectiveValue,
-                               double primalObjectiveValue,
-                               double absoluteObjectiveGap,
-                               double relativeObjectiveGap,
-                               double currentObjectiveValue,
-                               int maxConstraintIndex,
-                               double maxConstraintError,
-                               E_IterationLineType lineType);
-
-    void outputIterationDetailHeaderMinimax();
-
-    void outputIterationDetailMinimax(int iterationNumber,
-                                      std::string iterationDesc,
-                                      double totalTime,
-                                      int dualCutsAdded,
-                                      int dualCutsTotal,
-                                      double dualObjectiveValue,
-                                      double primalObjectiveValue,
-                                      double absoluteObjectiveGap,
-                                      double relativeObjectiveGap);
-
-    void outputPrimalSolutionDetailedReport();
-
-    void outputSolutionReport();
-
-  private:
-    OSOutput *osOutput;
-
-    double lastDualObjectiveValue = -DBL_MAX;
-    double lastPrimalObjectiveValue = DBL_MAX;
-    double lastAbsoluteObjectiveGap = DBL_MAX;
-    double lastRelativeObjectiveGap = 1.0;
-    double lastIterationOutputTimeStamp = 0.0;
-    int iterationsWithoutPrintoutCounter = 0;
-    int iterationPrintoutsSinceLastHeader = 0;
-    bool firstIterationHeaderPrinted = false;
-
-    Output();
+    std::shared_ptr<spdlog::logger> logger;
 };
+}

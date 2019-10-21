@@ -3,68 +3,59 @@
 
    @author Andreas Lundell, Åbo Akademi University
 
-   @section LICENSE 
-   This software is licensed under the Eclipse Public License 2.0. 
+   @section LICENSE
+   This software is licensed under the Eclipse Public License 2.0.
    Please see the README and LICENSE files for more information.
 */
 
 #include "NLPSolverIpoptRelaxed.h"
 
-NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed()
-{
-    osolwriter = new OSoLWriter();
+#include "../Settings.h"
 
-    NLPProblem = new OptProblemNLPRelaxed();
+#include "../Model/Problem.h"
+
+namespace SHOT
+{
+
+NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr)
+{
+    sourceProblem = source;
+
+    for(auto& V : sourceProblem->allVariables)
+        originalVariableType.push_back(V->properties.type);
+
+    updateSettings();
+
+    ipoptProblem = std::make_shared<IpoptProblem>(env, sourceProblem);
+    ipoptApplication = std::make_shared<Ipopt::IpoptApplication>();
 
     setInitialSettings();
-}
 
-NLPSolverIpoptRelaxed::~NLPSolverIpoptRelaxed()
-{
-    delete osolwriter;
-    delete NLPProblem;
-}
+    ipoptProblem->lowerBounds = sourceProblem->getVariableLowerBounds();
+    ipoptProblem->upperBounds = sourceProblem->getVariableUpperBounds();
 
-bool NLPSolverIpoptRelaxed::createProblemInstance(OSInstance *origInstance)
-{
-    Output::getInstance().outputInfo("     Creating relaxed Ipopt problem.");
+    Ipopt::ApplicationReturnStatus ipoptStatus = ipoptApplication->Initialize();
 
-    dynamic_cast<OptProblemNLPRelaxed *>(NLPProblem)->reformulate(origInstance);
-
-    Output::getInstance().outputInfo("     Ipopt relaxed NLP problem created.");
-
-    return (true);
+    if(ipoptStatus != Ipopt::Solve_Succeeded)
+    {
+        env->output->outputError(" Error when initializing Ipopt.");
+    }
 }
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
-    auto constrTol = Settings::getInstance().getDoubleSetting("Ipopt.ConstraintViolationTolerance", "Subsolver");
-    osOption->setAnotherSolverOption("constr_viol_tol", UtilityFunctions::toStringFormat(constrTol, "%.10f"), "ipopt",
-                                     "", "double", "");
+    ipoptApplication->Options()->SetNumericValue("constr_viol_tol",
+        env->settings->getSetting<double>("Ipopt.ConstraintViolationTolerance", "Subsolver") + 1e-12);
 
-    osOption->setAnotherSolverOption("tol",
-                                     UtilityFunctions::toStringFormat(
-                                         Settings::getInstance().getDoubleSetting("Ipopt.RelativeConvergenceTolerance", "Subsolver"), "%.10f"),
-                                     "ipopt", "", "double", "");
+    ipoptApplication->Options()->SetNumericValue(
+        "tol", env->settings->getSetting<double>("Ipopt.RelativeConvergenceTolerance", "Subsolver") + 1e-12);
 
-    osOption->setAnotherSolverOption("max_iter",
-                                     to_string(Settings::getInstance().getIntSetting("Ipopt.MaxIterations", "Subsolver")), "ipopt", "",
-                                     "integer", "");
+    ipoptApplication->Options()->SetIntegerValue(
+        "max_iter", env->settings->getSetting<int>("Ipopt.MaxIterations", "Subsolver"));
 
-    auto timeLimit = Settings::getInstance().getDoubleSetting("FixedInteger.TimeLimit", "Primal");
-    osOption->setAnotherSolverOption("max_cpu_time", UtilityFunctions::toStringFormat(timeLimit, "%.10f"), "ipopt", "",
-                                     "number", "");
+    ipoptApplication->Options()->SetNumericValue(
+        "max_cpu_time", env->settings->getSetting<double>("FixedInteger.TimeLimit", "Primal"));
 }
 
-std::vector<double> NLPSolverIpoptRelaxed::getSolution()
-{
-    int numVar = NLPProblem->getNumberOfVariables();
-    std::vector<double> tmpPoint(numVar);
-
-    for (int i = 0; i < numVar; i++)
-    {
-        tmpPoint.at(i) = NLPSolverIpoptBase::getSolution(i);
-    }
-
-    return (tmpPoint);
-}
+VectorDouble NLPSolverIpoptRelaxed::getSolution() { return (NLPSolverIpoptBase::getSolution()); }
+} // namespace SHOT

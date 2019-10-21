@@ -1,0 +1,17 @@
+#!/bin/sh
+
+rootdir=`pwd`
+MAKEFILE=$HOME/local/cpplapack/makefiles/Makefile
+
+for i in `find * -type d | grep -v .svn`; do
+    if [ -d $i ]; then
+        echo "################ Enter into $i/ ################"
+        cd $i
+        if [ -f main.cpp ]; then
+            make -f $MAKEFILE fullclean && rm -f SUCCEEDED tmp.txt
+        fi
+        if [ $? != 0 ]; then exit 1; fi
+        cd $rootdir
+        echo "################ Exit  from $i/ ################"
+    fi
+done
