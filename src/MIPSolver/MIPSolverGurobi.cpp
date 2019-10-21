@@ -403,10 +403,6 @@ void MIPSolverGurobi::initializeSolverSettings()
             gurobiModel->getEnv().set(
                 GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
         }
-
-        if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
-        {
-        }
     }
     catch(GRBException& e)
     {
