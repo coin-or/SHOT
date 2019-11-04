@@ -194,7 +194,7 @@ class ExpressionConstant : public NonlinearExpression
 {
 public:
     double constant = 0;
-    ExpressionConstant(double constant) : constant(constant){};
+    ExpressionConstant(double constant) : constant(constant) {};
 
     inline double calculate([[maybe_unused]] const VectorDouble& point) const override { return constant; };
 
@@ -218,7 +218,7 @@ public:
 
     inline int getNumberOfChildren() const override { return 0; }
 
-    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override{};
+    inline void appendNonlinearVariables([[maybe_unused]] Variables& nonlinearVariables) override {};
 
     inline bool operator==(const NonlinearExpression& rhs) const override
     {
@@ -655,16 +655,7 @@ public:
         return (log(childValue));
     }
 
-    inline bool tightenBounds(Interval bound) override
-    {
-        if(bound.l() < 0.0 && bound.u() < 0.0)
-            return (false);
-
-        if(bound.l() < 0.0)
-            bound.l(SHOT_DBL_EPS);
-
-        return (child->tightenBounds(exp(bound)));
-    };
+    inline bool tightenBounds(Interval bound) override { return (child->tightenBounds(exp(bound))); };
 
     inline FactorableFunction getFactorableFunction() override { return (log(child->getFactorableFunction())); }
 
@@ -1822,8 +1813,6 @@ public:
 
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
-        // int integerValue = (int)round(intpart);
-        // bool isEven = (integerValue % 2 == 0);
 
         Interval interval(0.0);
 
