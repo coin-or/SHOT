@@ -26,8 +26,8 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
 
     updateSettings();
 
-    ipoptProblem = std::make_shared<IpoptProblem>(env, sourceProblem);
-    ipoptApplication = std::make_shared<Ipopt::IpoptApplication>();
+    ipoptProblem = new IpoptProblem(env, sourceProblem);
+    ipoptApplication = new Ipopt::IpoptApplication();
 
     setInitialSettings();
 

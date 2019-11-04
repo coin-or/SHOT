@@ -629,11 +629,11 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
         if(!hasBeenSolved)
         {
-            ipoptStatus = ipoptApplication->OptimizeTNLP(ipoptProblem.get());
+            ipoptStatus = ipoptApplication->OptimizeTNLP(ipoptProblem);
         }
         else
         {
-            ipoptStatus = ipoptApplication->ReOptimizeTNLP(ipoptProblem.get());
+            ipoptStatus = ipoptApplication->ReOptimizeTNLP(ipoptProblem);
             hasBeenSolved = true;
         }
 

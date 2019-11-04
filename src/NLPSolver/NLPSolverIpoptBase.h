@@ -121,10 +121,10 @@ private:
     bool hasBeenSolved = false;
 
 protected:
-    std::shared_ptr<IpoptProblem> ipoptProblem;
+    Ipopt::SmartPtr<IpoptProblem> ipoptProblem;
     ProblemPtr sourceProblem;
 
-    std::shared_ptr<Ipopt::IpoptApplication> ipoptApplication;
+    Ipopt::SmartPtr<Ipopt::IpoptApplication> ipoptApplication;
 
     E_NLPSolutionStatus solveProblemInstance() override;
 
