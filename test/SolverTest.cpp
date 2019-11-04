@@ -84,6 +84,7 @@ bool SolveProblem(std::string filename)
     if(solver->getPrimalSolutions().size() > 0)
     {
         std::cout << std::endl << "Objective value: " << solver->getPrimalSolution().objValue << std::endl;
+        passed = true;
     }
     else
     {
@@ -236,10 +237,12 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test to read OSiL files:" << std::endl;
         passed = ReadProblem("data/tls2.osil");
         std::cout << "Finished test to read OSiL files." << std::endl;
+        break;
     case 2:
         std::cout << "Starting test to read NL files:" << std::endl;
         passed = ReadProblem("data/tls2.nl");
         std::cout << "Finished test to read NL files." << std::endl;
+        break;
     case 3:
         std::cout << "Starting test to solve a MINLP problem in OSiL syntax:" << std::endl;
         passed = SolveProblem("data/tls2.osil");

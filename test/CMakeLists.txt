@@ -3,7 +3,8 @@ set(TEST_EXE_NAME test_runner)
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 
-# The main groups of tests, there should be a file matching the name +"test".cpp in the test directory
+# The main groups of tests, there should be a file matching the name +"test".cpp
+# in the test directory
 set(cpptests Model Settings)
 
 set(Model_parts
@@ -43,8 +44,7 @@ set(Solver_parts
     1
     2
     3
-    4
-    5)
+    4)
 set(cpptests ${cpptests} Solver)
 
 if(HAS_IPOPT)
@@ -80,7 +80,10 @@ target_link_libraries(${TEST_EXE_NAME} ${libs})
 target_link_libraries(${TEST_EXE_NAME} SHOTSolver)
 
 if(HAS_CPLEX)
-  if(NOT (CPLEX_FOUND) OR NOT (CPLEX_CONCERT_FOUND) OR NOT (CPLEX_ILOCPLEX_FOUND))
+  if(NOT
+     (CPLEX_FOUND)
+     OR NOT (CPLEX_CONCERT_FOUND)
+     OR NOT (CPLEX_ILOCPLEX_FOUND))
     message("-- CPLEX libraries could not be found!")
   else()
 
@@ -165,7 +168,9 @@ foreach(cpptest ${cpptests})
              ${TEST_PATH}/test_runner
              ${cpptest}test
              ${part})
-    set_tests_properties(${cpptest}_${part} PROPERTIES FAIL_REGULAR_EXPRESSION "ERROR;FAIL;Test failed")
+    set_tests_properties(${cpptest}_${part}
+                         PROPERTIES FAIL_REGULAR_EXPRESSION
+                                    "ERROR;FAIL;Test failed")
   endforeach()
 endforeach()
 
