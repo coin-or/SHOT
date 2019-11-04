@@ -28,7 +28,7 @@ class MIPSolverCplexSingleTreeLegacy : public MIPSolverCplex
 {
 public:
     MIPSolverCplexSingleTreeLegacy(EnvironmentPtr envPtr);
-    ~MIPSolverCplexSingleTreeLegacy() override;
+    ~MIPSolverCplexSingleTreeLegacy() override = default;
 
     void checkParameters() override;
 

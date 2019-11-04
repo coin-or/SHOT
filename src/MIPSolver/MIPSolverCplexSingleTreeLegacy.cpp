@@ -623,8 +623,6 @@ MIPSolverCplexSingleTreeLegacy::MIPSolverCplexSingleTreeLegacy(EnvironmentPtr en
     checkParameters();
 }
 
-MIPSolverCplexSingleTreeLegacy::~MIPSolverCplexSingleTreeLegacy() = default;
-
 void MIPSolverCplexSingleTreeLegacy::initializeSolverSettings()
 {
     try

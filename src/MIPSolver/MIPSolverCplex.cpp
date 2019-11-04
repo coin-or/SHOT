@@ -1306,6 +1306,7 @@ bool MIPSolverCplex::createHyperplane(
 
         addConstraintFunction(tmpRange);
 
+        tmpRange.end();
         expr.end();
     }
     catch(IloException& e)
