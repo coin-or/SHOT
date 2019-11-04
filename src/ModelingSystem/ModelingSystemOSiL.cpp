@@ -64,11 +64,14 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         return (E_ProblemCreationStatus::ErrorInFile);
     }
 
-    // Read the problem name
-    problem->name = osilDocument.FirstChildElement("osil")
-                        ->FirstChildElement("instanceHeader")
-                        ->FirstChildElement("name")
-                        ->GetText();
+    // Read the problem name if it exists
+    if(osilDocument.FirstChildElement("osil")->FirstChildElement("instanceHeader")->FirstChildElement("name") != NULL)
+    {
+        problem->name = osilDocument.FirstChildElement("osil")
+                            ->FirstChildElement("instanceHeader")
+                            ->FirstChildElement("name")
+                            ->GetText();
+    }
 
     auto variablesNodes
         = osilDocument.FirstChildElement("osil")->FirstChildElement("instanceData")->FirstChildElement("variables");
