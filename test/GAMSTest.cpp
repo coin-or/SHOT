@@ -317,6 +317,7 @@ int GAMSTest(int argc, char* argv[])
         std::cout << "Starting test to read GAMS files:" << std::endl;
         passed = ReadProblemGAMS("data/tls2.gms");
         std::cout << "Finished test to read GAMS files." << std::endl;
+        break;
     case 2:
         std::cout << "Starting test to solve a MINLP problem in GAMS syntax:" << std::endl;
         passed = SolveProblemGAMS("data/tls2.gms");
