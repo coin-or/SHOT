@@ -609,7 +609,8 @@ std::string Results::getResultsOSrL()
             statusNode->InsertFirstChild(substatusNode);
         }
 
-        env->output->outputError(fmt::format("Unknown return code {} obtained from solver.", this->terminationReason));
+        env->output->outputError(
+            fmt::format(" Unknown return code {} obtained from solver.", static_cast<int>(this->terminationReason)));
     }
 
     solutionNode->InsertFirstChild(statusNode);
