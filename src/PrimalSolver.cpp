@@ -279,7 +279,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         }
         else
         {
-            auto tmpLine = fmt::format("       All discrete variables are fulfilled to tolerance %1%.", integerTol);
+            auto tmpLine = fmt::format("       All discrete variables are fulfilled to tolerance {}.", integerTol);
             env->output->outputDebug(tmpLine);
         }
 
@@ -420,7 +420,7 @@ void PrimalSolver::addFixedNLPCandidate(
     assert((int)pt.size() >= env->problem->properties.numberOfVariables);
 
     fixedPrimalNLPCandidates.push_back(
-        PrimalFixedNLPCandidate{ VectorDouble(pt.begin(), pt.begin() + env->problem->properties.numberOfVariables),
+        PrimalFixedNLPCandidate { VectorDouble(pt.begin(), pt.begin() + env->problem->properties.numberOfVariables),
             source, objVal, iter, maxConstrDev });
 }
 
