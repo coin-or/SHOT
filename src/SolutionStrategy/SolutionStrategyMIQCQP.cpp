@@ -63,6 +63,7 @@
 #include "../Tasks/TaskAddIntegerCuts.h"
 
 #include "../Output.h"
+#include "../Settings.h"
 #include "../Timing.h"
 
 namespace SHOT
@@ -78,6 +79,7 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
     env->timing->createTimer("DualProblemsDiscrete", "   - solving MIP problems");
 
     env->timing->createTimer("PrimalStrategy", " - primal strategy");
+    env->timing->createTimer("PrimalBoundStrategyNLP", "   - solving NLP problems");
 
     auto tFinalizeSolution = std::make_shared<TaskSequential>(env);
 
@@ -105,6 +107,23 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
 
     auto tCheckRelGap = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckRelGap, "CheckRelGap");
+
+    if(env->settings->getSetting<bool>("FixedInteger.Use", "Primal") && env->reformulatedProblem->properties.isDiscrete)
+    {
+        auto tSelectPrimFixedNLPSolPool = std::make_shared<TaskSelectPrimalFixedNLPPointsFromSolutionPool>(env);
+        env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
+
+        auto tSelectPrimNLPCheck = std::make_shared<TaskSelectPrimalCandidatesFromNLP>(env);
+        env->tasks->addTask(tSelectPrimNLPCheck, "SelectPrimNLPCheck");
+        std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimNLPCheck);
+
+        auto tCheckAbsGap2 = std::make_shared<TaskCheckAbsoluteGap>(env, "FinalizeSolution");
+        env->tasks->addTask(tCheckAbsGap, "CheckAbsGap2");
+
+        auto tCheckRelGap2 = std::make_shared<TaskCheckRelativeGap>(env, "FinalizeSolution");
+        env->tasks->addTask(tCheckRelGap, "CheckRelGap2");
+    }
 
     auto tCheckTimeLim = std::make_shared<TaskCheckTimeLimit>(env, "FinalizeSolution");
     env->tasks->addTask(tCheckTimeLim, "CheckTimeLim");
