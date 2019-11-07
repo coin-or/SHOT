@@ -415,11 +415,8 @@ void MIPSolverCplex::initializeSolverSettings()
         {
             auto nodeLimit = env->settings->getSetting<double>("MIP.NodeLimit", "Dual");
 
-            if(nodeLimit > SHOT_LONG_MAX)
-                nodeLimit = SHOT_LONG_MAX;
-
-            cplexInstance.setParam(
-                IloCplex::NodeLim, (CPXLONG)env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
+            if(nodeLimit > CPX_BIGINT)
+                cplexInstance.setParam(IloCplex::NodeLim, CPX_BIGINT);
         }
     }
     catch(IloException& e)
