@@ -89,7 +89,7 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
                     }
                     catch(std::exception& e)
                     {
-                        env->output->outputWarning("Cannot find solution with primal rootsearch.");
+                        env->output->outputDebug("        Cannot find solution with primal rootsearch.");
                     }
                 }
             }
