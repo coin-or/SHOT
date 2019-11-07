@@ -68,7 +68,7 @@ public:
     std::vector<IterationPtr> iterations;
     int getNumberOfIterations();
 
-    E_TerminationReason terminationReason = E_TerminationReason::Error;
+    E_TerminationReason terminationReason = E_TerminationReason::None;
     std::string terminationReasonDescription;
 
     E_ModelReturnStatus getModelReturnStatus();

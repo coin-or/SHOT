@@ -455,7 +455,7 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoSolveStatSet(modelingObject, gmoSolveStat_SolverErr);
         break;
     case E_TerminationReason::None:
-        gmoSolveStatSet(modelingObject, gmoSolveStat_SystemErr);
+        gmoSolveStatSet(modelingObject, gmoSolveStat_Normal);
         break;
     }
 

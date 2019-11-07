@@ -794,7 +794,7 @@ std::string Results::getResultsTrace()
         solverStatus = "10";
         break;
     case E_TerminationReason::None:
-        solverStatus = "13";
+        solverStatus = "1";
         break;
     }
 
@@ -1034,7 +1034,7 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (solutionIsGlobal ? E_ModelReturnStatus::InfeasibleGlobal : E_ModelReturnStatus::InfeasibleLocal);
 
     if(terminationReason == E_TerminationReason::Error || terminationReason == E_TerminationReason::NumericIssues)
-        return (hasPrimalSolution() ? E_ModelReturnStatus::ErrorUnknown : E_ModelReturnStatus::ErrorNoSolution);
+        return (hasPrimalSolution() ? E_ModelReturnStatus::FeasibleSolution : E_ModelReturnStatus::ErrorNoSolution);
 
     return (E_ModelReturnStatus::NoSolutionReturned);
 }
