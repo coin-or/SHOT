@@ -607,6 +607,21 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
 
     try
     {
+        // If we in previous iteration solved a feasibility problem since the objective was unbounded, the original
+        // objective needs to be restored
+        if(objectiveFunctionReplacedWithZero)
+        {
+            cplexModel.remove(cplexInstance.getObjective());
+
+            if(isMinimizationProblem)
+                cplexModel.add(IloMinimize(cplexEnv, cplexObjectiveExpression));
+            else
+                cplexModel.add(IloMaximize(cplexEnv, cplexObjectiveExpression));
+
+            modelUpdated = true;
+            objectiveFunctionReplacedWithZero = false;
+        }
+
         if(modelUpdated)
         {
             cplexInstance.extract(cplexModel);
@@ -614,9 +629,30 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
         }
 
         cplexInstance.solve();
-
         MIPSolutionStatus = getSolutionStatus();
 
+        // Try to solve a feasibility problem to get a valid solution point if unbounded
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        {
+            cplexModel.remove(cplexInstance.getObjective());
+
+            if(isMinimizationProblem)
+                cplexModel.add(IloMinimize(cplexEnv, SHOT_DBL_MIN));
+            else
+                cplexModel.add(IloMaximize(cplexEnv, SHOT_DBL_MAX));
+
+            cplexInstance.extract(cplexModel);
+            cplexInstance.solve();
+            MIPSolutionStatus = getSolutionStatus();
+
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+
+            objectiveFunctionReplacedWithZero = true;
+            modelUpdated = true;
+        }
+
+        // If the previous repair failed, we can try this
         if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
             repairInfeasibility();
@@ -624,6 +660,7 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
     }
+
     catch(IloException& e)
     {
         std::string errorString = e.getMessage();

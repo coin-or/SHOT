@@ -164,5 +164,7 @@ protected:
 
     IloExpr objExpression;
     IloExpr constrExpression;
+
+    bool objectiveFunctionReplacedWithZero = false;
 };
 } // namespace SHOT

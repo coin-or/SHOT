@@ -642,25 +642,68 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTreeLegacy::solveProblem()
 
     try
     {
+        // If we in previous iteration solved a feasibility problem since the objective was unbounded, the original
+        // objective needs to be restored
+        if(objectiveFunctionReplacedWithZero)
+        {
+            cplexModel.remove(cplexInstance.getObjective());
+
+            if(isMinimizationProblem)
+                cplexModel.add(IloMinimize(cplexEnv, cplexObjectiveExpression));
+            else
+                cplexModel.add(IloMaximize(cplexEnv, cplexObjectiveExpression));
+
+            modelUpdated = true;
+        }
+
         if(modelUpdated)
         {
             // Extract the model if we have updated the constraints
             cplexInstance.extract(cplexModel);
+            modelUpdated = false;
         }
 
-        if(getDiscreteVariableStatus())
+        if(objectiveFunctionReplacedWithZero)
         {
-            cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
-            cplexInstance.use(HCallback(env, cplexEnv, cplexVars));
-            cplexInstance.use(InfoCallback(env, cplexEnv, cplexVars));
+            // Do not want the callbacks the first iteration after tinkering with the objective
+            objectiveFunctionReplacedWithZero = false;
+        }
+        else
+        {
+            if(getDiscreteVariableStatus())
+            {
+                cplexInstance.use(CtCallback(env, cplexEnv, cplexVars));
+                cplexInstance.use(HCallback(env, cplexEnv, cplexVars));
+                cplexInstance.use(InfoCallback(env, cplexEnv, cplexVars));
+            }
         }
 
         // Fixes a deadlock bug in Cplex 12.7 and 12.8
         cplexEnv.setNormalizer(false);
 
         cplexInstance.solve();
+        MIPSolutionStatus = getSolutionStatus();
 
-        MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
+        // Try to solve a feasibility problem to get a valid solution point if unbounded
+        if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
+        {
+            cplexModel.remove(cplexInstance.getObjective());
+
+            if(isMinimizationProblem)
+                cplexModel.add(IloMinimize(cplexEnv, SHOT_DBL_MIN));
+            else
+                cplexModel.add(IloMaximize(cplexEnv, SHOT_DBL_MAX));
+
+            cplexInstance.extract(cplexModel);
+            cplexInstance.solve();
+            MIPSolutionStatus = getSolutionStatus();
+
+            if(MIPSolutionStatus == E_ProblemSolutionStatus::Optimal)
+                MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+
+            objectiveFunctionReplacedWithZero = true;
+            modelUpdated = true;
+        }
 
         if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
         {
