@@ -997,25 +997,86 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
             resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
-            auto auxConstraint = std::make_shared<NonlinearConstraint>(
-                auxConstraintCounter, "s_pnl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-            auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-            auxConstraintCounter++;
+            bool extractQuadraticTerms = env->settings->getSetting<bool>("Reformulation.Quadratics.Extract", "Model");
 
-            if(reversedSigns)
+            if(static_cast<ES_QuadraticProblemStrategy>(
+                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+                != ES_QuadraticProblemStrategy::QuadraticallyConstrained)
+                extractQuadraticTerms = false;
+
+            // If the extracted term is quadratic, create a quadratic constraint instead of a nonlinear one
+            if(extractQuadraticTerms && T->getType() == E_NonlinearExpressionTypes::Product
+                && std::dynamic_pointer_cast<ExpressionProduct>(T)->isQuadraticTerm())
             {
-                auxConstraint->add(simplify(
-                    std::make_shared<ExpressionNegate>(copyNonlinearExpression(T.get(), reformulatedProblem))));
+                auto quadraticTerm
+                    = convertProductToQuadraticTerm(std::dynamic_pointer_cast<ExpressionProduct>(T)).value();
+
+                auto auxConstraint = std::make_shared<QuadraticConstraint>(
+                    auxConstraintCounter, "s_pqnl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+                auxConstraintCounter++;
+
+                if(reversedSigns)
+                {
+                    quadraticTerm->coefficient *= -1.0;
+                    auxConstraint->add(quadraticTerm);
+                }
+                else
+                {
+                    auxConstraint->add(quadraticTerm);
+                }
+
+                reformulatedProblem->add(std::move(auxVariable));
+                reformulatedProblem->add(std::move(auxConstraint));
+            }
+            else if(extractQuadraticTerms && T->getType() == E_NonlinearExpressionTypes::Square
+                && std::dynamic_pointer_cast<ExpressionSquare>(T)->child->getType()
+                    == E_NonlinearExpressionTypes::Variable)
+            {
+                auto variable = std::dynamic_pointer_cast<ExpressionVariable>(
+                    std::dynamic_pointer_cast<ExpressionSquare>(T)->child);
+
+                auto quadraticTerm = std::make_shared<QuadraticTerm>(1.0, variable->variable, variable->variable);
+                auto auxConstraint = std::make_shared<QuadraticConstraint>(
+                    auxConstraintCounter, "s_psnl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+                auxConstraintCounter++;
+
+                if(reversedSigns)
+                {
+                    quadraticTerm->coefficient *= -1.0;
+                    auxConstraint->add(quadraticTerm);
+                }
+                else
+                {
+                    auxConstraint->add(quadraticTerm);
+                }
+
+                reformulatedProblem->add(std::move(auxVariable));
+                reformulatedProblem->add(std::move(auxConstraint));
             }
             else
             {
-                auxConstraint->add(copyNonlinearExpression(T.get(), reformulatedProblem));
+                auto auxConstraint = std::make_shared<NonlinearConstraint>(
+                    auxConstraintCounter, "s_pnl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+                auxConstraintCounter++;
+
+                if(reversedSigns)
+                {
+                    auxConstraint->add(simplify(
+                        std::make_shared<ExpressionNegate>(copyNonlinearExpression(T.get(), reformulatedProblem))));
+                }
+                else
+                {
+                    auxConstraint->add(copyNonlinearExpression(T.get(), reformulatedProblem));
+                }
+
+                auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
+
+                reformulatedProblem->add(std::move(auxVariable));
+                reformulatedProblem->add(std::move(auxConstraint));
             }
-
-            auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
-
-            reformulatedProblem->add(std::move(auxVariable));
-            reformulatedProblem->add(std::move(auxConstraint));
         }
     }
 
