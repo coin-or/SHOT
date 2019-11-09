@@ -366,6 +366,9 @@ void MIPSolverCplex::initializeSolverSettings()
         cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::AbsMIPGap,
             env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
 
+        cplexInstance.setParam(IloCplex::Param::MIP::Tolerances::Integrality,
+            env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+
         if(env->settings->getSetting<bool>("TreeStrategy.Multi.Reinitialize", "Dual"))
         {
             if(env->results->getNumberOfIterations() == 0)

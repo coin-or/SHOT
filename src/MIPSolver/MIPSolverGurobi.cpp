@@ -388,8 +388,15 @@ void MIPSolverGurobi::initializeSolverSettings()
         gurobiModel->getEnv().set(
             GRB_IntParam_MIPFocus, env->settings->getSetting<int>("Gurobi.MIPFocus", "Subsolver"));
         gurobiModel->getEnv().set(GRB_IntParam_Threads, env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-        // gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, 1e-6);
-        // gurobiModel->getEnv().set(GRB_DoubleParam_IntFeasTol, 1e-6);
+
+        auto constraintTolerance
+            = std::min(env->settings->getSetting<double>("Tolerance.NonlinearConstraint", "Primal"),
+                env->settings->getSetting<double>("Tolerance.LinearConstraint", "Primal"));
+
+        gurobiModel->getEnv().set(GRB_DoubleParam_FeasibilityTol, constraintTolerance);
+        gurobiModel->getEnv().set(
+            GRB_DoubleParam_IntFeasTol, env->settings->getSetting<double>("Tolerance.Integer", "Primal"));
+
         // gurobiModel->getEnv().set(GRB_DoubleParam_OptimalityTol, 1e-6);
         // gurobiModel->getEnv().set(GRB_DoubleParam_MarkowitzTol, 1e-4);
 
