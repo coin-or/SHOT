@@ -422,7 +422,9 @@ int MIPSolverGurobi::addLinearConstraint(
         for(auto E : elements)
         {
             auto variable = gurobiModel->getVar(E.first);
-            *expr.get() = *expr.get() + E.second * variable;
+
+            if(std::abs(E.second) > 1e-13) // Gurobi might crash otherwise
+                *expr.get() = *expr.get() + E.second * variable;
         }
 
         if(isGreaterThan)
