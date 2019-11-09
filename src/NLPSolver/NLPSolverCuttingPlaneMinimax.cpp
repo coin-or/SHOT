@@ -198,8 +198,6 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }
 
-        numHyperAdded = 0;
-
         if(i == 0) // No linesearch minimization in first iteration, just add cutting plane in LP solution point
         {
             currSol = LPVarSol;
@@ -252,6 +250,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // Gets the most deviated constraints
         auto constraintValues = sourceProblem->getFractionOfDeviatingNonlinearConstraints(
             currSol, SHOT_DBL_MIN, constrSelFactor, LPObjVar);
+
+        numHyperAdded = 0;
 
         for(auto& NCV : constraintValues)
         {
