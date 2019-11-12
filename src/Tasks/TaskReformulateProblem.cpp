@@ -1845,10 +1845,14 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
 AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
     VariablePtr firstVariable, VariablePtr secondVariable)
 {
+    std::tuple<VariablePtr, VariablePtr> key;
+
     // The variable with lower index is stored first in the tuple
     if(firstVariable->index < secondVariable->index)
     {
-        auto auxVariableIterator = bilinearAuxVariables.find(std::make_tuple(firstVariable, secondVariable));
+        key = std::make_tuple(firstVariable, secondVariable);
+
+        auto auxVariableIterator = bilinearAuxVariables.find(key);
 
         if(auxVariableIterator != bilinearAuxVariables.end())
         {
@@ -1857,7 +1861,9 @@ AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
     }
     else
     {
-        auto auxVariableIterator = bilinearAuxVariables.find(std::make_tuple(secondVariable, firstVariable));
+        key = std::make_tuple(secondVariable, firstVariable);
+
+        auto auxVariableIterator = bilinearAuxVariables.find(key);
 
         if(auxVariableIterator != bilinearAuxVariables.end())
         {
@@ -1899,6 +1905,8 @@ AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
 
     reformulatedProblem->add((auxVariable));
     auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+
+    bilinearAuxVariables.emplace(key, auxVariable);
 
     return (auxVariable);
 }
