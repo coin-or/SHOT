@@ -1935,11 +1935,11 @@ private:
     {
         if(baseValue > 0.0 && baseValue < 1.0)
         {
-            if(exponentConvexity == E_Convexity::Concave)
+            if(exponentConvexity == E_Convexity::Concave || exponentConvexity == E_Convexity::Linear)
                 return E_Convexity::Convex;
         }
         else if(baseValue >= 1.0)
-            if(exponentConvexity == E_Convexity::Convex)
+            if(exponentConvexity == E_Convexity::Convex || exponentConvexity == E_Convexity::Linear)
                 return E_Convexity::Convex;
 
         return E_Convexity::Unknown;
