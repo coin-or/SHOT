@@ -57,18 +57,22 @@ void TaskSelectPrimalCandidatesFromRootsearch::run(std::vector<SolutionPoint> so
 
                 auto solPoint = P.point;
 
-                for(auto& V : env->problem->binaryVariables)
+                assert(xNLP.size() == solPoint.size());
+
+                for(auto& V : env->reformulatedProblem->binaryVariables)
                 {
                     xNLP.at(V->index) = P.point.at(V->index);
                 }
 
-                for(auto& V : env->problem->integerVariables)
+                for(auto& V : env->reformulatedProblem->integerVariables)
                 {
                     xNLP.at(V->index) = P.point.at(V->index);
                 }
 
-                auto maxDevNLP2 = env->problem->getMaxNumericConstraintValue(xNLP, env->problem->numericConstraints);
-                auto maxDevMIP = env->problem->getMaxNumericConstraintValue(P.point, env->problem->numericConstraints);
+                auto maxDevNLP2 = env->reformulatedProblem->getMaxNumericConstraintValue(
+                    xNLP, env->reformulatedProblem->numericConstraints);
+                auto maxDevMIP = env->reformulatedProblem->getMaxNumericConstraintValue(
+                    P.point, env->reformulatedProblem->numericConstraints);
 
                 if(maxDevNLP2.normalizedValue < 0 && maxDevMIP.normalizedValue > 0)
                 {
