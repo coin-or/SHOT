@@ -851,13 +851,75 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         }
     }
 
+    NumericConstraints resultingConstraints;
     NumericConstraintPtr constraint;
 
-    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0 || destinationSignomialTerms.size() > 0)
+    if(copyOriginalNonlinearExpression || destinationMonomialTerms.size() > 0)
     // We have a nonlinear constraint
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Nonlinear;
+    }
+    else if(destinationSignomialTerms.size() > 0)
+    {
+        bool transformed = false;
+
+        if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
+            && destinationLinearTerms.size() == 0 && destinationSignomialTerms[0]->coefficient < 0.0
+            && valueLHS == SHOT_DBL_MIN && valueRHS < 0.0)
+        // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= d, c,d < 0
+        {
+
+            if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
+                   [](SignomialElementPtr E) { return (E->power > 0.0 && E->variable->lowerBound > 0.0); }))
+            {
+                // All coefficients are negative and variable positive, i.e. we can use the reformulation
+
+                double remainingRHS = std::log(valueRHS * destinationSignomialTerms[0]->coefficient);
+
+                constraint = std::make_shared<LinearConstraint>(C->index, C->name, SHOT_DBL_MIN, remainingRHS);
+                constraint->properties.classification = E_ConstraintClassification::Linear;
+
+                for(auto& E : destinationSignomialTerms[0]->elements)
+                {
+                    auto auxVariable = std::make_shared<AuxiliaryVariable>(
+                        "s_rnsig_" + std::to_string(auxVariableCounter + 1), auxVariableCounter, E_VariableType::Real,
+                        -E->power * std::log(E->variable->upperBound), SHOT_DBL_MAX);
+
+                    auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearExpressionPartitioning;
+                    auxVariableCounter++;
+
+                    reformulatedProblem->add(auxVariable);
+                    destinationLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
+
+                    auto auxConstraint = std::make_shared<NonlinearConstraint>(
+                        auxConstraintCounter, "s_rnsig_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+
+                    auxConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
+                    auxConstraintCounter++;
+
+                    NonlinearExpressionPtr expression
+                        = std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(-E->power),
+                            std::make_shared<ExpressionLog>(std::make_shared<ExpressionVariable>(
+                                reformulatedProblem->getVariable(E->variable->index))));
+
+                    auxConstraint->add(std::move(expression));
+                    auxVariable->nonlinearExpression = auxConstraint->nonlinearExpression;
+
+                    resultingConstraints.push_back(std::move(auxConstraint));
+                }
+
+                destinationSignomialTerms.clear();
+                transformed = true;
+            }
+        }
+
+        if(!transformed)
+        {
+            constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
+            constraint->properties.classification = E_ConstraintClassification::Nonlinear;
+        }
     }
     else if(destinationQuadraticTerms.size() == 0)
     // We have a linear constraint
@@ -915,7 +977,9 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 ->add(copyNonlinearExpression(sourceConstraint->nonlinearExpression.get(), reformulatedProblem));
     }
 
-    return (NumericConstraints({ constraint }));
+    resultingConstraints.insert(resultingConstraints.begin(), constraint);
+
+    return (NumericConstraints({ resultingConstraints }));
 }
 
 LinearTerms TaskReformulateProblem::partitionNonlinearSum(
