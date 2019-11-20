@@ -48,9 +48,9 @@ enum class E_ConstraintSignType
 
 struct ConstraintProperties
 {
-    E_ConstraintClassification classification;
-    E_Convexity convexity;
-    E_ConstraintSignType type;
+    E_ConstraintClassification classification = E_ConstraintClassification::None;
+    E_Convexity convexity = E_Convexity::NotSet;
+    E_ConstraintSignType type = E_ConstraintSignType::None;
 
     bool isReformulated = false;
 
@@ -218,7 +218,7 @@ class QuadraticConstraint : public LinearConstraint
 public:
     QuadraticTerms quadraticTerms;
 
-    QuadraticConstraint() : LinearConstraint(){};
+    QuadraticConstraint() : LinearConstraint() {};
 
     QuadraticConstraint(int constraintIndex, std::string constraintName, double LHS, double RHS)
     {
