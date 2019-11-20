@@ -865,8 +865,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         bool transformed = false;
 
         if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
-            && destinationLinearTerms.size() == 0 && destinationSignomialTerms[0]->coefficient < 0.0
-            && valueLHS == SHOT_DBL_MIN && valueRHS < 0.0)
+            && destinationLinearTerms.size() == 0 && destinationSignomialTerms[0]->elements.size() > 1
+            && destinationSignomialTerms[0]->coefficient < 0.0 && valueLHS == SHOT_DBL_MIN && valueRHS < 0.0)
         // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= d, c,d < 0
         {
             if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
@@ -914,8 +914,9 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             }
         }
         else if(destinationSignomialTerms.size() == 1 && destinationQuadraticTerms.size() == 0
-            && destinationLinearTerms.size() == 1 && destinationSignomialTerms[0]->coefficient > 0.0
-            && destinationLinearTerms[0]->coefficient < 0 && valueLHS == SHOT_DBL_MIN && valueRHS <= 0.0)
+            && destinationLinearTerms.size() == 1 && destinationSignomialTerms[0]->elements.size() > 1
+            && destinationSignomialTerms[0]->coefficient > 0.0 && destinationLinearTerms[0]->coefficient < 0
+            && valueLHS == SHOT_DBL_MIN && valueRHS <= 0.0)
         // We can perhaps use the transformation for terms of the type  c * x1^p1 * ... xn^pn <= y, c > 0
         {
             if(std::all_of(destinationSignomialTerms[0]->elements.begin(), destinationSignomialTerms[0]->elements.end(),
