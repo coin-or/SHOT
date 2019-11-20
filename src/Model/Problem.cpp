@@ -95,6 +95,8 @@ void Problem::updateConstraints()
 
     for(auto& C : nonlinearConstraints)
     {
+        C->variablesInNonlinearExpression.clear();
+
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
         {
             if(C->valueRHS != 0.0)
@@ -587,6 +589,8 @@ void Problem::updateFactorableFunctions()
         ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
         // ADFunctions.optimize();
     }
+
+    CppAD::AD<double>::abort_recording();
 }
 
 Problem::Problem(EnvironmentPtr env) : env(env) {}

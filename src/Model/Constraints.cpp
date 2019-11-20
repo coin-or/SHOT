@@ -460,7 +460,6 @@ void NonlinearConstraint::add(MonomialTerms terms)
     if(monomialTerms.size() == 0)
     {
         monomialTerms = terms;
-        properties.hasMonomialTerms = true;
     }
     else
     {
@@ -469,12 +468,16 @@ void NonlinearConstraint::add(MonomialTerms terms)
             add(T);
         }
     }
+
+    properties.hasMonomialTerms = true;
+    properties.classification = E_ConstraintClassification::Nonlinear;
 }
 
 void NonlinearConstraint::add(MonomialTermPtr term)
 {
     monomialTerms.push_back(term);
     properties.hasMonomialTerms = true;
+    properties.classification = E_ConstraintClassification::Nonlinear;
 }
 
 void NonlinearConstraint::add(SignomialTerms terms)
@@ -482,7 +485,6 @@ void NonlinearConstraint::add(SignomialTerms terms)
     if(signomialTerms.size() == 0)
     {
         signomialTerms = terms;
-        properties.hasSignomialTerms = true;
     }
     else
     {
@@ -491,12 +493,16 @@ void NonlinearConstraint::add(SignomialTerms terms)
             add(T);
         }
     }
+
+    properties.hasSignomialTerms = true;
+    properties.classification = E_ConstraintClassification::Nonlinear;
 }
 
 void NonlinearConstraint::add(SignomialTermPtr term)
 {
     signomialTerms.push_back(term);
     properties.hasSignomialTerms = true;
+    properties.classification = E_ConstraintClassification::Nonlinear;
 }
 
 void NonlinearConstraint::add(NonlinearExpressionPtr expression)
@@ -514,6 +520,7 @@ void NonlinearConstraint::add(NonlinearExpressionPtr expression)
     }
 
     properties.hasNonlinearExpression = true;
+    properties.classification = E_ConstraintClassification::Nonlinear;
 }
 
 void NonlinearConstraint::updateFactorableFunction()
