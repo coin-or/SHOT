@@ -66,7 +66,7 @@ void TaskSelectHyperplanePointsECP::run(std::vector<SolutionPoint> solPoints)
             if(addedHyperplanes >= maxHyperplanesPerIter)
             {
                 env->timing->stopTimer("DualCutGenerationRootSearch");
-                return;
+                break;
             }
 
             // Do not add hyperplane if one has been added for this constraint already
