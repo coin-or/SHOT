@@ -630,6 +630,12 @@ void Problem::finalize()
         if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
             doFBBT();
     }
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        getConstraintsJacobianSparsityPattern();
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        getLagrangianHessianSparsityPattern();
 }
 
 void Problem::add(Variables variables)
@@ -925,7 +931,13 @@ std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
     {
         std::stringstream filename;
         filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/sparsitypattern_jacobian.txt";
+
+        filename << "/sparsitypattern_jacobian";
+
+        if(properties.isReformulated)
+            filename << "_ref";
+
+        filename << ".txt";
 
         std::stringstream stream;
 
@@ -1014,7 +1026,12 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
     {
         std::stringstream filename;
         filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/sparsitypattern_hessianoflagrangian.txt";
+        filename << "/sparsitypattern_hessianoflagrangian";
+
+        if(properties.isReformulated)
+            filename << "_ref";
+
+        filename << ".txt";
 
         std::stringstream stream;
 
