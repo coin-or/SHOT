@@ -283,7 +283,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adds the linear constraint
             if(LPSolver->addLinearConstraint(elements, constant,
                    "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
-                > 0)
+                >= 0)
             {
                 numHyperTot++;
                 numHyperAdded++;
@@ -387,7 +387,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     bool constraintsInitialized = true;
 
-    for(auto& C : env->problem->linearConstraints)
+    for(auto& C : sourceProblem->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
