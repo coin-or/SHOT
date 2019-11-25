@@ -357,9 +357,10 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     // Auxiliary objective variable for minimax problem
     double objUpperBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
+    double objLowerBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
 
     variablesInitialized = variablesInitialized
-        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, -1e+10 + 1, objUpperBound);
+        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, objLowerBound, objUpperBound);
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
