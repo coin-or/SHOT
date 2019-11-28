@@ -685,27 +685,13 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
 
     try
     {
-        // Fixes some strange behavior with the objective value when solving MIP vs LP problems
-        if(isMIP && isMinimizationProblem)
-        {
-            objVal = 1.0;
-        }
-        else if(isMIP && !isMinimizationProblem)
-        {
-            objVal = -1.0;
-        }
-        else
-        {
-            objVal = 1.0;
-        }
-
         if(isMIP)
         {
-            objVal *= cbcModel->savedSolutionObjective(solIdx);
+            objVal = cbcModel->savedSolutionObjective(solIdx);
         }
         else
         {
-            objVal *= cbcModel->getObjValue();
+            objVal = cbcModel->getObjValue();
         }
     }
     catch(std::exception& e)
