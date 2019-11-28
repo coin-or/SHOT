@@ -82,6 +82,24 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
     }
     else
     {
+
+        if(env->solutionStatistics.numberOfIterationsWithDualStagnation > 2
+            && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex && sourcePoints.size() > 0)
+        {
+            Hyperplane hyperplane;
+            hyperplane.isObjectiveHyperplane = true;
+            hyperplane.sourceConstraintIndex = -1;
+            hyperplane.generatedPoint = sourcePoints[0].point;
+            hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
+
+            hyperplane.objectiveFunctionValue = 0.0;
+            /*= env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint) - 0.01;*/
+
+            env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+
+            env->output->outputWarning("        Adding objective cutting plane since the dual has stagnated.");
+        }
+
         for(auto& SOLPT : sourcePoints)
         {
             Hyperplane hyperplane;
@@ -90,20 +108,8 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
             hyperplane.generatedPoint = SOLPT.point;
             hyperplane.source = E_HyperplaneSource::ObjectiveRootsearch;
 
-            if(env->reformulatedProblem->objectiveFunction->properties.hasNonlinearExpression
-                || env->reformulatedProblem->objectiveFunction->properties.hasMonomialTerms
-                || env->reformulatedProblem->objectiveFunction->properties.hasSignomialTerms)
-            {
-                hyperplane.objectiveFunctionValue
-                    = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->calculateValue(hyperplane.generatedPoint);
-            }
-            else
-            {
-                hyperplane.objectiveFunctionValue
-                    = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                          ->calculateValue(hyperplane.generatedPoint);
-            }
+            hyperplane.objectiveFunctionValue
+                = env->reformulatedProblem->objectiveFunction->calculateValue(hyperplane.generatedPoint);
 
             env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
         }
