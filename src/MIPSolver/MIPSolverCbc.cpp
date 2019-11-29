@@ -44,14 +44,7 @@ bool MIPSolverCbc::initializeProblem()
 {
     discreteVariablesActivated = true;
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
-    {
-        this->cutOff = SHOT_DBL_MAX;
-    }
-    else
-    {
-        this->cutOff = SHOT_DBL_MIN;
-    }
+    this->cutOff = SHOT_DBL_MAX;
 
     osiInterface = std::make_unique<OsiClpSolverInterface>();
     coinModel = std::make_unique<CoinModel>();
@@ -121,7 +114,6 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
     try
     {
         coinModel->setColObjective(variableIndex, coefficient);
-
         objectiveLinearExpression.insert(variableIndex, coefficient);
     }
     catch(std::exception& e)
@@ -144,19 +136,26 @@ bool MIPSolverCbc::finalizeObjective(bool isMinimize, double constant)
 {
     try
     {
-        if(constant != 0.0)
-            coinModel->setObjectiveOffset(constant);
-
-        if(isMinimize)
+        if(!isMinimize)
         {
-            coinModel->setOptimizationDirection(1.0);
-            isMinimizationProblem = true;
+            isMinimizationProblem = false;
+
+            for(int i = 0; i < objectiveLinearExpression.getNumElements(); i++)
+            {
+                objectiveLinearExpression.getElements()[i] *= -1;
+                coinModel->setColObjective(
+                    objectiveLinearExpression.getIndices()[i], objectiveLinearExpression.getElements()[i]);
+            }
+
+            coinModel->setObjectiveOffset(-constant);
         }
         else
         {
-            coinModel->setOptimizationDirection(-1.0);
-            isMinimizationProblem = false;
+            isMinimizationProblem = true;
+            coinModel->setObjectiveOffset(constant);
         }
+
+        coinModel->setOptimizationDirection(1.0);
     }
     catch(std::exception& e)
     {
@@ -251,18 +250,6 @@ void MIPSolverCbc::initializeSolverSettings()
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setMaximumSolutions(solLimit);
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("MIP.SolutionPool.Capacity", "Dual"));
-
-    // Cbc has problems with too large cutoff values
-    if(isMinimizationProblem && std::abs(this->cutOff) < 10e20)
-    {
-        cbcModel->setCutoff(this->cutOff);
-        env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for minimization.");
-    }
-    else if(!isMinimizationProblem && std::abs(this->cutOff) < 10e20)
-    {
-        cbcModel->setCutoff(this->cutOff);
-        env->output->outputDebug("     Setting cutoff value to " + std::to_string(cutOff) + " for maximization.");
-    }
 
     // Adds a user-provided node limit
     if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
@@ -408,6 +395,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             env->output->outputError("Error when adding MIP start to Cbc", e.what());
         }
 
+        // Cbc has problems with too large cutoff values
+        if(std::abs(this->cutOff) < 10e20)
+            cbcModel->setCutoff(this->cutOff);
+
         CbcMain0(*cbcModel);
 
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
@@ -550,28 +541,23 @@ void MIPSolverCbc::setTimeLimit(double seconds)
 
 void MIPSolverCbc::setCutOff(double cutOff)
 {
+    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+        return;
+
     double cutOffTol = env->settings->getSetting<double>("MIP.CutOff.Tolerance", "Dual");
 
-    try
+    if(isMinimizationProblem)
     {
-        if(isMinimizationProblem)
-        {
-            this->cutOff = cutOff + cutOffTol;
+        this->cutOff = cutOff + cutOffTol;
 
-            env->output->outputDebug(
-                "     Setting cutoff value to " + std::to_string(this->cutOff) + " for minimization.");
-        }
-        else
-        {
-            this->cutOff = cutOff - cutOffTol;
-
-            env->output->outputDebug(
-                "     Setting cutoff value to " + std::to_string(this->cutOff) + " for maximization.");
-        }
+        env->output->outputDebug("     Setting cutoff value to " + std::to_string(this->cutOff) + " for minimization.");
     }
-    catch(std::exception& e)
+    else
     {
-        env->output->outputError("Error when setting cut off value", e.what());
+        this->cutOff = -1 * (cutOff + cutOffTol);
+
+        env->output->outputDebug(
+            "     Setting cutoff value to " + std::to_string(cutOff + cutOffTol) + " for maximization.");
     }
 }
 
@@ -584,10 +570,11 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
     {
         if(!cutOffConstraintDefined)
         {
-            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
-                osiInterface->addRow(objectiveLinearExpression, cutOff, osiInterface->getInfinity(), "CUTOFF_C");
-            else
+            if(isMinimizationProblem)
                 osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(), cutOff, "CUTOFF_C");
+            else
+                osiInterface->addRow(
+                    objectiveLinearExpression, -osiInterface->getInfinity(), -1.0 * cutOff, "CUTOFF_C");
 
             cutOffConstraintDefined = true;
             cutOffConstraintIndex = osiInterface->getNumRows() - 1;
@@ -596,19 +583,19 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
         }
         else
         {
-            if(env->reformulatedProblem->objectiveFunction->properties.isMaximize)
-            {
-                osiInterface->setRowUpper(cutOffConstraintIndex, -cutOff);
-
-                env->output->outputCritical(
-                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
-            }
-            else
+            if(isMinimizationProblem)
             {
                 osiInterface->setRowUpper(cutOffConstraintIndex, cutOff);
 
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+            }
+            else
+            {
+                osiInterface->setRowUpper(cutOffConstraintIndex, -cutOff);
+
+                env->output->outputDebug(
+                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
             }
 
             modelUpdated = true;
@@ -649,7 +636,11 @@ void MIPSolverCbc::addMIPStart(VectorDouble point)
         std::pair<std::string, double> tmpPair;
 
         tmpPair.first = env->reformulatedProblem->auxiliaryObjectiveVariable->name;
-        tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
+
+        if(isMinimizationProblem)
+            tmpPair.second = env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
+        else
+            tmpPair.second = -1.0 * env->reformulatedProblem->auxiliaryObjectiveVariable->calculate(point);
 
         variableValues.push_back(tmpPair);
     }
@@ -673,34 +664,18 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus();
 
-    double objVal = NAN;
-
     if(!isMIP && solIdx > 0) // LP problems only have one solution!
     {
         env->output->outputError(
             "Cannot obtain solution with index " + std::to_string(solIdx) + " in Cbc since the problem is LP/QP!");
 
-        return (objVal);
+        return (NAN);
     }
 
-    try
-    {
-        if(isMIP)
-        {
-            objVal = cbcModel->savedSolutionObjective(solIdx);
-        }
-        else
-        {
-            objVal = cbcModel->getObjValue();
-        }
-    }
-    catch(std::exception& e)
-    {
-        env->output->outputError(
-            "Error when obtaining objective value for solution index " + std::to_string(solIdx) + " in Cbc", e.what());
-    }
+    // Cannot trust Cbc to give the correct sign of the objective back se we recalculate it
+    double objectiveValue = env->reformulatedProblem->objectiveFunction->calculateValue(getVariableSolution(solIdx));
 
-    return (objVal);
+    return (objectiveValue);
 }
 
 void MIPSolverCbc::deleteMIPStarts() { MIPStarts.clear(); }
@@ -721,7 +696,8 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
             cut.insert(I, -1.0);
         }
 
-        osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0, "IC");
+        osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0,
+            "IC_" + std::to_string(env->solutionStatistics.numberOfIntegerCuts));
 
         modelUpdated = true;
 
@@ -884,6 +860,9 @@ double MIPSolverCbc::getDualObjectiveValue()
     try
     {
         objVal = cbcModel->getBestPossibleObjValue();
+
+        if(!isMinimizationProblem)
+            objVal *= -1.0;
     }
     catch(std::exception& e)
     {
