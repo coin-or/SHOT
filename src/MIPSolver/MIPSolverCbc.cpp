@@ -354,11 +354,15 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     }
     else if(cbcModel->isAbandoned())
     {
-        MIPSolutionStatus = E_ProblemSolutionStatus::Error;
+        MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
     else if(cbcModel->isContinuousUnbounded())
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Unbounded;
+    }
+    else if(cbcModel->status() == 5)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
     }
     else
     {

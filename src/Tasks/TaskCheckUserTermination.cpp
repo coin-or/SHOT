@@ -28,7 +28,8 @@ void TaskCheckUserTermination::run()
 {
     env->events->notify(E_EventType::UserTerminationCheck);
 
-    if(env->tasks->isTerminated())
+    if(env->tasks->isTerminated()
+        || env->results->getCurrentIteration()->solutionStatus == E_ProblemSolutionStatus::Abort)
     {
         env->results->terminationReason = E_TerminationReason::UserAbort;
         env->tasks->setNextTask(taskIDIfTrue);
