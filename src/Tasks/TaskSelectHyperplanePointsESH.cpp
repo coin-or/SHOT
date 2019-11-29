@@ -44,13 +44,22 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
     if(env->dualSolver->interiorPts.size() == 0)
     {
-        if(!hyperplaneSolutionPointStrategyInitialized)
-        {
+        if(!tSelectHPPts)
             tSelectHPPts = std::make_unique<TaskSelectHyperplanePointsECP>(env);
-            hyperplaneSolutionPointStrategyInitialized = true;
-        }
 
         env->output->outputDebug("        Adding cutting plane since no interior point is known.");
+        tSelectHPPts->run(solPoints);
+
+        env->timing->stopTimer("DualCutGenerationRootSearch");
+        return;
+    }
+    else if(env->solutionStatistics.numberOfIterationsWithDualStagnation > 2
+        && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+    {
+        if(!tSelectHPPts)
+            tSelectHPPts = std::make_unique<TaskSelectHyperplanePointsECP>(env);
+
+        env->output->outputDebug("        Adding cutting plane since the dual has stagnated.");
         tSelectHPPts->run(solPoints);
 
         env->timing->stopTimer("DualCutGenerationRootSearch");

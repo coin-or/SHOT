@@ -552,6 +552,10 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
                 MIPSolutionStatus = E_ProblemSolutionStatus::SolutionLimit;
             }
         }
+        else if(status == IloCplex::CplexStatus::OptimalInfeas)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+        }
         else if(status == IloCplex::CplexStatus::Feasible)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;

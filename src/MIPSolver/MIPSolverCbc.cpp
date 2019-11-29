@@ -480,6 +480,14 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 }
             }
         }
+        else if((env->reformulatedProblem->objectiveFunction->properties.classification
+                    >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
+        {
+            // The auxiliary variable in the dual problem is unbounded
+            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 10e30,
+                getUnboundedVariableBoundValue() / 10e30);
+            variableBoundsUpdated = true;
+        }
 
         if(variableBoundsUpdated)
         {
@@ -677,27 +685,13 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
 
     try
     {
-        // Fixes some strange behavior with the objective value when solving MIP vs LP problems
-        if(isMIP && isMinimizationProblem)
-        {
-            objVal = 1.0;
-        }
-        else if(isMIP && !isMinimizationProblem)
-        {
-            objVal = -1.0;
-        }
-        else
-        {
-            objVal = 1.0;
-        }
-
         if(isMIP)
         {
-            objVal *= cbcModel->savedSolutionObjective(solIdx);
+            objVal = cbcModel->savedSolutionObjective(solIdx);
         }
         else
         {
-            objVal *= cbcModel->getObjValue();
+            objVal = cbcModel->getObjValue();
         }
     }
     catch(std::exception& e)

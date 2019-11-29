@@ -185,7 +185,7 @@ void simplifyNonlinearExpressions(
     {
         if(C->properties.hasNonlinearExpression
             && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::SquareRoot && C->linearTerms.size() == 0
-            && C->quadraticTerms.size() == 0)
+            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0)
         {
             // Can take the square of both sides
 
@@ -194,6 +194,40 @@ void simplifyNonlinearExpressions(
                 C->valueLHS = C->valueLHS * C->valueLHS;
             if(abs(C->valueRHS) < SHOT_DBL_MAX)
                 C->valueRHS = C->valueRHS * C->valueRHS;
+
+            continue;
+        }
+
+        if(C->properties.hasNonlinearExpression
+            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square && C->linearTerms.size() == 0
+            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0
+            && C->valueLHS >= 0.0)
+        {
+            // Can take the square root of both sides
+
+            C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
+            C->valueLHS = std::sqrt(C->valueLHS);
+
+            if(abs(C->valueRHS) < SHOT_DBL_MAX)
+                C->valueRHS = std::sqrt(C->valueRHS);
+
+            continue;
+        }
+
+        if(C->properties.hasNonlinearExpression
+            && C->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Square && C->linearTerms.size() == 0
+            && C->quadraticTerms.size() == 0 && C->monomialTerms.size() == 0 && C->signomialTerms.size() == 0
+            && C->getConstraintFunctionBounds().l() > 0.0)
+        {
+            // Can take the square root of both sides
+
+            C->nonlinearExpression = std::dynamic_pointer_cast<ExpressionSquare>(C->nonlinearExpression)->child;
+            // C->valueLHS = std::sqrt(C->getConstraintFunctionBounds().l());
+
+            if(abs(C->valueRHS) < SHOT_DBL_MAX)
+                C->valueRHS = std::sqrt(C->valueRHS);
+
+            continue;
         }
     }
 

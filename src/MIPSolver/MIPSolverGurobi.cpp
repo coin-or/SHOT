@@ -688,6 +688,14 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
                 }
             }
         }
+        else if((env->reformulatedProblem->objectiveFunction->properties.classification
+                    >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
+        {
+            // The auxiliary variable in the dual problem is unbounded
+            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
+                getUnboundedVariableBoundValue() / 1.1);
+            variableBoundsUpdated = true;
+        }
 
         if(variableBoundsUpdated)
         {

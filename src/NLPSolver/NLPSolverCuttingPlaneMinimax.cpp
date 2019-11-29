@@ -283,7 +283,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adds the linear constraint
             if(LPSolver->addLinearConstraint(elements, constant,
                    "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
-                > 0)
+                >= 0)
             {
                 numHyperTot++;
                 numHyperAdded++;
@@ -357,9 +357,10 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     // Auxiliary objective variable for minimax problem
     double objUpperBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual");
+    double objLowerBound = env->settings->getSetting<double>("ESH.InteriorPoint.MinimaxObjectiveLowerBound", "Dual");
 
     variablesInitialized = variablesInitialized
-        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, -1e+10 + 1, objUpperBound);
+        && destination->addVariable("shot_mmobjvar", E_VariableType::Real, objLowerBound, objUpperBound);
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
     {
@@ -387,7 +388,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     bool constraintsInitialized = true;
 
-    for(auto& C : env->problem->linearConstraints)
+    for(auto& C : sourceProblem->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 

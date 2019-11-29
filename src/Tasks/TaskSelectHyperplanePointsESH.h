@@ -30,7 +30,6 @@ public:
 
 private:
     std::unique_ptr<TaskSelectHyperplanePointsECP> tSelectHPPts;
-    bool hyperplaneSolutionPointStrategyInitialized = false;
     std::vector<Constraint*> nonlinearConstraints;
 };
 } // namespace SHOT

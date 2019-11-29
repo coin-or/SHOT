@@ -95,6 +95,8 @@ void Problem::updateConstraints()
 
     for(auto& C : nonlinearConstraints)
     {
+        C->variablesInNonlinearExpression.clear();
+
         if(C->valueRHS == SHOT_DBL_MAX && C->valueLHS != SHOT_DBL_MIN)
         {
             if(C->valueRHS != 0.0)
@@ -587,6 +589,8 @@ void Problem::updateFactorableFunctions()
         ADFunctions.Dependent(factorableFunctionVariables, factorableFunctions);
         // ADFunctions.optimize();
     }
+
+    CppAD::AD<double>::abort_recording();
 }
 
 Problem::Problem(EnvironmentPtr env) : env(env) {}
@@ -626,6 +630,12 @@ void Problem::finalize()
         if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.Use", "Model"))
             doFBBT();
     }
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        getConstraintsJacobianSparsityPattern();
+
+    if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        getLagrangianHessianSparsityPattern();
 }
 
 void Problem::add(Variables variables)
@@ -921,7 +931,13 @@ std::shared_ptr<std::vector<std::pair<NumericConstraintPtr, Variables>>>
     {
         std::stringstream filename;
         filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/sparsitypattern_jacobian.txt";
+
+        filename << "/sparsitypattern_jacobian";
+
+        if(properties.isReformulated)
+            filename << "_ref";
+
+        filename << ".txt";
 
         std::stringstream stream;
 
@@ -1010,7 +1026,12 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> Problem::getLa
     {
         std::stringstream filename;
         filename << env->settings->getSetting<std::string>("Debug.Path", "Output");
-        filename << "/sparsitypattern_hessianoflagrangian.txt";
+        filename << "/sparsitypattern_hessianoflagrangian";
+
+        if(properties.isReformulated)
+            filename << "_ref";
+
+        filename << ".txt";
 
         std::stringstream stream;
 

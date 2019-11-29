@@ -661,11 +661,7 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
         break;
 
     case gmoorder_Q:
-        if(env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model")
-            >= static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective))
-            objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
-        else
-            objectiveFunction = std::make_shared<NonlinearObjectiveFunction>();
+        objectiveFunction = std::make_shared<QuadraticObjectiveFunction>();
         break;
 
     case gmoorder_NL:
