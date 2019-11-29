@@ -102,7 +102,8 @@ Ipopt::Index IpoptProblem::get_number_of_nonlinear_variables()
     return (sourceProblem->properties.numberOfNonlinearVariables);
 }
 
-bool IpoptProblem::get_list_of_nonlinear_variables(Ipopt::Index num_nonlin_vars, Ipopt::Index* pos_nonlin_vars)
+bool IpoptProblem::get_list_of_nonlinear_variables(
+    [[maybe_unused]] Ipopt::Index num_nonlin_vars, Ipopt::Index* pos_nonlin_vars)
 {
     VectorInteger nonlinearVariables;
     int count;
@@ -119,9 +120,9 @@ bool IpoptProblem::get_list_of_nonlinear_variables(Ipopt::Index num_nonlin_vars,
 }
 
 // returns the initial point for the problem
-bool IpoptProblem::get_starting_point(Index n, bool init_x, Number* x, bool init_z, [[maybe_unused]] Number* z_L,
-    [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m, [[maybe_unused]] bool init_lambda,
-    [[maybe_unused]] Number* lambda)
+bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[maybe_unused]] Number* x, bool init_z,
+    [[maybe_unused]] Number* z_L, [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m,
+    [[maybe_unused]] bool init_lambda, [[maybe_unused]] Number* lambda)
 {
     assert(init_x == true);
     assert(init_z == false);

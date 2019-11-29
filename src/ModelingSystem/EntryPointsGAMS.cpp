@@ -47,7 +47,7 @@ extern "C"
     }
 
     DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen);
-    DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen)
+    DllExport int STDCALL shtcreate(void** Cptr, [[maybe_unused]] char* msgBuf, [[maybe_unused]] int msgBufLen)
     {
         assert(Cptr != nullptr);
         assert(msgBufLen > 0);
@@ -270,7 +270,7 @@ extern "C"
     DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr) { return 0; }
 
     DllExport int STDCALL C__shtModifyProblem(void* Cptr);
-    DllExport int STDCALL C__shtModifyProblem(void* Cptr)
+    DllExport int STDCALL C__shtModifyProblem([[maybe_unused]] void* Cptr)
     {
         assert(Cptr != nullptr);
         return 1;
