@@ -37,9 +37,6 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     quadraticObjectiveRegardedAsNonlinear = false;
 
-    partitionQuadraticTermsInObjective
-        = env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model");
-
     partitionQuadraticTermsInConstraint
         = env->settings->getSetting<bool>("Reformulation.Constraint.PartitionQuadraticTerms", "Model");
 
@@ -341,33 +338,41 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         auto sourceObjective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction);
 
+        partitionQuadraticTermsInObjective = true;
+
         // Check whether we should partition the quadratic terms at all
-        if(quadraticObjectiveRegardedAsNonlinear)
+        if(env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model")
+            == (int)ES_PartitionNonlinearSums::Always)
         {
-            if(env->problem->objectiveFunction->properties.isMinimize)
+        }
+        else if(env->settings->getSetting<int>("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model")
+            == (int)ES_PartitionNonlinearSums::Never)
+        {
+            partitionQuadraticTermsInObjective = false;
+        }
+        else if(env->problem->objectiveFunction->properties.isMinimize)
+        {
+            // Quadratic objective is convex, but not all terms are
+            if(sourceObjective->properties.convexity == E_Convexity::Convex
+                && !sourceObjective->quadraticTerms.checkAllForConvexityType(E_Convexity::Convex))
             {
-                // Quadratic objective is convex, but not all terms are
-                if(sourceObjective->properties.convexity == E_Convexity::Convex
-                    && !sourceObjective->quadraticTerms.checkAllForConvexityType(E_Convexity::Convex))
-                {
-                    partitionQuadraticTermsInObjective = false;
-                }
+                partitionQuadraticTermsInObjective = false;
             }
-            else
+        }
+        else
+        {
+            // Quadratic objective is concave, but not all terms are
+            if(sourceObjective->properties.convexity == E_Convexity::Concave
+                && !sourceObjective->quadraticTerms.checkAllForConvexityType(E_Convexity::Concave))
             {
-                // Quadratic objective is concave, but not all terms are
-                if(sourceObjective->properties.convexity == E_Convexity::Concave
-                    && !sourceObjective->quadraticTerms.checkAllForConvexityType(E_Convexity::Concave))
-                {
-                    partitionQuadraticTermsInObjective = false;
-                }
+                partitionQuadraticTermsInObjective = false;
             }
         }
 
         if(partitionQuadraticTermsInObjective)
         {
             auto [tmpLinearTerms, tmpQuadraticTerms]
-                = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed, false);
+                = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed, true);
 
             destinationLinearTerms.add(tmpLinearTerms);
             destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -704,8 +709,24 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
     {
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
+        bool partitionTerms = true;
+
+        if(static_cast<ES_PartitionNonlinearSums>(
+               env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+            == ES_PartitionNonlinearSums::Never)
+        {
+            partitionTerms = false;
+        }
+        else if(static_cast<ES_PartitionNonlinearSums>(
+                    env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                == ES_PartitionNonlinearSums::IfConvex
+            && !sourceConstraint->quadraticTerms.checkAllForConvexityType(E_Convexity::Convex))
+        {
+            partitionTerms = false;
+        }
+
         auto [tmpLinearTerms, tmpQuadraticTerms]
-            = reformulateAndPartitionQuadraticSum(sourceConstraint->quadraticTerms, isSignReversed, false);
+            = reformulateAndPartitionQuadraticSum(sourceConstraint->quadraticTerms, isSignReversed, partitionTerms);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -1079,11 +1100,27 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
                 QuadraticTerms quadTerms;
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                auto [tmpLinearTerms, tmpQuadraticTerms]
-                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, false);
+                bool partitionTerms = true;
 
-                if(tmpQuadraticTerms.size()
-                    == 0) // Otherwise we cannot proceed and will continue as if nonbilinear term
+                if(static_cast<ES_PartitionNonlinearSums>(
+                       env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                    == ES_PartitionNonlinearSums::Never)
+                {
+                    partitionTerms = false;
+                }
+                else if(static_cast<ES_PartitionNonlinearSums>(
+                            env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
+                        == ES_PartitionNonlinearSums::IfConvex
+                    && !quadTerms.checkAllForConvexityType(E_Convexity::Convex))
+                {
+                    partitionTerms = false;
+                }
+
+                auto [tmpLinearTerms, tmpQuadraticTerms]
+                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionTerms);
+
+                if(tmpQuadraticTerms.size() == 0)
+                // Otherwise we cannot proceed and will continue as if nonbilinear term
                 {
                     resultLinearTerms.add(tmpLinearTerms);
                     continue; // Continue to next nonlinear term

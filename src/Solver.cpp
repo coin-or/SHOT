@@ -834,9 +834,6 @@ void Solver::initializeSettings()
         static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "How to partition nonlinear sums in constraints",
         enumNonlinearTermPartitioning);
 
-    // env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false,
-    //    "Partition nonlinear terms as auxiliary constraints");
-
     env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false,
         "Partition quadratic terms as auxiliary constraints");
 
@@ -859,12 +856,14 @@ void Solver::initializeSettings()
         "Reformulates a nonlinear objective as an auxiliary constraint");
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "How to partition nonlinear sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
         enumNonlinearTermPartitioning);
-    enumNonlinearTermPartitioning.clear();
 
-    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false,
-        "Partition quadratic terms as auxiliary constraints");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        enumNonlinearTermPartitioning);
+
+    enumNonlinearTermPartitioning.clear();
 
     // Reformulations for signomials
 
@@ -1355,10 +1354,12 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting(
                 "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
-            env->settings->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", true);
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
                 (int)ES_PartitionNonlinearSums::Always);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+                (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
@@ -1385,6 +1386,17 @@ void Solver::setConvexityBasedSettings()
 
 #endif
         }
+
+#ifdef HAS_CBC
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+        {
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+                (int)ES_PartitionNonlinearSums::IfConvex);
+        }
+
+#endif
     }
 }
 
