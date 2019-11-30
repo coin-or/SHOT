@@ -37,9 +37,6 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
     quadraticObjectiveRegardedAsNonlinear = false;
 
-    partitionQuadraticTermsInConstraint
-        = env->settings->getSetting<bool>("Reformulation.Constraint.PartitionQuadraticTerms", "Model");
-
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;
 
