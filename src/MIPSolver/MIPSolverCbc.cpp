@@ -676,8 +676,25 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
         return (NAN);
     }
 
+    double objectiveValue = NAN;
+
     // Cannot trust Cbc to give the correct sign of the objective back se we recalculate it
-    double objectiveValue = env->reformulatedProblem->objectiveFunction->calculateValue(getVariableSolution(solIdx));
+    try
+    {
+        auto variableSolution = getVariableSolution(solIdx);
+        objectiveValue = (isMinimizationProblem) ? coinModel->objectiveOffset() : -coinModel->objectiveOffset();
+
+        for(int i = 0; i < objectiveLinearExpression.getNumElements(); i++)
+        {
+            objectiveValue += objectiveLinearExpression.getElements()[i]
+                * variableSolution[objectiveLinearExpression.getIndices()[i]];
+        }
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError(
+            "Error when obtaining objective value for solution index " + std::to_string(solIdx) + " in Cbc", e.what());
+    }
 
     return (objectiveValue);
 }
