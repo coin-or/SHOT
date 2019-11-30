@@ -1088,6 +1088,27 @@ void Solver::initializeSettings()
 
 #endif
 
+    // Subsolver settings: Cbc
+
+#ifdef HAS_CBC
+
+    env->settings->createSetting("Cbc.AutoScale", "Subsolver", false,
+        "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
+
+    env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", std::string("fewest"),
+        "Node strategy, valid values: depth, downdepth, downfewest, fewest, hybrid, updepth, upfewest");
+
+    env->settings->createSetting(
+        "Cbc.ParallelMode", "Subsolver", true, "Run Cbc with multiple threads in deterministic mode");
+
+    env->settings->createSetting("Cbc.Scaling", "Subsolver", std::string("automatic"),
+        "Whether to scale problem, valid values: automatic, dynamic, equilibrium, geometric, off, rowsonly");
+
+    env->settings->createSetting("Cbc.Strategy", "Subsolver", 1,
+        "This turns on newer features. Use 0 for easy problems, 1 is default, 2 is aggressive", 0, 2);
+
+#endif
+
     // Subsolver settings: GAMS NLP
 
 #ifdef HAS_GAMS

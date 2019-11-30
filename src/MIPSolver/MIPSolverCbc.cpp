@@ -411,8 +411,41 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        const char* argv[] = { "", "-solve", "-quit" };
-        CbcMain1(3, argv, *cbcModel);
+        env->settings->createSetting("Cbc.AutoScale", "Subsolver", false,
+            "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
+
+        env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", "fewest",
+            "Node strategy, valid values: depth, downdepth, downfewest, fewest, hybrid, updepth, upfewest");
+
+        env->settings->createSetting(
+            "Cbc.ParallelMode", "Subsolver", true, "Run Cbc with multiple threads in deterministic mode");
+
+        env->settings->createSetting("Cbc.Scaling", "Subsolver", "automatic",
+            "Whether to scale problem, valid values: automatic, dynamic, equilibrium, geometric, off, rowsonly");
+
+        const char* argv[8];
+
+        argv[0] = "";
+        argv[1] = "-solve";
+        argv[2] = "-quit";
+
+        if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
+            argv[3] = "-autoscale=on";
+        else
+            argv[3] = "-autoscale=off";
+
+        argv[4] = ("-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver")).c_str();
+
+        if(env->settings->getSetting<bool>("Cbc.ParallelMode", "Subsolver"))
+            argv[5] = "-parallelmode=deterministic";
+        else
+            argv[5] = "-parallelmode=opportunistic";
+
+        argv[6] = ("-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver")).c_str();
+
+        argv[7] = ("-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"))).c_str();
+
+        CbcMain1(8, argv, *cbcModel);
 
         MIPSolutionStatus = getSolutionStatus();
     }
