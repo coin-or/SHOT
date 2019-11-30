@@ -906,7 +906,11 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
 
+#ifdef HAS_GAMS
+
     env->settings->createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
+
+#endif
 
     VectorString enumIterationDetail;
     enumIterationDetail.push_back("Full");
@@ -1016,6 +1020,8 @@ void Solver::initializeSettings()
 
     // Subsolver settings: Cplex
 
+#ifdef HAS_CPLEX
+
     env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
         "Whether to add lazy constraints generated in relaxed points as local or global");
 
@@ -1065,7 +1071,12 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Cplex.WorkMem", "Subsolver", 30000.0, "Memory limit for when to start swapping to disk", 0, 1.0e+75);
 
+#endif
+
     // Subsolver settings: Gurobi
+
+#ifdef HAS_GUROBI
+
     env->settings->createSetting(
         "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
 
@@ -1075,7 +1086,11 @@ void Solver::initializeSettings()
     env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 0,
         "Numeric focus (higher number more careful): 0: Automatic. 3: Most careful.", 0, 3);
 
+#endif
+
     // Subsolver settings: GAMS NLP
+
+#ifdef HAS_GAMS
 
     std::string optfile = "";
     env->settings->createSetting(
@@ -1084,7 +1099,11 @@ void Solver::initializeSettings()
     std::string solver = "conopt";
     env->settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS");
 
+#endif
+
     // Subsolver settings: Ipopt
+
+#ifdef HAS_IPOPT
 
     env->settings->createSetting("Ipopt.ConstraintViolationTolerance", "Subsolver", 1E-8,
         "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
@@ -1104,6 +1123,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting(
         "Ipopt.RelativeConvergenceTolerance", "Subsolver", 1E-8, "Relative convergence tolerance");
+
+#endif
 
     // Subsolver settings: root searches
 
