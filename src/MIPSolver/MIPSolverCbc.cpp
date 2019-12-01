@@ -797,16 +797,10 @@ VectorDouble MIPSolverCbc::getVariableSolution(int solIdx)
 int MIPSolverCbc::getNumberOfSolutions()
 {
     int numSols = 0;
-    bool isMIP = getDiscreteVariableStatus();
 
     try
     {
-        if(isMIP)
-            numSols = cbcModel->getSolutionCount();
-        else
-        {
-            numSols = cbcModel->numberSavedSolutions();
-        }
+        numSols = cbcModel->numberSavedSolutions();
     }
     catch(std::exception& e)
     {
