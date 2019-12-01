@@ -38,6 +38,14 @@ void TaskCheckDualStagnation::run()
         return;
     }
 
+    // To avoid unnecessary termination when there are many subsequent dual problems with the same objective value but
+    // different nonlinear constraint errors
+    if(std::abs(currIter->maxDeviation - env->results->getPreviousIteration()->maxDeviation)
+        > env->settings->getSetting<double>("DualStagnation.ConstraintTolerance", "Termination"))
+    {
+        return;
+    }
+
     if(!env->dualSolver->isSingleTree && !currIter->MIPSolutionLimitUpdated
         && currIter->iterationNumber - env->solutionStatistics.iterationLastDualCutAdded > 2)
     {

@@ -1184,6 +1184,10 @@ void Solver::initializeSettings()
     env->settings->createSetting("ObjectiveGap.Relative", "Termination", 0.001,
         "Relative gap termination tolerance for objective function", 0, SHOT_DBL_MAX);
 
+    env->settings->createSetting("DualStagnation.ConstraintTolerance", "Termination", 1e-6,
+        "Min absolute difference between max nonlinear constraint errors in subsequent iterations for termination", 0,
+        SHOT_DBL_MAX);
+
     env->settings->createSetting("DualStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
 
