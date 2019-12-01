@@ -702,11 +702,13 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
     try
     {
         auto variableSolution = getVariableSolution(solIdx);
-        objectiveValue = (isMinimizationProblem) ? coinModel->objectiveOffset() : -coinModel->objectiveOffset();
+        double factor = (isMinimizationProblem) ? 1.0 : -1.0;
+
+        objectiveValue = factor * coinModel->objectiveOffset();
 
         for(int i = 0; i < objectiveLinearExpression.getNumElements(); i++)
         {
-            objectiveValue += objectiveLinearExpression.getElements()[i]
+            objectiveValue += factor * objectiveLinearExpression.getElements()[i]
                 * variableSolution[objectiveLinearExpression.getIndices()[i]];
         }
     }
