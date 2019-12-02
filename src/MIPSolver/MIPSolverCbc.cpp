@@ -375,7 +375,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
-    const char* argv[10];
+    const int numArguments = 11;
+    const char* argv[numArguments];
 
     argv[0] = "";
     argv[1] = "-solve";
@@ -404,6 +405,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         argv[9] = ("-cutoff=" + std::to_string(this->cutOff)).c_str();
     else
         argv[9] = "";
+
+    argv[10] = ("-sec=" + std::to_string(this->timeLimit)).c_str();
 
     try
     {
@@ -434,7 +437,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        CbcMain1(9, argv, *cbcModel);
+        CbcMain1(numArguments, argv, *cbcModel);
 
         MIPSolutionStatus = getSolutionStatus();
     }
@@ -463,7 +466,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            CbcMain1(9, argv, *cbcModel);
+            CbcMain1(numArguments, argv, *cbcModel);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -519,7 +522,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            CbcMain1(9, argv, *cbcModel);
+            CbcMain1(numArguments, argv, *cbcModel);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -551,17 +554,7 @@ void MIPSolverCbc::setSolutionLimit(long int limit) { this->solLimit = limit; }
 
 int MIPSolverCbc::getSolutionLimit() { return (this->solLimit); }
 
-void MIPSolverCbc::setTimeLimit(double seconds)
-{
-    try
-    {
-        cbcModel->setMaximumSeconds(seconds);
-    }
-    catch(std::exception& e)
-    {
-        env->output->outputError("Error when setting time limit in Cbc", e.what());
-    }
-}
+void MIPSolverCbc::setTimeLimit(double seconds) { timeLimit = seconds; }
 
 void MIPSolverCbc::setCutOff(double cutOff)
 {
