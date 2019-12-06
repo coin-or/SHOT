@@ -26,6 +26,10 @@
 #include "palmcc.h"
 #include "optcc.h"
 
+#if defined(__linux) && defined(HAS_CPLEX)
+#include "ilcplex/cplex.h"
+#endif
+
 using namespace SHOT;
 
 extern "C"
@@ -38,30 +42,61 @@ extern "C"
         palHandle_t pal;
     } gamsshot;
 
-    DllExport void STDCALL shtXCreate(void** Cptr);
-    DllExport void STDCALL shtXCreate(void** Cptr)
+    DllExport void STDCALL shtInitialize(void);
+    DllExport void STDCALL shtInitialize(void)
     {
-        assert(Cptr != nullptr);
+#if defined(__linux) && defined(HAS_CPLEX)
+        CPXinitialize();
+#endif
 
-        *Cptr = calloc(1, sizeof(gamsshot));
+        gmoInitMutexes();
+        gevInitMutexes();
+        palInitMutexes();
+    }
+
+    DllExport void STDCALL shtFinalize(void);
+    DllExport void STDCALL shtFinalize(void)
+    {
+#if defined(__linux) && defined(HAS_CPLEX)
+        CPXfinalize();
+#endif
+
+        gmoFiniMutexes();
+        gevFiniMutexes();
+        palFiniMutexes();
     }
 
     DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen);
-    DllExport int STDCALL shtcreate(void** Cptr, [[maybe_unused]] char* msgBuf, [[maybe_unused]] int msgBufLen)
+    DllExport int STDCALL shtcreate(void** Cptr, char* msgBuf, int msgBufLen)
     {
         assert(Cptr != nullptr);
-        assert(msgBufLen > 0);
         assert(msgBuf != nullptr);
 
-        *Cptr = calloc(1, sizeof(gamsshot));
+        *Cptr = NULL;
 
-        msgBuf[0] = 0;
+        if( !gmoGetReady(msgBuf, msgBufLen) )
+           return 0;
+
+        if( !gevGetReady(msgBuf, msgBufLen) )
+           return 0;
+
+        if( !palGetReady(msgBuf, msgBufLen) )
+           return 0;
+
+        *Cptr = calloc(1, sizeof(gamsshot));
+        if( *Cptr == NULL )
+        {
+           snprintf(msgBuf, msgBufLen, "Out of memory when creating gamsshot object.\n");
+           if( msgBufLen > 0 )
+              msgBuf[msgBufLen] = '\0';
+           return 0;
+        }
 
         return 1;
     }
 
-    DllExport void STDCALL shtXFree(void** Cptr);
-    DllExport void STDCALL shtXFree(void** Cptr)
+    DllExport void STDCALL shtfree(void** Cptr);
+    DllExport void STDCALL shtfree(void** Cptr)
     {
         assert(Cptr != nullptr);
         assert(*Cptr != nullptr);
@@ -74,90 +109,24 @@ extern "C"
 
         gmoLibraryUnload();
         gevLibraryUnload();
-#ifdef GAMS_BUILD
         palLibraryUnload();
-#endif
     }
 
-    DllExport int STDCALL shtfree(void** Cptr);
-    DllExport int STDCALL shtfree(void** Cptr)
-    {
-        shtXFree(Cptr);
-
-        return 1;
-    }
-
-    /* comp returns the compatibility mode:
-           0: client is too old for the DLL, no compatibility
-           1: client version and DLL version are the same, full compatibility
-           2: client is older than DLL, but defined as compatible, backward compatibility
-           3: client is newer than DLL, forward compatibility
-           FIXME: for now, we just claim full compatibility
-     */
-    DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp);
-    DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
-    {
-        *comp = 1;
-        return 1;
-    }
-
-    DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp);
-    DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
-    {
-        *comp = 1;
-        return 1;
-    }
-
-    DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
-        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
-    DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
-        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
-    {
-        return 1;
-    }
-
-    DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
-        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg);
-    DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg,
-        [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
-    {
-        return 1;
-    }
-
-    DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr);
-    DllExport int STDCALL C__shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
+    DllExport int STDCALL shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr);
+    DllExport int STDCALL shtReadyAPI(void* Cptr, gmoHandle_t Gptr, optHandle_t Optr)
     {
         gamsshot* gs;
-#ifdef GAMS_BUILD
         gevHandle_t gev;
-#endif
+        char msg[256];
 
         assert(Cptr != nullptr);
         assert(Gptr != nullptr);
-
-        char msg[256];
-        if(!gmoGetReady(msg, sizeof(msg)))
-        {
-            fputs(msg, stderr);
-            return 1;
-        }
-        if(!gevGetReady(msg, sizeof(msg)))
-        {
-            fputs(msg, stderr);
-            return 1;
-        }
 
         gs = (gamsshot*)Cptr;
         gs->gmo = Gptr;
         gs->opt = Optr;
 
-#ifdef GAMS_BUILD
         gev = (gevHandle_t)gmoEnvironment(Gptr);
-        if(!palGetReady(msg, sizeof(msg)))
-        {
-            gevLogStat(gev, msg);
-            return 1;
-        }
         if(!palCreate(&gs->pal, msg, sizeof(msg)))
         {
             gevLogStat(gev, msg);
@@ -165,12 +134,14 @@ extern "C"
         }
 
         /* print auditline */
+#ifdef GAMS_BUILD
 #define PALPTR gs->pal
 #include "shotCLsvn.h"
         palGetAuditLine(gs->pal, msg);
         gevLogStat(gev, "");
         gevLogStat(gev, msg);
         gevStatAudit(gev, msg);
+#endif
 
         /* initialize licensing */
         palLicenseRegisterGAMS(gs->pal, 1, gevGetStrOpt(gev, "License1", msg));
@@ -180,13 +151,12 @@ extern "C"
         palLicenseRegisterGAMS(gs->pal, 5, gevGetStrOpt(gev, "License5", msg));
         palLicenseRegisterGAMSDone(gs->pal);
         /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
-#endif
 
         return 0;
     }
 
-    DllExport int STDCALL C__shtCallSolver(void* Cptr);
-    DllExport int STDCALL C__shtCallSolver(void* Cptr)
+    DllExport int STDCALL shtCallSolver(void* Cptr);
+    DllExport int STDCALL shtCallSolver(void* Cptr)
     {
         gamsshot* gs;
 
@@ -266,13 +236,66 @@ extern "C"
         return 0;
     }
 
-    DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr);
-    DllExport int STDCALL C__shtHaveModifyProblem([[maybe_unused]] void* Cptr) { return 0; }
-
-    DllExport int STDCALL C__shtModifyProblem(void* Cptr);
-    DllExport int STDCALL C__shtModifyProblem([[maybe_unused]] void* Cptr)
+    DllExport void STDCALL C__shtInitialize(void);
+    DllExport void STDCALL C__shtInitialize(void)
     {
-        assert(Cptr != nullptr);
+       shtInitialize();
+    }
+
+    DllExport void STDCALL C__shtFinalize(void);
+    DllExport void STDCALL C__shtFinalize(void)
+    {
+       shtFinalize();
+    }
+
+    DllExport void STDCALL shtXCreate(void** Cptr);
+    DllExport void STDCALL shtXCreate(void** Cptr)
+    {
+        char msg[GMS_SSSIZE];
+        shtcreate(Cptr, msg, sizeof(msg));
+    }
+
+    DllExport void STDCALL shtXFree(void** Cptr);
+    DllExport void STDCALL shtXFree(void** Cptr)
+    {
+        shtfree(Cptr);
+    }
+
+    DllExport int  STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr);
+    DllExport int  STDCALL C__shtReadyAPI(void* Cptr, struct gmoRec* Gptr, struct optRec* Optr)
+    {
+        return shtReadyAPI(Cptr, Gptr, Optr);
+    }
+
+    DllExport int  STDCALL C__shtCallSolver(void* Cptr);
+    DllExport int  STDCALL C__shtCallSolver(void* Cptr)
+    {
+        return shtCallSolver(Cptr);
+    }
+
+    DllExport int STDCALL C__shtXAPIVersion(int api, char* Msg, int* comp);
+    DllExport int STDCALL C__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
+    {
+        *comp = 1;
+        return 1;
+    }
+
+    DllExport int STDCALL D__shtXAPIVersion(int api, char* Msg, int* comp);
+    DllExport int STDCALL D__shtXAPIVersion([[maybe_unused]] int api, [[maybe_unused]] char* Msg, int* comp)
+    {
+        *comp = 1;
+        return 1;
+    }
+
+    DllExport int STDCALL C__shtXCheck(const char* funcn, int ClNrArg, int Clsign[], char* Msg);
+    DllExport int STDCALL C__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg, [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
+    {
+        return 1;
+    }
+
+    DllExport int STDCALL D__shtXCheck(const char* funcn, int ClNrArg, int Clsign[], char* Msg);
+    DllExport int STDCALL D__shtXCheck([[maybe_unused]] const char* funcn, [[maybe_unused]] int ClNrArg, [[maybe_unused]] int Clsign[], [[maybe_unused]] char* Msg)
+    {
         return 1;
     }
 }
