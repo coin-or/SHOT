@@ -409,7 +409,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
         }
 
         constraintsInitialized
-            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS, C->constant);
     }
 
     if(!constraintsInitialized)
