@@ -205,8 +205,8 @@ extern "C"
 
             solver.setProblem(problem, modelingSystem);
 
-            env->report->outputOptionsReport();
             env->report->outputProblemInstanceReport();
+            env->report->outputOptionsReport();
 
             if(!solver.solveProblem()) // solve problem
             {
