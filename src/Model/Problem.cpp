@@ -1425,7 +1425,17 @@ void Problem::saveProblemToFile(std::string filename)
 void Problem::doFBBT()
 {
     env->timing->startTimer("BoundTightening");
-    env->timing->startTimer("BoundTighteningFBBT");
+
+    if(properties.isReformulated)
+    {
+        env->timing->startTimer("BoundTighteningFBBTReformulated");
+        env->output->outputInfo(" Performing bound tightening on reformulated problem.");
+    }
+    else
+    {
+        env->timing->startTimer("BoundTighteningFBBTOriginal");
+        env->output->outputInfo(" Performing bound tightening on original problem.");
+    }
 
     int numberOfIterations = env->settings->getSetting<int>("BoundTightening.FeasibilityBased.MaxIterations", "Model");
 
@@ -1450,7 +1460,19 @@ void Problem::doFBBT()
             break;
     }
 
-    env->timing->stopTimer("BoundTighteningFBBT");
+    if(properties.isReformulated)
+    {
+        env->timing->stopTimer("BoundTighteningFBBTReformulated");
+        env->output->outputDebug(fmt::format(
+            " Bound tightening finished in {} s.", env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
+    }
+    else
+    {
+        env->timing->stopTimer("BoundTighteningFBBTOriginal");
+        env->output->outputDebug(fmt::format(
+            " Bound tightening finished in {} s.", env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
+    }
+
     env->timing->stopTimer("BoundTightening");
 }
 

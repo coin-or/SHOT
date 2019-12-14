@@ -571,7 +571,7 @@ void Report::outputProblemInstanceReport()
 
     bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
 
-    report << "╶ Problem instance "
+    report << "\r\n╶ Problem instance "
               "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
               "\r\n";
     report << "\r\n";
