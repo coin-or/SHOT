@@ -1460,17 +1460,20 @@ void Problem::doFBBT()
             break;
     }
 
+    int numberOfTightenedVariables = std::count_if(allVariables.begin(), allVariables.end(),
+        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
+
     if(properties.isReformulated)
     {
         env->timing->stopTimer("BoundTighteningFBBTReformulated");
-        env->output->outputDebug(fmt::format(
-            " Bound tightening finished in {} s.", env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
+            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
     }
     else
     {
         env->timing->stopTimer("BoundTighteningFBBTOriginal");
-        env->output->outputDebug(fmt::format(
-            " Bound tightening finished in {} s.", env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
+            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
     }
 
     env->timing->stopTimer("BoundTightening");

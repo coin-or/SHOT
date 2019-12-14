@@ -35,6 +35,7 @@ bool Variable::tightenBounds(const Interval bound)
     if(bound.l() > this->lowerBound + epsTolerance && bound.l() <= this->upperBound)
     {
         tightened = true;
+        this->properties.hasLowerBoundBeenTightened = true;
 
         if(bound.l() == 0.0 && std::signbit(bound.l()))
         {
@@ -54,6 +55,7 @@ bool Variable::tightenBounds(const Interval bound)
     if(bound.u() < this->upperBound - epsTolerance && bound.u() >= this->lowerBound)
     {
         tightened = true;
+        this->properties.hasUpperBoundBeenTightened = true;
 
         if(bound.u() == 0.0 && std::signbit(bound.u()))
         {
