@@ -62,7 +62,8 @@ Solver::Solver()
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
-    env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -290,7 +291,7 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_AMPL
         if(problemExtension == ".nl")
         {
-            env->report->outputModelingSystemHeader(ES_SourceFormat::OSiL, fileName);
+            env->report->outputModelingSystemHeader(ES_SourceFormat::NL, fileName);
 
             auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
@@ -311,7 +312,7 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
         {
-            env->report->outputModelingSystemHeader(ES_SourceFormat::OSiL, fileName);
+            env->report->outputModelingSystemHeader(ES_SourceFormat::GAMS, fileName);
 
             auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
