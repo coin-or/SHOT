@@ -94,6 +94,8 @@ void simplifyNonlinearExpressions(
         }
     }
 
+    bool constraintTypesHaveChanged = false;
+
     for(auto& C : problem->numericConstraints)
     {
         if(!C->properties.hasNonlinearExpression)
@@ -114,6 +116,9 @@ void simplifyNonlinearExpressions(
             if(tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0)
             {
                 // The constraint is quadratic
+
+                constraintTypesHaveChanged = true;
+
                 auto newConstraint = std::make_shared<QuadraticConstraint>();
                 newConstraint->index = nonlinearConstraint->index;
                 newConstraint->name = nonlinearConstraint->name;
@@ -137,6 +142,9 @@ void simplifyNonlinearExpressions(
             else
             {
                 // The constraint is linear
+
+                constraintTypesHaveChanged = true;
+
                 auto newConstraint = std::make_shared<LinearConstraint>();
                 newConstraint->index = nonlinearConstraint->index;
                 newConstraint->name = nonlinearConstraint->name;
@@ -178,6 +186,23 @@ void simplifyNonlinearExpressions(
 
             if(tmpConstant != 0.0)
                 nonlinearConstraint->constant += tmpConstant;
+        }
+    }
+
+    if(constraintTypesHaveChanged)
+    {
+        problem->linearConstraints.clear();
+        problem->quadraticConstraints.clear();
+        problem->nonlinearConstraints.clear();
+
+        for(auto& C : problem->numericConstraints)
+        {
+            if(auto constraint = std::dynamic_pointer_cast<LinearConstraint>(C))
+                problem->linearConstraints.push_back(constraint);
+            else if(auto constraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
+                problem->quadraticConstraints.push_back(constraint);
+            else if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
+                problem->nonlinearConstraints.push_back(constraint);
         }
     }
 
