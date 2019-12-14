@@ -796,6 +796,9 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.MaxIterations", "Model", 5, "Maximal number of bound tightening iterations");
 
+    env->settings->createSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0,
+        "Time limit for bound tightening", 0.0, SHOT_DBL_MAX);
+
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.Use", "Model", true, "Peform feasibility-based bound tightening");
 

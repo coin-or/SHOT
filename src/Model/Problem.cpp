@@ -1426,6 +1426,8 @@ void Problem::doFBBT()
 {
     env->timing->startTimer("BoundTightening");
 
+    double startTime = env->timing->getElapsedTime("BoundTightening");
+
     if(properties.isReformulated)
     {
         env->timing->startTimer("BoundTighteningFBBTReformulated");
@@ -1439,24 +1441,60 @@ void Problem::doFBBT()
 
     int numberOfIterations = env->settings->getSetting<int>("BoundTightening.FeasibilityBased.MaxIterations", "Model");
 
+    bool stopTightening = false;
+
     for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
+
         env->output->outputDebug(fmt::format("  Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
         for(auto& C : linearConstraints)
+        {
+            if(env->timing->getElapsedTime("BoundTightening") - startTime
+                > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+            {
+                stopTightening = true;
+                break;
+            }
+
             boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+        }
+
+        if(stopTightening)
+            break;
 
         for(auto& C : quadraticConstraints)
+        {
+            if(env->timing->getElapsedTime("BoundTightening") - startTime
+                > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+            {
+                stopTightening = true;
+                break;
+            }
+
             boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+        }
+
+        if(stopTightening)
+            break;
 
         if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.UseNonlinear", "Model"))
         {
             for(auto& C : nonlinearConstraints)
+            {
+                if(env->timing->getElapsedTime("BoundTightening") - startTime
+                    > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+                {
+                    stopTightening = true;
+                    break;
+                }
+
                 boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+            }
         }
 
-        if(!boundsUpdated)
+        if(stopTightening || !boundsUpdated)
             break;
     }
 
