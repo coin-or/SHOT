@@ -313,6 +313,13 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }
 
+        if(env->timing->getElapsedTime("InteriorPointSearch")
+            > env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TimeLimit", "Dual"))
+        {
+            statusCode = E_NLPSolutionStatus::TimeLimit;
+            break;
+        }
+
         if(numHyperAdded == 0)
         {
             statusCode = (objectiveValue > 0) ? E_NLPSolutionStatus::Infeasible : E_NLPSolutionStatus::Feasible;

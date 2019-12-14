@@ -623,6 +623,9 @@ void Solver::initializeSettings()
         "Iteration limit for minimization subsolver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
+        "ESH.InteriorPoint.CuttingPlane.TimeLimit", "Dual", 10.0, "Time limit for minimax solver", 0.0, SHOT_DBL_MAX);
+
+    env->settings->createSetting(
         "ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false, "Reuse valid cutting planes in main dual model");
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual", 1.0,
