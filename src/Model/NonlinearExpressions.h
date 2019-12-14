@@ -2155,6 +2155,16 @@ public:
         children = terms;
     }
 
+    ExpressionSum(
+        NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild, NonlinearExpressionPtr thirdChild)
+    {
+        NonlinearExpressions terms;
+        terms.push_back(firstChild);
+        terms.push_back(secondChild);
+        terms.push_back(thirdChild);
+        children = terms;
+    }
+
     inline double calculate(const VectorDouble& point) const override
     {
         double value = 0.0;
@@ -2341,6 +2351,16 @@ public:
         NonlinearExpressions terms;
         terms.push_back(firstChild);
         terms.push_back(secondChild);
+        children = terms;
+    }
+
+    ExpressionProduct(
+        NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild, NonlinearExpressionPtr thirdChild)
+    {
+        NonlinearExpressions terms;
+        terms.push_back(firstChild);
+        terms.push_back(secondChild);
+        terms.push_back(thirdChild);
         children = terms;
     }
 
