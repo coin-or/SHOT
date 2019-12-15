@@ -672,7 +672,7 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if(childBounds.l() >= 0 && (childConvexity == E_Convexity::Concave || childConvexity == E_Convexity::Linear))
+        if(childConvexity == E_Convexity::Concave || childConvexity == E_Convexity::Linear)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1808,16 +1808,9 @@ public:
         if(secondChild->getMonotonicity() != E_Monotonicity::Constant)
             return (false);
 
-        auto baseBounds = firstChild->getBounds();
         double power = secondChild->getBounds().l();
 
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
-
         Interval interval(0.0);
-
-        if(!isInteger && baseBounds.l() <= 0)
-            baseBounds.l(SHOT_DBL_EPS);
 
         if(std::abs(power - 2.0) <= 2e-10)
         {
