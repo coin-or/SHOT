@@ -1404,7 +1404,7 @@ public:
         if(denominatorBounds.l() * denominatorBounds.u() <= 0)
             return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
 
-        return (firstChild->getBounds() / secondChild->getBounds());
+        return (firstChild->getBounds() / denominatorBounds);
     }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override
