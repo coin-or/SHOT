@@ -1812,9 +1812,10 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
     }
-    catch(const mc::Interval::Exceptions& e)
+    catch(mc::Interval::Exceptions& e)
     {
-        env->output->outputError(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
+        env->output->outputError(
+            fmt::format("  error when tightening bound in constraint {}: {}", constraint->name, e.what()));
     }
 
     // Update variable bounds for original variables also in original problem if tightened in reformulated one
