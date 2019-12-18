@@ -1409,8 +1409,31 @@ public:
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override
     {
-        // TODO
-        return (false);
+        auto bounds1 = secondChild->getBounds();
+        auto bounds2 = secondChild->getBounds();
+
+        if((bound.l() * bound.u() <= 0 || (bound.l() <= 0 && bound.u() == SHOT_DBL_INF)) && bounds1.l() >= 0
+            && bounds2.l() > 0) // we know everything is positive
+        {
+            bound.l(SHOT_DBL_EPS);
+        }
+        else if((bound.l() * bound.u() <= 0 || (bound.l() == -SHOT_DBL_INF && bound.u() >= 0)) && bounds1.u() <= 0
+            && bounds2.u() < 0) // we know everything is negative
+        {
+            bound.u(-SHOT_DBL_EPS);
+        }
+        else if(bound.l() * bound.u() <= 0)
+        {
+            return (false);
+        }
+
+        bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
+        bool secondTightened = secondChild->tightenBounds(firstChild->getBounds() / bound);
+
+        if(secondTightened)
+            firstTightened = firstTightened || firstChild->tightenBounds(secondChild->getBounds() * bound);
+
+        return (firstTightened || secondTightened);
     }
 
     inline FactorableFunction getFactorableFunction() override
