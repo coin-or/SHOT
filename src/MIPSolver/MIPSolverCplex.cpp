@@ -708,23 +708,24 @@ bool MIPSolverCplex::repairInfeasibility()
 
         relax.add(numOrigConstraints, 0.0);
 
-        int offset = 0;
+        int hyperplaneCounter = 0;
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
             {
                 relax.add(0.0);
-                offset++;
+                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
+                // TODO: allow for relaxing integer constraints
                 relax.add(0);
-                offset++;
             }
-            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - offset).isSourceConvex)
+            else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {
                 relax.add(0);
+                hyperplaneCounter++;
             }
             else
             {
@@ -776,7 +777,7 @@ bool MIPSolverCplex::repairInfeasibility()
                 ss << "/lp";
                 ss << env->results->getCurrentIteration()->iterationNumber - 1;
                 ss << "repaired.lp";
-                env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
+                writeProblemToFile(ss.str());
             }
 
             return (true);
@@ -1376,9 +1377,9 @@ bool MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
         }
 
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
-        tmpRange.setName("IC");
+        tmpRange.setName(fmt::format("IC_{}", integerCuts.size()).c_str());
 
-        integerCuts.push_back(cplexConstrs.getSize());
+        integerCuts.push_back(cplexConstrs.getSize() - 1);
 
         env->solutionStatistics.numberOfIntegerCuts++;
 
