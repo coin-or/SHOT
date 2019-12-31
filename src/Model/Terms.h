@@ -729,7 +729,7 @@ public:
     VariablePtr variable;
     double power;
 
-    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power){};
+    SignomialElement(VariablePtr variable, double power) : variable(variable), power(power) {};
 
     inline double calculate(const VectorDouble& point) const { return pow(variable->calculate(point), power); }
 
@@ -787,20 +787,27 @@ public:
 
     inline bool tightenBounds(Interval bound)
     {
-        if(bound.l() < 0)
-            bound.l(SHOT_DBL_EPS);
-
         double intpart;
         bool isInteger = (std::modf(power, &intpart) == 0.0);
+        int integerValue = (int)round(intpart);
+        bool isEven = (integerValue % 2 == 0);
 
-        if(isInteger && power > 0 && bound.l() < 0.0)
+        if(isInteger && isEven && power > 0 && bound.l() <= 0.0)
             bound.l(0.0);
         else if(bound.l() <= 0.0)
             bound.l(SHOT_DBL_EPS);
-        else if(bound.l() < 0.0)
-            bound.l(0.0);
 
-        auto interval = pow(bound, 1.0 / power);
+        Interval interval;
+
+        if(bound.l() < 0.0)
+            return (false);
+
+        if(power == 2.0)
+            interval = sqrt(bound);
+        else if(power == -1.0)
+            interval = 1 / bound;
+        else
+            interval = pow(bound, 1.0 / power);
 
         return (variable->tightenBounds(interval));
     }
