@@ -462,6 +462,12 @@ public:
 
     inline bool tightenBounds(Interval bound) override
     {
+        if(bound.l() == 0.0 && bound.u() > SHOT_DBL_EPS)
+            bound.l(SHOT_DBL_EPS);
+
+        if(bound.u() == 0.0 && bound.l() < -SHOT_DBL_EPS)
+            bound.u(-SHOT_DBL_EPS);
+
         if(bound.l() <= 0.0 && bound.u() >= 0.0)
             return (false);
 
@@ -1409,7 +1415,7 @@ public:
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override
     {
-        auto bounds1 = secondChild->getBounds();
+        auto bounds1 = firstChild->getBounds();
         auto bounds2 = secondChild->getBounds();
 
         if((bound.l() * bound.u() <= 0 || (bound.l() <= 0 && bound.u() == SHOT_DBL_INF)) && bounds1.l() >= 0
