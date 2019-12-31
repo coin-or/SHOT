@@ -243,9 +243,6 @@ bool MIPSolverCbc::finalizeProblem()
 
 void MIPSolverCbc::initializeSolverSettings()
 {
-    if(cbcModel->haveMultiThreadSupport())
-        cbcModel->setNumberThreads(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-
     cbcModel->setAllowableGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setAllowableFractionGap(env->settings->getSetting<double>("ObjectiveGap.Absolute", "Termination") / 1.0);
     cbcModel->setMaximumSolutions(solLimit);
@@ -378,6 +375,39 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     E_ProblemSolutionStatus MIPSolutionStatus;
     cachedSolutionHasChanged = true;
 
+    const int numArguments = 11;
+    const char* argv[numArguments];
+
+    argv[0] = "";
+    argv[1] = "-solve";
+    argv[2] = "-quit";
+
+    if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
+        argv[3] = "-autoscale=on";
+    else
+        argv[3] = "-autoscale=off";
+
+    argv[4] = ("-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver")).c_str();
+
+    if(env->settings->getSetting<bool>("Cbc.ParallelMode", "Subsolver"))
+        argv[5] = "-parallelmode=deterministic";
+    else
+        argv[5] = "-parallelmode=opportunistic";
+
+    argv[6] = ("-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver")).c_str();
+
+    argv[7] = ("-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"))).c_str();
+
+    argv[8] = ("-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"))).c_str();
+
+    // Cbc has problems with too large cutoff values
+    if(std::abs(this->cutOff) < 10e20)
+        argv[9] = ("-cutoff=" + std::to_string(this->cutOff)).c_str();
+    else
+        argv[9] = "";
+
+    argv[10] = ("-sec=" + std::to_string(this->timeLimit)).c_str();
+
     try
     {
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
@@ -399,10 +429,6 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             env->output->outputError("Error when adding MIP start to Cbc", e.what());
         }
 
-        // Cbc has problems with too large cutoff values
-        if(std::abs(this->cutOff) < 10e20)
-            cbcModel->setCutoff(this->cutOff);
-
         CbcMain0(*cbcModel);
 
         if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
@@ -411,8 +437,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
         }
 
-        const char* argv[] = { "", "-solve", "-quit" };
-        CbcMain1(3, argv, *cbcModel);
+        CbcMain1(numArguments, argv, *cbcModel);
 
         MIPSolutionStatus = getSolutionStatus();
     }
@@ -441,8 +466,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            const char* argv[] = { "", "-solve", "-quit" };
-            CbcMain1(3, argv, *cbcModel);
+            CbcMain1(numArguments, argv, *cbcModel);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -498,8 +522,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
             }
 
-            const char* argv[] = { "", "-solve", "-quit" };
-            CbcMain1(3, argv, *cbcModel);
+            CbcMain1(numArguments, argv, *cbcModel);
 
             MIPSolutionStatus = getSolutionStatus();
 
@@ -516,7 +539,172 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     return (MIPSolutionStatus);
 }
 
-bool MIPSolverCbc::repairInfeasibility() { return false; }
+bool MIPSolverCbc::repairInfeasibility()
+{
+    if(env->dualSolver->generatedHyperplanes.size() == 0)
+        return (false);
+
+    try
+    {
+        auto repairedInterface = osiInterface->clone();
+
+        int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
+        int numOrigVariables = osiInterface->getNumCols();
+        int numCurrConstraints = osiInterface->getNumRows();
+
+        VectorInteger repairConstraints;
+        VectorDouble relaxParameters;
+
+        int numConstraintsToRepair = 0;
+        int hyperplaneCounter = 0;
+
+        for(int i = numOrigConstraints; i < numCurrConstraints; i++)
+        {
+            if(i == cutOffConstraintIndex)
+            {
+                hyperplaneCounter++;
+            }
+            else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
+            {
+                // TODO: allow for relaxing integer constraints
+            }
+            else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
+            {
+                hyperplaneCounter++;
+            }
+            else
+            {
+                repairConstraints.push_back(i);
+                relaxParameters.push_back(1 / (((double)i) + 1.0));
+                numConstraintsToRepair++;
+            }
+        }
+
+        double tmpCoefficient[1] = { -1.0 };
+
+        for(int i = 0; i < numConstraintsToRepair; i++)
+        {
+            int tmpConstraint[1] = { repairConstraints[i] };
+            repairedInterface->addCol(
+                1, tmpConstraint, tmpCoefficient, 0.0, osiInterface->getInfinity(), relaxParameters[i]);
+        }
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "infeasrelax.lp";
+
+            try
+            {
+                repairedInterface->writeLp(ss.str().c_str(), "");
+            }
+            catch(std::exception& e)
+            {
+                env->output->outputError("Error when saving relaxed infesibility model to file in Cbc", e.what());
+            }
+        }
+
+        cbcModel = std::make_unique<CbcModel>(*repairedInterface);
+
+        initializeSolverSettings();
+
+        CbcMain0(*cbcModel);
+
+        if(!env->settings->getSetting<bool>("Console.DualSolver.Show", "Output"))
+        {
+            cbcModel->setLogLevel(0);
+            osiInterface->setHintParam(OsiDoReducePrint, false, OsiHintTry);
+        }
+
+        cachedSolutionHasChanged = true;
+
+        const int numArguments = 11;
+        const char* argv[numArguments];
+
+        argv[0] = "";
+        argv[1] = "-solve";
+        argv[2] = "-quit";
+
+        if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
+            argv[3] = "-autoscale=on";
+        else
+            argv[3] = "-autoscale=off";
+
+        argv[4] = ("-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver")).c_str();
+
+        if(env->settings->getSetting<bool>("Cbc.ParallelMode", "Subsolver"))
+            argv[5] = "-parallelmode=deterministic";
+        else
+            argv[5] = "-parallelmode=opportunistic";
+
+        argv[6] = ("-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver")).c_str();
+
+        argv[7] = ("-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"))).c_str();
+
+        argv[8] = ("-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"))).c_str();
+
+        // Cbc has problems with too large cutoff values
+        if(std::abs(this->cutOff) < 10e20)
+            argv[9] = ("-cutoff=" + std::to_string(this->cutOff)).c_str();
+        else
+            argv[9] = "";
+
+        argv[10] = ("-sec=" + std::to_string(this->timeLimit)).c_str();
+
+        CbcMain1(numArguments, argv, *cbcModel);
+
+        auto MIPSolutionStatus = getSolutionStatus();
+
+        if(MIPSolutionStatus != E_ProblemSolutionStatus::Optimal)
+        {
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
+        auto solution = getVariableSolution(0);
+        int numRepairs = 0;
+
+        for(int i = 0; i < numConstraintsToRepair; i++)
+        {
+            double slackValue = solution[numOrigVariables + i];
+
+            if(slackValue == 0.0)
+                continue;
+
+            double oldRHS = osiInterface->getRowUpper()[numOrigConstraints + i];
+            osiInterface->setRowUpper(repairConstraints[i], oldRHS + 1.5 * slackValue);
+
+            numRepairs++;
+
+            env->output->outputDebug("        Constraint: " + osiInterface->getRowName(repairConstraints[i])
+                + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
+        }
+
+        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
+
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repaired.lp";
+            writeProblemToFile(ss.str());
+        }
+        cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+        return (true);
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError("        Error when trying to repair infeasibility", e.what());
+    }
+
+    return (false);
+}
 
 int MIPSolverCbc::increaseSolutionLimit(int increment)
 {
@@ -531,17 +719,7 @@ void MIPSolverCbc::setSolutionLimit(long int limit) { this->solLimit = limit; }
 
 int MIPSolverCbc::getSolutionLimit() { return (this->solLimit); }
 
-void MIPSolverCbc::setTimeLimit(double seconds)
-{
-    try
-    {
-        cbcModel->setMaximumSeconds(seconds);
-    }
-    catch(std::exception& e)
-    {
-        env->output->outputError("Error when setting time limit in Cbc", e.what());
-    }
-}
+void MIPSolverCbc::setTimeLimit(double seconds) { timeLimit = seconds; }
 
 void MIPSolverCbc::setCutOff(double cutOff)
 {
@@ -676,8 +854,27 @@ double MIPSolverCbc::getObjectiveValue(int solIdx)
         return (NAN);
     }
 
+    double objectiveValue = NAN;
+
     // Cannot trust Cbc to give the correct sign of the objective back se we recalculate it
-    double objectiveValue = env->reformulatedProblem->objectiveFunction->calculateValue(getVariableSolution(solIdx));
+    try
+    {
+        auto variableSolution = getVariableSolution(solIdx);
+        double factor = (isMinimizationProblem) ? 1.0 : -1.0;
+
+        objectiveValue = factor * coinModel->objectiveOffset();
+
+        for(int i = 0; i < objectiveLinearExpression.getNumElements(); i++)
+        {
+            objectiveValue += factor * objectiveLinearExpression.getElements()[i]
+                * variableSolution[objectiveLinearExpression.getIndices()[i]];
+        }
+    }
+    catch(std::exception& e)
+    {
+        env->output->outputError(
+            "Error when obtaining objective value for solution index " + std::to_string(solIdx) + " in Cbc", e.what());
+    }
 
     return (objectiveValue);
 }
@@ -701,9 +898,11 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
         }
 
         osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0,
-            "IC_" + std::to_string(env->solutionStatistics.numberOfIntegerCuts));
+            fmt::format("IC_{}", integerCuts.size()));
 
         modelUpdated = true;
+
+        integerCuts.push_back(osiInterface->getNumRows() - 1);
 
         env->solutionStatistics.numberOfIntegerCuts++;
     }
@@ -758,16 +957,10 @@ VectorDouble MIPSolverCbc::getVariableSolution(int solIdx)
 int MIPSolverCbc::getNumberOfSolutions()
 {
     int numSols = 0;
-    bool isMIP = getDiscreteVariableStatus();
 
     try
     {
-        if(isMIP)
-            numSols = cbcModel->getSolutionCount();
-        else
-        {
-            numSols = cbcModel->numberSavedSolutions();
-        }
+        numSols = cbcModel->numberSavedSolutions();
     }
     catch(std::exception& e)
     {

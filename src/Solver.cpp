@@ -846,14 +846,12 @@ void Solver::initializeSettings()
     enumNonlinearTermPartitioning.push_back("If convex");
     enumNonlinearTermPartitioning.push_back("Never");
     env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "How to partition nonlinear sums in constraints",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
         enumNonlinearTermPartitioning);
 
-    // env->settings->createSetting("Reformulation.Constraint.PartitionNonlinearTerms", "Model", false,
-    //    "Partition nonlinear terms as auxiliary constraints");
-
-    env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", false,
-        "Partition quadratic terms as auxiliary constraints");
+    env->settings->createSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        enumNonlinearTermPartitioning);
 
     // Reformulations for monomials
 
@@ -874,12 +872,14 @@ void Solver::initializeSettings()
         "Reformulates a nonlinear objective as an auxiliary constraint");
 
     env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
-        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "How to partition nonlinear sums in objective function",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition nonlinear sums in objective function",
         enumNonlinearTermPartitioning);
-    enumNonlinearTermPartitioning.clear();
 
-    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", false,
-        "Partition quadratic terms as auxiliary constraints");
+    env->settings->createSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+        static_cast<int>(ES_PartitionNonlinearSums::IfConvex), "When to partition quadratic sums in objective function",
+        enumNonlinearTermPartitioning);
+
+    enumNonlinearTermPartitioning.clear();
 
     // Reformulations for signomials
 
@@ -922,7 +922,11 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("Console.DualSolver.Show", "Output", false, "Show output from dual solver on console");
 
+#ifdef HAS_GAMS
+
     env->settings->createSetting("Console.GAMS.Show", "Output", false, "Show GAMS output on console");
+
+#endif
 
     VectorString enumIterationDetail;
     enumIterationDetail.push_back("Full");
@@ -1032,6 +1036,8 @@ void Solver::initializeSettings()
 
     // Subsolver settings: Cplex
 
+#ifdef HAS_CPLEX
+
     env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
         "Whether to add lazy constraints generated in relaxed points as local or global");
 
@@ -1081,7 +1087,12 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Cplex.WorkMem", "Subsolver", 30000.0, "Memory limit for when to start swapping to disk", 0, 1.0e+75);
 
+#endif
+
     // Subsolver settings: Gurobi
+
+#ifdef HAS_GUROBI
+
     env->settings->createSetting(
         "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
 
@@ -1091,7 +1102,32 @@ void Solver::initializeSettings()
     env->settings->createSetting("Gurobi.NumericFocus", "Subsolver", 0,
         "Numeric focus (higher number more careful): 0: Automatic. 3: Most careful.", 0, 3);
 
+#endif
+
+    // Subsolver settings: Cbc
+
+#ifdef HAS_CBC
+
+    env->settings->createSetting("Cbc.AutoScale", "Subsolver", false,
+        "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
+
+    env->settings->createSetting("Cbc.NodeStrategy", "Subsolver", std::string("fewest"),
+        "Node strategy, valid values: depth, downdepth, downfewest, fewest, hybrid, updepth, upfewest");
+
+    env->settings->createSetting(
+        "Cbc.ParallelMode", "Subsolver", true, "Run Cbc with multiple threads in deterministic mode");
+
+    env->settings->createSetting("Cbc.Scaling", "Subsolver", std::string("automatic"),
+        "Whether to scale problem, valid values: automatic, dynamic, equilibrium, geometric, off, rowsonly");
+
+    env->settings->createSetting("Cbc.Strategy", "Subsolver", 1,
+        "This turns on newer features. Use 0 for easy problems, 1 is default, 2 is aggressive", 0, 2);
+
+#endif
+
     // Subsolver settings: GAMS NLP
+
+#ifdef HAS_GAMS
 
     std::string optfile = "";
     env->settings->createSetting(
@@ -1100,7 +1136,11 @@ void Solver::initializeSettings()
     std::string solver = "conopt";
     env->settings->createSetting("GAMS.NLP.Solver", "Subsolver", solver, "NLP solver to use in GAMS");
 
+#endif
+
     // Subsolver settings: Ipopt
+
+#ifdef HAS_IPOPT
 
     env->settings->createSetting("Ipopt.ConstraintViolationTolerance", "Subsolver", 1E-8,
         "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
@@ -1120,6 +1160,8 @@ void Solver::initializeSettings()
 
     env->settings->createSetting(
         "Ipopt.RelativeConvergenceTolerance", "Subsolver", 1E-8, "Relative convergence tolerance");
+
+#endif
 
     // Subsolver settings: root searches
 
@@ -1156,6 +1198,10 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("ObjectiveGap.Relative", "Termination", 0.001,
         "Relative gap termination tolerance for objective function", 0, SHOT_DBL_MAX);
+
+    env->settings->createSetting("DualStagnation.ConstraintTolerance", "Termination", 1e-6,
+        "Min absolute difference between max nonlinear constraint errors in subsequent iterations for termination", 0,
+        SHOT_DBL_MAX);
 
     env->settings->createSetting("DualStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant dual objective value improvement", 0, SHOT_INT_MAX);
@@ -1370,10 +1416,12 @@ void Solver::setConvexityBasedSettings()
 
             env->settings->updateSetting(
                 "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
-            env->settings->updateSetting("Reformulation.Constraint.PartitionQuadraticTerms", "Model", true);
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionQuadraticTerms", "Model", (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
                 (int)ES_PartitionNonlinearSums::Always);
-            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model", true);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
+                (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
@@ -1400,6 +1448,17 @@ void Solver::setConvexityBasedSettings()
 
 #endif
         }
+
+#ifdef HAS_CBC
+        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+        {
+            env->settings->updateSetting(
+                "Reformulation.Constraint.PartitionNonlinearTerms", "Model", (int)ES_PartitionNonlinearSums::IfConvex);
+            env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionNonlinearTerms", "Model",
+                (int)ES_PartitionNonlinearSums::IfConvex);
+        }
+
+#endif
     }
 }
 

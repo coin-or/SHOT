@@ -410,6 +410,9 @@ void MIPSolverGurobi::initializeSolverSettings()
             gurobiModel->getEnv().set(
                 GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
         }
+
+        // For integer cut sizes
+        gurobiModel->getEnv().set(GRB_IntParam_UpdateMode, 1);
     }
     catch(GRBException& e)
     {
@@ -473,11 +476,23 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
             expr += (1.0 - 1.0 * variable);
         }
 
-        gurobiModel->addConstr(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
+        int numConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
 
-        modelUpdated = true;
+        gurobiModel->addConstr(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0,
+            fmt::format("IC_{}", integerCuts.size()));
 
-        env->solutionStatistics.numberOfIntegerCuts++;
+        gurobiModel->update();
+
+        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraints)
+        {
+            integerCuts.push_back(gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
+
+            modelUpdated = true;
+
+            env->solutionStatistics.numberOfIntegerCuts++;
+        }
+
+        Utilities::displayVector(integerCuts);
     }
     catch(GRBException& e)
     {
@@ -726,6 +741,9 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
 bool MIPSolverGurobi::repairInfeasibility()
 {
+    if(env->dualSolver->generatedHyperplanes.size() == 0)
+        return (false);
+
     try
     {
         gurobiModel->update();
@@ -740,21 +758,21 @@ bool MIPSolverGurobi::repairInfeasibility()
         VectorDouble relaxParameters;
         int numConstraintsToRepair = 0;
 
-        int offset = 0;
+        int hyperplaneCounter = 0;
 
         for(int i = numOrigConstraints; i < numCurrConstraints; i++)
         {
             if(i == cutOffConstraintIndex)
             {
-                offset++;
+                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                offset++;
+                // TODO: allow for relaxing integer constraints
             }
-            else if(env->dualSolver->generatedHyperplanes.at(i - numOrigConstraints - offset).isSourceConvex)
+            else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {
-                offset++;
+                hyperplaneCounter++;
             }
             else
             {
@@ -792,6 +810,10 @@ bool MIPSolverGurobi::repairInfeasibility()
         {
             auto variable = feasModel.getVar(numOrigVariables + i);
             double slackValue = variable.get(GRB_DoubleAttr_X);
+
+            if(slackValue == 0.0)
+                continue;
+
             auto constraint = originalConstraints.at(i);
             double oldRHS = constraint.get(GRB_DoubleAttr_RHS);
             constraint.set(GRB_DoubleAttr_RHS, oldRHS + 1.5 * slackValue);
@@ -811,7 +833,7 @@ bool MIPSolverGurobi::repairInfeasibility()
             ss << "/lp";
             ss << env->results->getCurrentIteration()->iterationNumber - 1;
             ss << "repaired.lp";
-            env->dualSolver->MIPSolver->writeProblemToFile(ss.str());
+            writeProblemToFile(ss.str());
         }
 
         return (true);
