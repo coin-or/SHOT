@@ -645,6 +645,10 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     {
         MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
     }
+    else if(status == GRB_LOADED)
+    {
+        MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;
+    }
     else
     {
         env->output->outputError("        MIP solver return status " + std::to_string(status));

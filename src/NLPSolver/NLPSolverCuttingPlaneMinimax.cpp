@@ -313,6 +313,13 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             break;
         }
 
+        if(env->timing->getElapsedTime("InteriorPointSearch")
+            > env->settings->getSetting<double>("ESH.InteriorPoint.CuttingPlane.TimeLimit", "Dual"))
+        {
+            statusCode = E_NLPSolutionStatus::TimeLimit;
+            break;
+        }
+
         if(numHyperAdded == 0)
         {
             statusCode = (objectiveValue > 0) ? E_NLPSolutionStatus::Infeasible : E_NLPSolutionStatus::Feasible;
@@ -402,7 +409,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
         }
 
         constraintsInitialized
-            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS, C->constant);
     }
 
     if(!constraintsInitialized)

@@ -523,8 +523,8 @@ int main(int argc, char* argv[])
             / fs::filesystem::path(solFilename);
     }
 
-    env->report->outputOptionsReport();
     env->report->outputProblemInstanceReport();
+    env->report->outputOptionsReport();
 
     if(!solver.solveProblem()) // Solve the problem
     {

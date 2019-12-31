@@ -62,7 +62,8 @@ Solver::Solver()
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
-    env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -92,6 +93,8 @@ Solver::Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink)
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
     env->timing->createTimer("BoundTighteningFBBT", "   - feasibility based");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -270,6 +273,8 @@ bool Solver::setProblem(std::string fileName)
     {
         if(problemExtension == ".osil" || problemExtension == ".xml")
         {
+            env->report->outputModelingSystemHeader(ES_SourceFormat::OSiL, fileName);
+
             auto modelingSystem = std::make_shared<ModelingSystemOSiL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
@@ -288,6 +293,8 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_AMPL
         if(problemExtension == ".nl")
         {
+            env->report->outputModelingSystemHeader(ES_SourceFormat::NL, fileName);
+
             auto modelingSystem = std::make_shared<ModelingSystemAMPL>(env);
             ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
@@ -307,6 +314,8 @@ bool Solver::setProblem(std::string fileName)
 #ifdef HAS_GAMS
         if(problemExtension == ".gms")
         {
+            env->report->outputModelingSystemHeader(ES_SourceFormat::GAMS, fileName);
+
             auto modelingSystem = std::make_shared<SHOT::ModelingSystemGAMS>(env);
             SHOT::ProblemPtr problem = std::make_shared<SHOT::Problem>(env);
 
@@ -614,6 +623,9 @@ void Solver::initializeSettings()
         "Iteration limit for minimization subsolver", 0, SHOT_INT_MAX);
 
     env->settings->createSetting(
+        "ESH.InteriorPoint.CuttingPlane.TimeLimit", "Dual", 10.0, "Time limit for minimax solver", 0.0, SHOT_DBL_MAX);
+
+    env->settings->createSetting(
         "ESH.InteriorPoint.CuttingPlane.Reuse", "Dual", false, "Reuse valid cutting planes in main dual model");
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs", "Dual", 1.0,
@@ -786,6 +798,9 @@ void Solver::initializeSettings()
     // Bound tightening
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.MaxIterations", "Model", 5, "Maximal number of bound tightening iterations");
+
+    env->settings->createSetting("BoundTightening.FeasibilityBased.TimeLimit", "Model", 5.0,
+        "Time limit for bound tightening", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.Use", "Model", true, "Peform feasibility-based bound tightening");

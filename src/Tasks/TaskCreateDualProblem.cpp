@@ -174,7 +174,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         }
 
         constraintsInitialized
-            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS, C->constant);
     }
 
     for(auto& C : sourceProblem->quadraticConstraints)
@@ -201,7 +201,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
         }
 
         constraintsInitialized
-            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS);
+            = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS, C->constant);
     }
 
     if(!constraintsInitialized)

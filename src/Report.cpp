@@ -527,21 +527,54 @@ void Report::outputOptionsReport()
     env->output->outputInfo(report.str());
 }
 
+void Report::outputModelingSystemHeader(ES_SourceFormat source, std::string filename)
+{
+    std::stringstream report;
+
+    report << "╶ Modeling system "
+              "────────────────────────────────────────────────────────────────────────────────────────────────────╴"
+              "\r\n";
+    report << "\r\n";
+
+    switch(source)
+    {
+    case(ES_SourceFormat::GAMS):
+        report << " Modeling system:            GAMS\r\n";
+        break;
+    case(ES_SourceFormat::OSiL):
+        report << " Modeling system:            OSiL\r\n";
+        break;
+
+    case(ES_SourceFormat::NL):
+        report << " Modeling system:            AMPL\r\n";
+        break;
+
+    default:
+        break;
+    }
+
+    if(filename != "")
+        report << " Problem read from file:     " << filename << "\r\n";
+
+    env->output->outputInfo(report.str());
+}
+
+void Report::outputModelingSystemReport()
+{
+    std::stringstream report;
+    env->output->outputInfo(report.str());
+}
+
 void Report::outputProblemInstanceReport()
 {
     std::stringstream report;
 
     bool isReformulated = (env->problem == env->reformulatedProblem) ? false : true;
 
-    report << "╶ Problem instance "
+    report << "\r\n╶ Problem instance "
               "───────────────────────────────────────────────────────────────────────────────────────────────────╴"
               "\r\n";
     report << "\r\n";
-
-    auto problemFile = env->settings->getSetting<std::string>("ProblemFile", "Input");
-
-    report << " Problem read from file:     " << problemFile;
-    report << "\r\n\r\n";
 
     if(isReformulated)
     {

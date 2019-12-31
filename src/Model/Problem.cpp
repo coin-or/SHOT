@@ -1425,32 +1425,95 @@ void Problem::saveProblemToFile(std::string filename)
 void Problem::doFBBT()
 {
     env->timing->startTimer("BoundTightening");
-    env->timing->startTimer("BoundTighteningFBBT");
+
+    double startTime = env->timing->getElapsedTime("BoundTightening");
+
+    if(properties.isReformulated)
+    {
+        env->timing->startTimer("BoundTighteningFBBTReformulated");
+        env->output->outputInfo(" Performing bound tightening on reformulated problem.");
+    }
+    else
+    {
+        env->timing->startTimer("BoundTighteningFBBTOriginal");
+        env->output->outputInfo(" Performing bound tightening on original problem.");
+    }
 
     int numberOfIterations = env->settings->getSetting<int>("BoundTightening.FeasibilityBased.MaxIterations", "Model");
+
+    bool stopTightening = false;
 
     for(int i = 0; i < numberOfIterations; i++)
     {
         bool boundsUpdated = false;
+
         env->output->outputDebug(fmt::format("  Bound tightening pass {} of {}.", i + 1, numberOfIterations));
 
         for(auto& C : linearConstraints)
+        {
+            if(env->timing->getElapsedTime("BoundTightening") - startTime
+                > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+            {
+                stopTightening = true;
+                break;
+            }
+
             boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+        }
+
+        if(stopTightening)
+            break;
 
         for(auto& C : quadraticConstraints)
+        {
+            if(env->timing->getElapsedTime("BoundTightening") - startTime
+                > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+            {
+                stopTightening = true;
+                break;
+            }
+
             boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+        }
+
+        if(stopTightening)
+            break;
 
         if(env->settings->getSetting<bool>("BoundTightening.FeasibilityBased.UseNonlinear", "Model"))
         {
             for(auto& C : nonlinearConstraints)
+            {
+                if(env->timing->getElapsedTime("BoundTightening") - startTime
+                    > env->settings->getSetting<double>("BoundTightening.FeasibilityBased.TimeLimit", "Model"))
+                {
+                    stopTightening = true;
+                    break;
+                }
+
                 boundsUpdated = doFBBTOnConstraint(C) || boundsUpdated;
+            }
         }
 
-        if(!boundsUpdated)
+        if(stopTightening || !boundsUpdated)
             break;
     }
 
-    env->timing->stopTimer("BoundTighteningFBBT");
+    int numberOfTightenedVariables = std::count_if(allVariables.begin(), allVariables.end(),
+        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
+
+    if(properties.isReformulated)
+    {
+        env->timing->stopTimer("BoundTighteningFBBTReformulated");
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
+            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTReformulated")));
+    }
+    else
+    {
+        env->timing->stopTimer("BoundTighteningFBBTOriginal");
+        env->output->outputInfo(fmt::format("  - Bounds for {} variables tightened in {:.2f} s.",
+            numberOfTightenedVariables, env->timing->getElapsedTime("BoundTighteningFBBTOriginal")));
+    }
+
     env->timing->stopTimer("BoundTightening");
 }
 
@@ -1749,9 +1812,10 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
             }
         }
     }
-    catch(const mc::Interval::Exceptions& e)
+    catch(mc::Interval::Exceptions& e)
     {
-        env->output->outputError(fmt::format("  error when tightening bound in constraint {}.", constraint->name));
+        env->output->outputError(
+            fmt::format("  error when tightening bound in constraint {}: {}", constraint->name, e.what()));
     }
 
     // Update variable bounds for original variables also in original problem if tightened in reformulated one

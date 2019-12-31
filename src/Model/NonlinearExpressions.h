@@ -672,7 +672,7 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if(childBounds.l() >= 0 && (childConvexity == E_Convexity::Concave || childConvexity == E_Convexity::Linear))
+        if(childConvexity == E_Convexity::Concave || childConvexity == E_Convexity::Linear)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1404,13 +1404,36 @@ public:
         if(denominatorBounds.l() * denominatorBounds.u() <= 0)
             return (Interval(SHOT_DBL_MIN, SHOT_DBL_MAX));
 
-        return (firstChild->getBounds() / secondChild->getBounds());
+        return (firstChild->getBounds() / denominatorBounds);
     }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override
     {
-        // TODO
-        return (false);
+        auto bounds1 = secondChild->getBounds();
+        auto bounds2 = secondChild->getBounds();
+
+        if((bound.l() * bound.u() <= 0 || (bound.l() <= 0 && bound.u() == SHOT_DBL_INF)) && bounds1.l() >= 0
+            && bounds2.l() > 0) // we know everything is positive
+        {
+            bound.l(SHOT_DBL_EPS);
+        }
+        else if((bound.l() * bound.u() <= 0 || (bound.l() == -SHOT_DBL_INF && bound.u() >= 0)) && bounds1.u() <= 0
+            && bounds2.u() < 0) // we know everything is negative
+        {
+            bound.u(-SHOT_DBL_EPS);
+        }
+        else if(bound.l() * bound.u() <= 0)
+        {
+            return (false);
+        }
+
+        bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
+        bool secondTightened = secondChild->tightenBounds(firstChild->getBounds() / bound);
+
+        if(secondTightened)
+            firstTightened = firstTightened || firstChild->tightenBounds(secondChild->getBounds() * bound);
+
+        return (firstTightened || secondTightened);
     }
 
     inline FactorableFunction getFactorableFunction() override
@@ -1808,16 +1831,9 @@ public:
         if(secondChild->getMonotonicity() != E_Monotonicity::Constant)
             return (false);
 
-        auto baseBounds = firstChild->getBounds();
         double power = secondChild->getBounds().l();
 
-        double intpart;
-        bool isInteger = (std::modf(power, &intpart) == 0.0);
-
         Interval interval(0.0);
-
-        if(!isInteger && baseBounds.l() <= 0)
-            baseBounds.l(SHOT_DBL_EPS);
 
         if(std::abs(power - 2.0) <= 2e-10)
         {
@@ -2155,6 +2171,16 @@ public:
         children = terms;
     }
 
+    ExpressionSum(
+        NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild, NonlinearExpressionPtr thirdChild)
+    {
+        NonlinearExpressions terms;
+        terms.push_back(firstChild);
+        terms.push_back(secondChild);
+        terms.push_back(thirdChild);
+        children = terms;
+    }
+
     inline double calculate(const VectorDouble& point) const override
     {
         double value = 0.0;
@@ -2341,6 +2367,16 @@ public:
         NonlinearExpressions terms;
         terms.push_back(firstChild);
         terms.push_back(secondChild);
+        children = terms;
+    }
+
+    ExpressionProduct(
+        NonlinearExpressionPtr firstChild, NonlinearExpressionPtr secondChild, NonlinearExpressionPtr thirdChild)
+    {
+        NonlinearExpressions terms;
+        terms.push_back(firstChild);
+        terms.push_back(secondChild);
+        terms.push_back(thirdChild);
         children = terms;
     }
 
