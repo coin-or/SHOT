@@ -719,8 +719,10 @@ bool MIPSolverCplex::repairInfeasibility()
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                // TODO: allow for relaxing integer constraints
-                relax.add(0);
+                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
+                    relax.add(1 / (((double)i) + 1.0));
+                else
+                    relax.add(0);
             }
             else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {

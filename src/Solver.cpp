@@ -714,6 +714,15 @@ void Solver::initializeSettings()
         "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN,
         SHOT_DBL_MAX);
 
+    env->settings->createSetting(
+        "MIP.InfeasibilityRepair.IntegerCuts", "Dual", true, "Allow feasibility repair of integer cuts");
+
+    env->settings->createSetting("MIP.InfeasibilityRepair.IterationLimit", "Dual", 100,
+        "Max number of infeasible problems repaired without primal objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("MIP.InfeasibilityRepair.TimeLimit", "Dual", 10.0,
+        "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
+
     env->settings->createSetting("MIP.NodeLimit", "Dual", SHOT_DBL_MAX,
         "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
 
@@ -1208,12 +1217,6 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
-
-    env->settings->createSetting("InfeasibilityRepair.IterationLimit", "Termination", 100,
-        "Max number of infeasible problems repaired without primal objective value improvement", 0, SHOT_INT_MAX);
-
-    env->settings->createSetting("InfeasibilityRepair.TimeLimit", "Termination", 10.0,
-        "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
 
     env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 

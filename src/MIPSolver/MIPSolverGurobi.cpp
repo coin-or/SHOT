@@ -768,7 +768,13 @@ bool MIPSolverGurobi::repairInfeasibility()
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                // TODO: allow for relaxing integer constraints
+                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
+                {
+                    repairConstraints.push_back(feasModel.getConstr(i));
+                    originalConstraints.push_back(gurobiModel->getConstr(i));
+                    relaxParameters.push_back(1 / (((double)i) + 1.0));
+                    numConstraintsToRepair++;
+                }
             }
             else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {
