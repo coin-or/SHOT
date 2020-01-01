@@ -715,7 +715,6 @@ bool MIPSolverCplex::repairInfeasibility()
             if(i == cutOffConstraintIndex)
             {
                 relax.add(0.0);
-                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {

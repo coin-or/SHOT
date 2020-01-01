@@ -764,7 +764,6 @@ bool MIPSolverGurobi::repairInfeasibility()
         {
             if(i == cutOffConstraintIndex)
             {
-                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
