@@ -985,15 +985,15 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 {
     if(term->coefficient == 1.0)
     {
-        stream << " +";
+        stream << " +1";
     }
     else if(term->coefficient == -1.0)
     {
-        stream << " -";
+        stream << " -1";
     }
     else if(term->coefficient == 0.0)
     {
-        stream << " +0.0";
+        stream << " +0";
     }
     else if(term->coefficient > 0)
     {
@@ -1168,7 +1168,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
     if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << terms.at(0);
+    stream << terms.at(0);
 
     for(size_t i = 1; i < terms.size(); i++)
     {
@@ -1183,7 +1183,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
     if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << terms.at(0);
+    stream << terms.at(0);
 
     for(size_t i = 1; i < terms.size(); i++)
     {
@@ -1198,7 +1198,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
     if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << terms.at(0);
+    stream << terms.at(0);
 
     for(size_t i = 1; i < terms.size(); i++)
     {

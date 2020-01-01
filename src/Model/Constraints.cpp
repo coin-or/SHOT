@@ -1031,10 +1031,10 @@ std::ostream& LinearConstraint::print(std::ostream& stream) const
         stream << linearTerms;
 
     if(constant > 0)
-        stream << '+' << constant;
+        stream << " +" << constant;
 
     if(constant < 0)
-        stream << constant;
+        stream << ' ' << constant;
 
     if(valueLHS == valueRHS)
         stream << " = " << valueRHS;
@@ -1059,13 +1059,13 @@ std::ostream& QuadraticConstraint::print(std::ostream& stream) const
         stream << linearTerms;
 
     if(quadraticTerms.size() > 0)
-        stream << " +" << quadraticTerms;
+        stream << quadraticTerms;
 
     if(constant > 0)
-        stream << '+' << constant;
+        stream << " +" << constant;
 
     if(constant < 0)
-        stream << constant;
+        stream << ' ' << constant;
 
     if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
@@ -1088,21 +1088,22 @@ std::ostream& NonlinearConstraint::print(std::ostream& stream) const
         stream << linearTerms;
 
     if(quadraticTerms.size() > 0)
-        stream << " +" << quadraticTerms;
+        stream << quadraticTerms;
 
     if(monomialTerms.size() > 0)
-        stream << " +" << monomialTerms;
+        stream << monomialTerms;
 
     if(signomialTerms.size() > 0)
-        stream << " +" << signomialTerms;
+        stream << signomialTerms;
 
-    stream << " +" << nonlinearExpression;
+    if(nonlinearExpression != nullptr)
+        stream << nonlinearExpression;
 
     if(constant > 0)
-        stream << '+' << constant;
+        stream << " +" << constant;
 
     if(constant < 0)
-        stream << constant;
+        stream << ' ' << constant;
 
     if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
