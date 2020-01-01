@@ -1052,14 +1052,21 @@ double MIPSolverCbc::getUnboundedVariableBoundValue() { return (1e+50); }
 
 double MIPSolverCbc::getDualObjectiveValue()
 {
-    double objVal = NAN;
+    bool isMIP = getDiscreteVariableStatus();
+    double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
     try
     {
-        objVal = cbcModel->getBestPossibleObjValue();
-
-        if(!isMinimizationProblem)
-            objVal *= -1.0;
+        if(isMIP)
+        {
+            objVal = cbcModel->getBestPossibleObjValue();
+            if(!isMinimizationProblem)
+                objVal *= -1.0;
+        }
+        else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
+        {
+            objVal = getObjectiveValue();
+        }
     }
     catch(std::exception& e)
     {

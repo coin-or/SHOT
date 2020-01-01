@@ -1202,19 +1202,23 @@ double MIPSolverCplex::getUnboundedVariableBoundValue() { return (1e+20); }
 
 double MIPSolverCplex::getDualObjectiveValue()
 {
-    double objVal = NAN;
+    bool isMIP = getDiscreteVariableStatus();
+    double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
     try
     {
-        objVal = cplexInstance.getBestObjValue();
+        if(isMIP)
+        {
+            objVal = cplexInstance.getBestObjValue();
+        }
+        else if(getSolutionStatus() == E_ProblemSolutionStatus::Optimal)
+        {
+            objVal = cplexInstance.getObjValue();
+        }
     }
     catch(IloException& e)
     {
         // Happens for infeasible LP
-        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
-            return (SHOT_DBL_MIN);
-        else
-            return (SHOT_DBL_MAX);
     }
 
     return (objVal);

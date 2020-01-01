@@ -1181,9 +1181,8 @@ double MIPSolverGurobi::getUnboundedVariableBoundValue() { return (1e+20); }
 
 double MIPSolverGurobi::getDualObjectiveValue()
 {
-
     bool isMIP = getDiscreteVariableStatus();
-    double objVal = NAN;
+    double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
     try
     {
