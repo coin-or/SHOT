@@ -599,47 +599,116 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
     bool isSignReversed = false;
 
+    /*
+    // Nonlinear equality constrains are already transformed in the Problem class. But will save this code here for
+    future use
+
     if(valueLHS == valueRHS)
     {
-        // Have a nonlinear equality constraint, writing it as g(x)<= u and -g(x) <= -u
+        // Will rewrite constraint as  g(x)<= u and -g(x) <= -u
 
-        auto auxConstraint1
-            = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name + "_a", SHOT_DBL_MIN, valueRHS);
+        auto auxConstraintRHS
+            = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name + "_rhs", SHOT_DBL_MIN, valueRHS);
         auxConstraintCounter++;
 
-        auxConstraint1->constant = C->constant;
+        auxConstraintRHS->constant = C->constant;
 
         if(C->properties.hasLinearTerms)
-            copyLinearTermsToConstraint(std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms, auxConstraint1);
-
-        if(C->properties.hasQuadraticTerms)
-            copyQuadraticTermsToConstraint(
-                std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms, auxConstraint1);
-
-        if(C->properties.hasMonomialTerms)
-            copyMonomialTermsToConstraint(
-                std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms, auxConstraint1);
-
-        if(C->properties.hasSignomialTerms)
-            copySignomialTermsToConstraint(
-                std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms, auxConstraint1);
-
-        if(C->properties.hasNonlinearExpression)
-            auxConstraint1->add(copyNonlinearExpression(
-                std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), reformulatedProblem));
-
-        auto reformulatedConstraint1 = reformulateConstraint(auxConstraint1);
-
-        if(reformulatedConstraint1.size() > 1)
-            return (reformulatedConstraint1);
-
-        if(reformulatedConstraint1.at(0)->properties.classification == E_ConstraintClassification::Linear)
         {
-            reformulatedConstraint1.at(0)->valueLHS = reformulatedConstraint1.at(0)->valueRHS;
-            return (reformulatedConstraint1);
+            copyLinearTermsToConstraint(std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms, auxConstraintRHS);
         }
 
-        // Will rewrite it as (f(x))^2 <= 0
+        if(C->properties.hasQuadraticTerms)
+        {
+            copyQuadraticTermsToConstraint(
+                std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms, auxConstraintRHS);
+        }
+
+        if(C->properties.hasMonomialTerms)
+        {
+            copyMonomialTermsToConstraint(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms, auxConstraintRHS);
+        }
+
+        if(C->properties.hasSignomialTerms)
+        {
+            copySignomialTermsToConstraint(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms, auxConstraintRHS);
+        }
+
+        if(C->properties.hasNonlinearExpression)
+        {
+            auxConstraintRHS->add(copyNonlinearExpression(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), reformulatedProblem));
+        }
+
+        auto reformulatedConstraintsRHS = reformulateConstraint(auxConstraintRHS);
+
+        // The reformulated constraint was linear, no need to consider -g(x) <= -LHS
+        if(reformulatedConstraintsRHS.size() == 1
+            && reformulatedConstraintsRHS.at(0)->properties.classification == E_ConstraintClassification::Linear)
+        {
+            reformulatedConstraintsRHS.at(0)->valueLHS = reformulatedConstraintsRHS.at(0)->valueRHS;
+            return (reformulatedConstraintsRHS);
+        }
+
+        // Will need to consider -g(x) <= -LHS
+
+        auto auxConstraintLHS
+            = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name + "_lhs", SHOT_DBL_MIN, -valueLHS);
+        auxConstraintCounter++;
+
+        auxConstraintLHS->constant = -C->constant;
+
+        if(C->properties.hasLinearTerms)
+        {
+            copyLinearTermsToConstraint(std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms, auxConstraintLHS);
+
+            for(auto& T : std::dynamic_pointer_cast<LinearConstraint>(auxConstraintLHS)->linearTerms)
+                T->coefficient *= -1.0;
+        }
+
+        if(C->properties.hasQuadraticTerms)
+        {
+            copyQuadraticTermsToConstraint(
+                std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms, auxConstraintLHS);
+
+            for(auto& T : std::dynamic_pointer_cast<QuadraticConstraint>(auxConstraintLHS)->quadraticTerms)
+                T->coefficient *= -1.0;
+        }
+
+        if(C->properties.hasMonomialTerms)
+        {
+            copyMonomialTermsToConstraint(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms, auxConstraintLHS);
+
+            for(auto& T : std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraintLHS)->monomialTerms)
+                T->coefficient *= -1.0;
+        }
+
+        if(C->properties.hasSignomialTerms)
+        {
+            copySignomialTermsToConstraint(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms, auxConstraintLHS);
+
+            for(auto& T : std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraintLHS)->signomialTerms)
+                T->coefficient *= -1.0;
+        }
+
+        if(C->properties.hasNonlinearExpression)
+        {
+            auxConstraintLHS->add(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
+                std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), reformulatedProblem))));
+        }
+
+        auto reformulatedConstraintsLHS = reformulateConstraint(auxConstraintLHS);
+
+        for(auto& C : reformulatedConstraintsLHS)
+            reformulatedConstraintsRHS.push_back(C);
+
+        return (NumericConstraints({ reformulatedConstraintsRHS }));
+
+        // Will rewrite it as (f(x))^2 <= 0:
 
         auto nonlinearConstraint = std::make_shared<NonlinearConstraint>(auxConstraintCounter, C->name, SHOT_DBL_MIN,
             reformulatedConstraint1.at(0)->valueRHS * reformulatedConstraint1.at(0)->valueRHS);
@@ -694,7 +763,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         nonlinearConstraint->properties.convexity = E_Convexity::Nonconvex;
         return (NumericConstraints({ nonlinearConstraint }));
-    }
+
+    }*/
 
     if(C->properties.hasLinearTerms)
     {
@@ -735,7 +805,6 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(env->settings->getSetting<int>("Reformulation.Monomials.Formulation", "Model")
             != static_cast<int>(ES_ReformulationBinaryMonomials::None))
-        // The product was a monomial term
         {
             auto [tmpLinearTerms, tmpMonomialTerms]
                 = reformulateMonomialSum(sourceConstraint->monomialTerms, isSignReversed);
