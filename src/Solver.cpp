@@ -62,8 +62,8 @@ Solver::Solver()
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
-    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem");
-    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem)");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem)");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);

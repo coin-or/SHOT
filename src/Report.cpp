@@ -869,8 +869,12 @@ void Report::outputSolutionReport()
         report << " Globally optimal primal solution found.\r\n";
         break;
     case E_ModelReturnStatus::FeasibleSolution:
-        report << " Feasible primal solution found. Can not guarantee optimality to the given termination "
-                  "criteria.\r\n";
+        if(env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
+            report << " Feasible primal solution found to convex problem. Can not guarantee optimality to the given "
+                      "termination criteria.\r\n";
+        else
+            report << " Feasible primal solution found to nonconvex problem. Can not guarantee optimality to the given "
+                      "termination criteria.\r\n";
         break;
     case E_ModelReturnStatus::InfeasibleLocal:
         report << " Problem found to be infeasible, but globality could not be verified since the problem seems to be "
