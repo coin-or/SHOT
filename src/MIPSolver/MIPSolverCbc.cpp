@@ -687,8 +687,6 @@ bool MIPSolverCbc::repairInfeasibility()
                 + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
         }
 
-        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
-
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::stringstream ss;
@@ -698,6 +696,15 @@ bool MIPSolverCbc::repairInfeasibility()
             ss << "repaired.lp";
             writeProblemToFile(ss.str());
         }
+
+        if(numRepairs == 0)
+        {
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
+        env->output->outputInfo("        Number of constraints modified: " + std::to_string(numRepairs));
+
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
         return (true);

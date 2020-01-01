@@ -761,14 +761,6 @@ bool MIPSolverCplex::repairInfeasibility()
                 }
             }
 
-            if(numRepairs == 0)
-            {
-                env->output->outputDebug("        Could not repair the infeasible dual problem.");
-                return (false);
-            }
-
-            env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
-
             cplexInstance.extract(cplexModel);
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
@@ -780,6 +772,14 @@ bool MIPSolverCplex::repairInfeasibility()
                 ss << "repaired.lp";
                 writeProblemToFile(ss.str());
             }
+
+            if(numRepairs == 0)
+            {
+                env->output->outputDebug("        Could not repair the infeasible dual problem.");
+                return (false);
+            }
+
+            env->output->outputInfo("        Number of constraints modified: " + std::to_string(numRepairs));
 
             return (true);
         }
