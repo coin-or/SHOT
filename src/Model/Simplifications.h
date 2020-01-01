@@ -1146,7 +1146,7 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
 {
     switch(expression->getType())
     {
-        case E_NonlinearExpressionTypes::Variable:
+    case E_NonlinearExpressionTypes::Variable:
         return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionVariable>(expression));
     case E_NonlinearExpressionTypes::Negate:
         return convertExpressionToSignomialTerm(std::dynamic_pointer_cast<ExpressionNegate>(expression));
@@ -1244,13 +1244,51 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto negation = std::dynamic_pointer_cast<ExpressionNegate>(expression);
 
-        if(auto optional = convertExpressionToSignomialTerm(negation); optional && extractSignomials)
+        bool converted = false;
+
+        if(negation->child->getType() == E_NonlinearExpressionTypes::Product)
         {
-            signomialTerms.add(optional.value());
+            if(auto optional
+                = convertProductToQuadraticTerm(std::dynamic_pointer_cast<ExpressionProduct>(negation->child));
+                optional && extractQuadratics)
+            {
+                optional.value()->coefficient *= -1.0;
+                quadraticTerms.add(optional.value());
+                converted = true;
+            }
         }
-        else
+        else if(negation->child->getType() == E_NonlinearExpressionTypes::Power)
         {
-            nonlinearExpression = expression;
+            if(auto optional = convertPowerToQuadraticTerm(std::dynamic_pointer_cast<ExpressionPower>(negation->child));
+                optional && extractQuadratics)
+            {
+                optional.value()->coefficient *= -1.0;
+                quadraticTerms.add(optional.value());
+                converted = true;
+            }
+        }
+        else if(negation->child->getType() == E_NonlinearExpressionTypes::Square)
+        {
+            if(auto optional
+                = convertSquareToQuadraticTerm(std::dynamic_pointer_cast<ExpressionSquare>(negation->child));
+                optional && extractQuadratics)
+            {
+                optional.value()->coefficient *= -1.0;
+                quadraticTerms.add(optional.value());
+                converted = true;
+            }
+        }
+
+        if(!converted)
+        {
+            if(auto optional = convertExpressionToSignomialTerm(negation); optional && extractSignomials)
+            {
+                signomialTerms.add(optional.value());
+            }
+            else
+            {
+                nonlinearExpression = expression;
+            }
         }
     }
     else if(expression->getType() == E_NonlinearExpressionTypes::Divide)
