@@ -1693,13 +1693,13 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
                 }
             }
         }
-        else if(partitionNonBinaryTerms) // Square term x1^2 or general bilinear term x1*x2 will be partitioned into
-                                         // multiple constraints
+        else if(partitionNonBinaryTerms) // Square term x1^2 or general bilinear term x1*x2 will be
+                                         // partitioned into multiple constraints
         {
             auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
 
-            auto auxConstraint = std::make_shared<NonlinearConstraint>(
+            auto auxConstraint = std::make_shared<QuadraticConstraint>(
                 auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
             auxConstraintCounter++;
 
