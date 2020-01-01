@@ -491,8 +491,6 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
 
             env->solutionStatistics.numberOfIntegerCuts++;
         }
-
-        Utilities::displayVector(integerCuts);
     }
     catch(GRBException& e)
     {
