@@ -684,7 +684,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     // To find a feasible point for an unbounded dual problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        bool variableBoundsUpdated = false;
+        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
@@ -697,11 +698,17 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
+                if(!V->properties.inObjectiveFunction)
+                    continue;
+
                 if(V->isDualUnbounded())
                 {
-                    updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
-                    variableBoundsUpdated = true;
+                    // Temporarily remove unbounded terms from objective
+                    originalObjectiveCoefficients.emplace_back(
+                        V->index, gurobiModel->getVar(V->index).get(GRB_DoubleAttr_Obj));
+
+                    gurobiModel->getVar(V->index).set(GRB_DoubleAttr_Obj, 0.0);
+                    problemUpdated = true;
                 }
             }
         }
@@ -711,10 +718,10 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
             // The auxiliary variable in the dual problem is unbounded
             updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
                 getUnboundedVariableBoundValue() / 1.1);
-            variableBoundsUpdated = true;
+            problemUpdated = true;
         }
 
-        if(variableBoundsUpdated)
+        if(problemUpdated)
         {
             gurobiModel->update();
 
@@ -724,11 +731,10 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isDualUnbounded())
-                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
-            }
+            for(auto& P : originalObjectiveCoefficients)
+                gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
+
+            gurobiModel->update();
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }

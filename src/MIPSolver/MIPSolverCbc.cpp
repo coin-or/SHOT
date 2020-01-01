@@ -478,7 +478,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     // To find a feasible point for an unbounded dual problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        bool variableBoundsUpdated = false;
+        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
@@ -493,9 +494,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isDualUnbounded())
                 {
-                    updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 10e30, getUnboundedVariableBoundValue() / 10e30);
-                    variableBoundsUpdated = true;
+                    // Temporarily remove unbounded terms from objective
+                    originalObjectiveCoefficients.emplace_back(V->index, osiInterface->getObjCoefficients()[V->index]);
+                    osiInterface->setObjCoeff(V->index, 0.0);
+                    problemUpdated = true;
                 }
             }
         }
@@ -503,12 +505,30 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                     >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
         {
             // The auxiliary variable in the dual problem is unbounded
-            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 10e30,
-                getUnboundedVariableBoundValue() / 10e30);
-            variableBoundsUpdated = true;
+            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 10e40,
+                getUnboundedVariableBoundValue() / 10e40);
+            problemUpdated = true;
         }
 
-        if(variableBoundsUpdated)
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "unbounded.lp";
+
+            try
+            {
+                osiInterface->writeLp(ss.str().c_str(), "");
+            }
+            catch(std::exception& e)
+            {
+                env->output->outputError("Error when saving relaxed infesibility model to file in Cbc", e.what());
+            }
+        }
+
+        if(problemUpdated)
         {
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
@@ -526,11 +546,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isDualUnbounded())
-                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
-            }
+            for(auto& P : originalObjectiveCoefficients)
+                osiInterface->setObjCoeff(P.index, P.value);
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
