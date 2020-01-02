@@ -31,6 +31,7 @@ public:
     bool hasHyperplaneBeenAdded(size_t hash, int constraintIndex);
 
     std::vector<GeneratedHyperplane> generatedHyperplanes;
+    std::vector<std::pair<VectorInteger, VectorInteger>> generatedIntegerCuts;
 
     // First is binaries = 1, second is binaries = 0
     std::vector<std::pair<VectorInteger, VectorInteger>> integerCutWaitingList;
