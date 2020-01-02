@@ -433,6 +433,8 @@ int MIPSolverCplex::addLinearConstraint(
 {
     try
     {
+        int numConstraintsBefore = cplexInstance.getNrows();
+
         IloExpr expr(cplexEnv);
 
         for(auto E : elements)
@@ -444,25 +446,46 @@ int MIPSolverCplex::addLinearConstraint(
         {
             IloRange tmpRange(cplexEnv, -constant, expr, IloInfinity);
             tmpRange.setName(name.c_str());
+
             cplexModel.add(tmpRange);
-            cplexConstrs.add(tmpRange);
+            cplexInstance.extract(cplexModel);
+
+            // Make sure that Cplex actually has added the constraint
+            if(cplexInstance.getNrows() > numConstraintsBefore)
+            {
+                cplexConstrs.add(tmpRange);
+            }
+            else
+            {
+                env->output->outputInfo("        Hyperplane not added by Cplex");
+                tmpRange.end();
+                return (-1);
+            }
         }
         else
         {
             IloRange tmpRange(cplexEnv, -IloInfinity, expr, -constant);
             tmpRange.setName(name.c_str());
+
             cplexModel.add(tmpRange);
-            cplexConstrs.add(tmpRange);
+            cplexInstance.extract(cplexModel);
+
+            // Make sure that Cplex actually has added the constraint
+            if(cplexInstance.getNrows() > numConstraintsBefore)
+            {
+                cplexConstrs.add(tmpRange);
+            }
+            else
+            {
+                env->output->outputInfo("        Hyperplane not added by Cplex");
+                tmpRange.end();
+                return (-1);
+            }
         }
-
-        modelUpdated = true;
-
-        expr.end();
     }
     catch(IloException& e)
     {
         env->output->outputError("        Error when adding linear constraint", e.getMessage());
-
         return (-1);
     }
 
@@ -1372,17 +1395,27 @@ bool MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
             expr += (1 - 1.0 * cplexVars[I]);
         }
 
+        int numConstraintsBefore = cplexInstance.getNrows();
+
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
         tmpRange.setName(fmt::format("IC_{}", integerCuts.size()).c_str());
 
-        integerCuts.push_back(cplexConstrs.getSize() - 1);
-
-        env->solutionStatistics.numberOfIntegerCuts++;
-
         cplexModel.add(tmpRange);
-        cplexConstrs.add(tmpRange);
+        cplexInstance.extract(cplexModel);
 
-        expr.end();
+        // Make sure that Cplex actually has added the constraint
+        if(cplexInstance.getNrows() > numConstraintsBefore)
+        {
+            cplexConstrs.add(tmpRange);
+            integerCuts.push_back(cplexConstrs.getSize() - 1);
+            env->solutionStatistics.numberOfIntegerCuts++;
+        }
+        else
+        {
+            env->output->outputInfo("        Integer cut not added by Cplex");
+            expr.end();
+            return (false);
+        }
     }
     catch(IloException& e)
     {

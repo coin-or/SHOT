@@ -265,6 +265,7 @@ int MIPSolverCbc::addLinearConstraint(
 {
     try
     {
+        int numConstraintsBefore = osiInterface->getNumRows();
         CoinPackedVector cut;
 
         for(auto E : elements)
@@ -277,14 +278,25 @@ int MIPSolverCbc::addLinearConstraint(
             osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
         else
             osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+
+        if(osiInterface->getNumRows() > numConstraintsBefore)
+        {
+        }
+        else
+        {
+            env->output->outputInfo("        Hyperplane not added by Cbc");
+            return (-1);
+        }
     }
     catch(std::exception& e)
     {
         env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.what());
+        return (-1);
     }
     catch(CoinError& e)
     {
         env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.message());
+        return (-1);
     }
 
     return (osiInterface->getNumRows() - 1);
@@ -913,6 +925,7 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
 {
     try
     {
+        int numConstraintsBefore = osiInterface->getNumRows();
         CoinPackedVector cut;
 
         for(int I : binaryIndexesOnes)
@@ -928,11 +941,16 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
         osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0,
             fmt::format("IC_{}", integerCuts.size()));
 
-        modelUpdated = true;
-
-        integerCuts.push_back(osiInterface->getNumRows() - 1);
-
-        env->solutionStatistics.numberOfIntegerCuts++;
+        if(osiInterface->getNumRows() > numConstraintsBefore)
+        {
+            integerCuts.push_back(osiInterface->getNumRows() - 1);
+            env->solutionStatistics.numberOfIntegerCuts++;
+        }
+        else
+        {
+            env->output->outputInfo("        Integer cut not added by Cbc");
+            return (false);
+        }
     }
     catch(CoinError& e)
     {

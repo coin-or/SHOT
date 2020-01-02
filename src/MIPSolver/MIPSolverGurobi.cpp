@@ -410,9 +410,6 @@ void MIPSolverGurobi::initializeSolverSettings()
             gurobiModel->getEnv().set(
                 GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
         }
-
-        // For integer cut sizes
-        gurobiModel->getEnv().set(GRB_IntParam_UpdateMode, 1);
     }
     catch(GRBException& e)
     {
@@ -427,6 +424,8 @@ int MIPSolverGurobi::addLinearConstraint(
 {
     try
     {
+        int numConstraintsBefore = gurobiModel->get(GRB_IntAttr_NumConstrs);
+
         auto expr = std::make_unique<GRBLinExpr>(0.0);
 
         for(auto E : elements)
@@ -446,12 +445,20 @@ int MIPSolverGurobi::addLinearConstraint(
             gurobiModel->addConstr(*expr <= -constant, name);
         }
 
-        modelUpdated = true;
+        gurobiModel->update();
+
+        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraintsBefore)
+        {
+        }
+        else
+        {
+            env->output->outputInfo("        Hyperplane not added by Gurobi");
+            return (-1);
+        }
     }
     catch(GRBException& e)
     {
         env->output->outputError("        Error when adding linear constraint", e.getMessage());
-
         return (-1);
     }
 
@@ -462,6 +469,7 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
 {
     try
     {
+        int numConstraintsBefore = gurobiModel->get(GRB_IntAttr_NumConstrs);
         GRBLinExpr expr = 0;
 
         for(int I : binaryIndexesOnes)
@@ -476,20 +484,20 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
             expr += (1.0 - 1.0 * variable);
         }
 
-        int numConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
-
         gurobiModel->addConstr(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0,
             fmt::format("IC_{}", integerCuts.size()));
 
         gurobiModel->update();
 
-        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraints)
+        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraintsBefore)
         {
             integerCuts.push_back(gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
-
-            modelUpdated = true;
-
             env->solutionStatistics.numberOfIntegerCuts++;
+        }
+        else
+        {
+            env->output->outputInfo("        Integer cut not added by Gurobi");
+            return (false);
         }
     }
     catch(GRBException& e)
