@@ -69,9 +69,6 @@ void TaskRepairInfeasibleDualProblem::run()
         env->tasks->setNextTask(taskIDIfTrue);
         iterLastRepair = currIter->iterationNumber;
 
-        // Does not work with Gurobi
-        // env->results->setDualBound(env->dualSolver->MIPSolver->getDualObjectiveValue());
-
         currIter->wasInfeasibilityRepairSuccessful = true;
         tmpType << "-SUCC";
     }
@@ -99,8 +96,9 @@ void TaskRepairInfeasibleDualProblem::run()
     env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate++;
     env->results->solutionIsGlobal = false;
 
-    env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"), 0, 0, 0,
-        env->dualSolver->cutOffToUse, 0, 0, 0, 0, currIter->maxDeviation, E_IterationLineType::DualRepair, true);
+    env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"),
+        currIter->numberOfInfeasibilityRepairedConstraints, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0,
+        currIter->maxDeviation, E_IterationLineType::DualRepair, true);
 
     env->timing->stopTimer("DualStrategy");
 }

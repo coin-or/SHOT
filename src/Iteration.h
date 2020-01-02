@@ -57,6 +57,7 @@ public:
     double solutionTime;
     bool hasInfeasibilityRepairBeenPerformed = false;
     bool wasInfeasibilityRepairSuccessful = false;
+    int numberOfInfeasibilityRepairedConstraints = 0;
 
     std::vector<VectorDouble> hyperplanePoints;
 

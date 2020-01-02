@@ -110,6 +110,10 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             combObjectiveValue
                 = fmt::format("Cutoff: {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
         }
+        else if(lineType == E_IterationLineType::DualRepair)
+        {
+            combObjectiveValue = fmt::format("Repaired: {:<12d}", dualCutsAdded);
+        }
         else
         {
             if(env->problem->objectiveFunction->properties.isMinimize)
@@ -149,7 +153,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         if(lineType == E_IterationLineType::DualRepair)
         {
             auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-                iterationDesc, totalTime, combDualCuts, "", "", "");
+                iterationDesc, totalTime, "", combObjectiveValue, "", "");
             env->output->outputInfo(tmpLine);
         }
         else if(lineType == E_IterationLineType::DualReductionCut)

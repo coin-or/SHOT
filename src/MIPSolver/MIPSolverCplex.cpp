@@ -718,13 +718,10 @@ bool MIPSolverCplex::repairInfeasibility()
         if(modelUpdated)
         {
             cplexInstance.extract(cplexModel);
-
             modelUpdated = false;
         }
 
         IloNumArray relax(cplexEnv);
-
-        cplexInstance.extract(cplexModel);
 
         int numCurrConstraints = cplexConstrs.getSize();
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
@@ -768,23 +765,27 @@ bool MIPSolverCplex::repairInfeasibility()
 
             for(int i = numOrigConstraints; i < infeas.getSize(); i++)
             {
-                if(infeas[i] > 0)
+                if(infeas[i] > 1e-10) // Cplex does not accept too small values, so zero cannot be used
                 {
                     numRepairs++;
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
-                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.5 * infeas[i]);
+                    double newRHS = cplexConstrs[i].getUB() + 1.5 * infeas[i];
+                    cplexConstrs[i].setUB(newRHS);
                 }
-                else if(infeas[i] < -0) // Should not happen for generated cuts
+                else if(infeas[i] < -1e-10) // Should not happen for generated cuts
                 {
                     numRepairs++;
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
-                    cplexConstrs[i].setLB(cplexConstrs[i].getLB() + 1.5 * infeas[i]);
+                    double newLHS = cplexConstrs[i].getLB() + 1.5 * infeas[i];
+                    cplexConstrs[i].setLB(newLHS);
                 }
             }
 
             cplexInstance.extract(cplexModel);
+
+            env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
@@ -802,7 +803,7 @@ bool MIPSolverCplex::repairInfeasibility()
                 return (false);
             }
 
-            env->output->outputInfo("        Number of constraints modified: " + std::to_string(numRepairs));
+            env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
             return (true);
         }

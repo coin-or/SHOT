@@ -841,6 +841,8 @@ bool MIPSolverGurobi::repairInfeasibility()
                 + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
         }
 
+        env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
+
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
             std::stringstream ss;
@@ -857,7 +859,7 @@ bool MIPSolverGurobi::repairInfeasibility()
             return (false);
         }
 
-        env->output->outputInfo("        Number of constraints modified: " + std::to_string(numRepairs));
+        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
         return (true);
     }
