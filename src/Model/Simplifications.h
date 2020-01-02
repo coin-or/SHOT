@@ -492,34 +492,33 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
             return (std::make_shared<ExpressionSquareRoot>(firstChild));
         else if(secondChildConstant == -1.0)
             return (std::make_shared<ExpressionInvert>(firstChild));
-    }
-
-    // Extract constants in if first child is product and has a constant as its first child.
-    // Since the children have been simplified, we can assume that the constant (if it exists) is first.
-    if(firstChild->getType() == E_NonlinearExpressionTypes::Product
-        && secondChild->getType() == E_NonlinearExpressionTypes::Constant && firstChild->getNumberOfChildren() > 1)
-    {
-        auto product = std::dynamic_pointer_cast<ExpressionProduct>(firstChild);
-        auto power = std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
-
-        double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(0))->constant;
-
-        NonlinearExpressions children;
-
-        for(auto it = product->children.begin() + 1; it != product->children.end(); it++)
+        else if(firstChild->getType() == E_NonlinearExpressionTypes::Product && firstChild->getNumberOfChildren() > 1
+            && std::dynamic_pointer_cast<ExpressionProduct>(firstChild)->children.at(0)->getType()
+                == E_NonlinearExpressionTypes::Constant)
         {
-            children.add(*it);
+            // Extract constants if first child is product and has a constant as its first child.
+            // Since the children have been simplified, we can assume that the constant (if it exists) is first.
+
+            auto product = std::dynamic_pointer_cast<ExpressionProduct>(firstChild);
+            double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(0))->constant;
+
+            NonlinearExpressions children;
+
+            for(auto it = product->children.begin() + 1; it != product->children.end(); it++)
+            {
+                children.add(*it);
+            }
+
+            auto newProduct = std::make_shared<ExpressionProduct>();
+
+            if(constant != 1.0)
+                newProduct->children.add(std::make_shared<ExpressionConstant>(std::pow(constant, secondChildConstant)));
+
+            newProduct->children.add(
+                std::make_shared<ExpressionPower>(std::make_shared<ExpressionProduct>(children), secondChild));
+
+            return (newProduct);
         }
-
-        auto newProduct = std::make_shared<ExpressionProduct>();
-
-        if(constant != 1.0)
-            newProduct->children.add(std::make_shared<ExpressionConstant>(std::pow(constant, power)));
-
-        newProduct->children.add(
-            std::make_shared<ExpressionPower>(std::make_shared<ExpressionProduct>(children), secondChild));
-
-        return (newProduct);
     }
 
     return (std::make_shared<ExpressionPower>(firstChild, secondChild));
