@@ -42,8 +42,10 @@ public:
     std::string getType() override;
 
 private:
-    bool useQuadraticConstraints = false;
-    bool useQuadraticObjective = true;
+    bool useConvexQuadraticConstraints = false;
+    bool useNonconvexQuadraticConstraints = false;
+    bool useConvexQuadraticObjective = false;
+    bool useNonconvexQuadraticObjective = false;
     bool quadraticObjectiveRegardedAsNonlinear = false;
     bool partitionQuadraticTermsInObjective = false;
     bool partitionQuadraticTermsInConstraint = false;

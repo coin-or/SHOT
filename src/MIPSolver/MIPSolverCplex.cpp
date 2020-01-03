@@ -583,6 +583,10 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
         }
+        else if(status == IloCplex::CplexStatus::OptimalRelaxedQuad)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+        }
         else if(status == IloCplex::CplexStatus::Infeasible)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Infeasible;

@@ -410,6 +410,14 @@ void MIPSolverGurobi::initializeSolverSettings()
             gurobiModel->getEnv().set(
                 GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
         }
+
+        // Supports nonconvex MIQCQP
+        if(static_cast<ES_QuadraticProblemStrategy>(
+               env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+            == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
+        {
+            gurobiModel->getEnv().set(GRB_IntParam_NonConvex, 2);
+        }
     }
     catch(GRBException& e)
     {

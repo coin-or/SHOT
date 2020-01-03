@@ -309,6 +309,8 @@ void Problem::updateProperties()
             = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
     }
 
+    updateConstraints();
+
     for(auto& C : numericConstraints)
     {
         C->updateProperties();

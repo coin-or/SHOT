@@ -30,12 +30,35 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
         env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
 
-    useQuadraticConstraints = (quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained);
-
-    useQuadraticObjective
-        = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
-
-    quadraticObjectiveRegardedAsNonlinear = false;
+    switch(quadraticStrategy)
+    {
+    case(ES_QuadraticProblemStrategy::Nonlinear):
+        useConvexQuadraticConstraints = false;
+        useNonconvexQuadraticConstraints = false;
+        useConvexQuadraticObjective = false;
+        useNonconvexQuadraticObjective = false;
+        break;
+    case(ES_QuadraticProblemStrategy::QuadraticObjective):
+        useConvexQuadraticConstraints = false;
+        useNonconvexQuadraticConstraints = false;
+        useConvexQuadraticObjective = true;
+        useNonconvexQuadraticObjective = false;
+        break;
+    case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
+        useConvexQuadraticConstraints = true;
+        useNonconvexQuadraticConstraints = false;
+        useConvexQuadraticObjective = true;
+        useNonconvexQuadraticObjective = false;
+        break;
+    case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
+        useConvexQuadraticConstraints = true;
+        useNonconvexQuadraticConstraints = true;
+        useConvexQuadraticObjective = true;
+        useNonconvexQuadraticObjective = true;
+        break;
+    default:
+        break;
+    }
 
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;
@@ -80,7 +103,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     reformulatedProblem->finalize();
 
     // Fixing that a quadratic objective changed into a nonlinear constraint is correctly identified
-    if(quadraticObjectiveRegardedAsNonlinear
+    if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
         && reformulatedProblem->objectiveFunction->properties.classification
             == E_ObjectiveFunctionClassification::Quadratic)
     {
@@ -143,7 +166,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         return;
     }
 
-    if(useQuadraticObjective
+    if(((env->problem->properties.convexity == E_ProblemConvexity::Convex && useConvexQuadraticObjective)
+           || useNonconvexQuadraticObjective)
         && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic)
     {
         // Quadratic objective function
@@ -568,12 +592,13 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         return (NumericConstraints({ constraint }));
     }
 
-    if(useQuadraticConstraints && (C->properties.convexity == E_Convexity::Convex)
+    if(((useConvexQuadraticConstraints && C->properties.convexity == E_Convexity::Convex)
+           || useNonconvexQuadraticConstraints)
         && (C->properties.classification == E_ConstraintClassification::Quadratic
                || (!C->properties.hasNonlinearExpression && !C->properties.hasMonomialTerms
                       && !C->properties.hasSignomialTerms)))
     {
-        // Quadratic constraint
+        // Quadratic constraint (not considered as nonlinear)
         QuadraticConstraintPtr constraint
             = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Quadratic;
@@ -1093,20 +1118,20 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint = std::make_shared<LinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Linear;
     }
-    else if(!useQuadraticConstraints)
+    else if(!useConvexQuadraticConstraints)
     // We have a quadratic constraint, but it will be considered as nonlinear since the user demands it
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
     }
-    else if(C->properties.convexity != E_Convexity::Convex)
+    else if(destinationQuadraticTerms.getConvexity() != E_Convexity::Convex)
     // We have a quadratic constraint, but it will be considered as nonlinear since it is nonconvex
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
     }
     else
-    // We have quadratic (convex) constraint
+    // We have quadratic constraint
     {
         constraint = std::make_shared<QuadraticConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::Quadratic;
@@ -1243,7 +1268,7 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
             if(static_cast<ES_QuadraticProblemStrategy>(
                    env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
-                != ES_QuadraticProblemStrategy::QuadraticallyConstrained)
+                < ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained)
                 extractQuadraticTerms = false;
 
             // If the extracted term is quadratic, create a quadratic constraint instead of a nonlinear one
@@ -1768,22 +1793,15 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
 
-            if(static_cast<ES_QuadraticProblemStrategy>(
-                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
-                == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
+            bool isConvex = (coeffSign * signfactor > 0 && (T->getConvexity() == E_Convexity::Convex));
+
+            if((useConvexQuadraticObjective && isConvex) || useNonconvexQuadraticConstraints)
             {
                 auto auxConstraint = std::make_shared<QuadraticConstraint>(
                     auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
                 auxConstraintCounter++;
 
-                if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
-                {
-                    auxConstraint->properties.convexity = E_Convexity::Convex;
-                }
-                else
-                {
-                    auxConstraint->properties.convexity = E_Convexity::Nonconvex;
-                }
+                auxConstraint->properties.convexity = (isConvex ? E_Convexity::Convex : E_Convexity::Nonconvex);
 
                 auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
                 auxConstraint->add(

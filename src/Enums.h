@@ -367,7 +367,8 @@ enum class ES_QuadraticProblemStrategy
 {
     Nonlinear,
     QuadraticObjective,
-    QuadraticallyConstrained
+    ConvexQuadraticallyConstrained,
+    NonconvexQuadraticallyConstrained
 };
 
 enum class ES_SourceFormat
