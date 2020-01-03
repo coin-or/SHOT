@@ -103,9 +103,14 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     {
         for(auto& V : env->problem->allVariables)
         {
-
             variableNames.push_back(V->name);
         }
+    }
+
+    for(auto& V : env->problem->allVariables)
+    {
+        NLPSolver->updateVariableLowerBound(V->index, V->lowerBound);
+        NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
     }
 
     env->timing->stopTimer("PrimalBoundStrategyNLP");
