@@ -1,18 +1,23 @@
-# Try to find the Gurobi libraries. Modified from https://github.com/ampl/mp/blob/master/support/cmake/FindCPLEX.cmake
+# Try to find the Gurobi libraries. Modified from
+# https://github.com/ampl/mp/blob/master/support/cmake/FindCPLEX.cmake
 
 include(FindPackageHandleStandardArgs)
 
-# Find the path to the main Gurobi folder. Gurobi can be installed in the following default locations:
-# /opt/gurobi<version>/linux64 - Linux /Library/gurobi<version>/mac64 - Mac OS X C:\gurobi<version>\win64 - Windows
+# Find the path to the main Gurobi folder. Gurobi can be installed in the
+# following default locations: /opt/gurobi<version>/linux64 - Linux
+# /Library/gurobi<version>/mac64 - Mac OS X C:\gurobi<version>\win64 - Windows
 
 file(GLOB
      GUROBI_SEARCH_PATHS
-     ${GUROBI_DIR}
      "/opt/gurobi/gurobi*/linux64"
      "/opt/gurobi*/linux64"
      "/Library/gurobi*/mac64"
      "C:\\gurobi*\\win64")
-find_path(GUROBI_INSTALL_DIR NAMES "include/gurobi_c++.h" PATHS ${GUROBI_SEARCH_PATHS})
+find_path(GUROBI_INSTALL_DIR
+          NAMES "include/gurobi_c++.h"
+          HINTS "${GUROBI_DIR}/linux64" "${GUROBI_DIR}/mac64"
+                "${GUROBI_DIR}\\win64"
+          PATHS ${GUROBI_SEARCH_PATHS})
 message(STATUS "Found Gurobi folder: ${GUROBI_INSTALL_DIR}")
 
 if(GUROBI_INSTALL_DIR)
@@ -41,7 +46,8 @@ if(GUROBI_INSTALL_DIR)
     endif()
 
     if(CMAKE_COMPILER_IS_GNUCXX)
-      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+                      OUTPUT_VARIABLE GCC_VERSION)
       if(GCC_VERSION VERSION_GREATER 5.2 OR GCC_VERSION VERSION_EQUAL 5.2)
         file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++5.2.a)
       else()
@@ -69,7 +75,8 @@ if(GUROBI_INSTALL_DIR)
     file(GLOB GUROBI_LIBRARY_DEBUG ${GUROBI_LIB_DIR}/libgurobi*.so)
 
     if(CMAKE_COMPILER_IS_GNUCXX)
-      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
+      execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
+                      OUTPUT_VARIABLE GCC_VERSION)
       if(GCC_VERSION VERSION_GREATER 5.2 OR GCC_VERSION VERSION_EQUAL 5.2)
         file(GLOB GUROBI_CPP_LIBRARY ${GUROBI_LIB_DIR}/libgurobi_g++5.2.a)
       else()
@@ -102,7 +109,8 @@ if(GUROBI_INSTALL_DIR)
   message(STATUS "Found Gurobi C++ library: ${GUROBI_CPP_LIBRARY}")
 endif()
 
-# Handle the QUIETLY and REQUIRED arguments and set GUROBI_FOUND to TRUE if all listed variables are TRUE.
+# Handle the QUIETLY and REQUIRED arguments and set GUROBI_FOUND to TRUE if all
+# listed variables are TRUE.
 find_package_handle_standard_args(GUROBI
                                   DEFAULT_MSG
                                   GUROBI_LIBRARY
