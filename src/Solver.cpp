@@ -1408,8 +1408,11 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
 
+            env->settings->updateSetting("ESH.Rootsearch.UniqueConstraints", "Dual", false);
+
+            env->settings->updateSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0);
             env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
-            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 10);
+            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 5);
 
             env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
