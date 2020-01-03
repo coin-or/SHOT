@@ -433,6 +433,8 @@ bool Solver::selectStrategy()
         {
             solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
             isProblemInitialized = true;
+
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
         }
 
         return (true);
