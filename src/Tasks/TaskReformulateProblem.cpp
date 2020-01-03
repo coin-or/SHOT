@@ -1768,23 +1768,50 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
 
-            auto auxConstraint = std::make_shared<QuadraticConstraint>(
-                auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-            auxConstraintCounter++;
-
-            if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
+            if(static_cast<ES_QuadraticProblemStrategy>(
+                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+                == ES_QuadraticProblemStrategy::QuadraticallyConstrained)
             {
-                auxConstraint->properties.convexity = E_Convexity::Convex;
+                auto auxConstraint = std::make_shared<QuadraticConstraint>(
+                    auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                auxConstraintCounter++;
+
+                if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
+                {
+                    auxConstraint->properties.convexity = E_Convexity::Convex;
+                }
+                else
+                {
+                    auxConstraint->properties.convexity = E_Convexity::Nonconvex;
+                }
+
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
+                auxConstraint->add(
+                    std::make_shared<QuadraticTerm>(coeffSign * signfactor, firstVariable, secondVariable));
+
+                reformulatedProblem->add(std::move(auxConstraint));
             }
             else
             {
-                auxConstraint->properties.convexity = E_Convexity::Nonconvex;
+                auto auxConstraint = std::make_shared<NonlinearConstraint>(
+                    auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+                auxConstraintCounter++;
+
+                if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
+                {
+                    auxConstraint->properties.convexity = E_Convexity::Convex;
+                }
+                else
+                {
+                    auxConstraint->properties.convexity = E_Convexity::Nonconvex;
+                }
+
+                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
+                auxConstraint->add(
+                    std::make_shared<QuadraticTerm>(coeffSign * signfactor, firstVariable, secondVariable));
+
+                reformulatedProblem->add(std::move(auxConstraint));
             }
-
-            auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
-            auxConstraint->add(std::make_shared<QuadraticTerm>(coeffSign * signfactor, firstVariable, secondVariable));
-
-            reformulatedProblem->add(std::move(auxConstraint));
         }
         else // Square term x1^2 or general bilinear term x1*x2 will remain as is
         {
