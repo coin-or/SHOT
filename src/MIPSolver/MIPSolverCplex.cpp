@@ -406,12 +406,19 @@ void MIPSolverCplex::initializeSolverSettings()
             IloCplex::Param::OptimalityTarget, env->settings->getSetting<int>("Cplex.OptimalityTarget", "Subsolver"));
 
         // Options for using swap file
-        cplexInstance.setParam(
-            IloCplex::WorkDir, env->settings->getSetting<std::string>("Cplex.WorkDir", "Subsolver").c_str());
-        cplexInstance.setParam(IloCplex::WorkMem, env->settings->getSetting<double>("Cplex.WorkMem", "Subsolver"));
+        auto workdir = env->settings->getSetting<std::string>("Cplex.WorkDir", "Subsolver");
+
+        if(workdir != "")
+            cplexInstance.setParam(IloCplex::WorkDir, workdir.c_str());
+
+        auto workmem = env->settings->getSetting<double>("Cplex.WorkMem", "Subsolver");
+
+        if(workmem > 0)
+            cplexInstance.setParam(IloCplex::WorkMem, workmem);
+
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getSetting<int>("Cplex.NodeFileInd", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::FeasOptMode, 2);
+        cplexInstance.setParam(IloCplex::FeasOptMode, env->settings->getSetting<int>("Cplex.FeasOptMode", "Subsolver"));
 
         // Adds a user-provided node limit
         if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
