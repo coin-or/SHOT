@@ -729,7 +729,7 @@ void Solver::initializeSettings()
         "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
-        "MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
+        "MIP.NumberOfThreads", "Dual", 0, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     VectorString enumPresolve;
     enumPresolve.push_back("Never");
@@ -1222,7 +1222,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting(
+        "TimeLimit", "Termination", SHOT_DBL_MAX, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 
     // Hidden settings for problem information
 
