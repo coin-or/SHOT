@@ -907,6 +907,7 @@ void Solver::initializeSettings()
     enumQPStrategy.push_back("Use quadratic objective");
     enumQPStrategy.push_back("Use convex quadratic objective and constraints");
     enumQPStrategy.push_back("Use nonconvex quadratic objective and constraints");
+
     env->settings->createSetting("Reformulation.Quadratics.Strategy", "Model",
         static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained),
         "How to treat quadratic functions", enumQPStrategy);
