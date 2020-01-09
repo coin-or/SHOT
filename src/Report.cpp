@@ -582,11 +582,11 @@ void Report::outputProblemInstanceReport()
 
     if(isReformulated)
     {
-        report << fmt::format(" {:28s}{:21s}{:s}", "", "Original", "Reformulated") << "\r\n";
+        report << fmt::format(" {:35s}{:21s}{:s}", "", "Original", "Reformulated") << "\r\n";
     }
     else
     {
-        report << fmt::format(" {:28s}{:21s}{:s}", "", "Original", "") << "\r\n";
+        report << fmt::format(" {:35s}{:21s}{:s}", "", "Original", "") << "\r\n";
     }
 
     report << "\r\n";
@@ -642,11 +642,14 @@ void Report::outputProblemInstanceReport()
     }
 
     report << fmt::format(
-                  " {:28s}{:21s}{:s}", "Problem classification:", problemClassificationOrig, problemClassificationRef)
+                  " {:35s}{:21s}{:s}", "Problem classification:", problemClassificationOrig, problemClassificationRef)
            << "\r\n";
 
     std::string objectiveClassificationOrig;
     std::string objectiveClassificationRef = "";
+    std::string objectiveDirectionOrig
+        = env->problem->objectiveFunction->properties.isMinimize ? "minimize" : "maximize";
+    std::string objectiveDirectionRef = "";
 
     switch(static_cast<E_ObjectiveFunctionClassification>(env->problem->objectiveFunction->properties.classification))
     {
@@ -683,11 +686,36 @@ void Report::outputProblemInstanceReport()
         break;
     }
 
+    switch(static_cast<E_Convexity>(env->problem->objectiveFunction->properties.convexity))
+    {
+    case(E_Convexity::Linear):
+        break;
+
+    case(E_Convexity::Convex):
+        objectiveClassificationOrig += ", convex";
+        break;
+
+    case(E_Convexity::Concave):
+        objectiveClassificationOrig += ", concave";
+        break;
+
+    case(E_Convexity::Nonconvex):
+        objectiveClassificationOrig += ", nonconvex";
+        break;
+
+    default:
+        break;
+    }
+
     if(isReformulated)
     {
+        objectiveDirectionRef
+            = env->reformulatedProblem->objectiveFunction->properties.isMinimize ? "minimize" : "maximize";
+
         switch(static_cast<E_ObjectiveFunctionClassification>(
             env->reformulatedProblem->objectiveFunction->properties.classification))
         {
+
         case(E_ObjectiveFunctionClassification::Linear):
             objectiveClassificationRef = "linear";
             break;
@@ -720,9 +748,36 @@ void Report::outputProblemInstanceReport()
             objectiveClassificationRef = "unknown";
             break;
         }
+
+        switch(static_cast<E_Convexity>(env->reformulatedProblem->objectiveFunction->properties.convexity))
+        {
+        case(E_Convexity::Linear):
+            break;
+
+        case(E_Convexity::Convex):
+            objectiveClassificationRef += ", convex";
+            break;
+
+        case(E_Convexity::Concave):
+            objectiveClassificationRef += ", concave";
+            break;
+
+        case(E_Convexity::Nonconvex):
+            objectiveClassificationRef += ", nonconvex";
+            break;
+
+        default:
+            break;
+        }
     }
 
-    report << fmt::format(" {:28s}{:21s}{:s}", "Objective function type:", objectiveClassificationOrig,
+    report << "\r\n";
+
+    report << fmt::format(
+                  " {:35s}{:21s}{:s}", "Objective function direction:", objectiveDirectionOrig, objectiveDirectionRef)
+           << "\r\n";
+
+    report << fmt::format(" {:35s}{:21s}{:s}", "Objective function type:", objectiveClassificationOrig,
                   objectiveClassificationRef)
            << "\r\n";
 
@@ -732,53 +787,68 @@ void Report::outputProblemInstanceReport()
     {
         if(env->problem->properties.numberOfNumericConstraints > 0
             || env->reformulatedProblem->properties.numberOfNumericConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           "Number of constraints:", env->problem->properties.numberOfNumericConstraints,
                           env->reformulatedProblem->properties.numberOfNumericConstraints)
                    << "\r\n";
 
         if(env->problem->properties.numberOfLinearConstraints > 0
             || env->reformulatedProblem->properties.numberOfLinearConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           " - linear:", env->problem->properties.numberOfLinearConstraints,
                           env->reformulatedProblem->properties.numberOfLinearConstraints)
 
                    << "\r\n";
 
-        if(env->problem->properties.numberOfQuadraticConstraints > 0
-            || env->reformulatedProblem->properties.numberOfQuadraticConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
-                          " - quadratic:", env->problem->properties.numberOfQuadraticConstraints,
-                          env->reformulatedProblem->properties.numberOfQuadraticConstraints)
+        if(env->problem->properties.numberOfConvexQuadraticConstraints > 0
+            || env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints > 0)
+            report << fmt::format(" {:35s}{:<21d}{:d}",
+                          " - convex quadratic:", env->problem->properties.numberOfConvexQuadraticConstraints,
+                          env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints)
 
                    << "\r\n";
 
-        if(env->problem->properties.numberOfNonlinearConstraints > 0
-            || env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
-                          " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints,
-                          env->reformulatedProblem->properties.numberOfNonlinearConstraints)
+        if(env->problem->properties.numberOfNonconvexQuadraticConstraints > 0
+            || env->reformulatedProblem->properties.numberOfNonconvexQuadraticConstraints > 0)
+            report << fmt::format(" {:35s}{:<21d}{:d}",
+                          " - nonconvex quadratic:", env->problem->properties.numberOfNonconvexQuadraticConstraints,
+                          env->reformulatedProblem->properties.numberOfNonconvexQuadraticConstraints)
+
+                   << "\r\n";
+
+        if(env->problem->properties.numberOfConvexNonlinearConstraints > 0
+            || env->reformulatedProblem->properties.numberOfConvexNonlinearConstraints > 0)
+            report << fmt::format(" {:35s}{:<21d}{:d}",
+                          " - convex nonlinear:", env->problem->properties.numberOfConvexNonlinearConstraints,
+                          env->reformulatedProblem->properties.numberOfConvexNonlinearConstraints)
+                   << "\r\n";
+
+        if(env->problem->properties.numberOfNonconvexNonlinearConstraints > 0
+            || env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints > 0)
+            report << fmt::format(" {:35s}{:<21d}{:d}",
+                          " - nonconvex nonlinear:", env->problem->properties.numberOfNonconvexNonlinearConstraints,
+                          env->reformulatedProblem->properties.numberOfNonconvexNonlinearConstraints)
                    << "\r\n";
     }
     else
     {
         if(env->problem->properties.numberOfNumericConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           "Number of constraints:", env->problem->properties.numberOfNumericConstraints, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
             report << fmt::format(
-                          " {:28s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, "")
+                          " {:35s}{:<21d}{:d}", " - linear:", env->problem->properties.numberOfLinearConstraints, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfQuadraticConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           " - quadratic:", env->problem->properties.numberOfQuadraticConstraints, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           " - nonlinear:", env->problem->properties.numberOfNonlinearConstraints, "")
                    << "\r\n";
     }
@@ -788,60 +858,67 @@ void Report::outputProblemInstanceReport()
     if(isReformulated)
     {
         if(env->problem->properties.numberOfVariables > 0 || env->reformulatedProblem->properties.numberOfVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           "Number of variables:", env->problem->properties.numberOfVariables,
                           env->reformulatedProblem->properties.numberOfVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfRealVariables > 0
             || env->reformulatedProblem->properties.numberOfRealVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables,
+            report << fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables,
                           env->reformulatedProblem->properties.numberOfRealVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfBinaryVariables > 0
             || env->reformulatedProblem->properties.numberOfBinaryVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables,
+            report << fmt::format(" {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables,
                           env->reformulatedProblem->properties.numberOfBinaryVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfIntegerVariables > 0
             || env->reformulatedProblem->properties.numberOfIntegerVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           " - integer:", env->problem->properties.numberOfIntegerVariables,
                           env->reformulatedProblem->properties.numberOfIntegerVariables)
                    << "\r\n";
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0
             || env->reformulatedProblem->properties.numberOfSemicontinuousVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables,
                           env->reformulatedProblem->properties.numberOfSemicontinuousVariables)
+                   << "\r\n";
+
+        if(env->problem->properties.numberOfNonlinearVariables > 0
+            || env->reformulatedProblem->properties.numberOfNonlinearVariables > 0)
+            report << fmt::format(" {:35s}{:<21d}{:d}",
+                          " - nonlinear:", env->problem->properties.numberOfNonlinearVariables,
+                          env->reformulatedProblem->properties.numberOfNonlinearVariables)
                    << "\r\n";
     }
     else
     {
         if(env->problem->properties.numberOfVariables > 0)
             report << fmt::format(
-                          " {:28s}{:<21d}{:d}", "Number of variables:", env->problem->properties.numberOfVariables, "")
+                          " {:35s}{:<21d}{:d}", "Number of variables:", env->problem->properties.numberOfVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfRealVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables, "")
+            report << fmt::format(" {:35s}{:<21d}{:d}", " - real:", env->problem->properties.numberOfRealVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfBinaryVariables > 0)
             report << fmt::format(
-                          " {:28s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables, "")
+                          " {:35s}{:<21d}{:d}", " - binary:", env->problem->properties.numberOfBinaryVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfIntegerVariables > 0)
             report << fmt::format(
-                          " {:28s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables, "")
+                          " {:35s}{:<21d}{:d}", " - integer:", env->problem->properties.numberOfIntegerVariables, "")
                    << "\r\n";
 
         if(env->problem->properties.numberOfSemicontinuousVariables > 0)
-            report << fmt::format(" {:28s}{:<21d}{:d}",
+            report << fmt::format(" {:35s}{:<21d}{:d}",
                           " - semicontinuous:", env->problem->properties.numberOfSemicontinuousVariables, "")
                    << "\r\n";
     }
