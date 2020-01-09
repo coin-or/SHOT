@@ -61,7 +61,11 @@ struct ProblemProperties
     int numberOfNumericConstraints = 0;
     int numberOfLinearConstraints = 0;
     int numberOfQuadraticConstraints = 0;
+    int numberOfConvexQuadraticConstraints = 0;
+    int numberOfNonconvexQuadraticConstraints = 0;
     int numberOfNonlinearConstraints = 0;
+    int numberOfConvexNonlinearConstraints = 0;
+    int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
 
     std::string name = "";

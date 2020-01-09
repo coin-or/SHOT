@@ -218,6 +218,8 @@ void Problem::updateVariables()
         {
             T->firstVariable->properties.inObjectiveFunction = true;
             T->secondVariable->properties.inObjectiveFunction = true;
+            T->firstVariable->properties.isNonlinear = true;
+            T->secondVariable->properties.isNonlinear = true;
         }
     }
 
@@ -229,6 +231,7 @@ void Problem::updateVariables()
             {
                 V->properties.inObjectiveFunction = true;
                 V->properties.inMonomialTerms = true;
+                V->properties.isNonlinear = true;
             }
         }
     }
@@ -241,6 +244,7 @@ void Problem::updateVariables()
             {
                 E->variable->properties.inObjectiveFunction = true;
                 E->variable->properties.inSignomialTerms = true;
+                E->variable->properties.isNonlinear = true;
             }
         }
     }
@@ -252,6 +256,7 @@ void Problem::updateVariables()
         {
             V->properties.inObjectiveFunction = true;
             V->properties.inNonlinearExpression = true;
+            V->properties.isNonlinear = true;
         }
     }
 
@@ -267,6 +272,8 @@ void Problem::updateVariables()
         {
             T->firstVariable->properties.inQuadraticConstraints = true;
             T->secondVariable->properties.inQuadraticConstraints = true;
+            T->firstVariable->properties.isNonlinear = true;
+            T->secondVariable->properties.isNonlinear = true;
         }
     }
 
@@ -276,18 +283,21 @@ void Problem::updateVariables()
         {
             V->properties.inMonomialTerms = true;
             V->properties.inNonlinearConstraints = true;
+            V->properties.isNonlinear = true;
         }
 
         for(auto& V : C->variablesInSignomialTerms)
         {
             V->properties.inSignomialTerms = true;
             V->properties.inNonlinearConstraints = true;
+            V->properties.isNonlinear = true;
         }
 
         for(auto& V : C->variablesInNonlinearExpression)
         {
             V->properties.inNonlinearExpression = true;
             V->properties.inNonlinearConstraints = true;
+            V->properties.isNonlinear = true;
         }
     }
 
@@ -382,14 +392,15 @@ void Problem::updateProperties()
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
 
-    properties.numberOfVariablesInNonlinearExpressions = 0;
-
-    for(auto& V : nonlinearVariables)
-        if(V->properties.inNonlinearExpression)
-            properties.numberOfVariablesInNonlinearExpressions++;
+    properties.numberOfVariablesInNonlinearExpressions = std::count_if(nonlinearVariables.begin(),
+        nonlinearVariables.end(), [](auto V) { return (V->properties.inNonlinearExpression); });
 
     if(auxiliaryObjectiveVariable)
         properties.numberOfAuxiliaryVariables++;
+
+    assert(properties.numberOfVariables
+        == properties.numberOfRealVariables + properties.numberOfDiscreteVariables
+            + properties.numberOfSemicontinuousVariables);
 
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
@@ -401,32 +412,51 @@ void Problem::updateProperties()
     bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
         && objectiveFunction->properties.hasQuadraticTerms);
 
-    int numQuadraticConstraints = 0;
-    int numNonlinearConstraints = 0;
-    int numNonlinearExpressions = 0;
+    properties.numberOfQuadraticConstraints = 0;
+    properties.numberOfConvexQuadraticConstraints = 0;
+    properties.numberOfNonconvexQuadraticConstraints = 0;
 
     for(auto& C : quadraticConstraints)
     {
         if(C->properties.hasQuadraticTerms)
-            numQuadraticConstraints++;
+        {
+            properties.numberOfQuadraticConstraints++;
+
+            if(C->properties.convexity == E_Convexity::Convex)
+                properties.numberOfConvexQuadraticConstraints++;
+            else
+                properties.numberOfNonconvexQuadraticConstraints++;
+        }
     }
+
+    properties.numberOfNonlinearConstraints = 0;
+    properties.numberOfConvexNonlinearConstraints = 0;
+    properties.numberOfNonconvexNonlinearConstraints = 0;
+    properties.numberOfNonlinearExpressions = 0;
 
     for(auto& C : nonlinearConstraints)
     {
         if(C->properties.hasQuadraticTerms || C->properties.hasMonomialTerms || C->properties.hasSignomialTerms
             || C->properties.hasNonlinearExpression)
-            numNonlinearConstraints++;
+        {
+            properties.numberOfNonlinearConstraints++;
+
+            if(C->properties.convexity == E_Convexity::Convex)
+                properties.numberOfConvexNonlinearConstraints++;
+            else
+                properties.numberOfNonconvexNonlinearConstraints++;
+        }
 
         if(C->properties.hasNonlinearExpression)
-            numNonlinearExpressions++;
+            properties.numberOfNonlinearExpressions++;
     }
 
     if(objectiveFunction->properties.hasNonlinearExpression)
-        numNonlinearExpressions++;
+        properties.numberOfNonlinearExpressions++;
 
-    properties.numberOfQuadraticConstraints = numQuadraticConstraints;
-    properties.numberOfNonlinearConstraints = numNonlinearConstraints;
-    properties.numberOfNonlinearExpressions = numNonlinearExpressions;
+    assert(properties.numberOfNumericConstraints
+        == properties.numberOfLinearConstraints + properties.numberOfQuadraticConstraints
+            + properties.numberOfNonlinearConstraints);
 
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
