@@ -801,8 +801,8 @@ void Solver::initializeSettings()
         "The main strategy to use", enumSolutionStrategy);
     enumSolutionStrategy.clear();
 
-    // env->settings->createSetting("TreeStrategy.Multi.Reinitialize", "Dual", false,
-    //"Reinitialize the dual model in the subsolver each iteration");
+    env->settings->createSetting("TreeStrategy.Multi.Reinitialize", "Dual", false,
+        "Reinitialize the dual model in the subsolver each iteration", true);
 
     // Optimization model settings
 
