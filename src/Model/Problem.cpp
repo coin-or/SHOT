@@ -181,7 +181,6 @@ void Problem::updateVariables()
     binaryVariables.sortByIndex();
     integerVariables.sortByIndex();
     semicontinuousVariables.sortByIndex();
-    nonlinearVariables.sortByIndex();
     auxiliaryVariables.sortByIndex();
 
     // Update bound vectors
@@ -194,16 +193,26 @@ void Problem::updateVariables()
     if(variableBounds.size() != numVariables)
         variableBounds.resize(numVariables);
 
-    nonlinearVariables.clear();
+    nonlinearExpressionVariables.clear();
+
+    // Reset variable properties
+    for(auto& V : allVariables)
+    {
+        V->properties.isNonlinear = false;
+        V->properties.inObjectiveFunction = false;
+        V->properties.inLinearConstraints = false;
+        V->properties.inQuadraticConstraints = false;
+        V->properties.inNonlinearConstraints = false;
+        V->properties.inMonomialTerms = false;
+        V->properties.inSignomialTerms = false;
+        V->properties.inNonlinearExpression = false;
+    }
 
     for(size_t i = 0; i < numVariables; i++)
     {
         variableLowerBounds[i] = allVariables[i]->lowerBound;
         variableUpperBounds[i] = allVariables[i]->upperBound;
         variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
-
-        if(allVariables[i]->properties.isNonlinear)
-            nonlinearVariables.push_back(allVariables[i]);
     }
 
     if(objectiveFunction->properties.hasLinearTerms)
@@ -218,6 +227,8 @@ void Problem::updateVariables()
         {
             T->firstVariable->properties.inObjectiveFunction = true;
             T->secondVariable->properties.inObjectiveFunction = true;
+            T->firstVariable->properties.inQuadraticTerms = true;
+            T->secondVariable->properties.inQuadraticTerms = true;
             T->firstVariable->properties.isNonlinear = true;
             T->secondVariable->properties.isNonlinear = true;
         }
@@ -256,6 +267,7 @@ void Problem::updateVariables()
         {
             V->properties.inObjectiveFunction = true;
             V->properties.inNonlinearExpression = true;
+
             V->properties.isNonlinear = true;
         }
     }
@@ -272,6 +284,8 @@ void Problem::updateVariables()
         {
             T->firstVariable->properties.inQuadraticConstraints = true;
             T->secondVariable->properties.inQuadraticConstraints = true;
+            T->firstVariable->properties.inQuadraticTerms = true;
+            T->secondVariable->properties.inQuadraticTerms = true;
             T->firstVariable->properties.isNonlinear = true;
             T->secondVariable->properties.isNonlinear = true;
         }
@@ -299,6 +313,23 @@ void Problem::updateVariables()
             V->properties.inNonlinearConstraints = true;
             V->properties.isNonlinear = true;
         }
+    }
+
+    nonlinearVariables.clear();
+    nonlinearExpressionVariables.clear();
+
+    for(auto& V : allVariables)
+    {
+        if(V->properties.isNonlinear)
+            nonlinearVariables.push_back(V);
+
+        if(V->properties.inNonlinearExpression)
+            nonlinearExpressionVariables.push_back(V);
+
+        assert(!V->properties.isNonlinear
+            || (V->properties.isNonlinear
+                   && (V->properties.inQuadraticTerms || V->properties.inMonomialTerms || V->properties.inSignomialTerms
+                          || V->properties.inNonlinearExpression)));
     }
 
     allVariables.takeOwnership(shared_from_this());
@@ -390,10 +421,8 @@ void Problem::updateProperties()
     properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
+    properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
-
-    properties.numberOfVariablesInNonlinearExpressions = std::count_if(nonlinearVariables.begin(),
-        nonlinearVariables.end(), [](auto V) { return (V->properties.inNonlinearExpression); });
 
     if(auxiliaryObjectiveVariable)
         properties.numberOfAuxiliaryVariables++;
@@ -576,10 +605,9 @@ void Problem::updateFactorableFunctions()
 
     factorableFunctionVariables = std::vector<CppAD::AD<double>>(properties.numberOfVariablesInNonlinearExpressions);
 
-    for(auto& V : nonlinearVariables)
+    for(auto& V : nonlinearExpressionVariables)
     {
-        if(!V->properties.inNonlinearExpression)
-            continue;
+        assert(V->properties.inNonlinearExpression);
 
         factorableFunctionVariables[nonlinearVariableCounter] = 3.0;
         V->factorableFunctionVariable = &factorableFunctionVariables[nonlinearVariableCounter];
@@ -635,6 +663,9 @@ Problem::~Problem()
     integerVariables.clear();
     semicontinuousVariables.clear();
     nonlinearVariables.clear();
+    nonlinearExpressionVariables.clear();
+
+    auxiliaryVariables.clear();
 
     variableLowerBounds.clear();
     variableUpperBounds.clear();
@@ -650,8 +681,6 @@ Problem::~Problem()
 
 void Problem::finalize()
 {
-    updateVariables();
-    updateConstraints();
     updateProperties();
     updateFactorableFunctions();
 

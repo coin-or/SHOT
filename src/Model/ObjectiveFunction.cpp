@@ -721,7 +721,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 
             std::vector<double> pointNonlinearSubset(numberOfNonlinearVariables, 0.0);
 
-            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+            for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
@@ -739,7 +739,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
                 if(coefficient == 0.0)
                     continue;
 
-                auto VAR = sharedOwnerProblem->nonlinearVariables[col[k]];
+                auto VAR = sharedOwnerProblem->nonlinearExpressionVariables[col[k]];
 
                 auto element = gradient.emplace(VAR, coefficient);
 
@@ -817,7 +817,7 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
             // the gradient may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
@@ -882,7 +882,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             std::vector<double> weights(sharedOwnerProblem->properties.numberOfNonlinearExpressions, 0.0);
             weights[this->nonlinearExpressionIndex] = 1.0;
 
-            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+            for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
@@ -981,7 +981,7 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
             // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
             // the hessian may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, true);

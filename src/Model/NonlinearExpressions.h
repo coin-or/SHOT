@@ -234,7 +234,7 @@ class ExpressionVariable : public NonlinearExpression
 public:
     VariablePtr variable;
 
-    ExpressionVariable(VariablePtr variable) : variable(variable) { variable->properties.isNonlinear = true; };
+    ExpressionVariable(VariablePtr variable) : variable(variable) {};
 
     inline double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
 
