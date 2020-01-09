@@ -243,6 +243,10 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
         stream << "(concave):";
         break;
 
+    case(E_Convexity::Nonconvex):
+        stream << "(nonconvex):";
+        break;
+
     default:
         stream << "(?):";
         break;
@@ -1034,12 +1038,13 @@ std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
     QuadraticObjectiveFunction::print(stream);
 
     if(monomialTerms.size() > 0)
-        stream << " +" << monomialTerms;
+        stream << monomialTerms;
 
     if(signomialTerms.size() > 0)
-        stream << " +" << signomialTerms;
+        stream << signomialTerms;
 
-    stream << " +" << nonlinearExpression;
+    if(nonlinearExpression != nullptr)
+        stream << " +(" << nonlinearExpression << ')';
 
     if(constant > 0)
         stream << '+' << constant;

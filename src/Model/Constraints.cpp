@@ -1102,7 +1102,7 @@ std::ostream& NonlinearConstraint::print(std::ostream& stream) const
         stream << signomialTerms;
 
     if(nonlinearExpression != nullptr)
-        stream << nonlinearExpression;
+        stream << " +(" << nonlinearExpression << ')';
 
     if(constant > 0)
         stream << " +" << constant;

@@ -564,7 +564,7 @@ public:
         return value;
     }
 
-    inline E_Convexity getConvexity() const override { return E_Convexity::Unknown; };
+    inline E_Convexity getConvexity() const override { return E_Convexity::Nonconvex; };
 
     inline E_Monotonicity getMonotonicity() const override { return E_Monotonicity::Unknown; };
 };
@@ -575,11 +575,11 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {
     if(term->coefficient == 1.0)
     {
-        stream << " +";
+        stream << " +1.0";
     }
     else if(term->coefficient == -1.0)
     {
-        stream << " -";
+        stream << " -1.0";
     }
     else if(term->coefficient == 0.0)
     {
