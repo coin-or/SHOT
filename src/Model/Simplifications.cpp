@@ -197,12 +197,12 @@ void simplifyNonlinearExpressions(
 
         for(auto& C : problem->numericConstraints)
         {
-            if(auto constraint = std::dynamic_pointer_cast<LinearConstraint>(C))
-                problem->linearConstraints.push_back(constraint);
+            if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
+                problem->nonlinearConstraints.push_back(constraint);
             else if(auto constraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
                 problem->quadraticConstraints.push_back(constraint);
-            else if(auto constraint = std::dynamic_pointer_cast<NonlinearConstraint>(C))
-                problem->nonlinearConstraints.push_back(constraint);
+            else if(auto constraint = std::dynamic_pointer_cast<LinearConstraint>(C))
+                problem->linearConstraints.push_back(constraint);
         }
     }
 
