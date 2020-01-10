@@ -87,6 +87,7 @@ private:
 
     void updateVariables();
     void updateConstraints();
+    void updateConvexity();
     void updateFactorableFunctions();
 
 public:
