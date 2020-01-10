@@ -167,7 +167,77 @@ void Problem::updateConstraints()
     this->objectiveFunction->takeOwnership(shared_from_this());
 
     for(auto& C : numericConstraints)
+    {
+        C->updateProperties();
         C->takeOwnership(shared_from_this());
+    }
+}
+
+void Problem::updateConvexity()
+{
+    bool assumeConvex = env->settings->getSetting<bool>("AssumeConvex", "Convexity");
+
+    if(assumeConvex && objectiveFunction->properties.convexity != E_Convexity::Linear)
+        objectiveFunction->properties.convexity
+            = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
+
+    for(auto& C : numericConstraints)
+    {
+        if(assumeConvex && C->properties.convexity != E_Convexity::Linear)
+            C->properties.convexity = E_Convexity::Convex;
+    }
+
+    if(assumeConvex)
+    {
+        properties.convexity = E_ProblemConvexity::Convex;
+    }
+    else
+    {
+        if(objectiveFunction->properties.isMinimize
+            && (objectiveFunction->properties.convexity == E_Convexity::Linear
+                   || objectiveFunction->properties.convexity == E_Convexity::Convex))
+        {
+            properties.convexity = E_ProblemConvexity::Convex;
+        }
+        else if(objectiveFunction->properties.isMaximize
+            && (objectiveFunction->properties.convexity == E_Convexity::Linear
+                   || objectiveFunction->properties.convexity == E_Convexity::Concave))
+        {
+            properties.convexity = E_ProblemConvexity::Convex;
+        }
+        else if(objectiveFunction->properties.convexity == E_Convexity::Nonconvex)
+        {
+            properties.convexity = E_ProblemConvexity::Nonconvex;
+        }
+        else if(objectiveFunction->properties.convexity == E_Convexity::Unknown)
+        {
+            properties.convexity = E_ProblemConvexity::Nonconvex;
+        }
+
+        if(properties.convexity == E_ProblemConvexity::Convex)
+        {
+            for(auto& C : quadraticConstraints)
+            {
+                if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
+                {
+                    properties.convexity = E_ProblemConvexity::Nonconvex;
+                    break;
+                }
+            }
+
+            if(properties.convexity != E_ProblemConvexity::Nonconvex)
+            {
+                for(auto& C : nonlinearConstraints)
+                {
+                    if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
+                    {
+                        properties.convexity = E_ProblemConvexity::Nonconvex;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 void Problem::updateVariables()
@@ -193,6 +263,7 @@ void Problem::updateVariables()
     if(variableBounds.size() != numVariables)
         variableBounds.resize(numVariables);
 
+    nonlinearVariables.clear();
     nonlinearExpressionVariables.clear();
 
     // Reset variable properties
@@ -315,9 +386,6 @@ void Problem::updateVariables()
         }
     }
 
-    nonlinearVariables.clear();
-    nonlinearExpressionVariables.clear();
-
     for(auto& V : allVariables)
     {
         if(V->properties.isNonlinear)
@@ -340,79 +408,11 @@ void Problem::updateVariables()
 
 void Problem::updateProperties()
 {
-    bool assumeConvex = env->settings->getSetting<bool>("AssumeConvex", "Convexity");
-
     objectiveFunction->updateProperties();
 
-    if(assumeConvex && objectiveFunction->properties.convexity != E_Convexity::Linear)
-    {
-        objectiveFunction->properties.convexity
-            = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
-    }
-
     updateConstraints();
-
-    for(auto& C : numericConstraints)
-    {
-        C->updateProperties();
-
-        if(assumeConvex && C->properties.convexity != E_Convexity::Linear)
-            C->properties.convexity = E_Convexity::Convex;
-    }
-
     updateVariables();
-
-    if(assumeConvex)
-    {
-        properties.convexity = E_ProblemConvexity::Convex;
-    }
-    else
-    {
-        if(objectiveFunction->properties.isMinimize
-            && (objectiveFunction->properties.convexity == E_Convexity::Linear
-                   || objectiveFunction->properties.convexity == E_Convexity::Convex))
-        {
-            properties.convexity = E_ProblemConvexity::Convex;
-        }
-        else if(objectiveFunction->properties.isMaximize
-            && (objectiveFunction->properties.convexity == E_Convexity::Linear
-                   || objectiveFunction->properties.convexity == E_Convexity::Concave))
-        {
-            properties.convexity = E_ProblemConvexity::Convex;
-        }
-        else if(objectiveFunction->properties.convexity == E_Convexity::Nonconvex)
-        {
-            properties.convexity = E_ProblemConvexity::Nonconvex;
-        }
-        else if(objectiveFunction->properties.convexity == E_Convexity::Unknown)
-        {
-            properties.convexity = E_ProblemConvexity::Nonconvex;
-        }
-
-        if(properties.convexity == E_ProblemConvexity::Convex)
-        {
-            for(auto& C : quadraticConstraints)
-            {
-                if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
-                {
-                    properties.convexity = E_ProblemConvexity::Nonconvex;
-                    break;
-                }
-            }
-
-            if(properties.convexity != E_ProblemConvexity::Nonconvex)
-            {
-                for(auto& C : nonlinearConstraints)
-                {
-                    if(C->properties.convexity != E_Convexity::Linear && C->properties.convexity != E_Convexity::Convex)
-                    {
-                        properties.convexity = E_ProblemConvexity::Nonconvex;
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    updateConvexity();
 
     properties.numberOfVariables = allVariables.size();
     properties.numberOfRealVariables = realVariables.size();
