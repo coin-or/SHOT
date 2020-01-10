@@ -17,50 +17,56 @@ namespace SHOT
 
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
-    stream << "[" << constraint.index << "]";
+    stream << "[" << constraint.index << "]\t";
 
     switch(constraint.properties.classification)
     {
     case(E_ConstraintClassification::Linear):
-        stream << "(L)   ";
+        stream << "(L,";
         break;
 
     case(E_ConstraintClassification::Quadratic):
-        stream << "(Q)   ";
+        stream << "(Q,";
         break;
 
     case(E_ConstraintClassification::QuadraticConsideredAsNonlinear):
     case(E_ConstraintClassification::Nonlinear):
-        stream << "(NL)  ";
+        stream << "(NL";
+        stream << (constraint.properties.hasQuadraticTerms ? "Q" : "");
+        stream << (constraint.properties.hasMonomialTerms ? "M" : "");
+        stream << (constraint.properties.hasSignomialTerms ? "S" : "");
+        stream << (constraint.properties.hasNonlinearExpression ? "E" : "");
+        stream << ",";
         break;
 
     default:
-        stream << "(?)   ";
+        stream << "(?,";
         break;
     }
-
-    if(constraint.name != "")
-        stream << ' ' << constraint.name;
 
     switch(constraint.properties.convexity)
     {
     case(E_Convexity::Linear):
-        stream << " (linear)";
+        stream << " linear)\t";
         break;
     case(E_Convexity::Convex):
-        stream << " (convex)";
+        stream << " convex)";
         break;
     case(E_Convexity::Nonconvex):
-        stream << " (nonconvex)";
+        stream << " nonconvex)";
         break;
     case(E_Convexity::NotSet):
     case(E_Convexity::Unknown):
+        stream << " unknown)";
         break;
     default:
         break;
     }
 
-    stream << ":\t";
+    if(constraint.name != "")
+        stream << '\t' << constraint.name;
+    else
+        stream << '\t';
 
     return constraint.print(stream); // polymorphic print via reference
 }
@@ -691,8 +697,12 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
-            // the gradient may be detected
+            assert(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions > 0);
+            assert(sharedOwnerProblem->properties.numberOfNonlinearExpressions > 0);
+            assert(this->nonlinearExpressionIndex >= 0);
+
+            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
+            // of the gradient may be detected
             auto nonlinearVariablesInExpressionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
