@@ -142,7 +142,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
         }
         else if(env->reformulatedProblem->properties.numberOfNonlinearConstraints == 0)
         {
-            combCurrSol = fmt::format("{:>12.2g} | {}", currentObjectiveValue, 0.0);
+            combCurrSol = fmt::format("{:>12g} | {}", currentObjectiveValue, 0.0);
         }
         else
         {
