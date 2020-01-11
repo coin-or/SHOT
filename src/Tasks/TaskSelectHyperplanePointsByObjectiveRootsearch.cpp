@@ -40,6 +40,9 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
 {
     env->timing->startTimer("DualObjectiveRootSearch");
 
+    if(sourcePoints.size() == 0)
+        return;
+
     bool useRootsearch = false;
 
     if(useRootsearch)
@@ -84,7 +87,7 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
     {
 
         if(env->solutionStatistics.numberOfIterationsWithDualStagnation > 2
-            && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex && sourcePoints.size() > 0)
+            && env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex)
         {
             Hyperplane hyperplane;
             hyperplane.isObjectiveHyperplane = true;
@@ -98,6 +101,24 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
             env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
 
             env->output->outputWarning("        Adding objective cutting plane since the dual has stagnated.");
+        }
+
+        bool isConvex = env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Linear
+            || ((env->reformulatedProblem->objectiveFunction->properties.isMinimize
+                    && env->reformulatedProblem->objectiveFunction->properties.convexity == E_Convexity::Convex)
+                   || (env->reformulatedProblem->objectiveFunction->properties.isMaximize
+                          && env->reformulatedProblem->objectiveFunction->properties.convexity
+                              == E_Convexity::Concave));
+
+        if(!isConvex && env->results->getCurrentIteration()->numHyperplanesAdded > 0)
+        {
+            // Nonconvex objective function, do not add a cut if not necessary
+            env->output->outputWarning("        No need to add cut to nonconvex objective function.");
+            return;
+        }
+        else
+        {
+            env->output->outputWarning("        Adding cut to nonconvex objective function.");
         }
 
         for(auto& SOLPT : sourcePoints)
