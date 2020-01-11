@@ -98,35 +98,42 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         std::string combDualCuts = "";
 
-        if(dualCutsAdded > 0)
+        if(lineType == E_IterationLineType::DualRepair)
+        {
+            combDualCuts = fmt::format("Repairs: {:<4d}", dualCutsAdded);
+        }
+        else if(dualCutsAdded > 0)
         {
             combDualCuts = fmt::format("{:>4d} | {:<6d}", dualCutsAdded, dualCutsTotal);
         }
 
         std::string combObjectiveValue;
-
-        if(lineType == E_IterationLineType::DualReductionCut)
+        if(env->problem->objectiveFunction->properties.isMinimize)
         {
-            combObjectiveValue
-                = fmt::format("Cutoff: {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
-        }
-        else if(lineType == E_IterationLineType::DualRepair)
-        {
-            combObjectiveValue = fmt::format("Repaired: {:<12d}", dualCutsAdded);
-        }
-        else
-        {
-            if(env->problem->objectiveFunction->properties.isMinimize)
+            if(lineType == E_IterationLineType::DualReductionCut)
+            {
+                combObjectiveValue
+                    = fmt::format("{:>12s} | {:<12s}", "", Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
+            }
+            else
             {
                 combObjectiveValue = fmt::format("{:>12s}{}| {:<12s}",
                     Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
                     Utilities::toStringFormat(primalObjectiveValue, "{:g}"));
             }
+        }
+        else
+        {
+            if(lineType == E_IterationLineType::DualReductionCut)
+            {
+                combObjectiveValue
+                    = fmt::format("{:>12s} | {:<12s}", Utilities::toStringFormat(primalObjectiveValue, "{:g}"), "");
+            }
             else
             {
-                combObjectiveValue = fmt::format("{:>12s} | {:<12s}{}",
-                    Utilities::toStringFormat(primalObjectiveValue, "{:g}"),
-                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*");
+                combObjectiveValue = fmt::format("{:>12s} |{}{:<12s}",
+                    Utilities::toStringFormat(primalObjectiveValue, "{:g}"), env->results->solutionIsGlobal ? " " : "*",
+                    Utilities::toStringFormat(dualObjectiveValue, "{:g}"));
             }
         }
 
@@ -152,14 +159,14 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(lineType == E_IterationLineType::DualRepair)
         {
-            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-                iterationDesc, totalTime, "", combObjectiveValue, "", "");
+            auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:^13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
+                iterationDesc, totalTime, combDualCuts, "", "", "");
             env->output->outputInfo(tmpLine);
         }
         else if(lineType == E_IterationLineType::DualReductionCut)
         {
             auto tmpLine = fmt::format("{:>6d}: {:<10s}{:^10.2f}{:>13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
-                iterationDesc, totalTime, combDualCuts, combObjectiveValue, "", "");
+                iterationDesc, totalTime, "", combObjectiveValue, "", "");
             env->output->outputInfo(tmpLine);
         }
         else
