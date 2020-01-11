@@ -113,12 +113,12 @@ void TaskSelectHyperplanePointsByObjectiveRootsearch::run(std::vector<SolutionPo
         if(!isConvex && env->results->getCurrentIteration()->numHyperplanesAdded > 0)
         {
             // Nonconvex objective function, do not add a cut if not necessary
-            env->output->outputWarning("        No need to add cut to nonconvex objective function.");
+            env->output->outputTrace("        No need to add cut to nonconvex objective function.");
             return;
         }
         else
         {
-            env->output->outputWarning("        Adding cut to nonconvex objective function.");
+            env->output->outputTrace("        Adding cut to nonconvex objective function.");
         }
 
         for(auto& SOLPT : sourcePoints)
