@@ -967,6 +967,25 @@ double Results::getPrimalBound()
 void Results::setPrimalBound(double value)
 {
     this->currentPrimalBound = value;
+
+    // In case we have crossover
+    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+    {
+        if(value < this->globalDualBound)
+        {
+            this->setDualBound(value);
+            this->globalDualBound = value;
+        }
+    }
+    else
+    {
+        if(value > this->globalDualBound)
+        {
+            this->setDualBound(value);
+            this->globalDualBound = value;
+        }
+    }
+
     env->dualSolver->cutOffToUse = value;
     env->dualSolver->useCutOff = true;
     env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
@@ -981,6 +1000,19 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 
 void Results::setDualBound(double value)
 {
+    double primalBound = this->getPrimalBound();
+
+    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+    {
+        if(value > primalBound)
+            value = primalBound;
+    }
+    else
+    {
+        if(value < primalBound)
+            value = primalBound;
+    }
+
     this->currentDualBound = value;
 
     if(this->solutionIsGlobal)
