@@ -1054,13 +1054,14 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 
     double objVal = NAN;
 
+    /* Does not seem to be true for nonconvex MIQCQP
     if(!isMIP && solIdx > 0) // LP problems only have one solution!
     {
         env->output->outputError(
             "Cannot obtain solution with index " + std::to_string(solIdx) + " since the problem is LP/QP!");
 
         return (objVal);
-    }
+    }*/
 
     try
     {
