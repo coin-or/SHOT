@@ -189,7 +189,7 @@ struct GeneratedHyperplane
     bool isSourceConvex = false;
     int iterationGenerated = -1;
 
-    std::size_t pointHash;
+    double pointHash;
 };
 
 struct SolutionStatistics

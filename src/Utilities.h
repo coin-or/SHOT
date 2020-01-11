@@ -107,7 +107,7 @@ template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElem
     }
 }
 
-std::size_t calculateHash(VectorDouble const& point);
+double calculateHash(VectorDouble const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 

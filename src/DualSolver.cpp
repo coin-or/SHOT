@@ -177,10 +177,20 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     if(!genHyperplane.isSourceConvex)
     {
         env->results->solutionIsGlobal = false;
-        env->output->outputDebug("Solution is no longer global");
+        env->output->outputDebug("     Solution is no longer global");
     }
 
     genHyperplane.pointHash = Utilities::calculateHash(hyperplane.generatedPoint);
+
+    if(hasHyperplaneBeenAdded(genHyperplane.pointHash, genHyperplane.sourceConstraintIndex))
+    {
+        env->output->outputTrace(fmt::format("     Not added hyperplane with hash {} to constraint {}",
+            genHyperplane.pointHash, genHyperplane.sourceConstraintIndex));
+        return;
+    }
+
+    env->output->outputTrace(fmt::format("     Added hyperplane with hash {} to constraint {}", genHyperplane.pointHash,
+        genHyperplane.sourceConstraintIndex));
 
     generatedHyperplanes.push_back(genHyperplane);
 
@@ -192,13 +202,14 @@ void DualSolver::addGeneratedHyperplane(const Hyperplane& hyperplane)
     env->output->outputTrace("     Hyperplane generated from: " + source);
 }
 
-bool DualSolver::hasHyperplaneBeenAdded(size_t hash, int constraintIndex)
+bool DualSolver::hasHyperplaneBeenAdded(double hash, int constraintIndex)
 {
-    return (false);
     for(auto& H : generatedHyperplanes)
     {
-        if(H.sourceConstraintIndex == constraintIndex && H.pointHash == hash)
+        if(H.sourceConstraintIndex == constraintIndex && Utilities::isAlmostEqual(H.pointHash, hash, 1e-8))
+        {
             return (true);
+        }
     }
 
     return (false);

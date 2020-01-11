@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <random>
 
 #include "Utilities.h"
 
@@ -488,14 +489,29 @@ VectorString getLinesInFile(const std::string& fileName)
     return (lines);
 }
 
-std::size_t calculateHash(VectorDouble const& point)
+auto randomNumberBetween = [](double low, double high) {
+    auto randomFunc = [distribution_ = std::uniform_real_distribution<double>(low, high),
+                          random_engine_ = std::mt19937 { std::random_device {}() }]() mutable {
+        return distribution_(random_engine_);
+    };
+    return randomFunc;
+};
+
+VectorDouble hashComparisonVector;
+
+double calculateHash(VectorDouble const& point)
 {
-    std::size_t seed = 0;
+    auto length = point.size();
 
-    for(auto& X : point)
-        boost::hash_combine(seed, X);
+    if(hashComparisonVector.size() < length)
+    {
+        std::generate_n(std::back_inserter(hashComparisonVector), length - hashComparisonVector.size(),
+            randomNumberBetween(1.0, 101.0));
+    }
 
-    return (seed);
+    double scalarProduct = std::inner_product(point.begin(), point.end(), hashComparisonVector.begin(), 0.0);
+
+    return (scalarProduct);
 }
 
 bool isAlmostEqual(double x, double y, const double epsilon) { return std::abs(x - y) <= epsilon * std::abs(x); }
