@@ -1302,14 +1302,14 @@ public:
 
     ExpressionAbs(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline double calculate(const VectorDouble& point) const override { return (abs(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (fabs(child->calculate(point))); }
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (abs(child->calculate(intervalVector)));
+        return (fabs(child->calculate(intervalVector)));
     }
 
-    inline Interval getBounds() const override { return (abs(child->getBounds())); }
+    inline Interval getBounds() const override { return (fabs(child->getBounds())); }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
