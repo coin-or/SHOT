@@ -59,6 +59,8 @@ public:
     bool wasInfeasibilityRepairSuccessful = false;
     int numberOfInfeasibilityRepairedConstraints = 0;
 
+    bool forceObjectiveReductionCut = false;
+
     std::vector<VectorDouble> hyperplanePoints;
 
     SolutionPoint getSolutionPointWithSmallestDeviation();

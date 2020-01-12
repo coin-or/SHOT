@@ -952,6 +952,22 @@ IterationPtr Results::getPreviousIteration()
         throw Exception("Only one iteration!");
 }
 
+std::optional<IterationPtr> Results::getLastFeasibleIteration()
+{
+    std::optional<IterationPtr> iteration;
+
+    for(auto I = iterations.rbegin(); I != iterations.rend(); ++I)
+    {
+        if(I->get()->solutionPoints.size() > 0)
+        {
+            iteration = *I;
+            break;
+        }
+    }
+
+    return iteration;
+}
+
 int Results::getNumberOfIterations() { return (iterations.size()); }
 
 double Results::getPrimalBound()

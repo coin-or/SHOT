@@ -51,6 +51,48 @@ void TaskRepairInfeasibleDualProblem::run()
         return;
     }
 
+    // Loop detection
+    if(auto optional = env->results->getLastFeasibleIteration();
+        env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate > 1 && optional)
+    {
+        bool noNewSolutions = true;
+
+        for(auto& SCURR : currIter->solutionPoints)
+        {
+            bool solutionFound = false;
+
+            for(auto& SFEAS : optional->get()->solutionPoints)
+            {
+                if(SCURR.hashValue == SFEAS.hashValue)
+                {
+                    solutionFound = true;
+                    break;
+                }
+            }
+
+            if(!solutionFound)
+            {
+                noNewSolutions = false;
+                break;
+            }
+        }
+
+        if(noNewSolutions)
+        {
+            currIter->forceObjectiveReductionCut = true;
+            env->tasks->setNextTask(taskIDIfFalse);
+
+            std::stringstream tmpType;
+            tmpType << "REP-LOOP";
+
+            env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"),
+                currIter->numberOfInfeasibilityRepairedConstraints, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0,
+                currIter->maxDeviation, E_IterationLineType::DualRepair, true);
+
+            return;
+        }
+    }
+
     auto currentSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
 
     currIter->hasInfeasibilityRepairBeenPerformed = true;

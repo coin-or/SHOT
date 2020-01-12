@@ -65,6 +65,7 @@ public:
     void createIteration();
     IterationPtr getCurrentIteration();
     IterationPtr getPreviousIteration();
+    std::optional<IterationPtr> getLastFeasibleIteration();
     std::vector<IterationPtr> iterations;
     int getNumberOfIterations();
 

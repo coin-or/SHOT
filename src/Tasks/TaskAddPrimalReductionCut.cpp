@@ -64,7 +64,11 @@ void TaskAddPrimalReductionCut::run()
 
     auto currIter = env->results->getCurrentIteration(); // The solved iteration
 
-    if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && !currIter->wasInfeasibilityRepairSuccessful)
+    if(currIter->forceObjectiveReductionCut)
+    {
+    }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible
+        && !currIter->wasInfeasibilityRepairSuccessful)
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;

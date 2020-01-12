@@ -127,6 +127,7 @@ struct SolutionPoint
     int iterFound;
     PairIndexValue maxDeviation;
     bool isRelaxedPoint = false;
+    double hashValue;
 };
 
 struct InteriorPoint
