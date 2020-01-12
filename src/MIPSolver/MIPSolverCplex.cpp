@@ -766,6 +766,31 @@ bool MIPSolverCplex::repairInfeasibility()
             }
         }
 
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorDouble weights(relax.getSize());
+
+            for(int i = 0; i < relax.getSize(); i++)
+                weights[i] = relax[i];
+
+            VectorString constraints(cplexConstrs.getSize());
+
+            for(int i = 0; i < cplexConstrs.getSize(); i++)
+            {
+                std::ostringstream expression;
+                expression << cplexConstrs[i];
+                constraints[i] = expression.str();
+            }
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repairedweights.txt";
+            Utilities::saveVariablePointVectorToFile(weights, constraints, ss.str());
+        }
+
         if(cplexInstance.feasOpt(cplexConstrs, relax))
         {
             IloNumArray infeas(cplexEnv);

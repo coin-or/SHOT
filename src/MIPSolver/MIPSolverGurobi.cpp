@@ -808,6 +808,25 @@ bool MIPSolverGurobi::repairInfeasibility()
             }
         }
 
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorString constraints(relaxParameters.size());
+
+            for(size_t i = 0; i < relaxParameters.size(); i++)
+            {
+                std::ostringstream expression;
+                constraints[i] = repairConstraints[i].get(GRB_StringAttr_ConstrName);
+            }
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repairedweights.txt";
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
+        }
+
         // Gurobi modifies the value when running feasModel.optimize()
         int numConstraintsToRepairOrig = numConstraintsToRepair;
 

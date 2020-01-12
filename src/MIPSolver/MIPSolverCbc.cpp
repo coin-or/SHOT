@@ -613,6 +613,25 @@ bool MIPSolverCbc::repairInfeasibility()
             }
         }
 
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorString constraints(relaxParameters.size());
+
+            for(size_t i = 0; i < relaxParameters.size(); i++)
+            {
+                std::ostringstream expression;
+                constraints[i] = osiInterface->getRowName(repairConstraints[i]);
+            }
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repairedweights.txt";
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
+        }
+
         double tmpCoefficient[1] = { -1.0 };
 
         for(int i = 0; i < numConstraintsToRepair; i++)
