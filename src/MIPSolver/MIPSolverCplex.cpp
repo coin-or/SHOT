@@ -735,7 +735,8 @@ bool MIPSolverCplex::repairInfeasibility()
         IloNumArray relax(cplexEnv);
 
         int numCurrConstraints = cplexConstrs.getSize();
-        int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
+        int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints
+            + env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints;
 
         relax.add(numOrigConstraints, 0.0);
 
@@ -774,7 +775,7 @@ bool MIPSolverCplex::repairInfeasibility()
 
             int numRepairs = 0;
 
-            for(int i = numOrigConstraints; i < infeas.getSize(); i++)
+            for(int i = numOrigConstraints; i < numCurrConstraints; i++)
             {
                 if(infeas[i] > 1e-10) // Cplex does not accept too small values, so zero cannot be used
                 {
@@ -782,6 +783,7 @@ bool MIPSolverCplex::repairInfeasibility()
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
                     double newRHS = cplexConstrs[i].getUB() + 1.5 * infeas[i];
+
                     cplexConstrs[i].setUB(newRHS);
                 }
                 else if(infeas[i] < -1e-10) // Should not happen for generated cuts
