@@ -972,18 +972,18 @@ void Results::setPrimalBound(double value)
     if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
     {
         if(value < this->globalDualBound)
-        {
-            this->setDualBound(value);
             this->globalDualBound = value;
-        }
+
+        if(value < this->currentDualBound)
+            this->currentDualBound = this->globalDualBound;
     }
     else
     {
         if(value > this->globalDualBound)
-        {
-            this->setDualBound(value);
             this->globalDualBound = value;
-        }
+
+        if(value > this->currentDualBound)
+            this->currentDualBound = this->globalDualBound;
     }
 
     env->dualSolver->cutOffToUse = value;
