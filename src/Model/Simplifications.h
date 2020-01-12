@@ -526,6 +526,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> expression)
 {
+    if(expression->getNumberOfChildren() == 1)
+        return (expression->children[0]);
+
     double constant = 0.0;
 
     NonlinearExpressions children;
@@ -576,6 +579,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProduct> expression)
 {
+    if(expression->getNumberOfChildren() == 1)
+        return (expression->children[0]);
+
     double constant = 1.0;
 
     NonlinearExpressions children;
