@@ -24,7 +24,8 @@ enum class E_AuxiliaryVariableType
     BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
     BinaryContinuousOrIntegerBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or
                                        // integer
-    IntegerBilinear // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
+    IntegerBilinear, // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
+    AbsoluteValue // From rewriting an absolute value
 };
 
 enum class E_Convexity
