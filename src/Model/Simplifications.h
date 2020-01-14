@@ -39,6 +39,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionConst
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionVariable> expression)
 {
+    if(expression->variable->lowerBound == expression->variable->upperBound)
+        return (std::make_shared<ExpressionConstant>(expression->variable->lowerBound));
+
     return (expression);
 }
 
@@ -673,8 +676,9 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
     switch(expression->getType())
     {
     case E_NonlinearExpressionTypes::Constant:
-    case E_NonlinearExpressionTypes::Variable:
         break;
+    case E_NonlinearExpressionTypes::Variable:
+        return simplifyExpression(std::dynamic_pointer_cast<ExpressionVariable>(expression));
     case E_NonlinearExpressionTypes::Negate:
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionNegate>(expression));
     case E_NonlinearExpressionTypes::Invert:
