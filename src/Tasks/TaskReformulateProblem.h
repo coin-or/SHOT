@@ -87,6 +87,9 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
+    NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
+
     AuxiliaryVariablePtr getBilinearAuxiliaryVariable(VariablePtr firstVariable, VariablePtr secondVariable);
 
     void addBilinearMcCormickEnvelope(

@@ -916,25 +916,52 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         }
     }
 
+    NonlinearExpressionPtr destinationExpression;
+
     if(C->properties.hasNonlinearExpression)
     {
         auto sourceConstraint = std::dynamic_pointer_cast<NonlinearConstraint>(C);
 
+        // Now trying to reformulate the nonlinear expression
+        auto reformulatedExpression = simplify(reformulateNonlinearExpression(
+            copyNonlinearExpression(sourceConstraint->nonlinearExpression.get(), reformulatedProblem)));
+
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
+            = extractTermsAndConstant(reformulatedExpression, true, true, true);
+
+        if(tmpLinearTerms.size() > 0)
+            destinationLinearTerms.add(tmpLinearTerms);
+
+        if(tmpQuadraticTerms.size() > 0)
+            destinationQuadraticTerms.add(tmpQuadraticTerms);
+
+        if(tmpMonomialTerms.size() > 0)
+            destinationMonomialTerms.add(tmpMonomialTerms);
+
+        if(tmpSignomialTerms.size() > 0)
+            destinationSignomialTerms.add(tmpSignomialTerms);
+
+        destinationExpression = tmpNonlinearExpression;
+    }
+
+    if(destinationExpression)
+    {
         if(static_cast<ES_PartitionNonlinearSums>(
                env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
                 == ES_PartitionNonlinearSums::Always
-            && sourceConstraint->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+            && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             auto tmpLinearTerms = partitionNonlinearSum(
-                std::dynamic_pointer_cast<ExpressionSum>(sourceConstraint->nonlinearExpression), isSignReversed);
+                std::dynamic_pointer_cast<ExpressionSum>(destinationExpression), isSignReversed);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
                     env->settings->getSetting<int>("Reformulation.Constraint.PartitionNonlinearTerms", "Model"))
                 == ES_PartitionNonlinearSums::IfConvex
-            && sourceConstraint->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Sum)
+            && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
-            auto sum = std::dynamic_pointer_cast<ExpressionSum>(sourceConstraint->nonlinearExpression);
+            auto sum = std::dynamic_pointer_cast<ExpressionSum>(destinationExpression);
             bool areAllConvex = false;
 
             if(!isSignReversed && sum->checkAllForConvexityType(E_Convexity::Convex))
@@ -952,8 +979,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
                 copyOriginalNonlinearExpression = true;
             }
         }
-        else if(sourceConstraint->nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant
-            && std::dynamic_pointer_cast<ExpressionConstant>(sourceConstraint->nonlinearExpression)->constant == 0.0)
+        else if(destinationExpression->getType() == E_NonlinearExpressionTypes::Constant
+            && std::dynamic_pointer_cast<ExpressionConstant>(destinationExpression)->constant == 0.0)
         {
             // Nonlinear expression is constant zero
         }
@@ -1124,7 +1151,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
         constraint->properties.classification = E_ConstraintClassification::QuadraticConsideredAsNonlinear;
     }
-    else if(destinationQuadraticTerms.getConvexity() != E_Convexity::Convex)
+    else if(destinationQuadraticTerms.getConvexity() != E_Convexity::Convex && !useNonconvexQuadraticConstraints)
     // We have a quadratic constraint, but it will be considered as nonlinear since it is nonconvex
     {
         constraint = std::make_shared<NonlinearConstraint>(C->index, C->name, valueLHS, valueRHS);
@@ -1157,11 +1184,9 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         if(isSignReversed)
             std::dynamic_pointer_cast<NonlinearConstraint>(constraint)
-                ->add(simplify(std::make_shared<ExpressionNegate>(
-                    copyNonlinearExpression(sourceConstraint->nonlinearExpression.get(), reformulatedProblem))));
+                ->add(simplify(std::make_shared<ExpressionNegate>(destinationExpression)));
         else
-            std::dynamic_pointer_cast<NonlinearConstraint>(constraint)
-                ->add(copyNonlinearExpression(sourceConstraint->nonlinearExpression.get(), reformulatedProblem));
+            std::dynamic_pointer_cast<NonlinearConstraint>(constraint)->add(destinationExpression);
     }
 
     resultingConstraints.insert(resultingConstraints.begin(), constraint);
@@ -2130,6 +2155,205 @@ void TaskReformulateProblem::copySignomialTermsToObjectiveFunction(
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destination)
             ->add(std::make_shared<SignomialTerm>(signCoefficient * ST->coefficient, elements));
     }
+}
+
+NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(NonlinearExpressionPtr source)
+{
+    switch(source->getType())
+    {
+    case E_NonlinearExpressionTypes::Constant:
+    case E_NonlinearExpressionTypes::Variable:
+        break;
+    /*case E_NonlinearExpressionTypes::Negate:
+        std::dynamic_pointer_cast<ExpressionNegate>(source)->child
+            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionNegate>(source)->child);
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionNegate>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Invert:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionInvert>(source)));
+        break;
+    case E_NonlinearExpressionTypes::SquareRoot:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquareRoot>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Square:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquare>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Log:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionLog>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Exp:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionExp>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Cos:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionCos>(source)));
+        break;
+    case E_NonlinearExpressionTypes::ArcCos:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcCos>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Sin:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSin>(source)));
+        break;
+    case E_NonlinearExpressionTypes::ArcSin:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcSin>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Tan:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionTan>(source)));
+        break;
+    case E_NonlinearExpressionTypes::ArcTan:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionArcTan>(source)));
+        break;*/
+    case E_NonlinearExpressionTypes::Negate:
+    case E_NonlinearExpressionTypes::Invert:
+    case E_NonlinearExpressionTypes::SquareRoot:
+    case E_NonlinearExpressionTypes::Square:
+    case E_NonlinearExpressionTypes::Log:
+    case E_NonlinearExpressionTypes::Exp:
+    case E_NonlinearExpressionTypes::Cos:
+    case E_NonlinearExpressionTypes::ArcCos:
+    case E_NonlinearExpressionTypes::Sin:
+    case E_NonlinearExpressionTypes::ArcSin:
+    case E_NonlinearExpressionTypes::Tan:
+    case E_NonlinearExpressionTypes::ArcTan:
+        std::dynamic_pointer_cast<ExpressionUnary>(source)->child
+            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionUnary>(source)->child);
+        break;
+    case E_NonlinearExpressionTypes::Abs:
+        return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionAbs>(source)));
+        break;
+    case E_NonlinearExpressionTypes::Divide:
+        std::dynamic_pointer_cast<ExpressionDivide>(source)->firstChild
+            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionDivide>(source)->firstChild);
+        std::dynamic_pointer_cast<ExpressionDivide>(source)->secondChild
+            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionDivide>(source)->secondChild);
+        break;
+    case E_NonlinearExpressionTypes::Power:
+        std::dynamic_pointer_cast<ExpressionPower>(source)->firstChild
+            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionPower>(source)->firstChild);
+        std::dynamic_pointer_cast<ExpressionPower>(source)->secondChild
+            = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionPower>(source)->secondChild);
+        break;
+    case E_NonlinearExpressionTypes::Sum:
+        for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(source)->children)
+            C = reformulateNonlinearExpression(C);
+        break;
+    case E_NonlinearExpressionTypes::Product:
+        for(auto& C : std::dynamic_pointer_cast<ExpressionProduct>(source)->children)
+            C = reformulateNonlinearExpression(C);
+        break;
+    }
+
+    return (source);
+}
+
+NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source)
+{
+    auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
+        = extractTermsAndConstant(source->child, true, true, true);
+
+    auto bounds = source->getBounds();
+
+    NumericConstraintPtr auxConstraint1;
+    NumericConstraintPtr auxConstraint2;
+
+    if(tmpMonomialTerms.size() > 0 || tmpSignomialTerms.size() > 0 || tmpNonlinearExpression)
+    {
+        auxConstraint1 = std::make_shared<NonlinearConstraint>(
+            auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_1", SHOT_DBL_MIN, 0.0);
+        auxConstraint1->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraintCounter++;
+
+        auxConstraint2 = std::make_shared<NonlinearConstraint>(
+            auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_2", SHOT_DBL_MIN, 0.0);
+        auxConstraint2->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraintCounter++;
+    }
+    else if(tmpQuadraticTerms.size() > 0)
+    {
+        auxConstraint1 = std::make_shared<QuadraticConstraint>(
+            auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_1", SHOT_DBL_MIN, 0.0);
+        auxConstraint1->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraintCounter++;
+
+        auxConstraint2 = std::make_shared<QuadraticConstraint>(
+            auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_2", SHOT_DBL_MIN, 0.0);
+        auxConstraint2->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraintCounter++;
+    }
+    else
+    {
+        auxConstraint1 = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_1", SHOT_DBL_MIN, 0.0);
+        auxConstraint1->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraintCounter++;
+
+        auxConstraint2 = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_cabs_" + std::to_string(auxConstraintCounter) + "_2", SHOT_DBL_MIN, 0.0);
+        auxConstraint2->properties.classification = E_ConstraintClassification::Nonlinear;
+        auxConstraintCounter++;
+    }
+
+    // The child is nonlinear
+    auto auxVariable = std::make_shared<AuxiliaryVariable>("s_abs_" + std::to_string(auxVariableCounter + 1),
+        auxVariableCounter, E_VariableType::Real, bounds.l(), bounds.u());
+    auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::AbsoluteValue;
+    auxVariableCounter++;
+
+    if(tmpConstant > 0)
+    {
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = tmpConstant;
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->constant = -tmpConstant;
+    }
+
+    if(tmpLinearTerms.size() > 0)
+    {
+        std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->add(tmpLinearTerms);
+
+        copyLinearTermsToConstraint(tmpLinearTerms, std::dynamic_pointer_cast<LinearConstraint>(auxConstraint2), true);
+    }
+
+    if(tmpQuadraticTerms.size() > 0)
+    {
+        std::dynamic_pointer_cast<QuadraticConstraint>(auxConstraint1)->add(tmpQuadraticTerms);
+
+        copyQuadraticTermsToConstraint(
+            tmpQuadraticTerms, std::dynamic_pointer_cast<QuadraticConstraint>(auxConstraint2), true);
+    }
+
+    if(tmpMonomialTerms.size() > 0)
+    {
+        std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraint1)->add(tmpMonomialTerms);
+
+        copyMonomialTermsToConstraint(
+            tmpMonomialTerms, std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraint2), true);
+    }
+
+    if(tmpSignomialTerms.size() > 0)
+    {
+        std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraint1)->add(tmpSignomialTerms);
+
+        copySignomialTermsToConstraint(
+            tmpSignomialTerms, std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraint2), true);
+    }
+
+    if(tmpNonlinearExpression)
+    {
+        std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraint1)
+            ->add(copyNonlinearExpression(tmpNonlinearExpression.get(), reformulatedProblem));
+        std::dynamic_pointer_cast<NonlinearConstraint>(auxConstraint2)
+            ->add(std::make_shared<ExpressionNegate>(
+                copyNonlinearExpression(tmpNonlinearExpression.get(), reformulatedProblem)));
+    }
+
+    std::dynamic_pointer_cast<LinearConstraint>(auxConstraint1)->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+    std::dynamic_pointer_cast<LinearConstraint>(auxConstraint2)->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+
+    auxVariable->nonlinearExpression = copyNonlinearExpression(source.get(), reformulatedProblem);
+
+    reformulatedProblem->add(auxVariable);
+    reformulatedProblem->add(auxConstraint1);
+    reformulatedProblem->add(auxConstraint2);
+
+    return (std::make_shared<ExpressionVariable>(auxVariable));
 }
 
 AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
