@@ -236,6 +236,12 @@ public:
 
     ExpressionVariable(VariablePtr variable) : variable(variable) {};
 
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        ownerProblem = owner;
+        assert(variable->ownerProblem.lock().get() == owner.get());
+    }
+
     inline double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
 
     inline Interval calculate(const IntervalVector& intervalVector) const override

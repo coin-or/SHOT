@@ -90,6 +90,8 @@ private:
     void updateConvexity();
     void updateFactorableFunctions();
 
+    bool verifyOwnership();
+
 public:
     EnvironmentPtr env;
 

@@ -683,6 +683,7 @@ void Problem::finalize()
 {
     updateProperties();
     updateFactorableFunctions();
+    assert(verifyOwnership());
 
     // Do not do bound tightening on problems solved by MIP solver
     if(this->properties.numberOfNonlinearConstraints > 0
@@ -1928,5 +1929,154 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
     }
 
     return stream;
+}
+
+bool Problem::verifyOwnership()
+{
+    if(std::any_of(allVariables.begin(), allVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(realVariables.begin(), realVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(binaryVariables.begin(), binaryVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(integerVariables.begin(), integerVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(semicontinuousVariables.begin(), semicontinuousVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(nonlinearVariables.begin(), nonlinearVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(nonlinearExpressionVariables.begin(), nonlinearExpressionVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(auxiliaryVariables.begin(), auxiliaryVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(auxiliaryObjectiveVariable && auxiliaryObjectiveVariable->ownerProblem.lock().get() != this)
+        return (false);
+
+    if(objectiveFunction->ownerProblem.lock().get() != this)
+        return (false);
+
+    if(auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction))
+    {
+        if(std::any_of(objective->monomialTerms.begin(), objective->monomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->signomialTerms.begin(), objective->signomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->variablesInMonomialTerms.begin(), objective->variablesInMonomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->variablesInSignomialTerms.begin(), objective->variablesInSignomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->variablesInNonlinearExpression.begin(),
+               objective->variablesInNonlinearExpression.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    if(auto objective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction))
+    {
+        if(std::any_of(objective->linearTerms.begin(), objective->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->quadraticTerms.begin(), objective->quadraticTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    auto objective = std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction);
+
+    if(std::any_of(objective->linearTerms.begin(), objective->linearTerms.end(),
+           [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(numericConstraints.begin(), numericConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(linearConstraints.begin(), linearConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(quadraticConstraints.begin(), quadraticConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(nonlinearConstraints.begin(), nonlinearConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    for(auto& C : linearConstraints)
+    {
+        if(std::any_of(C->linearTerms.begin(), C->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    for(auto& C : quadraticConstraints)
+    {
+        if(std::any_of(C->linearTerms.begin(), C->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->quadraticTerms.begin(), C->quadraticTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    for(auto& C : nonlinearConstraints)
+    {
+        if(std::any_of(C->linearTerms.begin(), C->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->quadraticTerms.begin(), C->quadraticTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->monomialTerms.begin(), C->monomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->signomialTerms.begin(), C->signomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->variablesInMonomialTerms.begin(), C->variablesInMonomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->variablesInSignomialTerms.begin(), C->variablesInSignomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->variablesInNonlinearExpression.begin(), C->variablesInNonlinearExpression.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    return (true);
 }
 } // namespace SHOT
