@@ -1285,6 +1285,11 @@ int MIPSolverGurobi::getNumberOfExploredNodes()
     }
 }
 
+std::string MIPSolverGurobi::getSolverVersion()
+{
+    return (fmt::format("{}.{}", std::to_string(GRB_VERSION_MAJOR), std::to_string(GRB_VERSION_MINOR)));
+}
+
 GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr) : env(envPtr) {}
 
 // Used to get the number of open nodes

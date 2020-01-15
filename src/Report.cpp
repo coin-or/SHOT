@@ -10,7 +10,9 @@
 
 #include "Report.h"
 
+#include "DualSolver.h"
 #include "Iteration.h"
+#include "MIPSolver/IMIPSolver.h"
 #include "Output.h"
 #include "Results.h"
 #include "Settings.h"
@@ -475,7 +477,8 @@ void Report::outputOptionsReport()
         break;
     }
 
-    report << "  - solver:                  " << dualSolver << "\r\n";
+    report << "  - solver:                  " << dualSolver << " " << env->dualSolver->MIPSolver->getSolverVersion()
+           << "\r\n";
 
     report << "\r\n";
 

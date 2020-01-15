@@ -1497,4 +1497,17 @@ int MIPSolverCplex::getNumberOfOpenNodes()
         return 0;
     }
 }
+
+std::string MIPSolverCplex::getSolverVersion()
+{
+    std::string version = std::to_string(cplexInstance.getVersionNumber());
+    std::string major = version.substr(0, 2);
+    std::string minor = version.substr(2, 2);
+
+    if(minor.substr(0, 1) == "0")
+        minor = minor.substr(1, 1);
+
+    return (fmt::format("{}.{}", major, minor));
+}
+
 } // namespace SHOT

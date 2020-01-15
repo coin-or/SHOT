@@ -1177,4 +1177,6 @@ int MIPSolverCbc::getNumberOfExploredNodes()
         return 0;
     }
 }
+
+std::string MIPSolverCbc::getSolverVersion() { return (CBC_VERSION); }
 } // namespace SHOT

@@ -142,6 +142,8 @@ public:
         return (MIPSolverBase::getConstraintIdentifier(source));
     };
 
+    std::string getSolverVersion() override;
+
     std::shared_ptr<GRBEnv> gurobiEnv;
     std::shared_ptr<GRBModel> gurobiModel;
     GRBLinExpr objectiveLinearExpression;
