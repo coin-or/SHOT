@@ -327,6 +327,36 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("description", "The number of primal solutions found");
     otherResultsNode->InsertEndChild(otherNode);
 
+    auto dualSolver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    std::string dualSolverName;
+
+#ifdef HAS_CPLEX
+    if(dualSolver == ES_MIPSolver::Cplex)
+    {
+        dualSolverName = "CPLEX";
+    }
+#endif
+
+#ifdef HAS_GUROBI
+    if(dualSolver == ES_MIPSolver::Gurobi)
+    {
+        dualSolverName = "Gurobi";
+    }
+#endif
+
+#ifdef HAS_CBC
+    if(dualSolver == ES_MIPSolver::Cbc)
+    {
+        dualSolverName = "Cbc";
+    }
+#endif
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "DualSolver");
+    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
+    otherNode->SetAttribute("description", "The dual solver used");
+    otherResultsNode->InsertEndChild(otherNode);
+
     for(auto& S : this->primalSolutionSourceStatistics)
     {
         otherNode = osrlDocument.NewElement("other");
