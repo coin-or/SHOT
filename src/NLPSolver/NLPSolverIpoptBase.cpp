@@ -120,8 +120,8 @@ bool IpoptProblem::get_list_of_nonlinear_variables(
 }
 
 // returns the initial point for the problem
-bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[maybe_unused]] Number* x, bool init_z,
-    [[maybe_unused]] Number* z_L, [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m,
+bool IpoptProblem::get_starting_point(Index n, [[maybe_unused]] bool init_x, [[maybe_unused]] Number* x,
+    [[maybe_unused]] bool init_z, [[maybe_unused]] Number* z_L, [[maybe_unused]] Number* z_U, [[maybe_unused]] Index m,
     [[maybe_unused]] bool init_lambda, [[maybe_unused]] Number* lambda)
 {
     assert(init_x == true);
