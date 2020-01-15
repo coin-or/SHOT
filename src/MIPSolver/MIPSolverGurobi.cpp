@@ -411,6 +411,7 @@ void MIPSolverGurobi::initializeSolverSettings()
                 GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
         }
 
+#if GRB_VERSION_MAJOR >= 9
         // Supports nonconvex MIQCQP
         if(static_cast<ES_QuadraticProblemStrategy>(
                env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
@@ -418,6 +419,7 @@ void MIPSolverGurobi::initializeSolverSettings()
         {
             gurobiModel->getEnv().set(GRB_IntParam_NonConvex, 2);
         }
+#endif
     }
     catch(GRBException& e)
     {
@@ -752,7 +754,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
             gurobiModel->update();
 
-            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+            if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
+                env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
     }
 
