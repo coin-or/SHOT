@@ -14,6 +14,7 @@
 #include "Iteration.h"
 #include "MIPSolver/IMIPSolver.h"
 #include "Output.h"
+#include "PrimalSolver.h"
 #include "Results.h"
 #include "Settings.h"
 #include "TaskHandler.h"
@@ -490,12 +491,14 @@ void Report::outputOptionsReport()
         report << "none";
         break;
     case(ES_PrimalNLPSolver::GAMS):
-        report << "GAMS (";
+        report << "GAMS ";
+        report << env->results->usedPrimalNLPSolverVersion;
+        report << " (";
         report << env->settings->getSetting<std::string>("GAMS.NLP.Solver", "Subsolver");
         report << ")\r\n";
         break;
     case(ES_PrimalNLPSolver::Ipopt):
-        report << "Ipopt ";
+        report << "Ipopt " << env->results->usedPrimalNLPSolverVersion << " ";
 
         switch(static_cast<ES_IpoptSolver>(env->settings->getSetting<int>("Ipopt.LinearSolver", "Subsolver")))
         {

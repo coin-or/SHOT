@@ -18,7 +18,7 @@ namespace SHOT
 class INLPSolver
 {
 public:
-    INLPSolver(EnvironmentPtr envPtr) : env(envPtr){};
+    INLPSolver(EnvironmentPtr envPtr) : env(envPtr) {};
 
     virtual ~INLPSolver() = default;
 
@@ -44,6 +44,8 @@ public:
 
     virtual void updateVariableLowerBound(int variableIndex, double bound) = 0;
     virtual void updateVariableUpperBound(int variableIndex, double bound) = 0;
+
+    virtual std::string getSolverVersion() = 0;
 
 protected:
     virtual E_NLPSolutionStatus solveProblemInstance() = 0;

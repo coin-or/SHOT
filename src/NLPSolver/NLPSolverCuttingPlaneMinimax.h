@@ -49,6 +49,8 @@ public:
 
     void saveProblemToFile(std::string fileName) override;
 
+    std::string getSolverVersion() override { return (""); };
+
 private:
     std::unique_ptr<IMIPSolver> LPSolver;
     ProblemPtr sourceProblem;

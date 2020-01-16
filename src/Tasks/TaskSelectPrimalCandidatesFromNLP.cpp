@@ -54,6 +54,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     {
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
         NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, env->problem);
+        env->results->usedPrimalNLPSolverVersion = NLPSolver->getSolverVersion();
         break;
     }
 #endif

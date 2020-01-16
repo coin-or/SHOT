@@ -52,6 +52,8 @@ public:
     void updateVariableLowerBound(int variableIndex, double bound) override;
     void updateVariableUpperBound(int variableIndex, double bound) override;
 
+    std::string getSolverVersion() override { return (GAMSMAJOR + "." + GAMSMINOR); };
+
 protected:
     E_NLPSolutionStatus solveProblemInstance() override;
 
