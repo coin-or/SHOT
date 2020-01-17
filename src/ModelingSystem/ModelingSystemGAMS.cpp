@@ -22,7 +22,7 @@
 
 #include "GamsNLinstr.h"
 #ifdef GAMS_BUILD
-extern "C" void HSLInit();
+#include "GamsLicensing.h"
 #endif
 
 #ifdef HAS_STD_FILESYSTEM
@@ -73,12 +73,11 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
 
 #ifdef GAMS_BUILD
     assert(pal != nullptr);
-    if(palLicenseCheckSubSys(pal, const_cast<char*>("IP")) == 0)
-    {
-        /* IPOPTH is licensed: use HSL MA27 and make it available */
+    GAMSinitLicensing(modelingObject, pal);
+
+    /* if IPOPTH is licensed, use MA27, otherwise Mumps */
+    if(GAMSHSLInit(modelingObject, pal))
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
-        HSLInit();
-    }
     else
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
 #endif
@@ -158,7 +157,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
     if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
     {
         /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
-        if(palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) != 0)
+        if(!GAMScheckCPLEXLicense(pal, true))
         {
             env->output->outputInfo(
                 " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
