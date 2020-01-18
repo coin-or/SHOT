@@ -407,6 +407,25 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
         Utilities::writeStringToFile(filename.str(), problem.str());
     }
 
+    // Do not do convexifying reformulations if the problem is assumed to be convex
+    if(env->settings->getSetting<bool>("AssumeConvex", "Convexity"))
+    {
+        env->settings->updateSetting(
+            "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+
+        env->settings->updateSetting(
+            "Reformulation.Monomials.Formulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
+    }
+
+#ifdef HAS_CBC
+    // TODO: figure out a better way to do this
+    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
+    {
+        env->settings->updateSetting(
+                "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+    }
+#endif
+
     auto taskReformulateProblem = std::make_unique<TaskReformulateProblem>(env);
     taskReformulateProblem->run();
 
