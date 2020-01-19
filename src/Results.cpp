@@ -357,6 +357,12 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("description", "The dual solver used");
     otherResultsNode->InsertEndChild(otherNode);
 
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "FixedNLPSolver");
+    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
+    otherNode->SetAttribute("description", "The dual solver used");
+    otherResultsNode->InsertEndChild(otherNode);
+
     for(auto& S : this->primalSolutionSourceStatistics)
     {
         otherNode = osrlDocument.NewElement("other");
