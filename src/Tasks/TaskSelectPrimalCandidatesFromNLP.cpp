@@ -491,6 +491,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
                 env->dualSolver->integerCutWaitingList.emplace_back(ones, zeroes);
             }
         }
+        else
+        {
+            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP, ("NLP" + sourceDesc),
+                env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
+                NAN, E_IterationLineType::PrimalNLP);
+        }
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;
         env->solutionStatistics.timeLastFixedNLPCall = env->timing->getElapsedTime("Total");
