@@ -372,6 +372,14 @@ void Problem::updateVariables()
 
     for(auto& C : nonlinearConstraints)
     {
+        for(auto& T : C->quadraticTerms)
+        {
+            T->firstVariable->properties.inQuadraticTerms = true;
+            T->secondVariable->properties.inQuadraticTerms = true;
+            T->firstVariable->properties.isNonlinear = true;
+            T->secondVariable->properties.isNonlinear = true;
+        }
+
         for(auto& V : C->variablesInMonomialTerms)
         {
             V->properties.inMonomialTerms = true;
