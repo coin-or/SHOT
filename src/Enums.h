@@ -353,8 +353,8 @@ enum class ES_ReformulationBinaryMonomials
 enum class ES_ReformulatiomBilinearInteger
 {
     None,
-    OneDiscretization,
-    TwoDiscretization
+    OneDiscretization //,
+    // TwoDiscretization
 };
 
 enum class ES_PartitionNonlinearSums
