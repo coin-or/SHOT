@@ -52,8 +52,9 @@ int main(int argc, char* argv[])
     fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile;
 
     // Read or create the file for the log
-    if(cmdl("--log") >> filename) // Have specified a log-file
+    if(cmdl("--log")) // Have specified a log-file
     {
+        filename = cmdl("--log").str();
         logFile = fs::filesystem::current_path() / fs::filesystem::path(filename);
         solver.setLogFile(logFile.string());
     }
@@ -152,8 +153,9 @@ int main(int argc, char* argv[])
 
     bool defaultOptionsGenerated = false;
 
-    if(cmdl("--opt") >> filename) // Have specified a opt-file
+    if(cmdl("--opt")) // Have specified a opt-file
     {
+        filename = cmdl("--opt").str();
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path(filename);
 
         if(fs::filesystem::exists(filepath))
@@ -187,8 +189,9 @@ int main(int argc, char* argv[])
             env->output->outputInfo("  Default options file written to: " + filepath.string());
         }
     }
-    else if(cmdl("--osol") >> filename) // Have specified a OSoL-file
+    else if(cmdl("--osol")) // Have specified a OSoL-file
     {
+        filename = cmdl("--osol").str();
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path(filename);
 
         if(fs::filesystem::exists(filepath))
@@ -253,8 +256,9 @@ int main(int argc, char* argv[])
         solver.updateSetting("Debug.Enable", "Output", true);
 
     std::string debugPath;
-    if(cmdl("--debug") >> debugPath)
+    if(cmdl("--debug"))
     {
+        debugPath = cmdl("--debug").str();
         solver.updateSetting("Debug.Enable", "Output", true);
         solver.updateSetting("Debug.Path", "Output", debugPath);
     }
@@ -465,14 +469,14 @@ int main(int argc, char* argv[])
         }
     }
 
-    // Read problem file
-
-    if(!cmdl(1) || !(cmdl(1) >> filename))
+    if(!cmdl(1))
     {
         env->output->outputCritical("  No problem file specified.\r\n");
         env->output->outputCritical("  Try 'SHOT --help' for more information.");
         return (0);
     }
+
+    filename = cmdl[1];
 
     if(!fs::filesystem::exists(filename))
     {
@@ -503,22 +507,25 @@ int main(int argc, char* argv[])
     // Define result file locations
 
     std::string osrlFilename;
-    if(cmdl("--osrl") >> osrlFilename) // Have specified a OSrL-file location
+    if(cmdl("--osrl")) // Have specified a OSrL-file location
     {
+        osrlFilename = cmdl("--osrl").str();
         resultFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(osrlFilename);
     }
 
     std::string trcFilename;
-    if(cmdl("--trc") >> trcFilename) // Have specified a trace-file location
+    if(cmdl("--trc")) // Have specified a trace-file location
     {
+        trcFilename = cmdl("--trc").str();
         traceFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(trcFilename);
     }
 
     std::string solFilename;
-    if(cmdl("--sol") >> solFilename) // Have specified an sol-file location
+    if(cmdl("--sol")) // Have specified an sol-file location
     {
+        solFilename = cmdl("--sol").str();
         solFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(solFilename);
     }
