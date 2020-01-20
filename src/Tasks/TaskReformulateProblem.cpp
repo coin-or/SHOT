@@ -1516,7 +1516,22 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->index);
         auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->index);
 
-        if(T->isSquare && allTermsAreBinary) // Square term b^2 -> b
+        if(T->firstVariable->upperBound > 1e15 || T->secondVariable->upperBound > 1e15
+            || T->firstVariable->lowerBound < -1e15 || T->secondVariable->lowerBound < -1e15)
+        {
+            // The transformations does not work well with large bounds
+            if(reversedSigns)
+            {
+                resultQuadraticTerms.add(
+                    std::make_shared<QuadraticTerm>(-1.0 * T->coefficient, firstVariable, secondVariable));
+            }
+            else
+            {
+                resultQuadraticTerms.add(
+                    std::make_shared<QuadraticTerm>(T->coefficient, firstVariable, secondVariable));
+            }
+        }
+        else if(T->isSquare && allTermsAreBinary) // Square term b^2 -> b
         {
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
         }
@@ -1585,142 +1600,41 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
             reformulatedProblem->add(std::move(auxConstraint1));
             reformulatedProblem->add(std::move(auxConstraint2));
         }
-        else if(T->isBilinear && T->firstVariable->properties.type == E_VariableType::Integer
-            && T->secondVariable->properties.type == E_VariableType::Integer /*&& T->firstVariable->lowerBound >= 0
-            && T->secondVariable->lowerBound >= 0*/
-            && T->firstVariable->upperBound <= 200 && T->secondVariable->upperBound <= 200)
-        // bilinear term i1*i2
+        else if(T->isBilinear
+            && (T->firstVariable->properties.type == E_VariableType::Integer
+                   || T->secondVariable->properties.type == E_VariableType::Integer))
+        // bilinear term i1*i2 or i1*x2
         {
-            // This formulation does not work for variables with negative bounds, so disabling it for now
-            /*
-            if(env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation", "Model")
-                == static_cast<int>(ES_ReformulatiomBilinearInteger::TwoDiscretization))
-            {
-                auto auxVariable = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
-
-                resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
-
-                Variables firstBinaries;
-                Variables secondBinaries;
-
-                auto auxFirstSum = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_bli" + std::to_string(auxConstraintCounter), 1.0, 1.0);
-                auxConstraintCounter++;
-
-                auto auxFirstSumVarDef = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_blx" + std::to_string(auxConstraintCounter), 0, 0);
-                auxConstraintCounter++;
-
-                auxFirstSumVarDef->add(std::make_shared<LinearTerm>(-1.0, firstVariable));
-
-                for(auto i = 0; i <= firstVariable->upperBound; i++)
-                {
-                    auto auxBinary
-                        = std::make_shared<AuxiliaryVariable>("s_bli" + std::to_string(auxVariableCounter + 1),
-                            auxVariableCounter, E_VariableType::Binary, 0.0, 1.0);
-
-                    auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
-                    auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));
-
-                    firstBinaries.push_back(auxBinary);
-                    auxVariableCounter++;
-                }
-
-                auto auxSecondSum = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_blj" + std::to_string(auxConstraintCounter), 1.0, 1.0);
-                auxConstraintCounter++;
-
-                auto auxSecondSumVarDef = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_bly" + std::to_string(auxConstraintCounter), 0, 0);
-                auxConstraintCounter++;
-
-                auxSecondSumVarDef->add(std::make_shared<LinearTerm>(-1.0, secondVariable));
-
-                for(auto i = 0; i <= secondVariable->upperBound; i++)
-                {
-                    auto auxBinary
-                        = std::make_shared<AuxiliaryVariable>("s_blj" + std::to_string(auxVariableCounter + 1),
-                            auxVariableCounter, E_VariableType::Binary, 0.0, 1.0);
-
-                    auxSecondSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
-                    auxSecondSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));
-
-                    secondBinaries.push_back(auxBinary);
-                    auxVariableCounter++;
-                }
-
-                for(auto i = 0; i <= firstVariable->upperBound; i++)
-                {
-                    for(auto j = 0; j <= secondVariable->upperBound; j++)
-                    {
-                        double ijprod = -1.0 * coeffSign * signfactor * i * j;
-
-                        if(coeffSign * signfactor == -1.0)
-                        {
-                            auto auxConstraint = std::make_shared<LinearConstraint>(auxConstraintCounter,
-                                "s_blwn" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN,
-                                -ijprod + 2 * firstVariable->upperBound * secondVariable->upperBound);
-
-                            auxConstraintCounter++;
-
-                            auxConstraint->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-                            auxConstraint->add(std::make_shared<LinearTerm>(
-                                firstVariable->upperBound * secondVariable->upperBound - ijprod, firstBinaries[i]));
-                            auxConstraint->add(std::make_shared<LinearTerm>(
-                                firstVariable->upperBound * secondVariable->upperBound - ijprod, secondBinaries[j]));
-
-                            reformulatedProblem->add(std::move(auxConstraint));
-                        }
-                        else
-                        {
-                            auto auxConstraint = std::make_shared<LinearConstraint>(auxConstraintCounter,
-                                "s_blwp" + std::to_string(auxConstraintCounter), ijprod, SHOT_DBL_MAX);
-
-                            auxConstraintCounter++;
-
-                            auxConstraint->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-                            auxConstraint->add(std::make_shared<LinearTerm>(ijprod, firstBinaries[i]));
-                            auxConstraint->add(std::make_shared<LinearTerm>(ijprod, secondBinaries[j]));
-
-                            reformulatedProblem->add(std::move(auxConstraint));
-                        }
-                    }
-                }
-
-                for(auto& V : firstBinaries)
-                    reformulatedProblem->add(std::move(V));
-
-                for(auto& V : secondBinaries)
-                    reformulatedProblem->add(std::move(V));
-
-                reformulatedProblem->add(std::move(auxFirstSum));
-                reformulatedProblem->add(std::move(auxFirstSumVarDef));
-                reformulatedProblem->add(std::move(auxSecondSum));
-                reformulatedProblem->add(std::move(auxSecondSumVarDef));
-            }
-            else if(env->settings->getSetting<int>("Reformulation.Bilinear.IntegerFormulation", "Model")
-                == static_cast<int>(ES_ReformulatiomBilinearInteger::OneDiscretization))
-            {
-                */
             VariablePtr discretizationVariable;
             VariablePtr nonDiscretizationVariable;
             Variables discretizationBinaries;
 
-            bool foundFirstVariable
-                = (integerAuxiliaryBinaryVariables.find(firstVariable) != integerAuxiliaryBinaryVariables.end());
-            bool foundSecondVariable
-                = (integerAuxiliaryBinaryVariables.find(secondVariable) != integerAuxiliaryBinaryVariables.end());
+            bool foundFirstVariable = false;
+            bool foundSecondVariable = false;
+            bool firstVariableIsDiscrete = false;
+
+            if(firstVariable->properties.type == E_VariableType::Binary
+                || firstVariable->properties.type == E_VariableType::Integer)
+            {
+                foundFirstVariable
+                    = (integerAuxiliaryBinaryVariables.find(firstVariable) != integerAuxiliaryBinaryVariables.end());
+                firstVariableIsDiscrete = true;
+            }
+
+            if(secondVariable->properties.type == E_VariableType::Binary
+                || secondVariable->properties.type == E_VariableType::Integer)
+            {
+                foundSecondVariable
+                    = (integerAuxiliaryBinaryVariables.find(secondVariable) != integerAuxiliaryBinaryVariables.end());
+            }
+
+            bool firstVariableSmallerDomain = (firstVariable->upperBound - firstVariable->lowerBound
+                < secondVariable->upperBound - secondVariable->lowerBound);
 
             if(foundFirstVariable && foundSecondVariable)
             {
-                discretizationVariable = (firstVariable->upperBound - firstVariable->lowerBound
-                                             < secondVariable->upperBound - secondVariable->lowerBound)
-                    ? firstVariable
-                    : secondVariable;
-                nonDiscretizationVariable = (firstVariable->upperBound - firstVariable->lowerBound
-                                                < secondVariable->upperBound - secondVariable->lowerBound)
-                    ? secondVariable
-                    : firstVariable;
+                discretizationVariable = firstVariableSmallerDomain ? firstVariable : secondVariable;
+                nonDiscretizationVariable = firstVariableSmallerDomain ? secondVariable : firstVariable;
 
                 discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
             }
@@ -1738,13 +1652,18 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
                 discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
             }
-            else
+            else // Need to create binary variables and SOS1 constraint
             {
-                discretizationVariable
-                    = (firstVariable->upperBound < secondVariable->upperBound) ? firstVariable : secondVariable;
-
-                nonDiscretizationVariable
-                    = (firstVariable->upperBound < secondVariable->upperBound) ? secondVariable : firstVariable;
+                if(firstVariableIsDiscrete && firstVariableSmallerDomain)
+                {
+                    discretizationVariable = firstVariable;
+                    nonDiscretizationVariable = secondVariable;
+                }
+                else
+                {
+                    discretizationVariable = secondVariable;
+                    nonDiscretizationVariable = firstVariable;
+                }
 
                 auto auxFirstSum = std::make_shared<LinearConstraint>(
                     auxConstraintCounter, "s_bli" + std::to_string(auxConstraintCounter), 1.0, 1.0);
