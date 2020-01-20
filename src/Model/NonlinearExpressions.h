@@ -1874,15 +1874,7 @@ public:
             if(std::modf(constantValue, &intpart) == 0.0)
             {
                 int power = (int)constantValue;
-
-                FactorableFunction result = firstChild->getFactorableFunction();
-
-                for(int i = 1; i < power; i++)
-                {
-                    result *= firstChild->getFactorableFunction();
-                }
-
-                return (result);
+                return (CppAD::pow(firstChild->getFactorableFunction(), power));
             }
         }
 
