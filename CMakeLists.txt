@@ -24,7 +24,14 @@ else()
   message(SEND_ERROR "SHOT needs support for C++17 filesystem.")
 endif()
 
-# Sets the release types, e.g. Release, Debug: set(CMAKE_BUILD_TYPE Debug)
+# Sets the release types, e.g. Release, Debug:
+
+# set(CMAKE_BUILD_TYPE Debug)
+
+# Asserts enabled in CppAD otherwise
+if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
+  add_definitions(-DNDEBUG)
+endif()
 
 option(COMPILE_TESTS "Should the automated tests be compiled" OFF)
 
@@ -35,29 +42,42 @@ option(HAS_AMPL "Should the AMPL .nl interface be build" ON)
 
 # GAMS
 option(HAS_GAMS "Is GAMS available" ON)
-set(GAMS_DIR "/opt/gams/gams27.3" CACHE STRING "The base directory where GAMS is located (if available)")
+set(GAMS_DIR
+    "/opt/gams/gams27.3"
+    CACHE STRING "The base directory where GAMS is located (if available)")
 
 # CPLEX
 option(HAS_CPLEX "Is Cplex available" ON)
-set(CPLEX_DIR "/opt/ibm/ILOG/CPLEX_Studio129" CACHE STRING "The base directory where CPLEX is located (if available)")
+set(CPLEX_DIR
+    "/opt/ibm/ILOG/CPLEX_Studio129"
+    CACHE STRING "The base directory where CPLEX is located (if available)")
 
 # Gurobi
 option(HAS_GUROBI "Is Gurobi available" ON)
-set(GUROBI_DIR "/opt/gurobi/gurobi810" CACHE STRING "The base directory where Gurobi is located (if available)")
+set(GUROBI_DIR
+    "/opt/gurobi/gurobi810"
+    CACHE STRING "The base directory where Gurobi is located (if available)")
 
 # Cbc
 option(HAS_CBC "Is Cbc available" ON)
-set(CBC_DIR "/opt/Cbc-2.10" CACHE STRING "The base directory where Cbc is located (if available).")
+set(CBC_DIR
+    "/opt/Cbc-2.10"
+    CACHE STRING "The base directory where Cbc is located (if available).")
 
 # Ipopt
 option(HAS_IPOPT "Is Ipopt available" ON)
-set(IPOPT_DIR "/opt/ipopt" CACHE STRING "The base directory where Ipopt is located (if available).")
+set(IPOPT_DIR
+    "/opt/ipopt"
+    CACHE STRING "The base directory where Ipopt is located (if available).")
 
 # Create also the executable
-option(GENERATE_EXE "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
-       ON)
+option(
+  GENERATE_EXE
+  "Should the SHOT executable be generated (requires at least that either OS or GAMS is available)"
+  ON)
 
-# External libraries; these are included in SHOT's source tree, and should not need to be modified
+# External libraries; these are included in SHOT's source tree, and should not
+# need to be modified
 set(AMPL_DIR "ThirdParty/ampl")
 set(ARGH_DIR "ThirdParty/argh")
 set(BOOST_DIR "ThirdParty/boost")
@@ -104,7 +124,8 @@ mark_as_advanced(SHOT_VERSION_MAJOR
                  SHOT_VERSION_MINOR
                  SHOT_VERSION_PATCH
                  GITHASH)
-configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in" "${PROJECT_BINARY_DIR}/SHOTConfig.h")
+configure_file("${PROJECT_SOURCE_DIR}/src/SHOTConfig.h.in"
+               "${PROJECT_BINARY_DIR}/SHOTConfig.h")
 include_directories("${PROJECT_BINARY_DIR}")
 
 # Makes sure the provided directories are in CMake format
@@ -254,42 +275,68 @@ file(GLOB_RECURSE
 
 if(HAS_CBC)
   if(CBC_FOUND)
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
+    set(SOURCES ${SOURCES}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.cpp")
     set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCbc.h")
   endif(CBC_FOUND)
 endif(HAS_CBC)
 
 if(HAS_CPLEX)
   if(CPLEX_FOUND)
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
+    set(SOURCES ${SOURCES}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
+    set(SOURCES ${SOURCES}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.cpp")
 
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.cpp")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.h")
+    set(SOURCES
+        ${SOURCES}
+        "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.cpp")
+    set(HEADERS
+        ${HEADERS}
+        "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTree.h")
 
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTreeLegacy.cpp")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTreeLegacy.h")
+    set(
+      SOURCES
+      ${SOURCES}
+      "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTreeLegacy.cpp")
+    set(HEADERS ${HEADERS}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
+    set(HEADERS ${HEADERS}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplex.h")
+    set(HEADERS
+        ${HEADERS}
+        "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCplexSingleTreeLegacy.h")
   endif(CPLEX_FOUND)
 endif(HAS_CPLEX)
 
 if(HAS_GUROBI)
   if(GUROBI_FOUND)
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
-    set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.cpp")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
-    set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.h")
+    set(SOURCES ${SOURCES}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.cpp")
+    set(SOURCES ${SOURCES}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.cpp")
+    set(SOURCES
+        ${SOURCES}
+        "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.cpp")
+    set(HEADERS ${HEADERS}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCallbackBase.h")
+    set(HEADERS ${HEADERS}
+                "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobi.h")
+    set(HEADERS
+        ${HEADERS}
+        "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverGurobiSingleTree.h")
   endif(GUROBI_FOUND)
 endif(HAS_GUROBI)
 
 if(HAS_IPOPT)
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
+  set(SOURCES ${SOURCES}
+              "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.cpp")
+  set(SOURCES ${SOURCES}
+              "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.cpp")
+  set(HEADERS ${HEADERS}
+              "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptBase.h")
+  set(HEADERS ${HEADERS}
+              "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverIpoptRelaxed.h")
 endif(HAS_IPOPT)
 
 if(HAS_AMPL)
@@ -303,17 +350,23 @@ if(HAS_AMPL)
       "${AMPL_DIR}/src/posix.cc"
       "${AMPL_DIR}/src/problem.cc"
       "${AMPL_DIR}/src/os.cc")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h" "${AMPL_DIR}/include/mp/*.h")
+  set(HEADERS ${HEADERS}
+              "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.h"
+              "${AMPL_DIR}/include/mp/*.h")
 endif(HAS_AMPL)
 
 if(HAS_GAMS)
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gmomcc.c")
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/gevmcc.c")
   set(SOURCES ${SOURCES} "${GAMS_DIR}/apifiles/C/api/palmcc.c")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp")
-  set(SOURCES ${SOURCES} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.cpp")
-  set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h")
+  set(SOURCES ${SOURCES}
+              "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.cpp")
+  set(SOURCES ${SOURCES}
+              "${PROJECT_SOURCE_DIR}/src/ModelingSystem/EntryPointsGAMS.cpp")
+  set(SOURCES ${SOURCES}
+              "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.cpp")
+  set(HEADERS ${HEADERS}
+              "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/NLPSolver/NLPSolverGAMS.h")
   set(HEADERS ${HEADERS} "${PROJECT_SOURCE_DIR}/src/GAMS/GamsNLinstr.h")
 endif(HAS_GAMS)
@@ -357,7 +410,10 @@ if(MSVC)
 endif(MSVC)
 
 if(HAS_CPLEX)
-  if(NOT (CPLEX_FOUND) OR NOT (CPLEX_CONCERT_FOUND) OR NOT (CPLEX_ILOCPLEX_FOUND))
+  if(NOT
+     (CPLEX_FOUND)
+     OR NOT (CPLEX_CONCERT_FOUND)
+     OR NOT (CPLEX_ILOCPLEX_FOUND))
     message("-- CPLEX libraries could not be found!")
   else()
 
@@ -424,7 +480,8 @@ if(HAS_CBC)
     target_link_libraries(SHOTSolver ${CBC_LIBRARIES})
     target_compile_options(SHOTSolver PUBLIC ${CBC_CFLAGS_OTHER})
 
-    message("-- The following Cbc libraries will be used from: ${CBC_LIBRARY_DIRS}")
+    message(
+      "-- The following Cbc libraries will be used from: ${CBC_LIBRARY_DIRS}")
     message("   ${CBC_LIBRARIES}")
   endif()
 endif(HAS_CBC)
@@ -470,7 +527,9 @@ endif(HAS_GAMS)
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 # Add a target to generate API documentation with Doxygen
-option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation(requires Doxygen)" ${DOXYGEN_FOUND})
+option(BUILD_DOCUMENTATION
+       "Create and install the HTML based API documentation(requires Doxygen)"
+       ${DOXYGEN_FOUND})
 
 if(BUILD_DOCUMENTATION)
   find_package(Doxygen)
