@@ -121,6 +121,113 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
+        else if(C->valueLHS == C->valueRHS
+            && ((C->properties.convexity == E_Convexity::Convex
+                    && C->properties.monotonicity == E_Monotonicity::Nondecreasing)
+                   || (C->properties.convexity == E_Convexity::Concave
+                          && C->properties.monotonicity == E_Monotonicity::Nonincreasing)))
+        {
+            // Will rewrite as ()^2 <=c^2
+
+            auto auxConstraint = std::make_shared<NonlinearConstraint>(
+                this->numericConstraints.size(), C->name + "_eqrf", SHOT_DBL_MIN, C->valueRHS * C->valueRHS);
+
+            auxConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
+
+            if(C->constant != 0.0)
+                auxConstraint->add(std::make_shared<ExpressionConstant>(C->constant));
+
+            if(C->properties.hasLinearTerms)
+            {
+                for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
+                {
+                    if(LT->coefficient == 1.0)
+                        auxConstraint->add(std::make_shared<ExpressionVariable>(LT->variable));
+                    else
+                    {
+                        auxConstraint->add(
+                            std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(LT->coefficient),
+                                std::make_shared<ExpressionVariable>(LT->variable)));
+                    }
+                }
+            }
+
+            if(C->properties.hasQuadraticTerms)
+            {
+                for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
+                {
+                    NonlinearExpressions product;
+
+                    if(QT->coefficient != 1.0)
+                        product.push_back(std::make_shared<ExpressionConstant>(QT->coefficient));
+
+                    product.push_back(std::make_shared<ExpressionVariable>(QT->firstVariable));
+                    product.push_back(std::make_shared<ExpressionVariable>(QT->secondVariable));
+
+                    C->add(std::make_shared<ExpressionProduct>(product));
+                }
+            }
+
+            if(C->properties.hasMonomialTerms)
+            {
+                for(auto& MT : std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms)
+                {
+                    NonlinearExpressions product;
+
+                    if(MT->coefficient != 1.0)
+                        product.push_back(std::make_shared<ExpressionConstant>(MT->coefficient));
+
+                    for(auto& VAR : MT->variables)
+                        product.push_back(std::make_shared<ExpressionVariable>(VAR));
+
+                    C->add(std::make_shared<ExpressionProduct>(product));
+                }
+            }
+
+            if(C->properties.hasSignomialTerms)
+            {
+                for(auto& ST : std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms)
+                {
+                    NonlinearExpressions product;
+
+                    if(ST->coefficient != 1.0)
+                        product.push_back(std::make_shared<ExpressionConstant>(ST->coefficient));
+
+                    for(auto& E : ST->elements)
+                    {
+                        if(E->power == 1.0)
+                            product.push_back(std::make_shared<ExpressionVariable>(E->variable));
+                        else if(E->power == 2.0)
+                            product.push_back(
+                                std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(E->variable)));
+                        else
+                            product.push_back(
+                                std::make_shared<ExpressionPower>(std::make_shared<ExpressionVariable>(E->variable),
+                                    std::make_shared<ExpressionConstant>(E->power)));
+                    }
+
+                    C->add(std::make_shared<ExpressionProduct>(product));
+                }
+            }
+
+            if(C->properties.hasNonlinearExpression)
+            {
+                auxConstraint->add(copyNonlinearExpression(
+                    std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), this));
+            }
+
+            auxConstraint->nonlinearExpression = std::make_shared<ExpressionSquare>(auxConstraint->nonlinearExpression);
+
+            auxConstraint->ownerProblem = C->ownerProblem;
+
+            auxConstraint->updateProperties();
+
+            // We know this is a convex constraint
+            auxConstraint->properties.convexity = E_Convexity::Convex;
+            auxConstraints.push_back(auxConstraint);
+
+            std::cout << "hej\n";
+        }
         else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
         {
             double valueLHS = C->valueLHS;

@@ -262,6 +262,7 @@ void LinearConstraint::updateProperties()
 
     properties.convexity = E_Convexity::Linear;
     properties.classification = E_ConstraintClassification::Linear;
+    properties.monotonicity = linearTerms.getMonotonicity();
 }
 
 void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
@@ -451,6 +452,7 @@ void QuadraticConstraint::updateProperties()
 
     auto convexity = quadraticTerms.getConvexity();
     properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+    properties.monotonicity = Utilities::combineMonotonicity(properties.monotonicity, quadraticTerms.getMonotonicity());
 }
 
 void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
@@ -1018,6 +1020,18 @@ void NonlinearConstraint::updateProperties()
     {
         properties.hasSignomialTerms = false;
     }
+
+    if(properties.hasMonomialTerms)
+        properties.monotonicity
+            = Utilities::combineMonotonicity(properties.monotonicity, monomialTerms.getMonotonicity());
+
+    if(properties.hasSignomialTerms)
+        properties.monotonicity
+            = Utilities::combineMonotonicity(properties.monotonicity, signomialTerms.getMonotonicity());
+
+    if(properties.hasNonlinearExpression)
+        properties.monotonicity
+            = Utilities::combineMonotonicity(properties.monotonicity, nonlinearExpression->getMonotonicity());
 
     std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
         [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {

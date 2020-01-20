@@ -126,24 +126,10 @@ protected:
 
     void updateMonotonicity()
     {
-        bool areAllNonincreasing = true;
-        bool areAllNondecreasing = true;
+        monotonicity = E_Monotonicity::Constant;
 
         for(auto& TERM : *this)
-        {
-            auto monotonicity = TERM->getMonotonicity();
-            areAllNonincreasing = areAllNonincreasing
-                && (monotonicity == E_Monotonicity::Nonincreasing || monotonicity == E_Monotonicity::Constant);
-            areAllNondecreasing = areAllNondecreasing
-                && (monotonicity == E_Monotonicity::Nondecreasing || monotonicity == E_Monotonicity::Constant);
-        }
-
-        if(areAllNonincreasing)
-            monotonicity = E_Monotonicity::Nonincreasing;
-        else if(areAllNondecreasing)
-            monotonicity = E_Monotonicity::Nondecreasing;
-        else
-            monotonicity = E_Monotonicity::Unknown;
+            monotonicity = Utilities::combineMonotonicity(monotonicity, TERM->getMonotonicity());
     };
 
 public:

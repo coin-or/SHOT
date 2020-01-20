@@ -127,4 +127,6 @@ SparseVariableMatrix combineSparseVariableMatrices(
     const SparseVariableMatrix& first, const SparseVariableMatrix& second, const SparseVariableMatrix& third);
 
 E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second);
+
+E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonicity second);
 } // namespace SHOT::Utilities

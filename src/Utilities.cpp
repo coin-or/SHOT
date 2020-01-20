@@ -678,6 +678,9 @@ SparseVariableMatrix combineSparseVariableMatrices(
 
 E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
 {
+    if(first == E_Convexity::NotSet && second == E_Convexity::NotSet)
+        return E_Convexity::NotSet;
+
     if(first == E_Convexity::Unknown || second == E_Convexity::Unknown)
         return E_Convexity::Unknown;
 
@@ -697,6 +700,28 @@ E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second)
         return E_Convexity::Concave;
 
     return E_Convexity::Linear;
+}
+
+E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonicity second)
+{
+    if(first == E_Monotonicity::NotSet && second == E_Monotonicity::NotSet)
+        return E_Monotonicity::NotSet;
+
+    if(first == E_Monotonicity::Unknown || second == E_Monotonicity::Unknown)
+        return E_Monotonicity::Unknown;
+
+    if(first == E_Monotonicity::Constant && second == E_Monotonicity::Constant)
+        return E_Monotonicity::Constant;
+
+    if((first == E_Monotonicity::Nondecreasing || first == E_Monotonicity::Constant)
+        && (second == E_Monotonicity::Nondecreasing || second == E_Monotonicity::Constant))
+        return E_Monotonicity::Nondecreasing;
+
+    if((first == E_Monotonicity::Nonincreasing || first == E_Monotonicity::Constant)
+        && (second == E_Monotonicity::Nonincreasing || second == E_Monotonicity::Constant))
+        return E_Monotonicity::Nonincreasing;
+
+    return E_Monotonicity::Unknown;
 }
 
 } // namespace SHOT::Utilities
