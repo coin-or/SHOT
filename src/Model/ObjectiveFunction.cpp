@@ -9,7 +9,10 @@
 */
 
 #include "ObjectiveFunction.h"
+
+#include "../Environment.h"
 #include "Problem.h"
+#include "../Settings.h"
 #include "../Utilities.h"
 
 namespace SHOT
@@ -204,7 +207,7 @@ void LinearObjectiveFunction::initializeGradientSparsityPattern()
             continue;
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->variable);
     }
 }
@@ -428,11 +431,11 @@ void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
             continue;
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->firstVariable);
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->secondVariable);
     }
 }
@@ -782,6 +785,23 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 {
     QuadraticObjectiveFunction::initializeGradientSparsityPattern();
 
+    bool debug = false;
+    std::stringstream stream;
+    std::stringstream filename;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        if(sharedOwnerProblem->env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            debug = true;
+
+            filename << sharedOwnerProblem->env->settings->getSetting<std::string>("Debug.Path", "Output");
+
+            for(auto& V : *gradientSparsityPattern)
+                stream << V->name << '\n';
+        }
+    }
+
     if(this->properties.hasMonomialTerms)
     {
         for(auto& T : monomialTerms)
@@ -793,7 +813,12 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             {
                 if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
                     == gradientSparsityPattern->end())
+                {
                     gradientSparsityPattern->push_back(V);
+
+                    if(debug)
+                        stream << "(monomial) " << V->name << '\n';
+                }
             }
         }
     }
@@ -809,7 +834,12 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             {
                 if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
                     == gradientSparsityPattern->end())
+                {
                     gradientSparsityPattern->push_back(E->variable);
+
+                    if(debug)
+                        stream << "(signomial) " << E->variable->name << '\n';
+                }
             }
         }
     }
@@ -818,13 +848,12 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-
             assert(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions > 0);
             assert(sharedOwnerProblem->properties.numberOfNonlinearExpressions > 0);
             assert(this->nonlinearExpressionIndex >= 0);
 
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
-            // the gradient may be detected
+            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
+            // of the gradient may be detected
             auto nonlinearVariablesInExpressionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
@@ -851,13 +880,30 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
                     {
                         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
                             == gradientSparsityPattern->end())
+                        {
                             gradientSparsityPattern->push_back(VAR);
+
+                            if(debug)
+                                stream << "(nonlinear expr) " << VAR->name << '\n';
+                        }
 
                         continue;
                     }
                 }
             }
         }
+    }
+
+    if(debug)
+    {
+        filename << "/sparsitypattern_jacobian_objective";
+
+        if(properties.isReformulated)
+            filename << "_ref";
+
+        filename << ".txt";
+
+        Utilities::writeStringToFile(filename.str(), stream.str());
     }
 
     nonlinearGradientSparsityMapGenerated = true;
