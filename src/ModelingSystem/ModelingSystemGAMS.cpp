@@ -25,8 +25,8 @@
 #include "GamsLicensing.h"
 #endif
 
-#include <cstdio>   // for tmpnam()
-#include <cstdlib>  // for mkdtemp()
+#include <cstdio> // for tmpnam()
+#include <cstdlib> // for mkdtemp()
 #include <fstream>
 
 #ifdef HAS_STD_FILESYSTEM
@@ -284,7 +284,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 #if _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
     strcpy(buffer, "loadgmsXXXXXX");
     tmpdirname = mkdtemp(buffer);
-    if(tmpdirname.length() == 0 )
+    if(tmpdirname.length() == 0)
     {
         throw std::logic_error("Could not create temporary directory.");
     }
@@ -325,85 +325,88 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     // printf(gamscall.c_str()); fflush(stdout);
 
     rc = system(gamscall.c_str());
-    switch( WEXITSTATUS(rc) )
+    switch(WEXITSTATUS(rc))
     {
-        case 0: /* Normal return */
-            break;
+    case 0: /* Normal return */
+        break;
 
-        case 2: /* Compilation error */
-        case 3: /* Execution error */
+    case 2: /* Compilation error */
+    case 3: /* Execution error */
+    {
+        std::string msg;
+
+        if(WEXITSTATUS(rc) == 2)
+            msg = "GAMS call returned with compilation error.";
+        else
+            msg = "GAMS call returned with execution error.";
+
+        std::ifstream lst(fs::filesystem::path(tmpdirname) / "listing");
+        std::string line;
+        while(lst.good() && !lst.eof())
         {
-            std::string msg;
-
-            if( WEXITSTATUS(rc) == 2 )
-                msg = "GAMS call returned with compilation error.";
-            else
-                msg = "GAMS call returned with execution error.";
-
-            std::ifstream lst(fs::filesystem::path(tmpdirname) / "listing");
-            std::string line;
-            while(lst.good() && !lst.eof())
+            getline(lst, line);
+            if(line.find("****") == 0 && line != "**** FILE SUMMARY")
             {
-                getline(lst, line);
-                if(line.find("****") == 0 && line != "**** FILE SUMMARY")
-                {
-                    msg.append(1, '\n');
-                    msg += line;
-                }
-            }
-
-            throw std::logic_error(msg);
-            break;
-        }
-
-        default:
-        {
-            std::string msg;
-
-            switch( WEXITSTATUS(rc) )
-            {
-                case 4: /* System limits reached */
-                    msg = "GAMS call returned with system limits reached.";
-                    break;
-                case 5: /* File error */
-                    msg = "GAMS call returned with file error.";
-                    break;
-                case 6: /* Parameter */
-                    msg = "GAMS call returned with parameter error.";
-                    break;
-                case 7: /* Licensing error */
-                    msg = "GAMS call returned with licensing error.";
-                    break;
-                case 8: /* System error */
-                    msg = "GAMS call returned with system error.";
-                    break;
-                case 9: /* GAMS could not be started */
-                    msg = "GAMS could not be started.";
-                    break;
-                case 10: /* out of memory */
-                    msg = "GAMS ran out of memory.";
-                    break;
-                case 11: /* out of disk */
-                    msg = "GAMS ran out of disk space.";
-                    break;
-                default: /* other errors, I don't want to handle each of them here... */
-                    snprintf(buffer, sizeof(buffer), "GAMS call returned with exit code %d (see also https://www.gams.com/latest/docs/UG_GAMSReturnCodes.html#UG_GAMSReturnCodes_ListOfErrorCodes).", WEXITSTATUS(rc));
-                    msg = buffer;
-                    break;
-            }
-
-            std::ifstream log(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
-            std::string line;
-            msg += " GAMS log:";
-            while(log.good() && !log.eof())
-            {
-                getline(log, line);
                 msg.append(1, '\n');
                 msg += line;
             }
-
-            throw std::logic_error(msg);
         }
+
+        throw std::logic_error(msg);
+        break;
+    }
+
+    default:
+    {
+        std::string msg;
+
+        switch(WEXITSTATUS(rc))
+        {
+        case 4: /* System limits reached */
+            msg = "GAMS call returned with system limits reached.";
+            break;
+        case 5: /* File error */
+            msg = "GAMS call returned with file error.";
+            break;
+        case 6: /* Parameter */
+            msg = "GAMS call returned with parameter error.";
+            break;
+        case 7: /* Licensing error */
+            msg = "GAMS call returned with licensing error.";
+            break;
+        case 8: /* System error */
+            msg = "GAMS call returned with system error.";
+            break;
+        case 9: /* GAMS could not be started */
+            msg = "GAMS could not be started.";
+            break;
+        case 10: /* out of memory */
+            msg = "GAMS ran out of memory.";
+            break;
+        case 11: /* out of disk */
+            msg = "GAMS ran out of disk space.";
+            break;
+        default: /* other errors, I don't want to handle each of them here... */
+            snprintf(buffer, sizeof(buffer),
+                "GAMS call returned with exit code %d (see also "
+                "https://www.gams.com/latest/docs/UG_GAMSReturnCodes.html#UG_GAMSReturnCodes_ListOfErrorCodes).",
+                WEXITSTATUS(rc));
+            msg = buffer;
+            break;
+        }
+
+        std::ifstream log(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
+        std::string line;
+        msg += " GAMS log:";
+        while(log.good() && !log.eof())
+        {
+            getline(log, line);
+            msg.append(1, '\n');
+            msg += line;
+        }
+
+        throw std::logic_error(msg);
+    }
     }
 
     createModelFromGAMSModel(fs::filesystem::path(tmpdirname) / "gamscntr.dat");
