@@ -64,6 +64,7 @@ public:
 
 private:
     bool createdtmpdir;
+    std::string tmpdirname;
     bool createdgmo;
     char buffer[GMS_SSSIZE];
 

@@ -25,6 +25,9 @@
 #include "GamsLicensing.h"
 #endif
 
+#include <cstdio>   // for tmpnam()
+#include <cstdlib>  // for mkdtemp()
+
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
 namespace fs = std;
@@ -273,50 +276,58 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     char gamscall[1024];
     char buffer[GMS_SSSIZE];
     int rc;
-    FILE* convertdopt;
 
     assert(modelingObject == nullptr);
     assert(modelingEnvironment == nullptr);
 
-    /* create temporary directory */
-    fs::filesystem::create_directory("loadgms.tmp");
-    fs::filesystem::permissions("loadgms.tmp", fs::filesystem::perms::all);
+    /* create temporary directory, mkdtemp is preferred over tmpnam */
+#if _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
+    strcpy(buffer, "loadgmsXXXXXX");
+    tmpdirname = mkdtemp(buffer);
+    if(tmpdirname.length() == 0 )
+    {
+        throw std::logic_error("Could not create temporary directory.");
+    }
+#else
+    tmpdirname = std::tmpnam(nullptr);
+    fs::filesystem::create_directory(tmpdirname);
+    fs::filesystem::permissions(tmpdirname, fs::filesystem::perms::all);
+#endif
 
     createdtmpdir = true;
 
     /* create empty convertd options file */
-    convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
-    if(convertdopt == nullptr)
+    std::ofstream convertdopt(fs::filesystem::path(tmpdirname) / "convertd.opt", std::ios::out);
+    if(!convertdopt.good())
     {
         throw std::logic_error("Could not create convertd options file.");
     }
-    fputs(" ", convertdopt);
-    fclose(convertdopt);
+    convertdopt << " " << std::endl;
+    convertdopt.close();
 
     /* call GAMS with convertd solver to get compiled model instance in temporary directory
      * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP)
      * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null
      * for this gams call
+     * TODO should use windows path separator on windows
      */
     snprintf(gamscall, sizeof(gamscall),
 #ifdef GAMSDIR
-        GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
-#else
-        "gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-        "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+        GAMSDIR "/"
 #endif
-        filename.c_str());
+        "gams %s SOLVER=CONVERTD SCRDIR=%s output=%s/listing optdir=%s optfile=1 "
+        "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > %s/gamsconvert.log",
+        filename.c_str(), tmpdirname.c_str(), tmpdirname.c_str(), tmpdirname.c_str(), tmpdirname.c_str());
 
     /* printf(gamscall); fflush(stdout); */
     rc = system(gamscall);
     if(rc != 0)
     {
-        snprintf(buffer, sizeof(buffer), "GAMS call returned with code %d", rc);
+        snprintf(buffer, sizeof(buffer), "GAMS call returned with code %d", WEXITSTATUS(rc));
         throw std::logic_error(buffer);
     }
 
-    createModelFromGAMSModel("loadgms.tmp/gamscntr.dat");
+    createModelFromGAMSModel(fs::filesystem::path(tmpdirname) / "gamscntr.dat");
 
     /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use
      * as a SHOT options file */
@@ -491,7 +502,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
     /* remove temporary directory content (should have only files) and directory itself) */
     if(createdtmpdir)
     {
-        system("rm loadgms.tmp/* && rmdir loadgms.tmp");
+        std::filesystem::remove_all(tmpdirname);
         createdtmpdir = false;
     }
 }
