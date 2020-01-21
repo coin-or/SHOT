@@ -280,7 +280,6 @@ bool Solver::setProblem(std::string fileName)
 
             if(modelingSystem->createProblem(problem, fileName) != E_ProblemCreationStatus::NormalCompletion)
             {
-                env->output->outputError(" Error while reading problem.");
                 return (false);
             }
 
@@ -300,7 +299,6 @@ bool Solver::setProblem(std::string fileName)
 
             if(modelingSystem->createProblem(problem, fileName) != E_ProblemCreationStatus::NormalCompletion)
             {
-                env->output->outputError(" Error while reading problem.");
                 return (false);
             }
 
@@ -322,7 +320,6 @@ bool Solver::setProblem(std::string fileName)
             if(modelingSystem->createProblem(problem, fileName, E_GAMSInputSource::ProblemFile)
                 != E_ProblemCreationStatus::NormalCompletion)
             {
-                env->output->outputError(" Error while reading problem.");
                 return (false);
             }
 
@@ -422,7 +419,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual")) == ES_MIPSolver::Cbc)
     {
         env->settings->updateSetting(
-                "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
+            "Reformulation.Quadratics.Strategy", "Model", (int)ES_QuadraticProblemStrategy::Nonlinear);
     }
 #endif
 

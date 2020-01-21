@@ -294,11 +294,11 @@ void Report::outputSolverHeader()
               "──────────────────────────────────────────────────────────────────╴\r\n";
     header << "\r\n";
 
-    header << "  Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.\r\n";
-    header << "  See documentation for full list of contributors and utilized software libraries.\r\n";
+    header << " Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland.\r\n";
+    header << " See documentation for full list of contributors and utilized software libraries.\r\n";
 
     header << "\r\n";
-    header << "  Version: ";
+    header << " Version: ";
     header << SHOT_VERSION_MAJOR;
     header << ".";
     header << SHOT_VERSION_MINOR;
@@ -324,7 +324,7 @@ void Report::outputSolverHeader()
 
     header << "\r\n";
     header << "\r\n";
-    header << "  For more information visit https://shotsolver.dev\r\n";
+    header << " For more information visit https://shotsolver.dev\r\n";
 
     env->output->outputInfo(header.str());
 }

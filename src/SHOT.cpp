@@ -71,9 +71,9 @@ int main(int argc, char* argv[])
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                                 "───────────────────────────────────╴\r\n");
 
-        env->output->outputCritical("  Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
+        env->output->outputCritical(" Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
         env->output->outputCritical("");
-        env->output->outputCritical("  SHOT has been compiled with support for the following problem formats ");
+        env->output->outputCritical(" SHOT has been compiled with support for the following problem formats ");
 
 #ifdef HAS_AMPL
         env->output->outputCritical("   AMPL (.nl) ");
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
 
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
         if(!Utilities::writeStringToFile(filepath.string(), markup))
-            env->output->outputCritical(" Error when writing markup file: " + filepath.string());
+            env->output->outputCritical("Error when writing markup file: " + filepath.string());
     }
 
     // Read or create options file
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            env->output->outputCritical("  Options file not found: " + filepath.string());
+            env->output->outputCritical(" Options file not found: " + filepath.string());
             return 0;
         }
     }
@@ -181,12 +181,12 @@ int main(int argc, char* argv[])
             // Create option file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptions()))
             {
-                env->output->outputCritical("  Error when writing options file: " + filepath.string());
+                env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
             }
 
             defaultOptionsGenerated = true;
-            env->output->outputInfo("  Default options file written to: " + filepath.string());
+            env->output->outputInfo(" Default options file written to: " + filepath.string());
         }
     }
     else if(cmdl("--osol")) // Have specified a OSoL-file
@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
         if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
-            env->output->outputInfo("  Default options file written to: " + filepath.string());
+            env->output->outputInfo(" Default options file written to: " + filepath.string());
         }
         else
         {
@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
             // Create OSoL-file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptionsOSoL()))
             {
-                env->output->outputCritical("  Error when writing OSoL file: " + filepath.string());
+                env->output->outputCritical(" Error when writing OSoL file: " + filepath.string());
                 return 0;
             }
         }
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
     {
         if(!optionsFile.empty() && !solver.setOptionsFromFile(optionsFile.string()))
         {
-            env->output->outputCritical("  Cannot set options from file: " + optionsFile.string());
+            env->output->outputCritical(" Cannot set options from file: " + optionsFile.string());
             return (0);
         }
 
@@ -317,7 +317,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'threads'");
+            env->output->outputCritical(" Cannot read value for parameter 'threads'");
         }
     }
 
@@ -329,7 +329,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'absgap'");
+            env->output->outputCritical(" Cannot read value for parameter 'absgap'");
         }
     }
 
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'relgap'");
+            env->output->outputCritical(" Cannot read value for parameter 'relgap'");
         }
     }
 
@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'timelimit'");
+            env->output->outputCritical(" Cannot read value for parameter 'timelimit'");
         }
     }
 
@@ -398,7 +398,7 @@ int main(int argc, char* argv[])
                 if(value == "true" || value == "false")
                     solver.updateSetting(name, category, (value == "true" ? true : false));
                 else
-                    env->output->outputCritical("  Cannot read boolean option in " + ARG);
+                    env->output->outputCritical(" Cannot read boolean option in " + ARG);
 
                 found = true;
                 break;
@@ -418,7 +418,7 @@ int main(int argc, char* argv[])
                 }
                 catch(const std::exception& e)
                 {
-                    env->output->outputCritical("  Cannot read integer option in " + ARG);
+                    env->output->outputCritical(" Cannot read integer option in " + ARG);
                 }
 
                 found = true;
@@ -439,7 +439,7 @@ int main(int argc, char* argv[])
                 }
                 catch(const std::exception& e)
                 {
-                    env->output->outputCritical("  Cannot read integer option in " + ARG);
+                    env->output->outputCritical(" Cannot read integer option in " + ARG);
                 }
 
                 found = true;
@@ -460,7 +460,7 @@ int main(int argc, char* argv[])
                 }
                 catch(const std::exception& e)
                 {
-                    env->output->outputCritical("  Cannot read numeric option in " + ARG);
+                    env->output->outputCritical(" Cannot read numeric option in " + ARG);
                 }
 
                 found = true;
@@ -471,8 +471,8 @@ int main(int argc, char* argv[])
 
     if(!cmdl(1))
     {
-        env->output->outputCritical("  No problem file specified.\r\n");
-        env->output->outputCritical("  Try 'SHOT --help' for more information.");
+        env->output->outputCritical(" No problem file specified.\r\n");
+        env->output->outputCritical(" Try 'SHOT --help' for more information.");
         return (0);
     }
 
@@ -486,21 +486,21 @@ int main(int argc, char* argv[])
         }
         else
         {
-            env->output->outputCritical("   Problem file " + filename + " not found!");
+            env->output->outputCritical(" Problem file " + filename + " not found!");
             return (0);
         }
     }
 
     if(!solver.setProblem(filename))
     {
-        env->output->outputCritical("   Error when reading problem file.");
+        env->output->outputCritical(fmt::format(" SHOT could not read problem from file {}", filename));
         return (0);
     }
 
     // Check if we want to use the ASL calling format
     if(useASL && !((ES_SourceFormat)env->settings->getSetting<int>("SourceFormat", "Input") == ES_SourceFormat::NL))
     {
-        env->output->outputCritical("  Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
+        env->output->outputCritical(" Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
         return (0);
     }
 
@@ -612,7 +612,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    env->output->outputInfo("\r\n");
     env->output->outputInfo(" Log written to:     " + logFile.string());
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
