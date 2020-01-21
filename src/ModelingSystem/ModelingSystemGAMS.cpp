@@ -274,7 +274,6 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 
 void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 {
-    char gamscall[1024];
     char buffer[GMS_SSSIZE];
     int rc;
 
@@ -310,18 +309,22 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
      * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP)
      * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null
      * for this gams call
-     * TODO should use windows path separator on windows
      */
-    snprintf(gamscall, sizeof(gamscall),
+    std::string gamscall;
 #ifdef GAMSDIR
-        GAMSDIR "/"
+    gamscall = fs::filesystem::path(GAMSDIR) / "gams";
+#else
+    gamscall = "gams";
 #endif
-        "gams %s SOLVER=CONVERTD SCRDIR=%s output=%s/listing optdir=%s optfile=1 "
-        "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > %s/gamsconvert.log",
-        filename.c_str(), tmpdirname.c_str(), tmpdirname.c_str(), tmpdirname.c_str(), tmpdirname.c_str());
+    gamscall += " \"" + filename + "\"";
+    gamscall += " SOLVER=CONVERTD PF4=0 SOLPRINT=0 LIMCOL=0 LIMROW=0 PC=2";
+    gamscall += " SCRDIR=" + tmpdirname;
+    gamscall += " OUTPUT=" + std::string(fs::filesystem::path(tmpdirname) / "listing");
+    gamscall += " OPTFILE=1 OPTDIR=" + tmpdirname;
+    gamscall += " LO=3 > " + std::string(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
+    // printf(gamscall.c_str()); fflush(stdout);
 
-    /* printf(gamscall); fflush(stdout); */
-    rc = system(gamscall);
+    rc = system(gamscall.c_str());
     switch( WEXITSTATUS(rc) )
     {
         case 0: /* Normal return */
