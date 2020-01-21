@@ -198,7 +198,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     }
     catch(const std::exception& e)
     {
-        env->output->outputError(fmt::format("Error when reading GAMS model from \"{}\": {}", filename, e.what()));
+        env->output->outputError(fmt::format(" Error when reading GAMS model from \"{}\".\r\n {}", filename, e.what()));
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -336,9 +336,9 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
         std::string msg;
 
         if(WEXITSTATUS(rc) == 2)
-            msg = "GAMS call returned with compilation error.";
+            msg = "GAMS call returned with compilation error:\n";
         else
-            msg = "GAMS call returned with execution error.";
+            msg = "GAMS call returned with execution error:\n";
 
         std::ifstream lst(fs::filesystem::path(tmpdirname) / "listing");
         std::string line;
@@ -348,9 +348,12 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
             if(line.find("****") == 0 && line != "**** FILE SUMMARY")
             {
                 msg.append(1, '\n');
+                msg.append(1, ' ');
                 msg += line;
             }
         }
+
+        msg.append(1, '\n');
 
         throw std::logic_error(msg);
         break;
@@ -397,11 +400,12 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
         std::ifstream log(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
         std::string line;
-        msg += " GAMS log:";
+        msg += " GAMS log:\n";
         while(log.good() && !log.eof())
         {
             getline(log, line);
             msg.append(1, '\n');
+            msg.append(1, ' ');
             msg += line;
         }
 
