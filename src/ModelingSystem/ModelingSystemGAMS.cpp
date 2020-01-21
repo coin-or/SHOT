@@ -321,10 +321,33 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
     /* printf(gamscall); fflush(stdout); */
     rc = system(gamscall);
-    if(rc != 0)
+    switch( WEXITSTATUS(rc) )
     {
-        snprintf(buffer, sizeof(buffer), "GAMS call returned with code %d", WEXITSTATUS(rc));
-        throw std::logic_error(buffer);
+        case 0: /* Normal return */
+            break;
+        case 2: /* Compilation error */
+            throw std::logic_error("GAMS call returned with compilation error.");
+        case 3: /* Execution error */
+            throw std::logic_error("GAMS call returned with execution error.");
+        case 4: /* System limits reached */
+            throw std::logic_error("GAMS call returned with system limits reached.");
+        case 5: /* File error */
+            throw std::logic_error("GAMS call returned with file error.");
+        case 6: /* Parameter */
+            throw std::logic_error("GAMS call returned with parameter error.");
+        case 7: /* Licensing error */
+            throw std::logic_error("GAMS call returned with licensing error.");
+        case 8: /* System error */
+            throw std::logic_error("GAMS call returned with system error.");
+        case 9: /* GAMS could not be started */
+            throw std::logic_error("GAMS could not be started.");
+        case 10: /* out of memory */
+            throw std::logic_error("GAMS ran out of memory.");
+        case 11: /* out of disk */
+            throw std::logic_error("GAMS ran out of disk space.");
+        default: /* other errors, I don't want to handle each of them here... */
+            snprintf(buffer, sizeof(buffer), "GAMS call returned with exit code %d (see also https://www.gams.com/latest/docs/UG_GAMSReturnCodes.html#UG_GAMSReturnCodes_ListOfErrorCodes).", WEXITSTATUS(rc));
+            throw std::logic_error(buffer);
     }
 
     createModelFromGAMSModel(fs::filesystem::path(tmpdirname) / "gamscntr.dat");
