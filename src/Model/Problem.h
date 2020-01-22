@@ -85,6 +85,7 @@ private:
 
     NonlinearConstraints constraintsWithNonlinearExpressions;
 
+    void updateVariableBounds(); // This is called by updateVariables()
     void updateVariables();
     void updateConstraints();
     void updateConvexity();
