@@ -452,6 +452,10 @@ void QuadraticConstraint::updateProperties()
 
     auto convexity = quadraticTerms.getConvexity();
     properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+
+    if(valueLHS != SHOT_DBL_MIN)
+        properties.convexity = E_Convexity::Nonconvex;
+
     properties.monotonicity = Utilities::combineMonotonicity(properties.monotonicity, quadraticTerms.getMonotonicity());
 }
 
