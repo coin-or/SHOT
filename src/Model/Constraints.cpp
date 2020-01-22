@@ -1081,7 +1081,7 @@ std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint
 
 std::ostream& QuadraticConstraint::print(std::ostream& stream) const
 {
-    if(valueLHS > SHOT_DBL_MIN)
+    if(valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
     if(linearTerms.size() > 0)
@@ -1096,7 +1096,9 @@ std::ostream& QuadraticConstraint::print(std::ostream& stream) const
     if(constant < 0)
         stream << ' ' << constant;
 
-    if(valueRHS < SHOT_DBL_MAX)
+    if(valueLHS == valueRHS)
+        stream << " = " << valueRHS;
+    else if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;
@@ -1110,7 +1112,7 @@ std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint
 
 std::ostream& NonlinearConstraint::print(std::ostream& stream) const
 {
-    if(valueLHS > SHOT_DBL_MIN)
+    if(valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
     if(linearTerms.size() > 0)
@@ -1134,7 +1136,9 @@ std::ostream& NonlinearConstraint::print(std::ostream& stream) const
     if(constant < 0)
         stream << ' ' << constant;
 
-    if(valueRHS < SHOT_DBL_MAX)
+    if(valueLHS == valueRHS)
+        stream << " = " << valueRHS;
+    else if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;
