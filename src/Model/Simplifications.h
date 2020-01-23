@@ -1180,8 +1180,8 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
 }
 
 inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, NonlinearExpressionPtr, double>
-    extractTermsAndConstant(
-        NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials, bool extractQuadratics)
+    extractTermsAndConstant(NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials,
+        bool extractQuadratics, bool extractLinears)
 {
     double constant = 0.0;
     LinearTerms linearTerms;
@@ -1199,7 +1199,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             constant += expressionConstant->constant;
         }
     }
-    else if(expression->getType() == E_NonlinearExpressionTypes::Variable)
+    else if(expression->getType() == E_NonlinearExpressionTypes::Variable && extractLinears)
     {
         auto variable = std::dynamic_pointer_cast<ExpressionVariable>(expression);
         linearTerms.add(std::make_shared<LinearTerm>(1.0, variable->variable));
@@ -1317,7 +1317,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto power = std::dynamic_pointer_cast<ExpressionPower>(expression);
 
-        if(auto optional = convertPowerToLinearTerm(power); optional)
+        if(auto optional = convertPowerToLinearTerm(power); optional && extractLinears)
         {
             linearTerms.add(optional.value());
         }
@@ -1338,7 +1338,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression);
 
-        if(auto optional = convertProductToLinearTerm(product); optional)
+        if(auto optional = convertProductToLinearTerm(product); optional && extractLinears)
         {
             linearTerms.add(optional.value());
         }
@@ -1369,7 +1369,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
-                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics);
+                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics, extractLinears);
 
             linearTerms.add(tmpLinearTerms);
             quadraticTerms.add(tmpQuadraticTerms);
@@ -1406,6 +1406,24 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         && std::dynamic_pointer_cast<ExpressionConstant>(nonlinearExpression)->constant == 0.0)
     {
         nonlinearExpression = nullptr;
+    }
+
+    if(auto sharedOwnerProblem = expression->ownerProblem.lock())
+    {
+        for(auto& T : linearTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        for(auto& T : quadraticTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        for(auto& T : monomialTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        for(auto& T : signomialTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        if(nonlinearExpression)
+            nonlinearExpression->takeOwnership(sharedOwnerProblem);
     }
 
     return std::make_tuple(linearTerms, quadraticTerms, monomialTerms, signomialTerms, nonlinearExpression, constant);
