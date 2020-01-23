@@ -90,19 +90,13 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Reformulating objective function
     reformulateObjectiveFunction();
 
-    if(env->settings->getSetting<bool>("Reformulation.Bilinear.AddConvexEnvelope",
-           "Model")) // Also adds the McCormick envelopes to the dual model
-    {
-        for(auto& VAR : bilinearAuxVariables)
-        {
-            addBilinearMcCormickEnvelope(VAR.second, std::get<0>(VAR.first), std::get<1>(VAR.first));
-        }
-    }
+    // Creating expressions for the bilinear reformulations
+    createBilinearReformulations();
 
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->finalize();
 
-    // Fixing that a quadratic objective changed into a nonlinear constraint is correctly identified
+    // Fixing that a quadratic objective changed into a nonlinear objective is correctly identified
     if(!(useConvexQuadraticObjective || useNonconvexQuadraticObjective)
         && reformulatedProblem->objectiveFunction->properties.classification
             == E_ObjectiveFunctionClassification::Quadratic)
@@ -190,153 +184,13 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         quadraticObjectiveRegardedAsNonlinear = true;
     }
 
-    if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    if(env->problem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
+        && env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model"))
     {
-        bool useEpigraph = env->settings->getSetting<bool>("Reformulation.ObjectiveFunction.Epigraph.Use", "Model");
+        // Rewrite objective as objective constraint, aka epigraph
 
-        if(useEpigraph)
-        {
-            double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
-
-            Interval objectiveBound;
-
-            try
-            {
-                objectiveBound = env->problem->objectiveFunction->getBounds();
-            }
-            catch(mc::Interval::Exceptions& e)
-            {
-                objectiveBound = Interval(-objVarBound, objVarBound);
-            }
-
-            auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
-                "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
-            objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
-
-            if(env->problem->objectiveFunction->properties.hasLinearTerms)
-            {
-                for(auto& T :
-                    std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms)
-                {
-                    objectiveVariable->linearTerms.add(std::make_shared<LinearTerm>(
-                        T->coefficient, reformulatedProblem->getVariable(T->variable->index)));
-                }
-            }
-
-            if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
-            {
-                for(auto& T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)
-                                  ->quadraticTerms)
-                {
-                    objectiveVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(T->coefficient,
-                        reformulatedProblem->getVariable(T->firstVariable->index),
-                        reformulatedProblem->getVariable(T->secondVariable->index)));
-                }
-            }
-
-            if(env->problem->objectiveFunction->properties.hasMonomialTerms)
-            {
-                for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                                  ->monomialTerms)
-                {
-                    objectiveVariable->monomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
-                }
-            }
-
-            if(env->problem->objectiveFunction->properties.hasSignomialTerms)
-            {
-                for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                                  ->signomialTerms)
-                {
-                    objectiveVariable->signomialTerms.add(
-                        std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
-                }
-            }
-
-            if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
-            {
-                objectiveVariable->nonlinearExpression
-                    = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                          ->nonlinearExpression;
-            }
-
-            bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
-            double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
-
-            // Adding new linear objective function
-            auto objective = std::make_shared<LinearObjectiveFunction>();
-            objective->direction = E_ObjectiveFunctionDirection::Minimize;
-            objective->constant = 0.0;
-
-            objective->add(std::make_shared<LinearTerm>(1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
-
-            // Adding the auxiliary objective constraint
-            auto constraint = std::make_shared<NonlinearConstraint>(reformulatedProblem->numericConstraints.size(),
-                "shot_objconstr", SHOT_DBL_MIN, -1.0 * signfactor * env->problem->objectiveFunction->constant);
-
-            if(env->problem->objectiveFunction->properties.hasLinearTerms)
-            {
-                copyLinearTermsToConstraint(
-                    std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms,
-                    constraint, isSignReversed);
-            }
-
-            if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
-            {
-                copyQuadraticTermsToConstraint(
-                    std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)
-                        ->quadraticTerms,
-                    constraint);
-            }
-
-            if(env->problem->objectiveFunction->properties.hasMonomialTerms)
-            {
-                copyMonomialTermsToConstraint(
-                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                        ->monomialTerms,
-                    constraint, isSignReversed);
-            }
-
-            if(env->problem->objectiveFunction->properties.hasSignomialTerms)
-            {
-                copySignomialTermsToConstraint(
-                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                        ->signomialTerms,
-                    constraint, isSignReversed);
-            }
-
-            if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
-            {
-                if(isSignReversed)
-                {
-                    constraint->add(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
-                        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                            ->nonlinearExpression.get(),
-                        reformulatedProblem))));
-                }
-                else
-                {
-                    constraint->add(copyNonlinearExpression(
-                        std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
-                            ->nonlinearExpression.get(),
-                        reformulatedProblem));
-                }
-            }
-
-            reformulatedProblem->add(objectiveVariable);
-            constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
-            auto reformulatedConstraints = reformulateConstraint(constraint);
-
-            for(auto& RC : reformulatedConstraints)
-            {
-                reformulatedProblem->add(std::move(RC));
-            }
-
-            objectiveVariable->index = auxVariableCounter;
-            reformulatedProblem->add(std::move(objective));
-
-            return;
-        }
+        createEpigraphConstraint();
+        return;
     }
 
     // Objective is to be regarded as nonlinear
@@ -400,6 +254,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         }
         else
         {
+            // Use the quadratic terms as they are
             destinationQuadraticTerms.add(sourceObjective->quadraticTerms);
         }
     }
@@ -548,11 +403,11 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         {
             if(isSignReversed)
                 std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(
-                    simplify(std::make_shared<ExpressionNegate>(
-                        copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem))));
+                    reformulateNonlinearExpression(simplify(std::make_shared<ExpressionNegate>(
+                        copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem)))));
             else
-                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(
-                    copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem));
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objective)->add(reformulateNonlinearExpression(
+                    copyNonlinearExpression(sourceObjective->nonlinearExpression.get(), reformulatedProblem)));
         }
     }
 
@@ -568,6 +423,144 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
     {
         reformulatedProblem->add(std::dynamic_pointer_cast<LinearObjectiveFunction>(objective));
     }
+}
+
+void TaskReformulateProblem::createEpigraphConstraint()
+{
+    double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+
+    Interval objectiveBound;
+
+    try
+    {
+        objectiveBound = env->problem->objectiveFunction->getBounds();
+    }
+    catch(mc::Interval::Exceptions& e)
+    {
+        objectiveBound = Interval(-objVarBound, objVarBound);
+    }
+
+    auto objectiveVariable = std::make_shared<AuxiliaryVariable>(
+        "shot_objvar", auxVariableCounter, E_VariableType::Real, objectiveBound.l(), objectiveBound.u());
+    objectiveVariable->properties.auxiliaryType = E_AuxiliaryVariableType::NonlinearObjectiveFunction;
+
+    if(env->problem->objectiveFunction->properties.hasLinearTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms)
+        {
+            objectiveVariable->linearTerms.add(
+                std::make_shared<LinearTerm>(T->coefficient, reformulatedProblem->getVariable(T->variable->index)));
+        }
+    }
+
+    if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
+    {
+        for(auto& T :
+            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms)
+        {
+            objectiveVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(T->coefficient,
+                reformulatedProblem->getVariable(T->firstVariable->index),
+                reformulatedProblem->getVariable(T->secondVariable->index)));
+        }
+    }
+
+    if(env->problem->objectiveFunction->properties.hasMonomialTerms)
+    {
+        for(auto& T :
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->monomialTerms)
+        {
+            objectiveVariable->monomialTerms.add(std::make_shared<MonomialTerm>(T.get(), reformulatedProblem));
+        }
+    }
+
+    if(env->problem->objectiveFunction->properties.hasSignomialTerms)
+    {
+        for(auto& T :
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->signomialTerms)
+        {
+            objectiveVariable->signomialTerms.add(std::make_shared<SignomialTerm>(T.get(), reformulatedProblem));
+        }
+    }
+
+    if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
+    {
+        objectiveVariable->nonlinearExpression
+            = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                  ->nonlinearExpression;
+    }
+
+    bool isSignReversed = env->problem->objectiveFunction->properties.isMaximize;
+    double signfactor = (env->problem->objectiveFunction->properties.isMinimize) ? 1.0 : -1.0;
+
+    // Adding new linear objective function
+    auto objective = std::make_shared<LinearObjectiveFunction>();
+    objective->direction = E_ObjectiveFunctionDirection::Minimize;
+    objective->constant = 0.0;
+
+    objective->add(std::make_shared<LinearTerm>(1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
+
+    // Adding the auxiliary objective constraint
+    auto constraint = std::make_shared<NonlinearConstraint>(reformulatedProblem->numericConstraints.size(),
+        "shot_objconstr", SHOT_DBL_MIN, -1.0 * signfactor * env->problem->objectiveFunction->constant);
+
+    if(env->problem->objectiveFunction->properties.hasLinearTerms)
+    {
+        copyLinearTermsToConstraint(
+            std::dynamic_pointer_cast<LinearObjectiveFunction>(env->problem->objectiveFunction)->linearTerms,
+            constraint, isSignReversed);
+    }
+
+    if(env->problem->objectiveFunction->properties.hasQuadraticTerms)
+    {
+        copyQuadraticTermsToConstraint(
+            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms,
+            constraint);
+    }
+
+    if(env->problem->objectiveFunction->properties.hasMonomialTerms)
+    {
+        copyMonomialTermsToConstraint(
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->monomialTerms,
+            constraint, isSignReversed);
+    }
+
+    if(env->problem->objectiveFunction->properties.hasSignomialTerms)
+    {
+        copySignomialTermsToConstraint(
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)->signomialTerms,
+            constraint, isSignReversed);
+    }
+
+    if(env->problem->objectiveFunction->properties.hasNonlinearExpression)
+    {
+        if(isSignReversed)
+        {
+            constraint->add(
+                reformulateNonlinearExpression(simplify(std::make_shared<ExpressionNegate>(copyNonlinearExpression(
+                    std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                        ->nonlinearExpression.get(),
+                    reformulatedProblem)))));
+        }
+        else
+        {
+            constraint->add(reformulateNonlinearExpression(copyNonlinearExpression(
+                std::dynamic_pointer_cast<NonlinearObjectiveFunction>(env->problem->objectiveFunction)
+                    ->nonlinearExpression.get(),
+                reformulatedProblem)));
+        }
+    }
+
+    reformulatedProblem->add(objectiveVariable);
+    constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
+    auto reformulatedConstraints = reformulateConstraint(constraint);
+
+    for(auto& RC : reformulatedConstraints)
+    {
+        reformulatedProblem->add(std::move(RC));
+    }
+
+    objectiveVariable->index = auxVariableCounter;
+    reformulatedProblem->add(std::move(objective));
 }
 
 NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstraintPtr C)
@@ -761,7 +754,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
-            = extractTermsAndConstant(reformulatedExpression, true, true, true);
+            = extractTermsAndConstant(reformulatedExpression, true, true, true, true);
 
         if(tmpLinearTerms.size() > 0)
             destinationLinearTerms.add(tmpLinearTerms);
@@ -1345,7 +1338,6 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
 
     for(auto& T : quadraticTerms)
     {
-        double coeffSign = (T->coefficient > 0) ? 1.0 : -1.0;
         auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->index);
         auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->index);
 
@@ -1370,243 +1362,30 @@ std::tuple<LinearTerms, QuadraticTerms> TaskReformulateProblem::reformulateAndPa
         }
         else if(T->isBilinear && T->isBinary) // Bilinear term b1*b2
         {
-            auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-
+            auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
-
-            auto auxConstraint = std::make_shared<LinearConstraint>(
-                auxConstraintCounter, "s_binbl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 1.0);
-            auxConstraintCounter++;
-
-            auto linearTerm1 = std::make_shared<LinearTerm>(1.0, firstVariable);
-            auto linearTerm2 = std::make_shared<LinearTerm>(1.0, secondVariable);
-            auto linearTerm3 = std::make_shared<LinearTerm>(-1.0, auxVariable);
-
-            auxConstraint->add(linearTerm1);
-            auxConstraint->add(linearTerm2);
-            auxConstraint->add(linearTerm3);
-
-            auto auxConstraintBound1 = std::make_shared<LinearConstraint>(
-                auxConstraintCounter, "s_blbb_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-            auxConstraintBound1->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-            auxConstraintBound1->add(std::make_shared<LinearTerm>(-1.0, firstVariable));
-            auxConstraintCounter++;
-
-            auto auxConstraintBound2 = std::make_shared<LinearConstraint>(
-                auxConstraintCounter, "s_blbb_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-            auxConstraintBound2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-            auxConstraintBound2->add(std::make_shared<LinearTerm>(-1.0, secondVariable));
-            auxConstraintCounter++;
-
-            reformulatedProblem->add(std::move(auxConstraint));
-            reformulatedProblem->add(std::move(auxConstraintBound1));
-            reformulatedProblem->add(std::move(auxConstraintBound2));
         }
         else if(T->isBilinear
             && (T->firstVariable->properties.type == E_VariableType::Binary
                    || T->secondVariable->properties.type == E_VariableType::Binary))
         // Bilinear term b1*x2 or x1*b2
         {
-            auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
-
+            auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
-
-            auto binaryVariable
-                = (T->firstVariable->properties.type == E_VariableType::Binary) ? T->firstVariable : T->secondVariable;
-            auto otherVariable
-                = (T->firstVariable->properties.type == E_VariableType::Binary) ? T->secondVariable : T->firstVariable;
-
-            auto auxConstraint1 = std::make_shared<LinearConstraint>(auxConstraintCounter,
-                "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
-            auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-            auxConstraint1->add(std::make_shared<LinearTerm>(1.0, otherVariable));
-            auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
-            auxConstraintCounter++;
-
-            auto auxConstraint2 = std::make_shared<LinearConstraint>(auxConstraintCounter,
-                "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
-            auxConstraint2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-            auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
-            auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
-            auxConstraintCounter++;
-
-            reformulatedProblem->add(std::move(auxConstraint1));
-            reformulatedProblem->add(std::move(auxConstraint2));
         }
         else if(T->isBilinear
             && (T->firstVariable->properties.type == E_VariableType::Integer
                    || T->secondVariable->properties.type == E_VariableType::Integer))
         // bilinear term i1*i2 or i1*x2
         {
-            VariablePtr discretizationVariable;
-            VariablePtr nonDiscretizationVariable;
-            Variables discretizationBinaries;
-
-            bool foundFirstVariable = false;
-            bool foundSecondVariable = false;
-            bool firstVariableIsDiscrete = false;
-
-            if(firstVariable->properties.type == E_VariableType::Binary
-                || firstVariable->properties.type == E_VariableType::Integer)
-            {
-                foundFirstVariable
-                    = (integerAuxiliaryBinaryVariables.find(firstVariable) != integerAuxiliaryBinaryVariables.end());
-                firstVariableIsDiscrete = true;
-            }
-
-            if(secondVariable->properties.type == E_VariableType::Binary
-                || secondVariable->properties.type == E_VariableType::Integer)
-            {
-                foundSecondVariable
-                    = (integerAuxiliaryBinaryVariables.find(secondVariable) != integerAuxiliaryBinaryVariables.end());
-            }
-
-            bool firstVariableSmallerDomain = (firstVariable->upperBound - firstVariable->lowerBound
-                < secondVariable->upperBound - secondVariable->lowerBound);
-
-            if(foundFirstVariable && foundSecondVariable)
-            {
-                discretizationVariable = firstVariableSmallerDomain ? firstVariable : secondVariable;
-                nonDiscretizationVariable = firstVariableSmallerDomain ? secondVariable : firstVariable;
-
-                discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
-            }
-            else if(foundFirstVariable)
-            {
-                discretizationVariable = firstVariable;
-                nonDiscretizationVariable = secondVariable;
-
-                discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
-            }
-            else if(foundSecondVariable)
-            {
-                discretizationVariable = secondVariable;
-                nonDiscretizationVariable = firstVariable;
-
-                discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
-            }
-            else // Need to create binary variables and SOS1 constraint
-            {
-                if(firstVariableIsDiscrete && firstVariableSmallerDomain)
-                {
-                    discretizationVariable = firstVariable;
-                    nonDiscretizationVariable = secondVariable;
-                }
-                else
-                {
-                    discretizationVariable = secondVariable;
-                    nonDiscretizationVariable = firstVariable;
-                }
-
-                auto auxFirstSum = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_bli" + std::to_string(auxConstraintCounter), 1.0, 1.0);
-                auxConstraintCounter++;
-
-                auto auxFirstSumVarDef = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_blx" + std::to_string(auxConstraintCounter), 0, 0);
-                auxConstraintCounter++;
-
-                auxFirstSumVarDef->add(std::make_shared<LinearTerm>(-1.0, discretizationVariable));
-
-                for(auto i = discretizationVariable->lowerBound; i <= discretizationVariable->upperBound; i++)
-                {
-                    auto auxBinary
-                        = std::make_shared<AuxiliaryVariable>("s_bli" + std::to_string(auxVariableCounter + 1),
-                            auxVariableCounter, E_VariableType::Binary, 0.0, 1.0);
-
-                    auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
-                    auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));
-
-                    discretizationBinaries.push_back(auxBinary);
-                    reformulatedProblem->add(auxBinary);
-                    auxVariableCounter++;
-                }
-
-                reformulatedProblem->add(std::move(auxFirstSum));
-                reformulatedProblem->add(std::move(auxFirstSumVarDef));
-
-                integerAuxiliaryBinaryVariables.emplace(discretizationVariable, discretizationBinaries);
-            }
-
-            auto auxVariable = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
-
+            auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
-
-            double M = 2
-                * std::max(std::abs(discretizationVariable->lowerBound), std::abs(discretizationVariable->upperBound))
-                * std::max(
-                      std::abs(nonDiscretizationVariable->lowerBound), std::abs(nonDiscretizationVariable->upperBound));
-
-            for(auto i = discretizationVariable->lowerBound; i <= discretizationVariable->upperBound; i++)
-            {
-                auto auxConstraint1 = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_blw1_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, M);
-
-                auto auxConstraint2 = std::make_shared<LinearConstraint>(
-                    auxConstraintCounter, "s_blw2_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, M);
-
-                auxConstraintCounter++;
-
-                auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-                auxConstraint2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
-
-                auxConstraint1->add(std::make_shared<LinearTerm>(i, nonDiscretizationVariable));
-                auxConstraint2->add(std::make_shared<LinearTerm>(-i, nonDiscretizationVariable));
-
-                auxConstraint1->add(
-                    std::make_shared<LinearTerm>(M, discretizationBinaries[i - discretizationVariable->lowerBound]));
-
-                auxConstraint2->add(
-                    std::make_shared<LinearTerm>(M, discretizationBinaries[i - discretizationVariable->lowerBound]));
-
-                reformulatedProblem->add(std::move(auxConstraint1));
-                reformulatedProblem->add(std::move(auxConstraint2));
-            }
-            //}
         }
         else if(partitionNonBinaryTerms) // Square term x1^2 or general bilinear term x1*x2 will be
                                          // partitioned into multiple constraints
         {
-            auto auxVariable = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
+            auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
             resultLinearTerms.add(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
-
-            bool isConvex = (coeffSign * signfactor > 0 && (T->getConvexity() == E_Convexity::Convex));
-
-            if((useConvexQuadraticObjective && isConvex) || useNonconvexQuadraticConstraints)
-            {
-                auto auxConstraint = std::make_shared<QuadraticConstraint>(
-                    auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-                auxConstraintCounter++;
-
-                auxConstraint->properties.convexity = (isConvex ? E_Convexity::Convex : E_Convexity::Nonconvex);
-
-                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
-                auxConstraint->add(
-                    std::make_shared<QuadraticTerm>(coeffSign * signfactor, firstVariable, secondVariable));
-
-                reformulatedProblem->add(std::move(auxConstraint));
-            }
-            else
-            {
-                auto auxConstraint = std::make_shared<NonlinearConstraint>(
-                    auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
-                auxConstraintCounter++;
-
-                if(coeffSign * signfactor > 0 && T->getConvexity() == E_Convexity::Convex)
-                {
-                    auxConstraint->properties.convexity = E_Convexity::Convex;
-                }
-                else
-                {
-                    auxConstraint->properties.convexity = E_Convexity::Nonconvex;
-                }
-
-                auxConstraint->add(std::make_shared<LinearTerm>(-1.0 * coeffSign * signfactor, auxVariable));
-                auxConstraint->add(
-                    std::make_shared<QuadraticTerm>(coeffSign * signfactor, firstVariable, secondVariable));
-
-                reformulatedProblem->add(std::move(auxConstraint));
-            }
         }
         else // Square term x1^2 or general bilinear term x1*x2 will remain as is
         {
@@ -1957,7 +1736,6 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
     case E_NonlinearExpressionTypes::Negate:
     case E_NonlinearExpressionTypes::Invert:
     case E_NonlinearExpressionTypes::SquareRoot:
-    case E_NonlinearExpressionTypes::Square:
     case E_NonlinearExpressionTypes::Log:
     case E_NonlinearExpressionTypes::Exp:
     case E_NonlinearExpressionTypes::Cos:
@@ -1968,6 +1746,10 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
     case E_NonlinearExpressionTypes::ArcTan:
         std::dynamic_pointer_cast<ExpressionUnary>(source)->child
             = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionUnary>(source)->child);
+        break;
+    case E_NonlinearExpressionTypes::Square:
+        // Extract quadratics
+        source = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionSquare>(source));
         break;
     case E_NonlinearExpressionTypes::Abs:
         return (reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionAbs>(source)));
@@ -1989,8 +1771,8 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
             C = reformulateNonlinearExpression(C);
         break;
     case E_NonlinearExpressionTypes::Product:
-        for(auto& C : std::dynamic_pointer_cast<ExpressionProduct>(source)->children)
-            C = reformulateNonlinearExpression(C);
+        // Extract quadratics
+        source = reformulateNonlinearExpression(std::dynamic_pointer_cast<ExpressionProduct>(source));
         break;
     }
 
@@ -2000,7 +1782,7 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(No
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source)
 {
     auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
-        = extractTermsAndConstant(source->child, true, true, true);
+        = extractTermsAndConstant(source->child, true, true, true, true);
 
     auto bounds = source->getBounds();
 
@@ -2108,35 +1890,120 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
     return (std::make_shared<ExpressionVariable>(auxVariable));
 }
 
-AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
+NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source)
+{
+    // Extract quadratic terms
+
+    auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
+        = extractTermsAndConstant(source, false, false, true, false);
+
+    for(auto& T : tmpQuadraticTerms)
+    {
+        std::cout << "Extracted square\n";
+
+        auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+
+        /*
+                if(newVariable)
+                {
+                    auto newRHS = (tmpConstant == 0.0) ? 0.0 : -tmpConstant;
+
+                    auto auxConstraint = std::make_shared<QuadraticConstraint>(
+                        auxConstraintCounter, "s_cquad_" + std::to_string(auxConstraintCounter), newRHS, newRHS);
+                    auxConstraintCounter++;
+
+                    auxConstraint->add(T);
+
+                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+
+                    auto numericConstraints = reformulateConstraint(auxConstraint);
+
+                    for(auto& C : numericConstraints)
+                        reformulatedProblem->add(std::move(C));
+                }*/
+
+        if(tmpNonlinearExpression)
+        {
+            tmpNonlinearExpression = reformulateNonlinearExpression(tmpNonlinearExpression);
+
+            tmpNonlinearExpression = std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionVariable>(auxVariable), tmpNonlinearExpression);
+        }
+        else
+            tmpNonlinearExpression = std::make_shared<ExpressionVariable>(auxVariable);
+    }
+
+    return (tmpNonlinearExpression);
+}
+
+NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source)
+{
+    auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
+        = extractTermsAndConstant(source, false, false, true, false);
+
+    // Extract quadratic terms
+    for(auto& T : tmpQuadraticTerms)
+    {
+        auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+
+        /*
+                if(newVariable)
+                {
+                    auto newRHS = (tmpConstant == 0.0) ? 0.0 : -tmpConstant;
+
+                    auto auxConstraint = std::make_shared<QuadraticConstraint>(
+                        auxConstraintCounter, "s_cquad_" + std::to_string(auxConstraintCounter), newRHS, newRHS);
+                    auxConstraintCounter++;
+
+                    auxConstraint->add(T);
+
+                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+
+                    auto numericConstraints = reformulateConstraint(auxConstraint);
+
+                    for(auto& C : numericConstraints)
+                        reformulatedProblem->add(std::move(C));
+                }*/
+
+        if(tmpNonlinearExpression)
+        {
+            tmpNonlinearExpression = reformulateNonlinearExpression(tmpNonlinearExpression);
+
+            tmpNonlinearExpression = std::make_shared<ExpressionSum>(
+                std::make_shared<ExpressionVariable>(auxVariable), tmpNonlinearExpression);
+        }
+        else
+            tmpNonlinearExpression = std::make_shared<ExpressionVariable>(auxVariable);
+    }
+
+    if(tmpQuadraticTerms.size() > 0)
+        return (reformulateNonlinearExpression(tmpNonlinearExpression));
+
+    for(auto& C : source->children)
+        C = reformulateNonlinearExpression(C);
+
+    return (source);
+}
+
+std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxiliaryVariable(
     VariablePtr firstVariable, VariablePtr secondVariable)
 {
     std::tuple<VariablePtr, VariablePtr> key;
 
     // The variable with lower index is stored first in the tuple
     if(firstVariable->index < secondVariable->index)
-    {
         key = std::make_tuple(firstVariable, secondVariable);
-
-        auto auxVariableIterator = bilinearAuxVariables.find(key);
-
-        if(auxVariableIterator != bilinearAuxVariables.end())
-        {
-            return (auxVariableIterator->second);
-        }
-    }
     else
-    {
         key = std::make_tuple(secondVariable, firstVariable);
 
-        auto auxVariableIterator = bilinearAuxVariables.find(key);
+    auto auxVariableIterator = bilinearAuxVariables.find(key);
 
-        if(auxVariableIterator != bilinearAuxVariables.end())
-        {
-            return (auxVariableIterator->second);
-        }
-    }
+    if(auxVariableIterator != bilinearAuxVariables.end())
+        return (std::make_pair(auxVariableIterator->second, false));
 
+    // Create a new variable
+
+    // Get the max bounds
     auto valueList = { firstVariable->lowerBound * secondVariable->lowerBound,
         firstVariable->lowerBound * secondVariable->upperBound, firstVariable->upperBound * secondVariable->lowerBound,
         firstVariable->upperBound * secondVariable->upperBound };
@@ -2144,37 +2011,265 @@ AuxiliaryVariablePtr TaskReformulateProblem::getBilinearAuxiliaryVariable(
     double lowerBound = std::min(valueList);
     double upperBound = std::max(valueList);
 
-    // Create a new variable
     auto auxVariable = std::make_shared<AuxiliaryVariable>("s_bl_" + firstVariable->name + "_" + secondVariable->name,
         auxVariableCounter, E_VariableType::Real, lowerBound, upperBound);
     auxVariableCounter++;
 
+    reformulatedProblem->add((auxVariable));
+    auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+    bilinearAuxVariables.emplace(key, auxVariable);
+
+    return (std::make_pair(auxVariable, true));
+}
+
+void TaskReformulateProblem::createBilinearReformulations()
+{
+    for(const auto& [VARS, AUXVAR] : bilinearAuxVariables)
+    {
+        auto firstVariable = std::get<0>(VARS);
+        auto firstVariableType = firstVariable->properties.type;
+
+        auto secondVariable = std::get<0>(VARS);
+        auto secondVariableType = secondVariable->properties.type;
+
+        if(firstVariableType == E_VariableType::Binary && secondVariableType == E_VariableType::Binary)
+        {
+            reformulateBinaryBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryBilinear;
+        }
+        else if((firstVariableType == E_VariableType::Binary && secondVariableType == E_VariableType::Real)
+            || (firstVariableType == E_VariableType::Real && secondVariableType == E_VariableType::Binary))
+        {
+            reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousBilinear;
+        }
+        else if(firstVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Integer)
+        {
+            reformulateIntegerBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        }
+        else if(firstVariableType == E_VariableType::Real && secondVariableType == E_VariableType::Real)
+        {
+            reformulateRealBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
+        }
+        else
+        {
+        }
+    }
+}
+
+void TaskReformulateProblem::reformulateBinaryBilinearTerm(
+    VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable)
+{
+    auto auxConstraint = std::make_shared<LinearConstraint>(
+        auxConstraintCounter, "s_binbl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 1.0);
+    auxConstraintCounter++;
+
+    auto linearTerm1 = std::make_shared<LinearTerm>(1.0, firstVariable);
+    auto linearTerm2 = std::make_shared<LinearTerm>(1.0, secondVariable);
+    auto linearTerm3 = std::make_shared<LinearTerm>(-1.0, auxVariable);
+
+    auxConstraint->add(linearTerm1);
+    auxConstraint->add(linearTerm2);
+    auxConstraint->add(linearTerm3);
+
+    auto auxConstraintBound1 = std::make_shared<LinearConstraint>(
+        auxConstraintCounter, "s_blbb_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+    auxConstraintBound1->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+    auxConstraintBound1->add(std::make_shared<LinearTerm>(-1.0, firstVariable));
+    auxConstraintCounter++;
+
+    auto auxConstraintBound2 = std::make_shared<LinearConstraint>(
+        auxConstraintCounter, "s_blbb_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+    auxConstraintBound2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+    auxConstraintBound2->add(std::make_shared<LinearTerm>(-1.0, secondVariable));
+    auxConstraintCounter++;
+
+    reformulatedProblem->add(std::move(auxConstraint));
+    reformulatedProblem->add(std::move(auxConstraintBound1));
+    reformulatedProblem->add(std::move(auxConstraintBound2));
+}
+
+void TaskReformulateProblem::reformulateBinaryContinuousBilinearTerm(
+    VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable)
+{
+    auto binaryVariable = (firstVariable->properties.type == E_VariableType::Binary) ? firstVariable : secondVariable;
+    auto otherVariable = (firstVariable->properties.type == E_VariableType::Binary) ? secondVariable : firstVariable;
+
+    auto auxConstraint1 = std::make_shared<LinearConstraint>(auxConstraintCounter,
+        "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
+    auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+    auxConstraint1->add(std::make_shared<LinearTerm>(1.0, otherVariable));
+    auxConstraint1->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    auxConstraintCounter++;
+
+    auto auxConstraint2 = std::make_shared<LinearConstraint>(auxConstraintCounter,
+        "s_blbc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, otherVariable->upperBound);
+    auxConstraint2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+    auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, otherVariable));
+    auxConstraint2->add(std::make_shared<LinearTerm>(otherVariable->upperBound, binaryVariable));
+    auxConstraintCounter++;
+
+    reformulatedProblem->add(std::move(auxConstraint1));
+    reformulatedProblem->add(std::move(auxConstraint2));
+}
+
+void TaskReformulateProblem::reformulateIntegerBilinearTerm(
+    VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable)
+{
+    VariablePtr discretizationVariable;
+    VariablePtr nonDiscretizationVariable;
+    Variables discretizationBinaries;
+
+    bool foundFirstVariable = false;
+    bool foundSecondVariable = false;
+    bool firstVariableIsDiscrete = false;
+
     if(firstVariable->properties.type == E_VariableType::Binary
-        && secondVariable->properties.type == E_VariableType::Binary)
+        || firstVariable->properties.type == E_VariableType::Integer)
     {
-        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryBilinear;
+        foundFirstVariable
+            = (integerAuxiliaryBinaryVariables.find(firstVariable) != integerAuxiliaryBinaryVariables.end());
+        firstVariableIsDiscrete = true;
     }
-    else if(firstVariable->properties.type == E_VariableType::Integer
-        && secondVariable->properties.type == E_VariableType::Integer)
+
+    if(secondVariable->properties.type == E_VariableType::Binary
+        || secondVariable->properties.type == E_VariableType::Integer)
     {
-        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        foundSecondVariable
+            = (integerAuxiliaryBinaryVariables.find(secondVariable) != integerAuxiliaryBinaryVariables.end());
     }
-    else if(firstVariable->properties.type == E_VariableType::Real
-        && secondVariable->properties.type == E_VariableType::Real)
+
+    bool firstVariableSmallerDomain = (firstVariable->upperBound - firstVariable->lowerBound
+        < secondVariable->upperBound - secondVariable->lowerBound);
+
+    if(foundFirstVariable && foundSecondVariable)
     {
-        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
+        discretizationVariable = firstVariableSmallerDomain ? firstVariable : secondVariable;
+        nonDiscretizationVariable = firstVariableSmallerDomain ? secondVariable : firstVariable;
+
+        discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
+    }
+    else if(foundFirstVariable)
+    {
+        discretizationVariable = firstVariable;
+        nonDiscretizationVariable = secondVariable;
+
+        discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
+    }
+    else if(foundSecondVariable)
+    {
+        discretizationVariable = secondVariable;
+        nonDiscretizationVariable = firstVariable;
+
+        discretizationBinaries = integerAuxiliaryBinaryVariables[discretizationVariable];
+    }
+    else // Need to create binary variables and SOS1 constraint
+    {
+        if(firstVariableIsDiscrete && firstVariableSmallerDomain)
+        {
+            discretizationVariable = firstVariable;
+            nonDiscretizationVariable = secondVariable;
+        }
+        else
+        {
+            discretizationVariable = secondVariable;
+            nonDiscretizationVariable = firstVariable;
+        }
+
+        auto auxFirstSum = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_bli" + std::to_string(auxConstraintCounter), 1.0, 1.0);
+        auxConstraintCounter++;
+
+        auto auxFirstSumVarDef = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_blx" + std::to_string(auxConstraintCounter), 0, 0);
+        auxConstraintCounter++;
+
+        auxFirstSumVarDef->add(std::make_shared<LinearTerm>(-1.0, discretizationVariable));
+
+        for(auto i = discretizationVariable->lowerBound; i <= discretizationVariable->upperBound; i++)
+        {
+            auto auxBinary = std::make_shared<AuxiliaryVariable>(
+                "s_bli" + std::to_string(auxVariableCounter + 1), auxVariableCounter, E_VariableType::Binary, 0.0, 1.0);
+
+            auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
+            auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));
+
+            discretizationBinaries.push_back(auxBinary);
+            reformulatedProblem->add(auxBinary);
+            auxVariableCounter++;
+        }
+
+        reformulatedProblem->add(std::move(auxFirstSum));
+        reformulatedProblem->add(std::move(auxFirstSumVarDef));
+
+        integerAuxiliaryBinaryVariables.emplace(discretizationVariable, discretizationBinaries);
+    }
+
+    double M = 2 * std::max(std::abs(discretizationVariable->lowerBound), std::abs(discretizationVariable->upperBound))
+        * std::max(std::abs(nonDiscretizationVariable->lowerBound), std::abs(nonDiscretizationVariable->upperBound));
+
+    for(auto i = discretizationVariable->lowerBound; i <= discretizationVariable->upperBound; i++)
+    {
+        auto auxConstraint1 = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_blw1_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, M);
+
+        auto auxConstraint2 = std::make_shared<LinearConstraint>(
+            auxConstraintCounter, "s_blw2_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, M);
+
+        auxConstraintCounter++;
+
+        auxConstraint1->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+        auxConstraint2->add(std::make_shared<LinearTerm>(1.0, auxVariable));
+
+        auxConstraint1->add(std::make_shared<LinearTerm>(i, nonDiscretizationVariable));
+        auxConstraint2->add(std::make_shared<LinearTerm>(-i, nonDiscretizationVariable));
+
+        auxConstraint1->add(
+            std::make_shared<LinearTerm>(M, discretizationBinaries[i - discretizationVariable->lowerBound]));
+
+        auxConstraint2->add(
+            std::make_shared<LinearTerm>(M, discretizationBinaries[i - discretizationVariable->lowerBound]));
+
+        reformulatedProblem->add(std::move(auxConstraint1));
+        reformulatedProblem->add(std::move(auxConstraint2));
+    }
+}
+
+void TaskReformulateProblem::reformulateRealBilinearTerm(
+    VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable)
+{
+    bool isConvex = (firstVariable == secondVariable) ? true : false;
+
+    if((useConvexQuadraticConstraints && isConvex) || useNonconvexQuadraticConstraints)
+    {
+        auto auxConstraint = std::make_shared<QuadraticConstraint>(
+            auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), 0.0, 0.0);
+        auxConstraintCounter++;
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+
+        reformulatedProblem->add(std::move(auxConstraint));
     }
     else
     {
-        auxVariable->properties.auxiliaryType = E_AuxiliaryVariableType::BinaryContinuousOrIntegerBilinear;
+        auto auxConstraint = std::make_shared<NonlinearConstraint>(
+            auxConstraintCounter, "s_blcc_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
+        auxConstraintCounter++;
+
+        auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
+        auxConstraint->add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+
+        reformulatedProblem->add(std::move(auxConstraint));
+
+        if(env->settings->getSetting<bool>("Reformulation.Bilinear.AddConvexEnvelope",
+               "Model")) // Also adds the McCormick envelopes to the dual model
+        {
+            addBilinearMcCormickEnvelope(auxVariable, firstVariable, secondVariable);
+        }
     }
-
-    reformulatedProblem->add((auxVariable));
-    auxVariable->quadraticTerms.add(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
-
-    bilinearAuxVariables.emplace(key, auxVariable);
-
-    return (auxVariable);
 }
 
 void TaskReformulateProblem::addBilinearMcCormickEnvelope(

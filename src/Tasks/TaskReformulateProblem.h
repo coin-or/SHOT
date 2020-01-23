@@ -51,6 +51,8 @@ private:
     bool partitionQuadraticTermsInConstraint = false;
 
     void reformulateObjectiveFunction();
+    void createEpigraphConstraint();
+
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
 
     template <class T> void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
@@ -89,8 +91,22 @@ private:
 
     NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
     NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
 
-    AuxiliaryVariablePtr getBilinearAuxiliaryVariable(VariablePtr firstVariable, VariablePtr secondVariable);
+    std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
+        VariablePtr firstVariable, VariablePtr secondVariable);
+
+    void createBilinearReformulations();
+
+    void reformulateBinaryBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+    void reformulateBinaryContinuousBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+    void reformulateIntegerBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+    void reformulateRealBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
 
     void addBilinearMcCormickEnvelope(
         AuxiliaryVariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);
