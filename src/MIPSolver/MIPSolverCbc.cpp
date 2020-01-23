@@ -572,7 +572,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         }
     }
 
-    for(int i = numArguments-1; i >= 0; --i)
+    for(int i = numArguments - 1; i >= 0; --i)
         free(argv[i]);
 
     return (MIPSolutionStatus);
@@ -684,39 +684,46 @@ bool MIPSolverCbc::repairInfeasibility()
         cachedSolutionHasChanged = true;
 
         const int numArguments = 11;
-        const char* argv[numArguments];
+        char* argv[numArguments];
+        std::string arg;
 
-        argv[0] = "";
-        argv[1] = "-solve";
-        argv[2] = "-quit";
+        argv[0] = strdup("");
+        argv[1] = strdup("-solve");
+        argv[2] = strdup("-quit");
 
         if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
-            argv[3] = "-autoscale=on";
+            argv[3] = strdup("-autoscale=on");
         else
-            argv[3] = "-autoscale=off";
+            argv[3] = strdup("-autoscale=off");
 
-        argv[4] = ("-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver")).c_str();
+        arg = "-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
+        argv[4] = strdup(arg.c_str());
 
         if(env->settings->getSetting<bool>("Cbc.ParallelMode", "Subsolver"))
-            argv[5] = "-parallelmode=deterministic";
+            argv[5] = strdup("-parallelmode=deterministic");
         else
-            argv[5] = "-parallelmode=opportunistic";
+            argv[5] = strdup("-parallelmode=opportunistic");
 
-        argv[6] = ("-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver")).c_str();
+        arg = "-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
+        argv[6] = strdup(arg.c_str());
 
-        argv[7] = ("-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"))).c_str();
+        arg = "-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
+        argv[7] = strdup(arg.c_str());
 
-        argv[8] = ("-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"))).c_str();
+        arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
+        argv[8] = strdup(arg.c_str());
 
         // Cbc has problems with too large cutoff values
         if(std::abs(this->cutOff) < 10e20)
-            argv[9] = ("-cutoff=" + std::to_string(this->cutOff)).c_str();
+            arg = "-cutoff=" + std::to_string(this->cutOff);
         else
-            argv[9] = "";
+            arg = "";
+        argv[9] = strdup(arg.c_str());
 
-        argv[10] = ("-sec=" + std::to_string(this->timeLimit)).c_str();
+        arg = "-sec=" + std::to_string(this->timeLimit);
+        argv[10] = strdup(arg.c_str());
 
-        CbcMain1(numArguments, argv, *cbcModel);
+        CbcMain1(numArguments, const_cast<const char**>(argv), *cbcModel);
 
         auto MIPSolutionStatus = getSolutionStatus();
 
@@ -766,6 +773,9 @@ bool MIPSolverCbc::repairInfeasibility()
         env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
+
+        for(int i = numArguments - 1; i >= 0; --i)
+            free(argv[i]);
 
         return (true);
     }
