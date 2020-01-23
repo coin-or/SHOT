@@ -22,8 +22,12 @@
 
 #include "GamsNLinstr.h"
 #ifdef GAMS_BUILD
-extern "C" void HSLInit();
+#include "GamsLicensing.h"
 #endif
+
+#include <cstdio> // for tmpnam()
+#include <cstdlib> // for mkdtemp()
+#include <fstream>
 
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
@@ -73,12 +77,11 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
 
 #ifdef GAMS_BUILD
     assert(pal != nullptr);
-    if(palLicenseCheckSubSys(pal, const_cast<char*>("IP")) == 0)
-    {
-        /* IPOPTH is licensed: use HSL MA27 and make it available */
+    GAMSinitLicensing(modelingObject, pal);
+
+    /* if IPOPTH is licensed, use MA27, otherwise Mumps */
+    if(GAMSHSLInit(modelingObject, pal))
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::ma27));
-        HSLInit();
-    }
     else
         env->settings->updateSetting("Ipopt.LinearSolver", "Subsolver", static_cast<int>(ES_IpoptSolver::mumps));
 #endif
@@ -158,7 +161,7 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings, [[maybe_unused]] p
     if(env->settings->getSetting<int>("MIP.Solver", "Dual") == (int)ES_MIPSolver::Cplex)
     {
         /* sometimes we would also allow a solver if demo-sized problem, but we don't know how large the MIPs will be */
-        if(palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) != 0)
+        if(!GAMScheckCPLEXLicense(pal, true))
         {
             env->output->outputInfo(
                 " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
@@ -195,7 +198,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(
     }
     catch(const std::exception& e)
     {
-        env->output->outputError(fmt::format("Error when reading GAMS model from \"{}\": {}", filename, e.what()));
+        env->output->outputError(fmt::format(" Error when reading GAMS model from \"{}\".\r\n {}", filename, e.what()));
 
         return (E_ProblemCreationStatus::Error);
     }
@@ -271,53 +274,146 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 
 void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 {
-    char gamscall[1024];
     char buffer[GMS_SSSIZE];
     int rc;
-    FILE* convertdopt;
 
     assert(modelingObject == nullptr);
     assert(modelingEnvironment == nullptr);
 
-    /* create temporary directory */
-    fs::filesystem::create_directory("loadgms.tmp");
-    fs::filesystem::permissions("loadgms.tmp", fs::filesystem::perms::all);
+    /* create temporary directory, mkdtemp is preferred over tmpnam */
+#if _DEFAULT_SOURCE || _BSD_SOURCE || _POSIX_C_SOURCE >= 200809L
+    strcpy(buffer, "loadgmsXXXXXX");
+    tmpdirname = mkdtemp(buffer);
+    if(tmpdirname.length() == 0)
+    {
+        throw std::logic_error("Could not create temporary directory.");
+    }
+#else
+    tmpdirname = std::tmpnam(nullptr);
+    fs::filesystem::create_directory(tmpdirname);
+    fs::filesystem::permissions(tmpdirname, fs::filesystem::perms::all);
+#endif
 
     createdtmpdir = true;
 
     /* create empty convertd options file */
-    convertdopt = fopen("loadgms.tmp/convertd.opt", "w");
-    if(convertdopt == nullptr)
+    std::ofstream convertdopt(fs::filesystem::path(tmpdirname) / "convertd.opt", std::ios::out);
+    if(!convertdopt.good())
     {
         throw std::logic_error("Could not create convertd options file.");
     }
-    fputs(" ", convertdopt);
-    fclose(convertdopt);
+    convertdopt << " " << std::endl;
+    convertdopt.close();
 
     /* call GAMS with convertd solver to get compiled model instance in temporary directory
      * we set lo=3 so that we get lo=3 into the gams control file, which is useful for showing the log of GAMS (NLP)
      * solvers later but since we don't want to see the stdout output from gams here, we redirect stdout to /dev/null
      * for this gams call
      */
-    snprintf(gamscall, sizeof(gamscall),
+    std::string gamscall;
 #ifdef GAMSDIR
-        GAMSDIR "/gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-                "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+    gamscall = fs::filesystem::path(GAMSDIR) / "gams";
 #else
-        "gams %s SOLVER=CONVERTD SCRDIR=loadgms.tmp output=loadgms.tmp/listing optdir=loadgms.tmp optfile=1 "
-        "pf4=0 solprint=0 limcol=0 limrow=0 pc=2 lo=3 > loadgms.tmp/gamsconvert.log",
+    gamscall = "gams";
 #endif
-        filename.c_str());
+    gamscall += " \"" + filename + "\"";
+    gamscall += " SOLVER=CONVERTD PF4=0 SOLPRINT=0 LIMCOL=0 LIMROW=0 PC=2";
+    gamscall += " SCRDIR=" + tmpdirname;
+    gamscall += " OUTPUT=" + std::string(fs::filesystem::path(tmpdirname) / "listing");
+    gamscall += " OPTFILE=1 OPTDIR=" + tmpdirname;
+    gamscall += " LO=3 > " + std::string(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
+    // printf(gamscall.c_str()); fflush(stdout);
 
-    /* printf(gamscall); fflush(stdout); */
-    rc = system(gamscall);
-    if(rc != 0)
+    rc = system(gamscall.c_str());
+    switch(WEXITSTATUS(rc))
     {
-        snprintf(buffer, sizeof(buffer), "GAMS call returned with code %d", rc);
-        throw std::logic_error(buffer);
+    case 0: /* Normal return */
+        break;
+
+    case 2: /* Compilation error */
+    case 3: /* Execution error */
+    {
+        std::string msg;
+
+        if(WEXITSTATUS(rc) == 2)
+            msg = "GAMS call returned with compilation error:\n";
+        else
+            msg = "GAMS call returned with execution error:\n";
+
+        std::ifstream lst(fs::filesystem::path(tmpdirname) / "listing");
+        std::string line;
+        while(lst.good() && !lst.eof())
+        {
+            getline(lst, line);
+            if(line.find("****") == 0 && line != "**** FILE SUMMARY")
+            {
+                msg.append(1, '\n');
+                msg.append(1, ' ');
+                msg += line;
+            }
+        }
+
+        msg.append(1, '\n');
+
+        throw std::logic_error(msg);
+        break;
     }
 
-    createModelFromGAMSModel("loadgms.tmp/gamscntr.dat");
+    default:
+    {
+        std::string msg;
+
+        switch(WEXITSTATUS(rc))
+        {
+        case 4: /* System limits reached */
+            msg = "GAMS call returned with system limits reached.";
+            break;
+        case 5: /* File error */
+            msg = "GAMS call returned with file error.";
+            break;
+        case 6: /* Parameter */
+            msg = "GAMS call returned with parameter error.";
+            break;
+        case 7: /* Licensing error */
+            msg = "GAMS call returned with licensing error.";
+            break;
+        case 8: /* System error */
+            msg = "GAMS call returned with system error.";
+            break;
+        case 9: /* GAMS could not be started */
+            msg = "GAMS could not be started.";
+            break;
+        case 10: /* out of memory */
+            msg = "GAMS ran out of memory.";
+            break;
+        case 11: /* out of disk */
+            msg = "GAMS ran out of disk space.";
+            break;
+        default: /* other errors, I don't want to handle each of them here... */
+            snprintf(buffer, sizeof(buffer),
+                "GAMS call returned with exit code %d (see also "
+                "https://www.gams.com/latest/docs/UG_GAMSReturnCodes.html#UG_GAMSReturnCodes_ListOfErrorCodes).",
+                WEXITSTATUS(rc));
+            msg = buffer;
+            break;
+        }
+
+        std::ifstream log(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
+        std::string line;
+        msg += " GAMS log:\n";
+        while(log.good() && !log.eof())
+        {
+            getline(log, line);
+            msg.append(1, '\n');
+            msg.append(1, ' ');
+            msg += line;
+        }
+
+        throw std::logic_error(msg);
+    }
+    }
+
+    createModelFromGAMSModel(fs::filesystem::path(tmpdirname) / "gamscntr.dat");
 
     /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use
      * as a SHOT options file */
@@ -492,7 +588,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
     /* remove temporary directory content (should have only files) and directory itself) */
     if(createdtmpdir)
     {
-        system("rm loadgms.tmp/* && rmdir loadgms.tmp");
+        std::filesystem::remove_all(tmpdirname);
         createdtmpdir = false;
     }
 }

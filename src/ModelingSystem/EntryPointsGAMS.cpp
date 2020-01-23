@@ -125,32 +125,22 @@ extern "C"
         gs = (gamsshot*)Cptr;
         gs->gmo = Gptr;
         gs->opt = Optr;
-
         gev = (gevHandle_t)gmoEnvironment(Gptr);
+
         if(!palCreate(&gs->pal, msg, sizeof(msg)))
         {
             gevLogStat(gev, msg);
             return 1;
         }
 
+#if PALAPIVERSION >= 3
         /* print auditline */
-#ifdef GAMS_BUILD
-#define PALPTR gs->pal
-#include "shotCLsvn.h"
+        palSetSystemName(gs->pal, "SHOT");
         palGetAuditLine(gs->pal, msg);
         gevLogStat(gev, "");
         gevLogStat(gev, msg);
         gevStatAudit(gev, msg);
 #endif
-
-        /* initialize licensing */
-        palLicenseRegisterGAMS(gs->pal, 1, gevGetStrOpt(gev, "License1", msg));
-        palLicenseRegisterGAMS(gs->pal, 2, gevGetStrOpt(gev, "License2", msg));
-        palLicenseRegisterGAMS(gs->pal, 3, gevGetStrOpt(gev, "License3", msg));
-        palLicenseRegisterGAMS(gs->pal, 4, gevGetStrOpt(gev, "License4", msg));
-        palLicenseRegisterGAMS(gs->pal, 5, gevGetStrOpt(gev, "License5", msg));
-        palLicenseRegisterGAMSDone(gs->pal);
-        /* palLicenseCheck(pal,gmoM(gmo),gmoN(gmo),gmoNZ(gmo),gmoNLNZ(gmo),gmoNDisc(gmo)); */
 
         return 0;
     }

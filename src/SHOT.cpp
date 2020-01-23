@@ -52,8 +52,9 @@ int main(int argc, char* argv[])
     fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile;
 
     // Read or create the file for the log
-    if(cmdl("--log") >> filename) // Have specified a log-file
+    if(cmdl("--log")) // Have specified a log-file
     {
+        filename = cmdl("--log").str();
         logFile = fs::filesystem::current_path() / fs::filesystem::path(filename);
         solver.setLogFile(logFile.string());
     }
@@ -70,9 +71,9 @@ int main(int argc, char* argv[])
         env->output->outputInfo("╶──────────────────────────────────────────────────────────────────────────────────"
                                 "───────────────────────────────────╴\r\n");
 
-        env->output->outputCritical("  Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
+        env->output->outputCritical(" Usage: SHOT PROBLEMFILE [ARGUMENTS] [OPTIONS]");
         env->output->outputCritical("");
-        env->output->outputCritical("  SHOT has been compiled with support for the following problem formats ");
+        env->output->outputCritical(" SHOT has been compiled with support for the following problem formats ");
 
 #ifdef HAS_AMPL
         env->output->outputCritical("   AMPL (.nl) ");
@@ -145,15 +146,16 @@ int main(int argc, char* argv[])
 
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path("options.md");
         if(!Utilities::writeStringToFile(filepath.string(), markup))
-            env->output->outputCritical(" Error when writing markup file: " + filepath.string());
+            env->output->outputCritical("Error when writing markup file: " + filepath.string());
     }
 
     // Read or create options file
 
     bool defaultOptionsGenerated = false;
 
-    if(cmdl("--opt") >> filename) // Have specified a opt-file
+    if(cmdl("--opt")) // Have specified a opt-file
     {
+        filename = cmdl("--opt").str();
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path(filename);
 
         if(fs::filesystem::exists(filepath))
@@ -162,7 +164,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            env->output->outputCritical("  Options file not found: " + filepath.string());
+            env->output->outputCritical(" Options file not found: " + filepath.string());
             return 0;
         }
     }
@@ -179,22 +181,23 @@ int main(int argc, char* argv[])
             // Create option file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptions()))
             {
-                env->output->outputCritical("  Error when writing options file: " + filepath.string());
+                env->output->outputCritical(" Error when writing options file: " + filepath.string());
                 return 0;
             }
 
             defaultOptionsGenerated = true;
-            env->output->outputInfo("  Default options file written to: " + filepath.string());
+            env->output->outputInfo(" Default options file written to: " + filepath.string());
         }
     }
-    else if(cmdl("--osol") >> filename) // Have specified a OSoL-file
+    else if(cmdl("--osol")) // Have specified a OSoL-file
     {
+        filename = cmdl("--osol").str();
         auto filepath = fs::filesystem::current_path() / fs::filesystem::path(filename);
 
         if(fs::filesystem::exists(filepath))
         {
             optionsFile = filepath;
-            env->output->outputInfo("  Default options file written to: " + filepath.string());
+            env->output->outputInfo(" Default options file written to: " + filepath.string());
         }
         else
         {
@@ -215,7 +218,7 @@ int main(int argc, char* argv[])
             // Create OSoL-file
             if(!Utilities::writeStringToFile(filepath.string(), solver.getOptionsOSoL()))
             {
-                env->output->outputCritical("  Error when writing OSoL file: " + filepath.string());
+                env->output->outputCritical(" Error when writing OSoL file: " + filepath.string());
                 return 0;
             }
         }
@@ -227,7 +230,7 @@ int main(int argc, char* argv[])
     {
         if(!optionsFile.empty() && !solver.setOptionsFromFile(optionsFile.string()))
         {
-            env->output->outputCritical("  Cannot set options from file: " + optionsFile.string());
+            env->output->outputCritical(" Cannot set options from file: " + optionsFile.string());
             return (0);
         }
 
@@ -253,8 +256,9 @@ int main(int argc, char* argv[])
         solver.updateSetting("Debug.Enable", "Output", true);
 
     std::string debugPath;
-    if(cmdl("--debug") >> debugPath)
+    if(cmdl("--debug"))
     {
+        debugPath = cmdl("--debug").str();
         solver.updateSetting("Debug.Enable", "Output", true);
         solver.updateSetting("Debug.Path", "Output", debugPath);
     }
@@ -313,7 +317,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'threads'");
+            env->output->outputCritical(" Cannot read value for parameter 'threads'");
         }
     }
 
@@ -325,7 +329,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'absgap'");
+            env->output->outputCritical(" Cannot read value for parameter 'absgap'");
         }
     }
 
@@ -337,7 +341,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'relgap'");
+            env->output->outputCritical(" Cannot read value for parameter 'relgap'");
         }
     }
 
@@ -349,7 +353,7 @@ int main(int argc, char* argv[])
         }
         catch(const std::exception& e)
         {
-            env->output->outputCritical("  Cannot read value for parameter 'timelimit'");
+            env->output->outputCritical(" Cannot read value for parameter 'timelimit'");
         }
     }
 
@@ -394,7 +398,7 @@ int main(int argc, char* argv[])
                 if(value == "true" || value == "false")
                     solver.updateSetting(name, category, (value == "true" ? true : false));
                 else
-                    env->output->outputCritical("  Cannot read boolean option in " + ARG);
+                    env->output->outputCritical(" Cannot read boolean option in " + ARG);
 
                 found = true;
                 break;
@@ -414,7 +418,7 @@ int main(int argc, char* argv[])
                 }
                 catch(const std::exception& e)
                 {
-                    env->output->outputCritical("  Cannot read integer option in " + ARG);
+                    env->output->outputCritical(" Cannot read integer option in " + ARG);
                 }
 
                 found = true;
@@ -435,7 +439,7 @@ int main(int argc, char* argv[])
                 }
                 catch(const std::exception& e)
                 {
-                    env->output->outputCritical("  Cannot read integer option in " + ARG);
+                    env->output->outputCritical(" Cannot read integer option in " + ARG);
                 }
 
                 found = true;
@@ -456,7 +460,7 @@ int main(int argc, char* argv[])
                 }
                 catch(const std::exception& e)
                 {
-                    env->output->outputCritical("  Cannot read numeric option in " + ARG);
+                    env->output->outputCritical(" Cannot read numeric option in " + ARG);
                 }
 
                 found = true;
@@ -465,14 +469,14 @@ int main(int argc, char* argv[])
         }
     }
 
-    // Read problem file
-
-    if(!cmdl(1) || !(cmdl(1) >> filename))
+    if(!cmdl(1))
     {
-        env->output->outputCritical("  No problem file specified.\r\n");
-        env->output->outputCritical("  Try 'SHOT --help' for more information.");
+        env->output->outputCritical(" No problem file specified.\r\n");
+        env->output->outputCritical(" Try 'SHOT --help' for more information.");
         return (0);
     }
+
+    filename = cmdl[1];
 
     if(!fs::filesystem::exists(filename))
     {
@@ -482,43 +486,46 @@ int main(int argc, char* argv[])
         }
         else
         {
-            env->output->outputCritical("   Problem file " + filename + " not found!");
+            env->output->outputCritical(" Problem file " + filename + " not found!");
             return (0);
         }
     }
 
     if(!solver.setProblem(filename))
     {
-        env->output->outputCritical("   Error when reading problem file.");
+        env->output->outputCritical(fmt::format(" SHOT could not read problem from file {}", filename));
         return (0);
     }
 
     // Check if we want to use the ASL calling format
     if(useASL && !((ES_SourceFormat)env->settings->getSetting<int>("SourceFormat", "Input") == ES_SourceFormat::NL))
     {
-        env->output->outputCritical("  Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
+        env->output->outputCritical(" Error: Can only use parameter AMPL if the problem is a AMPL (.nl) file.");
         return (0);
     }
 
     // Define result file locations
 
     std::string osrlFilename;
-    if(cmdl("--osrl") >> osrlFilename) // Have specified a OSrL-file location
+    if(cmdl("--osrl")) // Have specified a OSrL-file location
     {
+        osrlFilename = cmdl("--osrl").str();
         resultFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(osrlFilename);
     }
 
     std::string trcFilename;
-    if(cmdl("--trc") >> trcFilename) // Have specified a trace-file location
+    if(cmdl("--trc")) // Have specified a trace-file location
     {
+        trcFilename = cmdl("--trc").str();
         traceFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(trcFilename);
     }
 
     std::string solFilename;
-    if(cmdl("--sol") >> solFilename) // Have specified an sol-file location
+    if(cmdl("--sol")) // Have specified an sol-file location
     {
+        solFilename = cmdl("--sol").str();
         solFile = fs::filesystem::path(env->settings->getSetting<std::string>("ResultPath", "Output"))
             / fs::filesystem::path(solFilename);
     }
@@ -605,7 +612,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    env->output->outputInfo("\r\n");
     env->output->outputInfo(" Log written to:     " + logFile.string());
 
     if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
