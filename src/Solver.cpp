@@ -915,8 +915,15 @@ void Solver::initializeSettings()
 
     // Reformulations for quadratic objective and constraints
 
-    env->settings->createSetting(
-        "Reformulation.Quadratics.Extract", "Model", true, "Extract quadratic terms from nonlinear expressions");
+    VectorString enumQuadExtractStrategy;
+    enumQuadExtractStrategy.push_back("All nonlinear");
+    enumQuadExtractStrategy.push_back("Use quadratic objective");
+    enumQuadExtractStrategy.push_back("Use convex quadratic objective and constraints");
+
+    env->settings->createSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+        static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame),
+        "How to extract quadratic terms from nonlinear expressions", enumQuadExtractStrategy);
+    enumQuadExtractStrategy.clear();
 
     VectorString enumQPStrategy;
     enumQPStrategy.push_back("All nonlinear");

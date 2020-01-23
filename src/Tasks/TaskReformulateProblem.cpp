@@ -1115,7 +1115,9 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
 
             resultLinearTerms.add(std::make_shared<LinearTerm>(1.0, auxVariable));
 
-            bool extractQuadraticTerms = env->settings->getSetting<bool>("Reformulation.Quadratics.Extract", "Model");
+            bool extractQuadraticTerms
+                = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+                    >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
 
             if(static_cast<ES_QuadraticProblemStrategy>(
                    env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
@@ -1892,95 +1894,71 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source)
 {
-    // Extract quadratic terms
+    // Extract all quadratic terms from inside of the nonlinear expression
+    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraint));
 
-    auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
-        = extractTermsAndConstant(source, false, false, true, false);
-
-    for(auto& T : tmpQuadraticTerms)
+    if(extractQuadraticTerms)
     {
-        auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
+            = extractTermsAndConstant(source, false, false, true, false);
 
-        /*
-                if(newVariable)
-                {
-                    auto newRHS = (tmpConstant == 0.0) ? 0.0 : -tmpConstant;
-
-                    auto auxConstraint = std::make_shared<QuadraticConstraint>(
-                        auxConstraintCounter, "s_cquad_" + std::to_string(auxConstraintCounter), newRHS, newRHS);
-                    auxConstraintCounter++;
-
-                    auxConstraint->add(T);
-
-                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-
-                    auto numericConstraints = reformulateConstraint(auxConstraint);
-
-                    for(auto& C : numericConstraints)
-                        reformulatedProblem->add(std::move(C));
-                }*/
-
-        if(tmpNonlinearExpression)
+        if(tmpQuadraticTerms.size() > 0)
         {
-            tmpNonlinearExpression = reformulateNonlinearExpression(tmpNonlinearExpression);
+            auto sum = std::make_shared<ExpressionSum>();
 
-            tmpNonlinearExpression = std::make_shared<ExpressionSum>(
-                std::make_shared<ExpressionVariable>(auxVariable), tmpNonlinearExpression);
+            for(auto& T : tmpQuadraticTerms)
+            {
+                auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+                sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+            }
+
+            if(tmpNonlinearExpression)
+                sum->children.push_back(reformulateNonlinearExpression(tmpNonlinearExpression));
+
+            return (simplify(sum));
         }
-        else
-            tmpNonlinearExpression = std::make_shared<ExpressionVariable>(auxVariable);
     }
 
-    return (tmpNonlinearExpression);
+    source->child = reformulateNonlinearExpression(source->child);
+
+    return (simplify(source));
 }
 
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source)
 {
-    auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression, tmpConstant]
-        = extractTermsAndConstant(source, false, false, true, false);
+    // Extract all quadratic terms from inside of the nonlinear expression
+    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+        == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraint));
 
-    // Extract quadratic terms
-    for(auto& T : tmpQuadraticTerms)
+    if(extractQuadraticTerms)
     {
-        auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+        auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
+            tmpConstant]
+            = extractTermsAndConstant(source, false, false, true, false);
 
-        /*
-                if(newVariable)
-                {
-                    auto newRHS = (tmpConstant == 0.0) ? 0.0 : -tmpConstant;
-
-                    auto auxConstraint = std::make_shared<QuadraticConstraint>(
-                        auxConstraintCounter, "s_cquad_" + std::to_string(auxConstraintCounter), newRHS, newRHS);
-                    auxConstraintCounter++;
-
-                    auxConstraint->add(T);
-
-                    auxConstraint->add(std::make_shared<LinearTerm>(-1.0, auxVariable));
-
-                    auto numericConstraints = reformulateConstraint(auxConstraint);
-
-                    for(auto& C : numericConstraints)
-                        reformulatedProblem->add(std::move(C));
-                }*/
-
-        if(tmpNonlinearExpression)
+        if(tmpQuadraticTerms.size() > 0)
         {
-            tmpNonlinearExpression = reformulateNonlinearExpression(tmpNonlinearExpression);
+            auto sum = std::make_shared<ExpressionSum>();
 
-            tmpNonlinearExpression = std::make_shared<ExpressionSum>(
-                std::make_shared<ExpressionVariable>(auxVariable), tmpNonlinearExpression);
+            for(auto& T : tmpQuadraticTerms)
+            {
+                auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+                sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+            }
+
+            if(tmpNonlinearExpression)
+                sum->children.push_back(reformulateNonlinearExpression(tmpNonlinearExpression));
+
+            return (simplify(sum));
         }
-        else
-            tmpNonlinearExpression = std::make_shared<ExpressionVariable>(auxVariable);
     }
-
-    if(tmpQuadraticTerms.size() > 0)
-        return (reformulateNonlinearExpression(tmpNonlinearExpression));
 
     for(auto& C : source->children)
         C = reformulateNonlinearExpression(C);
 
-    return (source);
+    return (simplify(source));
 }
 
 std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxiliaryVariable(
