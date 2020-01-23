@@ -2015,7 +2015,7 @@ void TaskReformulateProblem::createBilinearReformulations()
         auto firstVariable = std::get<0>(VARS);
         auto firstVariableType = firstVariable->properties.type;
 
-        auto secondVariable = std::get<0>(VARS);
+        auto secondVariable = std::get<1>(VARS);
         auto secondVariableType = secondVariable->properties.type;
 
         if(firstVariableType == E_VariableType::Binary && secondVariableType == E_VariableType::Binary)
