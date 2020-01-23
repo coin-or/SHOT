@@ -63,7 +63,10 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
+        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX
+            && static_cast<ES_QuadraticProblemStrategy>(
+                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+                != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
         {
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
@@ -225,8 +228,6 @@ void Problem::updateConstraints()
             // We know this is a convex constraint
             auxConstraint->properties.convexity = E_Convexity::Convex;
             auxConstraints.push_back(auxConstraint);
-
-            std::cout << "hej\n";
         }
         else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
         {
@@ -347,18 +348,9 @@ void Problem::updateConvexity()
     }
 }
 
-void Problem::updateVariables()
+void Problem::updateVariableBounds()
 {
     auto numVariables = allVariables.size();
-
-    allVariables.sortByIndex();
-    allVariables.sortByIndex();
-    allVariables.sortByIndex();
-    realVariables.sortByIndex();
-    binaryVariables.sortByIndex();
-    integerVariables.sortByIndex();
-    semicontinuousVariables.sortByIndex();
-    auxiliaryVariables.sortByIndex();
 
     // Update bound vectors
     if(variableLowerBounds.size() != numVariables)
@@ -369,6 +361,33 @@ void Problem::updateVariables()
 
     if(variableBounds.size() != numVariables)
         variableBounds.resize(numVariables);
+
+    for(size_t i = 0; i < numVariables; i++)
+    {
+        if(allVariables[i]->properties.type == E_VariableType::Integer && allVariables[i]->lowerBound > -1
+            && allVariables[i]->upperBound < 2)
+        {
+            allVariables[i]->properties.type = E_VariableType::Binary;
+            allVariables[i]->lowerBound = 0.0;
+            allVariables[i]->upperBound = 1.0;
+        }
+
+        variableLowerBounds[i] = allVariables[i]->lowerBound;
+        variableUpperBounds[i] = allVariables[i]->upperBound;
+        variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
+    }
+}
+
+void Problem::updateVariables()
+{
+    allVariables.sortByIndex();
+    allVariables.sortByIndex();
+    allVariables.sortByIndex();
+    realVariables.sortByIndex();
+    binaryVariables.sortByIndex();
+    integerVariables.sortByIndex();
+    semicontinuousVariables.sortByIndex();
+    auxiliaryVariables.sortByIndex();
 
     nonlinearVariables.clear();
     nonlinearExpressionVariables.clear();
@@ -386,20 +405,7 @@ void Problem::updateVariables()
         V->properties.inNonlinearExpression = false;
     }
 
-    for(size_t i = 0; i < numVariables; i++)
-    {
-        if(allVariables[i]->properties.type == E_VariableType::Integer && allVariables[i]->lowerBound > -1
-            && allVariables[i]->upperBound < 2)
-        {
-            allVariables[i]->properties.type = E_VariableType::Binary;
-            allVariables[i]->lowerBound = 0.0;
-            allVariables[i]->upperBound = 1.0;
-        }
-
-        variableLowerBounds[i] = allVariables[i]->lowerBound;
-        variableUpperBounds[i] = allVariables[i]->upperBound;
-        variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
-    }
+    updateVariableBounds();
 
     if(objectiveFunction->properties.hasLinearTerms)
     {
@@ -1038,7 +1044,7 @@ VectorDouble Problem::getVariableLowerBounds()
 {
     if(!variablesUpdated)
     {
-        updateVariables();
+        updateVariableBounds();
     }
 
     return variableLowerBounds;
@@ -1048,7 +1054,7 @@ VectorDouble Problem::getVariableUpperBounds()
 {
     if(!variablesUpdated)
     {
-        updateVariables();
+        updateVariableBounds();
     }
 
     return variableUpperBounds;
@@ -1058,7 +1064,7 @@ IntervalVector Problem::getVariableBounds()
 {
     if(!variablesUpdated)
     {
-        updateVariables();
+        updateVariableBounds();
     }
 
     return variableBounds;

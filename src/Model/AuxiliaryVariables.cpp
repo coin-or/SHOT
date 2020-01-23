@@ -93,6 +93,17 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
     case E_AuxiliaryVariableType::BinaryBilinear:
         stream << " (binary bilinear linearization)";
         break;
+    case E_AuxiliaryVariableType::BinaryContinuousBilinear:
+        stream << " (mixed binary-continuous bilinear linearization)";
+        break;
+
+    case E_AuxiliaryVariableType::ContinuousBilinear:
+        stream << " (continuous bilinear linearization)";
+        break;
+
+    case E_AuxiliaryVariableType::IntegerBilinear:
+        stream << " (integer bilinear linearization)";
+        break;
 
     default:
         stream << " (unknown auxiliary variable)";

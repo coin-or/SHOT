@@ -293,7 +293,7 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
         {
             if(valueLHS == valueRHS)
             {
-                env->output->outputError("        Gurobi does not support quadratic equality constraints.");
+                gurobiModel->addQConstr(constraintLinearExpression + constraintQuadraticExpression == valueRHS, name);
             }
             else if(valueLHS < valueRHS)
             {
