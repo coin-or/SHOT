@@ -1899,8 +1899,6 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 
     for(auto& T : tmpQuadraticTerms)
     {
-        std::cout << "Extracted square\n";
-
         auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
 
         /*
