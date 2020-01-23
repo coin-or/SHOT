@@ -376,7 +376,10 @@ enum class ES_QuadraticTermsExtractStrategy
     DoNotExtract,
     ExtractTermsToSame, // Extract terms at first level of nonlinear expression (at model read) to the same objective or
                         // constraint
-    ExtractToEqualityConstraint // Extract terms at all levels (at reformulation step) to a new equality expression
+    ExtractToEqualityConstraintIfNonconvex, // Extract terms at all levels (at reformulation step) to a new equality
+                                            // expression
+    ExtractToEqualityConstraintAlways // Extract terms at all levels (at reformulation step) to a new equality
+                                      // expression
 };
 
 enum class ES_SourceFormat

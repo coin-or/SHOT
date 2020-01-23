@@ -50,6 +50,9 @@ private:
     bool partitionQuadraticTermsInObjective = false;
     bool partitionQuadraticTermsInConstraint = false;
 
+    bool extractQuadraticTermsFromNonconvexExpressions = false;
+    bool extractQuadraticTermsFromConvexExpressions = false;
+
     void reformulateObjectiveFunction();
     void createEpigraphConstraint();
 

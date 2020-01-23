@@ -60,6 +60,14 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
         break;
     }
 
+    extractQuadraticTermsFromNonconvexExpressions
+        = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
+
+    extractQuadraticTermsFromConvexExpressions
+        = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+            == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintAlways));
+
     auxVariableCounter = env->problem->properties.numberOfVariables;
     auxConstraintCounter = env->problem->properties.numberOfNumericConstraints;
 
@@ -1895,10 +1903,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source)
 {
     // Extract all quadratic terms from inside of the nonlinear expression
-    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-        == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraint));
+    auto convxity = source->getConvexity();
 
-    if(extractQuadraticTerms)
+    if((extractQuadraticTermsFromNonconvexExpressions
+           && !(convxity > E_Convexity::Convex || convxity == E_Convexity::Unknown))
+        || extractQuadraticTermsFromConvexExpressions)
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
@@ -1929,10 +1938,11 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source)
 {
     // Extract all quadratic terms from inside of the nonlinear expression
-    bool extractQuadraticTerms = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
-        == static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraint));
+    auto convxity = source->getConvexity();
 
-    if(extractQuadraticTerms)
+    if((extractQuadraticTermsFromNonconvexExpressions
+           && !(convxity > E_Convexity::Convex || convxity == E_Convexity::Unknown))
+        || extractQuadraticTermsFromConvexExpressions)
     {
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
             tmpConstant]
