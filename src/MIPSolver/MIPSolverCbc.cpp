@@ -380,40 +380,41 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     std::string arg;
 
     argv[0] = strdup("");
-    argv[1] = strdup("-solve");
-    argv[2] = strdup("-quit");
 
     if(env->settings->getSetting<bool>("Cbc.AutoScale", "Subsolver"))
-        argv[3] = strdup("-autoscale=on");
+        argv[1] = strdup("-autoscale=on");
     else
-        argv[3] = strdup("-autoscale=off");
+        argv[1] = strdup("-autoscale=off");
 
     arg = "-nodestrategy=" + env->settings->getSetting<std::string>("Cbc.NodeStrategy", "Subsolver");
-    argv[4] = strdup(arg.c_str());
+    argv[2] = strdup(arg.c_str());
 
     if(env->settings->getSetting<bool>("Cbc.ParallelMode", "Subsolver"))
-        argv[5] = strdup("-parallelmode=deterministic");
+        argv[3] = strdup("-parallelmode=deterministic");
     else
-        argv[5] = strdup("-parallelmode=opportunistic");
+        argv[3] = strdup("-parallelmode=opportunistic");
 
     arg = "-scaling=" + env->settings->getSetting<std::string>("Cbc.Scaling", "Subsolver");
-    argv[6] = strdup(arg.c_str());
+    argv[4] = strdup(arg.c_str());
 
     arg = "-strategy=" + std::to_string(env->settings->getSetting<int>("Cbc.Strategy", "Subsolver"));
-    argv[7] = strdup(arg.c_str());
+    argv[5] = strdup(arg.c_str());
 
     arg = "-threads=" + std::to_string(env->settings->getSetting<int>("MIP.NumberOfThreads", "Dual"));
-    argv[8] = strdup(arg.c_str());
+    argv[6] = strdup(arg.c_str());
 
     // Cbc has problems with too large cutoff values
     if(std::abs(this->cutOff) < 10e20)
         arg = "-cutoff=" + std::to_string(this->cutOff);
     else
         arg = "";
-    argv[9] = strdup(arg.c_str());
+    argv[7] = strdup(arg.c_str());
 
     arg = "-sec=" + std::to_string(this->timeLimit);
-    argv[10] = strdup(arg.c_str());
+    argv[8] = strdup(arg.c_str());
+
+    argv[9] = strdup("-solve");
+    argv[10] = strdup("-quit");
 
     try
     {
