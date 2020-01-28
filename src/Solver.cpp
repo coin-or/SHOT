@@ -1131,7 +1131,7 @@ void Solver::initializeSettings()
         "Node strategy, valid values: depth, downdepth, downfewest, fewest, hybrid, updepth, upfewest");
 
     env->settings->createSetting(
-        "Cbc.ParallelMode", "Subsolver", true, "Run Cbc with multiple threads in deterministic mode");
+        "Cbc.DeterministicParallelMode", "Subsolver", false, "Run Cbc with multiple threads in deterministic mode");
 
     env->settings->createSetting("Cbc.Scaling", "Subsolver", std::string("automatic"),
         "Whether to scale problem, valid values: automatic, dynamic, equilibrium, geometric, off, rowsonly");
