@@ -126,24 +126,10 @@ protected:
 
     void updateMonotonicity()
     {
-        bool areAllNonincreasing = true;
-        bool areAllNondecreasing = true;
+        monotonicity = E_Monotonicity::Constant;
 
         for(auto& TERM : *this)
-        {
-            auto monotonicity = TERM->getMonotonicity();
-            areAllNonincreasing = areAllNonincreasing
-                && (monotonicity == E_Monotonicity::Nonincreasing || monotonicity == E_Monotonicity::Constant);
-            areAllNondecreasing = areAllNondecreasing
-                && (monotonicity == E_Monotonicity::Nondecreasing || monotonicity == E_Monotonicity::Constant);
-        }
-
-        if(areAllNonincreasing)
-            monotonicity = E_Monotonicity::Nonincreasing;
-        else if(areAllNondecreasing)
-            monotonicity = E_Monotonicity::Nondecreasing;
-        else
-            monotonicity = E_Monotonicity::Unknown;
+            monotonicity = Utilities::combineMonotonicity(monotonicity, TERM->getMonotonicity());
     };
 
 public:
@@ -564,7 +550,7 @@ public:
         return value;
     }
 
-    inline E_Convexity getConvexity() const override { return E_Convexity::Unknown; };
+    inline E_Convexity getConvexity() const override { return E_Convexity::Nonconvex; };
 
     inline E_Monotonicity getMonotonicity() const override { return E_Monotonicity::Unknown; };
 };
@@ -575,11 +561,11 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTermPtr term)
 {
     if(term->coefficient == 1.0)
     {
-        stream << " +";
+        stream << " +1.0";
     }
     else if(term->coefficient == -1.0)
     {
-        stream << " -";
+        stream << " -1.0";
     }
     else if(term->coefficient == 0.0)
     {
@@ -985,15 +971,15 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTermPtr term)
 {
     if(term->coefficient == 1.0)
     {
-        stream << " +";
+        stream << " +1";
     }
     else if(term->coefficient == -1.0)
     {
-        stream << " -";
+        stream << " -1";
     }
     else if(term->coefficient == 0.0)
     {
-        stream << " +0.0";
+        stream << " +0";
     }
     else if(term->coefficient > 0)
     {
@@ -1168,7 +1154,7 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTerms terms)
     if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << terms.at(0);
+    stream << terms.at(0);
 
     for(size_t i = 1; i < terms.size(); i++)
     {
@@ -1183,7 +1169,7 @@ inline std::ostream& operator<<(std::ostream& stream, MonomialTerms terms)
     if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << terms.at(0);
+    stream << terms.at(0);
 
     for(size_t i = 1; i < terms.size(); i++)
     {
@@ -1198,7 +1184,7 @@ inline std::ostream& operator<<(std::ostream& stream, SignomialTerms terms)
     if(terms.size() == 0)
         return stream;
 
-    stream << ' ' << terms.at(0);
+    stream << terms.at(0);
 
     for(size_t i = 1; i < terms.size(); i++)
     {

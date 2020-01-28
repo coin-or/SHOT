@@ -158,5 +158,7 @@ public:
 
     void saveOptionsToFile(std::string fileName) override;
     void saveProblemToFile(std::string fileName) override;
+
+    std::string getSolverVersion() override { return (IPOPT_VERSION); };
 };
 } // namespace SHOT

@@ -17,50 +17,56 @@ namespace SHOT
 
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
-    stream << "[" << constraint.index << "]";
+    stream << "[" << constraint.index << "]\t";
 
     switch(constraint.properties.classification)
     {
     case(E_ConstraintClassification::Linear):
-        stream << "(L)   ";
+        stream << "(L,";
         break;
 
     case(E_ConstraintClassification::Quadratic):
-        stream << "(Q)   ";
+        stream << "(Q,";
         break;
 
     case(E_ConstraintClassification::QuadraticConsideredAsNonlinear):
     case(E_ConstraintClassification::Nonlinear):
-        stream << "(NL)  ";
+        stream << "(NL";
+        stream << (constraint.properties.hasQuadraticTerms ? "Q" : "");
+        stream << (constraint.properties.hasMonomialTerms ? "M" : "");
+        stream << (constraint.properties.hasSignomialTerms ? "S" : "");
+        stream << (constraint.properties.hasNonlinearExpression ? "E" : "");
+        stream << ",";
         break;
 
     default:
-        stream << "(?)   ";
+        stream << "(?,";
         break;
     }
-
-    if(constraint.name != "")
-        stream << ' ' << constraint.name;
 
     switch(constraint.properties.convexity)
     {
     case(E_Convexity::Linear):
-        stream << " (linear)";
+        stream << " linear)\t";
         break;
     case(E_Convexity::Convex):
-        stream << " (convex)";
+        stream << " convex)";
         break;
     case(E_Convexity::Nonconvex):
-        stream << " (nonconvex)";
+        stream << " nonconvex)";
         break;
     case(E_Convexity::NotSet):
     case(E_Convexity::Unknown):
+        stream << " unknown)";
         break;
     default:
         break;
     }
 
-    stream << ":\t";
+    if(constraint.name != "")
+        stream << '\t' << constraint.name;
+    else
+        stream << '\t';
 
     return constraint.print(stream); // polymorphic print via reference
 }
@@ -256,6 +262,7 @@ void LinearConstraint::updateProperties()
 
     properties.convexity = E_Convexity::Linear;
     properties.classification = E_ConstraintClassification::Linear;
+    properties.monotonicity = linearTerms.getMonotonicity();
 }
 
 void QuadraticConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
@@ -445,6 +452,11 @@ void QuadraticConstraint::updateProperties()
 
     auto convexity = quadraticTerms.getConvexity();
     properties.convexity = Utilities::combineConvexity(convexity, properties.convexity);
+
+    if(valueLHS != SHOT_DBL_MIN)
+        properties.convexity = E_Convexity::Nonconvex;
+
+    properties.monotonicity = Utilities::combineMonotonicity(properties.monotonicity, quadraticTerms.getMonotonicity());
 }
 
 void NonlinearConstraint::add(LinearTerms terms) { LinearConstraint::add(terms); }
@@ -612,7 +624,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
 
             std::vector<double> pointNonlinearSubset(numberOfNonlinearVariables, 0.0);
 
-            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+            for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
@@ -630,7 +642,7 @@ SparseVariableVector NonlinearConstraint::calculateGradient(const VectorDouble& 
                 if(coefficient == 0.0)
                     continue;
 
-                auto VAR = sharedOwnerProblem->nonlinearVariables[col[k]];
+                auto VAR = sharedOwnerProblem->nonlinearExpressionVariables[col[k]];
 
                 auto element = gradient.emplace(VAR, coefficient);
 
@@ -691,10 +703,14 @@ void NonlinearConstraint::initializeGradientSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
-            // the gradient may be detected
+            assert(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions > 0);
+            assert(sharedOwnerProblem->properties.numberOfNonlinearExpressions > 0);
+            assert(this->nonlinearExpressionIndex >= 0);
+
+            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
+            // of the gradient may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
@@ -759,7 +775,7 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
             std::vector<double> weights(sharedOwnerProblem->properties.numberOfNonlinearExpressions, 0.0);
             weights[this->nonlinearExpressionIndex] = 1.0;
 
-            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+            for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
             // TODO: utilize sparsity pattern
@@ -860,7 +876,7 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
             // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
             // the hessian may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
@@ -935,6 +951,7 @@ void NonlinearConstraint::updateProperties()
     QuadraticConstraint::updateProperties();
 
     properties.classification = E_ConstraintClassification::Nonlinear;
+
     variablesInNonlinearExpression.clear();
 
     if(nonlinearExpression != nullptr)
@@ -942,6 +959,9 @@ void NonlinearConstraint::updateProperties()
         properties.hasNonlinearExpression = true;
 
         nonlinearExpression->appendNonlinearVariables(variablesInNonlinearExpression);
+
+        assert(variablesInNonlinearExpression.size() > 0
+            || nonlinearExpression->getType() == E_NonlinearExpressionTypes::Constant);
 
         try
         {
@@ -955,6 +975,7 @@ void NonlinearConstraint::updateProperties()
     }
     else
     {
+        assert(variablesInNonlinearExpression.size() == 0);
         properties.hasNonlinearExpression = false;
     }
 
@@ -1004,6 +1025,18 @@ void NonlinearConstraint::updateProperties()
         properties.hasSignomialTerms = false;
     }
 
+    if(properties.hasMonomialTerms)
+        properties.monotonicity
+            = Utilities::combineMonotonicity(properties.monotonicity, monomialTerms.getMonotonicity());
+
+    if(properties.hasSignomialTerms)
+        properties.monotonicity
+            = Utilities::combineMonotonicity(properties.monotonicity, signomialTerms.getMonotonicity());
+
+    if(properties.hasNonlinearExpression)
+        properties.monotonicity
+            = Utilities::combineMonotonicity(properties.monotonicity, nonlinearExpression->getMonotonicity());
+
     std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
         [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
             return (variableOne->index < variableTwo->index);
@@ -1031,10 +1064,10 @@ std::ostream& LinearConstraint::print(std::ostream& stream) const
         stream << linearTerms;
 
     if(constant > 0)
-        stream << '+' << constant;
+        stream << " +" << constant;
 
     if(constant < 0)
-        stream << constant;
+        stream << ' ' << constant;
 
     if(valueLHS == valueRHS)
         stream << " = " << valueRHS;
@@ -1052,22 +1085,24 @@ std::ostream& operator<<(std::ostream& stream, QuadraticConstraintPtr constraint
 
 std::ostream& QuadraticConstraint::print(std::ostream& stream) const
 {
-    if(valueLHS > SHOT_DBL_MIN)
+    if(valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
     if(linearTerms.size() > 0)
         stream << linearTerms;
 
     if(quadraticTerms.size() > 0)
-        stream << " +" << quadraticTerms;
+        stream << quadraticTerms;
 
     if(constant > 0)
-        stream << '+' << constant;
+        stream << " +" << constant;
 
     if(constant < 0)
-        stream << constant;
+        stream << ' ' << constant;
 
-    if(valueRHS < SHOT_DBL_MAX)
+    if(valueLHS == valueRHS)
+        stream << " = " << valueRHS;
+    else if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;
@@ -1081,30 +1116,33 @@ std::ostream& operator<<(std::ostream& stream, NonlinearConstraintPtr constraint
 
 std::ostream& NonlinearConstraint::print(std::ostream& stream) const
 {
-    if(valueLHS > SHOT_DBL_MIN)
+    if(valueLHS > SHOT_DBL_MIN && valueLHS != valueRHS)
         stream << valueLHS << " <= ";
 
     if(linearTerms.size() > 0)
         stream << linearTerms;
 
     if(quadraticTerms.size() > 0)
-        stream << " +" << quadraticTerms;
+        stream << quadraticTerms;
 
     if(monomialTerms.size() > 0)
-        stream << " +" << monomialTerms;
+        stream << monomialTerms;
 
     if(signomialTerms.size() > 0)
-        stream << " +" << signomialTerms;
+        stream << signomialTerms;
 
-    stream << " +" << nonlinearExpression;
+    if(nonlinearExpression != nullptr)
+        stream << " +(" << nonlinearExpression << ')';
 
     if(constant > 0)
-        stream << '+' << constant;
+        stream << " +" << constant;
 
     if(constant < 0)
-        stream << constant;
+        stream << ' ' << constant;
 
-    if(valueRHS < SHOT_DBL_MAX)
+    if(valueLHS == valueRHS)
+        stream << " = " << valueRHS;
+    else if(valueRHS < SHOT_DBL_MAX)
         stream << " <= " << valueRHS;
 
     return stream;

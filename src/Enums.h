@@ -22,9 +22,9 @@ enum class E_AuxiliaryVariableType
     SignomialTermsPartitioning, // From reformulating signomial terms as constraints
     ContinuousBilinear, // From linearizing a bilinear term x1 * x2 where x1 and x2 are real
     BinaryBilinear, // From linearizing a bilinear term b1 * b2 where b1 and b2 are binary
-    BinaryContinuousOrIntegerBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is real or
-                                       // integer
-    IntegerBilinear // From linearizing a bilinear term i1 * i2, where i1 and i2 are integers
+    BinaryContinuousBilinear, // From linearizing a bilinear term b1 * x2 where b1 is binary and x2 is continuous
+    IntegerBilinear, // From linearizing a bilinear term i1 * x2, where i1 is integer and x2 is continuous or discrete
+    AbsoluteValue // From rewriting an absolute value
 };
 
 enum class E_Convexity
@@ -352,8 +352,8 @@ enum class ES_ReformulationBinaryMonomials
 enum class ES_ReformulatiomBilinearInteger
 {
     None,
-    OneDiscretization,
-    TwoDiscretization
+    OneDiscretization //,
+    // TwoDiscretization
 };
 
 enum class ES_PartitionNonlinearSums
@@ -367,7 +367,19 @@ enum class ES_QuadraticProblemStrategy
 {
     Nonlinear,
     QuadraticObjective,
-    QuadraticallyConstrained
+    ConvexQuadraticallyConstrained,
+    NonconvexQuadraticallyConstrained
+};
+
+enum class ES_QuadraticTermsExtractStrategy
+{
+    DoNotExtract,
+    ExtractTermsToSame, // Extract terms at first level of nonlinear expression (at model read) to the same objective or
+                        // constraint
+    ExtractToEqualityConstraintIfNonconvex, // Extract terms at all levels (at reformulation step) to a new equality
+                                            // expression
+    ExtractToEqualityConstraintAlways // Extract terms at all levels (at reformulation step) to a new equality
+                                      // expression
 };
 
 enum class ES_SourceFormat

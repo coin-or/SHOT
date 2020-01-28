@@ -45,10 +45,52 @@ void TaskRepairInfeasibleDualProblem::run()
     }
 
     if(env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate
-        >= env->settings->getSetting<int>("InfeasibilityRepair.IterationLimit", "Termination"))
+        >= env->settings->getSetting<int>("MIP.InfeasibilityRepair.IterationLimit", "Dual"))
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
+    }
+
+    // Loop detection
+    if(auto optional = env->results->getLastFeasibleIteration();
+        env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate > 1 && optional)
+    {
+        bool noNewSolutions = true;
+
+        for(auto& SCURR : currIter->solutionPoints)
+        {
+            bool solutionFound = false;
+
+            for(auto& SFEAS : optional->get()->solutionPoints)
+            {
+                if(SCURR.hashValue == SFEAS.hashValue)
+                {
+                    solutionFound = true;
+                    break;
+                }
+            }
+
+            if(!solutionFound)
+            {
+                noNewSolutions = false;
+                break;
+            }
+        }
+
+        if(noNewSolutions)
+        {
+            currIter->forceObjectiveReductionCut = true;
+            env->tasks->setNextTask(taskIDIfFalse);
+
+            std::stringstream tmpType;
+            tmpType << "REP-LOOP";
+
+            env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"),
+                currIter->numberOfInfeasibilityRepairedConstraints, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0,
+                currIter->maxDeviation, E_IterationLineType::DualRepair, true);
+
+            return;
+        }
     }
 
     auto currentSolutionLimit = env->dualSolver->MIPSolver->getSolutionLimit();
@@ -56,7 +98,7 @@ void TaskRepairInfeasibleDualProblem::run()
     currIter->hasInfeasibilityRepairBeenPerformed = true;
 
     env->dualSolver->MIPSolver->setTimeLimit(
-        env->settings->getSetting<double>("InfeasibilityRepair.TimeLimit", "Termination"));
+        env->settings->getSetting<double>("MIP.InfeasibilityRepair.TimeLimit", "Dual"));
 
     // Otherwise repair problem might not be solved to optimality
     env->dualSolver->MIPSolver->setSolutionLimit(2100000000);
@@ -68,9 +110,6 @@ void TaskRepairInfeasibleDualProblem::run()
     {
         env->tasks->setNextTask(taskIDIfTrue);
         iterLastRepair = currIter->iterationNumber;
-
-        // Does not work with Gurobi
-        // env->results->setDualBound(env->dualSolver->MIPSolver->getDualObjectiveValue());
 
         currIter->wasInfeasibilityRepairSuccessful = true;
         tmpType << "-SUCC";
@@ -99,8 +138,9 @@ void TaskRepairInfeasibleDualProblem::run()
     env->solutionStatistics.numberOfDualRepairsSinceLastPrimalUpdate++;
     env->results->solutionIsGlobal = false;
 
-    env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"), 0, 0, 0,
-        env->dualSolver->cutOffToUse, 0, 0, 0, 0, currIter->maxDeviation, E_IterationLineType::DualRepair, true);
+    env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"),
+        currIter->numberOfInfeasibilityRepairedConstraints, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0,
+        currIter->maxDeviation, E_IterationLineType::DualRepair, true);
 
     env->timing->stopTimer("DualStrategy");
 }

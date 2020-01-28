@@ -234,7 +234,13 @@ class ExpressionVariable : public NonlinearExpression
 public:
     VariablePtr variable;
 
-    ExpressionVariable(VariablePtr variable) : variable(variable) { variable->properties.isNonlinear = true; };
+    ExpressionVariable(VariablePtr variable) : variable(variable) {};
+
+    inline void takeOwnership(ProblemPtr owner) override
+    {
+        ownerProblem = owner;
+        assert(variable->ownerProblem.lock().get() == owner.get());
+    }
 
     inline double calculate(const VectorDouble& point) const override { return (variable->calculate(point)); };
 
@@ -1302,14 +1308,14 @@ public:
 
     ExpressionAbs(NonlinearExpressionPtr childExpression) { child = childExpression; }
 
-    inline double calculate(const VectorDouble& point) const override { return (abs(child->calculate(point))); }
+    inline double calculate(const VectorDouble& point) const override { return (fabs(child->calculate(point))); }
 
     inline Interval calculate(const IntervalVector& intervalVector) const override
     {
-        return (abs(child->calculate(intervalVector)));
+        return (fabs(child->calculate(intervalVector)));
     }
 
-    inline Interval getBounds() const override { return (abs(child->getBounds())); }
+    inline Interval getBounds() const override { return (fabs(child->getBounds())); }
 
     inline bool tightenBounds([[maybe_unused]] Interval bound) override { return (false); };
 
@@ -1868,15 +1874,7 @@ public:
             if(std::modf(constantValue, &intpart) == 0.0)
             {
                 int power = (int)constantValue;
-
-                FactorableFunction result = firstChild->getFactorableFunction();
-
-                for(int i = 1; i < power; i++)
-                {
-                    result *= firstChild->getFactorableFunction();
-                }
-
-                return (result);
+                return (CppAD::pow(firstChild->getFactorableFunction(), power));
             }
         }
 

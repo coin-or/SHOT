@@ -54,8 +54,9 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect
-        >= env->settings->getSetting<int>("ReductionCut.MaxIterations", "Primal"))
+    int maxIterations = env->settings->getSetting<int>("ReductionCut.MaxIterations", "Primal");
+
+    if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect >= maxIterations)
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
@@ -63,25 +64,52 @@ void TaskAddPrimalReductionCut::run()
 
     auto currIter = env->results->getCurrentIteration(); // The solved iteration
 
-    if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible && !currIter->wasInfeasibilityRepairSuccessful)
+    if(currIter->forceObjectiveReductionCut)
+    {
+    }
+    else if(currIter->solutionStatus == E_ProblemSolutionStatus::Infeasible
+        && !currIter->wasInfeasibilityRepairSuccessful)
     {
         env->tasks->setNextTask(taskIDIfFalse);
         return;
     }
 
-    double reductionFactor = env->settings->getSetting<double>("ReductionCut.ReductionFactor", "Primal");
+    double relativeGap = env->results->getRelativeCurrentObjectiveGap();
 
-    if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+    // Different logic if gap is large
+    if(relativeGap <= 1.0 && relativeGap > 0.1)
     {
+        double factor
+            = ((double)env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect) / (maxIterations + 1.0);
+
         env->dualSolver->cutOffToUse
-            = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
-        env->results->currentDualBound = SHOT_DBL_MIN;
+            = factor * env->results->currentDualBound + (1 - factor) * env->results->currentPrimalBound;
+
+        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        {
+            env->results->currentDualBound = SHOT_DBL_MIN;
+        }
+        else
+        {
+            env->results->currentDualBound = SHOT_DBL_MAX;
+        }
     }
     else
     {
-        env->dualSolver->cutOffToUse
-            = env->dualSolver->cutOffToUse + reductionFactor * std::abs(env->dualSolver->cutOffToUse);
-        env->results->currentDualBound = SHOT_DBL_MAX;
+        double reductionFactor = env->settings->getSetting<double>("ReductionCut.ReductionFactor", "Primal");
+
+        if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
+        {
+            env->dualSolver->cutOffToUse
+                = env->dualSolver->cutOffToUse - reductionFactor * std::abs(env->dualSolver->cutOffToUse);
+            env->results->currentDualBound = SHOT_DBL_MIN;
+        }
+        else
+        {
+            env->dualSolver->cutOffToUse
+                = env->dualSolver->cutOffToUse + reductionFactor * std::abs(env->dualSolver->cutOffToUse);
+            env->results->currentDualBound = SHOT_DBL_MAX;
+        }
     }
 
     std::stringstream tmpType;

@@ -65,6 +65,7 @@ public:
     void createIteration();
     IterationPtr getCurrentIteration();
     IterationPtr getPreviousIteration();
+    std::optional<IterationPtr> getLastFeasibleIteration();
     std::vector<IterationPtr> iterations;
     int getNumberOfIterations();
 
@@ -78,6 +79,7 @@ public:
 
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::None;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::None;
+    std::string usedPrimalNLPSolverVersion = "";
 
     bool solutionIsGlobal = true;
 

@@ -63,7 +63,10 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
-        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
+        else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX
+            && static_cast<ES_QuadraticProblemStrategy>(
+                   env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+                != ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
         {
             double valueLHS = C->valueLHS;
             C->valueLHS = SHOT_DBL_MIN;
@@ -121,6 +124,111 @@ void Problem::updateConstraints()
 
             C->constant *= -1.0;
         }
+        else if(C->valueLHS == C->valueRHS
+            && ((C->properties.convexity == E_Convexity::Convex
+                    && C->properties.monotonicity == E_Monotonicity::Nondecreasing)
+                   || (C->properties.convexity == E_Convexity::Concave
+                          && C->properties.monotonicity == E_Monotonicity::Nonincreasing)))
+        {
+            // Will rewrite as ()^2 <=c^2
+
+            auto auxConstraint = std::make_shared<NonlinearConstraint>(
+                this->numericConstraints.size(), C->name + "_eqrf", SHOT_DBL_MIN, C->valueRHS * C->valueRHS);
+
+            auxConstraint->properties.classification = E_ConstraintClassification::Nonlinear;
+
+            if(C->constant != 0.0)
+                auxConstraint->add(std::make_shared<ExpressionConstant>(C->constant));
+
+            if(C->properties.hasLinearTerms)
+            {
+                for(auto& LT : std::dynamic_pointer_cast<LinearConstraint>(C)->linearTerms)
+                {
+                    if(LT->coefficient == 1.0)
+                        auxConstraint->add(std::make_shared<ExpressionVariable>(LT->variable));
+                    else
+                    {
+                        auxConstraint->add(
+                            std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(LT->coefficient),
+                                std::make_shared<ExpressionVariable>(LT->variable)));
+                    }
+                }
+            }
+
+            if(C->properties.hasQuadraticTerms)
+            {
+                for(auto& QT : std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
+                {
+                    NonlinearExpressions product;
+
+                    if(QT->coefficient != 1.0)
+                        product.push_back(std::make_shared<ExpressionConstant>(QT->coefficient));
+
+                    product.push_back(std::make_shared<ExpressionVariable>(QT->firstVariable));
+                    product.push_back(std::make_shared<ExpressionVariable>(QT->secondVariable));
+
+                    C->add(std::make_shared<ExpressionProduct>(product));
+                }
+            }
+
+            if(C->properties.hasMonomialTerms)
+            {
+                for(auto& MT : std::dynamic_pointer_cast<NonlinearConstraint>(C)->monomialTerms)
+                {
+                    NonlinearExpressions product;
+
+                    if(MT->coefficient != 1.0)
+                        product.push_back(std::make_shared<ExpressionConstant>(MT->coefficient));
+
+                    for(auto& VAR : MT->variables)
+                        product.push_back(std::make_shared<ExpressionVariable>(VAR));
+
+                    C->add(std::make_shared<ExpressionProduct>(product));
+                }
+            }
+
+            if(C->properties.hasSignomialTerms)
+            {
+                for(auto& ST : std::dynamic_pointer_cast<NonlinearConstraint>(C)->signomialTerms)
+                {
+                    NonlinearExpressions product;
+
+                    if(ST->coefficient != 1.0)
+                        product.push_back(std::make_shared<ExpressionConstant>(ST->coefficient));
+
+                    for(auto& E : ST->elements)
+                    {
+                        if(E->power == 1.0)
+                            product.push_back(std::make_shared<ExpressionVariable>(E->variable));
+                        else if(E->power == 2.0)
+                            product.push_back(
+                                std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(E->variable)));
+                        else
+                            product.push_back(
+                                std::make_shared<ExpressionPower>(std::make_shared<ExpressionVariable>(E->variable),
+                                    std::make_shared<ExpressionConstant>(E->power)));
+                    }
+
+                    C->add(std::make_shared<ExpressionProduct>(product));
+                }
+            }
+
+            if(C->properties.hasNonlinearExpression)
+            {
+                auxConstraint->add(copyNonlinearExpression(
+                    std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(), this));
+            }
+
+            auxConstraint->nonlinearExpression = std::make_shared<ExpressionSquare>(auxConstraint->nonlinearExpression);
+
+            auxConstraint->ownerProblem = C->ownerProblem;
+
+            auxConstraint->updateProperties();
+
+            // We know this is a convex constraint
+            auxConstraint->properties.convexity = E_Convexity::Convex;
+            auxConstraints.push_back(auxConstraint);
+        }
         else if(C->valueLHS != SHOT_DBL_MIN && C->valueRHS != SHOT_DBL_MAX)
         {
             double valueLHS = C->valueLHS;
@@ -167,157 +275,25 @@ void Problem::updateConstraints()
     this->objectiveFunction->takeOwnership(shared_from_this());
 
     for(auto& C : numericConstraints)
+    {
+        C->updateProperties();
         C->takeOwnership(shared_from_this());
+    }
 }
 
-void Problem::updateVariables()
-{
-    auto numVariables = allVariables.size();
-
-    allVariables.sortByIndex();
-    allVariables.sortByIndex();
-    allVariables.sortByIndex();
-    realVariables.sortByIndex();
-    binaryVariables.sortByIndex();
-    integerVariables.sortByIndex();
-    semicontinuousVariables.sortByIndex();
-    nonlinearVariables.sortByIndex();
-    auxiliaryVariables.sortByIndex();
-
-    // Update bound vectors
-    if(variableLowerBounds.size() != numVariables)
-        variableLowerBounds.resize(numVariables);
-
-    if(variableUpperBounds.size() != numVariables)
-        variableUpperBounds.resize(numVariables);
-
-    if(variableBounds.size() != numVariables)
-        variableBounds.resize(numVariables);
-
-    nonlinearVariables.clear();
-
-    for(size_t i = 0; i < numVariables; i++)
-    {
-        variableLowerBounds[i] = allVariables[i]->lowerBound;
-        variableUpperBounds[i] = allVariables[i]->upperBound;
-        variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
-
-        if(allVariables[i]->properties.isNonlinear)
-            nonlinearVariables.push_back(allVariables[i]);
-    }
-
-    if(objectiveFunction->properties.hasLinearTerms)
-    {
-        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction)->linearTerms)
-            T->variable->properties.inObjectiveFunction = true;
-    }
-
-    if(objectiveFunction->properties.hasQuadraticTerms)
-    {
-        for(auto& T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction)->quadraticTerms)
-        {
-            T->firstVariable->properties.inObjectiveFunction = true;
-            T->secondVariable->properties.inObjectiveFunction = true;
-        }
-    }
-
-    if(objectiveFunction->properties.hasMonomialTerms)
-    {
-        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->monomialTerms)
-        {
-            for(auto& V : T->variables)
-            {
-                V->properties.inObjectiveFunction = true;
-                V->properties.inMonomialTerms = true;
-            }
-        }
-    }
-
-    if(objectiveFunction->properties.hasSignomialTerms)
-    {
-        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->signomialTerms)
-        {
-            for(auto& E : T->elements)
-            {
-                E->variable->properties.inObjectiveFunction = true;
-                E->variable->properties.inSignomialTerms = true;
-            }
-        }
-    }
-
-    if(objectiveFunction->properties.hasNonlinearExpression)
-    {
-        for(auto& V :
-            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->variablesInNonlinearExpression)
-        {
-            V->properties.inObjectiveFunction = true;
-            V->properties.inNonlinearExpression = true;
-        }
-    }
-
-    for(auto& C : linearConstraints)
-    {
-        for(auto& T : C->linearTerms)
-            T->variable->properties.inLinearConstraints = true;
-    }
-
-    for(auto& C : quadraticConstraints)
-    {
-        for(auto& T : C->quadraticTerms)
-        {
-            T->firstVariable->properties.inQuadraticConstraints = true;
-            T->secondVariable->properties.inQuadraticConstraints = true;
-        }
-    }
-
-    for(auto& C : nonlinearConstraints)
-    {
-        for(auto& V : C->variablesInMonomialTerms)
-        {
-            V->properties.inMonomialTerms = true;
-            V->properties.inNonlinearConstraints = true;
-        }
-
-        for(auto& V : C->variablesInSignomialTerms)
-        {
-            V->properties.inSignomialTerms = true;
-            V->properties.inNonlinearConstraints = true;
-        }
-
-        for(auto& V : C->variablesInNonlinearExpression)
-        {
-            V->properties.inNonlinearExpression = true;
-            V->properties.inNonlinearConstraints = true;
-        }
-    }
-
-    allVariables.takeOwnership(shared_from_this());
-    auxiliaryVariables.takeOwnership(shared_from_this());
-
-    variablesUpdated = true;
-}
-
-void Problem::updateProperties()
+void Problem::updateConvexity()
 {
     bool assumeConvex = env->settings->getSetting<bool>("AssumeConvex", "Convexity");
 
-    objectiveFunction->updateProperties();
-
     if(assumeConvex && objectiveFunction->properties.convexity != E_Convexity::Linear)
-    {
         objectiveFunction->properties.convexity
             = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
-    }
 
     for(auto& C : numericConstraints)
     {
-        C->updateProperties();
-
         if(assumeConvex && C->properties.convexity != E_Convexity::Linear)
             C->properties.convexity = E_Convexity::Convex;
     }
-
-    updateVariables();
 
     if(assumeConvex)
     {
@@ -370,6 +346,202 @@ void Problem::updateProperties()
             }
         }
     }
+}
+
+void Problem::updateVariableBounds()
+{
+    auto numVariables = allVariables.size();
+
+    // Update bound vectors
+    if(variableLowerBounds.size() != numVariables)
+        variableLowerBounds.resize(numVariables);
+
+    if(variableUpperBounds.size() != numVariables)
+        variableUpperBounds.resize(numVariables);
+
+    if(variableBounds.size() != numVariables)
+        variableBounds.resize(numVariables);
+
+    for(size_t i = 0; i < numVariables; i++)
+    {
+        if(allVariables[i]->properties.type == E_VariableType::Integer && allVariables[i]->lowerBound > -1
+            && allVariables[i]->upperBound < 2)
+        {
+            allVariables[i]->properties.type = E_VariableType::Binary;
+            allVariables[i]->lowerBound = 0.0;
+            allVariables[i]->upperBound = 1.0;
+        }
+
+        variableLowerBounds[i] = allVariables[i]->lowerBound;
+        variableUpperBounds[i] = allVariables[i]->upperBound;
+        variableBounds[i] = Interval(variableLowerBounds[i], variableUpperBounds[i]);
+    }
+}
+
+void Problem::updateVariables()
+{
+    allVariables.sortByIndex();
+    allVariables.sortByIndex();
+    allVariables.sortByIndex();
+    realVariables.sortByIndex();
+    binaryVariables.sortByIndex();
+    integerVariables.sortByIndex();
+    semicontinuousVariables.sortByIndex();
+    auxiliaryVariables.sortByIndex();
+
+    nonlinearVariables.clear();
+    nonlinearExpressionVariables.clear();
+
+    // Reset variable properties
+    for(auto& V : allVariables)
+    {
+        V->properties.isNonlinear = false;
+        V->properties.inObjectiveFunction = false;
+        V->properties.inLinearConstraints = false;
+        V->properties.inQuadraticConstraints = false;
+        V->properties.inNonlinearConstraints = false;
+        V->properties.inMonomialTerms = false;
+        V->properties.inSignomialTerms = false;
+        V->properties.inNonlinearExpression = false;
+    }
+
+    updateVariableBounds();
+
+    if(objectiveFunction->properties.hasLinearTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction)->linearTerms)
+            T->variable->properties.inObjectiveFunction = true;
+    }
+
+    if(objectiveFunction->properties.hasQuadraticTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction)->quadraticTerms)
+        {
+            T->firstVariable->properties.inObjectiveFunction = true;
+            T->secondVariable->properties.inObjectiveFunction = true;
+            T->firstVariable->properties.inQuadraticTerms = true;
+            T->secondVariable->properties.inQuadraticTerms = true;
+            T->firstVariable->properties.isNonlinear = true;
+            T->secondVariable->properties.isNonlinear = true;
+        }
+    }
+
+    if(objectiveFunction->properties.hasMonomialTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->monomialTerms)
+        {
+            for(auto& V : T->variables)
+            {
+                V->properties.inObjectiveFunction = true;
+                V->properties.inMonomialTerms = true;
+                V->properties.isNonlinear = true;
+            }
+        }
+    }
+
+    if(objectiveFunction->properties.hasSignomialTerms)
+    {
+        for(auto& T : std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->signomialTerms)
+        {
+            for(auto& E : T->elements)
+            {
+                E->variable->properties.inObjectiveFunction = true;
+                E->variable->properties.inSignomialTerms = true;
+                E->variable->properties.isNonlinear = true;
+            }
+        }
+    }
+
+    if(objectiveFunction->properties.hasNonlinearExpression)
+    {
+        for(auto& V :
+            std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction)->variablesInNonlinearExpression)
+        {
+            V->properties.inObjectiveFunction = true;
+            V->properties.inNonlinearExpression = true;
+
+            V->properties.isNonlinear = true;
+        }
+    }
+
+    for(auto& C : linearConstraints)
+    {
+        for(auto& T : C->linearTerms)
+            T->variable->properties.inLinearConstraints = true;
+    }
+
+    for(auto& C : quadraticConstraints)
+    {
+        for(auto& T : C->quadraticTerms)
+        {
+            T->firstVariable->properties.inQuadraticConstraints = true;
+            T->secondVariable->properties.inQuadraticConstraints = true;
+            T->firstVariable->properties.inQuadraticTerms = true;
+            T->secondVariable->properties.inQuadraticTerms = true;
+            T->firstVariable->properties.isNonlinear = true;
+            T->secondVariable->properties.isNonlinear = true;
+        }
+    }
+
+    for(auto& C : nonlinearConstraints)
+    {
+        for(auto& T : C->quadraticTerms)
+        {
+            T->firstVariable->properties.inQuadraticTerms = true;
+            T->secondVariable->properties.inQuadraticTerms = true;
+            T->firstVariable->properties.isNonlinear = true;
+            T->secondVariable->properties.isNonlinear = true;
+        }
+
+        for(auto& V : C->variablesInMonomialTerms)
+        {
+            V->properties.inMonomialTerms = true;
+            V->properties.inNonlinearConstraints = true;
+            V->properties.isNonlinear = true;
+        }
+
+        for(auto& V : C->variablesInSignomialTerms)
+        {
+            V->properties.inSignomialTerms = true;
+            V->properties.inNonlinearConstraints = true;
+            V->properties.isNonlinear = true;
+        }
+
+        for(auto& V : C->variablesInNonlinearExpression)
+        {
+            V->properties.inNonlinearExpression = true;
+            V->properties.inNonlinearConstraints = true;
+            V->properties.isNonlinear = true;
+        }
+    }
+
+    for(auto& V : allVariables)
+    {
+        if(V->properties.isNonlinear)
+            nonlinearVariables.push_back(V);
+
+        if(V->properties.inNonlinearExpression)
+            nonlinearExpressionVariables.push_back(V);
+
+        assert(!V->properties.isNonlinear
+            || (V->properties.isNonlinear
+                   && (V->properties.inQuadraticTerms || V->properties.inMonomialTerms || V->properties.inSignomialTerms
+                          || V->properties.inNonlinearExpression)));
+    }
+
+    allVariables.takeOwnership(shared_from_this());
+    auxiliaryVariables.takeOwnership(shared_from_this());
+
+    variablesUpdated = true;
+}
+
+void Problem::updateProperties()
+{
+    objectiveFunction->updateProperties();
+
+    updateConstraints();
+    updateVariables();
+    updateConvexity();
 
     properties.numberOfVariables = allVariables.size();
     properties.numberOfRealVariables = realVariables.size();
@@ -378,16 +550,15 @@ void Problem::updateProperties()
     properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables;
     properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
     properties.numberOfNonlinearVariables = nonlinearVariables.size();
+    properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
     properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
-
-    properties.numberOfVariablesInNonlinearExpressions = 0;
-
-    for(auto& V : nonlinearVariables)
-        if(V->properties.inNonlinearExpression)
-            properties.numberOfVariablesInNonlinearExpressions++;
 
     if(auxiliaryObjectiveVariable)
         properties.numberOfAuxiliaryVariables++;
+
+    assert(properties.numberOfVariables
+        == properties.numberOfRealVariables + properties.numberOfDiscreteVariables
+            + properties.numberOfSemicontinuousVariables);
 
     properties.numberOfNumericConstraints = numericConstraints.size();
     properties.numberOfLinearConstraints = linearConstraints.size();
@@ -399,32 +570,51 @@ void Problem::updateProperties()
     bool isObjQuadratic = (objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
         && objectiveFunction->properties.hasQuadraticTerms);
 
-    int numQuadraticConstraints = 0;
-    int numNonlinearConstraints = 0;
-    int numNonlinearExpressions = 0;
+    properties.numberOfQuadraticConstraints = 0;
+    properties.numberOfConvexQuadraticConstraints = 0;
+    properties.numberOfNonconvexQuadraticConstraints = 0;
 
     for(auto& C : quadraticConstraints)
     {
         if(C->properties.hasQuadraticTerms)
-            numQuadraticConstraints++;
+        {
+            properties.numberOfQuadraticConstraints++;
+
+            if(C->properties.convexity == E_Convexity::Convex)
+                properties.numberOfConvexQuadraticConstraints++;
+            else
+                properties.numberOfNonconvexQuadraticConstraints++;
+        }
     }
+
+    properties.numberOfNonlinearConstraints = 0;
+    properties.numberOfConvexNonlinearConstraints = 0;
+    properties.numberOfNonconvexNonlinearConstraints = 0;
+    properties.numberOfNonlinearExpressions = 0;
 
     for(auto& C : nonlinearConstraints)
     {
         if(C->properties.hasQuadraticTerms || C->properties.hasMonomialTerms || C->properties.hasSignomialTerms
             || C->properties.hasNonlinearExpression)
-            numNonlinearConstraints++;
+        {
+            properties.numberOfNonlinearConstraints++;
+
+            if(C->properties.convexity == E_Convexity::Convex)
+                properties.numberOfConvexNonlinearConstraints++;
+            else
+                properties.numberOfNonconvexNonlinearConstraints++;
+        }
 
         if(C->properties.hasNonlinearExpression)
-            numNonlinearExpressions++;
+            properties.numberOfNonlinearExpressions++;
     }
 
     if(objectiveFunction->properties.hasNonlinearExpression)
-        numNonlinearExpressions++;
+        properties.numberOfNonlinearExpressions++;
 
-    properties.numberOfQuadraticConstraints = numQuadraticConstraints;
-    properties.numberOfNonlinearConstraints = numNonlinearConstraints;
-    properties.numberOfNonlinearExpressions = numNonlinearExpressions;
+    assert(properties.numberOfNumericConstraints
+        == properties.numberOfLinearConstraints + properties.numberOfQuadraticConstraints
+            + properties.numberOfNonlinearConstraints);
 
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
@@ -544,10 +734,9 @@ void Problem::updateFactorableFunctions()
 
     factorableFunctionVariables = std::vector<CppAD::AD<double>>(properties.numberOfVariablesInNonlinearExpressions);
 
-    for(auto& V : nonlinearVariables)
+    for(auto& V : nonlinearExpressionVariables)
     {
-        if(!V->properties.inNonlinearExpression)
-            continue;
+        assert(V->properties.inNonlinearExpression);
 
         factorableFunctionVariables[nonlinearVariableCounter] = 3.0;
         V->factorableFunctionVariable = &factorableFunctionVariables[nonlinearVariableCounter];
@@ -603,6 +792,9 @@ Problem::~Problem()
     integerVariables.clear();
     semicontinuousVariables.clear();
     nonlinearVariables.clear();
+    nonlinearExpressionVariables.clear();
+
+    auxiliaryVariables.clear();
 
     variableLowerBounds.clear();
     variableUpperBounds.clear();
@@ -618,10 +810,9 @@ Problem::~Problem()
 
 void Problem::finalize()
 {
-    updateVariables();
-    updateConstraints();
     updateProperties();
     updateFactorableFunctions();
+    assert(verifyOwnership());
 
     // Do not do bound tightening on problems solved by MIP solver
     if(this->properties.numberOfNonlinearConstraints > 0
@@ -853,7 +1044,7 @@ VectorDouble Problem::getVariableLowerBounds()
 {
     if(!variablesUpdated)
     {
-        updateVariables();
+        updateVariableBounds();
     }
 
     return variableLowerBounds;
@@ -863,7 +1054,7 @@ VectorDouble Problem::getVariableUpperBounds()
 {
     if(!variablesUpdated)
     {
-        updateVariables();
+        updateVariableBounds();
     }
 
     return variableUpperBounds;
@@ -873,7 +1064,7 @@ IntervalVector Problem::getVariableBounds()
 {
     if(!variablesUpdated)
     {
-        updateVariables();
+        updateVariableBounds();
     }
 
     return variableBounds;
@@ -1867,5 +2058,154 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
     }
 
     return stream;
+}
+
+bool Problem::verifyOwnership()
+{
+    if(std::any_of(allVariables.begin(), allVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(realVariables.begin(), realVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(binaryVariables.begin(), binaryVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(integerVariables.begin(), integerVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(semicontinuousVariables.begin(), semicontinuousVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(nonlinearVariables.begin(), nonlinearVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(nonlinearExpressionVariables.begin(), nonlinearExpressionVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(auxiliaryVariables.begin(), auxiliaryVariables.end(),
+           [this](VariablePtr const& V) { return (V->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(auxiliaryObjectiveVariable && auxiliaryObjectiveVariable->ownerProblem.lock().get() != this)
+        return (false);
+
+    if(objectiveFunction->ownerProblem.lock().get() != this)
+        return (false);
+
+    if(auto objective = std::dynamic_pointer_cast<NonlinearObjectiveFunction>(objectiveFunction))
+    {
+        if(std::any_of(objective->monomialTerms.begin(), objective->monomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->signomialTerms.begin(), objective->signomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->variablesInMonomialTerms.begin(), objective->variablesInMonomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->variablesInSignomialTerms.begin(), objective->variablesInSignomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->variablesInNonlinearExpression.begin(),
+               objective->variablesInNonlinearExpression.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    if(auto objective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(objectiveFunction))
+    {
+        if(std::any_of(objective->linearTerms.begin(), objective->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(objective->quadraticTerms.begin(), objective->quadraticTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    auto objective = std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction);
+
+    if(std::any_of(objective->linearTerms.begin(), objective->linearTerms.end(),
+           [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(numericConstraints.begin(), numericConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(linearConstraints.begin(), linearConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(quadraticConstraints.begin(), quadraticConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    if(std::any_of(nonlinearConstraints.begin(), nonlinearConstraints.end(),
+           [this](ConstraintPtr const& C) { return (C->ownerProblem.lock().get() != this); }))
+        return (false);
+
+    for(auto& C : linearConstraints)
+    {
+        if(std::any_of(C->linearTerms.begin(), C->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    for(auto& C : quadraticConstraints)
+    {
+        if(std::any_of(C->linearTerms.begin(), C->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->quadraticTerms.begin(), C->quadraticTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    for(auto& C : nonlinearConstraints)
+    {
+        if(std::any_of(C->linearTerms.begin(), C->linearTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->quadraticTerms.begin(), C->quadraticTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->monomialTerms.begin(), C->monomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->signomialTerms.begin(), C->signomialTerms.end(),
+               [this](auto const& T) { return (T->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->variablesInMonomialTerms.begin(), C->variablesInMonomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->variablesInSignomialTerms.begin(), C->variablesInSignomialTerms.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+
+        if(std::any_of(C->variablesInNonlinearExpression.begin(), C->variablesInNonlinearExpression.end(),
+               [this](auto const& V) { return (V->ownerProblem.lock().get() != this); }))
+            return (false);
+    }
+
+    return (true);
 }
 } // namespace SHOT

@@ -107,7 +107,7 @@ template <typename K, typename V> inline void erase_if(std::map<K, V>& mapOfElem
     }
 }
 
-std::size_t calculateHash(VectorDouble const& point);
+double calculateHash(VectorDouble const& point);
 
 bool isAlmostEqual(double x, double y, const double epsilon);
 
@@ -127,4 +127,6 @@ SparseVariableMatrix combineSparseVariableMatrices(
     const SparseVariableMatrix& first, const SparseVariableMatrix& second, const SparseVariableMatrix& third);
 
 E_Convexity combineConvexity(const E_Convexity first, const E_Convexity second);
+
+E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonicity second);
 } // namespace SHOT::Utilities

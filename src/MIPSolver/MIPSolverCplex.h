@@ -151,6 +151,8 @@ public:
         return (MIPSolverBase::getConstraintIdentifier(source));
     };
 
+    std::string getSolverVersion() override;
+
     IloModel cplexModel;
     IloCplex cplexInstance;
 

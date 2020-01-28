@@ -95,19 +95,23 @@ bool Variable::isDualUnbounded()
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
-        double maxBound;
+        double minLB;
+        double maxUB;
 
         if(sharedOwnerProblem->env->settings)
         {
-            maxBound = sharedOwnerProblem->env->settings->getSetting<double>(
+            minLB = sharedOwnerProblem->env->settings->getSetting<double>(
                 "ContinuousVariable.MinimumLowerBound", "Model");
+            maxUB = sharedOwnerProblem->env->settings->getSetting<double>(
+                "ContinuousVariable.MaximumUpperBound", "Model");
         }
         else
         {
-            maxBound = 1e50;
+            minLB = -1e50;
+            maxUB = 1e50;
         }
 
-        if(lowerBound >= -maxBound && upperBound <= maxBound)
+        if(lowerBound >= minLB && upperBound <= maxUB)
             return false;
     }
 

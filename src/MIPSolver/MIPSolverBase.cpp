@@ -86,6 +86,7 @@ std::vector<SolutionPoint> MIPSolverBase::getAllVariableSolutions()
         }
 
         tmpSolPt.point = tmpPt;
+        tmpSolPt.hashValue = Utilities::calculateHash(tmpPt);
 
         tmpSolPt.objectiveValue = getObjectiveValue(i);
         tmpSolPt.iterFound = env->results->getCurrentIteration()->iterationNumber;

@@ -265,6 +265,7 @@ int MIPSolverCbc::addLinearConstraint(
 {
     try
     {
+        int numConstraintsBefore = osiInterface->getNumRows();
         CoinPackedVector cut;
 
         for(auto E : elements)
@@ -277,14 +278,25 @@ int MIPSolverCbc::addLinearConstraint(
             osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
         else
             osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+
+        if(osiInterface->getNumRows() > numConstraintsBefore)
+        {
+        }
+        else
+        {
+            env->output->outputInfo("        Hyperplane not added by Cbc");
+            return (-1);
+        }
     }
     catch(std::exception& e)
     {
         env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.what());
+        return (-1);
     }
     catch(CoinError& e)
     {
         env->output->outputError("Error when adding term to linear constraint in Cbc: ", e.message());
+        return (-1);
     }
 
     return (osiInterface->getNumRows() - 1);
@@ -482,7 +494,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     // To find a feasible point for an unbounded dual problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        bool variableBoundsUpdated = false;
+        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
@@ -497,9 +510,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             {
                 if(V->isDualUnbounded())
                 {
-                    updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 10e30, getUnboundedVariableBoundValue() / 10e30);
-                    variableBoundsUpdated = true;
+                    // Temporarily remove unbounded terms from objective
+                    originalObjectiveCoefficients.emplace_back(V->index, osiInterface->getObjCoefficients()[V->index]);
+                    osiInterface->setObjCoeff(V->index, 0.0);
+                    problemUpdated = true;
                 }
             }
         }
@@ -507,12 +521,30 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                     >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
         {
             // The auxiliary variable in the dual problem is unbounded
-            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 10e30,
-                getUnboundedVariableBoundValue() / 10e30);
-            variableBoundsUpdated = true;
+            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 10e40,
+                getUnboundedVariableBoundValue() / 10e40);
+            problemUpdated = true;
         }
 
-        if(variableBoundsUpdated)
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "unbounded.lp";
+
+            try
+            {
+                osiInterface->writeLp(ss.str().c_str(), "");
+            }
+            catch(std::exception& e)
+            {
+                env->output->outputError("Error when saving relaxed infesibility model to file in Cbc", e.what());
+            }
+        }
+
+        if(problemUpdated)
         {
             cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
@@ -530,11 +562,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isDualUnbounded())
-                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
-            }
+            for(auto& P : originalObjectiveCoefficients)
+                osiInterface->setObjCoeff(P.index, P.value);
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
@@ -569,11 +598,15 @@ bool MIPSolverCbc::repairInfeasibility()
         {
             if(i == cutOffConstraintIndex)
             {
-                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                // TODO: allow for relaxing integer constraints
+                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
+                {
+                    repairConstraints.push_back(i);
+                    relaxParameters.push_back(1 / (((double)i) + 1.0));
+                    numConstraintsToRepair++;
+                }
             }
             else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {
@@ -585,6 +618,25 @@ bool MIPSolverCbc::repairInfeasibility()
                 relaxParameters.push_back(1 / (((double)i) + 1.0));
                 numConstraintsToRepair++;
             }
+        }
+
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorString constraints(relaxParameters.size());
+
+            for(size_t i = 0; i < relaxParameters.size(); i++)
+            {
+                std::ostringstream expression;
+                constraints[i] = osiInterface->getRowName(repairConstraints[i]);
+            }
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repairedweights.txt";
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
         }
 
         double tmpCoefficient[1] = { -1.0 };
@@ -693,7 +745,7 @@ bool MIPSolverCbc::repairInfeasibility()
                 + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
         }
 
-        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
+        env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
@@ -704,6 +756,15 @@ bool MIPSolverCbc::repairInfeasibility()
             ss << "repaired.lp";
             writeProblemToFile(ss.str());
         }
+
+        if(numRepairs == 0)
+        {
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
+        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
+
         cbcModel = std::make_unique<CbcModel>(*osiInterface);
 
         for(int i = numArguments - 1; i >= 0; --i)
@@ -898,6 +959,7 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
 {
     try
     {
+        int numConstraintsBefore = osiInterface->getNumRows();
         CoinPackedVector cut;
 
         for(int I : binaryIndexesOnes)
@@ -913,11 +975,16 @@ bool MIPSolverCbc::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorInte
         osiInterface->addRow(cut, -osiInterface->getInfinity(), binaryIndexesOnes.size() - 1.0,
             fmt::format("IC_{}", integerCuts.size()));
 
-        modelUpdated = true;
-
-        integerCuts.push_back(osiInterface->getNumRows() - 1);
-
-        env->solutionStatistics.numberOfIntegerCuts++;
+        if(osiInterface->getNumRows() > numConstraintsBefore)
+        {
+            integerCuts.push_back(osiInterface->getNumRows() - 1);
+            env->solutionStatistics.numberOfIntegerCuts++;
+        }
+        else
+        {
+            env->output->outputInfo("        Integer cut not added by Cbc");
+            return (false);
+        }
     }
     catch(CoinError& e)
     {
@@ -1123,4 +1190,6 @@ int MIPSolverCbc::getNumberOfExploredNodes()
         return 0;
     }
 }
+
+std::string MIPSolverCbc::getSolverVersion() { return (CBC_VERSION); }
 } // namespace SHOT

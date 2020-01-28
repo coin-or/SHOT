@@ -15,6 +15,9 @@
 #include "../Results.h"
 #include "../Settings.h"
 #include "../Timing.h"
+#include "../Utilities.h"
+
+#include <algorithm> // std::equal
 
 namespace SHOT
 {
@@ -35,17 +38,61 @@ void TaskAddIntegerCuts::run()
     if(!currIter->isMIP() || !env->settings->getSetting<bool>("HyperplaneCuts.Delay", "Dual")
         || !currIter->MIPSolutionLimitUpdated)
     {
+        int numAdded = 0;
 
         for(size_t j = 0; j < env->dualSolver->integerCutWaitingList.size(); j++)
         {
             auto [ones, zeroes] = env->dualSolver->integerCutWaitingList.at(j);
 
+            bool alreadyAdded = false;
+
+            for(auto [oldOnes, oldZeroes] : env->dualSolver->generatedIntegerCuts)
+            {
+                bool cutsAreEqual = true;
+
+                if(oldOnes.size() != ones.size())
+                    continue;
+
+                if(oldZeroes.size() != zeroes.size())
+                    continue;
+
+                for(size_t i = 0; i < oldZeroes.size(); i++)
+                {
+                    if(zeroes[i] != oldZeroes[i])
+                    {
+                        cutsAreEqual = false;
+                        break;
+                    }
+                }
+
+                if(!cutsAreEqual)
+                    continue;
+
+                for(size_t i = 0; i < oldOnes.size(); i++)
+                {
+                    if(ones[i] != oldOnes[i])
+                    {
+                        cutsAreEqual = false;
+                        break;
+                    }
+                }
+
+                if(cutsAreEqual)
+                {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+
+            if(alreadyAdded)
+                continue;
+
             env->dualSolver->MIPSolver->createIntegerCut(ones, zeroes);
-            env->solutionStatistics.numberOfIntegerCuts++;
+            env->dualSolver->generatedIntegerCuts.emplace_back(ones, zeroes);
+            numAdded++;
         }
 
-        env->output->outputDebug("        Added " + std::to_string(env->dualSolver->integerCutWaitingList.size())
-            + " integer cut(s) to waiting list.");
+        env->output->outputDebug("        Added " + std::to_string(numAdded) + " integer cuts.");
 
         env->dualSolver->integerCutWaitingList.clear();
     }

@@ -62,8 +62,8 @@ Solver::Solver()
     env->timing->createTimer("ProblemInitialization", " - problem initialization");
     env->timing->createTimer("ProblemReformulation", " - problem reformulation");
     env->timing->createTimer("BoundTightening", " - bound tightening");
-    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem");
-    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem");
+    env->timing->createTimer("BoundTighteningFBBTOriginal", "   - feasibility based (original problem)");
+    env->timing->createTimer("BoundTighteningFBBTReformulated", "   - feasibility based (reformulated problem)");
 
     env->settings = std::make_shared<Settings>(env->output);
     env->tasks = std::make_shared<TaskHandler>(env);
@@ -449,6 +449,8 @@ bool Solver::selectStrategy()
         {
             solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
             isProblemInitialized = true;
+
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
         }
 
         return (true);
@@ -456,51 +458,51 @@ bool Solver::selectStrategy()
 
     auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
         env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"));
-    bool useQuadraticConstraints = (quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticallyConstrained);
+    bool useQuadraticConstraints = (quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained);
     bool useQuadraticObjective
         = (useQuadraticConstraints || quadraticStrategy == ES_QuadraticProblemStrategy::QuadraticObjective);
 
     bool isConvex = env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex;
 
-    if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
-    // MIQP problem
+    if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isMIQPProblem)
+    // Convex MIQP problem
     {
-        env->output->outputDebug(" Using MIQP solution strategy.");
+        env->output->outputDebug(" Using convex MIQP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
-    else if((useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
-    // QP problem
+    else if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && env->problem->properties.isQPProblem)
+    // Convex QP problem
     {
-        env->output->outputDebug(" Using QP solution strategy.");
+        env->output->outputDebug(" Using convex QP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
-    // MIQCQP problem
+    // Convex MIQCQP problem
     else if(isConvex && useQuadraticConstraints && env->problem->properties.isMIQCQPProblem)
     {
-        env->output->outputDebug(" Using MIQCQP solution strategy.");
+        env->output->outputDebug(" Using convex MIQCQP solution strategy.");
 
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
-    // QCQP problem
+    // Convex QCQP problem
     else if(isConvex && (useQuadraticConstraints || useQuadraticConstraints) && env->problem->properties.isQCQPProblem)
     {
-        env->output->outputDebug(" Using QCQP solution strategy.");
+        env->output->outputDebug(" Using convex QCQP solution strategy.");
 
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
     }
     // MILP problem
-    else if(env->problem->properties.isMILPProblem)
+    else if(env->problem->properties.isMILPProblem || env->problem->properties.isLPProblem)
     {
         env->output->outputDebug(" Using MILP solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
         env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
     }
     // NLP problem
-    else if(env->problem->properties.isNLPProblem || env->problem->properties.isLPProblem)
+    else if(isConvex && (env->problem->properties.isNLPProblem))
     {
         env->output->outputDebug(" Using continous solution strategy.");
         solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
@@ -730,11 +732,20 @@ void Solver::initializeSettings()
         "An extra tolerance for the objective cutoff value (to prevent infeasible subproblems)", SHOT_DBL_MIN,
         SHOT_DBL_MAX);
 
+    env->settings->createSetting(
+        "MIP.InfeasibilityRepair.IntegerCuts", "Dual", true, "Allow feasibility repair of integer cuts");
+
+    env->settings->createSetting("MIP.InfeasibilityRepair.IterationLimit", "Dual", 100,
+        "Max number of infeasible problems repaired without primal objective value improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting("MIP.InfeasibilityRepair.TimeLimit", "Dual", 10.0,
+        "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
+
     env->settings->createSetting("MIP.NodeLimit", "Dual", SHOT_DBL_MAX,
         "Node limit to use for MIP solver in single-tree strategy", 0.0, SHOT_DBL_MAX);
 
     env->settings->createSetting(
-        "MIP.NumberOfThreads", "Dual", 8, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
+        "MIP.NumberOfThreads", "Dual", 0, "Number of threads to use in MIP solver: 0: Automatic", 0, 999);
 
     VectorString enumPresolve;
     enumPresolve.push_back("Never");
@@ -807,7 +818,7 @@ void Solver::initializeSettings()
     enumSolutionStrategy.clear();
 
     env->settings->createSetting("TreeStrategy.Multi.Reinitialize", "Dual", false,
-        "Reinitialize the dual model in the subsolver each iteration");
+        "Reinitialize the dual model in the subsolver each iteration", true);
 
     // Optimization model settings
 
@@ -904,16 +915,26 @@ void Solver::initializeSettings()
 
     // Reformulations for quadratic objective and constraints
 
-    env->settings->createSetting(
-        "Reformulation.Quadratics.Extract", "Model", true, "Extract quadratic terms from nonlinear expressions");
+    VectorString enumQuadExtractStrategy;
+    enumQuadExtractStrategy.push_back("Do not extract");
+    enumQuadExtractStrategy.push_back("Extract to same objective or constraint");
+    enumQuadExtractStrategy.push_back("Extract to quadratic equality constraint if nonconvex");
+    enumQuadExtractStrategy.push_back("Extract to quadratic equality constraint even if convex");
+
+    env->settings->createSetting("Reformulation.Quadratics.ExtractStrategy", "Model",
+        static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame),
+        "How to extract quadratic terms from nonlinear expressions", enumQuadExtractStrategy);
+    enumQuadExtractStrategy.clear();
 
     VectorString enumQPStrategy;
     enumQPStrategy.push_back("All nonlinear");
     enumQPStrategy.push_back("Use quadratic objective");
-    enumQPStrategy.push_back("Use quadratic objective and constraints");
+    enumQPStrategy.push_back("Use convex quadratic objective and constraints");
+    enumQPStrategy.push_back("Use nonconvex quadratic objective and constraints");
+
     env->settings->createSetting("Reformulation.Quadratics.Strategy", "Model",
-        static_cast<int>(ES_QuadraticProblemStrategy::QuadraticallyConstrained), "How to treat quadratic functions",
-        enumQPStrategy);
+        static_cast<int>(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained),
+        "How to treat quadratic functions", enumQPStrategy);
     enumQPStrategy.clear();
 
     // Logging and output settings
@@ -1097,11 +1118,11 @@ void Solver::initializeSettings()
     env->settings->createSetting("Cplex.UseGenericCallback", "Subsolver", false,
         "Use the new generic callback (vers. >12.8) in the single-tree strategy (experimental)");
 
-    std::string workdir = "/data/stuff/tmp/";
+    std::string workdir = "";
     env->settings->createSetting("Cplex.WorkDir", "Subsolver", workdir, "Directory for swap file");
 
     env->settings->createSetting(
-        "Cplex.WorkMem", "Subsolver", 30000.0, "Memory limit for when to start swapping to disk", 0, 1.0e+75);
+        "Cplex.WorkMem", "Subsolver", 0.0, "Memory limit for when to start swapping to disk", 0.0, 1.0e+75);
 
 #endif
 
@@ -1225,13 +1246,8 @@ void Solver::initializeSettings()
     env->settings->createSetting("PrimalStagnation.IterationLimit", "Termination", 50,
         "Max number of iterations without significant primal objective value improvement", 0, SHOT_INT_MAX);
 
-    env->settings->createSetting("InfeasibilityRepair.IterationLimit", "Termination", 100,
-        "Max number of infeasible problems repaired without primal objective value improvement", 0, SHOT_INT_MAX);
-
-    env->settings->createSetting("InfeasibilityRepair.TimeLimit", "Termination", 10.0,
-        "Time limit when reparing infeasible problem", 0, SHOT_DBL_MAX);
-
-    env->settings->createSetting("TimeLimit", "Termination", 900.0, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting(
+        "TimeLimit", "Termination", SHOT_DBL_MAX, "Time limit (s) for solver", 0.0, SHOT_DBL_MAX);
 
     // Hidden settings for problem information
 
@@ -1419,8 +1435,11 @@ void Solver::setConvexityBasedSettings()
             env->settings->updateSetting("ESH.InteriorPoint.CuttingPlane.IterationLimit", "Dual", 50);
             env->settings->updateSetting("ESH.InteriorPoint.UsePrimalSolution", "Dual", 1);
 
+            env->settings->updateSetting("ESH.Rootsearch.UniqueConstraints", "Dual", false);
+
+            env->settings->updateSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 1.0);
             env->settings->updateSetting("HyperplaneCuts.UseIntegerCuts", "Dual", true);
-            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 10);
+            env->settings->updateSetting("HyperplaneCuts.MaxPerIteration", "Dual", 5);
 
             env->settings->updateSetting("TreeStrategy", "Dual", static_cast<int>(ES_TreeStrategy::MultiTree));
 
@@ -1438,7 +1457,7 @@ void Solver::setConvexityBasedSettings()
                 (int)ES_PartitionNonlinearSums::Always);
             env->settings->updateSetting("Reformulation.ObjectiveFunction.PartitionQuadraticTerms", "Model",
                 (int)ES_PartitionNonlinearSums::Always);
-            env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
+            // env->settings->updateSetting("Reformulation.Quadratics.Strategy", "Model", 0);
 
             env->settings->updateSetting("FixedInteger.CallStrategy", "Primal", 0);
             env->settings->updateSetting("FixedInteger.CreateInfeasibilityCut", "Primal", true);

@@ -123,7 +123,9 @@ E_ProblemCreationStatus ModelingSystemOS::createProblem(ProblemPtr& problem, std
 
         bool extractMonomialTerms = env->settings->getSetting<bool>("Reformulation.Monomials.Extract", "Model");
         bool extractSignomialTerms = env->settings->getSetting<bool>("Reformulation.Signomials.Extract", "Model");
-        bool extractQuadraticTerms = env->settings->getSetting<bool>("Reformulation.Quadratics.Extract", "Model");
+        bool extractQuadraticTerms
+            = (env->settings->getSetting<int>("Reformulation.Quadratics.ExtractStrategy", "Model")
+                >= static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractTermsToSame));
 
         simplifyNonlinearExpressions(problem, extractMonomialTerms, extractSignomialTerms, extractQuadraticTerms);
 

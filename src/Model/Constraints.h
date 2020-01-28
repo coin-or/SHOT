@@ -51,6 +51,7 @@ struct ConstraintProperties
     E_ConstraintClassification classification = E_ConstraintClassification::None;
     E_Convexity convexity = E_Convexity::NotSet;
     E_ConstraintSignType type = E_ConstraintSignType::None;
+    E_Monotonicity monotonicity = E_Monotonicity::NotSet;
 
     bool isReformulated = false;
 

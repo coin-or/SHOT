@@ -54,14 +54,17 @@ struct ProblemProperties
     int numberOfIntegerVariables = 0; // Not including binary variables
     int numberOfSemicontinuousVariables = 0;
     int numberOfNonlinearVariables = 0;
-    int numberOfAuxiliaryVariables = 0;
-
     int numberOfVariablesInNonlinearExpressions = 0;
+    int numberOfAuxiliaryVariables = 0;
 
     int numberOfNumericConstraints = 0;
     int numberOfLinearConstraints = 0;
     int numberOfQuadraticConstraints = 0;
+    int numberOfConvexQuadraticConstraints = 0;
+    int numberOfNonconvexQuadraticConstraints = 0;
     int numberOfNonlinearConstraints = 0;
+    int numberOfConvexNonlinearConstraints = 0;
+    int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
 
     std::string name = "";
@@ -82,9 +85,13 @@ private:
 
     NonlinearConstraints constraintsWithNonlinearExpressions;
 
+    void updateVariableBounds(); // This is called by updateVariables()
     void updateVariables();
     void updateConstraints();
+    void updateConvexity();
     void updateFactorableFunctions();
+
+    bool verifyOwnership();
 
 public:
     EnvironmentPtr env;
@@ -101,7 +108,8 @@ public:
     Variables binaryVariables;
     Variables integerVariables;
     Variables semicontinuousVariables;
-    Variables nonlinearVariables;
+    Variables nonlinearVariables; // All nonlinear variables, including in quadratic, signomial or monomial terms
+    Variables nonlinearExpressionVariables; // Variables in general nonlinear expressions
 
     AuxiliaryVariables auxiliaryVariables;
     AuxiliaryVariablePtr auxiliaryObjectiveVariable; // This is not the same as one created in the dual problem

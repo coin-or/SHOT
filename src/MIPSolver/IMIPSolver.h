@@ -120,6 +120,8 @@ public:
 
     virtual std::string getConstraintIdentifier(E_HyperplaneSource source) = 0;
 
+    virtual std::string getSolverVersion() = 0;
+
 protected:
 };
 } // namespace SHOT

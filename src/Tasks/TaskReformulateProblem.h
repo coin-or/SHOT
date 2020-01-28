@@ -42,13 +42,20 @@ public:
     std::string getType() override;
 
 private:
-    bool useQuadraticConstraints = false;
-    bool useQuadraticObjective = true;
+    bool useConvexQuadraticConstraints = false;
+    bool useNonconvexQuadraticConstraints = false;
+    bool useConvexQuadraticObjective = false;
+    bool useNonconvexQuadraticObjective = false;
     bool quadraticObjectiveRegardedAsNonlinear = false;
     bool partitionQuadraticTermsInObjective = false;
     bool partitionQuadraticTermsInConstraint = false;
 
+    bool extractQuadraticTermsFromNonconvexExpressions = false;
+    bool extractQuadraticTermsFromConvexExpressions = false;
+
     void reformulateObjectiveFunction();
+    void createEpigraphConstraint();
+
     NumericConstraints reformulateConstraint(NumericConstraintPtr constraint);
 
     template <class T> void copyLinearTermsToConstraint(LinearTerms terms, T destination, bool reversedSigns = false);
@@ -85,7 +92,24 @@ private:
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 
-    AuxiliaryVariablePtr getBilinearAuxiliaryVariable(VariablePtr firstVariable, VariablePtr secondVariable);
+    NonlinearExpressionPtr reformulateNonlinearExpression(NonlinearExpressionPtr source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionAbs> source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionSquare> source);
+    NonlinearExpressionPtr reformulateNonlinearExpression(std::shared_ptr<ExpressionProduct> source);
+
+    std::pair<AuxiliaryVariablePtr, bool> getBilinearAuxiliaryVariable(
+        VariablePtr firstVariable, VariablePtr secondVariable);
+
+    void createBilinearReformulations();
+
+    void reformulateBinaryBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+    void reformulateBinaryContinuousBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+    void reformulateIntegerBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
+    void reformulateRealBilinearTerm(
+        VariablePtr firstVariable, VariablePtr secondVariable, AuxiliaryVariablePtr auxVariable);
 
     void addBilinearMcCormickEnvelope(
         AuxiliaryVariablePtr auxVariable, VariablePtr firstVariable, VariablePtr secondVariable);

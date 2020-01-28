@@ -39,6 +39,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionConst
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionVariable> expression)
 {
+    if(expression->variable->lowerBound == expression->variable->upperBound)
+        return (std::make_shared<ExpressionConstant>(expression->variable->lowerBound));
+
     return (expression);
 }
 
@@ -492,34 +495,33 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
             return (std::make_shared<ExpressionSquareRoot>(firstChild));
         else if(secondChildConstant == -1.0)
             return (std::make_shared<ExpressionInvert>(firstChild));
-    }
-
-    // Extract constants in if first child is product and has a constant as its first child.
-    // Since the children have been simplified, we can assume that the constant (if it exists) is first.
-    if(firstChild->getType() == E_NonlinearExpressionTypes::Product
-        && secondChild->getType() == E_NonlinearExpressionTypes::Constant && firstChild->getNumberOfChildren() > 1)
-    {
-        auto product = std::dynamic_pointer_cast<ExpressionProduct>(firstChild);
-        auto power = std::dynamic_pointer_cast<ExpressionConstant>(secondChild)->constant;
-
-        double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(0))->constant;
-
-        NonlinearExpressions children;
-
-        for(auto it = product->children.begin() + 1; it != product->children.end(); it++)
+        else if(firstChild->getType() == E_NonlinearExpressionTypes::Product && firstChild->getNumberOfChildren() > 1
+            && std::dynamic_pointer_cast<ExpressionProduct>(firstChild)->children.at(0)->getType()
+                == E_NonlinearExpressionTypes::Constant)
         {
-            children.add(*it);
+            // Extract constants if first child is product and has a constant as its first child.
+            // Since the children have been simplified, we can assume that the constant (if it exists) is first.
+
+            auto product = std::dynamic_pointer_cast<ExpressionProduct>(firstChild);
+            double constant = std::dynamic_pointer_cast<ExpressionConstant>(product->children.at(0))->constant;
+
+            NonlinearExpressions children;
+
+            for(auto it = product->children.begin() + 1; it != product->children.end(); it++)
+            {
+                children.add(*it);
+            }
+
+            auto newProduct = std::make_shared<ExpressionProduct>();
+
+            if(constant != 1.0)
+                newProduct->children.add(std::make_shared<ExpressionConstant>(std::pow(constant, secondChildConstant)));
+
+            newProduct->children.add(
+                std::make_shared<ExpressionPower>(std::make_shared<ExpressionProduct>(children), secondChild));
+
+            return (newProduct);
         }
-
-        auto newProduct = std::make_shared<ExpressionProduct>();
-
-        if(constant != 1.0)
-            newProduct->children.add(std::make_shared<ExpressionConstant>(std::pow(constant, power)));
-
-        newProduct->children.add(
-            std::make_shared<ExpressionPower>(std::make_shared<ExpressionProduct>(children), secondChild));
-
-        return (newProduct);
     }
 
     return (std::make_shared<ExpressionPower>(firstChild, secondChild));
@@ -527,6 +529,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionPower
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> expression)
 {
+    if(expression->getNumberOfChildren() == 1)
+        return (expression->children[0]);
+
     double constant = 0.0;
 
     NonlinearExpressions children;
@@ -577,6 +582,9 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSum> 
 
 inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionProduct> expression)
 {
+    if(expression->getNumberOfChildren() == 1)
+        return (expression->children[0]);
+
     double constant = 1.0;
 
     NonlinearExpressions children;
@@ -668,8 +676,9 @@ inline NonlinearExpressionPtr simplify(NonlinearExpressionPtr expression)
     switch(expression->getType())
     {
     case E_NonlinearExpressionTypes::Constant:
-    case E_NonlinearExpressionTypes::Variable:
         break;
+    case E_NonlinearExpressionTypes::Variable:
+        return simplifyExpression(std::dynamic_pointer_cast<ExpressionVariable>(expression));
     case E_NonlinearExpressionTypes::Negate:
         return simplifyExpression(std::dynamic_pointer_cast<ExpressionNegate>(expression));
     case E_NonlinearExpressionTypes::Invert:
@@ -1171,8 +1180,8 @@ inline std::optional<SignomialTermPtr> convertToSignomialTerm(NonlinearExpressio
 }
 
 inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, NonlinearExpressionPtr, double>
-    extractTermsAndConstant(
-        NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials, bool extractQuadratics)
+    extractTermsAndConstant(NonlinearExpressionPtr expression, bool extractMonomials, bool extractSignomials,
+        bool extractQuadratics, bool extractLinears)
 {
     double constant = 0.0;
     LinearTerms linearTerms;
@@ -1190,7 +1199,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             constant += expressionConstant->constant;
         }
     }
-    else if(expression->getType() == E_NonlinearExpressionTypes::Variable)
+    else if(expression->getType() == E_NonlinearExpressionTypes::Variable && extractLinears)
     {
         auto variable = std::dynamic_pointer_cast<ExpressionVariable>(expression);
         linearTerms.add(std::make_shared<LinearTerm>(1.0, variable->variable));
@@ -1308,7 +1317,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto power = std::dynamic_pointer_cast<ExpressionPower>(expression);
 
-        if(auto optional = convertPowerToLinearTerm(power); optional)
+        if(auto optional = convertPowerToLinearTerm(power); optional && extractLinears)
         {
             linearTerms.add(optional.value());
         }
@@ -1329,7 +1338,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression);
 
-        if(auto optional = convertProductToLinearTerm(product); optional)
+        if(auto optional = convertProductToLinearTerm(product); optional && extractLinears)
         {
             linearTerms.add(optional.value());
         }
@@ -1360,7 +1369,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
                 tmpConstant]
-                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics);
+                = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics, extractLinears);
 
             linearTerms.add(tmpLinearTerms);
             quadraticTerms.add(tmpQuadraticTerms);
@@ -1397,6 +1406,24 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         && std::dynamic_pointer_cast<ExpressionConstant>(nonlinearExpression)->constant == 0.0)
     {
         nonlinearExpression = nullptr;
+    }
+
+    if(auto sharedOwnerProblem = expression->ownerProblem.lock())
+    {
+        for(auto& T : linearTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        for(auto& T : quadraticTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        for(auto& T : monomialTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        for(auto& T : signomialTerms)
+            T->takeOwnership(sharedOwnerProblem);
+
+        if(nonlinearExpression)
+            nonlinearExpression->takeOwnership(sharedOwnerProblem);
     }
 
     return std::make_tuple(linearTerms, quadraticTerms, monomialTerms, signomialTerms, nonlinearExpression, constant);

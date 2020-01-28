@@ -406,12 +406,19 @@ void MIPSolverCplex::initializeSolverSettings()
             IloCplex::Param::OptimalityTarget, env->settings->getSetting<int>("Cplex.OptimalityTarget", "Subsolver"));
 
         // Options for using swap file
-        cplexInstance.setParam(
-            IloCplex::WorkDir, env->settings->getSetting<std::string>("Cplex.WorkDir", "Subsolver").c_str());
-        cplexInstance.setParam(IloCplex::WorkMem, env->settings->getSetting<double>("Cplex.WorkMem", "Subsolver"));
+        auto workdir = env->settings->getSetting<std::string>("Cplex.WorkDir", "Subsolver");
+
+        if(workdir != "")
+            cplexInstance.setParam(IloCplex::WorkDir, workdir.c_str());
+
+        auto workmem = env->settings->getSetting<double>("Cplex.WorkMem", "Subsolver");
+
+        if(workmem > 0)
+            cplexInstance.setParam(IloCplex::WorkMem, workmem);
+
         cplexInstance.setParam(IloCplex::NodeFileInd, env->settings->getSetting<int>("Cplex.NodeFileInd", "Subsolver"));
 
-        cplexInstance.setParam(IloCplex::FeasOptMode, 2);
+        cplexInstance.setParam(IloCplex::FeasOptMode, env->settings->getSetting<int>("Cplex.FeasOptMode", "Subsolver"));
 
         // Adds a user-provided node limit
         if(env->settings->getSetting<double>("MIP.NodeLimit", "Dual") > 0)
@@ -433,6 +440,8 @@ int MIPSolverCplex::addLinearConstraint(
 {
     try
     {
+        int numConstraintsBefore = cplexInstance.getNrows();
+
         IloExpr expr(cplexEnv);
 
         for(auto E : elements)
@@ -444,25 +453,46 @@ int MIPSolverCplex::addLinearConstraint(
         {
             IloRange tmpRange(cplexEnv, -constant, expr, IloInfinity);
             tmpRange.setName(name.c_str());
+
             cplexModel.add(tmpRange);
-            cplexConstrs.add(tmpRange);
+            cplexInstance.extract(cplexModel);
+
+            // Make sure that Cplex actually has added the constraint
+            if(cplexInstance.getNrows() > numConstraintsBefore)
+            {
+                cplexConstrs.add(tmpRange);
+            }
+            else
+            {
+                env->output->outputInfo("        Hyperplane not added by Cplex");
+                tmpRange.end();
+                return (-1);
+            }
         }
         else
         {
             IloRange tmpRange(cplexEnv, -IloInfinity, expr, -constant);
             tmpRange.setName(name.c_str());
+
             cplexModel.add(tmpRange);
-            cplexConstrs.add(tmpRange);
+            cplexInstance.extract(cplexModel);
+
+            // Make sure that Cplex actually has added the constraint
+            if(cplexInstance.getNrows() > numConstraintsBefore)
+            {
+                cplexConstrs.add(tmpRange);
+            }
+            else
+            {
+                env->output->outputInfo("        Hyperplane not added by Cplex");
+                tmpRange.end();
+                return (-1);
+            }
         }
-
-        modelUpdated = true;
-
-        expr.end();
     }
     catch(IloException& e)
     {
         env->output->outputError("        Error when adding linear constraint", e.getMessage());
-
         return (-1);
     }
 
@@ -557,6 +587,10 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
             MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
         }
         else if(status == IloCplex::CplexStatus::Feasible)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
+        }
+        else if(status == IloCplex::CplexStatus::OptimalRelaxedQuad)
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Feasible;
         }
@@ -695,16 +729,14 @@ bool MIPSolverCplex::repairInfeasibility()
         if(modelUpdated)
         {
             cplexInstance.extract(cplexModel);
-
             modelUpdated = false;
         }
 
         IloNumArray relax(cplexEnv);
 
-        cplexInstance.extract(cplexModel);
-
         int numCurrConstraints = cplexConstrs.getSize();
-        int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
+        int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints
+            + env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints;
 
         relax.add(numOrigConstraints, 0.0);
 
@@ -715,12 +747,13 @@ bool MIPSolverCplex::repairInfeasibility()
             if(i == cutOffConstraintIndex)
             {
                 relax.add(0.0);
-                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                // TODO: allow for relaxing integer constraints
-                relax.add(0);
+                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
+                    relax.add(1 / (((double)i) + 1.0));
+                else
+                    relax.add(0);
             }
             else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {
@@ -733,6 +766,31 @@ bool MIPSolverCplex::repairInfeasibility()
             }
         }
 
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorDouble weights(relax.getSize());
+
+            for(int i = 0; i < relax.getSize(); i++)
+                weights[i] = relax[i];
+
+            VectorString constraints(cplexConstrs.getSize());
+
+            for(int i = 0; i < cplexConstrs.getSize(); i++)
+            {
+                std::ostringstream expression;
+                expression << cplexConstrs[i];
+                constraints[i] = expression.str();
+            }
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repairedweights.txt";
+            Utilities::saveVariablePointVectorToFile(weights, constraints, ss.str());
+        }
+
         if(cplexInstance.feasOpt(cplexConstrs, relax))
         {
             IloNumArray infeas(cplexEnv);
@@ -742,33 +800,30 @@ bool MIPSolverCplex::repairInfeasibility()
 
             int numRepairs = 0;
 
-            for(int i = numOrigConstraints; i < infeas.getSize(); i++)
+            for(int i = numOrigConstraints; i < numCurrConstraints; i++)
             {
-                if(infeas[i] > 0)
+                if(infeas[i] > 1e-10) // Cplex does not accept too small values, so zero cannot be used
                 {
                     numRepairs++;
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
-                    cplexConstrs[i].setUB(cplexConstrs[i].getUB() + 1.5 * infeas[i]);
+                    double newRHS = cplexConstrs[i].getUB() + 1.5 * infeas[i];
+
+                    cplexConstrs[i].setUB(newRHS);
                 }
-                else if(infeas[i] < -0) // Should not happen for generated cuts
+                else if(infeas[i] < -1e-10) // Should not happen for generated cuts
                 {
                     numRepairs++;
                     env->output->outputDebug("        Constraint: " + std::to_string(i)
                         + " repaired with infeasibility = " + std::to_string(infeas[i]));
-                    cplexConstrs[i].setLB(cplexConstrs[i].getLB() + 1.5 * infeas[i]);
+                    double newLHS = cplexConstrs[i].getLB() + 1.5 * infeas[i];
+                    cplexConstrs[i].setLB(newLHS);
                 }
             }
-
-            if(numRepairs == 0)
-            {
-                env->output->outputDebug("        Could not repair the infeasible dual problem.");
-                return (false);
-            }
-
-            env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
             cplexInstance.extract(cplexModel);
+
+            env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
             if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
             {
@@ -779,6 +834,14 @@ bool MIPSolverCplex::repairInfeasibility()
                 ss << "repaired.lp";
                 writeProblemToFile(ss.str());
             }
+
+            if(numRepairs == 0)
+            {
+                env->output->outputDebug("        Could not repair the infeasible dual problem.");
+                return (false);
+            }
+
+            env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
             return (true);
         }
@@ -946,7 +1009,10 @@ void MIPSolverCplex::setTimeLimit(double seconds)
 {
     try
     {
-        if(seconds > 0)
+        if(seconds > 1e+75)
+        {
+        }
+        else if(seconds > 0)
         {
             cplexInstance.setParam(IloCplex::TiLim, seconds);
         }
@@ -1371,17 +1437,27 @@ bool MIPSolverCplex::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorIn
             expr += (1 - 1.0 * cplexVars[I]);
         }
 
+        int numConstraintsBefore = cplexInstance.getNrows();
+
         IloRange tmpRange(cplexEnv, -IloInfinity, expr, binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0);
         tmpRange.setName(fmt::format("IC_{}", integerCuts.size()).c_str());
 
-        integerCuts.push_back(cplexConstrs.getSize() - 1);
-
-        env->solutionStatistics.numberOfIntegerCuts++;
-
         cplexModel.add(tmpRange);
-        cplexConstrs.add(tmpRange);
+        cplexInstance.extract(cplexModel);
 
-        expr.end();
+        // Make sure that Cplex actually has added the constraint
+        if(cplexInstance.getNrows() > numConstraintsBefore)
+        {
+            cplexConstrs.add(tmpRange);
+            integerCuts.push_back(cplexConstrs.getSize() - 1);
+            env->solutionStatistics.numberOfIntegerCuts++;
+        }
+        else
+        {
+            env->output->outputInfo("        Integer cut not added by Cplex");
+            expr.end();
+            return (false);
+        }
     }
     catch(IloException& e)
     {
@@ -1421,4 +1497,17 @@ int MIPSolverCplex::getNumberOfOpenNodes()
         return 0;
     }
 }
+
+std::string MIPSolverCplex::getSolverVersion()
+{
+    std::string version = std::to_string(cplexInstance.getVersionNumber());
+    std::string major = version.substr(0, 2);
+    std::string minor = version.substr(2, 2);
+
+    if(minor.substr(0, 1) == "0")
+        minor = minor.substr(1, 1);
+
+    return (fmt::format("{}.{}", major, minor));
+}
+
 } // namespace SHOT

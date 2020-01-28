@@ -327,6 +327,42 @@ std::string Results::getResultsOSrL()
     otherNode->SetAttribute("description", "The number of primal solutions found");
     otherResultsNode->InsertEndChild(otherNode);
 
+    auto dualSolver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("MIP.Solver", "Dual"));
+    std::string dualSolverName;
+
+#ifdef HAS_CPLEX
+    if(dualSolver == ES_MIPSolver::Cplex)
+    {
+        dualSolverName = "CPLEX";
+    }
+#endif
+
+#ifdef HAS_GUROBI
+    if(dualSolver == ES_MIPSolver::Gurobi)
+    {
+        dualSolverName = "Gurobi";
+    }
+#endif
+
+#ifdef HAS_CBC
+    if(dualSolver == ES_MIPSolver::Cbc)
+    {
+        dualSolverName = "Cbc";
+    }
+#endif
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "DualSolver");
+    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
+    otherNode->SetAttribute("description", "The dual solver used");
+    otherResultsNode->InsertEndChild(otherNode);
+
+    otherNode = osrlDocument.NewElement("other");
+    otherNode->SetAttribute("name", "FixedNLPSolver");
+    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
+    otherNode->SetAttribute("description", "The dual solver used");
+    otherResultsNode->InsertEndChild(otherNode);
+
     for(auto& S : this->primalSolutionSourceStatistics)
     {
         otherNode = osrlDocument.NewElement("other");
@@ -952,6 +988,22 @@ IterationPtr Results::getPreviousIteration()
         throw Exception("Only one iteration!");
 }
 
+std::optional<IterationPtr> Results::getLastFeasibleIteration()
+{
+    std::optional<IterationPtr> iteration;
+
+    for(auto I = iterations.rbegin(); I != iterations.rend(); ++I)
+    {
+        if(I->get()->solutionPoints.size() > 0)
+        {
+            iteration = *I;
+            break;
+        }
+    }
+
+    return iteration;
+}
+
 int Results::getNumberOfIterations() { return (iterations.size()); }
 
 double Results::getPrimalBound()
@@ -967,6 +1019,25 @@ double Results::getPrimalBound()
 void Results::setPrimalBound(double value)
 {
     this->currentPrimalBound = value;
+
+    // In case we have crossover
+    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+    {
+        if(value < this->globalDualBound)
+            this->globalDualBound = value;
+
+        if(value < this->currentDualBound)
+            this->currentDualBound = this->globalDualBound;
+    }
+    else
+    {
+        if(value > this->globalDualBound)
+            this->globalDualBound = value;
+
+        if(value > this->currentDualBound)
+            this->currentDualBound = this->globalDualBound;
+    }
+
     env->dualSolver->cutOffToUse = value;
     env->dualSolver->useCutOff = true;
     env->solutionStatistics.numberOfIterationsWithPrimalStagnation = 0;
@@ -981,6 +1052,19 @@ double Results::getGlobalDualBound() { return (globalDualBound); }
 
 void Results::setDualBound(double value)
 {
+    double primalBound = this->getPrimalBound();
+
+    if(env->problem->objectiveFunction->direction == E_ObjectiveFunctionDirection::Minimize)
+    {
+        if(value > primalBound)
+            value = primalBound;
+    }
+    else
+    {
+        if(value < primalBound)
+            value = primalBound;
+    }
+
     this->currentDualBound = value;
 
     if(this->solutionIsGlobal)

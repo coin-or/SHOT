@@ -293,7 +293,7 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
         {
             if(valueLHS == valueRHS)
             {
-                env->output->outputError("        Gurobi does not support quadratic equality constraints.");
+                gurobiModel->addQConstr(constraintLinearExpression + constraintQuadraticExpression == valueRHS, name);
             }
             else if(valueLHS < valueRHS)
             {
@@ -411,8 +411,15 @@ void MIPSolverGurobi::initializeSolverSettings()
                 GRB_DoubleParam_NodeLimit, env->settings->getSetting<double>("MIP.NodeLimit", "Dual"));
         }
 
-        // For integer cut sizes
-        gurobiModel->getEnv().set(GRB_IntParam_UpdateMode, 1);
+#if GRB_VERSION_MAJOR >= 9
+        // Supports nonconvex MIQCQP
+        if(static_cast<ES_QuadraticProblemStrategy>(
+               env->settings->getSetting<int>("Reformulation.Quadratics.Strategy", "Model"))
+            == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
+        {
+            gurobiModel->getEnv().set(GRB_IntParam_NonConvex, 2);
+        }
+#endif
     }
     catch(GRBException& e)
     {
@@ -427,6 +434,8 @@ int MIPSolverGurobi::addLinearConstraint(
 {
     try
     {
+        int numConstraintsBefore = gurobiModel->get(GRB_IntAttr_NumConstrs);
+
         auto expr = std::make_unique<GRBLinExpr>(0.0);
 
         for(auto E : elements)
@@ -446,12 +455,20 @@ int MIPSolverGurobi::addLinearConstraint(
             gurobiModel->addConstr(*expr <= -constant, name);
         }
 
-        modelUpdated = true;
+        gurobiModel->update();
+
+        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraintsBefore)
+        {
+        }
+        else
+        {
+            env->output->outputInfo("        Hyperplane not added by Gurobi");
+            return (-1);
+        }
     }
     catch(GRBException& e)
     {
         env->output->outputError("        Error when adding linear constraint", e.getMessage());
-
         return (-1);
     }
 
@@ -462,6 +479,7 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
 {
     try
     {
+        int numConstraintsBefore = gurobiModel->get(GRB_IntAttr_NumConstrs);
         GRBLinExpr expr = 0;
 
         for(int I : binaryIndexesOnes)
@@ -476,23 +494,21 @@ bool MIPSolverGurobi::createIntegerCut(VectorInteger& binaryIndexesOnes, VectorI
             expr += (1.0 - 1.0 * variable);
         }
 
-        int numConstraints = gurobiModel->get(GRB_IntAttr_NumConstrs);
-
         gurobiModel->addConstr(expr <= binaryIndexesOnes.size() + binaryIndexesZeroes.size() - 1.0,
             fmt::format("IC_{}", integerCuts.size()));
 
         gurobiModel->update();
 
-        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraints)
+        if(gurobiModel->get(GRB_IntAttr_NumConstrs) > numConstraintsBefore)
         {
             integerCuts.push_back(gurobiModel->get(GRB_IntAttr_NumConstrs) - 1);
-
-            modelUpdated = true;
-
             env->solutionStatistics.numberOfIntegerCuts++;
         }
-
-        Utilities::displayVector(integerCuts);
+        else
+        {
+            env->output->outputInfo("        Integer cut not added by Gurobi");
+            return (false);
+        }
     }
     catch(GRBException& e)
     {
@@ -686,7 +702,8 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
     // To find a feasible point for an unbounded dual problem
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        bool variableBoundsUpdated = false;
+        std::vector<PairIndexValue> originalObjectiveCoefficients;
+        bool problemUpdated = false;
 
         if((env->reformulatedProblem->objectiveFunction->properties.classification
                    == E_ObjectiveFunctionClassification::Linear
@@ -699,11 +716,17 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
+                if(!V->properties.inObjectiveFunction)
+                    continue;
+
                 if(V->isDualUnbounded())
                 {
-                    updateVariableBound(
-                        V->index, -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
-                    variableBoundsUpdated = true;
+                    // Temporarily remove unbounded terms from objective
+                    originalObjectiveCoefficients.emplace_back(
+                        V->index, gurobiModel->getVar(V->index).get(GRB_DoubleAttr_Obj));
+
+                    gurobiModel->getVar(V->index).set(GRB_DoubleAttr_Obj, 0.0);
+                    problemUpdated = true;
                 }
             }
         }
@@ -713,10 +736,10 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
             // The auxiliary variable in the dual problem is unbounded
             updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
                 getUnboundedVariableBoundValue() / 1.1);
-            variableBoundsUpdated = true;
+            problemUpdated = true;
         }
 
-        if(variableBoundsUpdated)
+        if(problemUpdated)
         {
             gurobiModel->update();
 
@@ -726,13 +749,13 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
             MIPSolutionStatus = getSolutionStatus();
 
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isDualUnbounded())
-                    updateVariableBound(V->index, V->lowerBound, V->upperBound);
-            }
+            for(auto& P : originalObjectiveCoefficients)
+                gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
 
-            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
+            gurobiModel->update();
+
+            if(env->results->iterations.size() > 0) // Might not have iterations if we are using the minimax solver
+                env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
     }
 
@@ -764,11 +787,16 @@ bool MIPSolverGurobi::repairInfeasibility()
         {
             if(i == cutOffConstraintIndex)
             {
-                hyperplaneCounter++;
             }
             else if(std::find(integerCuts.begin(), integerCuts.end(), i) != integerCuts.end())
             {
-                // TODO: allow for relaxing integer constraints
+                if(env->settings->getSetting<bool>("MIP.InfeasibilityRepair.IntegerCuts", "Dual"))
+                {
+                    repairConstraints.push_back(feasModel.getConstr(i));
+                    originalConstraints.push_back(gurobiModel->getConstr(i));
+                    relaxParameters.push_back(1 / (((double)i) + 1.0));
+                    numConstraintsToRepair++;
+                }
             }
             else if(env->dualSolver->generatedHyperplanes.at(hyperplaneCounter).isSourceConvex)
             {
@@ -781,6 +809,25 @@ bool MIPSolverGurobi::repairInfeasibility()
                 relaxParameters.push_back(1 / (((double)i) + 1.0));
                 numConstraintsToRepair++;
             }
+        }
+
+        // Saves the relaxation weights to a file
+        if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            VectorString constraints(relaxParameters.size());
+
+            for(size_t i = 0; i < relaxParameters.size(); i++)
+            {
+                std::ostringstream expression;
+                constraints[i] = repairConstraints[i].get(GRB_StringAttr_ConstrName);
+            }
+
+            std::stringstream ss;
+            ss << env->settings->getSetting<std::string>("Debug.Path", "Output");
+            ss << "/lp";
+            ss << env->results->getCurrentIteration()->iterationNumber - 1;
+            ss << "repairedweights.txt";
+            Utilities::saveVariablePointVectorToFile(relaxParameters, constraints, ss.str());
         }
 
         // Gurobi modifies the value when running feasModel.optimize()
@@ -824,7 +871,7 @@ bool MIPSolverGurobi::repairInfeasibility()
                 + " repaired with infeasibility = " + std::to_string(1.5 * slackValue));
         }
 
-        env->output->outputCritical("        Number of constraints modified: " + std::to_string(numRepairs));
+        env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints = numRepairs;
 
         if(env->settings->getSetting<bool>("Debug.Enable", "Output"))
         {
@@ -835,6 +882,14 @@ bool MIPSolverGurobi::repairInfeasibility()
             ss << "repaired.lp";
             writeProblemToFile(ss.str());
         }
+
+        if(numRepairs == 0)
+        {
+            env->output->outputDebug("        Could not repair the infeasible dual problem.");
+            return (false);
+        }
+
+        env->output->outputDebug("        Number of constraints modified: " + std::to_string(numRepairs));
 
         return (true);
     }
@@ -1021,13 +1076,14 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 
     double objVal = NAN;
 
+    /* Does not seem to be true for nonconvex MIQCQP
     if(!isMIP && solIdx > 0) // LP problems only have one solution!
     {
         env->output->outputError(
             "Cannot obtain solution with index " + std::to_string(solIdx) + " since the problem is LP/QP!");
 
         return (objVal);
-    }
+    }*/
 
     try
     {
@@ -1227,6 +1283,11 @@ int MIPSolverGurobi::getNumberOfExploredNodes()
         env->output->outputError("        Error when getting number of nodes", e.getMessage());
         return 0;
     }
+}
+
+std::string MIPSolverGurobi::getSolverVersion()
+{
+    return (fmt::format("{}.{}", std::to_string(GRB_VERSION_MAJOR), std::to_string(GRB_VERSION_MINOR)));
 }
 
 GurobiInfoCallback::GurobiInfoCallback(EnvironmentPtr envPtr) : env(envPtr) {}

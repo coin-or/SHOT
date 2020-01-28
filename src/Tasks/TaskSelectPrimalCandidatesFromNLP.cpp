@@ -54,6 +54,7 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     {
         env->results->usedPrimalNLPSolver = ES_PrimalNLPSolver::Ipopt;
         NLPSolver = std::make_shared<NLPSolverIpoptRelaxed>(env, env->problem);
+        env->results->usedPrimalNLPSolverVersion = NLPSolver->getSolverVersion();
         break;
     }
 #endif
@@ -103,9 +104,14 @@ TaskSelectPrimalCandidatesFromNLP::TaskSelectPrimalCandidatesFromNLP(Environment
     {
         for(auto& V : env->problem->allVariables)
         {
-
             variableNames.push_back(V->name);
         }
+    }
+
+    for(auto& V : env->problem->allVariables)
+    {
+        NLPSolver->updateVariableLowerBound(V->index, V->lowerBound);
+        NLPSolver->updateVariableUpperBound(V->index, V->upperBound);
     }
 
     env->timing->stopTimer("PrimalBoundStrategyNLP");
@@ -484,6 +490,14 @@ bool TaskSelectPrimalCandidatesFromNLP::solveFixedNLP()
 
                 env->dualSolver->integerCutWaitingList.emplace_back(ones, zeroes);
             }
+        }
+        else
+        {
+            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP, ("NLP" + sourceDesc),
+                env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
+                NAN, E_IterationLineType::PrimalNLP);
         }
 
         env->solutionStatistics.numberOfIterationsWithoutNLPCallMIP = 0;

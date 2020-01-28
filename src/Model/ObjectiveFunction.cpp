@@ -9,7 +9,10 @@
 */
 
 #include "ObjectiveFunction.h"
+
+#include "../Environment.h"
 #include "Problem.h"
+#include "../Settings.h"
 #include "../Utilities.h"
 
 namespace SHOT
@@ -204,7 +207,7 @@ void LinearObjectiveFunction::initializeGradientSparsityPattern()
             continue;
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->variable)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->variable);
     }
 }
@@ -241,6 +244,10 @@ std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 
     case(E_Convexity::Concave):
         stream << "(concave):";
+        break;
+
+    case(E_Convexity::Nonconvex):
+        stream << "(nonconvex):";
         break;
 
     default:
@@ -424,11 +431,11 @@ void QuadraticObjectiveFunction::initializeGradientSparsityPattern()
             continue;
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->firstVariable)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->firstVariable);
 
         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), T->secondVariable)
-            != gradientSparsityPattern->end())
+            == gradientSparsityPattern->end())
             gradientSparsityPattern->push_back(T->secondVariable);
     }
 }
@@ -721,7 +728,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
 
             std::vector<double> pointNonlinearSubset(numberOfNonlinearVariables, 0.0);
 
-            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+            for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearGradientSparsityPattern);
@@ -739,7 +746,7 @@ SparseVariableVector NonlinearObjectiveFunction::calculateGradient(const VectorD
                 if(coefficient == 0.0)
                     continue;
 
-                auto VAR = sharedOwnerProblem->nonlinearVariables[col[k]];
+                auto VAR = sharedOwnerProblem->nonlinearExpressionVariables[col[k]];
 
                 auto element = gradient.emplace(VAR, coefficient);
 
@@ -778,6 +785,23 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
 {
     QuadraticObjectiveFunction::initializeGradientSparsityPattern();
 
+    bool debug = false;
+    std::stringstream stream;
+    std::stringstream filename;
+
+    if(auto sharedOwnerProblem = ownerProblem.lock())
+    {
+        if(sharedOwnerProblem->env->settings->getSetting<bool>("Debug.Enable", "Output"))
+        {
+            debug = true;
+
+            filename << sharedOwnerProblem->env->settings->getSetting<std::string>("Debug.Path", "Output");
+
+            for(auto& V : *gradientSparsityPattern)
+                stream << V->name << '\n';
+        }
+    }
+
     if(this->properties.hasMonomialTerms)
     {
         for(auto& T : monomialTerms)
@@ -789,7 +813,12 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             {
                 if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), V)
                     == gradientSparsityPattern->end())
+                {
                     gradientSparsityPattern->push_back(V);
+
+                    if(debug)
+                        stream << "(monomial) " << V->name << '\n';
+                }
             }
         }
     }
@@ -805,7 +834,12 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
             {
                 if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), E->variable)
                     == gradientSparsityPattern->end())
+                {
                     gradientSparsityPattern->push_back(E->variable);
+
+                    if(debug)
+                        stream << "(signomial) " << E->variable->name << '\n';
+                }
             }
         }
     }
@@ -814,10 +848,14 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
     {
         if(auto sharedOwnerProblem = ownerProblem.lock())
         {
-            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
-            // the gradient may be detected
+            assert(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions > 0);
+            assert(sharedOwnerProblem->properties.numberOfNonlinearExpressions > 0);
+            assert(this->nonlinearExpressionIndex >= 0);
+
+            // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements
+            // of the gradient may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
@@ -842,13 +880,30 @@ void NonlinearObjectiveFunction::initializeGradientSparsityPattern()
                     {
                         if(std::find(gradientSparsityPattern->begin(), gradientSparsityPattern->end(), VAR)
                             == gradientSparsityPattern->end())
+                        {
                             gradientSparsityPattern->push_back(VAR);
+
+                            if(debug)
+                                stream << "(nonlinear expr) " << VAR->name << '\n';
+                        }
 
                         continue;
                     }
                 }
             }
         }
+    }
+
+    if(debug)
+    {
+        filename << "/sparsitypattern_jacobian_objective";
+
+        if(properties.isReformulated)
+            filename << "_ref";
+
+        filename << ".txt";
+
+        Utilities::writeStringToFile(filename.str(), stream.str());
     }
 
     nonlinearGradientSparsityMapGenerated = true;
@@ -882,7 +937,7 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
             std::vector<double> weights(sharedOwnerProblem->properties.numberOfNonlinearExpressions, 0.0);
             weights[this->nonlinearExpressionIndex] = 1.0;
 
-            for(auto& VAR : sharedOwnerProblem->nonlinearVariables)
+            for(auto& VAR : sharedOwnerProblem->nonlinearExpressionVariables)
                 pointNonlinearSubset[VAR->properties.nonlinearVariableIndex] = point[VAR->index];
 
             CppAD::sparse_rcv<std::vector<size_t>, std::vector<double>> subset(nonlinearHessianSparsityPattern);
@@ -981,7 +1036,7 @@ void NonlinearObjectiveFunction::initializeHessianSparsityPattern()
             // For some reason we need to have all nonlinear variables activated, otherwise not all nonzero elements of
             // the hessian may be detected
             auto nonlinearVariablesInExpressionMap
-                = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearVariables, true);
+                = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
 
             auto nonlinearFunctionMap
                 = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, true);
@@ -1034,12 +1089,13 @@ std::ostream& NonlinearObjectiveFunction::print(std::ostream& stream) const
     QuadraticObjectiveFunction::print(stream);
 
     if(monomialTerms.size() > 0)
-        stream << " +" << monomialTerms;
+        stream << monomialTerms;
 
     if(signomialTerms.size() > 0)
-        stream << " +" << signomialTerms;
+        stream << signomialTerms;
 
-    stream << " +" << nonlinearExpression;
+    if(nonlinearExpression != nullptr)
+        stream << " +(" << nonlinearExpression << ')';
 
     if(constant > 0)
         stream << '+' << constant;

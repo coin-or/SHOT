@@ -11,6 +11,7 @@
 #include "TaskSelectHyperplanePointsESH.h"
 
 #include "../DualSolver.h"
+#include "../MIPSolver/IMIPSolver.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -112,7 +113,9 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
                 // Do not add hyperplane if one has been added for this constraint already
                 if(useUniqueConstraints && hyperplaneAddedToConstraint.at(NCV.constraint->index))
+                {
                     continue;
+                }
 
                 // Do not add hyperplane if there are numerical errors
                 if(std::isnan(NCV.error) || std::isnan(NCV.normalizedValue))
@@ -132,7 +135,7 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                     continue;
                 }
 
-                if(NCV.constraint->properties.convexity == E_Convexity::Nonconvex)
+                if(NCV.constraint->properties.convexity != E_Convexity::Convex)
                 {
                     nonconvexSelectedNumericValues.emplace_back(i, j, NCV);
                     continue;
@@ -182,11 +185,11 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
         if(externalConstraintValue.normalizedValue >= 0)
         {
-            size_t hash = Utilities::calculateHash(externalPoint);
+            double hash = Utilities::calculateHash(externalPoint);
 
             if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->index))
             {
-                env->output->outputDebug("    Hyperplane already added for constraint "
+                env->output->outputTrace("    Hyperplane already added for constraint "
                     + std::to_string(externalConstraintValue.constraint->index) + " and hash " + std::to_string(hash));
                 continue;
             }
@@ -231,6 +234,8 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
     if(addedHyperplanes == 0)
     {
+        env->output->outputDebug("     Could not add hyperplane for convex constraints, number of nonconvex: "
+            + std::to_string(nonconvexSelectedNumericValues.size()));
         for(auto& values : nonconvexSelectedNumericValues)
         {
             if(addedHyperplanes > maxHyperplanesPerIter)
@@ -272,11 +277,11 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
 
             if(externalConstraintValue.normalizedValue >= 0)
             {
-                size_t hash = Utilities::calculateHash(externalPoint);
+                double hash = Utilities::calculateHash(externalPoint);
 
                 if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->index))
                 {
-                    env->output->outputDebug("    Hyperplane already added for constraint "
+                    env->output->outputTrace("    Hyperplane already added for constraint "
                         + std::to_string(externalConstraintValue.constraint->index) + " and hash "
                         + std::to_string(hash));
                     continue;
@@ -319,6 +324,161 @@ void TaskSelectHyperplanePointsESH::run(std::vector<SolutionPoint> solPoints)
                 env->output->outputDebug("     Could not add hyperplane to waiting list since constraint value is "
                     + std::to_string(externalConstraintValue.normalizedValue));
             }
+        }
+    }
+
+    std::vector<std::pair<Hyperplane, double>> hyperplanesCuttingAwayPrimals;
+
+    if(addedHyperplanes == 0)
+    {
+        env->output->outputDebug("     Could not add hyperplane for convex constraints, number of nonconvex: "
+            + std::to_string(nonconvexSelectedNumericValues.size()));
+
+        for(auto& values : nonconvexSelectedNumericValues)
+        {
+            if(addedHyperplanes > maxHyperplanesPerIter)
+                break;
+
+            int i = std::get<0>(values);
+            int j = std::get<1>(values);
+            auto NCV = std::get<2>(values);
+
+            if(NCV.error <= 0.0)
+                continue;
+
+            VectorDouble externalPoint;
+            VectorDouble internalPoint;
+
+            std::vector<NumericConstraint*> currentConstraint;
+            currentConstraint.push_back(std::dynamic_pointer_cast<NumericConstraint>(NCV.constraint).get());
+
+            try
+            {
+                env->timing->startTimer("DualCutGenerationRootSearch");
+                auto xNewc
+                    = env->rootsearchMethod->findZero(env->dualSolver->interiorPts.at(j)->point, solPoints.at(i).point,
+                        rootMaxIter, rootTerminationTolerance, rootActiveConstraintTolerance, currentConstraint, true);
+
+                env->timing->stopTimer("DualCutGenerationRootSearch");
+                internalPoint = xNewc.first;
+                externalPoint = xNewc.second;
+            }
+            catch(std::exception& e)
+            {
+                env->timing->stopTimer("DualCutGenerationRootSearch");
+                externalPoint = solPoints.at(i).point;
+
+                env->output->outputDebug("     Cannot find solution with rootsearch, using solution point instead.");
+            }
+
+            auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
+
+            if(externalConstraintValue.normalizedValue >= 0)
+            {
+                double hash = Utilities::calculateHash(externalPoint);
+
+                if(env->dualSolver->hasHyperplaneBeenAdded(hash, externalConstraintValue.constraint->index))
+                {
+                    env->output->outputTrace("    Hyperplane already added for constraint "
+                        + std::to_string(externalConstraintValue.constraint->index) + " and hash "
+                        + std::to_string(hash));
+                    continue;
+                }
+
+                Hyperplane hyperplane;
+                hyperplane.sourceConstraint = externalConstraintValue.constraint;
+                hyperplane.sourceConstraintIndex = externalConstraintValue.constraint->index;
+                hyperplane.generatedPoint = externalPoint;
+
+                if(solPoints.at(i).isRelaxedPoint)
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPCallbackRelaxed;
+                }
+                else if(i == 0 && currIter->isMIP())
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPOptimalRootsearch;
+                }
+                else if(currIter->isMIP())
+                {
+                    hyperplane.source = E_HyperplaneSource::MIPSolutionPoolRootsearch;
+                }
+                else
+                {
+                    hyperplane.source = E_HyperplaneSource::LPRelaxedRootsearch;
+                }
+
+                env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                addedHyperplanes++;
+
+                hyperplaneAddedToConstraint.at(externalConstraintValue.constraint->index) = true;
+
+                env->output->outputDebug("     Added hyperplane to waiting list with deviation: "
+                    + Utilities::toString(externalConstraintValue.error));
+
+                bool cutsAwayPrimalSolution = false;
+
+                for(auto& P : env->results->primalSolutions)
+                {
+                    if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
+                    {
+                        double constraintValue = terms->second;
+
+                        for(auto& T : terms->first)
+                        {
+                            constraintValue += T.second * P.point[T.first];
+                        }
+
+                        if(constraintValue > 0)
+                        {
+                            cutsAwayPrimalSolution = true;
+                            hyperplanesCuttingAwayPrimals.emplace_back(hyperplane, constraintValue);
+                            break;
+                        }
+                    }
+                }
+
+                if(!cutsAwayPrimalSolution)
+                {
+                    env->dualSolver->hyperplaneWaitingList.push_back(hyperplane);
+                    hyperplaneAddedToConstraint.at(NCV.constraint->index) = true;
+                    addedHyperplanes++;
+                }
+            }
+            else
+            {
+                env->output->outputDebug("     Could not add hyperplane to waiting list since constraint value is "
+                    + std::to_string(externalConstraintValue.normalizedValue));
+            }
+        }
+    }
+
+    if(addedHyperplanes == 0)
+    {
+        std::sort(hyperplanesCuttingAwayPrimals.begin(), hyperplanesCuttingAwayPrimals.end(),
+            [](const auto& element1, const auto& element2) { return (element1.second < element2.second); });
+
+        for(auto& HP : hyperplanesCuttingAwayPrimals)
+        {
+            double hash = Utilities::calculateHash(HP.first.generatedPoint);
+
+            if(env->dualSolver->hasHyperplaneBeenAdded(hash, HP.first.sourceConstraintIndex))
+            {
+                env->output->outputTrace("    Hyperplane already added for constraint "
+                    + std::to_string(HP.first.sourceConstraintIndex) + " and hash " + std::to_string(hash));
+                continue;
+            }
+
+            env->dualSolver->hyperplaneWaitingList.push_back(HP.first);
+            hyperplaneAddedToConstraint.at(HP.first.sourceConstraint->index) = true;
+            addedHyperplanes++;
+            env->output->outputDebug(fmt::format("        Selected hyperplane cut for constraint {} that cuts away "
+                                                 "previous primal solution with error {}",
+                HP.first.sourceConstraint->index, HP.second));
+
+            addedHyperplanes++;
+
+            if(addedHyperplanes > maxHyperplanesPerIter)
+                break;
         }
     }
 
