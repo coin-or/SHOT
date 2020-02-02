@@ -81,6 +81,10 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     for(auto& V : env->problem->allVariables)
     {
         auto variable = std::make_shared<Variable>(V->name, V->index, V->properties.type, V->lowerBound, V->upperBound);
+
+        variable->properties.hasLowerBoundBeenTightened = V->properties.hasLowerBoundBeenTightened;
+        variable->properties.hasUpperBoundBeenTightened = V->properties.hasUpperBoundBeenTightened;
+
         reformulatedProblem->add(std::move(variable));
     }
 
