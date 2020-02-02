@@ -96,6 +96,84 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
 
 static std::ostream& operator<<(std::ostream& stream, const ObjectiveFunction& objective)
 {
+    std::stringstream type;
+
+    switch(objective.properties.classification)
+    {
+    case(E_ObjectiveFunctionClassification::Linear):
+        type << "L";
+        break;
+
+    case(E_ObjectiveFunctionClassification::Quadratic):
+        type << "Q";
+        break;
+
+    case(E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear):
+    case(E_ObjectiveFunctionClassification::Nonlinear):
+        type << "NL";
+        break;
+
+    default:
+        type << "?";
+        break;
+    }
+
+    switch(objective.properties.convexity)
+    {
+    case(E_Convexity::Linear):
+        type << "-convex";
+        break;
+
+    case(E_Convexity::Convex):
+        type << "-convex";
+        break;
+
+    case(E_Convexity::Concave):
+        type << "-concave";
+        break;
+
+    case(E_Convexity::Nonconvex):
+        type << "-nonconvex";
+        break;
+
+    case(E_Convexity::Unknown):
+        type << "-unknown";
+        break;
+
+    default:
+        type << "-not set";
+        break;
+    }
+
+    std::stringstream contains;
+
+    if(objective.properties.hasLinearTerms)
+        contains << "L";
+    else
+        contains << " ";
+
+    if(objective.properties.hasQuadraticTerms)
+        contains << "Q";
+    else
+        contains << " ";
+
+    if(objective.properties.hasMonomialTerms)
+        contains << "M";
+    else
+        contains << " ";
+
+    if(objective.properties.hasSignomialTerms)
+        contains << "S";
+    else
+        contains << " ";
+
+    if(objective.properties.hasNonlinearExpression)
+        contains << "E";
+    else
+        contains << " ";
+
+    stream << fmt::format("[{:<12s}] [{:<5s}]\t", type.str(), contains.str());
+
     return objective.print(stream); // polymorphic print via reference
 }
 
@@ -227,34 +305,6 @@ void LinearObjectiveFunction::initializeHessianSparsityPattern()
 
 std::ostream& LinearObjectiveFunction::print(std::ostream& stream) const
 {
-    if(properties.isMinimize)
-        stream << "minimize ";
-    else if(properties.isMaximize)
-        stream << "maximize ";
-
-    switch(properties.convexity)
-    {
-    case(E_Convexity::Linear):
-        stream << "(linear):";
-        break;
-
-    case(E_Convexity::Convex):
-        stream << "(convex):";
-        break;
-
-    case(E_Convexity::Concave):
-        stream << "(concave):";
-        break;
-
-    case(E_Convexity::Nonconvex):
-        stream << "(nonconvex):";
-        break;
-
-    default:
-        stream << "(?):";
-        break;
-    }
-
     if(constant != 0.0)
         stream << constant;
 

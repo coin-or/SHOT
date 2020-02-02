@@ -12,61 +12,91 @@
 #include "../Utilities.h"
 #include "Problem.h"
 
+#include "spdlog/fmt/fmt.h"
+
 namespace SHOT
 {
 
 std::ostream& operator<<(std::ostream& stream, const Constraint& constraint)
 {
-    stream << "[" << constraint.index << "]\t";
+    std::stringstream type;
 
     switch(constraint.properties.classification)
     {
     case(E_ConstraintClassification::Linear):
-        stream << "(L,";
+        type << "L";
         break;
 
     case(E_ConstraintClassification::Quadratic):
-        stream << "(Q,";
+        type << "Q";
         break;
 
     case(E_ConstraintClassification::QuadraticConsideredAsNonlinear):
     case(E_ConstraintClassification::Nonlinear):
-        stream << "(NL";
-        stream << (constraint.properties.hasQuadraticTerms ? "Q" : "");
-        stream << (constraint.properties.hasMonomialTerms ? "M" : "");
-        stream << (constraint.properties.hasSignomialTerms ? "S" : "");
-        stream << (constraint.properties.hasNonlinearExpression ? "E" : "");
-        stream << ",";
+        type << "NL";
         break;
 
     default:
-        stream << "(?,";
+        type << "?";
         break;
     }
 
     switch(constraint.properties.convexity)
     {
     case(E_Convexity::Linear):
-        stream << " linear)\t";
+        type << "-convex";
         break;
+
     case(E_Convexity::Convex):
-        stream << " convex)";
+        type << "-convex";
         break;
+
+    case(E_Convexity::Concave):
+        type << "-concave";
+        break;
+
     case(E_Convexity::Nonconvex):
-        stream << " nonconvex)";
+        type << "-nonconvex";
         break;
-    case(E_Convexity::NotSet):
+
     case(E_Convexity::Unknown):
-        stream << " unknown)";
+        type << "-unknown";
         break;
+
     default:
+        type << "-not set";
         break;
     }
 
-    if(constraint.name != "")
-        stream << '\t' << constraint.name;
+    std::stringstream contains;
+
+    if(constraint.properties.hasLinearTerms)
+        contains << "L";
     else
-        stream << '\t';
+        contains << " ";
+
+    if(constraint.properties.hasQuadraticTerms)
+        contains << "Q";
+    else
+        contains << " ";
+
+    if(constraint.properties.hasMonomialTerms)
+        contains << "M";
+    else
+        contains << " ";
+
+    if(constraint.properties.hasSignomialTerms)
+        contains << "S";
+    else
+        contains << " ";
+
+    if(constraint.properties.hasNonlinearExpression)
+        contains << "E";
+    else
+        contains << " ";
+
+    stream << fmt::format(
+        "[{:>5d},{:<12s}] [{:<5s}] {:>12s}:", constraint.index, type.str(), contains.str(), constraint.name);
 
     return constraint.print(stream); // polymorphic print via reference
 }

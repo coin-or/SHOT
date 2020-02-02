@@ -13,6 +13,8 @@
 
 #include "ffunc.hpp"
 
+#include "spdlog/fmt/fmt.h"
+
 #include "../Environment.h"
 #include "../Output.h"
 #include "../Settings.h"
@@ -122,33 +124,82 @@ void Variable::takeOwnership(ProblemPtr owner) { ownerProblem = owner; }
 
 std::ostream& operator<<(std::ostream& stream, VariablePtr var)
 {
-    stream << "[" << var->index << "]:\t";
+    std::stringstream type;
 
     switch(var->properties.type)
     {
-    case E_VariableType::Real:
-        stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
+    case(E_VariableType::Real):
+        type << "C";
         break;
 
-    case E_VariableType::Binary:
-        stream << var->name << " in {0,1}";
+    case(E_VariableType::Binary):
+        type << "B";
         break;
 
-    case E_VariableType::Integer:
-        if(var->lowerBound == 0.0 && var->upperBound == 1.0)
-            stream << var->name << " in {0,1}";
-        else
-            stream << var->name << " in {" << var->lowerBound << ",...," << var->upperBound << "}";
+    case(E_VariableType::Integer):
+        type << "I";
         break;
 
-    case E_VariableType::Semicontinuous:
-        stream << var->name << " in {0} or " << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
+    case(E_VariableType::Semicontinuous):
+        type << "C";
         break;
 
     default:
-        stream << var->lowerBound << " <= " << var->name << " <= " << var->upperBound;
+        type << "?";
         break;
     }
+
+    std::stringstream contains;
+
+    if(var->properties.inObjectiveFunction)
+        contains << "O";
+    else
+        contains << " ";
+
+    if(var->properties.inLinearConstraints)
+        contains << "L";
+    else
+        contains << " ";
+
+    if(var->properties.inQuadraticConstraints)
+        contains << "Q";
+    else
+        contains << " ";
+
+    if(var->properties.inNonlinearConstraints)
+        contains << "N";
+    else
+        contains << " ";
+
+    std::stringstream inTerms;
+
+    if(var->properties.inLinearTerms)
+        inTerms << "L";
+    else
+        inTerms << " ";
+
+    if(var->properties.inQuadraticTerms)
+        inTerms << "Q";
+    else
+        inTerms << " ";
+
+    if(var->properties.inMonomialTerms)
+        inTerms << "M";
+    else
+        inTerms << " ";
+
+    if(var->properties.inSignomialTerms)
+        inTerms << "S";
+    else
+        inTerms << "    ";
+
+    if(var->properties.inNonlinearExpression)
+        inTerms << "N";
+    else
+        inTerms << " ";
+
+    stream << fmt::format("[{:>5d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>10}  <= {:^14s}  <= {:<10}", var->index, type.str(),
+        contains.str(), inTerms.str(), var->lowerBound, var->name, var->upperBound);
 
     return stream;
 }

@@ -44,6 +44,7 @@ struct VariableProperties
     bool inQuadraticConstraints = false;
     bool inNonlinearConstraints = false;
 
+    bool inLinearTerms = false;
     bool inQuadraticTerms = false;
     bool inMonomialTerms = false;
     bool inSignomialTerms = false;

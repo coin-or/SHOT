@@ -410,7 +410,10 @@ void Problem::updateVariables()
     if(objectiveFunction->properties.hasLinearTerms)
     {
         for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(objectiveFunction)->linearTerms)
+        {
             T->variable->properties.inObjectiveFunction = true;
+            T->variable->properties.inLinearTerms = true;
+        }
     }
 
     if(objectiveFunction->properties.hasQuadraticTerms)
@@ -467,11 +470,17 @@ void Problem::updateVariables()
     for(auto& C : linearConstraints)
     {
         for(auto& T : C->linearTerms)
+        {
             T->variable->properties.inLinearConstraints = true;
+            T->variable->properties.inLinearTerms = true;
+        }
     }
 
     for(auto& C : quadraticConstraints)
     {
+        for(auto& T : C->linearTerms)
+            T->variable->properties.inLinearTerms = true;
+
         for(auto& T : C->quadraticTerms)
         {
             T->firstVariable->properties.inQuadraticConstraints = true;
@@ -485,6 +494,9 @@ void Problem::updateVariables()
 
     for(auto& C : nonlinearConstraints)
     {
+        for(auto& T : C->linearTerms)
+            T->variable->properties.inLinearTerms = true;
+
         for(auto& T : C->quadraticTerms)
         {
             T->firstVariable->properties.inQuadraticTerms = true;
@@ -2027,7 +2039,12 @@ bool Problem::doFBBTOnConstraint(NumericConstraintPtr constraint)
 
 std::ostream& operator<<(std::ostream& stream, const Problem& problem)
 {
-    stream << problem.objectiveFunction << '\n';
+    if(problem.objectiveFunction->properties.isMinimize)
+        stream << "minimize:\n";
+    else
+        stream << "maximize:\n";
+
+    stream << problem.objectiveFunction << "\n\n";
 
     if(problem.numericConstraints.size() > 0)
         stream << "subject to:\n";
@@ -2037,7 +2054,7 @@ std::ostream& operator<<(std::ostream& stream, const Problem& problem)
         stream << C << '\n';
     }
 
-    stream << "variables:\n";
+    stream << "\nvariables:\n";
 
     for(auto& V : problem.allVariables)
     {
