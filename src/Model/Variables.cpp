@@ -198,8 +198,10 @@ std::ostream& operator<<(std::ostream& stream, VariablePtr var)
     else
         inTerms << " ";
 
-    stream << fmt::format("[{:>5d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>10}  <= {:^14s}  <= {:<10}", var->index, type.str(),
-        contains.str(), inTerms.str(), var->lowerBound, var->name, var->upperBound);
+    stream << fmt::format("[{:>5d},{:<1s}] [{:<4s}] [{:<5s}]\t{:>10}  {:1s} <= {:^14s}  <= {:1s} {:<10}", var->index,
+        type.str(), contains.str(), inTerms.str(), var->lowerBound,
+        var->properties.hasLowerBoundBeenTightened ? "*" : " ", var->name,
+        var->properties.hasUpperBoundBeenTightened ? "*" : " ", var->upperBound);
 
     return stream;
 }
