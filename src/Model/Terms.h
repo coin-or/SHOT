@@ -33,6 +33,8 @@ public:
 
     std::weak_ptr<Problem> ownerProblem;
 
+    virtual ~Term() = default;
+
     virtual double calculate(const VectorDouble& point) const = 0;
 
     virtual Interval calculate(const IntervalVector& intervalVector) const = 0;

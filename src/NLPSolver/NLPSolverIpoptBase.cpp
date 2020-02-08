@@ -106,7 +106,7 @@ bool IpoptProblem::get_list_of_nonlinear_variables(
     [[maybe_unused]] Ipopt::Index num_nonlin_vars, Ipopt::Index* pos_nonlin_vars)
 {
     VectorInteger nonlinearVariables;
-    int count;
+    int count = 0;
 
     for(int i = 0; i < sourceProblem->properties.numberOfNonlinearVariables; i++)
     {
