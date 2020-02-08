@@ -200,12 +200,12 @@ bool Solver::setProblem(std::string fileName)
     fs::filesystem::path problemExtension = problemFile.extension();
     fs::filesystem::path problemPath = problemFile.parent_path();
 
-    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
+    env->settings->updateSetting("ProblemFile", "Input", fs::filesystem::absolute(problemFile).string());
 
     // Removes path
     fs::filesystem::path problemName = problemFile.stem();
     env->settings->updateSetting("ProblemName", "Input", problemName.string());
-    env->settings->updateSetting("ProblemFile", "Input", problemFile.string());
+    env->settings->updateSetting("ProblemFile", "Input", fs::filesystem::absolute(problemFile).string());
 
     // Sets the debug path if not already set
     if(env->settings->getSetting<std::string>("Debug.Path", "Output") == "")
@@ -214,14 +214,14 @@ bool Solver::setProblem(std::string fileName)
             == ES_OutputDirectory::Program)
         {
             fs::filesystem::path debugPath(fs::filesystem::current_path());
-            debugPath /= problemName;
+            debugPath /= ("debug" / problemName);
 
-            env->settings->updateSetting("Debug.Path", "Output", "debug/" + problemName.string());
+                      env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
         }
         else
         {
             fs::filesystem::path debugPath(problemPath);
-            debugPath /= problemName;
+            debugPath /= ("debug" / problemName);
 
             env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
         }
@@ -385,7 +385,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
         fs::filesystem::path debugPath(fs::filesystem::current_path());
         debugPath /= problem->name;
 
-        env->settings->updateSetting("Debug.Path", "Output", "problemdebug/" + problem->name);
+        env->settings->updateSetting("Debug.Path", "Output", debugPath.string());
         env->settings->updateSetting("ResultPath", "Output", fs::filesystem::current_path().string());
     }
 
@@ -1294,8 +1294,9 @@ void Solver::initializeDebugMode()
         }
     }
 
-    fs::filesystem::path source(env->settings->getSetting<std::string>("ProblemFile", "Input"));
-    fs::filesystem::copy_file(fs::filesystem::canonical(source), debugDir / source.filename(),
+    fs::filesystem::path source(fs::filesystem::canonical( env->settings->getSetting<std::string>("ProblemFile", "Input")));
+
+    fs::filesystem::copy_file(source.string(), (debugDir / source.filename()).string(),
         fs::filesystem::copy_options::overwrite_existing);
 }
 

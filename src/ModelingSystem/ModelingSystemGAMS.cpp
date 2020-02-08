@@ -25,6 +25,10 @@
 #include "GamsLicensing.h"
 #endif
 
+#if defined(_WIN32)
+# define WEXITSTATUS(x) (x)
+#endif
+
 #include <cstdio> // for tmpnam()
 #include <cstdlib> // for mkdtemp()
 #include <fstream>
@@ -299,7 +303,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     createdtmpdir = true;
 
     /* create empty convertd options file */
-    std::ofstream convertdopt(fs::filesystem::path(tmpdirname) / "convertd.opt", std::ios::out);
+    std::ofstream convertdopt((fs::filesystem::path(tmpdirname) / "convertd.opt").string(), std::ios::out);
     if(!convertdopt.good())
     {
         throw std::logic_error("Could not create convertd options file.");
@@ -314,16 +318,16 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
      */
     std::string gamscall;
 #ifdef GAMSDIR
-    gamscall = fs::filesystem::path(GAMSDIR) / "gams";
+    gamscall = (fs::filesystem::path(GAMSDIR) / "gams").string();
 #else
     gamscall = "gams";
 #endif
     gamscall += " \"" + filename + "\"";
     gamscall += " SOLVER=CONVERTD PF4=0 SOLPRINT=0 LIMCOL=0 LIMROW=0 PC=2";
     gamscall += " SCRDIR=" + tmpdirname;
-    gamscall += " OUTPUT=" + std::string(fs::filesystem::path(tmpdirname) / "listing");
+    gamscall += " OUTPUT=" + (fs::filesystem::path(tmpdirname) / "listing").string();
     gamscall += " OPTFILE=1 OPTDIR=" + tmpdirname;
-    gamscall += " LO=3 > " + std::string(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
+    gamscall += " LO=3 > " + (fs::filesystem::path(tmpdirname) / "gamsconvert.log").string();
     // printf(gamscall.c_str()); fflush(stdout);
 
     rc = system(gamscall.c_str());
@@ -342,7 +346,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
         else
             msg = "GAMS call returned with execution error:\n";
 
-        std::ifstream lst(fs::filesystem::path(tmpdirname) / "listing");
+        std::ifstream lst((fs::filesystem::path(tmpdirname) / "listing").string());
         std::string line;
         while(lst.good() && !lst.eof())
         {
@@ -400,7 +404,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
             break;
         }
 
-        std::ifstream log(fs::filesystem::path(tmpdirname) / "gamsconvert.log");
+        std::ifstream log((fs::filesystem::path(tmpdirname) / "gamsconvert.log").string());
         std::string line;
         msg += " GAMS log:\n";
         while(log.good() && !log.eof())
@@ -415,7 +419,7 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
     }
     }
 
-    createModelFromGAMSModel(fs::filesystem::path(tmpdirname) / "gamscntr.dat");
+    createModelFromGAMSModel((fs::filesystem::path(tmpdirname) / "gamscntr.dat").string());
 
     /* since we ran convert with options file, GMO now stores convertd.opt as options file, which we don't want to use
      * as a SHOT options file */
@@ -590,7 +594,7 @@ void ModelingSystemGAMS::clearGAMSObjects()
     /* remove temporary directory content (should have only files) and directory itself) */
     if(createdtmpdir)
     {
-        std::filesystem::remove_all(tmpdirname);
+        fs::filesystem::remove_all(tmpdirname);
         createdtmpdir = false;
     }
 }
