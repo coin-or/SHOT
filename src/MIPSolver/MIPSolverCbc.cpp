@@ -283,9 +283,15 @@ int MIPSolverCbc::addLinearConstraint(
 
         // Adds the cutting plane
         if(isGreaterThan)
+        {
             osiInterface->addRow(cut, -constant, osiInterface->getInfinity(), name);
+            assert(osiInterface->getRowLower()[osiInterface->getNumRows() - 1] == -constant);
+        }
         else
+        {
             osiInterface->addRow(cut, -osiInterface->getInfinity(), -constant, name);
+            assert(osiInterface->getRowUpper()[osiInterface->getNumRows() - 1] == -constant);
+        }
 
         if(osiInterface->getNumRows() > numConstraintsBefore)
         {
@@ -321,6 +327,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setInteger(i);
+                assert(osiInterface->isInteger(i));
             }
         }
 
@@ -334,6 +341,7 @@ void MIPSolverCbc::activateDiscreteVariables(bool activate)
             if(variableTypes.at(i) == E_VariableType::Integer || variableTypes.at(i) == E_VariableType::Binary)
             {
                 osiInterface->setContinuous(i);
+                assert(osiInterface->isContinuous(i));
             }
         }
 
@@ -571,7 +579,10 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
             MIPSolutionStatus = getSolutionStatus();
 
             for(auto& P : originalObjectiveCoefficients)
+            {
                 osiInterface->setObjCoeff(P.index, P.value);
+                assert(osiInterface->getObjCoefficients()[P.index] == P.value);
+            }
 
             env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
         }
@@ -1070,6 +1081,8 @@ void MIPSolverCbc::updateVariableBound(int varIndex, double lowerBound, double u
     try
     {
         osiInterface->setColBounds(varIndex, lowerBound, upperBound);
+        assert(osiInterface->getColLower()[varIndex] == lowerBound);
+        assert(osiInterface->getColUpper()[varIndex] == upperBound);
     }
     catch(std::exception& e)
     {
@@ -1088,6 +1101,7 @@ void MIPSolverCbc::updateVariableLowerBound(int varIndex, double lowerBound)
     try
     {
         osiInterface->setColLower(varIndex, lowerBound);
+        assert(osiInterface->getColLower()[varIndex] == lowerBound);
     }
     catch(std::exception& e)
     {
@@ -1106,6 +1120,7 @@ void MIPSolverCbc::updateVariableUpperBound(int varIndex, double upperBound)
     try
     {
         osiInterface->setColUpper(varIndex, upperBound);
+        assert(osiInterface->getColUpper()[varIndex] == upperBound);
     }
     catch(std::exception& e)
     {
