@@ -113,8 +113,12 @@ bool MIPSolverCbc::addLinearTermToObjective(double coefficient, int variableInde
 {
     try
     {
-        coinModel->setColObjective(variableIndex, coefficient);
-        objectiveLinearExpression.insert(variableIndex, coefficient);
+        // In case there is already a linear term  for the variable present in the objective we need to take this into
+        // consideration
+        double currentValue = coinModel->getColObjective(variableIndex);
+
+        coinModel->setColObjective(variableIndex, coefficient + currentValue);
+        objectiveLinearExpression.insert(variableIndex, coefficient + currentValue);
     }
     catch(std::exception& e)
     {
@@ -172,7 +176,11 @@ bool MIPSolverCbc::addLinearTermToConstraint(double coefficient, int variableInd
 {
     try
     {
-        coinModel->setElement(numberOfConstraints, variableIndex, coefficient);
+        // In case there is already a linear term  for the variable present in the constraint we need to take this into
+        // consideration
+        double currentValue = coinModel->getElement(numberOfConstraints, variableIndex);
+
+        coinModel->setElement(numberOfConstraints, variableIndex, coefficient + currentValue);
     }
     catch(std::exception& e)
     {

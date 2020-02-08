@@ -2056,13 +2056,25 @@ void TaskReformulateProblem::reformulateBinaryBilinearTerm(
         auxConstraintCounter, "s_binbl_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 1.0);
     auxConstraintCounter++;
 
-    auto linearTerm1 = std::make_shared<LinearTerm>(1.0, firstVariable);
-    auto linearTerm2 = std::make_shared<LinearTerm>(1.0, secondVariable);
-    auto linearTerm3 = std::make_shared<LinearTerm>(-1.0, auxVariable);
+    if(firstVariable == secondVariable)
+    {
+        auto linearTerm1 = std::make_shared<LinearTerm>(2.0, firstVariable);
+        auto linearTerm2 = std::make_shared<LinearTerm>(-1.0, auxVariable);
 
-    auxConstraint->add(linearTerm1);
-    auxConstraint->add(linearTerm2);
-    auxConstraint->add(linearTerm3);
+        auxConstraint->add(linearTerm1);
+        auxConstraint->add(linearTerm2);
+    }
+    else
+    {
+
+        auto linearTerm1 = std::make_shared<LinearTerm>(1.0, firstVariable);
+        auto linearTerm2 = std::make_shared<LinearTerm>(1.0, secondVariable);
+        auto linearTerm3 = std::make_shared<LinearTerm>(-1.0, auxVariable);
+
+        auxConstraint->add(linearTerm1);
+        auxConstraint->add(linearTerm2);
+        auxConstraint->add(linearTerm3);
+    }
 
     auto auxConstraintBound1 = std::make_shared<LinearConstraint>(
         auxConstraintCounter, "s_blbb_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, 0.0);
