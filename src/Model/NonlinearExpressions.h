@@ -122,6 +122,8 @@ inline E_Monotonicity getMonotonicityTimesWithConstantFunction(
 class NonlinearExpression
 {
 public:
+    virtual ~NonlinearExpression() = default;
+
     std::weak_ptr<Problem> ownerProblem;
 
     virtual inline void takeOwnership(ProblemPtr owner) { ownerProblem = owner; }

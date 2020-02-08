@@ -465,8 +465,8 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
 
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible)
     {
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-               == E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear))
+        if(env->reformulatedProblem->objectiveFunction->properties.classification
+            == E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear)
         {
             osiInterface->setColBounds(getDualAuxiliaryObjectiveVariableIndex(), -1000000000.0, 1000000000.0);
 
