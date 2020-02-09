@@ -678,9 +678,9 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             cplexModel.remove(cplexInstance.getObjective());
 
             if(isMinimizationProblem)
-                cplexModel.add(IloMinimize(cplexEnv, SHOT_DBL_MIN));
+                cplexModel.add(IloMinimize(cplexEnv, 0.0));
             else
-                cplexModel.add(IloMaximize(cplexEnv, SHOT_DBL_MAX));
+                cplexModel.add(IloMaximize(cplexEnv, 0.0));
 
             cplexInstance.extract(cplexModel);
             cplexInstance.solve();
@@ -1166,6 +1166,19 @@ void MIPSolverCplex::writeProblemToFile(std::string filename)
 {
     try
     {
+        if(objectiveFunctionReplacedWithZero)
+        {
+            cplexModel.remove(cplexInstance.getObjective());
+
+            if(isMinimizationProblem)
+                cplexModel.add(IloMinimize(cplexEnv, cplexObjectiveExpression));
+            else
+                cplexModel.add(IloMaximize(cplexEnv, cplexObjectiveExpression));
+
+            modelUpdated = true;
+            objectiveFunctionReplacedWithZero = false;
+        }
+
         if(modelUpdated)
         {
             // Extract the model if we have updated the constraints
