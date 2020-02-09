@@ -76,10 +76,10 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
     auto variablesNodes
         = osilDocument.FirstChildElement("osil")->FirstChildElement("instanceData")->FirstChildElement("variables");
 
-    double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-    double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
-    double minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
-    double maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
+    double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+    double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
+    double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
 
     int variableIndex = 0;
 

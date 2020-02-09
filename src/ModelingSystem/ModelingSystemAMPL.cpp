@@ -66,10 +66,10 @@ private:
 public:
     AMPLProblemHandler(EnvironmentPtr envPtr, ProblemPtr problem) : env(envPtr), destination(problem)
     {
-        this->minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-        this->maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
-        this->minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
-        this->maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
+        this->minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+        this->maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+        this->minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
+        this->maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
     }
 
     void OnHeader(const mp::NLHeader& h)

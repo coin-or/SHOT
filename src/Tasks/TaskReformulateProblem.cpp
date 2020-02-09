@@ -439,7 +439,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
 void TaskReformulateProblem::createEpigraphConstraint()
 {
-    double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+    double objVarBound = env->settings->getSetting<double>("Variables.NonlinearObjectiveVariable.Bound", "Model");
 
     Interval objectiveBound;
 
@@ -1108,8 +1108,8 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(
         {
             Interval bounds;
 
-            double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-            double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+            double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+            double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
             try
             {
@@ -1226,8 +1226,8 @@ LinearTerms TaskReformulateProblem::partitionMonomialTerms(const MonomialTerms s
     {
         Interval bounds;
 
-        double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-        double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+        double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+        double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
         try
         {
@@ -1277,8 +1277,8 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
     {
         Interval bounds;
 
-        double varLowerBound = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-        double varUpperBound = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+        double varLowerBound = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+        double varUpperBound = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
         double coefficient = std::abs(T->coefficient);
 

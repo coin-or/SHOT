@@ -54,7 +54,7 @@ void TaskAddPrimalReductionCut::run()
         return;
     }
 
-    int maxIterations = env->settings->getSetting<int>("ReductionCut.MaxIterations", "Primal");
+    int maxIterations = env->settings->getSetting<int>("ReductionCut.MaxIterations", "Dual");
 
     if(env->solutionStatistics.numberOfPrimalReductionCutsUpdatesWithoutEffect >= maxIterations)
     {
@@ -96,7 +96,7 @@ void TaskAddPrimalReductionCut::run()
     }
     else
     {
-        double reductionFactor = env->settings->getSetting<double>("ReductionCut.ReductionFactor", "Primal");
+        double reductionFactor = env->settings->getSetting<double>("ReductionCut.ReductionFactor", "Dual");
 
         if(env->reformulatedProblem->objectiveFunction->properties.isMinimize)
         {

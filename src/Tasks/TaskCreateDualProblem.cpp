@@ -91,7 +91,7 @@ bool TaskCreateDualProblem::createProblem(MIPSolverPtr destination, ProblemPtr s
     }
     else if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
-        double objVarBound = env->settings->getSetting<double>("NonlinearObjectiveVariable.Bound", "Model");
+        double objVarBound = env->settings->getSetting<double>("Variables.NonlinearObjectiveVariable.Bound", "Model");
 
         Interval objectiveBound;
 

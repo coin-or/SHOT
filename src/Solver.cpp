@@ -34,6 +34,8 @@
 
 #include "../Tasks/TaskReformulateProblem.h"
 
+#include <map>
+
 #ifdef HAS_STD_FILESYSTEM
 #include <filesystem>
 namespace fs = std;
@@ -244,7 +246,7 @@ bool Solver::setProblem(std::string fileName)
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
-    if(env->settings->getSetting<bool>("AssumeConvex", "Convexity"))
+    if(env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"))
     {
         env->settings->updateSetting(
             "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
@@ -405,7 +407,7 @@ bool Solver::setProblem(SHOT::ProblemPtr problem, SHOT::ModelingSystemPtr modeli
     }
 
     // Do not do convexifying reformulations if the problem is assumed to be convex
-    if(env->settings->getSetting<bool>("AssumeConvex", "Convexity"))
+    if(env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model"))
     {
         env->settings->updateSetting(
             "Reformulation.Bilinear.IntegerFormulation", "Model", (int)ES_ReformulatiomBilinearInteger::None);
@@ -612,12 +614,9 @@ void Solver::initializeSettings()
 
     env->output->outputDebug("Starting initialization of settings:");
 
-    // Convexity strategy
-
-    env->settings->createSetting("UseRecommendedSettings", "Strategy", true,
-        "Modifies some settings to their recommended values based on the strategy");
-
-    env->settings->createSetting("AssumeConvex", "Convexity", false, "Assume that the problem is convex.");
+    env->settings->createSettingGroup("Dual", "", "Dual strategy",
+        "These settings control the various functionality of the dual strategy in SHOT, i.e., the polyhedral outer "
+        "approximation utilizing the ESH or ECP algorithms.");
 
     // Dual strategy settings: ECP and ESH
 
@@ -627,6 +626,12 @@ void Solver::initializeSettings()
     env->settings->createSetting("CutStrategy", "Dual", static_cast<int>(ES_HyperplaneCutStrategy::ESH),
         "Dual cut strategy", enumHyperplanePointStrategy);
     enumHyperplanePointStrategy.clear();
+
+    env->settings->createSettingGroup("Dual", "ESH", "Extended supporting hyperplane method",
+        "These settings control various aspects of the ESH implementation, including the strategy to obtain the "
+        "interior point.");
+
+    // Dual strategy settings: Interior point search strategy
 
     env->settings->createSetting("ESH.InteriorPoint.CuttingPlane.BitPrecision", "Dual", 8,
         "Required termination bit precision for minimization subsolver", 1, 64, true);
@@ -658,8 +663,6 @@ void Solver::initializeSettings()
     env->settings->createSetting("ESH.InteriorPoint.MinimaxObjectiveUpperBound", "Dual", 0.1,
         "Upper bound for minimax objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    // Dual strategy settings: Interior point search strategy
-
     VectorString enumNLPSolver;
     enumNLPSolver.push_back("Cutting plane minimax");
     /*enumNLPSolver.push_back("Ipopt minimax");
@@ -680,36 +683,43 @@ void Solver::initializeSettings()
         enumAddPrimalPointAsInteriorPoint);
     enumAddPrimalPointAsInteriorPoint.clear();
 
-    env->settings->createSetting("HyperplaneCuts.MaxConstraintFactor", "Dual", 0.1,
-        "Rootsearch performed on constraints with values larger than this factor times the maximum value", 1e-6, 1.0);
-
     env->settings->createSetting(
         "ESH.Rootsearch.UniqueConstraints", "Dual", false, "Allow only one hyperplane per constraint per iteration");
 
     env->settings->createSetting("ESH.Rootsearch.ConstraintTolerance", "Dual", 1e-8,
         "Constraint tolerance for when not to add individual hyperplanes", 0, SHOT_DBL_MAX);
 
-    // Dual strategy settings: Fixed integer (NLP) strategy
+    // Dual strategy settings: Fixed integer strategy
+
+    env->settings->createSettingGroup("Dual", "FixedInteger", "Fixed integer dual strategy",
+        "If no progress has been made in a certain number of iterations, it is possible to fix the integer variables "
+        "and solve integer-relaxed subproblems. These settings control this functionality. ");
 
     env->settings->createSetting("FixedInteger.ConstraintTolerance", "Dual", 0.0001,
-        "Constraint tolerance for fixed strategy", 0.0, SHOT_DBL_MAX);
+        "Constraint tolerance for fixed strategy", 0.0, SHOT_DBL_MAX, true);
 
     env->settings->createSetting(
-        "FixedInteger.MaxIterations", "Dual", 20, "Max LP iterations for fixed strategy", 0, SHOT_INT_MAX);
+        "FixedInteger.MaxIterations", "Dual", 20, "Max LP iterations for fixed strategy", 0, SHOT_INT_MAX, true);
 
-    env->settings->createSetting(
-        "FixedInteger.ObjectiveTolerance", "Dual", 0.001, "Objective tolerance for fixed strategy", 0.0, SHOT_DBL_MAX);
+    env->settings->createSetting("FixedInteger.ObjectiveTolerance", "Dual", 0.001,
+        "Objective tolerance for fixed strategy", 0.0, SHOT_DBL_MAX, true);
 
     env->settings->createSetting("FixedInteger.Use", "Dual", false,
-        "Solve a fixed LP problem if integer-values have not changes in several MIP iterations");
+        "Solve a fixed LP problem if integer-values have not changes in several MIP iterations", true);
 
     // Dual strategy settings: Hyperplane generation
+
+    env->settings->createSettingGroup("Dual", "HyperplaneCuts", "Generated hyperplane cuts",
+        "These settings control how the cutting planes or supporting hyperplanes are generated.");
 
     env->settings->createSetting("HyperplaneCuts.ConstraintSelectionFactor", "Dual", 0.5,
         "The fraction of violated constraints to generate supporting hyperplanes / cutting planes for", 0.0, 1.0);
 
     env->settings->createSetting(
         "HyperplaneCuts.Delay", "Dual", true, "Add hyperplane cuts to model only after optimal MIP solution");
+
+    env->settings->createSetting("HyperplaneCuts.MaxConstraintFactor", "Dual", 0.1,
+        "Rootsearch performed on constraints with values larger than this factor times the maximum value", 1e-6, 1.0);
 
     env->settings->createSetting("HyperplaneCuts.MaxPerIteration", "Dual", 200,
         "Maximal number of hyperplanes to add per iteration", 0, SHOT_INT_MAX);
@@ -722,6 +732,10 @@ void Solver::initializeSettings()
     //    "HyperplaneCuts.UsePrimalObjectiveCut", "Dual", true, "Add an objective cut in the primal solution");
 
     // Dual strategy settings: MIP solver
+
+    env->settings->createSettingGroup("Dual", "MIP", "MIP solver",
+        "These settings control the general functionality of the MIP solver in the dual strategy. Note that "
+        "solver-specific settings for Cplex, Gurobi and Cbc are available under the \"Subsolver\" category.");
 
     env->settings->createSetting(
         "MIP.CutOff.InitialValue", "Dual", SHOT_DBL_MAX, "Initial cutoff value to use", SHOT_DBL_MIN, SHOT_DBL_MAX);
@@ -783,13 +797,28 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
     env->settings->createSetting(
-        "MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "What MIP solver to use", enumMIPSolver);
+        "MIP.Solver", "Dual", static_cast<int>(ES_MIPSolver::Cplex), "Which MIP solver to use", enumMIPSolver);
     enumMIPSolver.clear();
 
     env->settings->createSetting(
         "MIP.UpdateObjectiveBounds", "Dual", false, "Update nonlinear objective variable bounds to primal/dual bounds");
 
+    // Primal settings: reduction cuts for nonconvex problems
+
+    env->settings->createSettingGroup("Dual", "ReductionCut", "Dual reduction cut",
+        "These settings control the added dual reduction cuts from the primal solution that will try to force a better "
+        "primal solution. This functionality is only used if SHOT cannot deduce that the problem is nonconvex .");
+
+    env->settings->createSetting("ReductionCut.MaxIterations", "Dual", 5,
+        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
+
+    env->settings->createSetting(
+        "ReductionCut.ReductionFactor", "Dual", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
+
     // Dual strategy settings: Relaxation strategies
+
+    env->settings->createSettingGroup("Dual", "Relaxation", "Relaxation strategies",
+        "These settings contorl various aspects regarding integer-relaxation of the dual problem.");
 
     env->settings->createSetting("Relaxation.Use", "Dual", true, "Initially solve continuous dual relaxations");
 
@@ -810,6 +839,11 @@ void Solver::initializeSettings()
 
     // Dual strategy settings: Main tree strategy
 
+    env->settings->createSettingGroup("Dual", "TreeStrategy", "Tree strategy",
+        "The single-tree strategy is normally more efficient than the multi-tree one. However, not all MIP solvers "
+        "support the required lazy constraint callbacks. These settings selects this strategy and controls its "
+        "behaviour.");
+
     VectorString enumSolutionStrategy;
     enumSolutionStrategy.push_back("Multi-tree");
     enumSolutionStrategy.push_back("Single-tree");
@@ -822,7 +856,16 @@ void Solver::initializeSettings()
 
     // Optimization model settings
 
+    env->settings->createSettingGroup("Model", "", "Optimization model",
+        "These settings control various aspects of SHOT's representation  for and handling of the provided "
+        "optimization model.");
+
     // Bound tightening
+
+    env->settings->createSettingGroup("Model", "BoundTightening", "Bound tightening",
+        "SHOT performs bound tightening to strengthen the internal representation of the problem. These settings "
+        "control how and when bound tightening is performed.");
+
     env->settings->createSetting(
         "BoundTightening.FeasibilityBased.MaxIterations", "Model", 5, "Maximal number of bound tightening iterations");
 
@@ -835,23 +878,35 @@ void Solver::initializeSettings()
     env->settings->createSetting("BoundTightening.FeasibilityBased.UseNonlinear", "Model", true,
         "Peform feasibility-based bound tightening on nonlinear expressions");
 
+    env->settings->createSettingGroup(
+        "Model", "Convexity", "Convexity", "These settings control the convexity detection functionality.");
+
+    env->settings->createSetting("Convexity.AssumeConvex", "Model", false, "Assume that the problem is convex.");
+
     env->settings->createSetting("Convexity.Quadratics.EigenValueTolerance", "Model", 1e-5,
         "Convexity tolerance for the eigenvalues of the Hessian matrix for quadratic terms", 0.0, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.MinimumLowerBound", "Model", -1e50,
+    env->settings->createSettingGroup("Model", "Variables", "Variables",
+        "These settings control the maximum variable bounds allowed in SHOT. Projection will be performed onto these "
+        "intervals. Note that the MIP solvers may have stricter requirements, in which case those may be used.");
+
+    env->settings->createSetting("Variables.Continuous.MinimumLowerBound", "Model", -1e50,
         "Minimum lower bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("ContinuousVariable.MaximumUpperBound", "Model", 1e50,
+    env->settings->createSetting("Variables.Continuous.MaximumUpperBound", "Model", 1e50,
         "Maximum upper bound for continuous variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.MinimumLowerBound", "Model", -2.0e9,
+    env->settings->createSetting("Variables.Integer.MinimumLowerBound", "Model", -2.0e9,
         "Minimum lower bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("IntegerVariable.MaximumUpperBound", "Model", 2.0e9,
+    env->settings->createSetting("Variables.Integer.MaximumUpperBound", "Model", 2.0e9,
         "Maximum upper bound for integer variables", SHOT_DBL_MIN, SHOT_DBL_MAX);
 
-    env->settings->createSetting("NonlinearObjectiveVariable.Bound", "Model", 1e12,
+    env->settings->createSetting("Variables.NonlinearObjectiveVariable.Bound", "Model", 1e12,
         "Max absolute bound for the auxiliary nonlinear objective variable", SHOT_DBL_MIN, SHOT_DBL_MAX);
+
+    env->settings->createSettingGroup("Model", "Reformulation", "Automatic reformulations",
+        "These settings control the automatic reformulations performed in SHOT.");
 
     // Reformulations for bilinears
     env->settings->createSetting("Reformulation.Bilinear.AddConvexEnvelope", "Model", false,
@@ -938,6 +993,10 @@ void Solver::initializeSettings()
     enumQPStrategy.clear();
 
     // Logging and output settings
+
+    env->settings->createSettingGroup("Output", "", "Solver output",
+        "These settings control how much and what output is shown to the user from the solver.");
+
     VectorString enumLogLevel;
     enumLogLevel.push_back("Trace");
     enumLogLevel.push_back("Debug");
@@ -984,6 +1043,13 @@ void Solver::initializeSettings()
 
     env->settings->createSetting(
         "SaveNumberOfSolutions", "Output", 1, "Save this number of primal solutions to OSrL file");
+
+    env->settings->createSettingGroup(
+        "Primal", "", "Primal heuristics", "These settings control the primal heuristics used in SHOT.");
+
+    env->settings->createSettingGroup("Primal", "FixedInteger", "Fixed-integer (NLP) strategy",
+        "The main primal strategy in SHOT is to solve integer-fixed NLP problems. These settings control, e.g., how "
+        "often NLP problems are solved.");
 
     // Primal settings: Fixed integer strategy
     VectorString enumPrimalNLPStrategy;
@@ -1045,19 +1111,18 @@ void Solver::initializeSettings()
 
     env->settings->createSetting("FixedInteger.Warmstart", "Primal", true, "Warm start the NLP solver");
 
-    // Primal settings: reduction cuts for nonconvex problems
-
-    env->settings->createSetting("ReductionCut.MaxIterations", "Primal", 5,
-        "Max number of primal cut reduction without primal improvement", 0, SHOT_INT_MAX);
-
-    env->settings->createSetting(
-        "ReductionCut.ReductionFactor", "Primal", 0.001, "The factor used to reduce the cutoff value", 0, 1.0);
-
     // Primal settings: rootsearch
+
+    env->settings->createSettingGroup("Primal", "Rootsearch", "Primal root search",
+        "SHOT can utilize root searches between the dual solution point and an integer-fixed interior point. This "
+        "setting controls whether this strategy is used.");
 
     env->settings->createSetting("Rootsearch.Use", "Primal", true, "Use a rootsearch to find primal solutions");
 
     // Primal settings: tolerances for accepting primal solutions
+
+    env->settings->createSettingGroup("Primal", "Tolerances", "Primal solution tolerances",
+        "These settings sets various tolerances for accepting primal solutions.");
 
     env->settings->createSetting("Tolerance.TrustLinearConstraintValues", "Primal", true,
         "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
@@ -1071,9 +1136,21 @@ void Solver::initializeSettings()
     env->settings->createSetting("Tolerance.NonlinearConstraint", "Primal", 1e-5,
         "Nonlinear constraint tolerance for accepting primal solutions");
 
+    // Strategy settings
+
+    env->settings->createSettingGroup("Strategy", "", "Strategy", "Overall strategy parameters used in SHOT.");
+
+    env->settings->createSetting("UseRecommendedSettings", "Strategy", true,
+        "Modifies some settings to their recommended values based on the strategy");
+
     // Subsolver settings: Cplex
 
+    env->settings->createSettingGroup("Subsolver", "", "Subsolver functionality",
+        "These settings allow for more direct control of the  different subsolvers utilized in SHOT.");
+
 #ifdef HAS_CPLEX
+
+    env->settings->createSettingGroup("Subsolver", "Cplex", "Cplex", "");
 
     env->settings->createSetting("Cplex.AddRelaxedLazyConstraintsAsLocal", "Subsolver", false,
         "Whether to add lazy constraints generated in relaxed points as local or global");
@@ -1130,6 +1207,8 @@ void Solver::initializeSettings()
 
 #ifdef HAS_GUROBI
 
+    env->settings->createSettingGroup("Subsolver", "Gurobi", "Gurobi", "");
+
     env->settings->createSetting(
         "Gurobi.ScaleFlag", "Subsolver", 0, "Controls model scaling: 0: Off. 1: Agressive. 2: Very agressive.", 0, 2);
 
@@ -1144,6 +1223,8 @@ void Solver::initializeSettings()
     // Subsolver settings: Cbc
 
 #ifdef HAS_CBC
+
+    env->settings->createSettingGroup("Subsolver", "Cbc", "Cbc", "");
 
     env->settings->createSetting("Cbc.AutoScale", "Subsolver", false,
         "Whether to scale objective, rhs and bounds of problem if they look odd (experimental)");
@@ -1166,6 +1247,8 @@ void Solver::initializeSettings()
 
 #ifdef HAS_GAMS
 
+    env->settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
+
     std::string optfile = "";
     env->settings->createSetting(
         "GAMS.NLP.OptionsFilename", "Subsolver", optfile, "Options file for the NLP solver in GAMS");
@@ -1178,6 +1261,8 @@ void Solver::initializeSettings()
     // Subsolver settings: Ipopt
 
 #ifdef HAS_IPOPT
+
+    env->settings->createSettingGroup("Subsolver", "Ipopt", "Ipopt", "");
 
     env->settings->createSetting("Ipopt.ConstraintViolationTolerance", "Subsolver", 1E-8,
         "Constraint violation tolerance in Ipopt", SHOT_DBL_MIN, SHOT_DBL_MAX);
@@ -1202,6 +1287,9 @@ void Solver::initializeSettings()
 
     // Subsolver settings: root searches
 
+    env->settings->createSettingGroup(
+        "Subsolver", "Rootsearch", "Root search solver", "Settings for the Boost rootsearch functionality.");
+
     env->settings->createSetting("Rootsearch.ActiveConstraintTolerance", "Subsolver", 0.0,
         "Epsilon constraint tolerance for root search", 0.0, SHOT_DBL_MAX);
 
@@ -1219,7 +1307,10 @@ void Solver::initializeSettings()
     env->settings->createSetting("Rootsearch.TerminationTolerance", "Subsolver", 1e-16,
         "Epsilon lambda tolerance for root search", 0.0, SHOT_DBL_MAX);
 
-    // Subsolver settings: termination
+    // Termination settings
+
+    env->settings->createSettingGroup(
+        "Termination", "", "Termination", "These settings control when SHOT will terminate the solution process.");
 
     env->settings->createSetting(
         "ConstraintTolerance", "Termination", 1e-8, "Termination tolerance for nonlinear constraints", 0, SHOT_DBL_MAX);
@@ -1406,17 +1497,17 @@ void Solver::verifySettings()
     }
 
     // Updating max bound setting for unbounded variables
-    double minLB = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-    double maxUB = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
+    double minLB = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+    double maxUB = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
 
     if(minLB < -unboundedVariableBound)
     {
-        env->settings->updateSetting("ContinuousVariable.MinimumLowerBound", "Model", -unboundedVariableBound);
+        env->settings->updateSetting("Variables.Continuous.MinimumLowerBound", "Model", -unboundedVariableBound);
     }
 
     if(maxUB > unboundedVariableBound)
     {
-        env->settings->updateSetting("ContinuousVariable.MaximumUpperBound", "Model", unboundedVariableBound);
+        env->settings->updateSetting("Variables.Continuous.MaximumUpperBound", "Model", unboundedVariableBound);
     }
 
     // Checking for too tight termination criteria

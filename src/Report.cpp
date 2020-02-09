@@ -1007,10 +1007,10 @@ void Report::outputSolutionReport()
     if(primalSolutionFound)
     {
         bool variablesAreBounded = true;
-        double minLBCont = env->settings->getSetting<double>("ContinuousVariable.MinimumLowerBound", "Model");
-        double maxUBCont = env->settings->getSetting<double>("ContinuousVariable.MaximumUpperBound", "Model");
-        double minLBInt = env->settings->getSetting<double>("IntegerVariable.MinimumLowerBound", "Model");
-        double maxUBInt = env->settings->getSetting<double>("IntegerVariable.MaximumUpperBound", "Model");
+        double minLBCont = env->settings->getSetting<double>("Variables.Continuous.MinimumLowerBound", "Model");
+        double maxUBCont = env->settings->getSetting<double>("Variables.Continuous.MaximumUpperBound", "Model");
+        double minLBInt = env->settings->getSetting<double>("Variables.Integer.MinimumLowerBound", "Model");
+        double maxUBInt = env->settings->getSetting<double>("Variables.Integer.MaximumUpperBound", "Model");
 
         if(minLBInt == 0)
             minLBInt = -maxUBInt; // In case a min lower bound of zero is used, we do not want to give false warnings
