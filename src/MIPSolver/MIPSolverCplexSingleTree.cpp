@@ -425,6 +425,21 @@ bool CplexCallback::createHyperplane(Hyperplane hyperplane, const IloCplex::Call
         }
     }
 
+    // Small fix to fix badly scaled cuts.
+    // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
+    if(abs(tmpPair.second) > 1e15)
+    {
+        double scalingFactor = abs(tmpPair.second) - 1e15;
+
+        for(auto& E : tmpPair.first)
+            E.second /= scalingFactor;
+
+        tmpPair.second /= scalingFactor;
+
+        env->output->outputWarning("        Large values found in RHS of cut, you might want to consider reducing the "
+                                   "bounds of the nonlinear variables.");
+    }
+
     try
     {
         IloExpr expr(context.getEnv());
