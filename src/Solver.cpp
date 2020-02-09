@@ -1068,7 +1068,7 @@ void Solver::initializeSettings()
     env->settings->createSetting(
         "Tolerance.LinearConstraint", "Primal", 1e-6, "Linear constraint tolerance for accepting primal solutions");
 
-    env->settings->createSetting("Tolerance.NonlinearConstraint", "Primal", 1e-6,
+    env->settings->createSetting("Tolerance.NonlinearConstraint", "Primal", 1e-5,
         "Nonlinear constraint tolerance for accepting primal solutions");
 
     // Subsolver settings: Cplex
