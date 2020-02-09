@@ -283,7 +283,7 @@ void Problem::updateConstraints()
 
 void Problem::updateConvexity()
 {
-    bool assumeConvex = env->settings->getSetting<bool>("AssumeConvex", "Convexity");
+    bool assumeConvex = env->settings->getSetting<bool>("Convexity.AssumeConvex", "Model");
 
     if(assumeConvex && objectiveFunction->properties.convexity != E_Convexity::Linear)
         objectiveFunction->properties.convexity

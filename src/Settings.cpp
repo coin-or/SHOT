@@ -27,7 +27,7 @@ void Settings::createBaseSetting(
     std::string name, std::string category, T value, std::string description, bool isPrivate)
 {
     // Check that setting is of the correct type
-    using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+    using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
             || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
         T>::type;
 
@@ -77,7 +77,7 @@ template void Settings::updateSetting(std::string name, std::string category, bo
 template <typename T> void Settings::updateSetting(std::string name, std::string category, T value)
 {
     // Check that setting is of the correct type
-    using value_type[[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
+    using value_type [[maybe_unused]] = typename std::enable_if<std::is_same<std::string, T>::value
             || std::is_same<double, T>::value || std::is_same<int, T>::value || std::is_same<bool, T>::value,
         T>::type;
 
@@ -362,6 +362,12 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
 {
     std::stringstream ss;
 
+    std::string currentCategory = "";
+    std::string currentSubCategory = "";
+
+    const std::string divider = "**************************************************************************************"
+                                "****************************************************";
+
     for(auto& T : settingTypes)
     {
         auto key = T.first;
@@ -376,6 +382,60 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
 
         if(!hideDescriptions)
         {
+            std::string name = T.first.second;
+            std::string category = T.first.first;
+            std::string fullname = fmt::format("{}.{}", category, name);
+            std::string subCategory = "";
+
+            size_t firstPeriod = name.find('.');
+
+            if(firstPeriod != std::string::npos)
+                subCategory = name.substr(0, firstPeriod);
+            else
+                subCategory = name;
+
+            std::string description;
+            std::string validValues;
+            std::string defaultValue;
+
+            if(category != currentCategory)
+            {
+                // This is a first level group
+
+                auto [header, description] = settingGroupDescriptions[std::make_pair(category, "")];
+
+                ss << '\n' << '\n' << divider << '\n';
+                ss << divider << '\n';
+                ss << fmt::format("* {}\n", header);
+
+                if(description != "")
+                    ss << "* " << description << "\n";
+
+                ss << divider << '\n' << divider << '\n';
+
+                currentCategory = category;
+                currentSubCategory = "something";
+            }
+
+            if(subCategory != currentSubCategory
+                && (settingGroupDescriptions.find(std::make_pair(category, subCategory))
+                       != settingGroupDescriptions.end()))
+            {
+                // This is a second level group
+
+                auto [header, description] = settingGroupDescriptions[std::make_pair(category, subCategory)];
+
+                ss << '\n' << '\n' << divider << '\n';
+                ss << fmt::format("* {}\n", header);
+
+                if(Utilities::trim(description) != "")
+                    ss << "* " << description << "\n";
+
+                ss << divider << '\n';
+
+                currentSubCategory = subCategory;
+            }
+
             std::stringstream desc;
 
             if(settingEnums[key] == true)
@@ -427,6 +487,7 @@ std::string Settings::getSettingsAsMarkup()
     std::stringstream ss;
 
     std::string currentCategory = "";
+    std::string currentSubCategory = "";
 
     for(auto& T : settingTypes)
     {
@@ -438,18 +499,57 @@ std::string Settings::getSettingsAsMarkup()
         std::string name = T.first.second;
         std::string category = T.first.first;
         std::string fullname = fmt::format("{}.{}", category, name);
+        std::string subCategory = "";
+
+        size_t firstPeriod = name.find('.');
+
+        if(firstPeriod != std::string::npos)
+            subCategory = name.substr(0, firstPeriod);
+        else
+            subCategory = name;
 
         std::string description;
         std::string validValues;
         std::string defaultValue;
 
+        bool printTableHeader = false;
+
         if(category != currentCategory)
         {
-            ss << fmt::format("# {}\n", category);
-            ss << fmt::format("|Name and description|Valid values|Default value|\n");
-            ss << fmt::format("|-|:-:|:-:|\n");
+            // This is a first level group
+
+            auto [header, description] = settingGroupDescriptions[std::make_pair(category, "")];
+
+            ss << '\n' << fmt::format("# {}\n", header) << '\n';
+
+            if(description != "")
+                ss << description << "\n\n";
 
             currentCategory = category;
+            currentSubCategory = "something";
+            printTableHeader = true;
+        }
+
+        if(subCategory != currentSubCategory
+            && (settingGroupDescriptions.find(std::make_pair(category, subCategory)) != settingGroupDescriptions.end()))
+        {
+            // This is a second level group
+
+            auto [header, description] = settingGroupDescriptions[std::make_pair(category, subCategory)];
+
+            ss << '\n' << fmt::format("## {}\n", header) << '\n';
+
+            if(Utilities::trim(description) != "")
+                ss << description << "\n\n";
+
+            currentSubCategory = subCategory;
+            printTableHeader = true;
+        }
+
+        if(printTableHeader)
+        {
+            ss << fmt::format("|Name and description|Valid values|Default value|\n");
+            ss << fmt::format("|-|:-:|:-:|\n");
         }
 
         if(settingEnums[key] == true)

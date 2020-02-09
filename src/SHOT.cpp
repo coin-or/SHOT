@@ -250,7 +250,7 @@ int main(int argc, char* argv[])
 #endif
 
     if(cmdl["--convex"])
-        solver.updateSetting("AssumeConvex", "Convexity", true);
+        solver.updateSetting("Convexity.AssumeConvex", "Model", true);
 
     if(cmdl["--debug"])
         solver.updateSetting("Debug.Enable", "Output", true);
