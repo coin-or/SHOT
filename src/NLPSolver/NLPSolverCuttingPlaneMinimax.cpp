@@ -280,6 +280,21 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
             // Adding the objective term
             elements.emplace(numVar, -1.0);
 
+            // Small fix to fix badly scaled cuts.
+            // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
+            if(abs(constant) > 1e15)
+            {
+                double scalingFactor = abs(constant) - 1e15;
+                for(auto& E : elements)
+                    E.second /= scalingFactor;
+
+                constant /= scalingFactor;
+
+                env->output->outputWarning(
+                    "     Large values found in RHS of cut, you might want to consider reducing the "
+                    "bounds of the nonlinear variables.");
+            }
+
             // Adds the linear constraint
             if(LPSolver->addLinearConstraint(elements, constant,
                    "minimax_" + std::to_string(NCV.constraint->index) + "_" + std::to_string(numHyperTot))
