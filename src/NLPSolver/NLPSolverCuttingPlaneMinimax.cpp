@@ -306,9 +306,9 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
                                     "inf found in linear terms for {} = {}",
                             NCV.constraint->name, env->reformulatedProblem->getVariable(E.first)->name,
                             std::to_string(currSol.at(E.first))));
-                }
 
-                cutHasNoNaNsorInfs = false;
+                    cutHasNoNaNsorInfs = false;
+                }
             }
 
             // Adds the linear constraint
